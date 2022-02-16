@@ -248,6 +248,20 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return nullptr;
 
   switch (I->getOpcode()) {
+  case Instruction::And: {
+    Constant *ShAmt;
+    // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
+    if (match(I, m_c_And(m_OneUse(m_TruncOrSelf(
+                             m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
+                         m_One()))) {
+      unsigned BW = X->getType()->getScalarSizeInBits();
+      Constant *BWMinusOne = ConstantInt::get(X->getType(), BW - 1);
+      Value *R = Builder.CreateShl(X, Builder.CreateSub(BWMinusOne, ShAmt));
+      R = Builder.CreateAShr(R, BWMinusOne);
+      return Builder.CreateTruncOrBitCast(R, I->getType());
+    }
+    break;
+  }
   case Instruction::SDiv:
     // `sdiv` is negatible if divisor is not undef/INT_MIN/1.
     // While this is normally not behind a use-check,

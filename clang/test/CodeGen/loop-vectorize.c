@@ -13,7 +13,7 @@
 
 int printf(const char * restrict format, ...);
 
-void for_test() {
+void for_test(void) {
   double A[1000], B[1000];
   int L = 500;
   for (int i = 0; i < L; i++) {

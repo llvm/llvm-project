@@ -10,7 +10,7 @@
 // CHECK: ![[FPEL1]] = {{.*}}"__FuncPtr", {{.*}}, baseType: ![[FPTY1:[0-9]+]]
 // CHECK: ![[FPTY1]] = {{.*}}baseType: ![[FNTY1:[0-9]+]]
 // CHECK: ![[FNTY1]] = !DISubroutineType(types: ![[VOIDVOID:[0-9]+]])
-// CHECK: ![[VOIDVOID]] = !{null, null}
+// CHECK: ![[VOIDVOID]] = !{null}
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "__block_descriptor"
 // CHECK-NOT:              line
 // CHECK-SAME:            )
@@ -24,6 +24,6 @@
 // CHECK: ![[FNTY2]] = !DISubroutineType(types: ![[INTINT:[0-9]+]])
 // CHECK: ![[INTINT]] = !{![[INT]], ![[INT]]}
 struct inStruct {
-  void (^voidBlockPtr)();
+  void (^voidBlockPtr)(void);
   int (^intBlockPtr)(int);
 } is;

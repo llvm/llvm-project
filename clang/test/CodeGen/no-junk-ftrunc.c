@@ -17,7 +17,7 @@
 // STRICT-NOT: strict-float-cast-overflow
 
 
-int main() {
+int main(void) {
   double d = 1e20;
   return (int)d != 1e20 && (unsigned)d != 1e20;
 }

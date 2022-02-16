@@ -7,4 +7,4 @@
 // NOCONVFUNC-NOT: convergent
 // CONVFUNC-SAME: convergent
 // CHECK-SAME: }
-void func() { }
+void func(void) { }

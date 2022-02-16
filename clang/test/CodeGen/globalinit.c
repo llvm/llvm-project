@@ -4,9 +4,9 @@ int A[10] = { 1,2,3,4,5 };
 
 
 extern int x[];
-void foo() { x[0] = 1; }
+void foo(void) { x[0] = 1; }
 int x[10];
-void bar() { x[0] = 1; }
+void bar(void) { x[0] = 1; }
 
 
 extern int y[];
@@ -28,7 +28,7 @@ char *test(int c) {
 
 
 _Bool booltest = 0;
-void booltest2() {
+void booltest2(void) {
   static _Bool booltest3 = 4;
 }
 

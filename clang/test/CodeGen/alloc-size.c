@@ -24,7 +24,7 @@ void *my_malloc(size_t) __attribute__((alloc_size(1)));
 void *my_calloc(size_t, size_t) __attribute__((alloc_size(1, 2)));
 
 // CHECK-LABEL: @test1
-void test1() {
+void test1(void) {
   void *const vp = my_malloc(100);
   // CHECK: store i32 100
   gi = OBJECT_SIZE_BUILTIN(vp, 0);
@@ -82,7 +82,7 @@ void test1() {
 }
 
 // CHECK-LABEL: @test2
-void test2() {
+void test2(void) {
   void *const vp = my_malloc(gi);
   // CHECK: @llvm.objectsize
   gi = OBJECT_SIZE_BUILTIN(vp, 0);
@@ -97,7 +97,7 @@ void test2() {
 }
 
 // CHECK-LABEL: @test3
-void test3() {
+void test3(void) {
   char *const buf = (char *)my_calloc(100, 5);
   // CHECK: store i32 500
   gi = OBJECT_SIZE_BUILTIN(buf, 0);
@@ -117,7 +117,7 @@ struct Data {
 };
 
 // CHECK-LABEL: @test5
-void test5() {
+void test5(void) {
   struct Data *const data = my_malloc(sizeof(*data));
   // CHECK: store i32 48
   gi = OBJECT_SIZE_BUILTIN(data, 0);
@@ -158,7 +158,7 @@ void test5() {
 }
 
 // CHECK-LABEL: @test6
-void test6() {
+void test6(void) {
   // Things that would normally trigger conservative estimates don't need to do
   // so when we know the source of the allocation.
   struct Data *const data = my_malloc(sizeof(*data) + 10);
@@ -222,7 +222,7 @@ void test6() {
 }
 
 // CHECK-LABEL: @test7
-void test7() {
+void test7(void) {
   struct Data *const data = my_malloc(sizeof(*data) + 5);
   // CHECK: store i32 9
   gi = OBJECT_SIZE_BUILTIN(data->pad, 0);
@@ -235,7 +235,7 @@ void test7() {
 }
 
 // CHECK-LABEL: @test8
-void test8() {
+void test8(void) {
   // Non-const pointers aren't currently supported.
   void *buf = my_calloc(100, 5);
   // CHECK: @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
@@ -249,7 +249,7 @@ void test8() {
 }
 
 // CHECK-LABEL: @test9
-void test9() {
+void test9(void) {
   // Check to be sure that we unwrap things correctly.
   short *const buf0 = (my_malloc(100));
   short *const buf1 = (short*)(my_malloc(100));
@@ -264,7 +264,7 @@ void test9() {
 }
 
 // CHECK-LABEL: @test10
-void test10() {
+void test10(void) {
   // Yay overflow
   short *const arr = my_calloc((size_t)-1 / 2 + 1, 2);
   // CHECK: @llvm.objectsize
@@ -304,7 +304,7 @@ void *my_tiny_malloc(char) __attribute__((alloc_size(1)));
 void *my_tiny_calloc(char, char) __attribute__((alloc_size(1, 2)));
 
 // CHECK-LABEL: @test11
-void test11() {
+void test11(void) {
   void *const vp = my_tiny_malloc(100);
   // CHECK: store i32 100
   gi = OBJECT_SIZE_BUILTIN(vp, 0);
@@ -332,7 +332,7 @@ void *my_signed_malloc(long) __attribute__((alloc_size(1)));
 void *my_signed_calloc(long, long) __attribute__((alloc_size(1, 2)));
 
 // CHECK-LABEL: @test12
-void test12() {
+void test12(void) {
   // CHECK: store i32 100
   gi = OBJECT_SIZE_BUILTIN(my_signed_malloc(100), 0);
   // CHECK: store i32 500
@@ -361,7 +361,7 @@ void test12() {
 void *alloc_uchar(unsigned char) __attribute__((alloc_size(1)));
 
 // CHECK-LABEL: @test13
-void test13() {
+void test13(void) {
   // If 128 were incorrectly seen as negative, the result would become -1.
   // CHECK: store i32 128,
   gi = OBJECT_SIZE_BUILTIN(alloc_uchar(128), 0);
@@ -371,7 +371,7 @@ void *(*malloc_function_pointer)(int)__attribute__((alloc_size(1)));
 void *(*calloc_function_pointer)(int, int)__attribute__((alloc_size(1, 2)));
 
 // CHECK-LABEL: @test_fn_pointer
-void test_fn_pointer() {
+void test_fn_pointer(void) {
   void *const vp = malloc_function_pointer(100);
   // CHECK: store i32 100
   gi = __builtin_object_size(vp, 0);
@@ -434,7 +434,7 @@ extern my_malloc_function_pointer_type malloc_function_pointer_with_typedef;
 extern my_calloc_function_pointer_type calloc_function_pointer_with_typedef;
 
 // CHECK-LABEL: @test_fn_pointer_typedef
-void test_fn_pointer_typedef() {
+void test_fn_pointer_typedef(void) {
   malloc_function_pointer_with_typedef(100);
   void *const vp = malloc_function_pointer_with_typedef(100);
   // CHECK: store i32 100

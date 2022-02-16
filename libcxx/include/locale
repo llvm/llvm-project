@@ -187,10 +187,14 @@ template <class charT> class messages_byname;
 
 */
 
+#include <__algorithm/equal.h>
+#include <__algorithm/find.h>
+#include <__algorithm/max.h>
+#include <__algorithm/reverse.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__debug>
 #include <__locale>
-#include <algorithm>
 #ifndef __APPLE__
 # include <cstdarg>
 #endif

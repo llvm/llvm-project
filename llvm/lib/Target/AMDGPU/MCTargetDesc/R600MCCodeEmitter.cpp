@@ -85,9 +85,8 @@ enum FCInstr {
 };
 
 MCCodeEmitter *llvm::createR600MCCodeEmitter(const MCInstrInfo &MCII,
-                                             const MCRegisterInfo &MRI,
                                              MCContext &Ctx) {
-  return new R600MCCodeEmitter(MCII, MRI);
+  return new R600MCCodeEmitter(MCII, *Ctx.getRegisterInfo());
 }
 
 void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,

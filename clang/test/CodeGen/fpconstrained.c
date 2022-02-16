@@ -8,7 +8,7 @@
 
 float f0, f1, f2;
 
-void foo() {
+void foo(void) {
   // CHECK-LABEL: define {{.*}}void @foo()
 
   // MAYTRAP: llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")

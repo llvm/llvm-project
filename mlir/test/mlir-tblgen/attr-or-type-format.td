@@ -389,10 +389,13 @@ def TypeC : TestType<"TestE"> {
   let assemblyFormat = "`{` struct($v0, $v2) `}` `{` struct($v1, $v3) `}`";
 }
 
+// TYPE: ::mlir::Type TestFType::parse(::mlir::AsmParser &odsParser) {
+// TYPE:   _result_a.getValueOr(int())
+
 // TYPE: void TestFType::print(::mlir::AsmPrinter &odsPrinter) const {
 // TYPE if (getA()) {
-// TYPE   printer << ' ';
-// TYPE   printer.printStrippedAttrOrType(getA());
+// TYPE   odsPrinter << ' ';
+// TYPE   odsPrinter.printStrippedAttrOrType(getA());
 def TypeD : TestType<"TestF"> {
   let parameters = (ins OptionalParameter<"int">:$a);
   let mnemonic = "type_f";
@@ -406,7 +409,7 @@ def TypeD : TestType<"TestF"> {
 // TYPE:     if (odsParser.parseComma())
 // TYPE:       return {};
 
-// TYPE: if (getA())
+// TYPE: if ((getA()))
 // TYPE:   odsPrinter.printStrippedAttrOrType(getA());
 // TYPE: odsPrinter << ", ";
 // TYPE: odsPrinter.printStrippedAttrOrType(getB());
@@ -426,7 +429,7 @@ def TypeE : TestType<"TestG"> {
 // TYPE:     return {};
 
 // TYPE: void TestHType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if (getA()) {
+// TYPE:   if ((getA())) {
 // TYPE:     odsPrinter << "a = ";
 // TYPE:     odsPrinter.printStrippedAttrOrType(getA());
 // TYPE:     odsPrinter << ", ";
@@ -469,9 +472,9 @@ def TypeG : TestType<"TestI"> {
 // TYPE:     return {};
 
 // TYPE: void TestJType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if (getB()) {
+// TYPE:   if ((getB())) {
 // TYPE:     odsPrinter << "(";
-// TYPE:     if (getB())
+// TYPE:     if ((getB()))
 // TYPE:       odsPrinter.printStrippedAttrOrType(getB());
 // TYPE:     odsPrinter << ")";
 // TYPE:   } else {
@@ -483,4 +486,16 @@ def TypeH : TestType<"TestJ"> {
   let parameters = (ins "int":$a, OptionalParameter<"int">:$b);
   let mnemonic = "type_j";
   let assemblyFormat = "(`(` $b^ `)`) : (`x`)? $a";
+}
+
+// TYPE: ::mlir::Type TestKType::parse(::mlir::AsmParser &odsParser) {
+// TYPE:   _result_a.getValueOr(10)
+
+// TYPE: void TestKType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE:   if ((getA() && !(getA() == 10)))
+
+def TypeI : TestType<"TestK"> {
+  let parameters = (ins DefaultValuedParameter<"int", "10">:$a);
+  let mnemonic = "type_k";
+  let assemblyFormat = "$a";
 }

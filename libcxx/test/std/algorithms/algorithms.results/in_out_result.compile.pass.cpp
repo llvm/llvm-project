@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts, libcpp-has-no-incomplete-ranges
+// UNSUPPORTED: libcpp-no-concepts
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 //
 // clang-cl and cl currently don't support [[no_unique_address]]
 // XFAIL: msvc

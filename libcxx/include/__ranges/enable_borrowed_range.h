@@ -24,8 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
-namespace ranges
-{
+namespace ranges {
 
 // [range.range], ranges
 

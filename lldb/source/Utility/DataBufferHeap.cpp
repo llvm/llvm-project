@@ -47,7 +47,8 @@ uint64_t DataBufferHeap::GetByteSize() const { return m_data.size(); }
 // Sets the number of bytes that this object should be able to contain. This
 // can be used prior to copying data into the buffer.
 uint64_t DataBufferHeap::SetByteSize(uint64_t new_size) {
-  m_data.resize(new_size);
+  if (new_size < m_data.max_size())
+    m_data.resize(new_size);
   return m_data.size();
 }
 

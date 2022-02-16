@@ -155,6 +155,17 @@ public:
       : converter{converter}, context{&converter.getMLIRContext()} {}
 
   template <typename A>
+  void translateShape(A &shape, Fortran::evaluate::Shape &&shapeExpr) {
+    for (Fortran::evaluate::MaybeExtentExpr extentExpr : shapeExpr) {
+      fir::SequenceType::Extent extent = fir::SequenceType::getUnknownExtent();
+      if (std::optional<std::int64_t> constantExtent =
+              toInt64(std::move(extentExpr)))
+        extent = *constantExtent;
+      shape.push_back(extent);
+    }
+  }
+
+  template <typename A>
   std::optional<std::int64_t> toInt64(A &&expr) {
     return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
         converter.getFoldingContext(), std::move(expr)));
@@ -185,6 +196,15 @@ public:
       }
     } else {
       fir::emitFatalError(loc, "symbol must have a type");
+    }
+    if (ultimate.IsObjectArray()) {
+      auto shapeExpr = Fortran::evaluate::GetShapeHelper{
+          converter.getFoldingContext()}(ultimate);
+      if (!shapeExpr)
+        TODO(loc, "assumed rank symbol type lowering");
+      fir::SequenceType::Shape shape;
+      translateShape(shape, std::move(*shapeExpr));
+      ty = fir::SequenceType::get(shape, ty);
     }
 
     if (Fortran::semantics::IsPointer(symbol))

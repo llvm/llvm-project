@@ -56,6 +56,20 @@ public:
   /// Returns the name of the parameter.
   StringRef getName() const { return param.getName(); }
 
+  /// Generate the code to check whether the parameter should be printed.
+  MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
+    std::string self = getParameterAccessorName(getName()) + "()";
+    ctx.withSelf(self);
+    os << tgfmt("($_self", &ctx);
+    if (llvm::Optional<StringRef> defaultValue = getParam().getDefaultValue()) {
+      // Use the `comparator` field if it exists, else the equality operator.
+      std::string valueStr = tgfmt(*defaultValue, &ctx).str();
+      ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
+      os << " && !(" << tgfmt(getParam().getComparator(), &ctx) << ")";
+    }
+    return os << ")";
+  }
+
 private:
   bool shouldBeQualifiedFlag = false;
   AttrOrTypeParameter param;
@@ -231,6 +245,7 @@ private:
 void DefFormat::genParser(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_parser", "odsParser");
+  ctx.addSubst("_ctx", "odsParser.getContext()");
   if (isa<AttrDef>(def))
     ctx.addSubst("_type", "odsType");
   os.indent();
@@ -274,11 +289,16 @@ void DefFormat::genParser(MethodBody &os) {
                 def.getCppClassName());
   }
   for (const AttrOrTypeParameter &param : params) {
-    if (param.isOptional())
-      os << formatv(",\n    _result_{0}.getValueOr({1}())", param.getName(),
-                    param.getCppStorageType());
-    else
+    if (param.isOptional()) {
+      os << formatv(",\n    _result_{0}.getValueOr(", param.getName());
+      if (Optional<StringRef> defaultValue = param.getDefaultValue())
+        os << tgfmt(*defaultValue, &ctx);
+      else
+        os << param.getCppStorageType() << "()";
+      os << ")";
+    } else {
       os << formatv(",\n    *_result_{0}", param.getName());
+    }
   }
   os << ");";
 }
@@ -596,6 +616,7 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
 void DefFormat::genPrinter(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_printer", "odsPrinter");
+  ctx.addSubst("_ctx", "getContext()");
   os.indent();
 
   /// Generate printers.
@@ -642,9 +663,10 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
   const AttrOrTypeParameter &param = el->getParam();
   ctx.withSelf(getParameterAccessorName(param.getName()) + "()");
 
-  // Guard the printer on the presence of optional parameters.
+  // Guard the printer on the presence of optional parameters and that they
+  // aren't equal to their default values (if they have one).
   if (el->isOptional() && !skipGuard) {
-    os << tgfmt("if ($_self) {\n", &ctx);
+    el->genPrintGuard(ctx, os << "if (") << ") {\n";
     os.indent();
   }
 
@@ -665,23 +687,26 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
     os.unindent() << "}\n";
 }
 
+/// Generate code to guard printing on the presence of any optional parameters.
+template <typename ParameterRange>
+static void guardOnAny(FmtContext &ctx, MethodBody &os,
+                       ParameterRange &&params) {
+  os << "if (";
+  llvm::interleave(
+      params, os,
+      [&](ParameterElement *param) { param->genPrintGuard(ctx, os); }, " || ");
+  os << ") {\n";
+  os.indent();
+}
+
 void DefFormat::genCommaSeparatedPrinter(
     ArrayRef<ParameterElement *> params, FmtContext &ctx, MethodBody &os,
     function_ref<void(ParameterElement *)> extra) {
   // Emit a space if necessary, but only if the struct is present.
   if (shouldEmitSpace || !lastWasPunctuation) {
     bool allOptional = llvm::all_of(params, paramIsOptional);
-    if (allOptional) {
-      os << "if (";
-      llvm::interleave(
-          params, os,
-          [&](ParameterElement *param) {
-            os << getParameterAccessorName(param->getName()) << "()";
-          },
-          " || ");
-      os << ") {\n";
-      os.indent();
-    }
+    if (allOptional)
+      guardOnAny(ctx, os, params);
     os << tgfmt("$_printer << ' ';\n", &ctx);
     if (allOptional)
       os.unindent() << "}\n";
@@ -692,8 +717,7 @@ void DefFormat::genCommaSeparatedPrinter(
   os.indent() << "bool _firstPrinted = true;\n";
   for (ParameterElement *param : params) {
     if (param->isOptional()) {
-      os << tgfmt("if ($_self()) {\n",
-                  &ctx.withSelf(getParameterAccessorName(param->getName())));
+      param->genPrintGuard(ctx, os << "if (") << ") {\n";
       os.indent();
     }
     os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
@@ -724,26 +748,14 @@ void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
 
 void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
-  // Emit the check on whether the group should be printed.
-  const auto guardOn = [&](auto params) {
-    os << "if (";
-    llvm::interleave(
-        params, os,
-        [&](ParameterElement *el) {
-          os << getParameterAccessorName(el->getName()) << "()";
-        },
-        " || ");
-    os << ") {\n";
-    os.indent();
-  };
   FormatElement *anchor = el->getAnchor();
   if (auto *param = dyn_cast<ParameterElement>(anchor)) {
-    guardOn(llvm::makeArrayRef(param));
+    guardOnAny(ctx, os, llvm::makeArrayRef(param));
   } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
-    guardOn(params->getParams());
+    guardOnAny(ctx, os, params->getParams());
   } else {
-    auto *strct = dyn_cast<StructDirective>(anchor);
-    guardOn(strct->getParams());
+    auto *strct = cast<StructDirective>(anchor);
+    guardOnAny(ctx, os, strct->getParams());
   }
   // Generate the printer for the contained elements.
   {

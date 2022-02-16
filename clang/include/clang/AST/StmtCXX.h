@@ -327,7 +327,6 @@ class CoroutineBodyStmt final
     Allocate,      ///< Coroutine frame memory allocation.
     Deallocate,    ///< Coroutine frame memory deallocation.
     ReturnValue,   ///< Return value for thunk function: p.get_return_object().
-    ResultDecl,    ///< Declaration holding the result of get_return_object.
     ReturnStmt,    ///< Return statement for the thunk function.
     ReturnStmtOnAllocFailure, ///< Return statement if allocation failed.
     FirstParamMove ///< First offset for move construction of parameter copies.
@@ -354,7 +353,6 @@ public:
     Expr *Allocate = nullptr;
     Expr *Deallocate = nullptr;
     Expr *ReturnValue = nullptr;
-    Stmt *ResultDecl = nullptr;
     Stmt *ReturnStmt = nullptr;
     Stmt *ReturnStmtOnAllocFailure = nullptr;
     ArrayRef<Stmt *> ParamMoves;
@@ -409,7 +407,11 @@ public:
   Expr *getReturnValueInit() const {
     return cast<Expr>(getStoredStmts()[SubStmt::ReturnValue]);
   }
-  Stmt *getResultDecl() const { return getStoredStmts()[SubStmt::ResultDecl]; }
+  Expr *getReturnValue() const {
+    assert(getReturnStmt());
+    auto *RS = cast<clang::ReturnStmt>(getReturnStmt());
+    return RS->getRetValue();
+  }
   Stmt *getReturnStmt() const { return getStoredStmts()[SubStmt::ReturnStmt]; }
   Stmt *getReturnStmtOnAllocFailure() const {
     return getStoredStmts()[SubStmt::ReturnStmtOnAllocFailure];

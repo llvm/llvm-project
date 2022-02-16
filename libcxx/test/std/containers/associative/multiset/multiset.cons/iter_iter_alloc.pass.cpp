@@ -46,7 +46,7 @@ int main(int, char**)
     assert(m.value_comp() == C(5));
     assert(m.get_allocator() == A(7));
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     assert(*next(m.begin(), 0) == 1);
     assert(*next(m.begin(), 1) == 1);
     assert(*next(m.begin(), 2) == 1);
@@ -78,7 +78,7 @@ int main(int, char**)
     std::multiset<V, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), a);
 
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     assert(*next(m.begin(), 0) == 1);
     assert(*next(m.begin(), 1) == 1);
     assert(*next(m.begin(), 2) == 1);

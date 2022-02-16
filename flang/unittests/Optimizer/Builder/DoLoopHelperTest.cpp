@@ -44,9 +44,9 @@ TEST_F(DoLoopHelperTest, createLoopWithCountTest) {
       firBuilder.getUnknownLoc(), firBuilder.getIndexType(), 10);
   auto loop =
       helper.createLoop(c10, [&](fir::FirOpBuilder &, mlir::Value index) {});
-  checkConstantValue(loop.lowerBound(), 0);
-  EXPECT_TRUE(mlir::isa<arith::SubIOp>(loop.upperBound().getDefiningOp()));
-  auto subOp = dyn_cast<arith::SubIOp>(loop.upperBound().getDefiningOp());
+  checkConstantValue(loop.getLowerBound(), 0);
+  EXPECT_TRUE(mlir::isa<arith::SubIOp>(loop.getUpperBound().getDefiningOp()));
+  auto subOp = dyn_cast<arith::SubIOp>(loop.getUpperBound().getDefiningOp());
   EXPECT_EQ(c10, subOp.getLhs());
   checkConstantValue(subOp.getRhs(), 1);
   checkConstantValue(loop.getStep(), 1);

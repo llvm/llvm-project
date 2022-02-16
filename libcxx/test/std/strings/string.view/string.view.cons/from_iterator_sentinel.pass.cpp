@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <string_view>
 
@@ -17,7 +16,6 @@
 #include <string_view>
 #include <cassert>
 #include <iterator>
-#include <ranges>
 
 #include "make_string.h"
 #include "test_iterators.h"

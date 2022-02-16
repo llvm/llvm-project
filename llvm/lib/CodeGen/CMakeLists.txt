@@ -188,6 +188,8 @@ add_llvm_component_library(LLVMCodeGen
   RegUsageInfoPropagate.cpp
   ReplaceWithVeclib.cpp
   ResetMachineFunctionPass.cpp
+  RegisterBank.cpp
+  RegisterBankInfo.cpp
   SafeStack.cpp
   SafeStackLayout.cpp
   ScheduleDAG.cpp

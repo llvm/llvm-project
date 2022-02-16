@@ -44,6 +44,11 @@ attributes {
 // CHECK: !test.optional_group_struct<(a = 10, b = 5)>
 // CHECK: !test.spaces< 5
 // CHECK-NEXT: ()() 6>
+// CHECK: !test.ap_float<5.000000e+00>
+// CHECK: !test.ap_float<>
+// CHECK: !test.default_valued_type<(i64)>
+// CHECK: !test.default_valued_type<>
+
 func private @test_roundtrip_default_parsers_struct(
   !test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>
 ) -> (
@@ -70,5 +75,9 @@ func private @test_roundtrip_default_parsers_struct(
   !test.optional_group_struct<x>,
   !test.optional_group_struct<(b = 5)>,
   !test.optional_group_struct<(b = 5, a = 10)>,
-  !test.spaces<5 ()() 6>
+  !test.spaces<5 ()() 6>,
+  !test.ap_float<5.0>,
+  !test.ap_float<>,
+  !test.default_valued_type<(i64)>,
+  !test.default_valued_type<>
 )

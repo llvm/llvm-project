@@ -6,21 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 // <iterator>
+//
+// constexpr istream_iterator(default_sentinel_t); // since C++20
 
-// template <class C> auto begin(const C& c) -> decltype(c.begin());
-
-#include <vector>
+#include <iterator>
 #include <cassert>
 
-#include "test_macros.h"
+int main(int, char**) {
+  using T = std::istream_iterator<int>;
 
-int main(int, char**)
-{
-    int ia[] = {1, 2, 3};
-    const std::vector<int> v(ia, ia + sizeof(ia)/sizeof(ia[0]));
-    std::vector<int>::const_iterator i = begin(v);
-    assert(*i == 1);
+  {
+    T it(std::default_sentinel);
+    assert(it == T());
+  }
+
+  {
+    T it = std::default_sentinel;
+    assert(it == T());
+  }
+
+  {
+    constexpr T it(std::default_sentinel);
+    (void)it;
+  }
 
   return 0;
 }

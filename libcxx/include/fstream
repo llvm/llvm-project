@@ -179,6 +179,7 @@ typedef basic_fstream<wchar_t> wfstream;
 
 */
 
+#include <__algorithm/max.h>
 #include <__availability>
 #include <__config>
 #include <__debug>

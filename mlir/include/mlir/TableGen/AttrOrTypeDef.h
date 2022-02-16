@@ -52,6 +52,9 @@ public:
   explicit AttrOrTypeParameter(const llvm::DagInit *def, unsigned index)
       : def(def), index(index) {}
 
+  /// Returns true if the parameter is anonymous (has no name).
+  bool isAnonymous() const;
+
   /// Get the parameter name.
   StringRef getName() const;
 
@@ -59,7 +62,7 @@ public:
   Optional<StringRef> getAllocator() const;
 
   /// If specified, get the custom comparator code for this parameter.
-  Optional<StringRef> getComparator() const;
+  StringRef getComparator() const;
 
   /// Get the C++ type of this parameter.
   StringRef getCppType() const;
@@ -84,6 +87,9 @@ public:
 
   /// Returns true if the parameter is optional.
   bool isOptional() const;
+
+  /// Get the default value of the parameter if it has one.
+  Optional<StringRef> getDefaultValue() const;
 
   /// Return the underlying def of this parameter.
   llvm::Init *getDef() const;

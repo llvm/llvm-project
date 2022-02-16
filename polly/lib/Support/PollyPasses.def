@@ -9,14 +9,14 @@ FUNCTION_ANALYSIS("polly-function-scops", ScopInfoAnalysis())
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("polly-prepare", CodePreparationPass())
-FUNCTION_PASS("print<polly-detect>", ScopAnalysisPrinterPass(errs()))
-FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(errs()))
+FUNCTION_PASS("print<polly-detect>", ScopAnalysisPrinterPass(llvm::errs()))
+FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(llvm::errs()))
 #undef FUNCTION_PASS
 
 #ifndef SCOP_ANALYSIS
 #define SCOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
-SCOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+SCOP_ANALYSIS("pass-instrumentation", llvm::PassInstrumentationAnalysis(PIC))
 SCOP_ANALYSIS("polly-ast", IslAstAnalysis())
 SCOP_ANALYSIS("polly-dependences", DependenceAnalysis())
 #undef SCOP_ANALYSIS
@@ -26,17 +26,17 @@ SCOP_ANALYSIS("polly-dependences", DependenceAnalysis())
 #endif
 SCOP_PASS("polly-export-jscop", JSONExportPass())
 SCOP_PASS("polly-import-jscop", JSONImportPass())
-SCOP_PASS("print<polly-ast>", IslAstPrinterPass(outs()))
-SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(outs()))
+SCOP_PASS("print<polly-ast>", IslAstPrinterPass(llvm::outs()))
+SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(llvm::outs()))
 SCOP_PASS("polly-codegen", CodeGenerationPass())
 SCOP_PASS("polly-simplify", SimplifyPass())
-SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(outs()))
+SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(llvm::outs()))
 SCOP_PASS("polly-optree", ForwardOpTreePass())
-SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(outs()))
+SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(llvm::outs()))
 SCOP_PASS("polly-delicm", DeLICMPass())
-SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(outs()))
+SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(llvm::outs()))
 SCOP_PASS("polly-prune-unprofitable", PruneUnprofitablePass())
 SCOP_PASS("polly-opt-isl", IslScheduleOptimizerPass())
-SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(outs()))
+SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(llvm::outs()))
 SCOP_PASS("polly-dce", DeadCodeElimPass())
 #undef SCOP_PASS

@@ -24,7 +24,7 @@ int main(int, char**)
         std::list<int> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin()));
         assert(l1.size() == 3);
-        assert(distance(l1.begin(), l1.end()) == 3);
+        assert(std::distance(l1.begin(), l1.end()) == 3);
         std::list<int>::const_iterator i = l1.begin();
         assert(*i == 1);
         ++i;
@@ -36,7 +36,7 @@ int main(int, char**)
         std::list<int> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin(), 2));
         assert(l1.size() == 3);
-        assert(distance(l1.begin(), l1.end()) == 3);
+        assert(std::distance(l1.begin(), l1.end()) == 3);
         std::list<int>::const_iterator i = l1.begin();
         assert(*i == 2);
         ++i;
@@ -48,7 +48,7 @@ int main(int, char**)
         std::list<int> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin(), 3));
         assert(l1.size() == 3);
-        assert(distance(l1.begin(), l1.end()) == 3);
+        assert(std::distance(l1.begin(), l1.end()) == 3);
         std::list<int>::const_iterator i = l1.begin();
         assert(*i == 2);
         ++i;
@@ -61,7 +61,7 @@ int main(int, char**)
         std::list<int> l2(a2, a2+3);
         l1.splice(l1.begin(), l2, next(l2.begin()), l2.end());
         assert(l1.size() == 5);
-        assert(distance(l1.begin(), l1.end()) == 5);
+        assert(std::distance(l1.begin(), l1.end()) == 5);
         std::list<int>::const_iterator i = l1.begin();
         assert(*i == 5);
         ++i;
@@ -81,7 +81,7 @@ int main(int, char**)
         std::list<int> l2(a2, a2+3);
         l1.splice(next(l1.begin()), l2, next(l2.begin()), l2.end());
         assert(l1.size() == 5);
-        assert(distance(l1.begin(), l1.end()) == 5);
+        assert(std::distance(l1.begin(), l1.end()) == 5);
         std::list<int>::const_iterator i = l1.begin();
         assert(*i == 1);
         ++i;
@@ -101,7 +101,7 @@ int main(int, char**)
         std::list<int> l2(a2, a2+3);
         l1.splice(l1.end(), l2, next(l2.begin()), l2.end());
         assert(l1.size() == 5);
-        assert(distance(l1.begin(), l1.end()) == 5);
+        assert(std::distance(l1.begin(), l1.end()) == 5);
         std::list<int>::const_iterator i = l1.begin();
         assert(*i == 1);
         ++i;
@@ -121,7 +121,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin()));
         assert(l1.size() == 3);
-        assert(distance(l1.begin(), l1.end()) == 3);
+        assert(std::distance(l1.begin(), l1.end()) == 3);
         std::list<int, min_allocator<int>>::const_iterator i = l1.begin();
         assert(*i == 1);
         ++i;
@@ -133,7 +133,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin(), 2));
         assert(l1.size() == 3);
-        assert(distance(l1.begin(), l1.end()) == 3);
+        assert(std::distance(l1.begin(), l1.end()) == 3);
         std::list<int, min_allocator<int>>::const_iterator i = l1.begin();
         assert(*i == 2);
         ++i;
@@ -145,7 +145,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin(), 3));
         assert(l1.size() == 3);
-        assert(distance(l1.begin(), l1.end()) == 3);
+        assert(std::distance(l1.begin(), l1.end()) == 3);
         std::list<int, min_allocator<int>>::const_iterator i = l1.begin();
         assert(*i == 2);
         ++i;
@@ -158,7 +158,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> l2(a2, a2+3);
         l1.splice(l1.begin(), l2, next(l2.begin()), l2.end());
         assert(l1.size() == 5);
-        assert(distance(l1.begin(), l1.end()) == 5);
+        assert(std::distance(l1.begin(), l1.end()) == 5);
         std::list<int, min_allocator<int>>::const_iterator i = l1.begin();
         assert(*i == 5);
         ++i;
@@ -178,7 +178,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> l2(a2, a2+3);
         l1.splice(next(l1.begin()), l2, next(l2.begin()), l2.end());
         assert(l1.size() == 5);
-        assert(distance(l1.begin(), l1.end()) == 5);
+        assert(std::distance(l1.begin(), l1.end()) == 5);
         std::list<int, min_allocator<int>>::const_iterator i = l1.begin();
         assert(*i == 1);
         ++i;
@@ -198,7 +198,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> l2(a2, a2+3);
         l1.splice(l1.end(), l2, next(l2.begin()), l2.end());
         assert(l1.size() == 5);
-        assert(distance(l1.begin(), l1.end()) == 5);
+        assert(std::distance(l1.begin(), l1.end()) == 5);
         std::list<int, min_allocator<int>>::const_iterator i = l1.begin();
         assert(*i == 1);
         ++i;

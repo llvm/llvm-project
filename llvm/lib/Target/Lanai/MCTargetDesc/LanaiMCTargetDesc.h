@@ -27,7 +27,6 @@ class MCSubtargetInfo;
 class Target;
 
 MCCodeEmitter *createLanaiMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
 MCAsmBackend *createLanaiAsmBackend(const Target &T, const MCSubtargetInfo &STI,

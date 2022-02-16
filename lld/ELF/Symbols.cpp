@@ -33,10 +33,6 @@ std::string lld::toString(const elf::Symbol &sym) {
   return ret;
 }
 
-std::string lld::toELFString(const Archive::Symbol &b) {
-  return demangle(b.getName(), config->demangle);
-}
-
 Defined *ElfSym::bss;
 Defined *ElfSym::etext1;
 Defined *ElfSym::etext2;
@@ -129,7 +125,6 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   case Symbol::SharedKind:
   case Symbol::UndefinedKind:
     return 0;
-  case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
     llvm_unreachable("lazy symbol reached writer");
   case Symbol::CommonKind:
@@ -246,22 +241,10 @@ void Symbol::parseSymbolVersion() {
 }
 
 void Symbol::extract() const {
-  if (auto *sym = dyn_cast<LazyArchive>(this)) {
-    cast<ArchiveFile>(sym->file)->extract(sym->sym);
-  } else if (file->lazy) {
+  if (file->lazy) {
     file->lazy = false;
     parseFile(file);
   }
-}
-
-MemoryBufferRef LazyArchive::getMemberBuffer() {
-  Archive::Child c =
-      CHECK(sym.getMember(),
-            "could not get the member for symbol " + toELFString(sym));
-
-  return CHECK(c.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   toELFString(sym));
 }
 
 uint8_t Symbol::computeBinding() const {
@@ -427,9 +410,6 @@ void Symbol::resolve(const Symbol &other) {
     break;
   case Symbol::DefinedKind:
     resolveDefined(cast<Defined>(other));
-    break;
-  case Symbol::LazyArchiveKind:
-    resolveLazy(cast<LazyArchive>(other));
     break;
   case Symbol::LazyObjectKind:
     resolveLazy(cast<LazyObject>(other));
@@ -605,15 +585,14 @@ int Symbol::compare(const Symbol *other) const {
   return 0;
 }
 
-static void reportDuplicate(Symbol *sym, InputFile *newFile,
+static void reportDuplicate(const Symbol &sym, InputFile *newFile,
                             InputSectionBase *errSec, uint64_t errOffset) {
   if (config->allowMultipleDefinition)
     return;
-
-  Defined *d = cast<Defined>(sym);
+  const Defined *d = cast<Defined>(&sym);
   if (!d->section || !errSec) {
-    error("duplicate symbol: " + toString(*sym) + "\n>>> defined in " +
-          toString(sym->file) + "\n>>> defined in " + toString(newFile));
+    error("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
+          toString(sym.file) + "\n>>> defined in " + toString(newFile));
     return;
   }
 
@@ -625,12 +604,12 @@ static void reportDuplicate(Symbol *sym, InputFile *newFile,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *sec1 = cast<InputSectionBase>(d->section);
-  std::string src1 = sec1->getSrcMsg(*sym, d->value);
+  std::string src1 = sec1->getSrcMsg(sym, d->value);
   std::string obj1 = sec1->getObjMsg(d->value);
-  std::string src2 = errSec->getSrcMsg(*sym, errOffset);
+  std::string src2 = errSec->getSrcMsg(sym, errOffset);
   std::string obj2 = errSec->getObjMsg(errOffset);
 
-  std::string msg = "duplicate symbol: " + toString(*sym) + "\n>>> defined at ";
+  std::string msg = "duplicate symbol: " + toString(sym) + "\n>>> defined at ";
   if (!src1.empty())
     msg += src1 + "\n>>>            ";
   msg += obj1 + "\n>>> defined at ";
@@ -675,7 +654,7 @@ void Symbol::resolveDefined(const Defined &other) {
   if (cmp > 0)
     replace(other);
   else if (cmp == 0)
-    reportDuplicate(this, other.file,
+    reportDuplicate(*this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);
 }
@@ -691,14 +670,7 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
   // For common objects, we want to look for global or weak definitions that
   // should be extracted as the canonical definition instead.
   if (isCommon() && elf::config->fortranCommon) {
-    if (auto *laSym = dyn_cast<LazyArchive>(&other)) {
-      ArchiveFile *archive = cast<ArchiveFile>(laSym->file);
-      const Archive::Symbol &archiveSym = laSym->sym;
-      if (archive->shouldExtractForCommon(archiveSym)) {
-        replaceCommon(*this, other);
-        return;
-      }
-    } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
+    if (auto *loSym = dyn_cast<LazyObject>(&other)) {
       if (loSym->file->shouldExtractForCommon(getName())) {
         replaceCommon(*this, other);
         return;

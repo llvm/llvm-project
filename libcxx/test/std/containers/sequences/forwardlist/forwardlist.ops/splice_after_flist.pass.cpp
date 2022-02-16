@@ -36,7 +36,7 @@ testd(const C& c, int p, int l)
         assert(*i == t2[n2]);
     for (; n1 < size_t1; ++n1, ++i)
         assert(*i == t1[n1]);
-    assert(distance(c.begin(), c.end()) == size_t1 + l);
+    assert(std::distance(c.begin(), c.end()) == size_t1 + l);
 }
 
 int main(int, char**)

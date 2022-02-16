@@ -220,7 +220,9 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     uint32_t Code = MaybeCode.get();
     Expected<uint32_t> MaybeNumElts = ReadVBR(6);
     if (!MaybeNumElts)
-      return MaybeNumElts.takeError();
+      return error(
+          ("Failed to read size: " + toString(MaybeNumElts.takeError()))
+              .c_str());
     uint32_t NumElts = MaybeNumElts.get();
     if (!isSizePlausible(NumElts))
       return error("Size is not plausible");
@@ -275,7 +277,9 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
       // Array case.  Read the number of elements as a vbr6.
       Expected<uint32_t> MaybeNumElts = ReadVBR(6);
       if (!MaybeNumElts)
-        return MaybeNumElts.takeError();
+        return error(
+            ("Failed to read size: " + toString(MaybeNumElts.takeError()))
+                .c_str());
       uint32_t NumElts = MaybeNumElts.get();
       if (!isSizePlausible(NumElts))
         return error("Size is not plausible");

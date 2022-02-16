@@ -1,6 +1,11 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -debug-info-kind=limited -gsimple-template-names=mangled %s -o - -w -std=c++17 | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -debug-info-kind=limited -gsimple-template-names=simple %s -o - -w -std=c++17 | FileCheck --check-prefix=SIMPLE --implicit-check-not=_STN %s
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -debug-info-kind=limited %s -o - -w -std=c++17 | FileCheck --check-prefix=FULL --implicit-check-not=_STN %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=limited -gsimple-template-names=mangled \
+// RUN:   | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=limited -gsimple-template-names=simple \
+// RUN:   | FileCheck %s --implicit-check-not=_STN --check-prefix=SIMPLE
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=limited \
+// RUN:   | FileCheck %s --implicit-check-not=_STN --check-prefix=FULL
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=line-tables-only -gsimple-template-names=mangled -fdebug-info-for-profiling \
+// RUN:   | FileCheck %s --implicit-check-not=_STN --check-prefix=FULL
 
 template <typename... T>
 void f1() {}
@@ -105,4 +110,10 @@ void f() {
 
   f3<t1>();
   // CHECK: !DISubprogram(name: "_STNf3|<t1>",
+  
+  f1<_BitInt(3)>();
+  // CHECK: !DISubprogram(name: "f1<_BitInt(3)>",
+
+  f1<const unsigned _BitInt(5)>();
+  // CHECK: !DISubprogram(name: "f1<const unsigned _BitInt(5)>",
 }

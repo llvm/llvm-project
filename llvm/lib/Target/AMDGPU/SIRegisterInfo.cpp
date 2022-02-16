@@ -392,13 +392,11 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts()
-        ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
-        : CSR_AMDGPU_HighRegs_SaveList;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
+                               : CSR_AMDGPU_HighRegs_SaveList;
   case CallingConv::AMDGPU_Gfx:
-    return MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts()
-               ? CSR_AMDGPU_SI_Gfx_With_AGPRs_SaveList
-               : CSR_AMDGPU_SI_Gfx_SaveList;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_With_AGPRs_SaveList
+                               : CSR_AMDGPU_SI_Gfx_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
     static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
@@ -418,13 +416,11 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()
-        ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
-        : CSR_AMDGPU_HighRegs_RegMask;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
+                               : CSR_AMDGPU_HighRegs_RegMask;
   case CallingConv::AMDGPU_Gfx:
-    return MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()
-               ? CSR_AMDGPU_SI_Gfx_With_AGPRs_RegMask
-               : CSR_AMDGPU_SI_Gfx_RegMask;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_With_AGPRs_RegMask
+                               : CSR_AMDGPU_SI_Gfx_RegMask;
   default:
     return nullptr;
   }
@@ -441,8 +437,7 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   // equivalent AV class. If used one, the verifier will crash after
   // RegBankSelect in the GISel flow. The aligned regclasses are not fully given
   // until Instruction selection.
-  if (MF.getSubtarget<GCNSubtarget>().hasMAIInsts() &&
-      (isVGPRClass(RC) || isAGPRClass(RC))) {
+  if (ST.hasMAIInsts() && (isVGPRClass(RC) || isAGPRClass(RC))) {
     if (RC == &AMDGPU::VGPR_32RegClass || RC == &AMDGPU::AGPR_32RegClass)
       return &AMDGPU::AV_32RegClass;
     if (RC == &AMDGPU::VReg_64RegClass || RC == &AMDGPU::AReg_64RegClass)
@@ -491,8 +486,7 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  const SIFrameLowering *TFI =
-      MF.getSubtarget<GCNSubtarget>().getFrameLowering();
+  const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   // During ISel lowering we always reserve the stack pointer in entry
   // functions, but never actually want to reference it when accessing our own

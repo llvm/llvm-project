@@ -6,7 +6,7 @@
 extern int x;
 
 // CHECK-LABEL: define{{.*}} i32 @f
-int f() {
+int f(void) {
   int *p = &x;
 // CHECK: ret i32 %{{.*}}, !dbg [[DI:![0-9]*]]
 // CHECK: [[DI]] = !DILocation(line: [[@LINE+1]]

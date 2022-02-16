@@ -4,6 +4,7 @@ add_loader_object(
     start.cpp
   DEPENDS
     libc.config.linux.app_h
+    libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.string.memcpy

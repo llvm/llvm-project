@@ -83,7 +83,7 @@ _bar:
 #--- test.s
 .globl _main
 _main:
-  movq __CFBigNumGetInt128@GOTPCREL(%rip), %rax        
+  movq __CFBigNumGetInt128@GOTPCREL(%rip), %rax
   ret
 
 #--- weak-reexport.s

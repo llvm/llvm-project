@@ -49,7 +49,7 @@ void
 test(C& c1, const C& c2)
 {
     c1.assign(c2.begin(), c2.end());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     assert(c1 == c2);
 }
 
@@ -69,7 +69,7 @@ testI(C& c1, const C& c2)
     typedef typename C::const_iterator CI;
     typedef cpp17_input_iterator<CI> ICI;
     c1.assign(ICI(c2.begin()), ICI(c2.end()));
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     assert(c1 == c2);
 }
 

@@ -26,6 +26,8 @@ namespace Fortran::semantics {
 
 static void CheckImplicitInterfaceArg(
     evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
+  auto restorer{
+      messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
     messages.Say(*kw,
         "Keyword '%s=' may not appear in a reference to a procedure with an implicit interface"_err_en_US,
@@ -525,6 +527,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     const characteristics::DummyProcedure &dummy, const std::string &dummyName,
     evaluate::FoldingContext &context) {
   parser::ContextualMessages &messages{context.messages()};
+  auto restorer{
+      messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   const characteristics::Procedure &interface { dummy.procedure.value() };
   if (const auto *expr{arg.UnwrapExpr()}) {
     bool dummyIsPointer{
@@ -658,6 +662,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
   if (!dummy.name.empty()) {
     dummyName += " '"s + parser::ToLowerCaseLetters(dummy.name) + "='";
   }
+  auto restorer{
+      messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   std::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &object) {

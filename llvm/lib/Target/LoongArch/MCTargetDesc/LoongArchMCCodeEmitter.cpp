@@ -88,7 +88,6 @@ void LoongArchMCCodeEmitter::encodeInstruction(
 }
 
 MCCodeEmitter *llvm::createLoongArchMCCodeEmitter(const MCInstrInfo &MCII,
-                                                  const MCRegisterInfo &MRI,
                                                   MCContext &Ctx) {
   return new LoongArchMCCodeEmitter(Ctx, MCII);
 }

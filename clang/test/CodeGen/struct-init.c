@@ -25,7 +25,7 @@ typedef __attribute__(( __vector_size__(8) )) unsigned int __neon_uint32x2_t;
 // rdar://8183908
 typedef unsigned int uint32_t;
 typedef __attribute__((neon_vector_type(2)))  uint32_t uint32x2_t;
-void foo() {
+void foo(void) {
     const uint32x2_t signBit = { (uint2) 0x80000000 };
 }
 

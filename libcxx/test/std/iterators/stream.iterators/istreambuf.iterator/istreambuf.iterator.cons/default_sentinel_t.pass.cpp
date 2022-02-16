@@ -6,22 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 // <iterator>
 
-// template <class T, size_t N> T* begin(T (&array)[N]);
+// constexpr istreambuf_iterator(default_sentinel_t) noexcept; // since C++20
 
 #include <iterator>
+#include <sstream>
 #include <cassert>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    int ia[] = {1, 2, 3};
-    int* i = std::begin(ia);
-    assert(*i == 1);
-    *i = 2;
-    assert(ia[0] == 2);
+int main(int, char**) {
+  using T = std::istreambuf_iterator<char>;
+
+  {
+    T it(std::default_sentinel);
+    assert(it == T());
+  }
+
+  {
+    T it = std::default_sentinel;
+    assert(it == T());
+  }
+
+  {
+    constexpr T it(std::default_sentinel);
+    (void)it;
+  }
+
+  ASSERT_NOEXCEPT(T(std::default_sentinel));
 
   return 0;
 }

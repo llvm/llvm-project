@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: c++03
+// UNSUPPORTED: c++03
 
 // <iterator>
 // template <class C> constexpr auto begin(C& c) -> decltype(c.begin());
@@ -29,169 +29,253 @@
 //
 //  All of these are constexpr in C++17
 
+#include <array>
+#include <cassert>
+#include <initializer_list>
+#include <iterator>
+#include <list>
+#include <vector>
+
 #include "test_macros.h"
 
-#include <iterator>
-#include <cassert>
-#include <vector>
-#include <array>
-#include <list>
-#include <initializer_list>
+// Throughout this test, we consistently compare against c.begin() instead of c.cbegin()
+// because some STL types (e.g. initializer_list) don't syntactically support il.cbegin().
+// Note that std::cbegin(x) effectively calls std::as_const(x).begin(), not x.cbegin();
+// see the ContainerHijacker test case below.
+
+TEST_CONSTEXPR_CXX14 bool test_arrays_and_initializer_lists_forward()
+{
+  {
+    int a[] = {1, 2, 3};
+    ASSERT_SAME_TYPE(decltype(std::begin(a)), int*);
+    ASSERT_SAME_TYPE(decltype(std::end(a)), int*);
+    assert(std::begin(a) == a);
+    assert(std::end(a) == a + 3);
+#if TEST_STD_VER > 11
+    ASSERT_SAME_TYPE(decltype(std::cbegin(a)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::cend(a)), const int*);
+    assert(std::cbegin(a) == a);
+    assert(std::cend(a) == a + 3);
+#endif
+
+    const auto& ca = a;
+    ASSERT_SAME_TYPE(decltype(std::begin(ca)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::end(ca)), const int*);
+    assert(std::begin(ca) == a);
+    assert(std::end(ca) == a + 3);
+#if TEST_STD_VER > 11
+    ASSERT_SAME_TYPE(decltype(std::cbegin(ca)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::cend(ca)), const int*);
+    assert(std::cbegin(ca) == a);
+    assert(std::cend(ca) == a + 3);
+#endif
+  }
+  {
+    std::initializer_list<int> il = {1, 2, 3};
+    ASSERT_SAME_TYPE(decltype(std::begin(il)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::end(il)), const int*);
+    assert(std::begin(il) == il.begin());
+    assert(std::end(il) == il.end());
+#if TEST_STD_VER > 11
+    ASSERT_SAME_TYPE(decltype(std::cbegin(il)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::cend(il)), const int*);
+    assert(std::cbegin(il) == il.begin());
+    assert(std::cend(il) == il.end());
+#endif
+
+    const auto& cil = il;
+    ASSERT_SAME_TYPE(decltype(std::begin(cil)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::end(cil)), const int*);
+    assert(std::begin(cil) == il.begin());
+    assert(std::end(cil) == il.end());
+#if TEST_STD_VER > 11
+    ASSERT_SAME_TYPE(decltype(std::cbegin(cil)), const int*);
+    ASSERT_SAME_TYPE(decltype(std::cend(cil)), const int*);
+    assert(std::cbegin(cil) == il.begin());
+    assert(std::cend(cil) == il.end());
+#endif
+  }
+  return true;
+}
+
+#if TEST_STD_VER > 11
+TEST_CONSTEXPR_CXX17 bool test_arrays_and_initializer_lists_backward()
+{
+  {
+    int a[] = {1, 2, 3};
+    ASSERT_SAME_TYPE(decltype(std::rbegin(a)), std::reverse_iterator<int*>);
+    ASSERT_SAME_TYPE(decltype(std::rend(a)), std::reverse_iterator<int*>);
+    assert(std::rbegin(a).base() == a + 3);
+    assert(std::rend(a).base() == a);
+    ASSERT_SAME_TYPE(decltype(std::crbegin(a)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::crend(a)), std::reverse_iterator<const int*>);
+    assert(std::crbegin(a).base() == a + 3);
+    assert(std::crend(a).base() == a);
+
+    const auto& ca = a;
+    ASSERT_SAME_TYPE(decltype(std::rbegin(ca)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::rend(ca)), std::reverse_iterator<const int*>);
+    assert(std::rbegin(ca).base() == a + 3);
+    assert(std::rend(ca).base() == a);
+    ASSERT_SAME_TYPE(decltype(std::crbegin(ca)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::crend(ca)), std::reverse_iterator<const int*>);
+    assert(std::crbegin(ca).base() == a + 3);
+    assert(std::crend(ca).base() == a);
+  }
+  {
+    std::initializer_list<int> il = {1, 2, 3};
+    ASSERT_SAME_TYPE(decltype(std::rbegin(il)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::rend(il)), std::reverse_iterator<const int*>);
+    assert(std::rbegin(il).base() == il.end());
+    assert(std::rend(il).base() == il.begin());
+    ASSERT_SAME_TYPE(decltype(std::crbegin(il)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::crend(il)), std::reverse_iterator<const int*>);
+    assert(std::crbegin(il).base() == il.end());
+    assert(std::crend(il).base() == il.begin());
+
+    const auto& cil = il;
+    ASSERT_SAME_TYPE(decltype(std::rbegin(cil)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::rend(cil)), std::reverse_iterator<const int*>);
+    assert(std::rbegin(cil).base() == il.end());
+    assert(std::rend(cil).base() == il.begin());
+    ASSERT_SAME_TYPE(decltype(std::crbegin(cil)), std::reverse_iterator<const int*>);
+    ASSERT_SAME_TYPE(decltype(std::crend(cil)), std::reverse_iterator<const int*>);
+    assert(std::crbegin(cil).base() == il.end());
+    assert(std::crend(cil).base() == il.begin());
+  }
+  return true;
+}
+#endif
 
 template<typename C>
-void test_const_container( const C & c, typename C::value_type val ) {
-    assert ( std::begin(c)   == c.begin());
-    assert (*std::begin(c)   ==  val );
-    assert ( std::begin(c)   != c.end());
-    assert ( std::end(c)     == c.end());
+TEST_CONSTEXPR_CXX14 bool test_container() {
+  C c = {1, 2, 3};
+  ASSERT_SAME_TYPE(decltype(std::begin(c)), typename C::iterator);
+  ASSERT_SAME_TYPE(decltype(std::end(c)), typename C::iterator);
+  assert(std::begin(c) == c.begin());
+  assert(std::end(c) == c.end());
 #if TEST_STD_VER > 11
-    assert ( std::cbegin(c)  == c.cbegin());
-    assert ( std::cbegin(c)  != c.cend());
-    assert ( std::cend(c)    == c.cend());
-    assert ( std::rbegin(c)  == c.rbegin());
-    assert ( std::rbegin(c)  != c.rend());
-    assert ( std::rend(c)    == c.rend());
-    assert ( std::crbegin(c) == c.crbegin());
-    assert ( std::crbegin(c) != c.crend());
-    assert ( std::crend(c)   == c.crend());
+  ASSERT_SAME_TYPE(decltype(std::cbegin(c)), typename C::const_iterator);
+  ASSERT_SAME_TYPE(decltype(std::cend(c)), typename C::const_iterator);
+  assert(std::cbegin(c) == c.begin());
+  assert(std::cend(c) == c.end());
+  ASSERT_SAME_TYPE(decltype(std::rbegin(c)), typename C::reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(std::rend(c)), typename C::reverse_iterator);
+  assert(std::rbegin(c).base() == c.end());
+  assert(std::rend(c).base() == c.begin());
+  ASSERT_SAME_TYPE(decltype(std::crbegin(c)), typename C::const_reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(std::crend(c)), typename C::const_reverse_iterator);
+  assert(std::crbegin(c).base() == c.end());
+  assert(std::crend(c).base() == c.begin());
 #endif
-    }
 
-template<typename T>
-void test_const_container( const std::initializer_list<T> & c, T val ) {
-    assert ( std::begin(c)   == c.begin());
-    assert (*std::begin(c)   ==  val );
-    assert ( std::begin(c)   != c.end());
-    assert ( std::end(c)     == c.end());
+  const C& cc = c;
+  ASSERT_SAME_TYPE(decltype(std::begin(cc)), typename C::const_iterator);
+  ASSERT_SAME_TYPE(decltype(std::end(cc)), typename C::const_iterator);
+  assert(std::begin(cc) == c.begin());
+  assert(std::end(cc) == c.end());
 #if TEST_STD_VER > 11
-//  initializer_list doesn't have cbegin/cend/rbegin/rend
-//  but std::cbegin(),etc work (b/c they're general fn templates)
-//     assert ( std::cbegin(c)  == c.cbegin());
-//     assert ( std::cbegin(c)  != c.cend());
-//     assert ( std::cend(c)    == c.cend());
-//     assert ( std::rbegin(c)  == c.rbegin());
-//     assert ( std::rbegin(c)  != c.rend());
-//     assert ( std::rend(c)    == c.rend());
-//     assert ( std::crbegin(c) == c.crbegin());
-//     assert ( std::crbegin(c) != c.crend());
-//     assert ( std::crend(c)   == c.crend());
+  ASSERT_SAME_TYPE(decltype(std::cbegin(cc)), typename C::const_iterator);
+  ASSERT_SAME_TYPE(decltype(std::cend(cc)), typename C::const_iterator);
+  assert(std::cbegin(cc) == c.begin());
+  assert(std::cend(cc) == c.end());
+  ASSERT_SAME_TYPE(decltype(std::rbegin(cc)), typename C::const_reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(std::rend(cc)), typename C::const_reverse_iterator);
+  assert(std::rbegin(cc).base() == c.end());
+  assert(std::rend(cc).base() == c.begin());
+  ASSERT_SAME_TYPE(decltype(std::crbegin(cc)), typename C::const_reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(std::crend(cc)), typename C::const_reverse_iterator);
+  assert(std::crbegin(cc).base() == c.end());
+  assert(std::crend(cc).base() == c.begin());
 #endif
-    }
 
-template<typename C>
-void test_container( C & c, typename C::value_type val ) {
-    assert ( std::begin(c)   == c.begin());
-    assert (*std::begin(c)   ==  val );
-    assert ( std::begin(c)   != c.end());
-    assert ( std::end(c)     == c.end());
-#if TEST_STD_VER > 11
-    assert ( std::cbegin(c)  == c.cbegin());
-    assert ( std::cbegin(c)  != c.cend());
-    assert ( std::cend(c)    == c.cend());
-    assert ( std::rbegin(c)  == c.rbegin());
-    assert ( std::rbegin(c)  != c.rend());
-    assert ( std::rend(c)    == c.rend());
-    assert ( std::crbegin(c) == c.crbegin());
-    assert ( std::crbegin(c) != c.crend());
-    assert ( std::crend(c)   == c.crend());
-#endif
-    }
+  return true;
+}
 
-template<typename T>
-void test_container( std::initializer_list<T> & c, T val ) {
-    assert ( std::begin(c)   == c.begin());
-    assert (*std::begin(c)   ==  val );
-    assert ( std::begin(c)   != c.end());
-    assert ( std::end(c)     == c.end());
-#if TEST_STD_VER > 11
-//  initializer_list doesn't have cbegin/cend/rbegin/rend
-//     assert ( std::cbegin(c)  == c.cbegin());
-//     assert ( std::cbegin(c)  != c.cend());
-//     assert ( std::cend(c)    == c.cend());
-//     assert ( std::rbegin(c)  == c.rbegin());
-//     assert ( std::rbegin(c)  != c.rend());
-//     assert ( std::rend(c)    == c.rend());
-//     assert ( std::crbegin(c) == c.crbegin());
-//     assert ( std::crbegin(c) != c.crend());
-//     assert ( std::crend(c)   == c.crend());
-#endif
-    }
+struct ArrayHijacker {
+  friend constexpr int begin(ArrayHijacker(&)[3]) { return 42; }
+  friend constexpr int end(ArrayHijacker(&)[3]) { return 42; }
+  friend constexpr int begin(const ArrayHijacker(&)[3]) { return 42; }
+  friend constexpr int end(const ArrayHijacker(&)[3]) { return 42; }
+};
 
-template<typename T, size_t Sz>
-void test_const_array( const T (&array)[Sz] ) {
-    assert ( std::begin(array)  == array );
-    assert (*std::begin(array)  ==  array[0] );
-    assert ( std::begin(array)  != std::end(array));
-    assert ( std::end(array)    == array + Sz);
+struct ContainerHijacker {
+  int *a_;
+  constexpr int *begin() const { return a_; }
+  constexpr int *end() const { return a_ + 3; }
+  constexpr int *rbegin() const { return a_; }
+  constexpr int *rend() const { return a_ + 3; }
+  friend constexpr int begin(ContainerHijacker&) { return 42; }
+  friend constexpr int end(ContainerHijacker&) { return 42; }
+  friend constexpr int begin(const ContainerHijacker&) { return 42; }
+  friend constexpr int end(const ContainerHijacker&) { return 42; }
+  friend constexpr int cbegin(ContainerHijacker&) { return 42; }
+  friend constexpr int cend(ContainerHijacker&) { return 42; }
+  friend constexpr int cbegin(const ContainerHijacker&) { return 42; }
+  friend constexpr int cend(const ContainerHijacker&) { return 42; }
+  friend constexpr int rbegin(ContainerHijacker&) { return 42; }
+  friend constexpr int rend(ContainerHijacker&) { return 42; }
+  friend constexpr int rbegin(const ContainerHijacker&) { return 42; }
+  friend constexpr int rend(const ContainerHijacker&) { return 42; }
+  friend constexpr int crbegin(ContainerHijacker&) { return 42; }
+  friend constexpr int crend(ContainerHijacker&) { return 42; }
+  friend constexpr int crbegin(const ContainerHijacker&) { return 42; }
+  friend constexpr int crend(const ContainerHijacker&) { return 42; }
+};
+
+TEST_CONSTEXPR_CXX17 bool test_adl_proofing() {
+  // https://llvm.org/PR28927
+  {
+    ArrayHijacker a[3] = {};
+    assert(begin(a) == 42);
+    assert(end(a) == 42);
+    assert(std::begin(a) == a);
+    assert(std::end(a) == a + 3);
 #if TEST_STD_VER > 11
-    assert ( std::cbegin(array) == array );
-    assert (*std::cbegin(array) == array[0] );
-    assert ( std::cbegin(array) != std::cend(array));
-    assert ( std::cend(array)   == array + Sz);
+    assert(std::cbegin(a) == a);
+    assert(std::cend(a) == a + 3);
+    assert(std::rbegin(a).base() == a + 3);
+    assert(std::rend(a).base() == a);
+    assert(std::crbegin(a).base() == a + 3);
+    assert(std::crend(a).base() == a);
 #endif
-    }
+  }
+  {
+    int a[3] = {};
+    ContainerHijacker c{a};
+    assert(begin(c) == 42);
+    assert(end(c) == 42);
+    assert(std::begin(c) == a);
+    assert(std::end(c) == a + 3);
+#if TEST_STD_VER > 11
+    assert(std::cbegin(c) == a);
+    assert(std::cend(c) == a + 3);
+    assert(std::rbegin(c) == a);
+    assert(std::rend(c) == a + 3);
+    assert(std::crbegin(c) == a);
+    assert(std::crend(c) == a + 3);
+#endif
+  }
+  return true;
+}
 
 int main(int, char**) {
-    std::vector<int> v; v.push_back(1);
-    std::list<int> l;   l.push_back(2);
-    std::array<int, 1> a; a[0] = 3;
-    std::initializer_list<int> il = { 4 };
-
-    test_container ( v, 1 );
-    test_container ( l, 2 );
-    test_container ( a, 3 );
-    test_container ( il, 4 );
-
-    test_const_container ( v, 1 );
-    test_const_container ( l, 2 );
-    test_const_container ( a, 3 );
-    test_const_container ( il, 4 );
-
-    static constexpr int arrA [] { 1, 2, 3 };
-    test_const_array ( arrA );
+  test_arrays_and_initializer_lists_forward();
 #if TEST_STD_VER > 11
-    constexpr const int *b = std::cbegin(arrA);
-    constexpr const int *e = std::cend(arrA);
-    static_assert(e - b == 3, "");
+  test_arrays_and_initializer_lists_backward();
 #endif
+  test_container<std::array<int, 3>>();
+  test_container<std::list<int>>();
+  test_container<std::vector<int>>();
+  test_adl_proofing();
 
+#if TEST_STD_VER > 11
+  static_assert(test_arrays_and_initializer_lists_forward(), "");
+#endif
 #if TEST_STD_VER > 14
-    {
-        typedef std::array<int, 5> C;
-        constexpr const C c{0,1,2,3,4};
-
-        static_assert ( c.begin()   == std::begin(c), "");
-        static_assert ( c.cbegin()  == std::cbegin(c), "");
-        static_assert ( c.end()     == std::end(c), "");
-        static_assert ( c.cend()    == std::cend(c), "");
-
-        static_assert ( c.rbegin()  == std::rbegin(c), "");
-        static_assert ( c.crbegin() == std::crbegin(c), "");
-        static_assert ( c.rend()    == std::rend(c), "");
-        static_assert ( c.crend()   == std::crend(c), "");
-
-        static_assert ( std::begin(c)   != std::end(c), "");
-        static_assert ( std::rbegin(c)  != std::rend(c), "");
-        static_assert ( std::cbegin(c)  != std::cend(c), "");
-        static_assert ( std::crbegin(c) != std::crend(c), "");
-
-        static_assert ( *c.begin()  == 0, "");
-        static_assert ( *c.rbegin()  == 4, "");
-
-        static_assert ( *std::begin(c)   == 0, "" );
-        static_assert ( *std::cbegin(c)  == 0, "" );
-        static_assert ( *std::rbegin(c)  == 4, "" );
-        static_assert ( *std::crbegin(c) == 4, "" );
-    }
-
-    {
-        static constexpr const int c[] = {0,1,2,3,4};
-
-        static_assert ( *std::begin(c)   == 0, "" );
-        static_assert ( *std::cbegin(c)  == 0, "" );
-        static_assert ( *std::rbegin(c)  == 4, "" );
-        static_assert ( *std::crbegin(c) == 4, "" );
-    }
+  static_assert(test_arrays_and_initializer_lists_backward());
+  static_assert(test_container<std::array<int, 3>>());
+  static_assert(test_adl_proofing());
 #endif
 
   return 0;

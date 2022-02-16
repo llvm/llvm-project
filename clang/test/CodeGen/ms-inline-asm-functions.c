@@ -8,9 +8,9 @@
 int k(int);
 __declspec(dllimport) int kimport(int);
 int (*kptr)(int);
-int (*gptr())(int);
+int (*gptr(void))(int);
 
-int foo() {
+int foo(void) {
   // CHECK-LABEL: _foo:
   int (*r)(int) = gptr();
 
@@ -30,13 +30,13 @@ int foo() {
   // CHECK-FIXME: calll   *_kptr
 }
 
-int bar() {
+int bar(void) {
   // CHECK-LABEL: _bar:
   __asm jmp k;
   // CHECK:     jmp     _k
 }
 
-int baz() {
+int baz(void) {
   // CHECK-LABEL: _baz:
   __asm mov eax, k;
   // CHECK: movl    _k, %eax
@@ -47,7 +47,7 @@ int baz() {
 // Test that this asm blob doesn't require more registers than available.  This
 // has to be an LLVM code generation test.
 
-void __declspec(naked) naked() {
+void __declspec(naked) naked(void) {
   __asm pusha
   __asm call k
   __asm popa

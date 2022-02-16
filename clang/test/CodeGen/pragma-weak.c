@@ -139,13 +139,13 @@ __attribute((pure,noinline,const)) void __xxx(void) { }
 ///////////// PR10878: Make sure we can call a weak alias
 void SHA512Pad(void *context) {}
 #pragma weak SHA384Pad = SHA512Pad
-void PR10878() { SHA384Pad(0); }
+void PR10878(void) { SHA384Pad(0); }
 // CHECK: call void @SHA384Pad(i8* noundef null)
 
 
 // PR14046: Parse #pragma weak in function-local context
 extern int PR14046e(void);
-void PR14046f() {
+void PR14046f(void) {
 #pragma weak PR14046e
   PR14046e();
 }

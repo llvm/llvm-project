@@ -16,7 +16,7 @@ int __attribute__((target("arch=alderlake"))) foo(void) {return 11;}
 int __attribute__((target("arch=rocketlake"))) foo(void) {return 12;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
-int bar() {
+int bar(void) {
   return foo();
 }
 
@@ -25,13 +25,13 @@ inline int __attribute__((target("arch=sandybridge"))) foo_inline(void);
 inline int __attribute__((target("arch=ivybridge"))) foo_inline(void) {return 1;}
 inline int __attribute__((target("default"))) foo_inline(void) { return 2; }
 
-int bar2() {
+int bar2(void) {
   return foo_inline();
 }
 
 inline __attribute__((target("default"))) void foo_decls(void);
 inline __attribute__((target("sse4.2"))) void foo_decls(void);
-void bar3() {
+void bar3(void) {
   foo_decls();
 }
 inline __attribute__((target("default"))) void foo_decls(void) {}
@@ -41,7 +41,7 @@ inline __attribute__((target("default"))) void foo_multi(int i, double d) {}
 inline __attribute__((target("avx,sse4.2"))) void foo_multi(int i, double d) {}
 inline __attribute__((target("sse4.2,fma4"))) void foo_multi(int i, double d) {}
 inline __attribute__((target("arch=ivybridge,fma4,sse4.2"))) void foo_multi(int i, double d) {}
-void bar4() {
+void bar4(void) {
   foo_multi(1, 5.0);
 }
 
@@ -52,7 +52,7 @@ int fwd_decl_avx(void);
 int __attribute__((target("avx"))) fwd_decl_avx(void) { return 2; }
 int __attribute__((target("default"))) fwd_decl_avx(void) { return 2; }
 
-void bar5() {
+void bar5(void) {
   fwd_decl_default();
   fwd_decl_avx();
 }
@@ -69,12 +69,12 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // PR50025:
 static void must_be_emitted(void) {}
 inline __attribute__((target("default"))) void pr50025(void) { must_be_emitted(); }
-void calls_pr50025() { pr50025(); }
+void calls_pr50025(void) { pr50025(); }
 
 // Also need to make sure we get other multiversion functions.
 inline __attribute__((target("default"))) void pr50025b(void) { must_be_emitted(); }
 inline __attribute__((target("default"))) void pr50025c(void) { pr50025b(); }
-void calls_pr50025c() { pr50025c(); }
+void calls_pr50025c(void) { pr50025c(); }
 
 // LINUX: @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
 // WINDOWS: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"

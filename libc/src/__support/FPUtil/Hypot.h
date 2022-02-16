@@ -143,38 +143,28 @@ static inline T hypot(T x, T y) {
     return y;
   }
 
+  uint16_t x_exp = x_bits.get_unbiased_exponent();
+  uint16_t y_exp = y_bits.get_unbiased_exponent();
+  uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
+
+  if ((exp_diff >= MantissaWidth<T>::VALUE + 2) || (x == 0) || (y == 0)) {
+    return abs(x) + abs(y);
+  }
+
   uint16_t a_exp, b_exp, out_exp;
   UIntType a_mant, b_mant;
   DUIntType a_mant_sq, b_mant_sq;
   bool sticky_bits;
 
-  if ((x_bits.get_unbiased_exponent() >=
-       y_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
-      (y == 0)) {
-    if ((y != 0) && (get_round() == FE_UPWARD)) {
-      UIntType out_bits = FPBits_t(abs(x)).uintval();
-      return T(FPBits_t(++out_bits));
-    }
-    return abs(x);
-  } else if ((y_bits.get_unbiased_exponent() >=
-              x_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
-             (x == 0)) {
-    if ((x != 0) && (get_round() == FE_UPWARD)) {
-      UIntType out_bits = FPBits_t(abs(y)).uintval();
-      return T(FPBits_t(++out_bits));
-    }
-    return abs(y);
-  }
-
   if (abs(x) >= abs(y)) {
-    a_exp = x_bits.get_unbiased_exponent();
+    a_exp = x_exp;
     a_mant = x_bits.get_mantissa();
-    b_exp = y_bits.get_unbiased_exponent();
+    b_exp = y_exp;
     b_mant = y_bits.get_mantissa();
   } else {
-    a_exp = y_bits.get_unbiased_exponent();
+    a_exp = y_exp;
     a_mant = y_bits.get_mantissa();
-    b_exp = x_bits.get_unbiased_exponent();
+    b_exp = x_exp;
     b_mant = x_bits.get_mantissa();
   }
 

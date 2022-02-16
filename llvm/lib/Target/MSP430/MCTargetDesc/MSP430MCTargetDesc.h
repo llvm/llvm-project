@@ -31,7 +31,6 @@ class MCTargetStreamer;
 
 /// Creates a machine code emitter for MSP430.
 MCCodeEmitter *createMSP430MCCodeEmitter(const MCInstrInfo &MCII,
-                                         const MCRegisterInfo &MRI,
                                          MCContext &Ctx);
 
 MCAsmBackend *createMSP430MCAsmBackend(const Target &T,

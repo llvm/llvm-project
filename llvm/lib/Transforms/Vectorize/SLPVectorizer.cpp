@@ -4023,13 +4023,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       ValueSet SourceVectors;
       for (Value *V : VL) {
         SourceVectors.insert(cast<Instruction>(V)->getOperand(0));
-        if (getInsertIndex(V) == None) {
-          LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement vectors with "
-                               "non-constant or undef index.\n");
-          newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
-          BS.cancelScheduling(VL, VL0);
-          return;
-        }
+        assert(getInsertIndex(V) != None && "Non-constant or undef index?");
       }
 
       if (count_if(VL, [&SourceVectors](Value *V) {
@@ -7958,6 +7952,17 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->verify();
 #endif
 
+#ifndef NDEBUG
+  // Check that all schedulable entities got scheduled
+  for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
+    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
+      if (SD->isSchedulingEntity() && SD->hasValidDependencies()) {
+        assert(SD->IsScheduled && "must be scheduled at this point");
+      }
+    });
+  }
+#endif
+
   // Avoid duplicate scheduling of the block.
   BS->ScheduleStart = nullptr;
 }
@@ -8616,6 +8621,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
 
 bool SLPVectorizerPass::tryToVectorizePair(Value *A, Value *B, BoUpSLP &R) {
   if (!A || !B)
+    return false;
+  if (isa<InsertElementInst>(A) || isa<InsertElementInst>(B))
     return false;
   Value *VL[] = {A, B};
   return tryToVectorizeList(VL, R);

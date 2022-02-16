@@ -27,7 +27,7 @@ void test()
     typename List::iterator i = l1.insert(next(l1.cbegin()), 4);
     assert(i == next(l1.begin()));
     assert(l1.size() == 4);
-    assert(distance(l1.begin(), l1.end()) == 4);
+    assert(std::distance(l1.begin(), l1.end()) == 4);
     assert(l1 == List(a2, a2+4));
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(DISABLE_NEW_COUNT)

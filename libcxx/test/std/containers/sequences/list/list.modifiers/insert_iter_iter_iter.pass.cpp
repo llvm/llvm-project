@@ -27,7 +27,7 @@ void test() {
     typename List::iterator i = l1.insert(l1.begin(), a1, a1+3);
     assert(i == l1.begin());
     assert(l1.size() == 3);
-    assert(distance(l1.begin(), l1.end()) == 3);
+    assert(std::distance(l1.begin(), l1.end()) == 3);
     i = l1.begin();
     assert(*i == 1);
     ++i;
@@ -38,7 +38,7 @@ void test() {
     i = l1.insert(i, a2, a2+3);
     assert(*i == 4);
     assert(l1.size() == 6);
-    assert(distance(l1.begin(), l1.end()) == 6);
+    assert(std::distance(l1.begin(), l1.end()) == 6);
     i = l1.begin();
     assert(*i == 1);
     ++i;
@@ -65,7 +65,7 @@ void test() {
     }
     assert(globalMemCounter.checkOutstandingNewEq(save_count));
     assert(l1.size() == 6);
-    assert(distance(l1.begin(), l1.end()) == 6);
+    assert(std::distance(l1.begin(), l1.end()) == 6);
     i = l1.begin();
     assert(*i == 1);
     ++i;

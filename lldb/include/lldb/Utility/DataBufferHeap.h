@@ -80,8 +80,8 @@ public:
   ///     to resize itself to.
   ///
   /// \return
-  ///     The size in bytes after that this heap buffer was
-  ///     successfully resized to.
+  ///     The size in bytes after this heap buffer was resized. If
+  ///     the resize failed the size will remain unchanged.
   lldb::offset_t SetByteSize(lldb::offset_t byte_size);
 
   /// Makes a copy of the \a src_len bytes in \a src.

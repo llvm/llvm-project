@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
 ; int csinc1 (int a, int b) { return !a ? b+3 : b+1; }
-define dso_local i32 @csinc1(i32 %a, i32 %b) {
+define i32 @csinc1(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #0
@@ -22,7 +22,7 @@ entry:
 }
 
 ; int csinc2 (int a, int b) { return a ? b+3 : b+1; }
-define dso_local i32 @csinc2(i32 %a, i32 %b) {
+define i32 @csinc2(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #0
@@ -37,7 +37,7 @@ entry:
 }
 
 ; int csinc3 (int a, int b) { return !a ? b+1 : b-3; }
-define dso_local i32 @csinc3(i32 %a, i32 %b) {
+define i32 @csinc3(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub w8, w1, #3
@@ -52,7 +52,7 @@ entry:
 }
 
 ; int csinc4 (int a, int b) { return a ? b+1 : b-3; }
-define dso_local i32 @csinc4(i32 %a, i32 %b) {
+define i32 @csinc4(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub w8, w1, #3
@@ -67,7 +67,7 @@ entry:
 }
 
 ; int csinc5 (int a, int b) { return a ? b+1 : b-4095; }
-define dso_local i32 @csinc5(i32 %a, i32 %b) {
+define i32 @csinc5(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub w8, w1, #4095
@@ -82,7 +82,7 @@ entry:
 }
 
 ; int csinc6 (int a, int b) { return a ? b+1 : b-4096; }
-define dso_local i32 @csinc6(i32 %a, i32 %b) {
+define i32 @csinc6(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc6:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub w8, w1, #1, lsl #12 // =4096
@@ -98,7 +98,7 @@ entry:
 
 ; prevent larger constants (the add laid after csinc)
 ; int csinc7 (int a, int b) { return a ? b+1 : b-4097; }
-define dso_local i32 @csinc7(i32 %a, i32 %b) {
+define i32 @csinc7(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc7:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #0
@@ -109,6 +109,36 @@ define dso_local i32 @csinc7(i32 %a, i32 %b) {
 entry:
   %tobool.not = icmp eq i32 %a, 0
   %cond.v = select i1 %tobool.not, i32 -4097, i32 1
+  %cond = add nsw i32 %cond.v, %b
+  ret i32 %cond
+}
+
+; int csinc8 (int a, int b) { return a ? b-1 : b+1; }
+define i32 @csinc8(i32 %a, i32 %b) {
+; CHECK-LABEL: csinc8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub w8, w1, #1
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    csinc w0, w8, w1, ne
+; CHECK-NEXT:    ret
+entry:
+  %tobool.not = icmp eq i32 %a, 0
+  %cond.v = select i1 %tobool.not, i32 1, i32 -1
+  %cond = add nsw i32 %cond.v, %b
+  ret i32 %cond
+}
+
+; int csinc9 (int a, int b) { return a ? b+1 : b-1; }
+define i32 @csinc9(i32 %a, i32 %b) {
+; CHECK-LABEL: csinc9:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub w8, w1, #1
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    csinc w0, w8, w1, eq
+; CHECK-NEXT:    ret
+entry:
+  %tobool.not = icmp eq i32 %a, 0
+  %cond.v = select i1 %tobool.not, i32 -1, i32 1
   %cond = add nsw i32 %cond.v, %b
   ret i32 %cond
 }

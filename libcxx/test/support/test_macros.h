@@ -206,10 +206,12 @@
 #define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
-#if defined(_LIBCPP_SAFE_STATIC)
-#define TEST_SAFE_STATIC _LIBCPP_SAFE_STATIC
+#if TEST_STD_VER > 17
+#define TEST_CONSTINIT constinit
+#elif defined(_LIBCPP_CONSTINIT)
+#define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
-#define TEST_SAFE_STATIC
+#define TEST_CONSTINIT
 #endif
 
 #if !defined(__cpp_impl_three_way_comparison) \
@@ -241,10 +243,6 @@
 #define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ONLY(...) static_assert(true, "")
-#endif
-
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-#define TEST_SUPPORTS_RANGES
 #endif
 
 #define TEST_IGNORE_NODISCARD (void)
@@ -390,6 +388,10 @@ inline void DoNotOptimize(Tp const& value) {
 
 #if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 #  define TEST_HAS_NO_FILESYSTEM_LIBRARY
+#endif
+
+#if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)
+#  define TEST_HAS_NO_FGETPOS_FSETPOS
 #endif
 
 #if defined(__GNUC__)

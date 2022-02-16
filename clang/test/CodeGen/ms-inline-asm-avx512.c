@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple x86_64-pc-windows-msvc -target-cpu skylake-avx512 -fasm-blocks -emit-llvm -o - | FileCheck %s
 
-void t1() {
+void t1(void) {
 // CHECK: @t1
 // CHECK: call void asm sideeffect inteldialect "vaddpd zmm8, zmm27, zmm6", "~{zmm8},~{dirflag},~{fpsr},~{flags}"()
 // CHECK: ret void
@@ -11,7 +11,7 @@ void t1() {
 }
 
 
-void t2() {
+void t2(void) {
 // CHECK: @t2
 // CHECK: call void asm sideeffect inteldialect "vaddpd zmm8 {k1}, zmm27, zmm6", "~{zmm8},~{dirflag},~{fpsr},~{flags}"()
 // CHECK: ret void
@@ -20,7 +20,7 @@ void t2() {
   }
 }
 
-void ignore_fe_size() {
+void ignore_fe_size(void) {
   // CHECK-LABEL: define dso_local void @ignore_fe_size()
   char c;
   // CHECK: vaddps xmm1, xmm2, $1{1to4}

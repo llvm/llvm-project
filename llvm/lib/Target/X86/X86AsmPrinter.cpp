@@ -60,8 +60,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   SMShadowTracker.startFunction(MF);
   CodeEmitter.reset(TM.getTarget().createMCCodeEmitter(
-      *Subtarget->getInstrInfo(), *Subtarget->getRegisterInfo(),
-      MF.getContext()));
+      *Subtarget->getInstrInfo(), MF.getContext()));
 
   EmitFPOData =
       Subtarget->isTargetWin32() && MF.getMMI().getModule()->getCodeViewFlag();

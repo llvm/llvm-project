@@ -28,8 +28,7 @@ class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
 
-MCCodeEmitter *createVEMCCodeEmitter(const MCInstrInfo &MCII,
-                                     const MCRegisterInfo &MRI, MCContext &Ctx);
+MCCodeEmitter *createVEMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 MCAsmBackend *createVEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                  const MCRegisterInfo &MRI,
                                  const MCTargetOptions &Options);

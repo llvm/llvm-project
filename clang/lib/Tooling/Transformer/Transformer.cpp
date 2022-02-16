@@ -65,6 +65,9 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
     }
   }
 
+  llvm::SmallVector<AtomicChange, 1> Changes;
+  Changes.reserve(ChangesByFileID.size());
   for (auto &IDChangePair : ChangesByFileID)
-    Consumer(std::move(IDChangePair.second));
+    Changes.push_back(std::move(IDChangePair.second));
+  Consumer(llvm::MutableArrayRef<AtomicChange>(Changes));
 }

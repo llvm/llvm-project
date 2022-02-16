@@ -504,6 +504,30 @@ TEST_F(StreamTest, PutRawBytesToMixedEndian) {
 #endif
 }
 
+TEST_F(StreamTest, PutRawBytesZeroLenght) {
+  uint32_t value = 0x12345678;
+
+  s.PutRawBytes(static_cast<void *>(&value), 0, hostByteOrder,
+                lldb::eByteOrderLittle);
+  EXPECT_EQ(0U, s.GetWrittenBytes());
+
+  s.PutRawBytes(static_cast<void *>(&value), 0, hostByteOrder,
+                lldb::eByteOrderBig);
+  EXPECT_EQ(0U, s.GetWrittenBytes());
+}
+
+TEST_F(StreamTest, PutBytesAsRawHex8ZeroLenght) {
+  uint32_t value = 0x12345678;
+
+  s.PutBytesAsRawHex8(static_cast<void *>(&value), 0, hostByteOrder,
+                      lldb::eByteOrderLittle);
+  EXPECT_EQ(0U, s.GetWrittenBytes());
+
+  s.PutBytesAsRawHex8(static_cast<void *>(&value), 0, hostByteOrder,
+                      lldb::eByteOrderBig);
+  EXPECT_EQ(0U, s.GetWrittenBytes());
+}
+
 // ULEB128 support for binary streams.
 
 TEST_F(BinaryStreamTest, PutULEB128OneByte) {

@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple armv7-apple-unknown -emit-llvm -o - %s -fexceptions -exception-model=sjlj -fblocks | FileCheck %s -check-prefix=CHECK-ARM
 
 // rdar://problem/8621849
-void test1() {
+void test1(void) {
   extern void test1_helper(void (^)(int));
 
   // CHECK-LABEL:     define{{.*}} void @test1() {{.*}} personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*)
@@ -21,7 +21,7 @@ void test1() {
 }
 
 void test2_helper();
-void test2() {
+void test2(void) {
   __block int x = 10;
   ^{ (void)x; };
   test2_helper(5, 6, 7);

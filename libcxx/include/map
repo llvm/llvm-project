@@ -528,6 +528,8 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 
 */
 
+#include <__algorithm/equal.h>
+#include <__algorithm/lexicographical_compare.h>
 #include <__config>
 #include <__debug>
 #include <__functional/is_transparent.h>

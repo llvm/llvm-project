@@ -556,13 +556,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
           return MemDepResult::getClobber(SI);
       }
 
-      // FIXME: this is overly conservative.
       // While volatile access cannot be eliminated, they do not have to clobber
       // non-aliasing locations, as normal accesses can for example be reordered
       // with volatile accesses.
       if (SI->isVolatile())
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
-            isOtherMemAccess(QueryInst))
+        if (!QueryInst || QueryInst->isVolatile())
           return MemDepResult::getClobber(SI);
 
       // If alias analysis can tell that this store is guaranteed to not modify

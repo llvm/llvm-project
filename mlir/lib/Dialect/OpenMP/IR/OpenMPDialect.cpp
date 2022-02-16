@@ -1528,63 +1528,30 @@ LogicalResult AtomicWriteOp::verify() {
 
 /// Parser for AtomicUpdateOp
 ///
-/// operation ::= `omp.atomic.update` atomic-clause-list region
+/// operation ::= `omp.atomic.update` atomic-clause-list ssa-id-and-type region
 ParseResult AtomicUpdateOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
   SmallVector<int> segments;
-  OpAsmParser::OperandType x, y, z;
-  Type xType, exprType;
-  StringRef binOp;
+  OpAsmParser::OperandType x, expr;
+  Type xType;
 
-  // x = y `op` z : xtype, exprtype
-  if (parser.parseOperand(x) || parser.parseEqual() || parser.parseOperand(y) ||
-      parser.parseKeyword(&binOp) || parser.parseOperand(z) ||
-      parseClauses(parser, result, clauses, segments) || parser.parseColon() ||
-      parser.parseType(xType) || parser.parseComma() ||
-      parser.parseType(exprType) ||
-      parser.resolveOperand(x, xType, result.operands)) {
+  if (parseClauses(parser, result, clauses, segments) ||
+      parser.parseOperand(x) || parser.parseColon() ||
+      parser.parseType(xType) ||
+      parser.resolveOperand(x, xType, result.operands) ||
+      parser.parseRegion(*result.addRegion()))
     return failure();
-  }
-
-  auto binOpEnum = AtomicBinOpKindToEnum(binOp.upper());
-  if (!binOpEnum)
-    return parser.emitError(parser.getNameLoc())
-           << "invalid atomic bin op in atomic update\n";
-  auto attr =
-      parser.getBuilder().getI64IntegerAttr((int64_t)binOpEnum.getValue());
-  result.addAttribute("binop", attr);
-
-  OpAsmParser::OperandType expr;
-  if (x.name == y.name && x.number == y.number) {
-    expr = z;
-    result.addAttribute("isXBinopExpr", parser.getBuilder().getUnitAttr());
-  } else if (x.name == z.name && x.number == z.number) {
-    expr = y;
-  } else {
-    return parser.emitError(parser.getNameLoc())
-           << "atomic update variable " << x.name
-           << " not found in the RHS of the assignment statement in an"
-              " atomic.update operation";
-  }
-  return parser.resolveOperand(expr, exprType, result.operands);
+  return success();
 }
 
 void AtomicUpdateOp::print(OpAsmPrinter &p) {
-  p << " " << x() << " = ";
-  Value y, z;
-  if (isXBinopExpr()) {
-    y = x();
-    z = expr();
-  } else {
-    y = expr();
-    z = x();
-  }
-  p << y << " " << AtomicBinOpKindToString(binop()).lower() << " " << z << " ";
+  p << " ";
   if (auto mo = memory_order())
     p << "memory_order(" << stringifyClauseMemoryOrderKind(*mo) << ") ";
   if (hintAttr())
     printSynchronizationHint(p, *this, hintAttr());
-  p << ": " << x().getType() << ", " << expr().getType();
+  p << x() << " : " << x().getType();
+  p.printRegion(region());
 }
 
 /// Verifier for AtomicUpdateOp
@@ -1596,6 +1563,22 @@ LogicalResult AtomicUpdateOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
+
+  if (region().getNumArguments() != 1)
+    return emitError("the region must accept exactly one argument");
+
+  if (x().getType().cast<PointerLikeType>().getElementType() !=
+      region().getArgument(0).getType()) {
+    return emitError("the type of the operand must be a pointer type whose "
+                     "element type is the same as that of the region argument");
+  }
+
+  YieldOp yieldOp = *region().getOps<YieldOp>().begin();
+
+  if (yieldOp.results().size() != 1)
+    return emitError("only updated value must be returned");
+  if (yieldOp.results().front().getType() != region().getArgument(0).getType())
+    return emitError("input and yielded value must have the same type");
   return success();
 }
 

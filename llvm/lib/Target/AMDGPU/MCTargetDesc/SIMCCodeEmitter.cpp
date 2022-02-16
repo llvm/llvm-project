@@ -37,9 +37,8 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
                           const MCSubtargetInfo &STI) const;
 
 public:
-  SIMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
-                  MCContext &ctx)
-      : AMDGPUMCCodeEmitter(mcii), MRI(mri) {}
+  SIMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
+      : AMDGPUMCCodeEmitter(mcii), MRI(*ctx.getRegisterInfo()) {}
   SIMCCodeEmitter(const SIMCCodeEmitter &) = delete;
   SIMCCodeEmitter &operator=(const SIMCCodeEmitter &) = delete;
 
@@ -82,9 +81,8 @@ private:
 } // end anonymous namespace
 
 MCCodeEmitter *llvm::createSIMCCodeEmitter(const MCInstrInfo &MCII,
-                                           const MCRegisterInfo &MRI,
                                            MCContext &Ctx) {
-  return new SIMCCodeEmitter(MCII, MRI, Ctx);
+  return new SIMCCodeEmitter(MCII, Ctx);
 }
 
 // Returns the encoding value to use if the given integer is an integer inline

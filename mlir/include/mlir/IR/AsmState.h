@@ -47,6 +47,9 @@ public:
            LocationMap *locationMap = nullptr);
   ~AsmState();
 
+  /// Get the printer flags.
+  const OpPrintingFlags &getPrinterFlags() const;
+
   /// Return an instance of the internal implementation. Returns nullptr if the
   /// state has not been initialized.
   detail::AsmStateImpl &getImpl() { return *impl; }

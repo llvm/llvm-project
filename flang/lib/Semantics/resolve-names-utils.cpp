@@ -8,6 +8,7 @@
 
 #include "resolve-names-utils.h"
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -412,45 +413,58 @@ void EquivalenceSets::FinishSet(const parser::CharBlock &source) {
   currSet_.clear();
 }
 
-// Report an error if sym1 and sym2 cannot be in the same equivalence set.
+// Report an error or warning if sym1 and sym2 cannot be in the same equivalence
+// set.
 bool EquivalenceSets::CheckCanEquivalence(
     const parser::CharBlock &source, const Symbol &sym1, const Symbol &sym2) {
   std::optional<parser::MessageFixedText> msg;
   const DeclTypeSpec *type1{sym1.GetType()};
   const DeclTypeSpec *type2{sym2.GetType()};
-  bool isNum1{IsNumericSequenceType(type1)};
-  bool isNum2{IsNumericSequenceType(type2)};
+  bool isDefaultNum1{IsDefaultNumericSequenceType(type1)};
+  bool isAnyNum1{IsAnyNumericSequenceType(type1)};
+  bool isDefaultNum2{IsDefaultNumericSequenceType(type2)};
+  bool isAnyNum2{IsAnyNumericSequenceType(type2)};
   bool isChar1{IsCharacterSequenceType(type1)};
   bool isChar2{IsCharacterSequenceType(type2)};
   if (sym1.attrs().test(Attr::PROTECTED) &&
       !sym2.attrs().test(Attr::PROTECTED)) { // C8114
     msg = "Equivalence set cannot contain '%s'"
           " with PROTECTED attribute and '%s' without"_err_en_US;
-  } else if (isNum1) {
+  } else if ((isDefaultNum1 && isDefaultNum2) || (isChar1 && isChar2)) {
+    // ok & standard conforming
+  } else if (!(isAnyNum1 || isChar1) &&
+      !(isAnyNum2 || isChar2)) { // C8110 - C8113
+    if (AreTkCompatibleTypes(type1, type2)) {
+      if (context_.ShouldWarn(LanguageFeature::EquivalenceSameNonSequence)) {
+        msg = "nonstandard: Equivalence set contains '%s' and '%s' with same "
+              "type "
+              "that is neither numeric nor character sequence type"_en_US;
+      }
+    } else {
+      msg = "Equivalence set cannot contain '%s' and '%s' with distinct types "
+            "that are not both numeric or character sequence types"_err_en_US;
+    }
+  } else if (isAnyNum1) {
     if (isChar2) {
       if (context_.ShouldWarn(
               LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "Equivalence set contains '%s' that is numeric sequence "
+        msg = "nonstandard: Equivalence set contains '%s' that is numeric "
+              "sequence "
               "type and '%s' that is character"_en_US;
       }
-    } else if (!isNum2) { // C8110
-      msg = "Equivalence set cannot contain '%s'"
-            " that is numeric sequence type and '%s' that is not"_err_en_US;
-    }
-  } else if (isChar1) {
-    if (isNum2) {
-      if (context_.ShouldWarn(
-              LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "Equivalence set contains '%s' that is character sequence "
-              "type and '%s' that is numeric"_en_US;
+    } else if (isAnyNum2 &&
+        context_.ShouldWarn(LanguageFeature::EquivalenceNonDefaultNumeric)) {
+      if (isDefaultNum1) {
+        msg =
+            "nonstandard: Equivalence set contains '%s' that is a default "
+            "numeric "
+            "sequence type and '%s' that is numeric with non-default kind"_en_US;
+      } else if (!isDefaultNum2) {
+        msg = "nonstandard: Equivalence set contains '%s' and '%s' that are "
+              "numeric "
+              "sequence types with non-default kinds"_en_US;
       }
-    } else if (!isChar2) { // C8111
-      msg = "Equivalence set cannot contain '%s'"
-            " that is character sequence type and '%s' that is not"_err_en_US;
     }
-  } else if (!isNum2 && !isChar2 && *type1 != *type2) { // C8112, C8113
-    msg = "Equivalence set cannot contain '%s' and '%s' with different types"
-          " that are neither numeric nor character sequence types"_err_en_US;
   }
   if (msg) {
     context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
@@ -678,15 +692,14 @@ bool EquivalenceSets::IsCharacterSequenceType(const DeclTypeSpec *type) {
 // Numeric or logical type of default kind or DOUBLE PRECISION or DOUBLE COMPLEX
 bool EquivalenceSets::IsDefaultKindNumericType(const IntrinsicTypeSpec &type) {
   if (auto kind{evaluate::ToInt64(type.kind())}) {
-    auto category{type.category()};
-    auto defaultKind{context_.GetDefaultKind(category)};
-    switch (category) {
+    switch (type.category()) {
     case TypeCategory::Integer:
     case TypeCategory::Logical:
-      return *kind == defaultKind;
+      return *kind == context_.GetDefaultKind(TypeCategory::Integer);
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return *kind == defaultKind || *kind == context_.doublePrecisionKind();
+      return *kind == context_.GetDefaultKind(TypeCategory::Real) ||
+          *kind == context_.doublePrecisionKind();
     default:
       return false;
     }
@@ -694,9 +707,16 @@ bool EquivalenceSets::IsDefaultKindNumericType(const IntrinsicTypeSpec &type) {
   return false;
 }
 
-bool EquivalenceSets::IsNumericSequenceType(const DeclTypeSpec *type) {
+bool EquivalenceSets::IsDefaultNumericSequenceType(const DeclTypeSpec *type) {
   return IsSequenceType(type, [&](const IntrinsicTypeSpec &type) {
     return IsDefaultKindNumericType(type);
+  });
+}
+
+bool EquivalenceSets::IsAnyNumericSequenceType(const DeclTypeSpec *type) {
+  return IsSequenceType(type, [&](const IntrinsicTypeSpec &type) {
+    return type.category() == TypeCategory::Logical ||
+        common::IsNumericTypeCategory(type.category());
   });
 }
 

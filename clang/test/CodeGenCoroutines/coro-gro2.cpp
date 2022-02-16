@@ -33,17 +33,15 @@ struct coro {
   Impl *impl;
 };
 
-// Verify that the NRVO is applied to the Gro object.
+// Verify that the RVO is applied.
 // CHECK-LABEL: define{{.*}} void @_Z1fi(%struct.coro* noalias sret(%struct.coro) align 8 %agg.result, i32 noundef %0)
 coro f(int) {
 // CHECK: %call = call noalias noundef nonnull i8* @_Znwm(
 // CHECK-NEXT: br label %[[CoroInit:.*]]
 
 // CHECK: {{.*}}[[CoroInit]]:
-// CHECK: store i1 false, i1* %gro.active
 // CHECK: call void @{{.*get_return_objectEv}}(%struct.coro* sret(%struct.coro) align 8 %agg.result
-// CHECK-NEXT: store i1 true, i1* %gro.active
-  co_return;
+co_return;
 }
 
 
@@ -64,24 +62,22 @@ struct coro_two {
   Impl *impl;
 };
 
-// Verify that the NRVO is applied to the Gro object.
+// Verify that the RVO is applied.
 // CHECK-LABEL: define{{.*}} void @_Z1hi(%struct.coro_two* noalias sret(%struct.coro_two) align 8 %agg.result, i32 noundef %0)
- coro_two h(int) {
+coro_two h(int) {
 
-// CHECK: %call = call noalias noundef i8* @_ZnwmRKSt9nothrow_t
-// CHECK-NEXT: %[[CheckNull:.*]] = icmp ne i8* %call, null
-// CHECK-NEXT: br i1 %[[CheckNull]], label %[[InitOnSuccess:.*]], label %[[InitOnFailure:.*]]
+  // CHECK: %call = call noalias noundef i8* @_ZnwmRKSt9nothrow_t
+  // CHECK-NEXT: %[[CheckNull:.*]] = icmp ne i8* %call, null
+  // CHECK-NEXT: br i1 %[[CheckNull]], label %[[InitOnSuccess:.*]], label %[[InitOnFailure:.*]]
 
-// CHECK: {{.*}}[[InitOnFailure]]:
-// CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
-// CHECK-NEXT: br label %[[RetLabel:.*]]
+  // CHECK: {{.*}}[[InitOnFailure]]:
+  // CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
+  // CHECK-NEXT: br label %[[RetLabel:.*]]
 
-// CHECK: {{.*}}[[InitOnSuccess]]:
-// CHECK: store i1 false, i1* %gro.active
-// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
-// CHECK-NEXT: store i1 true, i1* %gro.active
+  // CHECK: {{.*}}[[InitOnSuccess]]:
+  // CHECK: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
 
-// CHECK: [[RetLabel]]:
-// CHECK-NEXT: ret void
+  // CHECK: [[RetLabel]]:
+  // CHECK-NEXT: ret void
   co_return;
 }

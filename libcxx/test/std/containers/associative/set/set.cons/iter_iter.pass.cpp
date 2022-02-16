@@ -39,7 +39,7 @@ int main(int, char**)
     std::set<V> m(cpp17_input_iterator<const int*>(ar),
                   cpp17_input_iterator<const int*>(ar+sizeof(ar)/sizeof(ar[0])));
     assert(m.size() == 3);
-    assert(distance(m.begin(), m.end()) == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == 1);
     assert(*next(m.begin()) == 2);
     assert(*next(m.begin(), 2) == 3);
@@ -62,7 +62,7 @@ int main(int, char**)
     std::set<V, std::less<int>, min_allocator<int>> m(cpp17_input_iterator<const int*>(ar),
                   cpp17_input_iterator<const int*>(ar+sizeof(ar)/sizeof(ar[0])));
     assert(m.size() == 3);
-    assert(distance(m.begin(), m.end()) == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == 1);
     assert(*next(m.begin()) == 2);
     assert(*next(m.begin(), 2) == 3);

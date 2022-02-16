@@ -518,11 +518,14 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 
 */
 
+#include <__algorithm/max.h>
+#include <__algorithm/min.h>
+#include <__algorithm/remove.h>
+#include <__algorithm/remove_if.h>
 #include <__config>
 #include <__debug>
 #include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
-#include <algorithm>
 #include <compare>
 #include <cstdio>  // EOF
 #include <cstdlib>
@@ -2870,6 +2873,10 @@ template <class _CharT, class _Traits, class _Allocator>
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_type __c)
 {
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                         "string::insert(iterator, character) called with an iterator not"
+                         " referring to this string");
+
     size_type __ip = static_cast<size_type>(__pos - begin());
     size_type __sz = size();
     size_type __cap = capacity();
