@@ -173,7 +173,6 @@ MCFixupKind CSKYMCCodeEmitter::getTargetFixup(const MCExpr *Expr) const {
 }
 
 MCCodeEmitter *llvm::createCSKYMCCodeEmitter(const MCInstrInfo &MCII,
-                                             const MCRegisterInfo &MRI,
                                              MCContext &Ctx) {
   return new CSKYMCCodeEmitter(Ctx, MCII);
 }

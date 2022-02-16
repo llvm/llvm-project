@@ -167,7 +167,7 @@ unsigned MSP430MCCodeEmitter::getCGImmOpValue(const MCInst &MI, unsigned Op,
                                               const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(Op);
   assert(MO.isImm() && "Expr operand expected");
-  
+
   int64_t Imm = MO.getImm();
   switch (Imm) {
   default:
@@ -200,7 +200,6 @@ unsigned MSP430MCCodeEmitter::getCCOpValue(const MCInst &MI, unsigned Op,
 }
 
 MCCodeEmitter *createMSP430MCCodeEmitter(const MCInstrInfo &MCII,
-                                         const MCRegisterInfo &MRI,
                                          MCContext &Ctx) {
   return new MSP430MCCodeEmitter(Ctx, MCII);
 }

@@ -159,7 +159,6 @@ uint64_t VEMCCodeEmitter::getRDOpValue(const MCInst &MI, unsigned OpNo,
 #include "VEGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createVEMCCodeEmitter(const MCInstrInfo &MCII,
-                                           const MCRegisterInfo &MRI,
                                            MCContext &Ctx) {
   return new VEMCCodeEmitter(MCII, Ctx);
 }

@@ -28,7 +28,6 @@ class MCSubtargetInfo;
 class Target;
 
 MCCodeEmitter *createLoongArchMCCodeEmitter(const MCInstrInfo &MCII,
-                                            const MCRegisterInfo &MRI,
                                             MCContext &Ctx);
 
 MCAsmBackend *createLoongArchAsmBackend(const Target &T,

@@ -38,7 +38,6 @@ MCAsmBackend *createM68kAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                    const MCTargetOptions &Options);
 
 MCCodeEmitter *createM68kMCCodeEmitter(const MCInstrInfo &MCII,
-                                       const MCRegisterInfo &MRI,
                                        MCContext &Ctx);
 
 /// Construct an M68k ELF object writer.

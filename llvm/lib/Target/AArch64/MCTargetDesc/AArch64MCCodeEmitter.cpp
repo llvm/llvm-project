@@ -678,7 +678,6 @@ unsigned AArch64MCCodeEmitter::fixOneOperandFPComparison(
 #include "AArch64GenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
-                                                const MCRegisterInfo &MRI,
                                                 MCContext &Ctx) {
   return new AArch64MCCodeEmitter(MCII, Ctx);
 }

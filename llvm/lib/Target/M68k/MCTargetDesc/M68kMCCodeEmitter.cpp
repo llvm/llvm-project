@@ -566,7 +566,6 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 }
 
 MCCodeEmitter *llvm::createM68kMCCodeEmitter(const MCInstrInfo &MCII,
-                                             const MCRegisterInfo &MRI,
                                              MCContext &Ctx) {
   return new M68kMCCodeEmitter(MCII, Ctx);
 }
