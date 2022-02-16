@@ -285,7 +285,6 @@ clang/lib/Driver/ToolChains/InterfaceStubs.h
 clang/lib/Driver/ToolChains/Minix.h
 clang/lib/Driver/ToolChains/MipsLinux.cpp
 clang/lib/Driver/ToolChains/MSP430.h
-clang/lib/Driver/ToolChains/MSVCSetupApi.h
 clang/lib/Driver/ToolChains/PPCFreeBSD.cpp
 clang/lib/Driver/ToolChains/PPCFreeBSD.h
 clang/lib/Driver/ToolChains/PPCLinux.h
@@ -5329,6 +5328,8 @@ llvm/include/llvm/Transforms/Utils/UnifyFunctionExitNodes.h
 llvm/include/llvm/Transforms/Utils/UnifyLoopExits.h
 llvm/include/llvm/Transforms/Utils/ValueMapper.h
 llvm/include/llvm/Transforms/Vectorize/SLPVectorizer.h
+llvm/include/llvm/WindowsDriver/MSVCPaths.h
+llvm/include/llvm/WindowsDriver/MSVCSetupApi.h
 llvm/include/llvm/WindowsManifest/WindowsManifestMerger.h
 llvm/include/llvm/WindowsResource/ResourceScriptToken.h
 llvm/include/llvm/XRay/BlockIndexer.h
@@ -6492,6 +6493,7 @@ llvm/lib/Transforms/Vectorize/VPlanTransforms.cpp
 llvm/lib/Transforms/Vectorize/VPlanTransforms.h
 llvm/lib/Transforms/Vectorize/VPlanValue.h
 llvm/lib/Transforms/Vectorize/VPlanVerifier.cpp
+llvm/lib/WindowsDriver/MSVCPaths.cpp
 llvm/lib/WindowsManifest/WindowsManifestMerger.cpp
 llvm/lib/XRay/BlockIndexer.cpp
 llvm/lib/XRay/BlockVerifier.cpp
