@@ -605,6 +605,8 @@ public:
 
   FileSpec GetCurrentSourceDir();
 
+  bool IsInteractive();
+
 protected:
   friend class Debugger;
 
