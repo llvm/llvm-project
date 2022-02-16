@@ -3,7 +3,7 @@ SWIFTFLAGS_EXTRAS= -I$(shell pwd)
 MODULENAME=main
 LD_EXTRAS=-L$(shell pwd)
 
-all: SomeLibrary.swiftmodule a.out
+all: clean SomeLibrary.swiftmodule a.out
 
 include Makefile.rules
 

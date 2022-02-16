@@ -47,10 +47,6 @@ class TestLibraryIndirect(TestBase):
         See the ReadMe.md in the parent directory for more information.
         """
         self.build()
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
-
         if lldb.remote_platform:
             ext = 'so'
             if self.platformIsDarwin():
@@ -87,9 +83,6 @@ class TestLibraryIndirect(TestBase):
         self.build()
         os.remove(self.getBuildArtifact("SomeLibraryCore.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibraryCore.swiftinterface"))
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
 
         if lldb.remote_platform:
             ext = 'so'

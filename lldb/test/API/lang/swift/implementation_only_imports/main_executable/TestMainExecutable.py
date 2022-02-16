@@ -51,9 +51,6 @@ class TestMainExecutable(TestBase):
         """
 
         self.build()
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
 
         # This test is deliberately checking what the user will see, rather than
@@ -80,9 +77,6 @@ class TestMainExecutable(TestBase):
         self.runCmd("settings set symbols.use-swift-dwarfimporter false")
         os.remove(self.getBuildArtifact("SomeLibrary.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibrary.swiftinterface"))
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
 
         # FIXME: This particular test config is producing different results on
@@ -111,9 +105,6 @@ class TestMainExecutable(TestBase):
         """
 
         self.build(dictionary={"LIBRARY_SWIFTFLAGS_EXTRAS": "-enable-library-evolution"})
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
 
         # This test is deliberately checking what the user will see, rather than
@@ -137,9 +128,6 @@ class TestMainExecutable(TestBase):
         self.build(dictionary={"LIBRARY_SWIFTFLAGS_EXTRAS": "-enable-library-evolution"})
         os.remove(self.getBuildArtifact("SomeLibrary.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibrary.swiftinterface"))
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
 
         # This test is deliberately checking what the user will see, rather than

@@ -37,10 +37,6 @@ class TestSwiftVersion(TestBase):
 
     def do_test(self):
         """Test that LLDB can debug different Swift language versions"""
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
-
         exe_name = "main"
         exe_path = self.getBuildArtifact(exe_name)
 

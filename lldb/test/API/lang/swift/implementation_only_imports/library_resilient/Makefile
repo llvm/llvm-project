@@ -2,7 +2,7 @@ SWIFT_SOURCES=main.swift
 SWIFTFLAGS_EXTRAS= -I.
 LD_EXTRAS=-L.
 
-all: SomeLibraryCore.swiftmodule SomeLibrary.swiftmodule a.out
+all: clean SomeLibraryCore.swiftmodule SomeLibrary.swiftmodule a.out
 
 include Makefile.rules
 
@@ -18,4 +18,3 @@ SomeLibrary.swiftmodule: SomeLibrary.swift SomeLibraryCore.swiftmodule
 
 clean::
 	rm -rf *.o *.dylib *.so *.dll *.dSYM *.swiftdoc *.swiftmodule *.swiftinterface
-
