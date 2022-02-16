@@ -7952,6 +7952,17 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->verify();
 #endif
 
+#ifndef NDEBUG
+  // Check that all schedulable entities got scheduled
+  for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
+    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
+      if (SD->isSchedulingEntity() && SD->hasValidDependencies()) {
+        assert(SD->IsScheduled && "must be scheduled at this point");
+      }
+    });
+  }
+#endif
+
   // Avoid duplicate scheduling of the block.
   BS->ScheduleStart = nullptr;
 }
