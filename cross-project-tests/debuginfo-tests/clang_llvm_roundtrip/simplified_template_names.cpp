@@ -1,9 +1,12 @@
 // RUN: %clang %target_itanium_abi_host_triple %s -c -o - -gdwarf-4 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 \
 // RUN:   | llvm-dwarfdump --verify -
+// RUN: %clang %target_itanium_abi_host_triple %s -c -o - -gdwarf-4 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 -gmlt -fdebug-info-for-profiling \
+// RUN:   | llvm-dwarfdump --verify -
 // RUN: %clang %target_itanium_abi_host_triple %s -c -o - -gdwarf-4 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 -fdebug-types-section \
 // RUN:   | llvm-dwarfdump --verify -
 // RUN: %clang %target_itanium_abi_host_triple %s -c -o - -gdwarf-5 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 -fdebug-types-section \
 // RUN:   | llvm-dwarfdump --verify -
+
 #include <cstdint>
 template<typename ...Ts>
 struct t1 {
