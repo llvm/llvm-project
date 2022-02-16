@@ -43,13 +43,13 @@ void do_insert_cv_test()
     const VT v3(3);
     r = m.insert(v3);
     assert(r.second);
-    assert(r.first == prev(m.end()));
+    assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(*r.first == 3);
 
     r = m.insert(v3);
     assert(!r.second);
-    assert(r.first == prev(m.end()));
+    assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(*r.first == 3);
 }

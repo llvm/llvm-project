@@ -40,14 +40,14 @@ void do_insert_test() {
 
     const VT v3(3, 3.5);
     r = m.insert(v3);
-    assert(r == prev(m.end()));
+    assert(r == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r->first == 3);
     assert(r->second == 3.5);
 
     const VT v4(3, 3.5);
     r = m.insert(v4);
-    assert(r == prev(m.end()));
+    assert(r == std::prev(m.end()));
     assert(m.size() == 4);
     assert(r->first == 3);
     assert(r->second == 3.5);

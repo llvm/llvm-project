@@ -35,12 +35,12 @@ int main(int, char**)
         assert(*r == 1);
 
         r = m.insert(m.cend(), M::value_type(3));
-        assert(r == prev(m.end()));
+        assert(r == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r == 3);
 
         r = m.insert(m.cend(), M::value_type(3));
-        assert(r == prev(m.end()));
+        assert(r == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r == 3);
     }
@@ -60,12 +60,12 @@ int main(int, char**)
         assert(*r == 1);
 
         r = m.insert(m.cend(), M::value_type(3));
-        assert(r == prev(m.end()));
+        assert(r == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r == 3);
 
         r = m.insert(m.cend(), M::value_type(3));
-        assert(r == prev(m.end()));
+        assert(r == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r == 3);
     }
