@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
@@ -2184,6 +2185,10 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         if (!operandType)
           continue;
 
+        // If outs is sparse, leave it to the sparse compiler.
+        if (sparse_tensor::getSparseTensorEncoding(operandVal.getType()))
+          continue;
+
         // If outs is already an `init_tensor` operation, nothing to do.
         auto definingOp = operandVal.getDefiningOp<InitTensorOp>();
         if (definingOp)
@@ -2213,7 +2218,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
 } // namespace
 
 //===---------------------------------------------------------------------===//
-// Methods that add patterns descrined in this file to a pattern list.
+// Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
 
 void mlir::linalg::populateFoldReshapeOpsByLinearizationPatterns(

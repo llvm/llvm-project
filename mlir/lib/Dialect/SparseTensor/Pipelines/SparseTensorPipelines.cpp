@@ -29,6 +29,8 @@ using namespace mlir::sparse_tensor;
 void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
   // TODO(wrengr): ensure the original `pm` is for ModuleOp
+  pm.addNestedPass<FuncOp>(createLinalgGeneralizationPass());
+  pm.addPass(createLinalgElementwiseOpFusionPass());
   pm.addPass(createSparsificationPass(options.sparsificationOptions()));
   pm.addPass(createSparseTensorConversionPass());
   pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
