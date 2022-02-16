@@ -37,7 +37,6 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
-#include "../cpp17_input_iterator.h"
 #include "min_allocator.h"
 
 bool test() {
