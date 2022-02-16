@@ -23,6 +23,10 @@ class Module;
 } // namespace llvm
 
 namespace mlir {
+/// Pass that moves ops which are likely an index computation into gpu.launch
+/// body.
+std::unique_ptr<Pass> createGpuLauchSinkIndexComputationsPass();
+
 /// Replaces `gpu.launch` with `gpu.launch_func` by moving the region into
 /// a separate kernel function.
 std::unique_ptr<OperationPass<ModuleOp>>

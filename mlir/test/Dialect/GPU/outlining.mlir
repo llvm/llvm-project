@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect -gpu-kernel-outlining=data-layout-str='#dlti.dl_spec<#dlti.dl_entry<index,32:i32>>' -split-input-file %s | FileCheck --check-prefix CHECK-DL %s
+// RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining=data-layout-str='#dlti.dl_spec<#dlti.dl_entry<index,32:i32>>' -split-input-file %s | FileCheck --check-prefix CHECK-DL %s
 
 // CHECK: module attributes {gpu.container_module}
 
