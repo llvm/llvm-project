@@ -83,9 +83,11 @@ public:
 };
 
 enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };
+enum class BitModeTy { Bit32, Bit64, Bit32_64, Any };
 } // namespace
 
 static bool ArchiveMap;
+static BitModeTy BitMode;
 static bool DebugSyms;
 static bool DefinedOnly;
 static bool Demangle;
@@ -1624,9 +1626,23 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO) {
   }
 }
 
+static bool shouldDump(SymbolicFile &Obj) {
+  // The -X option is currently only implemented for XCOFF, ELF, and IR object
+  // files. The option isn't fundamentally impossible with other formats, just
+  // isn't implemented.
+  if (!isa<XCOFFObjectFile>(Obj) && !isa<ELFObjectFileBase>(Obj) &&
+      !isa<IRObjectFile>(Obj))
+    return true;
+
+  return isSymbolList64Bit(Obj) ? BitMode != BitModeTy::Bit32
+                                : BitMode != BitModeTy::Bit64;
+}
+
 static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
                                       StringRef ArchiveName = {},
                                       StringRef ArchitectureName = {}) {
+  if (!shouldDump(Obj))
+    return;
   auto Symbols = Obj.symbols();
   std::vector<VersionEntry> SymbolVersions;
   if (DynamicSyms) {
@@ -1830,7 +1846,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
           }
           if (!checkMachOAndArchFlags(O, Filename))
             return;
-          if (!PrintFileName) {
+          if (!PrintFileName && shouldDump(*O)) {
             outs() << "\n";
             if (isa<MachOObjectFile>(O)) {
               outs() << Filename << "(" << O->getFileName() << ")";
@@ -2167,6 +2183,18 @@ int main(int argc, char **argv) {
   SpecialSyms = Args.hasArg(OPT_special_syms);
   UndefinedOnly = Args.hasArg(OPT_undefined_only);
   WithoutAliases = Args.hasArg(OPT_without_aliases);
+
+  StringRef Mode = Args.getLastArgValue(OPT_X, "any");
+  if (Mode == "32")
+    BitMode = BitModeTy::Bit32;
+  else if (Mode == "64")
+    BitMode = BitModeTy::Bit64;
+  else if (Mode == "32_64")
+    BitMode = BitModeTy::Bit32_64;
+  else if (Mode == "any")
+    BitMode = BitModeTy::Any;
+  else
+    error("-X value should be one of: 32, 64, 32_64, (default) any");
 
   // Mach-O specific options.
   FormatMachOasHex = Args.hasArg(OPT_x);

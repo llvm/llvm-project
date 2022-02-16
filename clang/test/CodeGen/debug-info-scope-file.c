@@ -10,11 +10,11 @@
 // CHECK: [[F2:![0-9]*]] = distinct !DISubprogram(name: "f2",{{.*}} DISPFlagDefinition
 // CHECK: [[F2_LINE]] = !DILocation({{.*}}, scope: [[F2]])
 
-void f1() {
+void f1(void) {
 }
 
 # 2 "foo.c"
 
-void f2() {
+void f2(void) {
 }
 

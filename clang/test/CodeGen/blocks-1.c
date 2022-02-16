@@ -18,7 +18,7 @@
 
 int printf(const char *, ...);
 
-void test1() {
+void test1(void) {
   __block int a;
   int b=2;
   a=1;
@@ -29,7 +29,7 @@ void test1() {
   printf("a is %d, b is %d\n", a, b);
 }
 
-void test2() {
+void test2(void) {
   __block int a;
   a=1;
   printf("a is %d\n", a);
@@ -43,13 +43,13 @@ void test2() {
   printf("a is %d\n", a);
 }
 
-void test3() {
+void test3(void) {
   __block int k;
   __block int (^j)(int);
   ^{j=0; k=0;}(); // needs copy/dispose
 }
 
-int test4() {
+int test4(void) {
   extern int g;
   static int i = 1;
   ^(int j){ i = j; g = 0; }(0); // does not need copy/dispose
@@ -58,25 +58,25 @@ int test4() {
 
 int g;
 
-void test5() {
+void test5(void) {
   __block struct { int i; } i;
   ^{ (void)i; }(); // needs copy/dispose
 }
 
-void test6() {
+void test6(void) {
   __block int i;
   ^{ i=1; }(); // needs copy/dispose
   ^{}(); // does not need copy/dispose
 }
 
-void test7() {
+void test7(void) {
   ^{ // does not need copy/dispose
     __block int i;
     ^{ i = 1; }(); // needs copy/dispose
   }();
 }
 
-int main() {
+int main(void) {
   int rv = 0;
   test1();
   test2();

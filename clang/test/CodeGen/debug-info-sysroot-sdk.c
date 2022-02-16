@@ -5,7 +5,7 @@
 // RUN:   %s -isysroot /CLANG_SYSROOT/MacOSX.sdk -emit-llvm -o - \
 // RUN:   -debugger-tuning=gdb | FileCheck %s --check-prefix=GDB
 
-void foo() {}
+void foo(void) {}
 
 // The sysroot and sdk are LLDB-tuning-specific attributes.
 

@@ -1,1 +1,1 @@
-void test1() {}
+void test1(void) {}

@@ -294,14 +294,14 @@ public:
         : ifOp{ifOp}, builder{builder} {}
     template <typename CC>
     IfBuilder &genThen(CC func) {
-      builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       func();
       return *this;
     }
     template <typename CC>
     IfBuilder &genElse(CC func) {
-      assert(!ifOp.elseRegion().empty() && "must have else region");
-      builder.setInsertionPointToStart(&ifOp.elseRegion().front());
+      assert(!ifOp.getElseRegion().empty() && "must have else region");
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
       func();
       return *this;
     }

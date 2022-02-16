@@ -436,7 +436,7 @@ void fir::factory::genFinalization(fir::FirOpBuilder &builder,
   auto ifOp = builder.create<fir::IfOp>(loc, isAllocated,
                                         /*withElseRegion=*/false);
   auto insPt = builder.saveInsertionPoint();
-  builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   genFinalizeAndFree(builder, loc, addr);
   builder.restoreInsertionPoint(insPt);
 }

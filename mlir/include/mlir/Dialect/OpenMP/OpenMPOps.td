@@ -338,14 +338,12 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 
 def YieldOp : OpenMP_Op<"yield",
     [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WsLoopOp", "ReductionDeclareOp"]>]> {
+     ParentOneOf<["WsLoopOp", "ReductionDeclareOp", "AtomicUpdateOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
     terminates the region. The semantics of how the values are yielded is
     defined by the parent operation.
-    If "omp.yield" has any operands, the operands must match the parent
-    operation's results.
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
@@ -663,39 +661,35 @@ def AtomicBinOpKindAttr : I64EnumAttr<
   let symbolToStringFnName = "AtomicBinOpKindToString";
 }
 
-def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
+def AtomicUpdateOp : OpenMP_Op<"atomic.update",
+                               [SingleBlockImplicitTerminator<"YieldOp">]> {
 
   let summary = "performs an atomic update";
 
   let description = [{
     This operation performs an atomic update.
 
-    The operands `x` and `expr` are exactly the same as the operands `x` and
-    `expr` in the OpenMP Standard. The operand `x` is the address of the
-    variable that is being updated. `x` is atomically read/written. The
-    evaluation of `expr` need not be atomic w.r.t the read or write of the
-    location designated by `x`. In general, type(x) must dereference to
-    type(expr).
-
-    The attribute `isXBinopExpr` is
-      - true when the expression is of the form `x binop expr` on RHS
-      - false when the expression is of the form `expr binop x` on RHS
-
-    The attribute `binop` is the binary operation being performed atomically.
+    The operand `x` is exactly the same as the operand `x` in the OpenMP
+    Standard (OpenMP 5.0, section 2.17.7). It is the address of the variable
+    that is being updated. `x` is atomically read/written.
 
     `hint` is the value of hint (as used in the hint clause). It is a compile
     time constant. As the name suggests, this is just a hint for optimization.
 
     `memory_order` indicates the memory ordering behavior of the construct. It
     can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+
+    The region describes how to update the value of `x`. It takes the value at
+    `x` as an input and must yield the updated value. Only the update to `x` is
+    atomic. Generally the region must have only one instruction, but can
+    potentially have more than one instructions too. The update is sematically
+    similar to a compare-exchange loop based atomic update.
   }];
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
-                       AnyType:$expr,
-                       UnitAttr:$isXBinopExpr,
-                       AtomicBinOpKindAttr:$binop,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
+  let regions = (region SizedRegion<1>:$region);
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -769,6 +763,9 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
     element and accumulator types.
+
+    For initializer and reduction regions, the operand to `omp.yield` must
+    match the parent operation's results.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,

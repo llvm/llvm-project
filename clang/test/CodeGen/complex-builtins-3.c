@@ -20,7 +20,7 @@ extern void abort (void);
 extern void link_error (void);
 
 int
-main ()
+main (void)
 {
   /* For each type, test both runtime and compile time (constant folding)
      optimization.  */

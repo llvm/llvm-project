@@ -10,7 +10,7 @@ void t1(__fp16 a) { g = a; }
 // NATIVE: define{{.*}} void @t1(half noundef [[PARAM:%.*]])
 // CHECK: store half [[PARAM]], half* @g
 
-__fp16 t2() { return g; }
+__fp16 t2(void) { return g; }
 // SOFT: define{{.*}} half @t2()
 // HARD: define{{.*}} arm_aapcs_vfpcc half @t2()
 // NATIVE: define{{.*}} half @t2()
@@ -25,7 +25,7 @@ void t3(_Float16 a) { h = a; }
 // NATIVE: define{{.*}} void @t3(half noundef [[PARAM:%.*]])
 // CHECK: store half [[PARAM]], half* @h
 
-_Float16 t4() { return h; }
+_Float16 t4(void) { return h; }
 // SOFT: define{{.*}} half @t4()
 // HARD: define{{.*}} arm_aapcs_vfpcc half @t4()
 // NATIVE: define{{.*}} half @t4()

@@ -142,12 +142,12 @@ void f() {
   static_assert(std::is_same_v<std::atomic<const long>, _Atomic(const long)>);
 
   static_assert(std::is_same_v<std::memory_order, ::memory_order>);
-  static_assert(&std::memory_order_relaxed == &::memory_order_relaxed);
-  static_assert(&std::memory_order_consume == &::memory_order_consume);
-  static_assert(&std::memory_order_acquire == &::memory_order_acquire);
-  static_assert(&std::memory_order_release == &::memory_order_release);
-  static_assert(&std::memory_order_acq_rel == &::memory_order_acq_rel);
-  static_assert(&std::memory_order_seq_cst == &::memory_order_seq_cst);
+  static_assert(std::memory_order_relaxed == ::memory_order_relaxed);
+  static_assert(std::memory_order_consume == ::memory_order_consume);
+  static_assert(std::memory_order_acquire == ::memory_order_acquire);
+  static_assert(std::memory_order_release == ::memory_order_release);
+  static_assert(std::memory_order_acq_rel == ::memory_order_acq_rel);
+  static_assert(std::memory_order_seq_cst == ::memory_order_seq_cst);
 
   static_assert(std::is_same_v<std::atomic_flag, ::atomic_flag>);
 
