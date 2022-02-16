@@ -131,6 +131,7 @@ OPTIONS
  Specify the type of XCOFF object file, ELF object file, or IR object file input
  from command line or from archive files that llvm-nm should examine. The
  mode must be one of the following:
+ 
    32
          Process only 32-bit object files.
    64

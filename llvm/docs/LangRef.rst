@@ -2517,7 +2517,7 @@ Pointer Authentication Operand Bundles
 
 Pointer Authentication operand bundles are characterized by the
 ``"ptrauth"`` operand bundle tag.  They are described in the
-`Pointer Authentication <PointerAuth.html#operand-bundle>`_ document.
+`Pointer Authentication <PointerAuth.html#operand-bundle>`__ document.
 
 .. _moduleasm:
 
