@@ -786,15 +786,31 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
     // already defined, we should keep moving to eventually
     // bring in types for "struct t". Otherwise, the "struct s2"
     // definition won't be correct.
+    //
+    // In the above, we have following debuginfo:
+    //  {ptr, struct_member} ->  typedef -> struct
+    // and BTF type for 'typedef' is generated while 'struct' may
+    // be in FixUp. But let us generalize the above to handle
+    //  {different types} -> [various derived types]+ -> another type.
+    // For example,
+    //  {func_param, struct_member} -> const -> ptr -> volatile -> struct
+    // We will traverse const/ptr/volatile which already have corresponding
+    // BTF types and generate type for 'struct' which might be in Fixup
+    // state.
     if (Ty && (!CheckPointer || !SeenPointer)) {
       if (const auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-        unsigned Tag = DTy->getTag();
-        if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
-            Tag == dwarf::DW_TAG_volatile_type ||
-            Tag == dwarf::DW_TAG_restrict_type) {
-          uint32_t TmpTypeId;
-          visitTypeEntry(DTy->getBaseType(), TmpTypeId, CheckPointer,
-                         SeenPointer);
+        while (DTy) {
+          const DIType *BaseTy = DTy->getBaseType();
+          if (!BaseTy)
+            break;
+
+          if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
+            DTy = dyn_cast<DIDerivedType>(BaseTy);
+          } else {
+            uint32_t TmpTypeId;
+            visitTypeEntry(BaseTy, TmpTypeId, CheckPointer, SeenPointer);
+            break;
+          }
         }
       }
     }
