@@ -306,9 +306,9 @@ class ScriptedThread:
                 containing for each entry, the frame index, the canonical
                 frame address, the program counter value for that frame
                 and a symbol context.
-                None if the list is empty.
+                The list can be empty.
         """
-        return 0
+        return self.frames
 
     def get_register_info(self):
         if self.register_info is None:

@@ -359,6 +359,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
 void ScriptedProcess::RefreshStateAfterStop() {
   // Let all threads recover from stopping and do any clean up based on the
   // previous thread state (if any).
+  m_thread_list.RefreshStateAfterStop();
 }
 
 bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
