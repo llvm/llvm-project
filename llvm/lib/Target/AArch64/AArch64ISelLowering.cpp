@@ -14751,38 +14751,59 @@ static SDValue performAddUADDVCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 /// Perform the scalar expression combine in the form of:
-///   CSEL (c, 1, cc) + b => CSINC(b+c, b, cc)
+///   CSEL(c, 1, cc) + b => CSINC(b+c, b, cc)
+///   CSNEG(c, -1, cc) + b => CSINC(b+c, b, cc)
 static SDValue performAddCSelIntoCSinc(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (!VT.isScalarInteger() || N->getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue CSel = N->getOperand(0);
+  SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
   // Handle commutivity.
-  if (CSel.getOpcode() != AArch64ISD::CSEL) {
-    std::swap(CSel, RHS);
-    if (CSel.getOpcode() != AArch64ISD::CSEL) {
+  if (LHS.getOpcode() != AArch64ISD::CSEL &&
+      LHS.getOpcode() != AArch64ISD::CSNEG) {
+    std::swap(LHS, RHS);
+    if (LHS.getOpcode() != AArch64ISD::CSEL &&
+        LHS.getOpcode() != AArch64ISD::CSNEG) {
       return SDValue();
     }
   }
 
-  if (!CSel.hasOneUse())
+  if (!LHS.hasOneUse())
     return SDValue();
 
   AArch64CC::CondCode AArch64CC =
-      static_cast<AArch64CC::CondCode>(CSel.getConstantOperandVal(2));
+      static_cast<AArch64CC::CondCode>(LHS.getConstantOperandVal(2));
 
-  // The CSEL should include a const one operand.
-  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(CSel.getOperand(0));
-  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(CSel.getOperand(1));
-  if (!CTVal || !CFVal || (!CTVal->isOne() && !CFVal->isOne()))
+  // The CSEL should include a const one operand, and the CSNEG should include
+  // One or NegOne operand.
+  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(LHS.getOperand(0));
+  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+  if (!CTVal || !CFVal)
     return SDValue();
 
-  // switch CSEL (1, c, cc)  to CSEL (c, 1, !cc)
-  if (CTVal->isOne() && !CFVal->isOne()) {
+  if (!(LHS.getOpcode() == AArch64ISD::CSEL &&
+        (CTVal->isOne() || CFVal->isOne())) &&
+      !(LHS.getOpcode() == AArch64ISD::CSNEG &&
+        (CTVal->isOne() || CFVal->isAllOnes())))
+    return SDValue();
+
+  // Switch CSEL(1, c, cc) to CSEL(c, 1, !cc)
+  if (LHS.getOpcode() == AArch64ISD::CSEL && CTVal->isOne() &&
+      !CFVal->isOne()) {
     std::swap(CTVal, CFVal);
+    AArch64CC = AArch64CC::getInvertedCondCode(AArch64CC);
+  }
+
+  SDLoc DL(N);
+  // Switch CSNEG(1, c, cc) to CSNEG(-c, -1, !cc)
+  if (LHS.getOpcode() == AArch64ISD::CSNEG && CTVal->isOne() &&
+      !CFVal->isAllOnes()) {
+    APInt C = -1 * CFVal->getAPIntValue();
+    CTVal = cast<ConstantSDNode>(DAG.getConstant(C, DL, VT));
+    CFVal = cast<ConstantSDNode>(DAG.getAllOnesConstant(DL, VT));
     AArch64CC = AArch64CC::getInvertedCondCode(AArch64CC);
   }
 
@@ -14793,12 +14814,13 @@ static SDValue performAddCSelIntoCSinc(SDNode *N, SelectionDAG &DAG) {
   if (!TLI.isLegalAddImmediate(ADDC.getSExtValue()))
     return SDValue();
 
-  assert(CFVal->isOne() && "Unexpected constant value");
+  assert(((LHS.getOpcode() == AArch64ISD::CSEL && CFVal->isOne()) ||
+          (LHS.getOpcode() == AArch64ISD::CSNEG && CFVal->isAllOnes())) &&
+         "Unexpected constant value");
 
-  SDLoc DL(N);
   SDValue NewNode = DAG.getNode(ISD::ADD, DL, VT, RHS, SDValue(CTVal, 0));
   SDValue CCVal = DAG.getConstant(AArch64CC, DL, MVT::i32);
-  SDValue Cmp = CSel.getOperand(3);
+  SDValue Cmp = LHS.getOperand(3);
 
   return DAG.getNode(AArch64ISD::CSINC, DL, VT, NewNode, RHS, CCVal, Cmp);
 }
