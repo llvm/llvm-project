@@ -33,6 +33,17 @@ class AMDGPUAnnotateUniformValues : public FunctionPass,
   MemorySSA *MSSA;
   AliasAnalysis *AA;
   bool isEntryFunc;
+  bool Changed;
+
+  void setUniformMetadata(Instruction *I) {
+    I->setMetadata("amdgpu.uniform", MDNode::get(I->getContext(), {}));
+    Changed = true;
+  }
+
+  void setNoClobberMetadata(Instruction *I) {
+    I->setMetadata("amdgpu.noclobber", MDNode::get(I->getContext(), {}));
+    Changed = true;
+  }
 
 public:
   static char ID;
@@ -65,13 +76,6 @@ INITIALIZE_PASS_END(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                     "Add AMDGPU uniform metadata", false, false)
 
 char AMDGPUAnnotateUniformValues::ID = 0;
-
-static void setUniformMetadata(Instruction *I) {
-  I->setMetadata("amdgpu.uniform", MDNode::get(I->getContext(), {}));
-}
-static void setNoClobberMetadata(Instruction *I) {
-  I->setMetadata("amdgpu.noclobber", MDNode::get(I->getContext(), {}));
-}
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
   if (DA->isUniform(&I))
@@ -109,8 +113,9 @@ bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   isEntryFunc = AMDGPU::isEntryFunctionCC(F.getCallingConv());
 
+  Changed = false;
   visit(F);
-  return true;
+  return Changed;
 }
 
 FunctionPass *
