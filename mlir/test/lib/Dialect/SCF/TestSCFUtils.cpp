@@ -90,12 +90,23 @@ static const StringLiteral kTestPipeliningStageMarker =
 static const StringLiteral kTestPipeliningOpOrderMarker =
     "__test_pipelining_op_order__";
 
+static const StringLiteral kTestPipeliningAnnotationPart =
+    "__test_pipelining_part";
+static const StringLiteral kTestPipeliningAnnotationIteration =
+    "__test_pipelining_iteration";
+
 class TestSCFPipeliningPass
     : public PassWrapper<TestSCFPipeliningPass, OperationPass<FuncOp>> {
 public:
+  TestSCFPipeliningPass() = default;
+  TestSCFPipeliningPass(const TestSCFPipeliningPass &) {}
   StringRef getArgument() const final { return "test-scf-pipelining"; }
   StringRef getDescription() const final { return "test scf.forOp pipelining"; }
-  explicit TestSCFPipeliningPass() = default;
+
+  Option<bool> annotatePipeline{
+      *this, "annotate",
+      llvm::cl::desc("Annote operations during loop pipelining transformation"),
+      llvm::cl::init(false)};
 
   static void
   getSchedule(scf::ForOp forOp,
@@ -115,6 +126,25 @@ public:
     });
   }
 
+  static void annotate(Operation *op,
+                       mlir::scf::PipeliningOption::PipelinerPart part,
+                       unsigned iteration) {
+    OpBuilder b(op);
+    switch (part) {
+    case mlir::scf::PipeliningOption::PipelinerPart::Prologue:
+      op->setAttr(kTestPipeliningAnnotationPart, b.getStringAttr("prologue"));
+      break;
+    case mlir::scf::PipeliningOption::PipelinerPart::Kernel:
+      op->setAttr(kTestPipeliningAnnotationPart, b.getStringAttr("kernel"));
+      break;
+    case mlir::scf::PipeliningOption::PipelinerPart::Epilogue:
+      op->setAttr(kTestPipeliningAnnotationPart, b.getStringAttr("epilogue"));
+      break;
+    }
+    op->setAttr(kTestPipeliningAnnotationIteration,
+                b.getI32IntegerAttr(iteration));
+  }
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithmeticDialect, StandardOpsDialect>();
   }
@@ -123,7 +153,8 @@ public:
     RewritePatternSet patterns(&getContext());
     mlir::scf::PipeliningOption options;
     options.getScheduleFn = getSchedule;
-
+    if (annotatePipeline)
+      options.annotateFn = annotate;
     scf::populateSCFLoopPipeliningPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     getOperation().walk([](Operation *op) {
