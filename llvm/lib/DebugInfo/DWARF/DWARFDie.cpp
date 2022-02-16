@@ -250,6 +250,7 @@ struct DWARFTypePrinter {
         OS << ' ';
       if (DWARFDie Cont = resolveReferencedType(D, DW_AT_containing_type)) {
         appendQualifiedName(Cont);
+        EndedWithTemplate = false;
         OS << "::";
       }
       OS << "*";
@@ -546,8 +547,10 @@ struct DWARFTypePrinter {
       appendQualifiedName(TypeAttr ? resolveReferencedType(C, *TypeAttr)
                                    : DWARFDie());
     }
-    if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue)
+    if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
       OS << '<';
+      EndedWithTemplate = false;
+    }
     return IsTemplate;
   }
   void decomposeConstVolatile(DWARFDie &N, DWARFDie &T, DWARFDie &C,
