@@ -156,14 +156,14 @@ public:
     //   NSString *reason;
     //   NSDictionary *userInfo;
     //   id reserved;
-    static ConstString g___name("name");
-    static ConstString g___reason("reason");
-    static ConstString g___userInfo("userInfo");
-    static ConstString g___reserved("reserved");
-    if (name == g___name) return 0;
-    if (name == g___reason) return 1;
-    if (name == g___userInfo) return 2;
-    if (name == g___reserved) return 3;
+    static ConstString g_name("name");
+    static ConstString g_reason("reason");
+    static ConstString g_userInfo("userInfo");
+    static ConstString g_reserved("reserved");
+    if (name == g_name) return 0;
+    if (name == g_reason) return 1;
+    if (name == g_userInfo) return 2;
+    if (name == g_reserved) return 3;
     return UINT32_MAX;
   }
 

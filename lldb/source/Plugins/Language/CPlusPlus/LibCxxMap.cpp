@@ -213,27 +213,27 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
 
 size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     CalculateNumChildren() {
-  static ConstString g___pair3_("__pair3_");
-  static ConstString g___first_("__first_");
-  static ConstString g___value_("__value_");
+  static ConstString g_pair3_("__pair3_");
+  static ConstString g_first_("__first_");
+  static ConstString g_value_("__value_");
 
   if (m_count != UINT32_MAX)
     return m_count;
   if (m_tree == nullptr)
     return 0;
-  ValueObjectSP m_item(m_tree->GetChildMemberWithName(g___pair3_, true));
+  ValueObjectSP m_item(m_tree->GetChildMemberWithName(g_pair3_, true));
   if (!m_item)
     return 0;
 
   switch (m_item->GetCompilerType().GetNumDirectBaseClasses()) {
   case 1:
     // Assume a pre llvm r300140 __compressed_pair implementation:
-    m_item = m_item->GetChildMemberWithName(g___first_, true);
+    m_item = m_item->GetChildMemberWithName(g_first_, true);
     break;
   case 2: {
     // Assume a post llvm r300140 __compressed_pair implementation:
     ValueObjectSP first_elem_parent = m_item->GetChildAtIndex(0, true);
-    m_item = first_elem_parent->GetChildMemberWithName(g___value_, true);
+    m_item = first_elem_parent->GetChildMemberWithName(g_value_, true);
     break;
   }
   default:
@@ -247,7 +247,7 @@ size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
-  static ConstString g___value_("__value_");
+  static ConstString g_value_("__value_");
   static ConstString g_tree_("__tree_");
   static ConstString g_pair3("__pair3_");
 
@@ -259,7 +259,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   deref = m_root_node->Dereference(error);
   if (!deref || error.Fail())
     return false;
-  deref = deref->GetChildMemberWithName(g___value_, true);
+  deref = deref->GetChildMemberWithName(g_value_, true);
   if (deref) {
     m_element_type = deref->GetCompilerType();
     return true;
@@ -330,9 +330,9 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
-  static ConstString g___cc("__cc");
-  static ConstString g___nc("__nc");
-  static ConstString g___value_("__value_");
+  static ConstString g_cc("__cc");
+  static ConstString g_nc("__nc");
+  static ConstString g_value_("__value_");
 
   if (idx >= CalculateNumChildren())
     return lldb::ValueObjectSP();
@@ -367,7 +367,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
         return lldb::ValueObjectSP();
       }
       GetValueOffset(iterated_sp);
-      auto child_sp = iterated_sp->GetChildMemberWithName(g___value_, true);
+      auto child_sp = iterated_sp->GetChildMemberWithName(g_value_, true);
       if (child_sp)
         iterated_sp = child_sp;
       else
@@ -416,15 +416,15 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     switch (potential_child_sp->GetNumChildren()) {
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
-      if (child0_sp && child0_sp->GetName() == g___cc)
+      if (child0_sp && child0_sp->GetName() == g_cc)
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
     case 2: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
       auto child1_sp = potential_child_sp->GetChildAtIndex(1, true);
-      if (child0_sp && child0_sp->GetName() == g___cc && child1_sp &&
-          child1_sp->GetName() == g___nc)
+      if (child0_sp && child0_sp->GetName() == g_cc && child1_sp &&
+          child1_sp->GetName() == g_nc)
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
@@ -435,15 +435,15 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
-  static ConstString g___tree_("__tree_");
-  static ConstString g___begin_node_("__begin_node_");
+  static ConstString g_tree_("__tree_");
+  static ConstString g_begin_node_("__begin_node_");
   m_count = UINT32_MAX;
   m_tree = m_root_node = nullptr;
   m_iterators.clear();
-  m_tree = m_backend.GetChildMemberWithName(g___tree_, true).get();
+  m_tree = m_backend.GetChildMemberWithName(g_tree_, true).get();
   if (!m_tree)
     return false;
-  m_root_node = m_tree->GetChildMemberWithName(g___begin_node_, true).get();
+  m_root_node = m_tree->GetChildMemberWithName(g_begin_node_, true).get();
   return false;
 }
 
