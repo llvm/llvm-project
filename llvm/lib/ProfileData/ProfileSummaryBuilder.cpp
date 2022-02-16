@@ -59,12 +59,12 @@ cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
 
 // The next two options override the counts derived from summary computation and
 // are useful for debugging purposes.
-cl::opt<int> ProfileSummaryHotCount(
+cl::opt<uint64_t> ProfileSummaryHotCount(
     "profile-summary-hot-count", cl::ReallyHidden, cl::ZeroOrMore,
     cl::desc("A fixed hot count that overrides the count derived from"
              " profile-summary-cutoff-hot"));
 
-cl::opt<int> ProfileSummaryColdCount(
+cl::opt<uint64_t> ProfileSummaryColdCount(
     "profile-summary-cold-count", cl::ReallyHidden, cl::ZeroOrMore,
     cl::desc("A fixed cold count that overrides the count derived from"
              " profile-summary-cutoff-cold"));
