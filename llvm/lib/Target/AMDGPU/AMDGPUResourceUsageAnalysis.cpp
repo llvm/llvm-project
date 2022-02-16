@@ -87,9 +87,7 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumSGPRs(
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
     const GCNSubtarget &ST, int32_t ArgNumAGPR, int32_t ArgNumVGPR) const {
-  if (ST.hasGFX90AInsts() && ArgNumAGPR)
-    return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
-  return std::max(ArgNumVGPR, ArgNumAGPR);
+  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), ArgNumAGPR, ArgNumVGPR);
 }
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
