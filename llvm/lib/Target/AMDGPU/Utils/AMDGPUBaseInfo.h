@@ -601,7 +601,7 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 namespace Hwreg {
 
 LLVM_READONLY
-int64_t getHwregId(const StringRef Name);
+int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
 bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI);
