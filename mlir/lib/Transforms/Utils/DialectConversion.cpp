@@ -2588,6 +2588,11 @@ static void computeNecessaryMaterializations(
         return !necessaryMaterializations.count(matIt->second);
       return rewriterImpl.isOpIgnored(user);
     };
+    // This value may be replacing another value that has a live user.
+    for (Value inv : inverseMapping.lookup(value))
+      if (llvm::find_if_not(inv.getUsers(), findFn) != inv.user_end())
+        return true;
+    // Or have live users itself.
     return llvm::find_if_not(value.getUsers(), findFn) != value.user_end();
   };
 

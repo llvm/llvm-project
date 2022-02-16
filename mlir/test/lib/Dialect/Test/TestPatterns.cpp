@@ -1136,6 +1136,58 @@ struct TestTypeConversionDriver
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// Test Target Materialization With No Uses
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct ForwardOperandPattern : public OpConversionPattern<TestTypeChangerOp> {
+  using OpConversionPattern<TestTypeChangerOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(TestTypeChangerOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.replaceOp(op, adaptor.getOperands());
+    return success();
+  }
+};
+
+struct TestTargetMaterializationWithNoUses
+    : public PassWrapper<TestTargetMaterializationWithNoUses,
+                         OperationPass<ModuleOp>> {
+  StringRef getArgument() const final {
+    return "test-target-materialization-with-no-uses";
+  }
+  StringRef getDescription() const final {
+    return "Test a special case of target materialization in DialectConversion";
+  }
+
+  void runOnOperation() override {
+    TypeConverter converter;
+    converter.addConversion([](Type t) { return t; });
+    converter.addConversion([](IntegerType intTy) -> Type {
+      if (intTy.getWidth() == 16)
+        return IntegerType::get(intTy.getContext(), 64);
+      return intTy;
+    });
+    converter.addTargetMaterialization(
+        [](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
+          return builder.create<TestCastOp>(loc, type, inputs).getResult();
+        });
+
+    ConversionTarget target(getContext());
+    target.addIllegalOp<TestTypeChangerOp>();
+
+    RewritePatternSet patterns(&getContext());
+    patterns.add<ForwardOperandPattern>(converter, &getContext());
+
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
+      signalPassFailure();
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Test Block Merging
 //===----------------------------------------------------------------------===//
 
@@ -1317,6 +1369,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestUnknownRootOpDriver>();
 
   PassRegistration<TestTypeConversionDriver>();
+  PassRegistration<TestTargetMaterializationWithNoUses>();
 
   PassRegistration<TestMergeBlocksPatternDriver>();
   PassRegistration<TestSelectiveReplacementPatternDriver>();
