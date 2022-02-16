@@ -149,9 +149,20 @@ private:
   int maxNesting_{0}; // max level of nested parentheses
 };
 
+template <typename CHAR> static inline bool IsWhite(CHAR c) {
+  // White space.  ' ' is standard.  Other characters are extensions.
+  // Extension candidates:
+  //   '\t' (horizontal tab)
+  //   '\n' (new line)
+  //   '\v' (vertical tab)
+  //   '\f' (form feed)
+  //   '\r' (carriage ret)
+  return c == ' ' || c == '\t' || c == '\v';
+}
+
 template <typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
   for (++cursor_; cursor_ < end_; ++cursor_) {
-    if (*cursor_ != ' ') {
+    if (!IsWhite(*cursor_)) {
       return toupper(*cursor_);
     }
   }
@@ -161,7 +172,7 @@ template <typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
 
 template <typename CHAR> CHAR FormatValidator<CHAR>::LookAheadChar() {
   for (laCursor_ = cursor_ + 1; laCursor_ < end_; ++laCursor_) {
-    if (*laCursor_ != ' ') {
+    if (!IsWhite(*cursor_)) {
       return toupper(*laCursor_);
     }
   }

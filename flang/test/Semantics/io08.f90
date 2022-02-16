@@ -37,6 +37,9 @@
   write(*,'($)')
   write(*,'(\)')
   write(*,'(RZ,RU,RP,RN,RD,RC,SS,SP,S,3G15.3e2)')
+  write(*, '(' // achar( 9) // ')') ! horizontal tab
+  write(*, '(' // achar(11) // ')') ! vertical tab
+  write(*, '(' // achar(32) // ')') ! space
 
   ! C1302 warnings; no errors
   write(*,'(3P7I2)')
