@@ -267,19 +267,23 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
                     << " LSMInst cost: " << Info->LSMInstCost << '\n'
                     << " TotalInst cost: " << Info->InstCost << '\n');
 
+  bool Changed = false;
+
   if (isMemBound(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " is memory bound\n");
     NumMemBound++;
     F.addFnAttr("amdgpu-memory-bound", "true");
+    Changed = true;
   }
 
   if (AMDGPU::isEntryFunctionCC(F.getCallingConv()) && needLimitWave(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " needs limit wave\n");
     NumLimitWave++;
     F.addFnAttr("amdgpu-wave-limiter", "true");
+    Changed = true;
   }
 
-  return true;
+  return Changed;
 }
 
 bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
