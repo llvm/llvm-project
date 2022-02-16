@@ -1616,6 +1616,7 @@ defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
                                          [["w", "wv"]]>;
 
 // 12.3. Vector Integer Extension
+let HasNoMaskPassThru = true in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
   def vzext_vf2 : RVVIntExt<"vzext", "Uw", "UwUv", "csi">;
@@ -1627,6 +1628,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1] in {
 let Log2LMUL = [-3, -2, -1, 0] in {
   def vsext_vf8 : RVVIntExt<"vsext", "o", "ov", "c">;
   def vzext_vf8 : RVVIntExt<"vzext", "Uo", "UoUv", "c">;
+}
 }
 
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
@@ -1833,6 +1835,7 @@ defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
 defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
 
 // 14.8. Vector Floating-Point Square-Root Instruction
+let HasNoMaskPassThru = true in {
 def vfsqrt : RVVFloatingUnaryVVBuiltin;
 
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
@@ -1842,7 +1845,6 @@ def vfrsqrt7 : RVVFloatingUnaryVVBuiltin;
 def vfrec7 : RVVFloatingUnaryVVBuiltin;
 
 // 14.11. Vector Floating-Point MIN/MAX Instructions
-let HasNoMaskPassThru = true in {
 defm vfmin : RVVFloatingBinBuiltinSet;
 defm vfmax : RVVFloatingBinBuiltinSet;
 
@@ -1865,7 +1867,7 @@ defm vmfge : RVVFloatingMaskOutBuiltinSet;
 }
 
 // 14.14. Vector Floating-Point Classify Instruction
-let Name = "vfclass_v", HasPolicy = false in
+let Name = "vfclass_v", HasNoMaskPassThru = true in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "xfd">;
 
 // 14.15. Vector Floating-Point Merge Instructio
@@ -1887,6 +1889,7 @@ let HasMask = false, HasNoMaskedOverloaded = false, HasPolicy = false in
                                   [["f", "v", "ve"]]>;
 
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+let HasNoMaskPassThru = true in {
 def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
 def vfcvt_x_f_v : RVVConvToSignedBuiltin<"vfcvt_x">;
 def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
@@ -1915,6 +1918,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_f_x_w : RVVConvBuiltin<"Fv", "Fvw", "csi", "vfncvt_f">;
   def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_f">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
+}
 }
 
 // 15. Vector Reduction Operations
@@ -1981,7 +1985,7 @@ def vmsif : RVVMaskUnaryBuiltin;
 // 16.6. vmsof.m set-only-first mask bit
 def vmsof : RVVMaskUnaryBuiltin;
 
-let HasNoMaskedOverloaded = false in {
+let HasNoMaskPassThru = true, HasNoMaskedOverloaded = false in {
   // 16.8. Vector Iota Instruction
   defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
 
