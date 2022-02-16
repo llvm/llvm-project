@@ -466,14 +466,17 @@ class JSONCrashLogParser:
 
     def parse_crash_reason(self, json_exception):
         exception_type = json_exception['type']
-        exception_signal = json_exception['signal']
+        exception_signal = " "
+        if 'signal' in json_exception:
+            exception_signal += "({})".format(json_exception['signal'])
+
         if 'codes' in json_exception:
             exception_extra = " ({})".format(json_exception['codes'])
         elif 'subtype' in json_exception:
             exception_extra = " ({})".format(json_exception['subtype'])
         else:
             exception_extra = ""
-        return "{} ({}){}".format(exception_type, exception_signal,
+        return "{}{}{}".format(exception_type, exception_signal,
                                   exception_extra)
 
     def parse_images(self, json_images):
