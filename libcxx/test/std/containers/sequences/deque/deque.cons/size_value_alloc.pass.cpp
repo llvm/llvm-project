@@ -26,7 +26,7 @@ test(unsigned n, const T& x, const Allocator& a)
     C d(n, x, a);
     assert(d.get_allocator() == a);
     assert(d.size() == n);
-    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
         assert(*i == x);
 }

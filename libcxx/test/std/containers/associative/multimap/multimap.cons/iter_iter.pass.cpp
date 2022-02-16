@@ -37,7 +37,7 @@ int main(int, char**)
     };
     std::multimap<int, double> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     assert(*m.begin() == V(1, 1));
     assert(*next(m.begin()) == V(1, 1.5));
     assert(*next(m.begin(), 2) == V(1, 2));
@@ -65,7 +65,7 @@ int main(int, char**)
     };
     std::multimap<int, double, std::less<int>, min_allocator<V>> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     assert(*m.begin() == V(1, 1));
     assert(*next(m.begin()) == V(1, 1.5));
     assert(*next(m.begin(), 2) == V(1, 2));
@@ -95,7 +95,7 @@ int main(int, char**)
     A a;
     std::multimap<int, double, std::less<int>, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), a);
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     assert(*m.begin() == V(1, 1));
     assert(*next(m.begin()) == V(1, 1.5));
     assert(*next(m.begin(), 2) == V(1, 2));

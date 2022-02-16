@@ -39,7 +39,7 @@ int main(int, char**)
                  {2, 2},
              });
     assert(m.size() == 3);
-    assert(distance(m.begin(), m.end()) == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*next(m.begin()) == V(2, 1));
     assert(*next(m.begin(), 2) == V(3, 1));
@@ -61,7 +61,7 @@ int main(int, char**)
                  {2, 2},
              });
     assert(m.size() == 3);
-    assert(distance(m.begin(), m.end()) == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*next(m.begin()) == V(2, 1));
     assert(*next(m.begin(), 2) == V(3, 1));

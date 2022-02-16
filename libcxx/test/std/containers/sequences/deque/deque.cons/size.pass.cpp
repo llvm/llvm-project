@@ -31,7 +31,7 @@ test2(unsigned n)
     C d(n, Allocator());
     assert(static_cast<unsigned>(DefaultOnly::count) == n);
     assert(d.size() == n);
-    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
         assert(*i == T());
     }
@@ -52,7 +52,7 @@ test1(unsigned n)
     C d(n);
     assert(static_cast<unsigned>(DefaultOnly::count) == n);
     assert(d.size() == n);
-    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
 #if TEST_STD_VER >= 11
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
         assert(*i == T());

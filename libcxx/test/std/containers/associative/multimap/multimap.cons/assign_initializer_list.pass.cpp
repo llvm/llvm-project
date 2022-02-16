@@ -39,7 +39,7 @@ int main(int, char**)
                {3, 2}
            };
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     C::const_iterator i = m.cbegin();
     assert(*i == V(1, 1));
     assert(*++i == V(1, 1.5));
@@ -68,7 +68,7 @@ int main(int, char**)
                {3, 2}
            };
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     C::const_iterator i = m.cbegin();
     assert(*i == V(1, 1));
     assert(*++i == V(1, 1.5));

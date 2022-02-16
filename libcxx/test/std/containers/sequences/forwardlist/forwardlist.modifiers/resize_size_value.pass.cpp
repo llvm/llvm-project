@@ -30,13 +30,13 @@ int main(int, char**)
         C c(std::begin(t), std::end(t));
 
         c.resize(3, 10);
-        assert(distance(c.begin(), c.end()) == 3);
+        assert(std::distance(c.begin(), c.end()) == 3);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
 
         c.resize(6, 10);
-        assert(distance(c.begin(), c.end()) == 6);
+        assert(std::distance(c.begin(), c.end()) == 6);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
@@ -45,7 +45,7 @@ int main(int, char**)
         assert(*next(c.begin(), 5) == 10);
 
         c.resize(6, 12);
-        assert(distance(c.begin(), c.end()) == 6);
+        assert(std::distance(c.begin(), c.end()) == 6);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
@@ -61,13 +61,13 @@ int main(int, char**)
         C c(std::begin(t), std::end(t));
 
         c.resize(3, 10);
-        assert(distance(c.begin(), c.end()) == 3);
+        assert(std::distance(c.begin(), c.end()) == 3);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
 
         c.resize(6, 10);
-        assert(distance(c.begin(), c.end()) == 6);
+        assert(std::distance(c.begin(), c.end()) == 6);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
@@ -76,7 +76,7 @@ int main(int, char**)
         assert(*next(c.begin(), 5) == 10);
 
         c.resize(6, 12);
-        assert(distance(c.begin(), c.end()) == 6);
+        assert(std::distance(c.begin(), c.end()) == 6);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);

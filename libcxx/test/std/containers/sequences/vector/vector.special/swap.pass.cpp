@@ -44,7 +44,7 @@ int main(int, char**)
         swap(c1, c2);
         assert(c1 == std::vector<int>(a2, a2+sizeof(a2)/sizeof(a2[0])));
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
     }
@@ -57,7 +57,7 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c2));
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert(c2 == std::vector<int>(a1, a1+sizeof(a1)/sizeof(a1[0])));
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
@@ -71,9 +71,9 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c2));
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
     }
@@ -129,7 +129,7 @@ int main(int, char**)
         swap(c1, c2);
         assert((c1 == std::vector<int, min_allocator<int>>(a2, a2+sizeof(a2)/sizeof(a2[0]))));
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
     }
@@ -142,7 +142,7 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c2));
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert((c2 == std::vector<int, min_allocator<int>>(a1, a1+sizeof(a1)/sizeof(a1[0]))));
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
@@ -156,9 +156,9 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c2));
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
     }
