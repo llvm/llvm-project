@@ -192,6 +192,7 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                  SmallVectorImpl<Value *> &Objects,
                                  const AbstractAttribute &QueryingAA,
                                  const Instruction *CtxI,
+                                 bool &UsedAssumedInformation,
                                  bool Intraprocedural = false);
 
 /// Collect all potential values of the one stored by \p SI into
@@ -1824,23 +1825,24 @@ public:
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
-  /// If true is returned, \p AllCallSitesKnown is set if all possible call
-  /// sites of the function have been visited.
+  /// If true is returned, \p UsedAssumedInformation is set if assumed
+  /// information was used to skip or simplify potential call sites.
   bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const AbstractAttribute &QueryingAA,
-                            bool RequireAllCallSites, bool &AllCallSitesKnown);
+                            bool RequireAllCallSites,
+                            bool &UsedAssumedInformation);
 
   /// Check \p Pred on all call sites of \p Fn.
   ///
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
-  /// If true is returned, \p AllCallSitesKnown is set if all possible call
-  /// sites of the function have been visited.
+  /// If true is returned, \p UsedAssumedInformation is set if assumed
+  /// information was used to skip or simplify potential call sites.
   bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const Function &Fn, bool RequireAllCallSites,
                             const AbstractAttribute *QueryingAA,
-                            bool &AllCallSitesKnown);
+                            bool &UsedAssumedInformation);
 
   /// Check \p Pred on all values potentially returned by \p F.
   ///
