@@ -28,6 +28,19 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if (NOT LLVM_RUNTIMES_BUILD)
     load_llvm_config()
   endif()
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(print_target_triple ${CMAKE_CXX_COMPILER} --target=${LLVM_RUNTIME_TRIPLE} -print-target-triple)
+    execute_process(COMMAND ${print_target_triple}
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE output
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(result EQUAL 0)
+      set(LLVM_RUNTIME_TRIPLE ${output})
+    else()
+      string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+      message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+    endif()
+  endif()
   construct_compiler_rt_default_triple()
 
   include(SetPlatformToolchainTools)
