@@ -7,6 +7,6 @@ static void another(void) { // expected-warning {{function 'another' is not need
 
 template <typename T>
 void foo(void) {
-        thing();
-	another();
+  thing();
+  another();
 }
