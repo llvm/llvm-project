@@ -344,8 +344,8 @@ size_t Stream::PutRawBytes(const void *s, size_t src_len,
     for (size_t i = 0; i < src_len; ++i)
       _PutHex8(src[i], false);
   } else {
-    for (size_t i = src_len - 1; i < src_len; --i)
-      _PutHex8(src[i], false);
+    for (size_t i = src_len; i > 0; --i)
+      _PutHex8(src[i - 1], false);
   }
   if (!binary_was_set)
     m_flags.Clear(eBinary);
@@ -357,6 +357,7 @@ size_t Stream::PutBytesAsRawHex8(const void *s, size_t src_len,
                                  ByteOrder src_byte_order,
                                  ByteOrder dst_byte_order) {
   ByteDelta delta(*this);
+
   if (src_byte_order == eByteOrderInvalid)
     src_byte_order = m_byte_order;
 
@@ -370,8 +371,8 @@ size_t Stream::PutBytesAsRawHex8(const void *s, size_t src_len,
     for (size_t i = 0; i < src_len; ++i)
       _PutHex8(src[i], false);
   } else {
-    for (size_t i = src_len - 1; i < src_len; --i)
-      _PutHex8(src[i], false);
+    for (size_t i = src_len; i > 0; --i)
+      _PutHex8(src[i - 1], false);
   }
   if (binary_is_set)
     m_flags.Set(eBinary);
