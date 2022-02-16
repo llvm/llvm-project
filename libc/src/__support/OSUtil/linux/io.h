@@ -9,9 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_IO_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_IO_H
 
-#include "include/sys/syscall.h" // For syscall numbers.
 #include "src/string/string_utils.h"
 #include "syscall.h" // For internal syscall function.
+
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
 

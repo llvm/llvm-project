@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/linux/app.h"
-#include "include/sys/syscall.h"
 #include "src/__support/OSUtil/syscall.h"
 
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 #include <stdint.h>
+#include <sys/syscall.h>
 
 extern "C" int main(int, char **, char **);
 
