@@ -18,7 +18,7 @@
 ## So just use -DAG
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK-DAG: [[#%x,G0:]] g   F __TEXT,__text _g000000
-# CHECK-DAG: [[#%x,G0]]  g   F __TEXT,__text _g033333        
+# CHECK-DAG: [[#%x,G0]]  g   F __TEXT,__text _g033333
 # CHECK-DAG: [[#%x,G1:]] g   F __TEXT,__text _g100000
 # CHECK-DAG: [[#%x,G1]]  g   F __TEXT,__text _g133333
 # CHECK-DAG: [[#%x,G2:]] g   F __TEXT,__text _g200000

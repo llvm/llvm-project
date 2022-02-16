@@ -32,7 +32,7 @@
 # REEXP: __DATA   __data             {{.*}} pointer         0 libSystem        ___nan
 
 #--- ref-all.s
-.data        
+.data
 .quad	_xxx
 .quad _OBJC_CLASS_$_foo11
 .quad _OBJC_CLASS_$_foo10

@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/live.s -o %t/live.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/dead.s -o %t/dead.o
-        
+
 # RUN: not %lld -undefined bogus -o /dev/null %t/live.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=UNKNOWN
 # RUN: not %lld -undefined error -o /dev/null %t/live.o 2>&1 | \

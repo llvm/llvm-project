@@ -24,7 +24,7 @@
 ## Postlink checks.
 # RUN: llvm-nm %t/a.out | FileCheck %s --check-prefix=POSTCHECK
 # POSTCHECK: {{.*}} U ___gxx_personality_v0
-# POSTCHECK: {{.*}} t ___gxx_personality_v0	
+# POSTCHECK: {{.*}} t ___gxx_personality_v0
 
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/a.out | FileCheck %s --check-prefixes=A,CHECK -D#%x,OFF=0x100000000
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/b.out | FileCheck %s --check-prefixes=BC,CHECK -D#%x,OFF=0x100000000
@@ -71,8 +71,8 @@ _baz3:
   .cfi_endproc
 
 .text
-.no_dead_strip ___gxx_personality_v0	
-___gxx_personality_v0:	
+.no_dead_strip ___gxx_personality_v0
+___gxx_personality_v0:
   nop
 
 .subsections_via_symbols
@@ -108,7 +108,7 @@ _personality_1:
   retq
 _personality_2:
   retq
-  
+
 ## This yaml was created from the combined.o object file described in this comment:
 ## https://reviews.llvm.org/D107533#2935217
 #--- combined.yaml
@@ -254,7 +254,7 @@ LoadCommands:
     ntools:          1
     Tools:
       - tool:            3
-        version:         39913472    
+        version:         39913472
   - cmd:             LC_DATA_IN_CODE
     cmdsize:         16
     dataoff:         664
