@@ -1026,7 +1026,9 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
 
 namespace Hwreg {
 
-int64_t getHwregId(const StringRef Name) {
+int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
+  if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
+    return ID_HW_ID1;
   for (int Id = ID_SYMBOLIC_FIRST_; Id < ID_SYMBOLIC_LAST_; ++Id) {
     if (IdSymbolic[Id] && Name == IdSymbolic[Id])
       return Id;
