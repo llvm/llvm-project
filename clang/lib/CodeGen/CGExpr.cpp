@@ -1114,11 +1114,11 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
                                       CE->getBeginLoc());
         }
 
-        if (CE->getCastKind() == CK_AddressSpaceConversion)
-         return Builder.CreateAddrSpaceCast(Addr, ConvertType(E->getType()));
-
         llvm::Type *ElemTy = ConvertTypeForMem(E->getType()->getPointeeType());
-        return Builder.CreateElementBitCast(Addr, ElemTy);
+        Addr = Builder.CreateElementBitCast(Addr, ElemTy);
+        if (CE->getCastKind() == CK_AddressSpaceConversion)
+          Addr = Builder.CreateAddrSpaceCast(Addr, ConvertType(E->getType()));
+        return Addr;
       }
       break;
 
