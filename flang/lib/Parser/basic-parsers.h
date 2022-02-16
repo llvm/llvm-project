@@ -855,8 +855,8 @@ public:
     auto at{state.GetLocation()};
     auto result{parser_.Parse(state)};
     if (result) {
-      state.Nonstandard(
-          CharBlock{at, state.GetLocation()}, LF, "nonstandard usage"_en_US);
+      state.Nonstandard(CharBlock{at, std::max(state.GetLocation(), at + 1)},
+          LF, "nonstandard usage"_en_US);
     }
     return result;
   }
