@@ -79,12 +79,8 @@ using LibraryHashTypes = TypeList<
       float,
       double,
       long double,
-#if TEST_STD_VER >= 14
-      // Enum types
       PoisonedHashDetail::Enum,
       PoisonedHashDetail::EnumClass,
-#endif
-      // pointer types
       void*,
       void const*,
       PoisonedHashDetail::Class*
