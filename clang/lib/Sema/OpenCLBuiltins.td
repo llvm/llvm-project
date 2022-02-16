@@ -1082,8 +1082,10 @@ multiclass OpenCL2Atomics<AddressSpace addrspace, FunctionExtension BaseExt> {
   foreach TypePair = [[AtomicInt, Int], [AtomicUInt, UInt],
                       [AtomicLong, Long], [AtomicULong, ULong],
                       [AtomicFloat, Float], [AtomicDouble, Double]] in {
-    def : Builtin<"atomic_init",
-        [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
+    let Extension = BaseExt in {
+      def : Builtin<"atomic_init",
+          [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
+    }
     defm : BuiltinAtomicExplicit<"atomic_store",
         [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]], BaseExt>;
     defm : BuiltinAtomicExplicit<"atomic_load",
