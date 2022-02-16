@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; RUN: rm -rf %t && split-file %s %t
 ; RUN: llvm-as %t/a.ll -o %t/a.bc
-; RUN: llvm-mc -filetype=obj %t/b.s -o %t/b.o
+; RUN: llvm-mc --triple=x86_64-unknown-linux-gnu -filetype=obj %t/b.s -o %t/b.o
 ; RUN: not ld.lld %t/a.bc %t/a.bc -o /dev/null -shared 2>&1 | FileCheck %s
 
 ;; --thinlto-index-only skips some passes. Test the error is present.
