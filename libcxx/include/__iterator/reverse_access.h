@@ -21,8 +21,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_CXX03_LANG)
-
 #if _LIBCPP_STD_VER > 11
 
 template <class _Tp, size_t _Np>
@@ -95,9 +93,7 @@ auto crend(const _Cp& __c) -> decltype(_VSTD::rend(__c))
     return _VSTD::rend(__c);
 }
 
-#endif
-
-#endif // !defined(_LIBCPP_CXX03_LANG)
+#endif // _LIBCPP_STD_VER > 11
 
 _LIBCPP_END_NAMESPACE_STD
 
