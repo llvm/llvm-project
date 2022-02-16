@@ -17,6 +17,7 @@
 #define DEMANGLE_UTILITY_H
 
 #include "StringView.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstdlib>

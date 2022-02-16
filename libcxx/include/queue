@@ -217,11 +217,13 @@ template <class T, class Container, class Compare>
 
 */
 
+#include <__algorithm/make_heap.h>
+#include <__algorithm/pop_heap.h>
+#include <__algorithm/push_heap.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__utility/forward.h>
-#include <algorithm>
 #include <compare>
 #include <deque>
 #include <functional>

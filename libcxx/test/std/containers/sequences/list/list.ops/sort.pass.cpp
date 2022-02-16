@@ -10,6 +10,7 @@
 
 // void sort();
 
+#include <algorithm>
 #include <list>
 #include <random>
 #include <vector>

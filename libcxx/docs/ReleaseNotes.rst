@@ -52,6 +52,10 @@ API Changes
   ``<filesystem>`` header. The associated macro
   ``_LIBCPP_DEPRECATED_EXPERIMENTAL_FILESYSTEM`` has also been removed.
 
+- Transitive includes of ``<algorithm>`` have been removed. If you see compiler errors
+  related to missing declarations inside namespace ``std`` when updating libc++,
+  you are probably missing ``#include <algorithm>`` in a file where you use algorithms.
+
 ABI Changes
 -----------
 

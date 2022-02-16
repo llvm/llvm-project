@@ -10,9 +10,13 @@
 #ifndef _LIBCPP___BIT_REFERENCE
 #define _LIBCPP___BIT_REFERENCE
 
+#include <__algorithm/min.h>
 #include <__bits>
 #include <__config>
-#include <algorithm>
+#include <__iterator/iterator_traits.h>
+#include <__memory/pointer_traits.h>
+#include <cstring>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

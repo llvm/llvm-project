@@ -192,6 +192,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 
 */
 
+#include <__algorithm/is_permutation.h>
 #include <__config>
 #include <__hash_table>
 #include <ext/__hash>
