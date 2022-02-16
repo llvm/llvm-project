@@ -502,14 +502,6 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (SInfo.AllocasToInstrument.empty())
     return false;
 
-  for (auto &I : SInfo.AllocasToInstrument) {
-    memtag::AllocaInfo &Info = I.second;
-    assert(Info.AI && isInterestingAlloca(*Info.AI));
-    auto *PrevAI = Info.AI;
-    if (memtag::alignAndPadAlloca(Info, kTagGranuleSize))
-      PrevAI->eraseFromParent();
-  }
-
   std::unique_ptr<DominatorTree> DeleteDT;
   DominatorTree *DT = nullptr;
   if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
@@ -538,7 +530,11 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
   int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
-    const memtag::AllocaInfo &Info = I.second;
+    memtag::AllocaInfo &Info = I.second;
+    assert(Info.AI && isInterestingAlloca(*Info.AI));
+    auto *PrevAI = Info.AI;
+    if (memtag::alignAndPadAlloca(Info, kTagGranuleSize))
+      PrevAI->eraseFromParent();
     AllocaInst *AI = Info.AI;
     int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
