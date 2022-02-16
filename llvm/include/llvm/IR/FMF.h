@@ -13,6 +13,8 @@
 #ifndef LLVM_IR_FMF_H
 #define LLVM_IR_FMF_H
 
+#include "llvm/Support/raw_ostream.h"
+
 namespace llvm {
 
 /// Convenience struct for specifying and reasoning about fast-math flags.
