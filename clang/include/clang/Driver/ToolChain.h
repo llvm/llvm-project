@@ -513,6 +513,9 @@ public:
   /// compile unit information.
   virtual bool UseDwarfDebugFlags() const { return false; }
 
+  /// Add an additional -fdebug-prefix-map entry.
+  virtual std::string GetGlobalDebugPathRemapping() const { return {}; }
+  
   // Return the DWARF version to emit, in the absence of arguments
   // to the contrary.
   virtual unsigned GetDefaultDwarfVersion() const { return 5; }
