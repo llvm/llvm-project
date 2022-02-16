@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include <initializer_list>
 
 namespace llvm {
 namespace outliner {
@@ -56,6 +57,55 @@ private:
   /// target.
   unsigned CallOverhead = 0;
 
+  /// Liveness information for this Candidate. Tracks from the end of the
+  /// block containing this Candidate to the beginning of its sequence.
+  ///
+  /// Optional. Can be used to fine-tune the cost model, or fine-tune legality
+  /// decisions.
+  LiveRegUnits FromEndOfBlockToStartOfSeq;
+
+  /// Liveness information restricted to this Candidate's instruction sequence.
+  ///
+  /// Optional. Can be used to fine-tune the cost model, or fine-tune legality
+  /// decisions.
+  LiveRegUnits InSeq;
+
+  /// True if FromEndOfBlockToStartOfSeq has been initialized.
+  bool FromEndOfBlockToStartOfSeqWasSet = false;
+
+  /// True if InSeq has been initialized.
+  bool InSeqWasSet = false;
+
+  /// Populate FromEndOfBlockToStartOfSeq with liveness information.
+  void initFromEndOfBlockToStartOfSeq(const TargetRegisterInfo &TRI) {
+    assert(MBB->getParent()->getRegInfo().tracksLiveness() &&
+           "Candidate's Machine Function must track liveness");
+    // Only initialize once.
+    if (FromEndOfBlockToStartOfSeqWasSet)
+      return;
+    FromEndOfBlockToStartOfSeqWasSet = true;
+    FromEndOfBlockToStartOfSeq.init(TRI);
+    FromEndOfBlockToStartOfSeq.addLiveOuts(*MBB);
+    // Compute liveness from the end of the block up to the beginning of the
+    // outlining candidate.
+    for (auto &MI : make_range(MBB->rbegin(),
+                               (MachineBasicBlock::reverse_iterator)front()))
+      FromEndOfBlockToStartOfSeq.stepBackward(MI);
+  }
+
+  /// Populate InSeq with liveness information.
+  void initInSeq(const TargetRegisterInfo &TRI) {
+    assert(MBB->getParent()->getRegInfo().tracksLiveness() &&
+           "Candidate's Machine Function must track liveness");
+    // Only initialize once.
+    if (InSeqWasSet)
+      return;
+    InSeqWasSet = true;
+    InSeq.init(TRI);
+    for (auto &MI : make_range(front(), std::next(back())))
+      InSeq.accumulate(MI);
+  }
+
 public:
   /// The index of this \p Candidate's \p OutlinedFunction in the list of
   /// \p OutlinedFunctions.
@@ -65,25 +115,8 @@ public:
   /// from this point. Defined by the target.
   unsigned CallConstructionID = 0;
 
-  /// Contains physical register liveness information for the MBB containing
-  /// this \p Candidate.
-  ///
-  /// This is optionally used by the target to calculate more fine-grained
-  /// cost model information.
-  LiveRegUnits LRU;
-
-  /// Contains the accumulated register liveness information for the
-  /// instructions in this \p Candidate.
-  ///
-  /// This is optionally used by the target to determine which registers have
-  /// been used across the sequence.
-  LiveRegUnits UsedInSequence;
-
   /// Target-specific flags for this Candidate's MBB.
   unsigned Flags = 0x0;
-
-  /// True if initLRU has been called on this Candidate.
-  bool LRUWasSet = false;
 
   /// Return the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }
@@ -109,6 +142,50 @@ public:
   MachineFunction *getMF() const { return MBB->getParent(); }
   MachineBasicBlock *getMBB() const { return MBB; }
 
+  /// \returns True if \p Reg is available from the end of the block to the
+  /// beginning of the sequence.
+  ///
+  /// This query considers the following range:
+  ///
+  /// in_seq_1
+  /// in_seq_2
+  /// ...
+  /// in_seq_n
+  /// not_in_seq_1
+  /// ...
+  /// <end of block>
+  bool isAvailableAcrossAndOutOfSeq(Register Reg,
+                                    const TargetRegisterInfo &TRI) {
+    if (!FromEndOfBlockToStartOfSeqWasSet)
+      initFromEndOfBlockToStartOfSeq(TRI);
+    return FromEndOfBlockToStartOfSeq.available(Reg);
+  }
+
+  /// \returns True if `isAvailableAcrossAndOutOfSeq` fails for any register
+  /// in \p Regs.
+  bool isAnyUnavailableAcrossOrOutOfSeq(std::initializer_list<Register> Regs,
+                                        const TargetRegisterInfo &TRI) {
+    if (!FromEndOfBlockToStartOfSeqWasSet)
+      initFromEndOfBlockToStartOfSeq(TRI);
+    return any_of(Regs, [&](Register Reg) {
+      return !FromEndOfBlockToStartOfSeq.available(Reg);
+    });
+  }
+
+  /// \returns True if \p Reg is available within the sequence itself.
+  ///
+  /// This query considers the following range:
+  ///
+  /// in_seq_1
+  /// in_seq_2
+  /// ...
+  /// in_seq_n
+  bool isAvailableInsideSeq(Register Reg, const TargetRegisterInfo &TRI) {
+    if (!InSeqWasSet)
+      initInSeq(TRI);
+    return InSeq.available(Reg);
+  }
+
   /// The number of instructions that would be saved by outlining every
   /// candidate of this type.
   ///
@@ -132,31 +209,6 @@ public:
     return getStartIdx() > RHS.getStartIdx();
   }
 
-  /// Compute the registers that are live across this Candidate.
-  /// Used by targets that need this information for cost model calculation.
-  /// If a target does not need this information, then this should not be
-  /// called.
-  void initLRU(const TargetRegisterInfo &TRI) {
-    assert(MBB->getParent()->getRegInfo().tracksLiveness() &&
-           "Candidate's Machine Function must track liveness");
-    // Only initialize once.
-    if (LRUWasSet)
-      return;
-    LRUWasSet = true;
-    LRU.init(TRI);
-    LRU.addLiveOuts(*MBB);
-
-    // Compute liveness from the end of the block up to the beginning of the
-    // outlining candidate.
-    std::for_each(MBB->rbegin(), (MachineBasicBlock::reverse_iterator)front(),
-                  [this](MachineInstr &MI) { LRU.stepBackward(MI); });
-
-    // Walk over the sequence itself and figure out which registers were used
-    // in the sequence.
-    UsedInSequence.init(TRI);
-    std::for_each(front(), std::next(back()),
-                  [this](MachineInstr &MI) { UsedInSequence.accumulate(MI); });
-  }
 };
 
 /// The information necessary to create an outlined function for some
