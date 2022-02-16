@@ -12,10 +12,10 @@
 ///
 ///  Machine:
 ///
-///       BRA   [x]     BSR  [ ]     Bcc [ ]     DBcc [ ]     FBcc [ ]
+///       BRA   [x]     BSR  [ ]     Bcc [~]     DBcc [ ]     FBcc [ ]
 ///       FDBcc [ ]     FNOP [ ]     FPn [ ]     FScc [ ]     FTST [ ]
 ///       JMP   [~]     JSR  [x]     NOP [x]     RTD  [!]     RTR  [ ]
-///       RTS   [x]     Scc  [x]     TST [ ]
+///       RTS   [x]     Scc  [~]     TST [ ]
 ///
 ///  Pseudo:
 ///
@@ -43,7 +43,9 @@
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0 in {
-  def NOP : MxInst<(outs), (ins), "nop", [], MxEncFixed<0x4E71>>;
+  def NOP : MxInst<(outs), (ins), "nop", []> {
+    let Inst = (descend 0b0100, 0b1110, 0b0111, 0b0001);
+  }
 }
 
 
@@ -61,51 +63,60 @@ let hasSideEffects = 0 in {
 /// NE—Not equal        VS—Overflow set
 ///
 /// *Not applicable to the Bcc instructions.
-def MxCCt  : MxBead4Bits<0b0000>;
-def MxCCf  : MxBead4Bits<0b0001>;
-def MxCChi : MxBead4Bits<0b0010>;
-def MxCCls : MxBead4Bits<0b0011>;
-def MxCCcc : MxBead4Bits<0b0100>;
-def MxCCcs : MxBead4Bits<0b0101>;
-def MxCCne : MxBead4Bits<0b0110>;
-def MxCCeq : MxBead4Bits<0b0111>;
-def MxCCvc : MxBead4Bits<0b1000>;
-def MxCCvs : MxBead4Bits<0b1001>;
-def MxCCpl : MxBead4Bits<0b1010>;
-def MxCCmi : MxBead4Bits<0b1011>;
-def MxCCge : MxBead4Bits<0b1100>;
-def MxCClt : MxBead4Bits<0b1101>;
-def MxCCgt : MxBead4Bits<0b1110>;
-def MxCCle : MxBead4Bits<0b1111>;
+class MxEncCondOp<bits<4> cond> {
+  dag Value = (descend cond);
+}
+
+def MxCCt  : MxEncCondOp<0b0000>;
+def MxCCf  : MxEncCondOp<0b0001>;
+def MxCChi : MxEncCondOp<0b0010>;
+def MxCCls : MxEncCondOp<0b0011>;
+def MxCCcc : MxEncCondOp<0b0100>;
+def MxCCcs : MxEncCondOp<0b0101>;
+def MxCCne : MxEncCondOp<0b0110>;
+def MxCCeq : MxEncCondOp<0b0111>;
+def MxCCvc : MxEncCondOp<0b1000>;
+def MxCCvs : MxEncCondOp<0b1001>;
+def MxCCpl : MxEncCondOp<0b1010>;
+def MxCCmi : MxEncCondOp<0b1011>;
+def MxCCge : MxEncCondOp<0b1100>;
+def MxCClt : MxEncCondOp<0b1101>;
+def MxCCgt : MxEncCondOp<0b1110>;
+def MxCCle : MxEncCondOp<0b1111>;
+
+
 
 /// --------------------------------+---------+---------
 ///  F  E  D  C | B  A  9  8 | 7  6 | 5  4  3 | 2  1  0
 /// --------------------------------+---------+---------
 ///  0  1  0  1 | CONDITION  | 1  1 |   MODE  |   REG
 /// ----------------------------------------------------
-class MxSccEncoding<MxEncEA EA, MxEncExt EXT, MxBead4Bits CC>
-    : MxEncoding<EA.Reg, EA.DA, EA.Mode, MxBead2Bits<0b11>, CC, MxBead4Bits<0b0101>,
-                 EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>;
 
 let Uses = [CCR] in {
 class MxSccR<string CC>
     : MxInst<(outs MxDRD8:$dst), (ins), "s"#CC#"\t$dst",
-             [(set i8:$dst, (MxSetCC !cast<PatLeaf>("MxCOND"#CC), CCR))],
-             MxSccEncoding<MxEncEAd_0, MxExtEmpty,
-                           !cast<MxBead4Bits>("MxCC"#CC)>>;
+             [(set i8:$dst, (MxSetCC !cast<PatLeaf>("MxCOND"#CC), CCR))]> {
+  let Inst = (descend 0b0101, !cast<MxEncCondOp>("MxCC"#CC).Value, 0b11,
+              /*MODE without last bit*/0b00,
+              /*REGISTER prefixed with D/A bit*/(operand "$dst", 4));
+}
 
-class MxSccM<string CC, MxOperand MEMOpd, ComplexPattern MEMPat,
-             MxEncEA EA, MxEncExt EXT>
+class MxSccM<string CC, MxOperand MEMOpd, ComplexPattern MEMPat, MxEncMemOp DST_ENC>
     : MxInst<(outs), (ins MEMOpd:$dst), "s"#CC#"\t$dst",
-             [(store (MxSetCC !cast<PatLeaf>("MxCOND"#CC), CCR), MEMPat:$dst)],
-             MxSccEncoding<EA, EXT, !cast<MxBead4Bits>("MxCC"#CC)>>;
+             [(store (MxSetCC !cast<PatLeaf>("MxCOND"#CC), CCR), MEMPat:$dst)]> {
+  let Inst =
+    (ascend
+      (descend 0b0101, !cast<MxEncCondOp>("MxCC"#CC).Value, 0b11, DST_ENC.EA),
+      DST_ENC.Supplement
+    );
+}
 }
 
 foreach cc = [ "cc", "ls", "lt", "eq", "mi", "f", "ne", "ge",
                "cs", "pl", "gt", "t", "hi", "vc", "le", "vs"] in {
 def SET#"d8"#cc : MxSccR<cc>;
-def SET#"j8"#cc : MxSccM<cc, MxType8.JOp, MxType8.JPat, MxEncEAj_0, MxExtEmpty>;
-def SET#"p8"#cc : MxSccM<cc, MxType8.POp, MxType8.PPat, MxEncEAp_0, MxExtI16_0>;
+def SET#"j8"#cc : MxSccM<cc, MxType8.JOp, MxType8.JPat, MxEncAddrMode_j<"dst">>;
+def SET#"p8"#cc : MxSccM<cc, MxType8.POp, MxType8.PPat, MxEncAddrMode_p<"dst">>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -118,13 +129,16 @@ def SET#"p8"#cc : MxSccM<cc, MxType8.POp, MxType8.PPat, MxEncEAp_0, MxExtI16_0>;
 /// 0  1  0  0  1  1  1  0  1  1 |  MODE   |   REG
 ///------------------------------+---------+---------
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
-class MxJMP<MxOperand LOCOp, MxEncEA EA, MxEncExt EXT>
-    : MxInst<(outs), (ins LOCOp:$dst), "jmp\t$dst", [(brind iPTR:$dst)],
-             MxEncoding<EA.Reg, EA.DA, EA.Mode, MxBead2Bits<0b11>,
-                        MxBead4Bits<0b1110>, MxBead4Bits<0b0100>,
-                        EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>>;
+class MxJMP<MxOperand LOCOp, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins LOCOp:$dst), "jmp\t$dst", [(brind iPTR:$dst)]> {
+  let Inst =
+    (ascend
+      (descend 0b0100, 0b1110, 0b11, DST_ENC.EA),
+      DST_ENC.Supplement
+    );
+}
 
-def JMP32j : MxJMP<MxARI32, MxEncEAj_0, MxExtEmpty>;
+def JMP32j : MxJMP<MxARI32, MxEncAddrMode_j<"dst">>;
 
 
 // FIXME Support 16 bit indirect jump.
@@ -147,20 +161,35 @@ def JMP32j : MxJMP<MxARI32, MxEncEAj_0, MxExtEmpty>;
 ///  32-BIT DISPLACEMENT IF 8-BIT DISPLACEMENT = $FF
 /// --------------------------------------------------
 let isBranch = 1, isTerminator = 1, Uses = [CCR] in
-class MxBcc<string cc, Operand TARGET, MxEncoding ENC = MxEncEmpty>
-    : MxInst<(outs), (ins TARGET:$dst), "b"#cc#"\t$dst", [], ENC>;
+class MxBcc<string cc, Operand TARGET, dag disp_8, dag disp_16_32>
+    : MxInst<(outs), (ins TARGET:$dst), "b"#cc#"\t$dst", []> {
+  // FIXME: If we want to avoid supplying disp_16_32 with empty
+  //        (ascend) for 16/32 bits variants, we can use conditional
+  //        bang operator like this:
+  //        ```
+  //        class MxBcc<string cc, Operand TARGET, int SIZE>
+  //        ...
+  //        let Inst = !cond(
+  //            !eq(SIZE, 8):   /* encoding for Bcc8  */
+  //            !eq(SIZE, 16):  /* encoding for Bcc16 */
+  //            !eq(SIZE, 32):  /* encoding for Bcc32 */
+  //        );
+  let Inst =
+      (ascend
+        (descend 0b0110, !cast<MxEncCondOp>("MxCC"#cc).Value, disp_8),
+        disp_16_32
+      );
+}
 
 foreach cc = [ "cc", "ls", "lt", "eq", "mi", "ne", "ge",
                "cs", "pl", "gt", "hi", "vc", "le", "vs"] in {
   def B#cc#"8"
     : MxBcc<cc, MxBrTarget8,
-            MxEncoding<MxBead8Disp<0>,
-                       !cast<MxBead4Bits>("MxCC"#cc), MxBead4Bits<0x6>>>;
+            (operand "$dst", 8, (encoder "encodePCRelImm<8>")), (ascend)>;
+
   def B#cc#"16"
-    : MxBcc<cc, MxBrTarget16,
-            MxEncoding<MxBead4Bits<0x0>,
-                       MxBead4Bits<0x0>, !cast<MxBead4Bits>("MxCC"#cc),
-                       MxBead4Bits<0x6>, MxBead16Imm<0>>>;
+    : MxBcc<cc, MxBrTarget16, (descend 0b0000, 0b0000),
+            (operand "$dst", 16, (encoder "encodePCRelImm<16>"))>;
 }
 
 foreach cc = [ "cc", "ls", "lt", "eq", "mi", "ne", "ge",
@@ -178,17 +207,21 @@ def : Pat<(MxBrCond bb:$target, !cast<PatLeaf>("MxCOND"#cc), CCR),
 /// -------------------------------------------------
 ///  32-BIT DISPLACEMENT IF 8-BIT DISPLACEMENT = $FF
 /// -------------------------------------------------
-let isBranch = 1, isTerminator = 1, isBarrier=1 in
-class MxBra<Operand TARGET, MxEncoding ENC = MxEncEmpty>
-    : MxInst<(outs), (ins TARGET:$dst), "bra\t$dst", [], ENC>;
+let isBranch = 1, isTerminator = 1, isBarrier = 1 in
+class MxBra<Operand TARGET, dag disp_8, dag disp_16_32>
+    : MxInst<(outs), (ins TARGET:$dst), "bra\t$dst", []> {
+  let Inst =
+    (ascend
+      (descend 0b0110, 0b0000, disp_8),
+      disp_16_32
+    );
+}
 
 def BRA8  : MxBra<MxBrTarget8,
-                  MxEncoding<MxBead8Disp<0>, MxBead4Bits<0x0>,
-                             MxBead4Bits<0x6>>>;
-def BRA16 : MxBra<MxBrTarget16,
-                  MxEncoding<MxBead4Bits<0x0>, MxBead4Bits<0x0>,
-                             MxBead4Bits<0x0>, MxBead4Bits<0x6>,
-                             MxBead16Imm<0>>>;
+                  (operand "$dst", 8, (encoder "encodePCRelImm<8>")), (ascend)>;
+
+def BRA16 : MxBra<MxBrTarget16, (descend 0b0000, 0b0000),
+                  (operand "$dst", 16, (encoder "encodePCRelImm<16>"))>;
 
 def : Pat<(br bb:$target), (BRA8 MxBrTarget8:$target)>;
 
@@ -208,16 +241,19 @@ let isCall = 1 in
 ///------------------------------+---------+---------
 /// 0  1  0  0  1  1  1  0  1  0 |  MODE   |   REG
 ///------------------------------+---------+---------
-class MxCall<MxOperand LOCOp, MxEncEA EA, MxEncExt EXT>
-    : MxInst<(outs), (ins LOCOp:$dst), "jsr\t$dst", [],
-             MxEncoding<EA.Reg, EA.DA, EA.Mode, MxBead2Bits<0b10>,
-                        MxBead4Bits<0b1110>, MxBead4Bits<0b0100>,
-                        EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>>;
+class MxCall<MxOperand LOCOp, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins LOCOp:$dst), "jsr\t$dst", []> {
+  let Inst =
+    (ascend
+      (descend 0b0100, 0b1110, 0b10, DST_ENC.EA),
+      DST_ENC.Supplement
+    );
+}
 
-def CALLk : MxCall<MxPCI32, MxEncEAk,   MxExtBrief_0>;
-def CALLq : MxCall<MxPCD32, MxEncEAq,   MxExtI16_0>;
-def CALLb : MxCall<MxAL32,  MxEncEAb,   MxExtI32_0>;
-def CALLj : MxCall<MxARI32, MxEncEAj_0, MxExtEmpty>;
+def CALLk : MxCall<MxPCI32, MxEncAddrMode_k<"dst">>;
+def CALLq : MxCall<MxPCD32, MxEncAddrMode_q<"dst">>;
+def CALLb : MxCall<MxAL32,  MxEncAddrMode_abs<"dst", true>>;
+def CALLj : MxCall<MxARI32, MxEncAddrMode_j<"dst">>;
 
 multiclass CallPat<MxCall callOp, Predicate pred> {
   let Predicates = [pred] in {
@@ -261,7 +297,9 @@ def TAILJMPj  : MxPseudo<(outs), (ins MxARI32_TC:$dst)>;
 
 let isTerminator = 1, isReturn = 1, isBarrier = 1, hasCtrlDep = 1 in {
 
-def RTS : MxInst<(outs), (ins), "rts", [], MxEncFixed<0x4E75>>;
+def RTS : MxInst<(outs), (ins), "rts", []> {
+  let Inst = (descend 0b0100, 0b1110, 0b0111, 0b0101);
+}
 
 let isCodeGenOnly = 1 in
 def RET : MxPseudo<(outs), (ins i32imm:$adj, variable_ops),
