@@ -51,7 +51,6 @@ createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
 
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_OPERAND_ENUM
-#define GET_INSTRINFO_SCHED_ENUM
 #include "AMDGPUGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
