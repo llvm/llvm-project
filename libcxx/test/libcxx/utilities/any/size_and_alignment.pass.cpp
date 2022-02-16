@@ -18,9 +18,8 @@
 
 int main(int, char**)
 {
-    using std::any;
-    static_assert(sizeof(any) == sizeof(void*)*4, "");
-    static_assert(alignof(any) == alignof(void*), "");
+    static_assert(sizeof(std::any) == sizeof(void*)*4, "");
+    static_assert(alignof(std::any) == alignof(void*), "");
 
   return 0;
 }
