@@ -5898,8 +5898,9 @@ bool SCEVMinMaxExprContains(const SCEV *Root, const SCEV *OperandToFind,
 
     bool canRecurseInto(SCEVTypes Kind) const {
       // We can only recurse into the SCEV expression of the same effective type
-      // as the type of our root SCEV expression.
-      return RootKind == Kind || NonSequentialRootKind == Kind;
+      // as the type of our root SCEV expression, and into zero-extensions.
+      return RootKind == Kind || NonSequentialRootKind == Kind ||
+             scZeroExtend == Kind;
     };
 
     FindClosure(const SCEV *OperandToFind, SCEVTypes RootKind)
@@ -6006,13 +6007,14 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     // x == 0 ? 0 : umin_seq(..., x, ...)  ->  umin_seq(x, umin_seq(...))
     // x == 0 ? 0 : umin    (..., umin_seq(..., x, ...), ...)
     //                    ->  umin_seq(x, umin (..., umin_seq(...), ...))
-    if (getTypeSizeInBits(LHS->getType()) == getTypeSizeInBits(I->getType()) &&
+    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType()) &&
         isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero() &&
         isa<ConstantInt>(TrueVal) && cast<ConstantInt>(TrueVal)->isZero()) {
       const SCEV *X = getSCEV(LHS);
       const SCEV *FalseValExpr = getSCEV(FalseVal);
       if (SCEVMinMaxExprContains(FalseValExpr, X, scSequentialUMinExpr))
-        return getUMinExpr(X, FalseValExpr, /*Sequential=*/true);
+        return getUMinExpr(getNoopOrZeroExtend(X, I->getType()), FalseValExpr,
+                           /*Sequential=*/true);
     }
     break;
   default:

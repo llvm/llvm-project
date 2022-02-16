@@ -672,7 +672,7 @@ define i32 @umin_seq_x_y_zext_in_umin(i8 %x.narrow, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
 ; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin %y) U: [0,256) S: [0,256)
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin_seq %y) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_in_umin
 ;
   %x = zext i8 %x.narrow to i32
@@ -708,7 +708,7 @@ define i32 @umin_seq_x_y_zext_of_umin(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %umin = zext i8 %umin.narrow to i32
 ; CHECK-NEXT:    --> (zext i8 (%x umin %y) to i32) U: [0,256) S: [0,256)
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> ((zext i8 %x to i32) umin_seq (zext i8 (%x umin %y) to i32)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_of_umin
 ;
   %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
