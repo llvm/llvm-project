@@ -173,8 +173,8 @@ public:
   Address CreatePointerBitCastOrAddrSpaceCast(Address Addr, llvm::Type *Ty,
                                               const llvm::Twine &Name = "") {
     llvm::Value *Ptr =
-      CreatePointerBitCastOrAddrSpaceCast(Addr.getPointer(), Ty, Name);
-    return Address(Ptr, Addr.getAlignment());
+        CreatePointerBitCastOrAddrSpaceCast(Addr.getPointer(), Ty, Name);
+    return Address::deprecated(Ptr, Addr.getAlignment());
   }
 
   /// Given

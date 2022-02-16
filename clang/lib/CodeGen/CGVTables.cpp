@@ -90,9 +90,8 @@ static RValue PerformReturnAdjustment(CodeGenFunction &CGF,
 
   auto ClassDecl = ResultType->getPointeeType()->getAsCXXRecordDecl();
   auto ClassAlign = CGF.CGM.getClassPointerAlignment(ClassDecl);
-  ReturnValue = CGF.CGM.getCXXABI().performReturnAdjustment(CGF,
-                                            Address(ReturnValue, ClassAlign),
-                                            Thunk.Return);
+  ReturnValue = CGF.CGM.getCXXABI().performReturnAdjustment(
+      CGF, Address::deprecated(ReturnValue, ClassAlign), Thunk.Return);
 
   if (NullCheckValue) {
     CGF.Builder.CreateBr(AdjustEnd);
@@ -198,7 +197,8 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
 
   // Find the first store of "this", which will be to the alloca associated
   // with "this".
-  Address ThisPtr(&*AI, CGM.getClassPointerAlignment(MD->getParent()));
+  Address ThisPtr =
+      Address::deprecated(&*AI, CGM.getClassPointerAlignment(MD->getParent()));
   llvm::BasicBlock *EntryBB = &Fn->front();
   llvm::BasicBlock::iterator ThisStore =
       llvm::find_if(*EntryBB, [&](llvm::Instruction &I) {

@@ -706,8 +706,8 @@ public:
   AddressResult(Ptr Arg, unsigned Align) : Arg(Arg), Align(Align) {}
   void genCode(raw_ostream &OS,
                CodeGenParamAllocator &ParamAlloc) const override {
-    OS << "Address(" << Arg->varname() << ", CharUnits::fromQuantity("
-       << Align << "))";
+    OS << "Address::deprecated(" << Arg->varname()
+       << ", CharUnits::fromQuantity(" << Align << "))";
   }
   std::string typeName() const override {
     return "Address";

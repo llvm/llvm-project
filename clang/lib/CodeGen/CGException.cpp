@@ -1845,7 +1845,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
   llvm::Value *ChildVar =
       Builder.CreateBitCast(RecoverCall, ParentVar.getType());
   ChildVar->setName(ParentVar.getName());
-  return Address(ChildVar, ParentVar.getAlignment());
+  return Address::deprecated(ChildVar, ParentVar.getAlignment());
 }
 
 void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
@@ -1931,7 +1931,8 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
           FrameRecoverFn, {ParentI8Fn, ParentFP,
                            llvm::ConstantInt::get(Int32Ty, FrameEscapeIdx)});
       ParentFP = Builder.CreateBitCast(ParentFP, CGM.VoidPtrPtrTy);
-      ParentFP = Builder.CreateLoad(Address(ParentFP, getPointerAlign()));
+      ParentFP = Builder.CreateLoad(
+          Address(ParentFP, CGM.VoidPtrTy, getPointerAlign()));
     }
   }
 

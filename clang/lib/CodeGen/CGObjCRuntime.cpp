@@ -106,7 +106,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                              CGF.CGM.getContext().toBits(StorageSize),
                              CharUnits::fromQuantity(0)));
 
-  Address Addr(V, Alignment);
+  Address Addr = Address::deprecated(V, Alignment);
   Addr = CGF.Builder.CreateElementBitCast(Addr,
                                    llvm::Type::getIntNTy(CGF.getLLVMContext(),
                                                          Info->StorageSize));

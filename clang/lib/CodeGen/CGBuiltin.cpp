@@ -373,7 +373,7 @@ static Value *EmitAtomicCmpXchg128ForMSIntrin(CodeGenFunction &CGF,
   llvm::Type *Int128PtrTy = Int128Ty->getPointerTo();
   Destination = CGF.Builder.CreateBitCast(Destination, Int128PtrTy);
   Address ComparandResult(CGF.Builder.CreateBitCast(ComparandPtr, Int128PtrTy),
-                          CGF.getContext().toCharUnitsFromBits(128));
+                          Int128Ty, CGF.getContext().toCharUnitsFromBits(128));
 
   // (((i128)hi) << 64) | ((i128)lo)
   ExchangeHigh = CGF.Builder.CreateZExt(ExchangeHigh, Int128Ty);
@@ -961,7 +961,7 @@ static llvm::Value *EmitBitTestIntrinsic(CodeGenFunction &CGF,
   Value *BitBaseI8 = CGF.Builder.CreatePointerCast(BitBase, CGF.Int8PtrTy);
   Address ByteAddr(CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BitBaseI8,
                                                  ByteIndex, "bittest.byteaddr"),
-                   CharUnits::One());
+                   CGF.Int8Ty, CharUnits::One());
   Value *PosLow =
       CGF.Builder.CreateAnd(CGF.Builder.CreateTrunc(BitPos, CGF.Int8Ty),
                             llvm::ConstantInt::get(CGF.Int8Ty, 0x7));
@@ -1778,8 +1778,8 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   CharUnits Offset;
-  Address BufAddr(Builder.CreateLoad(GetAddrOfLocalVar(Args[0]), "buf"),
-                  BufferAlignment);
+  Address BufAddr = Address::deprecated(
+      Builder.CreateLoad(GetAddrOfLocalVar(Args[0]), "buf"), BufferAlignment);
   Builder.CreateStore(Builder.getInt8(Layout.getSummaryByte()),
                       Builder.CreateConstByteGEP(BufAddr, Offset++, "summary"));
   Builder.CreateStore(Builder.getInt8(Layout.getNumArgsByte()),
@@ -2108,7 +2108,7 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
                              ? Types[Context.VoidPtrTy]
                              : Types[CanonicalType];
 
-    Address FieldAddress = Address(FieldPtr, Align);
+    Address FieldAddress = Address::deprecated(FieldPtr, Align);
     FieldPtr = CGF.Builder.CreateLoad(FieldAddress);
 
     // FIXME Need to handle bitfield here
@@ -9597,7 +9597,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       for (size_t i = 0; i < 8; i++) {
         llvm::Value *ValOffsetPtr =
             Builder.CreateGEP(Int64Ty, ValPtr, Builder.getInt32(i));
-        Address Addr(ValOffsetPtr, CharUnits::fromQuantity(8));
+        Address Addr =
+            Address::deprecated(ValOffsetPtr, CharUnits::fromQuantity(8));
         ToRet = Builder.CreateStore(Builder.CreateExtractValue(Val, i), Addr);
       }
       return ToRet;
@@ -9609,7 +9610,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       for (size_t i = 0; i < 8; i++) {
         llvm::Value *ValOffsetPtr =
             Builder.CreateGEP(Int64Ty, ValPtr, Builder.getInt32(i));
-        Address Addr(ValOffsetPtr, CharUnits::fromQuantity(8));
+        Address Addr =
+            Address::deprecated(ValOffsetPtr, CharUnits::fromQuantity(8));
         Args.push_back(Builder.CreateLoad(Addr));
       }
 

@@ -3845,15 +3845,14 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                       SourceLocation());
 
   RValue DV = EmitAnyExpr(&DstExpr);
-  CharUnits Alignment
-    = getContext().getTypeAlignInChars(TheCXXConstructExpr->getType());
+  CharUnits Alignment =
+      getContext().getTypeAlignInChars(TheCXXConstructExpr->getType());
   EmitAggExpr(TheCXXConstructExpr,
-              AggValueSlot::forAddr(Address(DV.getScalarVal(), Alignment),
-                                    Qualifiers(),
-                                    AggValueSlot::IsDestructed,
-                                    AggValueSlot::DoesNotNeedGCBarriers,
-                                    AggValueSlot::IsNotAliased,
-                                    AggValueSlot::DoesNotOverlap));
+              AggValueSlot::forAddr(
+                  Address::deprecated(DV.getScalarVal(), Alignment),
+                  Qualifiers(), AggValueSlot::IsDestructed,
+                  AggValueSlot::DoesNotNeedGCBarriers,
+                  AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
 
   FinishFunction();
   HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);

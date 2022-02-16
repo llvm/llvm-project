@@ -1016,7 +1016,7 @@ static void forConstantArrayExpansion(CodeGenFunction &CGF,
   for (int i = 0, n = CAE->NumElts; i < n; i++) {
     llvm::Value *EltAddr = CGF.Builder.CreateConstGEP2_32(
         BaseAddr.getElementType(), BaseAddr.getPointer(), 0, i);
-    Fn(Address(EltAddr, EltAlign));
+    Fn(Address::deprecated(EltAddr, EltAlign));
   }
 }
 
@@ -2685,8 +2685,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
   // parameter, which is a pointer to the complete memory area.
   Address ArgStruct = Address::invalid();
   if (IRFunctionArgs.hasInallocaArg()) {
-    ArgStruct = Address(Fn->getArg(IRFunctionArgs.getInallocaArgNo()),
-                        FI.getArgStructAlignment());
+    ArgStruct = Address::deprecated(
+        Fn->getArg(IRFunctionArgs.getInallocaArgNo()),
+        FI.getArgStructAlignment());
 
     assert(ArgStruct.getType() == FI.getArgStruct()->getPointerTo());
   }
@@ -2736,8 +2737,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       Address V =
           Builder.CreateStructGEP(ArgStruct, FieldIndex, Arg->getName());
       if (ArgI.getInAllocaIndirect())
-        V = Address(Builder.CreateLoad(V),
-                    getContext().getTypeAlignInChars(Ty));
+        V = Address::deprecated(Builder.CreateLoad(V),
+                                getContext().getTypeAlignInChars(Ty));
       ArgVals.push_back(ParamValue::forIndirect(V));
       break;
     }
@@ -2885,7 +2886,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           assert(pointeeTy->isPointerType());
           Address temp =
             CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
-          Address arg = Address(V, getContext().getTypeAlignInChars(pointeeTy));
+          Address arg = Address::deprecated(
+              V, getContext().getTypeAlignInChars(pointeeTy));
           llvm::Value *incomingErrorValue = Builder.CreateLoad(arg);
           Builder.CreateStore(incomingErrorValue, temp);
           V = temp.getPointer();
@@ -3751,7 +3753,7 @@ static AggValueSlot createPlaceholderSlot(CodeGenFunction &CGF,
   CharUnits Align = CharUnits::fromQuantity(4);
   Placeholder = CGF.Builder.CreateAlignedLoad(IRPtrTy, Placeholder, Align);
 
-  return AggValueSlot::forAddr(Address(Placeholder, Align),
+  return AggValueSlot::forAddr(Address(Placeholder, IRTy, Align),
                                Ty.getQualifiers(),
                                AggValueSlot::IsNotDestructed,
                                AggValueSlot::DoesNotNeedGCBarriers,
@@ -4741,7 +4743,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AI->setAlignment(Align.getAsAlign());
     AI->setUsedWithInAlloca(true);
     assert(AI->isUsedWithInAlloca() && !AI->isStaticAlloca());
-    ArgMemory = Address(AI, Align);
+    ArgMemory = Address(AI, ArgStruct, Align);
   }
 
   ClangToLLVMArgMapping IRFunctionArgs(CGM.getContext(), CallInfo);
@@ -4966,7 +4968,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
           QualType pointeeTy = I->Ty->getPointeeType();
           swiftErrorArg =
-            Address(V, getContext().getTypeAlignInChars(pointeeTy));
+            Address::deprecated(V, getContext().getTypeAlignInChars(pointeeTy));
 
           swiftErrorTemp =
             CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
