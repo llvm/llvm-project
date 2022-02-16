@@ -227,21 +227,25 @@ public:
     return R;
   }
 
-  Expected<uint32_t> ReadVBR(unsigned NumBits) {
+  Expected<uint32_t> ReadVBR(const unsigned NumBits) {
     Expected<unsigned> MaybeRead = Read(NumBits);
     if (!MaybeRead)
       return MaybeRead;
     uint32_t Piece = MaybeRead.get();
 
-    if ((Piece & (1U << (NumBits-1))) == 0)
+    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
+    const uint32_t MaskBitOrder = (NumBits - 1);
+    const uint32_t Mask = 1UL << MaskBitOrder;
+
+    if ((Piece & Mask) == 0)
       return Piece;
 
     uint32_t Result = 0;
     unsigned NextBit = 0;
     while (true) {
-      Result |= (Piece & ((1U << (NumBits-1))-1)) << NextBit;
+      Result |= (Piece & (Mask - 1)) << NextBit;
 
-      if ((Piece & (1U << (NumBits-1))) == 0)
+      if ((Piece & Mask) == 0)
         return Result;
 
       NextBit += NumBits-1;
@@ -258,21 +262,24 @@ public:
 
   // Read a VBR that may have a value up to 64-bits in size. The chunk size of
   // the VBR must still be <= 32 bits though.
-  Expected<uint64_t> ReadVBR64(unsigned NumBits) {
+  Expected<uint64_t> ReadVBR64(const unsigned NumBits) {
     Expected<uint64_t> MaybeRead = Read(NumBits);
     if (!MaybeRead)
       return MaybeRead;
     uint32_t Piece = MaybeRead.get();
+    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
+    const uint32_t MaskBitOrder = (NumBits - 1);
+    const uint32_t Mask = 1UL << MaskBitOrder;
 
-    if ((Piece & (1U << (NumBits-1))) == 0)
+    if ((Piece & Mask) == 0)
       return uint64_t(Piece);
 
     uint64_t Result = 0;
     unsigned NextBit = 0;
     while (true) {
-      Result |= uint64_t(Piece & ((1U << (NumBits-1))-1)) << NextBit;
+      Result |= uint64_t(Piece & (Mask - 1)) << NextBit;
 
-      if ((Piece & (1U << (NumBits-1))) == 0)
+      if ((Piece & Mask) == 0)
         return Result;
 
       NextBit += NumBits-1;
