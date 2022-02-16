@@ -770,6 +770,10 @@ struct DSEState {
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
   /// basic block.
   MapVector<BasicBlock *, InstOverlapIntervalsTy> IOLs;
+  // Check if there are root nodes that are terminated by UnreachableInst.
+  // Those roots pessimize post-dominance queries. If there are such roots,
+  // fall back to CFG scan starting from all non-unreachable roots.
+  bool AnyUnreachableExit;
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
@@ -805,6 +809,10 @@ struct DSEState {
 
     // Collect whether there is any irreducible control flow in the function.
     ContainsIrreducibleLoops = mayContainIrreducibleControl(F, &LI);
+
+    AnyUnreachableExit = any_of(PDT.roots(), [](const BasicBlock *E) {
+      return isa<UnreachableInst>(E->getTerminator());
+    });
   }
 
   /// Return 'OW_Complete' if a store to the 'KillingLoc' location (by \p
@@ -1511,22 +1519,29 @@ struct DSEState {
       // If the common post-dominator does not post-dominate MaybeDeadAccess,
       // there is a path from MaybeDeadAccess to an exit not going through a
       // killing block.
-      if (!PDT.dominates(CommonPred, MaybeDeadAccess->getBlock()))
-        return None;
+      if (!PDT.dominates(CommonPred, MaybeDeadAccess->getBlock())) {
+        if (!AnyUnreachableExit)
+          return None;
+
+        // Fall back to CFG scan starting at all non-unreachable roots if not
+        // all paths to the exit go through CommonPred.
+        CommonPred = nullptr;
+      }
 
       // If CommonPred itself is in the set of killing blocks, we're done.
       if (KillingBlocks.count(CommonPred))
         return {MaybeDeadAccess};
 
       SetVector<BasicBlock *> WorkList;
-
       // If CommonPred is null, there are multiple exits from the function.
       // They all have to be added to the worklist.
       if (CommonPred)
         WorkList.insert(CommonPred);
       else
-        for (BasicBlock *R : PDT.roots())
-          WorkList.insert(R);
+        for (BasicBlock *R : PDT.roots()) {
+          if (!isa<UnreachableInst>(R->getTerminator()))
+            WorkList.insert(R);
+        }
 
       NumCFGTries++;
       // Check if all paths starting from an exit node go through one of the
