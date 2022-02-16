@@ -312,6 +312,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
   //     x = s_<op>_saveexec_b64 y
   //
 
+  bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::reverse_iterator I = fixTerminators(*TII, MBB);
     MachineBasicBlock::reverse_iterator E = MBB.rend();
@@ -351,6 +352,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
 
         CopyToExecInst->eraseFromParent();
+        Changed = true;
       }
 
       continue;
@@ -456,8 +458,9 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
       OtherInst->substituteRegister(CopyToExec, Exec,
                                     AMDGPU::NoSubRegister, *TRI);
     }
+
+    Changed = true;
   }
 
-  return true;
-
+  return Changed;
 }
