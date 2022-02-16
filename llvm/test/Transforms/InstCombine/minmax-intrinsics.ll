@@ -2352,3 +2352,14 @@ define i8 @smin_smin_smin_reassoc_constants(i8 %x, i8 %y) {
   %m3 = call i8 @llvm.smin.i8(i8 %m2, i8 126)
   ret i8 %m3
 }
+
+define i8 @umax_umax_reassoc_constantexpr_sink(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_umax_reassoc_constantexpr_sink(
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 42)
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
+; CHECK-NEXT:    ret i8 [[M2]]
+;
+  %m1 = call i8 @llvm.umax.i8(i8 %x, i8 42)
+  %m2 = call i8 @llvm.umax.i8(i8 %m1, i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
+  ret i8 %m2
+}
