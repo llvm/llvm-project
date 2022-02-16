@@ -3650,6 +3650,13 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format("//   x\n"
                    "// y",
                    Style));
+  EXPECT_EQ(
+      "// loooooooooooooooooooooooooooooong\n"
+      "// commentcomments\n"
+      "// normal comments",
+      format("//            loooooooooooooooooooooooooooooong commentcomments\n"
+             "// normal comments",
+             Style));
 
   Style.SpacesInLineCommentPrefix = {3, 3};
   EXPECT_EQ("//   Lorem ipsum\n"
