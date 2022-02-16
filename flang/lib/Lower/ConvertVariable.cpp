@@ -66,9 +66,25 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::SymMap &symMap) {
   assert(!var.isAlias());
   const Fortran::semantics::Symbol &sym = var.getSymbol();
+  const bool isDummy = Fortran::semantics::IsDummy(sym);
+  const bool isResult = Fortran::semantics::IsFunctionResult(sym);
   if (symMap.lookupSymbol(sym))
     return;
+
   const mlir::Location loc = converter.genLocation(sym.name());
+  if (isDummy) {
+    // This is an argument.
+    if (!symMap.lookupSymbol(sym))
+      mlir::emitError(loc, "symbol \"")
+          << toStringRef(sym.name()) << "\" must already be in map";
+    return;
+  } else if (isResult) {
+    // Some Fortran results may be passed by argument (e.g. derived
+    // types)
+    if (symMap.lookupSymbol(sym))
+      return;
+  }
+  // Otherwise, it's a local variable or function result.
   mlir::Value local = createNewLocal(converter, loc, var, {});
   symMap.addSymbol(sym, local);
 }
