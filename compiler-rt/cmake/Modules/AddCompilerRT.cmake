@@ -375,7 +375,7 @@ function(add_compiler_rt_runtime name type)
       if(APPLE)
         # Ad-hoc sign the dylibs
         add_custom_command(TARGET ${libname}
-          POST_BUILD  
+          POST_BUILD
           COMMAND codesign --sign - $<TARGET_FILE:${libname}>
           WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
         )
