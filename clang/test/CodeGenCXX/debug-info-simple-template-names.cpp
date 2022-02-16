@@ -105,4 +105,10 @@ void f() {
 
   f3<t1>();
   // CHECK: !DISubprogram(name: "_STNf3|<t1>",
+  
+  f1<_BitInt(3)>();
+  // CHECK: !DISubprogram(name: "f1<_BitInt(3)>",
+
+  f1<const unsigned _BitInt(5)>();
+  // CHECK: !DISubprogram(name: "f1<const unsigned _BitInt(5)>",
 }
