@@ -96,16 +96,16 @@ inline bool SetInteger(INT &x, int kind, std::int64_t value) {
   switch (kind) {
   case 1:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 1> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 1> &>(x);
   case 2:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 2> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 2> &>(x);
   case 4:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 4> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 4> &>(x);
   case 8:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 8> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 8> &>(x);
   default:
     return false;
   }

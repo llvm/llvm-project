@@ -908,8 +908,11 @@ bool IONAME(GetNewUnit)(Cookie cookie, int &unit, int kind) {
     io.GetIoErrorHandler().Crash(
         "GetNewUnit() called when not in an OPEN statement");
   }
-  if (!SetInteger(unit, kind, open->unit().unitNumber())) {
-    open->SignalError("GetNewUnit(): Bad INTEGER kind(%d) for result");
+  std::int64_t result{open->unit().unitNumber()};
+  if (!SetInteger(unit, kind, result)) {
+    open->SignalError("GetNewUnit(): Bad INTEGER kind(%d) or out-of-range "
+                      "value(%jd) for result",
+        kind, static_cast<std::intmax_t>(result));
   }
   return true;
 }
@@ -1175,8 +1178,13 @@ bool IONAME(InquireInteger64)(
   IoStatementState &io{*cookie};
   std::int64_t n;
   if (io.Inquire(inquiry, n)) {
-    SetInteger(result, kind, n);
-    return true;
+    if (SetInteger(result, kind, n)) {
+      return true;
+    }
+    io.GetIoErrorHandler().SignalError(
+        "InquireInteger64(): Bad INTEGER kind(%d) or out-of-range value(%jd) "
+        "for result",
+        kind, static_cast<std::intmax_t>(n));
   }
   return false;
 }

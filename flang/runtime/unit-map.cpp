@@ -10,19 +10,30 @@
 
 namespace Fortran::runtime::io {
 
+void UnitMap::Initialize() {
+  if (!isInitialized_) {
+    freeNewUnits_.InitializeState();
+    // Unit number -1 is reserved.
+    // The unit numbers are pushed in reverse order so that the first
+    // ones to be popped will be small and suitable for use as kind=1
+    // integers.
+    for (int j{freeNewUnits_.maxValue}; j > 1; --j) {
+      freeNewUnits_.Add(j);
+    }
+    isInitialized_ = true;
+  }
+}
+
 // See 12.5.6.12 in Fortran 2018.  NEWUNIT= unit numbers are negative,
-// and not equal -1 (or ERROR_UNIT, if it were negative, which it isn't.)
+// and not equal to -1 (or ERROR_UNIT, if it were negative, which it isn't.)
 ExternalFileUnit &UnitMap::NewUnit(const Terminator &terminator) {
   CriticalSection critical{lock_};
-  std::optional<std::size_t> n;
-  n = (~busyNewUnits_).LeastElement();
-  if (!n.has_value()) {
-    terminator.Crash(
-        "No available unit number for NEWUNIT= or internal child I/O");
+  Initialize();
+  std::optional<int> n{freeNewUnits_.PopValue()};
+  if (!n) {
+    n = emergencyNewUnit_++;
   }
-  busyNewUnits_.set(*n);
-  // bit position 0 <-> unit -2; kind=1 units are in [-65..-2]
-  return Create(static_cast<int>(-2 - *n), terminator);
+  return Create(-*n, terminator);
 }
 
 ExternalFileUnit *UnitMap::LookUpForClose(int n) {
@@ -53,7 +64,7 @@ void UnitMap::DestroyClosed(ExternalFileUnit &unit) {
       if (&p->unit == &unit) {
         int n{unit.unitNumber()};
         if (n <= -2) {
-          busyNewUnits_.reset(static_cast<std::size_t>(-2 - n));
+          freeNewUnits_.Add(-n);
         }
         if (previous) {
           previous->next.swap(p->next);
