@@ -690,7 +690,7 @@ define i8 @umin_seq_x_y_zext_in_iszero(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %umin = call i8 @llvm.umin.i8(i8 %y, i8 %x)
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i8 0, i8 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin_seq %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_in_iszero
 ;
   %x.wide = zext i8 %x to i32
