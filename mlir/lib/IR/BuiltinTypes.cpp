@@ -137,6 +137,10 @@ FloatType FloatType::scaleElementBitwidth(unsigned scale) {
   return FloatType();
 }
 
+unsigned FloatType::getFPMantissaWidth() {
+  return APFloat::semanticsPrecision(getFloatSemantics());
+}
+
 //===----------------------------------------------------------------------===//
 // FunctionType
 //===----------------------------------------------------------------------===//
