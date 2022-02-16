@@ -533,11 +533,7 @@ bool Relocation::isGOT(uint64_t Type) {
   return isGOTX86(Type);
 }
 
-bool Relocation::isNone(uint64_t Type) {
-  if (Arch == Triple::aarch64)
-    return Type == ELF::R_AARCH64_NONE;
-  return Type == ELF::R_X86_64_NONE;
-}
+bool Relocation::isNone(uint64_t Type) { return Type == getNone(); }
 
 bool Relocation::isRelative(uint64_t Type) {
   if (Arch == Triple::aarch64)
@@ -557,10 +553,10 @@ bool Relocation::isTLS(uint64_t Type) {
   return isTLSX86(Type);
 }
 
-bool Relocation::isPCRelative(uint64_t Type) {
+uint64_t Relocation::getNone() {
   if (Arch == Triple::aarch64)
-    return isPCRelativeAArch64(Type);
-  return isPCRelativeX86(Type);
+    return ELF::R_AARCH64_NONE;
+  return ELF::R_X86_64_NONE;
 }
 
 uint64_t Relocation::getPC32() {
@@ -573,6 +569,12 @@ uint64_t Relocation::getPC64() {
   if (Arch == Triple::aarch64)
     return ELF::R_AARCH64_PREL64;
   return ELF::R_X86_64_PC64;
+}
+
+bool Relocation::isPCRelative(uint64_t Type) {
+  if (Arch == Triple::aarch64)
+    return isPCRelativeAArch64(Type);
+  return isPCRelativeX86(Type);
 }
 
 size_t Relocation::emit(MCStreamer *Streamer) const {
