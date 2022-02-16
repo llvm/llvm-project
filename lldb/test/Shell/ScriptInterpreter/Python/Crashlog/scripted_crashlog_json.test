@@ -1,0 +1,10 @@
+# RUN: %clang_host -g %S/Inputs/test.c -o %t.out
+
+# RUN: cp %S/Inputs/scripted_crashlog.ips %t.crash
+# RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":9, "foo":16}' --json
+# RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog -i %t.crash' -o 'process status' 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+# CHECK: Process 92190 stopped
+# CHECK: * thread #1, name = 'CrashLogScriptedThread.thread-0', stop reason = EXC_BAD_ACCESS
+# CHECK: frame #0: 0x0000000104a23f68 scripted_crashlog_json.test.tmp.out`foo at test.c:3:6 [artificial]
