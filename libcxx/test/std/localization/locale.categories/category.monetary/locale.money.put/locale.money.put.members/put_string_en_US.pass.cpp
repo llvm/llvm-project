@@ -95,7 +95,7 @@ int main(int, char**)
     }
     {   // zero, showbase
         std::string v = "0";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, '*', v);
         std::string ex(str, iter.base());
@@ -103,7 +103,7 @@ int main(int, char**)
     }
     {   // negative one, showbase
         std::string v = "-1";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, '*', v);
         std::string ex(str, iter.base());
@@ -111,7 +111,7 @@ int main(int, char**)
     }
     {   // positive, showbase
         std::string v = "123456789";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, '*', v);
         std::string ex(str, iter.base());
@@ -119,7 +119,7 @@ int main(int, char**)
     }
     {   // negative, showbase
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, '*', v);
         std::string ex(str, iter.base());
@@ -127,9 +127,9 @@ int main(int, char**)
     }
     {   // negative, showbase, left
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        left(ios);
+        std::left(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, ' ', v);
         std::string ex(str, iter.base());
@@ -138,9 +138,9 @@ int main(int, char**)
     }
     {   // negative, showbase, internal
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        internal(ios);
+        std::internal(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, ' ', v);
         std::string ex(str, iter.base());
@@ -149,9 +149,9 @@ int main(int, char**)
     }
     {   // negative, showbase, right
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        right(ios);
+        std::right(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), false, ios, ' ', v);
         std::string ex(str, iter.base());
@@ -160,7 +160,7 @@ int main(int, char**)
     }
 
     // char, international
-    noshowbase(ios);
+    std::noshowbase(ios);
     ios.unsetf(std::ios_base::adjustfield);
     {   // zero
         std::string v = "0";
@@ -192,7 +192,7 @@ int main(int, char**)
     }
     {   // zero, showbase
         std::string v = "0";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, '*', v);
         std::string ex(str, iter.base());
@@ -200,7 +200,7 @@ int main(int, char**)
     }
     {   // negative one, showbase
         std::string v = "-1";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, '*', v);
         std::string ex(str, iter.base());
@@ -208,7 +208,7 @@ int main(int, char**)
     }
     {   // positive, showbase
         std::string v = "123456789";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, '*', v);
         std::string ex(str, iter.base());
@@ -216,7 +216,7 @@ int main(int, char**)
     }
     {   // negative, showbase
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, '*', v);
         std::string ex(str, iter.base());
@@ -224,9 +224,9 @@ int main(int, char**)
     }
     {   // negative, showbase, left
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        left(ios);
+        std::left(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, ' ', v);
         std::string ex(str, iter.base());
@@ -235,9 +235,9 @@ int main(int, char**)
     }
     {   // negative, showbase, internal
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        internal(ios);
+        std::internal(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, ' ', v);
         std::string ex(str, iter.base());
@@ -246,9 +246,9 @@ int main(int, char**)
     }
     {   // negative, showbase, right
         std::string v = "-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        right(ios);
+        std::right(ios);
         char str[100];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), true, ios, ' ', v);
         std::string ex(str, iter.base());
@@ -260,7 +260,7 @@ int main(int, char**)
 {
     const my_facetw f(1);
     // wchar_t, national
-    noshowbase(ios);
+    std::noshowbase(ios);
     ios.unsetf(std::ios_base::adjustfield);
     {   // zero
         std::wstring v = L"0";
@@ -292,7 +292,7 @@ int main(int, char**)
     }
     {   // zero, showbase
         std::wstring v = L"0";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -300,7 +300,7 @@ int main(int, char**)
     }
     {   // negative one, showbase
         std::wstring v = L"-1";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -308,7 +308,7 @@ int main(int, char**)
     }
     {   // positive, showbase
         std::wstring v = L"123456789";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -316,7 +316,7 @@ int main(int, char**)
     }
     {   // negative, showbase
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -324,9 +324,9 @@ int main(int, char**)
     }
     {   // negative, showbase, left
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        left(ios);
+        std::left(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, ' ', v);
         std::wstring ex(str, iter.base());
@@ -335,9 +335,9 @@ int main(int, char**)
     }
     {   // negative, showbase, internal
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        internal(ios);
+        std::internal(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, ' ', v);
         std::wstring ex(str, iter.base());
@@ -346,9 +346,9 @@ int main(int, char**)
     }
     {   // negative, showbase, right
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        right(ios);
+        std::right(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, ' ', v);
         std::wstring ex(str, iter.base());
@@ -357,7 +357,7 @@ int main(int, char**)
     }
 
     // wchar_t, international
-    noshowbase(ios);
+    std::noshowbase(ios);
     ios.unsetf(std::ios_base::adjustfield);
     {   // zero
         std::wstring v = L"0";
@@ -389,7 +389,7 @@ int main(int, char**)
     }
     {   // zero, showbase
         std::wstring v = L"0";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -397,7 +397,7 @@ int main(int, char**)
     }
     {   // negative one, showbase
         std::wstring v = L"-1";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -405,7 +405,7 @@ int main(int, char**)
     }
     {   // positive, showbase
         std::wstring v = L"123456789";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -413,7 +413,7 @@ int main(int, char**)
     }
     {   // negative, showbase
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, '*', v);
         std::wstring ex(str, iter.base());
@@ -421,9 +421,9 @@ int main(int, char**)
     }
     {   // negative, showbase, left
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        left(ios);
+        std::left(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, ' ', v);
         std::wstring ex(str, iter.base());
@@ -432,9 +432,9 @@ int main(int, char**)
     }
     {   // negative, showbase, internal
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        internal(ios);
+        std::internal(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, ' ', v);
         std::wstring ex(str, iter.base());
@@ -443,9 +443,9 @@ int main(int, char**)
     }
     {   // negative, showbase, right
         std::wstring v = L"-123456789";
-        showbase(ios);
+        std::showbase(ios);
         ios.width(20);
-        right(ios);
+        std::right(ios);
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, ' ', v);
         std::wstring ex(str, iter.base());

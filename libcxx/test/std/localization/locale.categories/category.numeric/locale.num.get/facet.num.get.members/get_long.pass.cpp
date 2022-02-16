@@ -80,7 +80,7 @@ int main(int, char**)
     }
     {
         const char str[] = "123";
-        oct(ios);
+        std::oct(ios);
         std::ios_base::iostate err = ios.goodbit;
         cpp17_input_iterator<const char*> iter =
             f.get(cpp17_input_iterator<const char*>(str),
@@ -92,7 +92,7 @@ int main(int, char**)
     }
     {
         const char str[] = "123";
-        hex(ios);
+        std::hex(ios);
         std::ios_base::iostate err = ios.goodbit;
         cpp17_input_iterator<const char*> iter =
             f.get(cpp17_input_iterator<const char*>(str),
@@ -104,7 +104,7 @@ int main(int, char**)
     }
     {
         const char str[] = "0x123";
-        hex(ios);
+        std::hex(ios);
         std::ios_base::iostate err = ios.goodbit;
         cpp17_input_iterator<const char*> iter =
             f.get(cpp17_input_iterator<const char*>(str),
@@ -163,7 +163,7 @@ int main(int, char**)
         assert(err == ios.goodbit);
         assert(v == 2);
     }
-    dec(ios);
+    std::dec(ios);
     ios.imbue(std::locale(std::locale(), new my_numpunct));
     {
         v = -1;

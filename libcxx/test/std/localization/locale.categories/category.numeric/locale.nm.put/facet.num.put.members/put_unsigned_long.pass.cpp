@@ -85,7 +85,7 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        showpos(ios);
+        std::showpos(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -94,7 +94,7 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        oct(ios);
+        std::oct(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -103,8 +103,8 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        oct(ios);
-        showbase(ios);
+        std::oct(ios);
+        std::showbase(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -113,7 +113,7 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        hex(ios);
+        std::hex(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -122,8 +122,8 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        hex(ios);
-        showbase(ios);
+        std::hex(ios);
+        std::showbase(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -132,9 +132,9 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        hex(ios);
-        showbase(ios);
-        uppercase(ios);
+        std::hex(ios);
+        std::showbase(ios);
+        std::uppercase(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -144,9 +144,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        hex(ios);
-        showbase(ios);
-        uppercase(ios);
+        std::hex(ios);
+        std::showbase(ios);
+        std::uppercase(ios);
         unsigned long v = 1000;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -156,8 +156,8 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        hex(ios);
-        showbase(ios);
+        std::hex(ios);
+        std::showbase(ios);
         unsigned long v = 2147483647;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -167,7 +167,7 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        oct(ios);
+        std::oct(ios);
         unsigned long v = 0123467;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -177,8 +177,8 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        oct(ios);
-        showbase(ios);
+        std::oct(ios);
+        std::showbase(ios);
         unsigned long v = 0123467;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -188,9 +188,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        oct(ios);
-        showbase(ios);
-        right(ios);
+        std::oct(ios);
+        std::showbase(ios);
+        std::right(ios);
         ios.width(15);
         unsigned long v = 0123467;
         char str[50];
@@ -201,9 +201,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        oct(ios);
-        showbase(ios);
-        left(ios);
+        std::oct(ios);
+        std::showbase(ios);
+        std::left(ios);
         ios.width(15);
         unsigned long v = 0123467;
         char str[50];
@@ -214,9 +214,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        oct(ios);
-        showbase(ios);
-        internal(ios);
+        std::oct(ios);
+        std::showbase(ios);
+        std::internal(ios);
         ios.width(15);
         unsigned long v = 0123467;
         char str[50];
@@ -228,9 +228,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        hex(ios);
-        showbase(ios);
-        right(ios);
+        std::hex(ios);
+        std::showbase(ios);
+        std::right(ios);
         ios.width(15);
         unsigned long v = 2147483647;
         char str[50];
@@ -241,9 +241,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        hex(ios);
-        showbase(ios);
-        left(ios);
+        std::hex(ios);
+        std::showbase(ios);
+        std::left(ios);
         ios.width(15);
         unsigned long v = 2147483647;
         char str[50];
@@ -254,9 +254,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        hex(ios);
-        showbase(ios);
-        internal(ios);
+        std::hex(ios);
+        std::showbase(ios);
+        std::internal(ios);
         ios.width(15);
         unsigned long v = 2147483647;
         char str[50];
@@ -268,9 +268,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        showpos(ios);
+        std::showpos(ios);
         unsigned long v = 1000;
-        right(ios);
+        std::right(ios);
         ios.width(10);
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -281,9 +281,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        showpos(ios);
+        std::showpos(ios);
         unsigned long v = 1000;
-        left(ios);
+        std::left(ios);
         ios.width(10);
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -294,9 +294,9 @@ int main(int, char**)
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        showpos(ios);
+        std::showpos(ios);
         unsigned long v = 1000;
-        internal(ios);
+        std::internal(ios);
         ios.width(10);
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -308,8 +308,8 @@ int main(int, char**)
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
         unsigned long v = static_cast<unsigned long>(-1000);
-        right(ios);
-        showpos(ios);
+        std::right(ios);
+        std::showpos(ios);
         ios.width(10);
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -322,7 +322,7 @@ int main(int, char**)
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
         unsigned long v = static_cast<unsigned long>(-1000);
-        left(ios);
+        std::left(ios);
         ios.width(10);
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
@@ -335,7 +335,7 @@ int main(int, char**)
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
         unsigned long v = static_cast<unsigned long>(-1000);
-        internal(ios);
+        std::internal(ios);
         ios.width(10);
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);

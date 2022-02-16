@@ -62,7 +62,7 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        boolalpha(ios);
+        std::boolalpha(ios);
         {
             bool v = false;
             char str[50];
@@ -80,7 +80,7 @@ int main(int, char**)
     }
     {
         std::ios ios(0);
-        boolalpha(ios);
+        std::boolalpha(ios);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
         {
             bool v = false;
