@@ -6,12 +6,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test(ptr %arg, ptr %arg1, ptr %arg2) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[ARG1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[ARG2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, <2 x ptr> [[TMP2]], <2 x i64> <i64 -1, i64 128>
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i8, ptr [[ARG2:%.*]], i64 128
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[ARG1:%.*]], i64 -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], i64 1
-; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store ptr [[TMP]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %tmp = getelementptr inbounds i8, ptr %arg2, i64 128
