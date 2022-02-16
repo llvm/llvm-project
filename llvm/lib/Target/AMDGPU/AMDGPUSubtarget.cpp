@@ -50,13 +50,6 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
-// This option does nothing. It is only here temporarily to avoid breaking
-// clients that still try to specify this on the command line.
-static cl::opt<bool> EnableFlatScratchUnused(
-  "amdgpu-enable-flat-scratch",
-  cl::desc("Use flat scratch instructions"),
-  cl::init(false));
-
 static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
