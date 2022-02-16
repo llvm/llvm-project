@@ -254,10 +254,6 @@ TEST_MACROS();
 #endif
 #include <stack>
 TEST_MACROS();
-#ifndef _LIBCPP_HAS_NO_THREADS
-#    include <stdatomic.h>
-TEST_MACROS();
-#endif
 #include <stdbool.h>
 TEST_MACROS();
 #include <stddef.h>

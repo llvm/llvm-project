@@ -517,7 +517,6 @@ set(files
   span
   sstream
   stack
-  stdatomic.h
   stdbool.h
   stddef.h
   stdexcept
