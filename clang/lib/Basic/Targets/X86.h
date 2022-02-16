@@ -168,14 +168,10 @@ public:
     return LongDoubleFormat == &llvm::APFloat::IEEEquad() ? "g" : "e";
   }
 
-  LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
+  unsigned getFloatEvalMethod() const override {
     // X87 evaluates with 80 bits "long double" precision.
-    return SSELevel == NoSSE ? LangOptions::FPEvalMethodKind::FEM_Extended
-                             : LangOptions::FPEvalMethodKind::FEM_Source;
+    return SSELevel == NoSSE ? 2 : 0;
   }
-
-  // EvalMethod `source` is not supported for targets with `NoSSE` feature.
-  bool supportSourceEvalMethod() const override { return SSELevel > NoSSE; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -475,13 +471,13 @@ public:
   NetBSDI386TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : NetBSDTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 
-  LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
+  unsigned getFloatEvalMethod() const override {
     VersionTuple OsVersion = getTriple().getOSVersion();
     // New NetBSD uses the default rounding mode.
     if (OsVersion >= VersionTuple(6, 99, 26) || OsVersion.getMajor() == 0)
-      return X86_32TargetInfo::getFPEvalMethod();
+      return X86_32TargetInfo::getFloatEvalMethod();
     // NetBSD before 6.99.26 defaults to "double" rounding.
-    return LangOptions::FPEvalMethodKind::FEM_Double;
+    return 1;
   }
 };
 
