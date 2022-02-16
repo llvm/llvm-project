@@ -416,7 +416,7 @@ void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
 }
 
 void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
-                              isl_id_to_ast_expr *NewAccesses) {
+                              __isl_keep isl_id_to_ast_expr *NewAccesses) {
   assert(Stmt.isBlockStmt() &&
          "Only block statements can be copied by the block generator");
 
@@ -1453,7 +1453,7 @@ static BasicBlock *findExitDominator(DominatorTree &DT, Region *R) {
 }
 
 void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
-                               isl_id_to_ast_expr *IdToAstExp) {
+                               __isl_keep isl_id_to_ast_expr *IdToAstExp) {
   assert(Stmt.isRegionStmt() &&
          "Only region statements can be copied by the region generator");
 
