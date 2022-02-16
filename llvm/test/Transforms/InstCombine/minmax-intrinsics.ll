@@ -2270,6 +2270,19 @@ define i8 @smax_smax_smax_reassoc_constants(i8 %x, i8 %y) {
   ret i8 %m3
 }
 
+define i8 @smax_smax_smax_reassoc_constants_swap(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_smax_smax_reassoc_constants_swap(
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 42)
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M2]], i8 126)
+; CHECK-NEXT:    ret i8 [[M3]]
+;
+  %m1 = call i8 @llvm.smax.i8(i8 %x, i8 42)
+  %m2 = call i8 @llvm.smax.i8(i8 %m1, i8 %y)
+  %m3 = call i8 @llvm.smax.i8(i8 %m2, i8 126)
+  ret i8 %m3
+}
+
 define i8 @smin_smin_smin_reassoc_constants(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smin_smin_smin_reassoc_constants(
 ; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 42)
