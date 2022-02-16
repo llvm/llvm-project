@@ -181,25 +181,20 @@ void ExternalFileUnit::DestroyClosed() {
   GetUnitMap().DestroyClosed(*this); // destroys *this
 }
 
-bool ExternalFileUnit::SetDirection(
-    Direction direction, IoErrorHandler &handler) {
+Iostat ExternalFileUnit::SetDirection(Direction direction) {
   if (direction == Direction::Input) {
     if (mayRead()) {
       direction_ = Direction::Input;
-      return true;
+      return IostatOk;
     } else {
-      handler.SignalError(IostatReadFromWriteOnly,
-          "READ(UNIT=%d) with ACTION='WRITE'", unitNumber());
-      return false;
+      return IostatReadFromWriteOnly;
     }
   } else {
     if (mayWrite()) {
       direction_ = Direction::Output;
-      return true;
+      return IostatOk;
     } else {
-      handler.SignalError(IostatWriteToReadOnly,
-          "WRITE(UNIT=%d) with ACTION='READ'", unitNumber());
-      return false;
+      return IostatWriteToReadOnly;
     }
   }
 }
@@ -220,21 +215,21 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   ExternalFileUnit &out{newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
-  out.SetDirection(Direction::Output, handler);
+  handler.SignalError(out.SetDirection(Direction::Output));
   out.isUnformatted = false;
   defaultOutput = &out;
 
   ExternalFileUnit &in{newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
-  in.SetDirection(Direction::Input, handler);
+  handler.SignalError(in.SetDirection(Direction::Input));
   in.isUnformatted = false;
   defaultInput = &in;
 
   ExternalFileUnit &error{newUnitMap->LookUpOrCreate(0, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   error.Predefine(2);
-  error.SetDirection(Direction::Output, handler);
+  handler.SignalError(error.SetDirection(Direction::Output));
   error.isUnformatted = false;
   errorOutput = &error;
 
@@ -872,8 +867,8 @@ void ChildIo::EndIoStatement() {
   u_.emplace<std::monostate>();
 }
 
-bool ChildIo::CheckFormattingAndDirection(Terminator &terminator,
-    const char *what, bool unformatted, Direction direction) {
+Iostat ChildIo::CheckFormattingAndDirection(
+    bool unformatted, Direction direction) {
   bool parentIsInput{!parent_.get_if<IoDirectionState<Direction::Output>>()};
   bool parentIsFormatted{parentIsInput
           ? parent_.get_if<FormattedIoStatementState<Direction::Input>>() !=
@@ -882,15 +877,13 @@ bool ChildIo::CheckFormattingAndDirection(Terminator &terminator,
               nullptr};
   bool parentIsUnformatted{!parentIsFormatted};
   if (unformatted != parentIsUnformatted) {
-    terminator.Crash("Child %s attempted on %s parent I/O unit", what,
-        parentIsUnformatted ? "unformatted" : "formatted");
-    return false;
+    return unformatted ? IostatUnformattedChildOnFormattedParent
+                       : IostatFormattedChildOnUnformattedParent;
   } else if (parentIsInput != (direction == Direction::Input)) {
-    terminator.Crash("Child %s attempted on %s parent I/O unit", what,
-        parentIsInput ? "input" : "output");
-    return false;
+    return parentIsInput ? IostatChildOutputToInputParent
+                         : IostatChildInputFromOutputParent;
   } else {
-    return true;
+    return IostatOk;
   }
 }
 

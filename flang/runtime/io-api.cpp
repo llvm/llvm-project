@@ -148,8 +148,8 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
 }
 
 template <Direction DIR, template <Direction> class STATE, typename... A>
-Cookie BeginExternalListIO(const char *what, int unitNumber,
-    const char *sourceFile, int sourceLine, A &&...xs) {
+Cookie BeginExternalListIO(
+    int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
   Terminator terminator{sourceFile, sourceLine};
   if (unitNumber == DefaultUnit) {
     unitNumber = DIR == Direction::Input ? 5 : 6;
@@ -159,38 +159,48 @@ Cookie BeginExternalListIO(const char *what, int unitNumber,
   if (!unit.isUnformatted.has_value()) {
     unit.isUnformatted = false;
   }
+  Iostat iostat{IostatOk};
   if (*unit.isUnformatted) {
-    terminator.Crash("%s attempted on unformatted file", what);
-    return nullptr;
+    iostat = IostatFormattedIoOnUnformattedUnit;
   }
   if (ChildIo * child{unit.GetChildIo()}) {
-    return child->CheckFormattingAndDirection(terminator, what, false, DIR)
-        ? &child->BeginIoStatement<ChildListIoStatementState<DIR>>(
-              *child, sourceFile, sourceLine)
-        : nullptr;
-  } else {
-    if (unit.access == Access::Direct) {
-      terminator.Crash("%s attempted on direct access file", what);
-      return nullptr;
+    if (iostat == IostatOk) {
+      iostat = child->CheckFormattingAndDirection(false, DIR);
     }
-    IoErrorHandler handler{terminator};
-    unit.SetDirection(DIR, handler);
-    IoStatementState &io{unit.BeginIoStatement<STATE<DIR>>(
-        std::forward<A>(xs)..., unit, sourceFile, sourceLine)};
-    return &io;
+    if (iostat == IostatOk) {
+      return &child->BeginIoStatement<ChildListIoStatementState<DIR>>(
+          *child, sourceFile, sourceLine);
+    } else {
+      return &child->BeginIoStatement<ErroneousIoStatementState>(
+          iostat, sourceFile, sourceLine);
+    }
+  } else {
+    if (iostat == IostatOk && unit.access == Access::Direct) {
+      iostat = IostatListIoOnDirectAccessUnit;
+    }
+    if (iostat == IostatOk) {
+      iostat = unit.SetDirection(DIR);
+    }
+    if (iostat == IostatOk) {
+      return &unit.BeginIoStatement<STATE<DIR>>(
+          std::forward<A>(xs)..., unit, sourceFile, sourceLine);
+    } else {
+      return &unit.BeginIoStatement<ErroneousIoStatementState>(
+          iostat, sourceFile, sourceLine);
+    }
   }
 }
 
 Cookie IONAME(BeginExternalListOutput)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalListIO<Direction::Output, ExternalListIoStatementState>(
-      "List-directed output", unitNumber, sourceFile, sourceLine);
+      unitNumber, sourceFile, sourceLine);
 }
 
 Cookie IONAME(BeginExternalListInput)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalListIO<Direction::Input, ExternalListIoStatementState>(
-      "List-directed input", unitNumber, sourceFile, sourceLine);
+      unitNumber, sourceFile, sourceLine);
 }
 
 template <Direction DIR>
@@ -202,28 +212,35 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
   }
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
       unitNumber, DIR, false /*!unformatted*/, terminator)};
+  Iostat iostat{IostatOk};
   if (!unit.isUnformatted.has_value()) {
     unit.isUnformatted = false;
   }
   if (*unit.isUnformatted) {
-    terminator.Crash("Formatted I/O attempted on unformatted file");
-    return nullptr;
+    iostat = IostatFormattedIoOnUnformattedUnit;
   }
   if (ChildIo * child{unit.GetChildIo()}) {
-    return child->CheckFormattingAndDirection(terminator,
-               DIR == Direction::Output ? "formatted output"
-                                        : "formatted input",
-               false, DIR)
-        ? &child->BeginIoStatement<ChildFormattedIoStatementState<DIR>>(
-              *child, format, formatLength, sourceFile, sourceLine)
-        : nullptr;
+    if (iostat == IostatOk) {
+      iostat = child->CheckFormattingAndDirection(false, DIR);
+    }
+    if (iostat == IostatOk) {
+      return &child->BeginIoStatement<ChildFormattedIoStatementState<DIR>>(
+          *child, format, formatLength, sourceFile, sourceLine);
+    } else {
+      return &child->BeginIoStatement<ErroneousIoStatementState>(
+          iostat, sourceFile, sourceLine);
+    }
   } else {
-    IoErrorHandler handler{terminator};
-    unit.SetDirection(DIR, handler);
-    IoStatementState &io{
-        unit.BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
-            unit, format, formatLength, sourceFile, sourceLine)};
-    return &io;
+    if (iostat == IostatOk) {
+      iostat = unit.SetDirection(DIR);
+    }
+    if (iostat == IostatOk) {
+      return &unit.BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
+          unit, format, formatLength, sourceFile, sourceLine);
+    } else {
+      return &unit.BeginIoStatement<ErroneousIoStatementState>(
+          iostat, sourceFile, sourceLine);
+    }
   }
 }
 
@@ -247,35 +264,45 @@ Cookie BeginUnformattedIO(
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
       unitNumber, DIR, true /*unformatted*/, terminator)};
+  Iostat iostat{IostatOk};
   if (!unit.isUnformatted.has_value()) {
     unit.isUnformatted = true;
   }
   if (!*unit.isUnformatted) {
-    terminator.Crash("Unformatted I/O attempted on formatted file");
+    iostat = IostatUnformattedIoOnFormattedUnit;
   }
   if (ChildIo * child{unit.GetChildIo()}) {
-    return child->CheckFormattingAndDirection(terminator,
-               DIR == Direction::Output ? "unformatted output"
-                                        : "unformatted input",
-               true, DIR)
-        ? &child->BeginIoStatement<ChildUnformattedIoStatementState<DIR>>(
-              *child, sourceFile, sourceLine)
-        : nullptr;
-  } else {
-    IoStatementState &io{
-        unit.BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
-            unit, sourceFile, sourceLine)};
-    IoErrorHandler handler{terminator};
-    unit.SetDirection(DIR, handler);
-    if constexpr (DIR == Direction::Output) {
-      if (unit.access == Access::Sequential) {
-        // Create space for (sub)record header to be completed by
-        // ExternalFileUnit::AdvanceRecord()
-        unit.recordLength.reset(); // in case of prior BACKSPACE
-        io.Emit("\0\0\0\0", 4); // placeholder for record length header
-      }
+    if (iostat == IostatOk) {
+      iostat = child->CheckFormattingAndDirection(true, DIR);
     }
-    return &io;
+    if (iostat == IostatOk) {
+      return &child->BeginIoStatement<ChildUnformattedIoStatementState<DIR>>(
+          *child, sourceFile, sourceLine);
+    } else {
+      return &child->BeginIoStatement<ErroneousIoStatementState>(
+          iostat, sourceFile, sourceLine);
+    }
+  } else {
+    if (iostat == IostatOk) {
+      iostat = unit.SetDirection(DIR);
+    }
+    if (iostat == IostatOk) {
+      IoStatementState &io{
+          unit.BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
+              unit, sourceFile, sourceLine)};
+      if constexpr (DIR == Direction::Output) {
+        if (unit.access == Access::Sequential) {
+          // Create space for (sub)record header to be completed by
+          // ExternalFileUnit::AdvanceRecord()
+          unit.recordLength.reset(); // in case of prior BACKSPACE
+          io.Emit("\0\0\0\0", 4); // placeholder for record length header
+        }
+      }
+      return &io;
+    } else {
+      return &unit.BeginIoStatement<ErroneousIoStatementState>(
+          iostat, sourceFile, sourceLine);
+    }
   }
 }
 
