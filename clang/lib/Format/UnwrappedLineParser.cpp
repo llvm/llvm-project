@@ -40,6 +40,12 @@ public:
   // getNextToken().
   virtual FormatToken *peekNextToken() = 0;
 
+  // Returns the token that would be returned after the next N calls to
+  // getNextToken(). N needs to be greater than zero, and small enough that
+  // there are still tokens. Check for tok::eof with N-1 before calling it with
+  // N.
+  virtual FormatToken *peekNextToken(int N) = 0;
+
   // Returns whether we are at the end of the file.
   // This can be different from whether getNextToken() returned an eof token
   // when the FormatTokenSource is a view on a part of the token stream.
@@ -135,6 +141,13 @@ public:
     if (eof())
       return &FakeEOF;
     return PreviousTokenSource->peekNextToken();
+  }
+
+  FormatToken *peekNextToken(int N) override {
+    assert(N > 0);
+    if (eof())
+      return &FakeEOF;
+    return PreviousTokenSource->peekNextToken(N);
   }
 
   bool isEOF() override { return PreviousTokenSource->isEOF(); }
@@ -252,6 +265,16 @@ public:
     int Next = Position + 1;
     LLVM_DEBUG({
       llvm::dbgs() << "Peeking ";
+      dbgToken(Next);
+    });
+    return Tokens[Next];
+  }
+
+  FormatToken *peekNextToken(int N) override {
+    assert(N > 0);
+    int Next = Position + N;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Peeking (+" << (N - 1) << ") ";
       dbgToken(Next);
     });
     return Tokens[Next];
@@ -1537,9 +1560,12 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
     case tok::kw_concept:
       parseConcept();
       return;
-    case tok::kw_requires:
-      parseRequiresClause();
-      return;
+    case tok::kw_requires: {
+      bool ParsedClause = parseRequires();
+      if (ParsedClause)
+        return;
+      break;
+    }
     case tok::kw_enum:
       // Ignore if this is part of "template <enum ...".
       if (Previous && Previous->is(tok::less)) {
@@ -2206,9 +2232,12 @@ void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       else
         nextToken();
       break;
-    case tok::kw_requires:
-      parseRequiresExpression();
+    case tok::kw_requires: {
+      auto RequiresToken = FormatTok;
+      nextToken();
+      parseRequiresExpression(RequiresToken);
       break;
+    }
     case tok::ampamp:
       if (AmpAmpTokenType != TT_Unknown)
         FormatTok->setType(AmpAmpTokenType);
@@ -2783,28 +2812,163 @@ void UnwrappedLineParser::parseConcept() {
   addUnwrappedLine();
 }
 
+/// \brief Parses a requires, decides if it is a clause or an expression.
+/// \pre The current token has to be the requires keyword.
+/// \returns true if it parsed a clause.
+bool clang::format::UnwrappedLineParser::parseRequires() {
+  assert(FormatTok->Tok.is(tok::kw_requires) && "'requires' expected");
+  auto RequiresToken = FormatTok;
+
+  // We try to guess if it is a requires clause, or a requires expression. For
+  // that we first consume the keyword and check the next token.
+  nextToken();
+
+  switch (FormatTok->Tok.getKind()) {
+  case tok::l_brace:
+    // This can only be an expression, never a clause.
+    parseRequiresExpression(RequiresToken);
+    return false;
+  case tok::l_paren:
+    // Clauses and expression can start with a paren, it's unclear what we have.
+    break;
+  default:
+    // All other tokens can only be a clause.
+    parseRequiresClause(RequiresToken);
+    return true;
+  }
+
+  // Looking forward we would have to decide if there are function declaration
+  // like arguments to the requires expression:
+  // requires (T t) {
+  // Or there is a constraint expression for the requires clause:
+  // requires (C<T> && ...
+
+  // But first let's look behind.
+  auto *PreviousNonComment = RequiresToken->getPreviousNonComment();
+
+  if (!PreviousNonComment ||
+      PreviousNonComment->is(TT_RequiresExpressionLBrace)) {
+    // If there is no token, or an expression left brace, we are a requires
+    // clause within a requires expression.
+    parseRequiresClause(RequiresToken);
+    return true;
+  }
+
+  switch (PreviousNonComment->Tok.getKind()) {
+  case tok::greater:
+  case tok::r_paren:
+  case tok::kw_noexcept:
+  case tok::kw_const:
+    // This is a requires clause.
+    parseRequiresClause(RequiresToken);
+    return true;
+  case tok::amp:
+  case tok::ampamp: {
+    // This can be either:
+    // if (... && requires (T t) ...)
+    // Or
+    // void member(...) && requires (C<T> ...
+    // We check the one token before that for a const:
+    // void member(...) const && requires (C<T> ...
+    auto PrevPrev = PreviousNonComment->getPreviousNonComment();
+    if (PrevPrev && PrevPrev->is(tok::kw_const)) {
+      parseRequiresClause(RequiresToken);
+      return true;
+    }
+    break;
+  }
+  default:
+    // It's an expression.
+    parseRequiresExpression(RequiresToken);
+    return false;
+  }
+
+  // Now we look forward and try to check if the paren content is a parameter
+  // list. The parameters can be cv-qualified and contain references or
+  // pointers.
+  // So we want basically to check for TYPE NAME, but TYPE can contain all kinds
+  // of stuff: typename, const, *, &, &&, ::, identifiers.
+
+  int NextTokenOffset = 1;
+  auto NextToken = Tokens->peekNextToken(NextTokenOffset);
+  auto PeekNext = [&NextTokenOffset, &NextToken, this] {
+    ++NextTokenOffset;
+    NextToken = Tokens->peekNextToken(NextTokenOffset);
+  };
+
+  bool FoundType = false;
+  bool LastWasColonColon = false;
+  int OpenAngles = 0;
+
+  for (; NextTokenOffset < 50; PeekNext()) {
+    switch (NextToken->Tok.getKind()) {
+    case tok::kw_volatile:
+    case tok::kw_const:
+    case tok::comma:
+      parseRequiresExpression(RequiresToken);
+      return false;
+    case tok::r_paren:
+    case tok::pipepipe:
+      parseRequiresClause(RequiresToken);
+      return true;
+    case tok::eof:
+      // Break out of the loop.
+      NextTokenOffset = 50;
+      break;
+    case tok::coloncolon:
+      LastWasColonColon = true;
+      break;
+    case tok::identifier:
+      if (FoundType && !LastWasColonColon && OpenAngles == 0) {
+        parseRequiresExpression(RequiresToken);
+        return false;
+      }
+      FoundType = true;
+      LastWasColonColon = false;
+      break;
+    case tok::less:
+      ++OpenAngles;
+      break;
+    case tok::greater:
+      --OpenAngles;
+      break;
+    default:
+      if (NextToken->isSimpleTypeSpecifier()) {
+        parseRequiresExpression(RequiresToken);
+        return false;
+      }
+      break;
+    }
+  }
+
+  // This seems to be a complicated expression, just assume it's a clause.
+  parseRequiresClause(RequiresToken);
+  return true;
+}
+
 /// \brief Parses a requires clause.
-/// \pre The current token needs to be the requires keyword.
+/// \param RequiresToken The requires keyword token, which starts this clause.
+/// \pre We need to be on the next token after the requires keyword.
 /// \sa parseRequiresExpression
 ///
 /// Returns if it either has finished parsing the clause, or it detects, that
 /// the clause is incorrect.
-void UnwrappedLineParser::parseRequiresClause() {
-  assert(FormatTok->Tok.is(tok::kw_requires) && "'requires' expected");
-  assert(FormatTok->getType() == TT_Unknown);
+void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
+  assert(FormatTok->getPreviousNonComment() == RequiresToken);
+  assert(RequiresToken->Tok.is(tok::kw_requires) && "'requires' expected");
+  assert(RequiresToken->getType() == TT_Unknown);
 
   // If there is no previous token, we are within a requires expression,
   // otherwise we will always have the template or function declaration in front
   // of it.
   bool InRequiresExpression =
-      !FormatTok->Previous ||
-      FormatTok->Previous->is(TT_RequiresExpressionLBrace);
+      !RequiresToken->Previous ||
+      RequiresToken->Previous->is(TT_RequiresExpressionLBrace);
 
-  FormatTok->setType(InRequiresExpression
-                         ? TT_RequiresClauseInARequiresExpression
-                         : TT_RequiresClause);
+  RequiresToken->setType(InRequiresExpression
+                             ? TT_RequiresClauseInARequiresExpression
+                             : TT_RequiresClause);
 
-  nextToken();
   parseConstraintExpression();
 
   if (!InRequiresExpression)
@@ -2812,17 +2976,18 @@ void UnwrappedLineParser::parseRequiresClause() {
 }
 
 /// \brief Parses a requires expression.
-/// \pre The current token needs to be the requires keyword.
+/// \param RequiresToken The requires keyword token, which starts this clause.
+/// \pre We need to be on the next token after the requires keyword.
 /// \sa parseRequiresClause
 ///
 /// Returns if it either has finished parsing the expression, or it detects,
 /// that the expression is incorrect.
-void UnwrappedLineParser::parseRequiresExpression() {
-  assert(FormatTok->Tok.is(tok::kw_requires) && "'requires' expected");
-  assert(FormatTok->getType() == TT_Unknown);
+void UnwrappedLineParser::parseRequiresExpression(FormatToken *RequiresToken) {
+  assert(FormatTok->getPreviousNonComment() == RequiresToken);
+  assert(RequiresToken->Tok.is(tok::kw_requires) && "'requires' expected");
+  assert(RequiresToken->getType() == TT_Unknown);
 
-  FormatTok->setType(TT_RequiresExpression);
-  nextToken();
+  RequiresToken->setType(TT_RequiresExpression);
 
   if (FormatTok->is(tok::l_paren)) {
     FormatTok->setType(TT_RequiresExpressionLParen);
@@ -2844,9 +3009,12 @@ void UnwrappedLineParser::parseRequiresExpression() {
 void UnwrappedLineParser::parseConstraintExpression() {
   do {
     switch (FormatTok->Tok.getKind()) {
-    case tok::kw_requires:
-      parseRequiresExpression();
+    case tok::kw_requires: {
+      auto RequiresToken = FormatTok;
+      nextToken();
+      parseRequiresExpression(RequiresToken);
       break;
+    }
 
     case tok::l_paren:
       parseParens(/*AmpAmpTokenType=*/TT_BinaryOperator);

@@ -133,8 +133,9 @@ private:
   bool parseEnum();
   bool parseStructLike();
   void parseConcept();
-  void parseRequiresClause();
-  void parseRequiresExpression();
+  bool parseRequires();
+  void parseRequiresClause(FormatToken *RequiresToken);
+  void parseRequiresExpression(FormatToken *RequiresToken);
   void parseConstraintExpression();
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
