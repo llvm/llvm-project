@@ -1192,14 +1192,14 @@ public:
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(
-        TheTarget->createMCCodeEmitter(*MII, *MCEInstance.LocalCtx));
+        TheTarget->createMCCodeEmitter(*MII, *MRI, *MCEInstance.LocalCtx));
     return MCEInstance;
   }
 
   /// Creating MCStreamer instance.
   std::unique_ptr<MCStreamer>
   createStreamer(llvm::raw_pwrite_stream &OS) const {
-    MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *Ctx);
+    MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *Ctx);
     MCAsmBackend *MAB =
         TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);

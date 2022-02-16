@@ -1843,6 +1843,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 }
 
 MCCodeEmitter *llvm::createX86MCCodeEmitter(const MCInstrInfo &MCII,
+                                            const MCRegisterInfo &MRI,
                                             MCContext &Ctx) {
   return new X86MCCodeEmitter(MCII, Ctx);
 }

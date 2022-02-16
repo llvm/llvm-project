@@ -223,7 +223,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
   InstructionPrinter->setPrintImmHex(true);
 
   std::unique_ptr<MCCodeEmitter> MCE(
-      TheTarget->createMCCodeEmitter(*MII, *Ctx));
+      TheTarget->createMCCodeEmitter(*MII, *MRI, *Ctx));
 
   // Make sure we don't miss any output on core dumps.
   outs().SetUnbuffered();

@@ -94,6 +94,7 @@ private:
 } // end anonymous namespace
 
 MCCodeEmitter *llvm::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
+                                              const MCRegisterInfo &MRI,
                                               MCContext &Ctx) {
   return new RISCVMCCodeEmitter(Ctx, MCII);
 }
