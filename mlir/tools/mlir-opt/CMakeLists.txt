@@ -23,7 +23,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses
     MLIRStandardOpsTestPasses
-    MLIRVectorTestPasses
+    MLIRTensorTestPasses
     MLIRTestAnalysis
     MLIRTestDialect
     MLIRTestIR
@@ -31,6 +31,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestReducer
     MLIRTestRewrite
     MLIRTestTransforms
+    MLIRVectorTestPasses
     )
 endif()
 

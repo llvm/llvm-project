@@ -4645,6 +4645,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/Transforms/Passes.h",
+        "include/mlir/Dialect/Tensor/Transforms/Transforms.h",
     ],
     includes = ["include"],
     deps = [
@@ -4652,6 +4653,7 @@ cc_library(
         ":Async",
         ":BufferizationDialect",
         ":BufferizationTransforms",
+        ":DialectUtils",
         ":IR",
         ":MemRefDialect",
         ":ParallelLoopMapperAttrGen",
@@ -5985,6 +5987,7 @@ cc_binary(
         "//mlir/test:TestShapeDialect",
         "//mlir/test:TestStandardOps",
         "//mlir/test:TestStandardToLLVM",
+        "//mlir/test:TestTensor",
         "//mlir/test:TestTosaDialect",
         "//mlir/test:TestTransforms",
         "//mlir/test:TestTypeDialect",
