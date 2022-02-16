@@ -196,8 +196,8 @@ namespace std {
 */
 
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
 #include <__ranges/enable_borrowed_range.h>

@@ -10,8 +10,8 @@
 #define _LIBCPP___ALGORITHM_SAMPLE_H
 
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__random/uniform_int_distribution.h>
 #include <iterator>
 

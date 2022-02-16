@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__support/ibm/xlocale.h>
 #include <sstream>
 #include <vector>

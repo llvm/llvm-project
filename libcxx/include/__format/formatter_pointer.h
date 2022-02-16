@@ -11,9 +11,9 @@
 #define _LIBCPP___FORMAT_FORMATTER_POINTER_H
 
 #include <__algorithm/copy.h>
+#include <__assert>
 #include <__availability>
 #include <__config>
-#include <__debug>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>
 #include <__format/formatter.h>

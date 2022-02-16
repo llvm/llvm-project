@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___ITERATOR_ADVANCE_H
 #define _LIBCPP___ITERATOR_ADVANCE_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>

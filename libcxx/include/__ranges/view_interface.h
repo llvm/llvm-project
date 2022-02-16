@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___RANGES_VIEW_INTERFACE_H
 #define _LIBCPP___RANGES_VIEW_INTERFACE_H
 
+#include <__assert>
 #include <__concepts/derived_from.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__debug>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/prev.h>

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <limits>
 #include <mutex>
 #include <system_error>

@@ -45,7 +45,7 @@ template <class P> struct hash<coroutine_handle<P>>;
 
  */
 
-#include <__debug>
+#include <__assert>
 #include <cstddef>
 #include <experimental/__config>
 #include <functional>

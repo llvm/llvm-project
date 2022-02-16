@@ -12,8 +12,8 @@
 
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__format/format_arg.h>
 #include <__format/format_error.h>
 #include <__format/format_string.h>

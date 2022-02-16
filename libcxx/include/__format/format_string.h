@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_STRING_H
 #define _LIBCPP___FORMAT_FORMAT_STRING_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__format/format_error.h>
 #include <cstddef>
 #include <cstdint>
