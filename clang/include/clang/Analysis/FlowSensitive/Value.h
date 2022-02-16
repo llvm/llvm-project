@@ -28,7 +28,19 @@ namespace dataflow {
 /// Base class for all values computed by abstract interpretation.
 class Value {
 public:
-  enum class Kind { Bool, Integer, Reference, Pointer, Struct };
+  enum class Kind {
+    Integer,
+    Reference,
+    Pointer,
+    Struct,
+
+    // Synthetic boolean values are either atomic values or composites that
+    // represent conjunctions, disjunctions, and negations.
+    AtomicBool,
+    Conjunction,
+    Disjunction,
+    Negation
+  };
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
 
@@ -43,9 +55,88 @@ private:
 /// Models a boolean.
 class BoolValue : public Value {
 public:
-  explicit BoolValue() : Value(Kind::Bool) {}
+  explicit BoolValue(Kind ValueKind) : Value(ValueKind) {}
 
-  static bool classof(const Value *Val) { return Val->getKind() == Kind::Bool; }
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::AtomicBool ||
+           Val->getKind() == Kind::Conjunction ||
+           Val->getKind() == Kind::Disjunction ||
+           Val->getKind() == Kind::Negation;
+  }
+};
+
+/// Models an atomic boolean.
+class AtomicBoolValue : public BoolValue {
+public:
+  explicit AtomicBoolValue() : BoolValue(Kind::AtomicBool) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::AtomicBool;
+  }
+};
+
+/// Models a boolean conjunction.
+// FIXME: Consider representing binary and unary boolean operations similar
+// to how they are represented in the AST. This might become more pressing
+// when such operations need to be added for other data types.
+class ConjunctionValue : public BoolValue {
+public:
+  explicit ConjunctionValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Conjunction), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Conjunction;
+  }
+
+  /// Returns the left sub-value of the conjunction.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the conjunction.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean disjunction.
+class DisjunctionValue : public BoolValue {
+public:
+  explicit DisjunctionValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Disjunction), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Disjunction;
+  }
+
+  /// Returns the left sub-value of the disjunction.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the disjunction.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean negation.
+class NegationValue : public BoolValue {
+public:
+  explicit NegationValue(BoolValue &SubVal)
+      : BoolValue(Kind::Negation), SubVal(SubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Negation;
+  }
+
+  /// Returns the sub-value of the negation.
+  BoolValue &getSubVal() const { return SubVal; }
+
+private:
+  BoolValue &SubVal;
 };
 
 /// Models an integer.

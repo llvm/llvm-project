@@ -20,12 +20,23 @@
 namespace clang {
 namespace dataflow {
 
+/// Maps statements to the environments of basic blocks that contain them.
+class StmtToEnvMap {
+public:
+  virtual ~StmtToEnvMap() = default;
+
+  /// Returns the environment of the basic block that contains `S` or nullptr if
+  /// there isn't one.
+  /// FIXME: Ensure that the result can't be null and return a const reference.
+  virtual const Environment *getEnvironment(const Stmt &S) const = 0;
+};
+
 /// Evaluates `S` and updates `Env` accordingly.
 ///
 /// Requirements:
 ///
 ///  The type of `S` must not be `ParenExpr`.
-void transfer(const Stmt &S, Environment &Env);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang
