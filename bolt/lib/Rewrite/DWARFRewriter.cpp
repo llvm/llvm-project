@@ -51,49 +51,8 @@ static void printDie(const DWARFDie &DIE) {
   DIE.dump(dbgs(), 0, DumpOpts);
 }
 
-struct AttrInfo {
-  DWARFFormValue V;
-  uint64_t Offset;
-  uint32_t Size; // Size of the attribute.
-};
-
-/// Finds attributes FormValue and Offset.
-///
-/// \param DIE die to look up in.
-/// \param Index the attribute index to extract.
-/// \return an optional AttrInfo with DWARFFormValue and Offset.
-static Optional<AttrInfo>
-findAttributeInfo(const DWARFDie DIE,
-                  const DWARFAbbreviationDeclaration *AbbrevDecl,
-                  uint32_t Index) {
-  const DWARFUnit &U = *DIE.getDwarfUnit();
-  uint64_t Offset =
-      AbbrevDecl->getAttributeOffsetFromIndex(Index, DIE.getOffset(), U);
-  Optional<DWARFFormValue> Value =
-      AbbrevDecl->getAttributeValueFromOffset(Index, Offset, U);
-  if (!Value)
-    return None;
-  // AttributeSpec
-  const DWARFAbbreviationDeclaration::AttributeSpec *AttrVal =
-      AbbrevDecl->attributes().begin() + Index;
-  uint32_t ValSize = 0;
-  Optional<int64_t> ValSizeOpt = AttrVal->getByteSize(U);
-  if (ValSizeOpt) {
-    ValSize = static_cast<uint32_t>(*ValSizeOpt);
-  } else {
-    DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
-    uint64_t NewOffset = Offset;
-    DWARFFormValue::skipValue(Value->getForm(), DebugInfoData, &NewOffset,
-                              U.getFormParams());
-    // This includes entire size of the entry, which might not be just the
-    // encoding part. For example for DW_AT_loc it will include expression
-    // location.
-    ValSize = NewOffset - Offset;
-  }
-
-  return AttrInfo{*Value, Offset, ValSize};
-}
-
+namespace llvm {
+namespace bolt {
 /// Finds attributes FormValue and Offset.
 ///
 /// \param DIE die to look up in.
@@ -112,6 +71,8 @@ static Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
     return None;
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
+} // namespace bolt
+} // namespace llvm
 
 using namespace llvm;
 using namespace llvm::support::endian;
@@ -691,12 +652,11 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       return;
     }
 
-    AbbrevWriter.addAttributePatch(
-        *DIE.getDwarfUnit(), AbbreviationDecl, dwarf::DW_AT_low_pc,
-        dwarf::DW_AT_GNU_ranges_base, dwarf::DW_FORM_indirect);
-    DebugInfoPatcher.addUDataPatch(LowPCAttrInfo->Offset, dwarf::DW_FORM_udata,
-                                   1);
-    DebugInfoPatcher.addUDataPatch(LowPCAttrInfo->Offset + 1, *RangesBase, 7);
+    AbbrevWriter.addAttribute(*DIE.getDwarfUnit(), AbbreviationDecl,
+                              dwarf::DW_AT_GNU_ranges_base,
+                              dwarf::DW_FORM_sec_offset);
+    reinterpret_cast<DebugInfoBinaryPatcher &>(DebugInfoPatcher)
+        .insertNewEntry(DIE, *RangesBase);
 
     return;
   }
@@ -1458,9 +1418,8 @@ void DWARFRewriter::convertToRangesPatchAbbrev(
   // there.
   if (RangesBase) {
     assert(LowPCForm != dwarf::DW_FORM_GNU_addr_index);
-    AbbrevWriter.addAttributePatch(Unit, Abbrev, dwarf::DW_AT_low_pc,
-                                   dwarf::DW_AT_GNU_ranges_base,
-                                   dwarf::DW_FORM_sec_offset);
+    AbbrevWriter.addAttribute(Unit, Abbrev, dwarf::DW_AT_GNU_ranges_base,
+                              dwarf::DW_FORM_sec_offset);
   }
 
   AbbrevWriter.addAttributePatch(Unit, Abbrev, dwarf::DW_AT_high_pc,
@@ -1486,11 +1445,11 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     // Ranges are relative to DW_AT_GNU_ranges_base.
     BaseOffset = DebugInfoPatcher.getRangeBase();
   } else {
-    // If case DW_AT_low_pc was converted into DW_AT_GNU_ranges_base
+    DebugInfoPatcher.addLE64Patch(LowPCOffset, 0);
+    // If DW_AT_GNU_ranges_base was inserted.
     if (RangesBase)
-      DebugInfoPatcher.addLE32Patch(LowPCOffset, *RangesBase, 8);
-    else
-      DebugInfoPatcher.addLE64Patch(LowPCOffset, 0);
+      reinterpret_cast<DebugInfoBinaryPatcher &>(DebugInfoPatcher)
+          .insertNewEntry(DIE, *RangesBase);
   }
   DebugInfoPatcher.addLE32Patch(HighPCOffset, RangesSectionOffset - BaseOffset,
                                 HighPCVal->Size);
