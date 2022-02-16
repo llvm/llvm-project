@@ -109,8 +109,7 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     return result_sp;
   }
 
-  BreakpointResolver *resolver;
-
+  BreakpointResolver *resolver = nullptr;
   switch (resolver_type) {
   case FileLineResolver:
     resolver = BreakpointResolverFileLine::CreateFromStructuredData(
@@ -139,13 +138,12 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     llvm_unreachable("Should never get an unresolvable resolver type.");
   }
 
-  if (!error.Success()) {
+  if (!resolver || error.Fail())
     return result_sp;
-  } else {
-    // Add on the global offset option:
-    resolver->SetOffset(offset);
-    return BreakpointResolverSP(resolver);
-  }
+
+  // Add on the global offset option:
+  resolver->SetOffset(offset);
+  return BreakpointResolverSP(resolver);
 }
 
 StructuredData::DictionarySP BreakpointResolver::WrapOptionsDict(
