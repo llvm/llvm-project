@@ -39,8 +39,11 @@ class OutputBuffer {
     if (Need > BufferCapacity) {
       // Avoid many reallocations during startup, with a bit of hysteresis.
       constexpr size_t MinInitAlloc = 1024;
-      Need = std::max(Need, MinInitAlloc);
-      BufferCapacity = std::max(Need, BufferCapacity * 2);
+      if (Need < MinInitAlloc)
+        Need = MinInitAlloc;
+      BufferCapacity *= 2;
+      if (BufferCapacity < Need)
+        BufferCapacity = Need;
       Buffer = static_cast<char *>(std::realloc(Buffer, BufferCapacity));
       if (Buffer == nullptr)
         std::terminate();
