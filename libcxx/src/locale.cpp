@@ -13,20 +13,20 @@
 #endif
 
 #include <__utility/unreachable.h>
-#include "algorithm"
-#include "clocale"
-#include "codecvt"
-#include "cstdio"
-#include "cstdlib"
-#include "cstring"
-#include "locale"
-#include "string"
-#include "type_traits"
-#include "typeinfo"
-#include "vector"
+#include <algorithm>
+#include <clocale>
+#include <codecvt>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <locale>
+#include <string>
+#include <type_traits>
+#include <typeinfo>
+#include <vector>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#   include "cwctype"
+#   include <cwctype>
 #endif
 
 #if defined(_AIX)
@@ -45,11 +45,13 @@
 
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
-#include "__undef_macros"
 
 // On Linux, wint_t and wchar_t have different signed-ness, and this causes
 // lots of noise in the build log, but no bugs that I know of.
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wsign-conversion")
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -6587,3 +6589,5 @@ template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t,
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS

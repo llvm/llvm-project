@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "__config"
+#include <__config>
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-#include "future"
-#include "string"
+#include <future>
+#include <string>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
