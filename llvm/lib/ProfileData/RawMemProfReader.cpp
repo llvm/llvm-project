@@ -368,7 +368,7 @@ Error RawMemProfReader::fillRecord(const uint64_t Id, const MemInfoBlock &MIB,
           I != 0);
     }
   }
-  Record.Info = MIB;
+  Record.Info = PortableMemInfoBlock(MIB);
   return Error::success();
 }
 

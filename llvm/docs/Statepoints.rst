@@ -739,7 +739,7 @@ Supported Architectures
 =======================
 
 Support for statepoint generation requires some code for each backend.
-Today, only X86_64 is supported.
+Today, only Aarch64 and X86_64 are supported.
 
 .. _OpenWork:
 
@@ -794,18 +794,6 @@ particular, there is current no way to represent a rethrow on a path which
 also has relocations.  See `this llvm-dev discussion
 <https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
 detail.
-
-Support for alternate stackmap formats
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For some use cases, it is
-desirable to directly encode a final memory efficient stackmap format for
-use by the runtime.  This is particularly relevant for ahead of time
-compilers which wish to directly link object files without the need for
-post processing of each individual object file.  While not implemented
-today for statepoints, there is precedent for a GCStrategy to be able to
-select a customer GCMetataPrinter for this purpose.  Patches to enable
-this functionality upstream are welcome.
 
 Bugs and Enhancements
 =====================

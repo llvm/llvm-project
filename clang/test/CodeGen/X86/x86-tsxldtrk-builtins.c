@@ -3,13 +3,13 @@
 
 #include <immintrin.h>
 
-void test_xsusldtrk() {
+void test_xsusldtrk(void) {
 // CHECK-LABEL: test_xsusldtrk
 // CHECK: call void @llvm.x86.xsusldtrk()
     _xsusldtrk();
 }
 
-void test_xresldtrk() {
+void test_xresldtrk(void) {
 // CHECK-LABEL: test_xresldtrk
 // CHECK: call void @llvm.x86.xresldtrk()
     _xresldtrk();

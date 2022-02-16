@@ -6,7 +6,7 @@ extern void a(const char *);
 
 // CHECK: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
 
-void intel() {
+void intel(void) {
   if (__builtin_cpu_is("intel"))
     a("intel");
 
@@ -14,7 +14,7 @@ void intel() {
   // CHECK: = icmp eq i32 [[LOAD]], 1
 }
 
-void amd() {
+void amd(void) {
   if (__builtin_cpu_is("amd"))
     a("amd");
 
@@ -22,7 +22,7 @@ void amd() {
   // CHECK: = icmp eq i32 [[LOAD]], 2
 }
 
-void atom() {
+void atom(void) {
   if (__builtin_cpu_is("atom"))
     a("atom");
 
@@ -30,7 +30,7 @@ void atom() {
   // CHECK: = icmp eq i32 [[LOAD]], 1
 }
 
-void amdfam10h() {
+void amdfam10h(void) {
   if (__builtin_cpu_is("amdfam10h"))
     a("amdfam10h");
 
@@ -38,7 +38,7 @@ void amdfam10h() {
   // CHECK: = icmp eq i32 [[LOAD]], 4
 }
 
-void barcelona() {
+void barcelona(void) {
   if (__builtin_cpu_is("barcelona"))
     a("barcelona");
 
@@ -46,7 +46,7 @@ void barcelona() {
   // CHECK: = icmp eq i32 [[LOAD]], 4
 }
 
-void nehalem() {
+void nehalem(void) {
   if (__builtin_cpu_is("nehalem"))
     a("nehalem");
 

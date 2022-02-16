@@ -132,7 +132,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   %c2 = arith.constant 2 : index
   memref.store %v42, %input[%c0, %c0, %c0, %c0] : memref<1x4x16x1xf64>
   memref.store %v77, %input[%c0, %c0, %c1, %c0] : memref<1x4x16x1xf64>
-  memref.store %v-13, %input[%c0, %c0, %c2, %c0] : memref<1x4x16x1xf64>
+  memref.store %v-13, %input[%c0, %c1, %c0, %c0] : memref<1x4x16x1xf64>
 
   call @pooling_on_buffers(%input, %shape, %output) :
     (memref<1x4x16x1xf64>, memref<2x2xf64>, memref<1x2x4x1xi32>) -> ()
@@ -421,9 +421,13 @@ def test_min_pooling_builtin():
       @builtin.FuncOp.from_py_func(
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
+      # Set the strides and use the default dilations.
       def pooling_on_buffers(input, shape, output):
         linalg.pooling_nhwc_min(
-            input, shape, outs=[output], strides=[2, 4], dilations=[1, 2])
+            input,
+            shape,
+            outs=[output],
+            strides=[2, 4])
 
     execution_engine = ExecutionEngine(transform(module, pooling_boiler))
 
@@ -451,13 +455,13 @@ def test_min_pooling_generic():
       @builtin.FuncOp.from_py_func(
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
+      # Set the strides and use the default dilations.
       def pooling_on_buffers(input, shape, output):
         linalg.pooling_nhwc_min(
             input,
             shape,
             outs=[output],
             strides=[2, 4],
-            dilations=[1, 2],
             emit_generic=True)
 
     execution_engine = ExecutionEngine(transform(module, pooling_boiler))

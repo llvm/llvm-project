@@ -31,7 +31,7 @@ struct float_s { float f; };
 void f_float_s_arg(struct float_s a) {}
 
 // CHECK: define{{.*}} float @f_ret_float_s()
-struct float_s f_ret_float_s() {
+struct float_s f_ret_float_s(void) {
   return (struct float_s){1.0};
 }
 
@@ -45,7 +45,7 @@ struct zbf_float_zbf_s { int : 0; float f; int : 0; };
 void f_zbf_float_s_arg(struct zbf_float_s a) {}
 
 // CHECK: define{{.*}} float @f_ret_zbf_float_s()
-struct zbf_float_s f_ret_zbf_float_s() {
+struct zbf_float_s f_ret_zbf_float_s(void) {
   return (struct zbf_float_s){1.0};
 }
 
@@ -53,7 +53,7 @@ struct zbf_float_s f_ret_zbf_float_s() {
 void f_zbf_float_zbf_s_arg(struct zbf_float_zbf_s a) {}
 
 // CHECK: define{{.*}} float @f_ret_zbf_float_zbf_s()
-struct zbf_float_zbf_s f_ret_zbf_float_zbf_s() {
+struct zbf_float_zbf_s f_ret_zbf_float_zbf_s(void) {
   return (struct zbf_float_zbf_s){1.0};
 }
 
@@ -66,7 +66,7 @@ struct float_float_s { float f; float g; };
 void f_float_float_s_arg(struct float_float_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_float_float_s()
-struct float_float_s f_ret_float_float_s() {
+struct float_float_s f_ret_float_float_s(void) {
   return (struct float_float_s){1.0, 2.0};
 }
 
@@ -89,7 +89,7 @@ struct float_int8_zbf_s { float f; int8_t i; int : 0; };
 void f_float_int8_s_arg(struct float_int8_s a) {}
 
 // CHECK: define{{.*}} { float, i8 } @f_ret_float_int8_s()
-struct float_int8_s f_ret_float_int8_s() {
+struct float_int8_s f_ret_float_int8_s(void) {
   return (struct float_int8_s){1.0, 2};
 }
 
@@ -97,7 +97,7 @@ struct float_int8_s f_ret_float_int8_s() {
 void f_float_uint8_s_arg(struct float_uint8_s a) {}
 
 // CHECK: define{{.*}} { float, i8 } @f_ret_float_uint8_s()
-struct float_uint8_s f_ret_float_uint8_s() {
+struct float_uint8_s f_ret_float_uint8_s(void) {
   return (struct float_uint8_s){1.0, 2};
 }
 
@@ -105,7 +105,7 @@ struct float_uint8_s f_ret_float_uint8_s() {
 void f_float_int32_s_arg(struct float_int32_s a) {}
 
 // CHECK: define{{.*}} { float, i32 } @f_ret_float_int32_s()
-struct float_int32_s f_ret_float_int32_s() {
+struct float_int32_s f_ret_float_int32_s(void) {
   return (struct float_int32_s){1.0, 2};
 }
 
@@ -113,7 +113,7 @@ struct float_int32_s f_ret_float_int32_s() {
 void f_float_int64_s_arg(struct float_int64_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_float_int64_s(%struct.float_int64_s* noalias sret(%struct.float_int64_s) align 8 %agg.result)
-struct float_int64_s f_ret_float_int64_s() {
+struct float_int64_s f_ret_float_int64_s(void) {
   return (struct float_int64_s){1.0, 2};
 }
 
@@ -121,7 +121,7 @@ struct float_int64_s f_ret_float_int64_s() {
 void f_float_int64bf_s_arg(struct float_int64bf_s a) {}
 
 // CHECK: define{{.*}} { float, i32 } @f_ret_float_int64bf_s()
-struct float_int64bf_s f_ret_float_int64bf_s() {
+struct float_int64bf_s f_ret_float_int64bf_s(void) {
   return (struct float_int64bf_s){1.0, 2};
 }
 
@@ -132,7 +132,7 @@ struct float_int64bf_s f_ret_float_int64bf_s() {
 void f_float_int8_zbf_s(struct float_int8_zbf_s a) {}
 
 // CHECK: define{{.*}} { float, i8 } @f_ret_float_int8_zbf_s()
-struct float_int8_zbf_s f_ret_float_int8_zbf_s() {
+struct float_int8_zbf_s f_ret_float_int8_zbf_s(void) {
   return (struct float_int8_zbf_s){1.0, 2};
 }
 
@@ -151,7 +151,7 @@ void f_struct_float_int8_insufficient_fprs(float a, float b, float c, float d,
 void f_floatcomplex(float __complex__ a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatcomplex()
-float __complex__ f_ret_floatcomplex() {
+float __complex__ f_ret_floatcomplex(void) {
   return 1.0;
 }
 
@@ -161,7 +161,7 @@ struct floatcomplex_s { float __complex__ c; };
 void f_floatcomplex_s_arg(struct floatcomplex_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatcomplex_s()
-struct floatcomplex_s f_ret_floatcomplex_s() {
+struct floatcomplex_s f_ret_floatcomplex_s(void) {
   return (struct floatcomplex_s){1.0};
 }
 
@@ -174,7 +174,7 @@ struct floatarr1_s { float a[1]; };
 void f_floatarr1_s_arg(struct floatarr1_s a) {}
 
 // CHECK: define{{.*}} float @f_ret_floatarr1_s()
-struct floatarr1_s f_ret_floatarr1_s() {
+struct floatarr1_s f_ret_floatarr1_s(void) {
   return (struct floatarr1_s){{1.0}};
 }
 
@@ -184,7 +184,7 @@ struct floatarr2_s { float a[2]; };
 void f_floatarr2_s_arg(struct floatarr2_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatarr2_s()
-struct floatarr2_s f_ret_floatarr2_s() {
+struct floatarr2_s f_ret_floatarr2_s(void) {
   return (struct floatarr2_s){{1.0, 2.0}};
 }
 
@@ -194,7 +194,7 @@ struct floatarr2_tricky1_s { struct { float f[1]; } g[2]; };
 void f_floatarr2_tricky1_s_arg(struct floatarr2_tricky1_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatarr2_tricky1_s()
-struct floatarr2_tricky1_s f_ret_floatarr2_tricky1_s() {
+struct floatarr2_tricky1_s f_ret_floatarr2_tricky1_s(void) {
   return (struct floatarr2_tricky1_s){{{{1.0}}, {{2.0}}}};
 }
 
@@ -204,7 +204,7 @@ struct floatarr2_tricky2_s { struct {}; struct { float f[1]; } g[2]; };
 void f_floatarr2_tricky2_s_arg(struct floatarr2_tricky2_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatarr2_tricky2_s()
-struct floatarr2_tricky2_s f_ret_floatarr2_tricky2_s() {
+struct floatarr2_tricky2_s f_ret_floatarr2_tricky2_s(void) {
   return (struct floatarr2_tricky2_s){{}, {{{1.0}}, {{2.0}}}};
 }
 
@@ -214,7 +214,7 @@ struct floatarr2_tricky3_s { union {}; struct { float f[1]; } g[2]; };
 void f_floatarr2_tricky3_s_arg(struct floatarr2_tricky3_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatarr2_tricky3_s()
-struct floatarr2_tricky3_s f_ret_floatarr2_tricky3_s() {
+struct floatarr2_tricky3_s f_ret_floatarr2_tricky3_s(void) {
   return (struct floatarr2_tricky3_s){{}, {{{1.0}}, {{2.0}}}};
 }
 
@@ -224,7 +224,7 @@ struct floatarr2_tricky4_s { union {}; struct { struct {}; float f[1]; } g[2]; }
 void f_floatarr2_tricky4_s_arg(struct floatarr2_tricky4_s a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatarr2_tricky4_s()
-struct floatarr2_tricky4_s f_ret_floatarr2_tricky4_s() {
+struct floatarr2_tricky4_s f_ret_floatarr2_tricky4_s(void) {
   return (struct floatarr2_tricky4_s){{}, {{{}, {1.0}}, {{}, {2.0}}}};
 }
 
@@ -237,7 +237,7 @@ struct int_float_int_s { int a; float b; int c; };
 void f_int_float_int_s_arg(struct int_float_int_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int_float_int_s(%struct.int_float_int_s* noalias sret(%struct.int_float_int_s) align 4 %agg.result)
-struct int_float_int_s f_ret_int_float_int_s() {
+struct int_float_int_s f_ret_int_float_int_s(void) {
   return (struct int_float_int_s){1, 2.0, 3};
 }
 
@@ -247,7 +247,7 @@ struct int64_float_s { int64_t a; float b; };
 void f_int64_float_s_arg(struct int64_float_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int64_float_s(%struct.int64_float_s* noalias sret(%struct.int64_float_s) align 8 %agg.result)
-struct int64_float_s f_ret_int64_float_s() {
+struct int64_float_s f_ret_int64_float_s(void) {
   return (struct int64_float_s){1, 2.0};
 }
 
@@ -257,7 +257,7 @@ struct char_char_float_s { char a; char b; float c; };
 void f_char_char_float_s_arg(struct char_char_float_s a) {}
 
 // CHECK: define{{.*}} [2 x i32] @f_ret_char_char_float_s()
-struct char_char_float_s f_ret_char_char_float_s() {
+struct char_char_float_s f_ret_char_char_float_s(void) {
   return (struct char_char_float_s){1, 2, 3.0};
 }
 
@@ -270,6 +270,6 @@ union float_u { float a; };
 void f_float_u_arg(union float_u a) {}
 
 // CHECK: define{{.*}} i32 @f_ret_float_u()
-union float_u f_ret_float_u() {
+union float_u f_ret_float_u(void) {
   return (union float_u){1.0};
 }

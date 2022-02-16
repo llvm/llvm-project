@@ -95,7 +95,7 @@ void bridge_of_cf(int *i) {
 }
 
 // CHECK-LABEL: define{{.*}} %struct.__CFString* @bridge_of_paren_expr()
-CFStringRef bridge_of_paren_expr() {
+CFStringRef bridge_of_paren_expr(void) {
   // CHECK-NOT: "@llvm.objc"
   CFStringRef r = (__bridge CFStringRef)(CreateNSString());
   r = (__bridge CFStringRef)((NSString *)(CreateNSString()));

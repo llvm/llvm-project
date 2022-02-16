@@ -35,7 +35,9 @@ class MyVarInst<MyMemOperand memory_op> : Instruction {
     // Testing operand referencing.
     (operand "$dst", 4),
     // Testing operand referencing with a certain bit range.
-    (slice "$dst", 3, 1)
+    (slice "$dst", 3, 1),
+    // Testing custom encoder
+    (operand "$dst", 2, (encoder "myCustomEncoder"))
   );
 }
 
@@ -55,39 +57,45 @@ def FOO16 : MyVarInst<MemOp16<"src">>;
 def FOO32 : MyVarInst<MemOp32<"src">>;
 
 // The fixed bits part
-// CHECK: {/*NumBits*/39,
+// CHECK: {/*NumBits*/41,
 // CHECK-SAME: // FOO16
-// CHECK: {/*NumBits*/55,
+// CHECK: {/*NumBits*/57,
 // CHECK-SAME: // FOO32
 // CHECK: UINT64_C(46848), // FOO16
 // CHECK: UINT64_C(46848), // FOO32
 
 // CHECK-LABEL: case ::FOO16: {
-// CHECK: Scratch = Scratch.zextOrSelf(39);
+// CHECK: Scratch = Scratch.zextOrSelf(41);
 // src.reg
-// CHECK: getMachineOpValue(MI, MI.getOperand(1), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(1), /*Pos=*/0, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(8, 0), 0);
 // src.offset
-// CHECK: getMachineOpValue(MI, MI.getOperand(2), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(2), /*Pos=*/16, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(16, 0), 16);
 // 1st dst
-// CHECK: getMachineOpValue(MI, MI.getOperand(0), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/32, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(4, 0), 32);
 // 2nd dst
-// CHECK: getMachineOpValue(MI, MI.getOperand(0), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/36, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(3, 1), 36);
+// dst w/ custom encoder
+// CHECK: myCustomEncoder(MI, /*OpIdx=*/0, /*Pos=*/39, Scratch, Fixups, STI);
+// CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 39);
 
 // CHECK-LABEL: case ::FOO32: {
-// CHECK: Scratch = Scratch.zextOrSelf(55);
+// CHECK: Scratch = Scratch.zextOrSelf(57);
 // src.reg
-// CHECK: getMachineOpValue(MI, MI.getOperand(1), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(1), /*Pos=*/0, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(8, 0), 0);
 // src.offset
-// CHECK: getMachineOpValue(MI, MI.getOperand(2), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(2), /*Pos=*/16, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(32, 0), 16);
 // 1st dst
-// CHECK: getMachineOpValue(MI, MI.getOperand(0), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/48, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(4, 0), 48);
 // 2nd dst
-// CHECK: getMachineOpValue(MI, MI.getOperand(0), Scratch, Fixups, STI);
+// CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/52, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(3, 1), 52);
+// dst w/ custom encoder
+// CHECK: myCustomEncoder(MI, /*OpIdx=*/0, /*Pos=*/55, Scratch, Fixups, STI);
+// CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 55);

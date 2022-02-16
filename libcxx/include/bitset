@@ -112,8 +112,10 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 */
 
+#include <__algorithm/fill.h>
 #include <__bit_reference>
 #include <__config>
+#include <__functional/unary_function.h>
 #include <climits>
 #include <cstddef>
 #include <iosfwd>

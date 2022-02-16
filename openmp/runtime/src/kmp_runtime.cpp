@@ -8953,19 +8953,16 @@ void __kmp_resize_dist_barrier(kmp_team_t *team, int old_nthreads,
     KMP_DEBUG_ASSERT(team->t.t_threads[f]->th.th_used_in_team.load() == 2);
   }
   // Release all the workers
-  kmp_uint64 new_value; // new value for go
-  new_value = team->t.b->go_release();
+  team->t.b->go_release();
 
   KMP_MFENCE();
 
   // Workers should see transition status 2 and move to 0; but may need to be
   // woken up first
-  size_t my_go_index;
   int count = old_nthreads - 1;
   while (count > 0) {
     count = old_nthreads - 1;
     for (int f = 1; f < old_nthreads; ++f) {
-      my_go_index = f / team->t.b->threads_per_go;
       if (other_threads[f]->th.th_used_in_team.load() != 0) {
         if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) { // Wake up the workers
           kmp_atomic_flag_64<> *flag = (kmp_atomic_flag_64<> *)CCAST(

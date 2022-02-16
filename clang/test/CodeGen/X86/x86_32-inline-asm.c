@@ -19,7 +19,7 @@ __m128 val128;
 __m256 val256;
 __m512 val512;
 
-int func1() {
+int func1(void) {
   // Error out if size is > 32-bits.
   uint32_t msr = 0x8b;
   uint64_t val = 0;
@@ -71,7 +71,7 @@ int func1() {
 #endif
 }
 
-int __attribute__((__target__("sse"))) _func2() {
+int __attribute__((__target__("sse"))) _func2(void) {
   __asm__ volatile("foo1 %0" : : "x" (val128)); // No error.
   __asm__ volatile("foo1 %0" : "=x" (val128));  // No error.
 #ifdef __AVX__
@@ -85,7 +85,7 @@ int __attribute__((__target__("sse"))) _func2() {
   __asm__ volatile("foo1 %0" : "=x" (val512)); // expected-error {{invalid output size for constraint '=x'}}
 }
 
-int __attribute__((__target__("avx"))) _func3() {
+int __attribute__((__target__("avx"))) _func3(void) {
   __asm__ volatile("foo1 %0" : : "x" (val128)); // No error.
   __asm__ volatile("foo1 %0" : "=x" (val128));  // No error.
   __asm__ volatile("foo1 %0" : : "x" (val256)); // No error.
@@ -94,7 +94,7 @@ int __attribute__((__target__("avx"))) _func3() {
   __asm__ volatile("foo1 %0" : "=x" (val512)); // expected-error {{invalid output size for constraint '=x'}}
 }
 
-int __attribute__((__target__("avx512f"))) _func4() {
+int __attribute__((__target__("avx512f"))) _func4(void) {
   __asm__ volatile("foo1 %0" : : "x" (val128)); // No error.
   __asm__ volatile("foo1 %0" : "=x" (val128));  // No error.
   __asm__ volatile("foo1 %0" : : "x" (val256)); // No error.

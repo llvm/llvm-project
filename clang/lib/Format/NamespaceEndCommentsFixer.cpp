@@ -136,7 +136,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
     return false;
   NamespaceNameInComment = Groups.size() > 2 ? Groups[2] : "";
 
-  return (NamespaceNameInComment == NamespaceName);
+  return NamespaceNameInComment == NamespaceName;
 }
 
 void addEndComment(const FormatToken *RBraceTok, StringRef EndCommentText,

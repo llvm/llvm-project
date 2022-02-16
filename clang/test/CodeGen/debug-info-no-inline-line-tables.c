@@ -5,10 +5,10 @@
 // RUN: %clang -S -emit-llvm -o - %s | FileCheck %s -check-prefix=NO-FLAG
 
 int x;
-__attribute((always_inline)) void f() {
+__attribute((always_inline)) void f(void) {
   x += 1;
 }
-int main() {
+int main(void) {
   f();
   x += 2;
   return x;

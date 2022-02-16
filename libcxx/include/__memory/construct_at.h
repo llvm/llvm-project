@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___MEMORY_CONSTRUCT_AT_H
 #define _LIBCPP___MEMORY_CONSTRUCT_AT_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__iterator/access.h>
 #include <__memory/addressof.h>
 #include <__memory/voidify.h>

@@ -17,6 +17,7 @@
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/MC/MCAsmLayout.h"
@@ -222,7 +223,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
   InstructionPrinter->setPrintImmHex(true);
 
   std::unique_ptr<MCCodeEmitter> MCE(
-      TheTarget->createMCCodeEmitter(*MII, *MRI, *Ctx));
+      TheTarget->createMCCodeEmitter(*MII, *Ctx));
 
   // Make sure we don't miss any output on core dumps.
   outs().SetUnbuffered();
@@ -712,8 +713,10 @@ void BinaryContext::skipMarkedFragments() {
     std::for_each(BF->ParentFragments.begin(), BF->ParentFragments.end(),
                   addToWorklist);
   }
-  errs() << "BOLT-WARNING: Ignored " << FragmentsToSkip.size() << " functions "
-         << "due to cold fragments.\n";
+  if (!FragmentsToSkip.empty())
+    errs() << "BOLT-WARNING: ignored " << FragmentsToSkip.size() << " function"
+           << (FragmentsToSkip.size() == 1 ? "" : "s")
+           << " due to cold fragments\n";
   FragmentsToSkip.clear();
 }
 

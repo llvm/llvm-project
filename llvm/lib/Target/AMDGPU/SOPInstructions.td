@@ -341,7 +341,7 @@ def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 
 let Defs = [SCC] in {
 def S_ABS_I32 : SOP1_32 <"s_abs_i32",
-    [(set i32:$sdst, (abs i32:$src0))]
+    [(set i32:$sdst, (UniformUnaryFrag<abs> i32:$src0))]
   >;
 } // End Defs = [SCC]
 
@@ -1377,7 +1377,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i32 (smax i32:$x, (i32 (ineg i32:$x)))),
+  (i32 (UniformBinFrag<smax> i32:$x, (i32 (ineg i32:$x)))),
   (S_ABS_I32 SReg_32:$x)
 >;
 

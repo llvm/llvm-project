@@ -27,6 +27,8 @@ bool isVVPBinaryOp(unsigned Opcode);
 
 bool isPackedVectorType(EVT SomeVT);
 
+bool isMaskType(EVT SomeVT);
+
 bool isVVPOrVEC(unsigned);
 
 bool maySafelyIgnoreMask(SDValue Op);
@@ -73,6 +75,17 @@ std::pair<SDValue, bool> getAnnotatedNodeAVL(SDValue);
 
 /// } AVL Functions
 
+enum class Packing {
+  Normal = 0, // 256 element standard mode.
+  Dense = 1   // 512 element packed mode.
+};
+
+// Get the vector or mask register type for this packing and element type.
+MVT getLegalVectorType(Packing P, MVT ElemVT);
+
+// Whether this type belongs to a packed mask or vector register.
+Packing getTypePacking(EVT);
+
 class VECustomDAG {
   SelectionDAG &DAG;
   SDLoc DL;
@@ -117,6 +130,8 @@ public:
   SDValue getConstant(uint64_t Val, EVT VT, bool IsTarget = false,
                       bool IsOpaque = false) const;
 
+  SDValue getConstantMask(Packing Packing, bool AllTrue) const;
+  SDValue getMaskBroadcast(EVT ResultVT, SDValue Scalar, SDValue AVL) const;
   SDValue getBroadcast(EVT ResultVT, SDValue Scalar, SDValue AVL) const;
 
   // Wrap AVL in a LEGALAVL node (unless it is one already).

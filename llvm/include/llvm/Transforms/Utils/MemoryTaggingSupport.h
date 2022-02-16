@@ -19,8 +19,10 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
+namespace memtag {
 // For an alloca valid between lifetime markers Start and Ends, call the
 // Callback for all possible exits out of the lifetime in the containing
 // function, which can return from the instructions in RetVec.
@@ -71,6 +73,38 @@ bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
+struct AllocaInfo {
+  AllocaInst *AI;
+  TrackingVH<Instruction> OldAI; // Track through RAUW to replace debug uses.
+  SmallVector<IntrinsicInst *, 2> LifetimeStart;
+  SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
+};
+
+struct StackInfo {
+  MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
+  SmallVector<Instruction *, 4> UnrecognizedLifetimes;
+  SmallVector<Instruction *, 8> RetVec;
+  bool CallsReturnTwice = false;
+};
+
+class StackInfoBuilder {
+public:
+  StackInfoBuilder(std::function<bool(const AllocaInst &)> IsInterestingAlloca)
+      : IsInterestingAlloca(IsInterestingAlloca) {}
+
+  void visit(Instruction &Inst);
+  StackInfo &get() { return Info; };
+
+private:
+  StackInfo Info;
+  std::function<bool(const AllocaInst &)> IsInterestingAlloca;
+};
+
+uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
+bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+
+} // namespace memtag
 } // namespace llvm
 
 #endif

@@ -31,7 +31,7 @@ void foo(int x)
 
 extern _Atomic _Bool b;
 
-_Bool bar() {
+_Bool bar(void) {
 // NATIVE-LABEL: @bar
 // NATIVE: %[[load:.*]] = load atomic i8, i8* @b seq_cst, align 1
 // NATIVE: %[[tobool:.*]] = trunc i8 %[[load]] to i1

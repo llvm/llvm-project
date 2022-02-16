@@ -81,6 +81,17 @@ public:
     return remove_prefix(PrefixLen).remove_suffix(SuffixLen);
   }
 
+  // Check if this string starts with the given \p Prefix.
+  bool starts_with(StringView Prefix) const {
+    if (Len < Prefix.Len)
+      return false;
+    for (size_t I = 0; I < Prefix.Len; ++I) {
+      if (Data[I] != Prefix.Data[I])
+        return false;
+    }
+    return true;
+  }
+
   // An equivalent method is not available in std::string_view.
   bool equals(StringView Other) const {
     if (Len != Other.Len)

@@ -58,21 +58,21 @@ int main(int, char**)
     ++i;
     std::vector<int>::iterator j = l1.erase(i);
     assert(l1.size() == 2);
-    assert(distance(l1.begin(), l1.end()) == 2);
+    assert(std::distance(l1.begin(), l1.end()) == 2);
     assert(*j == 3);
     assert(*l1.begin() == 1);
-    assert(*next(l1.begin()) == 3);
+    assert(*std::next(l1.begin()) == 3);
     assert(is_contiguous_container_asan_correct(l1));
     j = l1.erase(j);
     assert(j == l1.end());
     assert(l1.size() == 1);
-    assert(distance(l1.begin(), l1.end()) == 1);
+    assert(std::distance(l1.begin(), l1.end()) == 1);
     assert(*l1.begin() == 1);
     assert(is_contiguous_container_asan_correct(l1));
     j = l1.erase(l1.begin());
     assert(j == l1.end());
     assert(l1.size() == 0);
-    assert(distance(l1.begin(), l1.end()) == 0);
+    assert(std::distance(l1.begin(), l1.end()) == 0);
     assert(is_contiguous_container_asan_correct(l1));
     }
 #if TEST_STD_VER >= 11
@@ -84,21 +84,21 @@ int main(int, char**)
     ++i;
     std::vector<int, min_allocator<int>>::iterator j = l1.erase(i);
     assert(l1.size() == 2);
-    assert(distance(l1.begin(), l1.end()) == 2);
+    assert(std::distance(l1.begin(), l1.end()) == 2);
     assert(*j == 3);
     assert(*l1.begin() == 1);
-    assert(*next(l1.begin()) == 3);
+    assert(*std::next(l1.begin()) == 3);
     assert(is_contiguous_container_asan_correct(l1));
     j = l1.erase(j);
     assert(j == l1.end());
     assert(l1.size() == 1);
-    assert(distance(l1.begin(), l1.end()) == 1);
+    assert(std::distance(l1.begin(), l1.end()) == 1);
     assert(*l1.begin() == 1);
     assert(is_contiguous_container_asan_correct(l1));
     j = l1.erase(l1.begin());
     assert(j == l1.end());
     assert(l1.size() == 0);
-    assert(distance(l1.begin(), l1.end()) == 0);
+    assert(std::distance(l1.begin(), l1.end()) == 0);
     assert(is_contiguous_container_asan_correct(l1));
     }
 #endif

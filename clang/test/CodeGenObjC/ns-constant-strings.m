@@ -24,7 +24,7 @@ extern struct objc_class _NSConstantStringClassReference;
 
 const NSConstantString *appKey =  @"MyApp";
 
-int main() {
+int main(void) {
   const NSConstantString *appKey =  @"MyApp";
   const NSConstantString *appKey1 =  @"MyApp1";
 }

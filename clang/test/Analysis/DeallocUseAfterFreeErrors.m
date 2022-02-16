@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.SuperDealloc,debug.ExprInspection -analyzer-output=text -verify %s
 
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 #define nil ((id)0)
 

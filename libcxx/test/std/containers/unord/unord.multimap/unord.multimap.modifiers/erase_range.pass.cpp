@@ -40,7 +40,7 @@ int main(int, char**)
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
         C::const_iterator i = c.find(2);
-        C::const_iterator j = next(i, 2);
+        C::const_iterator j = std::next(i, 2);
         C::iterator k = c.erase(i, i);
         assert(k == i);
         assert(c.size() == 6);
@@ -109,7 +109,7 @@ int main(int, char**)
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
         C::const_iterator i = c.find(2);
-        C::const_iterator j = next(i, 2);
+        C::const_iterator j = std::next(i, 2);
         C::iterator k = c.erase(i, i);
         assert(k == i);
         assert(c.size() == 6);

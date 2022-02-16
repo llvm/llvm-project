@@ -290,15 +290,16 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   sub_command_object->HandleCompletion(request);
 }
 
-const char *CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
-                                                     uint32_t index) {
+llvm::Optional<std::string>
+CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
+                                         uint32_t index) {
   index++;
   if (current_command_args.GetArgumentCount() <= index)
-    return nullptr;
+    return llvm::None;
   CommandObject *sub_command_object =
       GetSubcommandObject(current_command_args[index].ref());
   if (sub_command_object == nullptr)
-    return nullptr;
+    return llvm::None;
   return sub_command_object->GetRepeatCommand(current_command_args, index);
 }
 
@@ -419,12 +420,13 @@ void CommandObjectProxy::HandleArgumentCompletion(
     proxy_command->HandleArgumentCompletion(request, opt_element_vector);
 }
 
-const char *CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
-                                                 uint32_t index) {
+llvm::Optional<std::string>
+CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
+                                     uint32_t index) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetRepeatCommand(current_command_args, index);
-  return nullptr;
+  return llvm::None;
 }
 
 llvm::StringRef CommandObjectProxy::GetUnsupportedError() {

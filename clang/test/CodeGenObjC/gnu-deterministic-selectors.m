@@ -7,7 +7,7 @@
 // CHECK: @.objc_selector_list = internal global [6 x { i8*, i8* }] [{ i8*, i8* } { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.objc_sel_namea, i64 0, i64 0), i8* null }, { i8*, i8* } { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.objc_sel_nameg, i64 0, i64 0), i8* null }, { i8*, i8* } { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.objc_sel_namej, i64 0, i64 0), i8* null }, { i8*, i8* } { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.objc_sel_namel, i64 0, i64 0), i8* null }, { i8*, i8* } { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.objc_sel_namez, i64 0, i64 0), i8* null }, { i8*, i8* } zeroinitializer], align 8
 
 
-void f() {
+void f(void) {
 	SEL a = @selector(z);
 	SEL b = @selector(a);
 	SEL c = @selector(g);

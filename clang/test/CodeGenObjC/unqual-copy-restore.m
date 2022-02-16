@@ -7,7 +7,7 @@
 
 typedef int handler(id<P1> *const p);
 
-int main() {
+int main(void) {
   id<P1> i1 = 0;
   handler *func = 0;
   return func(&i1);

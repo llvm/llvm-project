@@ -161,46 +161,46 @@ define <16 x i32> @PR42819(<8 x i32>* %a0) {
 define void @PR42833() {
 ; SSE2-LABEL: PR42833:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa c+144(%rip), %xmm1
-; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    addl b(%rip), %eax
+; SSE2-NEXT:    movl b(%rip), %eax
+; SSE2-NEXT:    movdqa c+144(%rip), %xmm0
+; SSE2-NEXT:    movdqa c+128(%rip), %xmm1
+; SSE2-NEXT:    addl c+128(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    paddd %xmm0, %xmm3
+; SSE2-NEXT:    paddd %xmm1, %xmm3
 ; SSE2-NEXT:    movdqa d+144(%rip), %xmm4
-; SSE2-NEXT:    psubd %xmm1, %xmm4
-; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    paddd %xmm0, %xmm5
+; SSE2-NEXT:    psubd %xmm0, %xmm4
+; SSE2-NEXT:    paddd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    paddd %xmm1, %xmm5
 ; SSE2-NEXT:    movss {{.*#+}} xmm5 = xmm3[0],xmm5[1,2,3]
-; SSE2-NEXT:    movdqa %xmm1, c+144(%rip)
+; SSE2-NEXT:    movdqa %xmm0, c+144(%rip)
 ; SSE2-NEXT:    movaps %xmm5, c+128(%rip)
-; SSE2-NEXT:    movdqa c+160(%rip), %xmm1
+; SSE2-NEXT:    movdqa c+160(%rip), %xmm0
 ; SSE2-NEXT:    movdqa c+176(%rip), %xmm3
 ; SSE2-NEXT:    movdqa d+160(%rip), %xmm5
 ; SSE2-NEXT:    movdqa d+176(%rip), %xmm6
 ; SSE2-NEXT:    movdqa d+128(%rip), %xmm7
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; SSE2-NEXT:    psubd %xmm0, %xmm7
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE2-NEXT:    psubd %xmm1, %xmm7
 ; SSE2-NEXT:    psubd %xmm3, %xmm6
-; SSE2-NEXT:    psubd %xmm1, %xmm5
+; SSE2-NEXT:    psubd %xmm0, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, d+160(%rip)
 ; SSE2-NEXT:    movdqa %xmm6, d+176(%rip)
 ; SSE2-NEXT:    movdqa %xmm4, d+144(%rip)
 ; SSE2-NEXT:    movdqa %xmm7, d+128(%rip)
 ; SSE2-NEXT:    paddd %xmm3, %xmm3
-; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, c+160(%rip)
+; SSE2-NEXT:    paddd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, c+160(%rip)
 ; SSE2-NEXT:    movdqa %xmm3, c+176(%rip)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: PR42833:
 ; SSE42:       # %bb.0:
+; SSE42-NEXT:    movl b(%rip), %eax
 ; SSE42-NEXT:    movdqa c+144(%rip), %xmm0
 ; SSE42-NEXT:    movdqa c+128(%rip), %xmm1
-; SSE42-NEXT:    movd %xmm1, %eax
-; SSE42-NEXT:    addl b(%rip), %eax
+; SSE42-NEXT:    addl c+128(%rip), %eax
 ; SSE42-NEXT:    movd %eax, %xmm2
 ; SSE42-NEXT:    paddd %xmm1, %xmm2
 ; SSE42-NEXT:    movdqa d+144(%rip), %xmm3
@@ -232,20 +232,20 @@ define void @PR42833() {
 ;
 ; AVX1-LABEL: PR42833:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa c+128(%rip), %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    addl b(%rip), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
+; AVX1-NEXT:    movl b(%rip), %eax
+; AVX1-NEXT:    addl c+128(%rip), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vmovdqa c+128(%rip), %xmm1
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm2
 ; AVX1-NEXT:    vmovdqa c+144(%rip), %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vmovdqa d+144(%rip), %xmm2
 ; AVX1-NEXT:    vpsubd c+144(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmovups %ymm1, c+128(%rip)
-; AVX1-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vmovups %ymm0, c+128(%rip)
+; AVX1-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovdqa d+128(%rip), %xmm1
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovdqa d+176(%rip), %xmm1
@@ -314,20 +314,20 @@ define void @PR42833() {
 ;
 ; XOP-LABEL: PR42833:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa c+128(%rip), %xmm0
-; XOP-NEXT:    vmovd %xmm0, %eax
-; XOP-NEXT:    addl b(%rip), %eax
-; XOP-NEXT:    vmovd %eax, %xmm1
-; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; XOP-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
+; XOP-NEXT:    movl b(%rip), %eax
+; XOP-NEXT:    addl c+128(%rip), %eax
+; XOP-NEXT:    vmovd %eax, %xmm0
+; XOP-NEXT:    vmovdqa c+128(%rip), %xmm1
+; XOP-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    vpaddd %xmm1, %xmm1, %xmm2
 ; XOP-NEXT:    vmovdqa c+144(%rip), %xmm3
 ; XOP-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
 ; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7]
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
 ; XOP-NEXT:    vmovdqa d+144(%rip), %xmm2
 ; XOP-NEXT:    vpsubd c+144(%rip), %xmm2, %xmm2
-; XOP-NEXT:    vmovups %ymm1, c+128(%rip)
-; XOP-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; XOP-NEXT:    vmovups %ymm0, c+128(%rip)
+; XOP-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm0
 ; XOP-NEXT:    vmovdqa d+128(%rip), %xmm1
 ; XOP-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    vmovdqa d+176(%rip), %xmm1

@@ -19,12 +19,26 @@
 
 namespace llvm {
 
-static const int StandardVectorWidth = 256;
-
 bool isPackedVectorType(EVT SomeVT) {
   if (!SomeVT.isVector())
     return false;
   return SomeVT.getVectorNumElements() > StandardVectorWidth;
+}
+
+MVT getLegalVectorType(Packing P, MVT ElemVT) {
+  return MVT::getVectorVT(ElemVT, P == Packing::Normal ? StandardVectorWidth
+                                                       : PackedVectorWidth);
+}
+
+Packing getTypePacking(EVT VT) {
+  assert(VT.isVector());
+  return isPackedVectorType(VT) ? Packing::Dense : Packing::Normal;
+}
+
+bool isMaskType(EVT SomeVT) {
+  if (!SomeVT.isVector())
+    return false;
+  return SomeVT.getVectorElementType() == MVT::i1;
 }
 
 /// \returns the VVP_* SDNode opcode corresponsing to \p OC.
@@ -121,11 +135,55 @@ SDValue VECustomDAG::getConstant(uint64_t Val, EVT VT, bool IsTarget,
   return DAG.getConstant(Val, DL, VT, IsTarget, IsOpaque);
 }
 
+SDValue VECustomDAG::getConstantMask(Packing Packing, bool AllTrue) const {
+  auto MaskVT = getLegalVectorType(Packing, MVT::i1);
+
+  // VEISelDAGtoDAG will replace this pattern with the constant-true VM.
+  auto TrueVal = DAG.getConstant(-1, DL, MVT::i32);
+  auto AVL = getConstant(MaskVT.getVectorNumElements(), MVT::i32);
+  auto Res = getNode(VEISD::VEC_BROADCAST, MaskVT, {TrueVal, AVL});
+  if (AllTrue)
+    return Res;
+
+  return DAG.getNOT(DL, Res, Res.getValueType());
+}
+
+SDValue VECustomDAG::getMaskBroadcast(EVT ResultVT, SDValue Scalar,
+                                      SDValue AVL) const {
+  // Constant mask splat.
+  if (auto BcConst = dyn_cast<ConstantSDNode>(Scalar))
+    return getConstantMask(getTypePacking(ResultVT),
+                           BcConst->getSExtValue() != 0);
+
+  // Expand the broadcast to a vector comparison.
+  auto ScalarBoolVT = Scalar.getSimpleValueType();
+  assert(ScalarBoolVT == MVT::i32);
+
+  // Cast to i32 ty.
+  SDValue CmpElem = DAG.getSExtOrTrunc(Scalar, DL, MVT::i32);
+  unsigned ElemCount = ResultVT.getVectorNumElements();
+  MVT CmpVecTy = MVT::getVectorVT(ScalarBoolVT, ElemCount);
+
+  // Broadcast to vector.
+  SDValue BCVec =
+      DAG.getNode(VEISD::VEC_BROADCAST, DL, CmpVecTy, {CmpElem, AVL});
+  SDValue ZeroVec =
+      getBroadcast(CmpVecTy, {DAG.getConstant(0, DL, ScalarBoolVT)}, AVL);
+
+  MVT BoolVecTy = MVT::getVectorVT(MVT::i1, ElemCount);
+
+  // Broadcast(Data) != Broadcast(0)
+  // TODO: Use a VVP operation for this.
+  return DAG.getSetCC(DL, BoolVecTy, BCVec, ZeroVec, ISD::CondCode::SETNE);
+}
+
 SDValue VECustomDAG::getBroadcast(EVT ResultVT, SDValue Scalar,
                                   SDValue AVL) const {
   assert(ResultVT.isVector());
   auto ScaVT = Scalar.getValueType();
-  assert(ScaVT != MVT::i1 && "TODO: Mask broadcasts");
+
+  if (isMaskType(ResultVT))
+    return getMaskBroadcast(ResultVT, Scalar, AVL);
 
   if (isPackedVectorType(ResultVT)) {
     // v512x packed mode broadcast

@@ -879,6 +879,29 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
 }
 
+/// If this min/max has a constant operand and an operand that is a matching
+/// min/max with a constant operand, constant-fold the 2 constant operands.
+static Instruction *reassociateMinMaxWithConstants(IntrinsicInst *II) {
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
+  if (!LHS || LHS->getIntrinsicID() != MinMaxID)
+    return nullptr;
+
+  Constant *C0, *C1;
+  if (!match(LHS->getArgOperand(1), m_ImmConstant(C0)) ||
+      !match(II->getArgOperand(1), m_ImmConstant(C1)))
+    return nullptr;
+
+  // max (max X, C0), C1 --> max X, (max C0, C1) --> max X, NewC
+  ICmpInst::Predicate Pred = MinMaxIntrinsic::getPredicate(MinMaxID);
+  Constant *CondC = ConstantExpr::getICmp(Pred, C0, C1);
+  Constant *NewC = ConstantExpr::getSelect(CondC, C0, C1);
+
+  Module *Mod = II->getModule();
+  Function *MinMax = Intrinsic::getDeclaration(Mod, MinMaxID, II->getType());
+  return CallInst::Create(MinMax, {LHS->getArgOperand(0), NewC});
+}
+
 /// Reduce a sequence of min/max intrinsics with a common operand.
 static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   // Match 3 of the same min/max ops. Example: umin(umin(), umin()).
@@ -1223,6 +1246,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (auto *Sel = dyn_cast<SelectInst>(I0))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
+
+    if (Instruction *NewMinMax = reassociateMinMaxWithConstants(II))
+      return NewMinMax;
 
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;

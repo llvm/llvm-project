@@ -122,3 +122,14 @@ int MCRegisterInfo::getCodeViewRegNum(MCRegister RegNum) const {
                                                            : Twine(RegNum)));
   return I->second;
 }
+
+bool MCRegisterInfo::regsOverlap(MCRegister RegA, MCRegister RegB) const {
+  // Regunits are numerically ordered. Find a common unit.
+  MCRegUnitIterator RUA(RegA, this);
+  MCRegUnitIterator RUB(RegB, this);
+  do {
+    if (*RUA == *RUB)
+      return true;
+  } while (*RUA < *RUB ? (++RUA).isValid() : (++RUB).isValid());
+  return false;
+}

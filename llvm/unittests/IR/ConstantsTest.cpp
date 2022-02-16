@@ -469,9 +469,11 @@ TEST(ConstantsTest, BuildConstantDataVectors) {
   }
 }
 
-TEST(ConstantsTest, BitcastToGEP) {
+void bitcastToGEPHelper(bool useOpaquePointers) {
   LLVMContext Context;
   std::unique_ptr<Module> M(new Module("MyModule", Context));
+  if (useOpaquePointers)
+    Context.enableOpaquePointers();
 
   auto *i32 = Type::getInt32Ty(Context);
   auto *U = StructType::create(Context, "Unsized");
@@ -488,6 +490,11 @@ TEST(ConstantsTest, BitcastToGEP) {
     /* With opaque pointers, no cast is necessary. */
     EXPECT_EQ(C, G);
   }
+}
+
+TEST(ConstantsTest, BitcastToGEP) {
+  bitcastToGEPHelper(true);
+  bitcastToGEPHelper(false);
 }
 
 bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,

@@ -29,7 +29,7 @@ void bad2(void) {
   spin_unlock(&mtx1); // expected-warning {{This lock has already been unlocked}}
 }
 
-void bad3() {
+void bad3(void) {
   spin_lock_init(&mtx1);
   if (spin_trylock(&mtx1) != 0)
     spin_unlock(&mtx1); // expected-warning {{This lock has already been unlocked}}
@@ -42,14 +42,14 @@ void bad4(void) {
   spin_unlock(&mtx2);
 }
 
-void good() {
+void good(void) {
   spin_lock_t mtx;
   spin_lock_init(&mtx);
   spin_lock_save(&mtx, 0, 0);
   spin_unlock_restore(&mtx, 0, 0);
 }
 
-void good2() {
+void good2(void) {
   spin_lock_t mtx;
   spin_lock_init(&mtx);
   if (spin_trylock(&mtx) == 0)
@@ -78,7 +78,7 @@ void bad12(void) {
   sync_mutex_unlock(&smtx1); // expected-warning {{This lock has already been unlocked}}
 }
 
-void bad13() {
+void bad13(void) {
   sync_mutex_unlock(&smtx1);
   if (sync_mutex_trylock(&smtx1) != 0)
     sync_mutex_unlock(&smtx1); // expected-warning {{This lock has already been unlocked}}
@@ -91,13 +91,13 @@ void bad14(void) {
   sync_mutex_unlock(&smtx2);
 }
 
-void good11() {
+void good11(void) {
   sync_mutex_t mtx;
   if (sync_mutex_trylock(&mtx) == 0)
     sync_mutex_unlock(&mtx);
 }
 
-void good12() {
+void good12(void) {
   sync_mutex_t mtx;
   if (sync_mutex_timedlock(&mtx, 0) == 0)
     sync_mutex_unlock(&mtx);

@@ -10,6 +10,10 @@
 #
 #   $ /bin/bash -c "$(curl -fsSl https://raw.githubusercontent.com/llvm/llvm-project/main/libcxx/utils/ci/macos-ci-setup)"
 #
+# If you perform system updates, you should re-run the script from the
+# administrator account -- this allows updating the packages used for
+# CI and the BuildKite agent tags.
+#
 # Once the necessary dependencies have been installed, you can switch
 # to a non-administrator account and run the script again, passing the
 # --setup-launchd argument. That will install a Launchd agent to run the
@@ -86,15 +90,26 @@ else
   fi
 
   # Install Homebrew
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-  HOMEBREW_PREFIX="$(brew --prefix)"
+  if ! which -s brew; then
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+  fi
 
   # Install the required tools to run CI
-  brew install sphinx-doc python3 ninja cmake clang-format buildkite/buildkite/buildkite-agent
+  brew update
+  for package in sphinx-doc python3 ninja cmake clang-format buildkite/buildkite/buildkite-agent; do
+    if brew ls --versions "${package}" >/dev/null; then
+      brew upgrade "${package}"
+    else
+      brew install "${package}"
+    fi
+  done
 
-  # Setup BuildKite Agent config
+  echo "Setting up BuildKite Agent config"
   version="$(sw_vers -productVersion | sed -E 's/([0-9]+).([0-9]+).[0-9]+/\1.\2/')"
   arch="$(uname -m)"
-  sed -i '' "s/token=xxx/token=${BUILDKITE_AGENT_TOKEN}/g" "${HOMEBREW_PREFIX}/etc/buildkite-agent/buildkite-agent.cfg"
-  echo "tags=\"queue=libcxx-builders,arch=${arch},os=macos,os=macos${version}\"" >> "${HOMEBREW_PREFIX}/etc/buildkite-agent/buildkite-agent.cfg"
+  cat <<EOF > "$(brew --prefix)/etc/buildkite-agent/buildkite-agent.cfg"
+token="${BUILDKITE_AGENT_TOKEN}"
+tags="queue=libcxx-builders,arch=${arch},os=macos,os=macos${version}"
+build-path=/tmp/buildkite-builds # Note that this is actually overwritten when starting the agent with launchd
+EOF
 fi

@@ -86,7 +86,7 @@ template<__dereferenceable _Tp>
   requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __can_reference; }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<_Tp&>()));
 
-#endif // !_LIBCPP_HAS_NO_CONCEPTS
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

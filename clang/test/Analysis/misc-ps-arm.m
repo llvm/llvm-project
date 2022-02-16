@@ -11,8 +11,8 @@ typedef struct
     float x, y;
 } Rdar11405978Vec;
     
-float32x2_t rdar11405978_bar();
-float32_t rdar11405978() {
+float32x2_t rdar11405978_bar(void);
+float32_t rdar11405978(void) {
   float32x2_t v = rdar11405978_bar();
   Rdar11405978Vec w = *(Rdar11405978Vec *)&v;
   return w.x; // no-warning

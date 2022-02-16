@@ -28,7 +28,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges::views {
 
@@ -38,30 +38,30 @@ namespace __all {
       requires ranges::view<decay_t<_Tp>>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(_VSTD::forward<_Tp>(__t))))
+      noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Tp>(__t))))
     {
-      return _LIBCPP_AUTO_CAST(_VSTD::forward<_Tp>(__t));
+      return _LIBCPP_AUTO_CAST(std::forward<_Tp>(__t));
     }
 
     template<class _Tp>
       requires (!ranges::view<decay_t<_Tp>>) &&
-               requires (_Tp&& __t) { ranges::ref_view{_VSTD::forward<_Tp>(__t)}; }
+               requires (_Tp&& __t) { ranges::ref_view{std::forward<_Tp>(__t)}; }
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::ref_view{_VSTD::forward<_Tp>(__t)}))
+      noexcept(noexcept(ranges::ref_view{std::forward<_Tp>(__t)}))
     {
-      return ranges::ref_view{_VSTD::forward<_Tp>(__t)};
+      return ranges::ref_view{std::forward<_Tp>(__t)};
     }
 
     template<class _Tp>
       requires (!ranges::view<decay_t<_Tp>> &&
-                !requires (_Tp&& __t) { ranges::ref_view{_VSTD::forward<_Tp>(__t)}; } &&
-                 requires (_Tp&& __t) { ranges::owning_view{_VSTD::forward<_Tp>(__t)}; })
+                !requires (_Tp&& __t) { ranges::ref_view{std::forward<_Tp>(__t)}; } &&
+                 requires (_Tp&& __t) { ranges::owning_view{std::forward<_Tp>(__t)}; })
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::owning_view{_VSTD::forward<_Tp>(__t)}))
+      noexcept(noexcept(ranges::owning_view{std::forward<_Tp>(__t)}))
     {
-      return ranges::owning_view{_VSTD::forward<_Tp>(__t)};
+      return ranges::owning_view{std::forward<_Tp>(__t)};
     }
   };
 } // namespace __all
@@ -75,7 +75,7 @@ using all_t = decltype(views::all(declval<_Range>()));
 
 } // namespace ranges::views
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

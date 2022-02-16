@@ -11,7 +11,7 @@ void foo(void) {
 }
 
 // check that we propagate info through compound literal regions
-void bar() {
+void bar(void) {
   int *integers = (int[]){1, 2, 3};
   clang_analyzer_eval(integers[0] == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(integers[1] == 2); // expected-warning{{TRUE}}

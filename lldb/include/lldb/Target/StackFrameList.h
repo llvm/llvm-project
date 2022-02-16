@@ -17,6 +17,8 @@
 
 namespace lldb_private {
 
+class ScriptedThread;
+
 class StackFrameList {
 public:
   // Constructors and Destructors
@@ -86,6 +88,7 @@ public:
 
 protected:
   friend class Thread;
+  friend class ScriptedThread;
 
   bool SetFrameAtIndex(uint32_t idx, lldb::StackFrameSP &frame_sp);
 

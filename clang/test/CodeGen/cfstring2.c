@@ -5,7 +5,7 @@ typedef const struct __CFString * CFStringRef;
 
 #define CFSTR(x) (CFStringRef) __builtin___CFStringMakeConstantString (x)
 
-void f() {
+void f(void) {
   CFSTR("Hello, World!");
 }
 

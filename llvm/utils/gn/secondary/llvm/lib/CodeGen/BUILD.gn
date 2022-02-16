@@ -173,6 +173,8 @@ static_library("CodeGen") {
     "RegAllocScore.cpp",
     "RegUsageInfoCollector.cpp",
     "RegUsageInfoPropagate.cpp",
+    "RegisterBank.cpp",
+    "RegisterBankInfo.cpp",
     "RegisterClassInfo.cpp",
     "RegisterCoalescer.cpp",
     "RegisterPressure.cpp",

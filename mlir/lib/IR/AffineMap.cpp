@@ -299,22 +299,17 @@ unsigned AffineMap::getNumSymbols() const {
   assert(map && "uninitialized map storage");
   return map->numSymbols;
 }
-unsigned AffineMap::getNumResults() const {
-  assert(map && "uninitialized map storage");
-  return map->results.size();
-}
+unsigned AffineMap::getNumResults() const { return getResults().size(); }
 unsigned AffineMap::getNumInputs() const {
   assert(map && "uninitialized map storage");
   return map->numDims + map->numSymbols;
 }
-
 ArrayRef<AffineExpr> AffineMap::getResults() const {
   assert(map && "uninitialized map storage");
-  return map->results;
+  return map->results();
 }
 AffineExpr AffineMap::getResult(unsigned idx) const {
-  assert(map && "uninitialized map storage");
-  return map->results[idx];
+  return getResults()[idx];
 }
 
 unsigned AffineMap::getDimPosition(unsigned idx) const {
@@ -534,7 +529,7 @@ AffineMap AffineMap::getMajorSubMap(unsigned numResults) const {
     return AffineMap();
   if (numResults > getNumResults())
     return *this;
-  return getSubMap(llvm::to_vector<4>(llvm::seq<unsigned>(0, numResults)));
+  return getSliceMap(0, numResults);
 }
 
 AffineMap AffineMap::getMinorSubMap(unsigned numResults) const {
@@ -542,8 +537,7 @@ AffineMap AffineMap::getMinorSubMap(unsigned numResults) const {
     return AffineMap();
   if (numResults > getNumResults())
     return *this;
-  return getSubMap(llvm::to_vector<4>(
-      llvm::seq<unsigned>(getNumResults() - numResults, getNumResults())));
+  return getSliceMap(getNumResults() - numResults, numResults);
 }
 
 AffineMap mlir::compressDims(AffineMap map,

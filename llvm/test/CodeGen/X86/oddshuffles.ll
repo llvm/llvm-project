@@ -956,8 +956,7 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[2,1,0,3,4,5,6,7]
 ; SSE2-NEXT:    pand %xmm6, %xmm2
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm8[0,1,2,3,4,7,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,2,0]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,7,4,5]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,0,2]
 ; SSE2-NEXT:    pandn %xmm3, %xmm6
 ; SSE2-NEXT:    por %xmm2, %xmm6
 ; SSE2-NEXT:    movups %xmm1, (%rsi)

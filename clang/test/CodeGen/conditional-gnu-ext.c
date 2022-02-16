@@ -11,8 +11,8 @@ float test(float x, int Y) {
 }
 
 // rdar://8446940
-extern void abort();
-void  test1 () {
+extern void abort(void);
+void  test1 (void) {
   char x[1];
   char *y = x ? : 0;
 
@@ -28,7 +28,7 @@ _Complex int getComplex(_Complex int val) {
   return val;
 }
 
-_Complex int complx() {
+_Complex int complx(void) {
     _Complex int cond;
     _Complex int rhs;
 

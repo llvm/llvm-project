@@ -145,12 +145,6 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* The ``memory region`` command and ``GetMemoryRegionInfo`` API method now
-  ignore non-address bits in the address parameter. This also means that on
-  systems with non-address bits the last (usually unmapped) memory region
-  will not extend to 0xF...F. Instead it will end at the end of the mappable
-  range that the virtual address size allows.
-
 Changes to Sanitizers
 ---------------------
 

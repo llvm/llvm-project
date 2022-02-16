@@ -38,7 +38,7 @@ void NoexceptMoveConstructorCheck::check(
       return;
     }
 
-    const auto *ProtoType = Decl->getType()->getAs<FunctionProtoType>();
+    const auto *ProtoType = Decl->getType()->castAs<FunctionProtoType>();
 
     if (isUnresolvedExceptionSpec(ProtoType->getExceptionSpecType()))
       return;

@@ -40,7 +40,7 @@ void useUndef(void) { 0 || undef(); }
 void testPointer(void) { (void) (1 && testPointer && 0); }
 
 char *global_ap, *global_bp, *global_cp;
-void ambiguous_backtrack_1() {
+void ambiguous_backtrack_1(void) {
   for (;;) {
     (global_bp - global_ap ? global_cp[global_bp - global_ap] : 0) || 1;
     global_bp++;

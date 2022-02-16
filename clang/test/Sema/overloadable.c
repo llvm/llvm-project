@@ -248,3 +248,14 @@ void typeof_function_is_not_a_pointer() {
   // if take_fn is passed a void (**)(void *), we'll get a warning.
   take_fn(fn);
 }
+
+// PR53805
+// We previously failed to consider the attribute being written before the
+// declaration when considering whether to allow a variadic signature with no
+// other parameters, and so we handled these cases differently.
+__attribute__((overloadable)) void can_overload_1(...); // ok, was previously rejected
+void can_overload_2(...) __attribute__((overloadable)); // ok
+[[clang::overloadable]] void can_overload_3(...);       // ok, was previously rejected
+void can_overload_4 [[clang::overloadable]] (...);      // ok
+void cannot_overload(...) [[clang::overloadable]];      // expected-error {{ISO C requires a named parameter before '...'}} \
+                                                        // expected-error {{'overloadable' attribute cannot be applied to types}}

@@ -12,7 +12,10 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/Analysis/ValueTracking.h"
+
 namespace llvm {
+namespace memtag {
 namespace {
 bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
                                  const DominatorTree *DT, size_t MaxLifetimes) {
@@ -54,4 +57,91 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
   }
   return nullptr;
 }
+
+void StackInfoBuilder::visit(Instruction &Inst) {
+  if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+    if (CI->canReturnTwice()) {
+      Info.CallsReturnTwice = true;
+    }
+  }
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+    if (IsInterestingAlloca(*AI)) {
+      Info.AllocasToInstrument[AI].AI = AI;
+      Info.AllocasToInstrument[AI].OldAI = AI;
+    }
+    return;
+  }
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+             II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+    AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
+    if (!AI) {
+      Info.UnrecognizedLifetimes.push_back(&Inst);
+      return;
+    }
+    if (!IsInterestingAlloca(*AI))
+      return;
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
+    else
+      Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+    return;
+  }
+  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+    for (Value *V : DVI->location_ops()) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!IsInterestingAlloca(*AI))
+          continue;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DVIVec = AInfo.DbgVariableIntrinsics;
+        if (DVIVec.empty() || DVIVec.back() != DVI)
+          DVIVec.push_back(DVI);
+      }
+    }
+  }
+  Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
+  if (ExitUntag)
+    Info.RetVec.push_back(ExitUntag);
+}
+
+uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
+  auto DL = AI.getModule()->getDataLayout();
+  return AI.getAllocationSizeInBits(DL).getValue() / 8;
+}
+
+bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
+  const Align NewAlignment = max(MaybeAlign(Info.AI->getAlign()), Alignment);
+  Info.AI->setAlignment(NewAlignment);
+  auto &Ctx = Info.AI->getFunction()->getContext();
+
+  uint64_t Size = getAllocaSizeInBytes(*Info.AI);
+  uint64_t AlignedSize = alignTo(Size, Alignment);
+  if (Size == AlignedSize)
+    return false;
+
+  // Add padding to the alloca.
+  Type *AllocatedType =
+      Info.AI->isArrayAllocation()
+          ? ArrayType::get(
+                Info.AI->getAllocatedType(),
+                cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
+          : Info.AI->getAllocatedType();
+  Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
+  Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
+  auto *NewAI =
+      new AllocaInst(TypeWithPadding, Info.AI->getType()->getAddressSpace(),
+                     nullptr, "", Info.AI);
+  NewAI->takeName(Info.AI);
+  NewAI->setAlignment(Info.AI->getAlign());
+  NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
+  NewAI->setSwiftError(Info.AI->isSwiftError());
+  NewAI->copyMetadata(*Info.AI);
+
+  auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+  Info.AI->replaceAllUsesWith(NewPtr);
+  Info.AI = NewAI;
+  return true;
+}
+
+} // namespace memtag
 } // namespace llvm

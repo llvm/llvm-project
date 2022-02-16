@@ -31,6 +31,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -376,7 +377,7 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
   std::unique_ptr<llvm::MCStreamer> mcStreamer;
   std::unique_ptr<llvm::MCInstrInfo> mcii(target->createMCInstrInfo());
 
-  llvm::MCCodeEmitter *ce = target->createMCCodeEmitter(*mcii, *mri, ctx);
+  llvm::MCCodeEmitter *ce = target->createMCCodeEmitter(*mcii, ctx);
   llvm::MCAsmBackend *mab = target->createMCAsmBackend(*sti, *mri, mcOptions);
   mcStreamer.reset(target->createMCObjectStreamer(
       triple, ctx, std::unique_ptr<llvm::MCAsmBackend>(mab),

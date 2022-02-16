@@ -25,6 +25,7 @@
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_platform_limits_posix.h"
@@ -390,6 +391,13 @@ bool FileExists(const char *filename) {
     return false;
   // Sanity check: filename is a regular file.
   return S_ISREG(st.st_mode);
+}
+
+bool DirExists(const char *path) {
+  struct stat st;
+  if (stat(path, &st))
+    return false;
+  return S_ISDIR(st.st_mode);
 }
 
 tid_t GetTid() {

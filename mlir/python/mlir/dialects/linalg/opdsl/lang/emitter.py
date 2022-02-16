@@ -23,6 +23,7 @@ __all__ = [
     "ValueList",
 ]
 
+# Type aliases.
 ValueList = Union[Sequence[Value], OpResultList]
 
 
@@ -38,15 +39,14 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
                                  *ins: Value, outs: ValueList,
                                  **attrs: Sequence[int]):
   all_arg_defs = op_config.ordered_operands
-  in_arg_defs = [arg for arg in all_arg_defs if arg.usage == "InputOperand"]
-  out_arg_defs = [arg for arg in all_arg_defs if arg.usage == "OutputOperand"]
-  attr_arg_defs = [arg for arg in all_arg_defs if arg.usage == "IndexAttribute"]
+  in_arg_defs = [d for d in all_arg_defs if d.usage == "Input"]
+  out_arg_defs = [d for d in all_arg_defs if d.usage == "Output"]
+  index_attr_arg_defs = [d for d in all_arg_defs if d.usage == "IndexAttr"]
 
   # Verify outs is a sequence or a list of results.
   if not isinstance(outs, (Sequence, OpResultList)):
-    raise ValueError(
-        f"Expected named argument outs to have type Sequence or OpResultLis but got {type(outs)}"
-    )
+    raise ValueError(f"Expected named argument outs to have type Sequence or "
+                     f"OpResultLis but got {type(outs)}")
 
   # Arity validation.
   if len(ins) != len(in_arg_defs):
@@ -59,18 +59,19 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   # Compute a replacement list for all attribute symbols.
   expressions = []  # type: Sequence[AffineExpr]
   replacements = []  # type: Sequence[AffineExpr]
-  for attr in attr_arg_defs:
-    if attr.name not in attrs:
-      raise ValueError(f"Expected named argument for the attribute {attr.name}")
-    attribute_values = attrs.get(attr.name)
-    if not all(isinstance(value, int) for value in attribute_values):
-      raise ValueError(f"Attribute {attr.name} needs to be of type "
-                       f"Sequence[int] but got {type(attribute_values)}")
-    results = attr.attribute_map.results  # type: AffineExprList
-    if len(attribute_values) != len(results):
-      raise ValueError(f"Attribute {attr.name} has length {len(results)} "
-                       f"but got {len(attribute_values)} values")
-    for expr, value in zip(results, attribute_values):
+  for index_attr in index_attr_arg_defs:
+    index_attr_vals = index_attr.operand_def.default_vals
+    if index_attr.name in attrs:
+      index_attr_vals = attrs.get(index_attr.name)
+    assert index_attr_vals, "Index attribute has no value"
+    if not all(isinstance(value, int) for value in index_attr_vals):
+      raise ValueError(f"Attribute {index_attr.name} needs to be of type "
+                       f"Sequence[int] but got {type(index_attr_vals)}")
+    results = index_attr.index_attr_map.results  # type: AffineExprList
+    if len(index_attr_vals) != len(results):
+      raise ValueError(f"Attribute {index_attr.name} has length {len(results)} "
+                       f"but got {len(index_attr_vals)} values")
+    for expr, value in zip(results, index_attr_vals):
       expressions.append(expr)
       replacements.append(AffineConstantExpr.get(value))
 
@@ -115,22 +116,24 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   iterator_types_attr = ArrayAttr.get(
       [StringAttr.get(s) for s in op_config.iterator_types])
 
-  # Compute a dictionary storing all index attributes.
-  index_attributes = {}  # type: Dict[str, DenseElementAttr]
-  for attr in attr_arg_defs:
-    attribute_values = attrs.get(attr.name)
-    array = np.array(attribute_values, dtype=np.int64)
-    index_attributes[attr.name] = DenseElementsAttr.get(array)
+  # Compute the index attributes used when emitting a named structured op.
+  index_attrs = {}  # type: Dict[str, DenseElementAttr]
+  for index_attr in index_attr_arg_defs:
+    index_attr_vals = attrs.get(index_attr.name)
+    # Only forward attributes set to a non-default value.
+    if index_attr_vals:
+      array = np.array(index_attr_vals, dtype=np.int64)
+      index_attrs[index_attr.name] = DenseElementsAttr.get(array)
 
   return (all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types,
           type_mapping, indexing_maps_attr, iterator_types_attr,
-          index_attributes, block_arg_types)
+          index_attrs, block_arg_types)
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
                                outs: ValueList, **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  indexing_maps_attr, iterator_types_attr, index_attributes, block_arg_types = \
+  indexing_maps_attr, iterator_types_attr, index_attrs, block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
 
   # An operation that accesses only scalars and scalar/rank zero tensors is
@@ -181,7 +184,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
                              op_class_name: str, *ins: Value, outs: ValueList,
                              **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  indexing_maps_attr, iterator_types_attr, index_attributes, block_arg_types = \
+  indexing_maps_attr, iterator_types_attr, index_attrs, block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
 
   # If we get here, there must exist a builtin class `op_class_name`.
@@ -194,7 +197,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
 
   # Set the index attributes used to compute the indexing maps.
   named_op = getattr(linalg, op_class_name)(ins, outs, result_types)
-  for name, value in index_attributes.items():
+  for name, value in index_attrs.items():
     named_op.operation.attributes[name] = value
 
   linalg.fill_builtin_region(named_op.operation)

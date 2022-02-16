@@ -623,7 +623,7 @@ __m128i test_mm_insert_epi16(__m128i A, int B) {
   return _mm_insert_epi16(A, B, 0);
 }
 
-void test_mm_lfence() {
+void test_mm_lfence(void) {
   // CHECK-LABEL: test_mm_lfence
   // CHECK: call void @llvm.x86.sse2.lfence()
   _mm_lfence();
@@ -774,7 +774,7 @@ __m128d test_mm_max_sd(__m128d A, __m128d B) {
   return _mm_max_sd(A, B);
 }
 
-void test_mm_mfence() {
+void test_mm_mfence(void) {
   // CHECK-LABEL: test_mm_mfence
   // CHECK: call void @llvm.x86.sse2.mfence()
   _mm_mfence();
@@ -917,7 +917,7 @@ __m128i test_mm_packus_epi16(__m128i A, __m128i B) {
   return _mm_packus_epi16(A, B);
 }
 
-void test_mm_pause() {
+void test_mm_pause(void) {
   // CHECK-LABEL: test_mm_pause
   // CHECK: call void @llvm.x86.sse2.pause()
   return _mm_pause();
@@ -1136,13 +1136,13 @@ __m128d test_mm_setr_pd(double A, double B) {
   return _mm_setr_pd(A, B);
 }
 
-__m128d test_mm_setzero_pd() {
+__m128d test_mm_setzero_pd(void) {
   // CHECK-LABEL: test_mm_setzero_pd
   // CHECK: store <2 x double> zeroinitializer
   return _mm_setzero_pd();
 }
 
-__m128i test_mm_setzero_si128() {
+__m128i test_mm_setzero_si128(void) {
   // CHECK-LABEL: test_mm_setzero_si128
   // CHECK: store <2 x i64> zeroinitializer
   return _mm_setzero_si128();
@@ -1628,13 +1628,13 @@ int test_mm_ucomineq_sd(__m128d A, __m128d B) {
   return _mm_ucomineq_sd(A, B);
 }
 
-__m128d test_mm_undefined_pd() {
+__m128d test_mm_undefined_pd(void) {
   // CHECK-LABEL: test_mm_undefined_pd
   // CHECK: ret <2 x double> zeroinitializer
   return _mm_undefined_pd();
 }
 
-__m128i test_mm_undefined_si128() {
+__m128i test_mm_undefined_si128(void) {
   // CHECK-LABEL: test_mm_undefined_si128
   // CHECK: ret <2 x i64> zeroinitializer
   return _mm_undefined_si128();

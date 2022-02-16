@@ -347,9 +347,9 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  result.addAttribute(getReductionDimsAttrName(),
+  result.addAttribute(getReductionDimsAttrStrName(),
                       builder.getI64ArrayAttr(reductionDims));
-  result.addAttribute(getKindAttrName(),
+  result.addAttribute(getKindAttrStrName(),
                       CombiningKindAttr::get(kind, builder.getContext()));
 }
 
@@ -491,10 +491,10 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   ArrayRef<StringRef> iteratorTypes) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
-  result.addAttribute(getIndexingMapsAttrName(),
+  result.addAttribute(::mlir::getIndexingMapsAttrName(),
                       builder.getAffineMapArrayAttr(
                           AffineMap::inferFromExprList(indexingExprs)));
-  result.addAttribute(getIteratorTypesAttrName(),
+  result.addAttribute(::mlir::getIteratorTypesAttrName(),
                       builder.getStrArrayAttr(iteratorTypes));
 }
 
@@ -512,9 +512,9 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   ArrayAttr iteratorTypes, CombiningKind kind) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
-  result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
-  result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
-  result.addAttribute(ContractionOp::getKindAttrName(),
+  result.addAttribute(::mlir::getIndexingMapsAttrName(), indexingMaps);
+  result.addAttribute(::mlir::getIteratorTypesAttrName(), iteratorTypes);
+  result.addAttribute(ContractionOp::getKindAttrStrName(),
                       CombiningKindAttr::get(kind, builder.getContext()));
 }
 
@@ -543,8 +543,8 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
-  if (!result.attributes.get(ContractionOp::getKindAttrName())) {
-    result.addAttribute(ContractionOp::getKindAttrName(),
+  if (!result.attributes.get(ContractionOp::getKindAttrStrName())) {
+    result.addAttribute(ContractionOp::getKindAttrStrName(),
                         CombiningKindAttr::get(ContractionOp::getDefaultKind(),
                                                result.getContext()));
   }
@@ -698,7 +698,7 @@ LogicalResult ContractionOp::verify() {
   unsigned numIterators = iterator_types().getValue().size();
   for (const auto &it : llvm::enumerate(indexing_maps())) {
     auto index = it.index();
-    auto map = it.value().cast<AffineMapAttr>().getValue();
+    auto map = it.value();
     if (map.getNumSymbols() != 0)
       return emitOpError("expected indexing map ")
              << index << " to have no symbols";
@@ -759,9 +759,9 @@ LogicalResult ContractionOp::verify() {
 }
 
 ArrayRef<StringRef> ContractionOp::getTraitAttrNames() {
-  static constexpr StringRef names[3] = {getIndexingMapsAttrName(),
-                                         getIteratorTypesAttrName(),
-                                         ContractionOp::getKindAttrName()};
+  static constexpr StringRef names[3] = {::mlir::getIndexingMapsAttrName(),
+                                         ::mlir::getIteratorTypesAttrName(),
+                                         ContractionOp::getKindAttrStrName()};
   return llvm::makeArrayRef(names);
 }
 
@@ -817,11 +817,11 @@ void ContractionOp::getIterationBounds(
 
 void ContractionOp::getIterationIndexMap(
     std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap) {
-  unsigned numMaps = indexing_maps().getValue().size();
+  unsigned numMaps = indexing_maps().size();
   iterationIndexMap.resize(numMaps);
   for (const auto &it : llvm::enumerate(indexing_maps())) {
     auto index = it.index();
-    auto map = it.value().cast<AffineMapAttr>().getValue();
+    auto map = it.value();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
       auto dim = map.getResult(i).cast<AffineDimExpr>();
       iterationIndexMap[index][dim.getPosition()] = i;
@@ -839,13 +839,6 @@ std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
   return getDimMap(indexingMaps, iterator_types(),
                    getParallelIteratorTypeName(), getContext());
-}
-
-SmallVector<AffineMap, 4> ContractionOp::getIndexingMaps() {
-  return llvm::to_vector<4>(
-      llvm::map_range(indexing_maps().getValue(), [](Attribute mapAttr) {
-        return mapAttr.cast<AffineMapAttr>().getValue();
-      }));
 }
 
 Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
@@ -961,7 +954,7 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
   auto positionAttr = getVectorSubscriptAttr(builder, position);
   result.addTypes(inferExtractOpResultType(source.getType().cast<VectorType>(),
                                            positionAttr));
-  result.addAttribute(getPositionAttrName(), positionAttr);
+  result.addAttribute(getPositionAttrStrName(), positionAttr);
 }
 
 // Convenience builder which assumes the values are constant indices.
@@ -1053,7 +1046,7 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
   std::reverse(globalPosition.begin(), globalPosition.end());
-  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
                      b.getI64ArrayAttr(globalPosition));
   return success();
 }
@@ -1295,7 +1288,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
     extractOp.setOperand(source);
     // OpBuilder is only used as a helper to build an I64ArrayAttr.
     OpBuilder b(extractOp.getContext());
-    extractOp->setAttr(ExtractOp::getPositionAttrName(),
+    extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
                        b.getI64ArrayAttr(extractPos));
     return extractOp.getResult();
   }
@@ -1355,7 +1348,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   SmallVector<int64_t, 4> newPosition = delinearize(newStrides, position);
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
-  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
                      b.getI64ArrayAttr(newPosition));
   extractOp.setOperand(shapeCastOp.source());
   return extractOp.getResult();
@@ -1396,7 +1389,7 @@ static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
   extractOp.vectorMutable().assign(extractStridedSliceOp.vector());
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
-  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
                      b.getI64ArrayAttr(extractedPos));
   return extractOp.getResult();
 }
@@ -1453,7 +1446,7 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp op) {
       op.vectorMutable().assign(insertOp.source());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(op.getContext());
-      op->setAttr(ExtractOp::getPositionAttrName(),
+      op->setAttr(ExtractOp::getPositionAttrStrName(),
                   b.getI64ArrayAttr(offsetDiffs));
       return op.getResult();
     }
@@ -1736,7 +1729,7 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
   auto shape = llvm::to_vector<4>(v1Type.getShape());
   shape[0] = mask.size();
   result.addTypes(VectorType::get(shape, v1Type.getElementType()));
-  result.addAttribute(getMaskAttrName(), maskAttr);
+  result.addAttribute(getMaskAttrStrName(), maskAttr);
 }
 
 void ShuffleOp::print(OpAsmPrinter &p) {
@@ -1784,7 +1777,7 @@ ParseResult ShuffleOp::parse(OpAsmParser &parser, OperationState &result) {
   VectorType v1Type, v2Type;
   if (parser.parseOperand(v1) || parser.parseComma() ||
       parser.parseOperand(v2) ||
-      parser.parseAttribute(attr, ShuffleOp::getMaskAttrName(),
+      parser.parseAttribute(attr, ShuffleOp::getMaskAttrStrName(),
                             result.attributes) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(v1Type) || parser.parseComma() ||
@@ -1877,7 +1870,7 @@ void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
   result.addOperands({source, dest});
   auto positionAttr = getVectorSubscriptAttr(builder, position);
   result.addTypes(dest.getType());
-  result.addAttribute(getPositionAttrName(), positionAttr);
+  result.addAttribute(getPositionAttrStrName(), positionAttr);
 }
 
 // Convenience builder which assumes the values are constant indices.
@@ -1995,8 +1988,8 @@ void InsertStridedSliceOp::build(OpBuilder &builder, OperationState &result,
   auto offsetsAttr = getVectorSubscriptAttr(builder, offsets);
   auto stridesAttr = getVectorSubscriptAttr(builder, strides);
   result.addTypes(dest.getType());
-  result.addAttribute(getOffsetsAttrName(), offsetsAttr);
-  result.addAttribute(getStridesAttrName(), stridesAttr);
+  result.addAttribute(getOffsetsAttrStrName(), offsetsAttr);
+  result.addAttribute(getStridesAttrStrName(), stridesAttr);
 }
 
 // TODO: Should be moved to Tablegen Confined attributes.
@@ -2172,9 +2165,9 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
                              vLHS.getElementType())
            : VectorType::get({vLHS.getDimSize(0)}, vLHS.getElementType());
 
-  if (!result.attributes.get(OuterProductOp::getKindAttrName())) {
+  if (!result.attributes.get(OuterProductOp::getKindAttrStrName())) {
     result.attributes.append(
-        OuterProductOp::getKindAttrName(),
+        OuterProductOp::getKindAttrStrName(),
         CombiningKindAttr::get(OuterProductOp::getDefaultKind(),
                                result.getContext()));
   }
@@ -2322,9 +2315,9 @@ void ExtractStridedSliceOp::build(OpBuilder &builder, OperationState &result,
   result.addTypes(
       inferStridedSliceOpResultType(source.getType().cast<VectorType>(),
                                     offsetsAttr, sizesAttr, stridesAttr));
-  result.addAttribute(getOffsetsAttrName(), offsetsAttr);
-  result.addAttribute(getSizesAttrName(), sizesAttr);
-  result.addAttribute(getStridesAttrName(), stridesAttr);
+  result.addAttribute(getOffsetsAttrStrName(), offsetsAttr);
+  result.addAttribute(getSizesAttrStrName(), sizesAttr);
+  result.addAttribute(getStridesAttrStrName(), stridesAttr);
 }
 
 LogicalResult ExtractStridedSliceOp::verify() {
@@ -2412,7 +2405,7 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
       op.setOperand(insertOp.source());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(op.getContext());
-      op->setAttr(ExtractStridedSliceOp::getOffsetsAttrName(),
+      op->setAttr(ExtractStridedSliceOp::getOffsetsAttrStrName(),
                   b.getI64ArrayAttr(offsetDiffs));
       return success();
     }
@@ -2765,7 +2758,7 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 3> elidedAttrs;
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.permutation_map().isMinorIdentity())
-    elidedAttrs.push_back(op.getPermutationMapAttrName());
+    elidedAttrs.push_back(op.getPermutationMapAttrStrName());
   bool elideInBounds = true;
   if (auto inBounds = op.in_bounds()) {
     for (auto attr : *inBounds) {
@@ -2776,7 +2769,7 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
     }
   }
   if (elideInBounds)
-    elidedAttrs.push_back(op.getInBoundsAttrName());
+    elidedAttrs.push_back(op.getInBoundsAttrStrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -2817,7 +2810,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   VectorType vectorType = types[1].dyn_cast<VectorType>();
   if (!vectorType)
     return parser.emitError(typesLoc, "requires vector type");
-  auto permutationAttrName = TransferReadOp::getPermutationMapAttrName();
+  auto permutationAttrName = TransferReadOp::getPermutationMapAttrStrName();
   Attribute mapAttr = result.attributes.get(permutationAttrName);
   if (!mapAttr) {
     auto permMap = getTransferMinorIdentityMap(shapedType, vectorType);
@@ -2963,7 +2956,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op->setAttr(TransferOp::getInBoundsAttrName(),
+  op->setAttr(TransferOp::getInBoundsAttrStrName(),
               b.getBoolArrayAttr(newInBounds));
   return success();
 }
@@ -3193,7 +3186,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   ShapedType shapedType = types[1].dyn_cast<ShapedType>();
   if (!shapedType || !shapedType.isa<MemRefType, RankedTensorType>())
     return parser.emitError(typesLoc, "requires memref or ranked tensor type");
-  auto permutationAttrName = TransferWriteOp::getPermutationMapAttrName();
+  auto permutationAttrName = TransferWriteOp::getPermutationMapAttrStrName();
   auto attr = result.attributes.get(permutationAttrName);
   if (!attr) {
     auto permMap = getTransferMinorIdentityMap(shapedType, vectorType);
@@ -4151,7 +4144,7 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 
   result.addOperands(vector);
   result.addTypes(VectorType::get(transposedShape, vt.getElementType()));
-  result.addAttribute(getTranspAttrName(), builder.getI64ArrayAttr(transp));
+  result.addAttribute(getTranspAttrStrName(), builder.getI64ArrayAttr(transp));
 }
 
 // Eliminates transpose operations, which produce values identical to their

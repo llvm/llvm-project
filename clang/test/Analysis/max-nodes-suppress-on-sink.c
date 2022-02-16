@@ -15,9 +15,9 @@ extern void exit(int) __attribute__ ((__noreturn__));
 
 void clang_analyzer_warnIfReached(void);
 
-int coin();
+int coin(void);
 
-void test_single_cfg_block_sink() {
+void test_single_cfg_block_sink(void) {
   void *p = malloc(1); // no-warning (wherever the leak warning may occur here)
 
   // Due to max-nodes option in the run line, we should reach the first call
@@ -34,7 +34,7 @@ void test_single_cfg_block_sink() {
 
 // A similar test with more complicated control flow before the no-return thing,
 // so that the no-return thing wasn't in the same CFG block.
-void test_more_complex_control_flow_before_sink() {
+void test_more_complex_control_flow_before_sink(void) {
   void *p = malloc(1); // no-warning
 
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
@@ -72,7 +72,7 @@ void test_loop_with_sink(int n) {
 }
 
 // Handle unreachable blocks correctly.
-void test_unreachable_successor_blocks() {
+void test_unreachable_successor_blocks(void) {
   void *p = malloc(1); // no-warning
 
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}

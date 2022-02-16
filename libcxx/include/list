@@ -180,10 +180,14 @@ template <class T, class Allocator, class Predicate>
 
 */
 
+#include <__algorithm/comp.h>
+#include <__algorithm/equal.h>
+#include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
 #include <__debug>
 #include <__utility/forward.h>
-#include <algorithm>
 #include <initializer_list>
 #include <iterator>
 #include <limits>

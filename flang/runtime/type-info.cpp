@@ -89,9 +89,14 @@ void Component::EstablishDescriptor(Descriptor &descriptor,
     const Descriptor &container, Terminator &terminator) const {
   TypeCategory cat{category()};
   if (cat == TypeCategory::Character) {
-    auto length{characterLen_.GetValue(&container)};
-    RUNTIME_CHECK(terminator, length.has_value());
-    descriptor.Establish(kind_, *length / kind_, nullptr, rank_);
+    std::size_t lengthInChars{0};
+    if (auto length{characterLen_.GetValue(&container)}) {
+      lengthInChars = static_cast<std::size_t>(*length / kind_);
+    } else {
+      RUNTIME_CHECK(
+          terminator, characterLen_.genre() == Value::Genre::Deferred);
+    }
+    descriptor.Establish(kind_, lengthInChars, nullptr, rank_);
   } else if (cat == TypeCategory::Derived) {
     const DerivedType *type{derivedType()};
     RUNTIME_CHECK(terminator, type != nullptr);

@@ -68,10 +68,10 @@ class TestObjCIvarsInBlocks(TestBase):
 
         error = lldb.SBError()
         direct_value = direct_blocky.GetValueAsSigned(error)
-        self.assertTrue(error.Success(), "Got direct value for blocky_ivar")
+        self.assertSuccess(error, "Got direct value for blocky_ivar")
 
         indirect_value = indirect_blocky.GetValueAsSigned(error)
-        self.assertTrue(error.Success(), "Got indirect value for blocky_ivar")
+        self.assertSuccess(error, "Got indirect value for blocky_ivar")
 
         self.assertEqual(
             direct_value, indirect_value,

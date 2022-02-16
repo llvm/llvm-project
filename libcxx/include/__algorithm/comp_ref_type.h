@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_COMP_REF_TYPE_H
 #define _LIBCPP___ALGORITHM_COMP_REF_TYPE_H
 
+#include <__assert>
 #include <__config>
 #include <__debug>
 #include <__utility/declval.h>

@@ -36,7 +36,7 @@ unsigned i;
 // SECTION: @test1
 // EXCLUDE: noprofile
 // EXCLUDE: @test1
-unsigned test1() {
+unsigned test1(void) {
   // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i32 0, i32 0)
   // FUNC: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i32 0, i32 0)
   // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i32 0, i32 0)
@@ -55,7 +55,7 @@ unsigned test1() {
 // SECTION: @test2
 // EXCLUDE-NOT: noprofile
 // EXCLUDE: @test2
-unsigned test2() {
+unsigned test2(void) {
   // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i32 0, i32 0)
   // FUNC-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i32 0, i32 0)
   // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i32 0, i32 0)

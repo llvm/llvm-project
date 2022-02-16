@@ -290,14 +290,6 @@ public:
 };
 
 class AArch64StackTagging : public FunctionPass {
-  struct AllocaInfo {
-    AllocaInst *AI;
-    TrackingVH<Instruction> OldAI; // Track through RAUW to replace debug uses.
-    SmallVector<IntrinsicInst *, 2> LifetimeStart;
-    SmallVector<IntrinsicInst *, 2> LifetimeEnd;
-    SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
-  };
-
   const bool MergeInit;
   const bool UseStackSafety;
 
@@ -313,7 +305,6 @@ public:
   }
 
   bool isInterestingAlloca(const AllocaInst &AI);
-  void alignAndPadAlloca(AllocaInfo &Info);
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -322,9 +313,9 @@ public:
   Instruction *collectInitializers(Instruction *StartInst, Value *StartPtr,
                                    uint64_t Size, InitializerBuilder &IB);
 
-  Instruction *
-  insertBaseTaggedPointer(const MapVector<AllocaInst *, AllocaInfo> &Allocas,
-                          const DominatorTree *DT);
+  Instruction *insertBaseTaggedPointer(
+      const MapVector<AllocaInst *, memtag::AllocaInfo> &Allocas,
+      const DominatorTree *DT);
   bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "AArch64 Stack Tagging"; }
@@ -466,12 +457,12 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
 }
 
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
-    const MapVector<AllocaInst *, AllocaInfo> &InterestingAllocas,
+    const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
     const DominatorTree *DT) {
   BasicBlock *PrologueBB = nullptr;
   // Try sinking IRG as deep as possible to avoid hurting shrink wrap.
-  for (auto &I : InterestingAllocas) {
-    const AllocaInfo &Info = I.second;
+  for (auto &I : AllocasToInstrument) {
+    const memtag::AllocaInfo &Info = I.second;
     AllocaInst *AI = Info.AI;
     if (!PrologueBB) {
       PrologueBB = AI->getParent();
@@ -490,40 +481,6 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   return Base;
 }
 
-void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
-  const Align NewAlignment =
-      max(MaybeAlign(Info.AI->getAlign()), kTagGranuleSize);
-  Info.AI->setAlignment(NewAlignment);
-
-  uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
-  uint64_t AlignedSize = alignTo(Size, kTagGranuleSize);
-  if (Size == AlignedSize)
-    return;
-
-  // Add padding to the alloca.
-  Type *AllocatedType =
-      Info.AI->isArrayAllocation()
-          ? ArrayType::get(
-                Info.AI->getAllocatedType(),
-                cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
-          : Info.AI->getAllocatedType();
-  Type *PaddingType =
-      ArrayType::get(Type::getInt8Ty(F->getContext()), AlignedSize - Size);
-  Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
-  auto *NewAI = new AllocaInst(
-      TypeWithPadding, Info.AI->getType()->getAddressSpace(), nullptr, "", Info.AI);
-  NewAI->takeName(Info.AI);
-  NewAI->setAlignment(Info.AI->getAlign());
-  NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
-  NewAI->setSwiftError(Info.AI->isSwiftError());
-  NewAI->copyMetadata(*Info.AI);
-
-  auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
-  Info.AI->replaceAllUsesWith(NewPtr);
-  Info.AI->eraseFromParent();
-  Info.AI = NewAI;
-}
-
 // FIXME: check for MTE extension
 bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
@@ -536,73 +493,21 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  MapVector<AllocaInst *, AllocaInfo>
-      InterestingAllocas; // need stable iteration order
-  SmallVector<Instruction *, 8> RetVec;
-  SmallVector<Instruction *, 4> UnrecognizedLifetimes;
+  memtag::StackInfoBuilder SIB(
+      [this](const AllocaInst &AI) { return isInterestingAlloca(AI); });
+  for (Instruction &I : instructions(F))
+    SIB.visit(I);
+  memtag::StackInfo &SInfo = SIB.get();
 
-  bool CallsReturnTwice = false;
-  for (Instruction &I : instructions(F)) {
-    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      if (CI->canReturnTwice()) {
-        CallsReturnTwice = true;
-      }
-    }
-    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-      if (isInterestingAlloca(*AI)) {
-        InterestingAllocas[AI].AI = AI;
-        InterestingAllocas[AI].OldAI = AI;
-      }
-      continue;
-    }
-
-    if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-      for (Value *V : DVI->location_ops())
-        if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
-          if (isInterestingAlloca(*AI) &&
-              (InterestingAllocas[AI].DbgVariableIntrinsics.empty() ||
-               InterestingAllocas[AI].DbgVariableIntrinsics.back() != DVI))
-            InterestingAllocas[AI].DbgVariableIntrinsics.push_back(DVI);
-      continue;
-    }
-
-    auto *II = dyn_cast<IntrinsicInst>(&I);
-    if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-                II->getIntrinsicID() == Intrinsic::lifetime_end)) {
-      AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-      if (!AI) {
-        UnrecognizedLifetimes.push_back(&I);
-        continue;
-      }
-      if (!isInterestingAlloca(*AI))
-        continue;
-      if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-        InterestingAllocas[AI].LifetimeStart.push_back(II);
-      else
-        InterestingAllocas[AI].LifetimeEnd.push_back(II);
-      continue;
-    }
-
-    Instruction *ExitUntag = getUntagLocationIfFunctionExit(I);
-    if (ExitUntag)
-      RetVec.push_back(ExitUntag);
-  }
-
-  if (InterestingAllocas.empty())
+  if (SInfo.AllocasToInstrument.empty())
     return false;
-
-  for (auto &I : InterestingAllocas) {
-    AllocaInfo &Info = I.second;
-    assert(Info.AI && isInterestingAlloca(*Info.AI));
-    alignAndPadAlloca(Info);
-  }
 
   std::unique_ptr<DominatorTree> DeleteDT;
   DominatorTree *DT = nullptr;
   if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DT = &P->getDomTree();
 
-  if (DT == nullptr && (InterestingAllocas.size() > 1 ||
+  if (DT == nullptr && (SInfo.AllocasToInstrument.size() > 1 ||
                         !F->hasFnAttribute(Attribute::OptimizeNone))) {
     DeleteDT = std::make_unique<DominatorTree>(*F);
     DT = DeleteDT.get();
@@ -621,11 +526,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SetTagFunc =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
 
-  Instruction *Base = insertBaseTaggedPointer(InterestingAllocas, DT);
+  Instruction *Base = insertBaseTaggedPointer(SInfo.AllocasToInstrument, DT);
 
   int NextTag = 0;
-  for (auto &I : InterestingAllocas) {
-    const AllocaInfo &Info = I.second;
+  for (auto &I : SInfo.AllocasToInstrument) {
+    memtag::AllocaInfo &Info = I.second;
+    assert(Info.AI && isInterestingAlloca(*Info.AI));
+    auto *PrevAI = Info.AI;
+    if (memtag::alignAndPadAlloca(Info, kTagGranuleSize))
+      PrevAI->eraseFromParent();
     AllocaInst *AI = Info.AI;
     int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
@@ -642,15 +551,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     TagPCall->setOperand(0, Info.AI);
 
     bool StandardLifetime =
-        UnrecognizedLifetimes.empty() &&
-        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
-                           ClMaxLifetimes);
+        SInfo.UnrecognizedLifetimes.empty() &&
+        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
+                                   ClMaxLifetimes);
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
-    if (UnrecognizedLifetimes.empty() && StandardLifetime &&
-        !CallsReturnTwice) {
+    if (SInfo.UnrecognizedLifetimes.empty() && StandardLifetime &&
+        !SInfo.CallsReturnTwice) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
@@ -659,8 +568,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
-          !forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd, RetVec,
-                                TagEnd)) {
+          !memtag::forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd,
+                                        SInfo.RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
@@ -668,7 +577,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
-      for (auto &RI : RetVec) {
+      for (auto &RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size);
       }
       // We may have inserted tag/untag outside of any lifetime interval.
@@ -686,7 +595,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
   // instrinsics have to go.
-  for (auto &I : UnrecognizedLifetimes)
+  for (auto &I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
 
   return true;

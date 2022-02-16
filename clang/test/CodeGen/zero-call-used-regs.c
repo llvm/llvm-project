@@ -218,32 +218,32 @@
 
 #define __zero_call_used_regs(kind) __attribute__((zero_call_used_regs(kind)))
 
-void no_attribute() {
+void no_attribute(void) {
 }
 
-void __zero_call_used_regs("skip") skip_test() {
+void __zero_call_used_regs("skip") skip_test(void) {
 }
 
-void __zero_call_used_regs("used-gpr-arg") used_gpr_arg_test() {
+void __zero_call_used_regs("used-gpr-arg") used_gpr_arg_test(void) {
 }
 
-void __zero_call_used_regs("used-gpr") used_gpr_test() {
+void __zero_call_used_regs("used-gpr") used_gpr_test(void) {
 }
 
-void __zero_call_used_regs("used-arg") used_arg_test() {
+void __zero_call_used_regs("used-arg") used_arg_test(void) {
 }
 
-void __zero_call_used_regs("used") used_test() {
+void __zero_call_used_regs("used") used_test(void) {
 }
 
-void __zero_call_used_regs("all-gpr-arg") all_gpr_arg_test() {
+void __zero_call_used_regs("all-gpr-arg") all_gpr_arg_test(void) {
 }
 
-void __zero_call_used_regs("all-gpr") all_gpr_test() {
+void __zero_call_used_regs("all-gpr") all_gpr_test(void) {
 }
 
-void __zero_call_used_regs("all-arg") all_arg_test() {
+void __zero_call_used_regs("all-arg") all_arg_test(void) {
 }
 
-void __zero_call_used_regs("all") all_test() {
+void __zero_call_used_regs("all") all_test(void) {
 }

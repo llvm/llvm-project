@@ -16,5 +16,26 @@ define void @test_memset_memcpy(ptr %src, i64 %src_size, ptr noalias %dst, i64 %
   ret void
 }
 
+%a = type { i64, i64, i64 }
+%b = type { i32, i32, i32 }
+
+define void @test_different_gep_source_elements(ptr %src) {
+; CHECK-LABEL: @test_different_gep_source_elements(
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr [[B:%.*]], ptr [[SRC:%.*]], i64 0, i32 1
+; CHECK-NEXT:    store i64 0, ptr [[PB]], align 4
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr [[A:%.*]], ptr [[SRC]], i64 0, i32 1
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr [[A]], ptr [[SRC]], i64 0, i32 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[PA]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %pb = getelementptr %b, ptr %src, i64 0, i32 1
+  store i64 0, ptr %pb
+  %pa = getelementptr %a, ptr %src, i64 0, i32 1
+  store i64 0, ptr %pa
+  %pa2 = getelementptr %a, ptr %src, i64 0, i32 2
+  store i64 0, ptr %pa2
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)

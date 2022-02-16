@@ -649,7 +649,6 @@ public:
 
 */
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <experimental/__config>

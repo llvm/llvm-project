@@ -149,14 +149,15 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 
 bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     const TypeAndShape &that, const char *thisIs, const char *thatIs,
-    bool isElemental, enum CheckConformanceFlags::Flags flags) const {
+    bool omitShapeConformanceCheck,
+    enum CheckConformanceFlags::Flags flags) const {
   if (!type_.IsTkCompatibleWith(that.type_)) {
     messages.Say(
         "%1$s type '%2$s' is not compatible with %3$s type '%4$s'"_err_en_US,
         thatIs, that.AsFortran(), thisIs, AsFortran());
     return false;
   }
-  return isElemental ||
+  return omitShapeConformanceCheck ||
       CheckConformance(messages, shape_, that.shape_, flags, thisIs, thatIs)
           .value_or(true /*fail only when nonconformance is known now*/);
 }
@@ -371,13 +372,13 @@ static std::optional<Procedure> CharacterizeProcedure(
   seenProcs.insert(symbol);
   CopyAttrs<Procedure, Procedure::Attr>(symbol, result,
       {
-          {semantics::Attr::PURE, Procedure::Attr::Pure},
           {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
           {semantics::Attr::BIND_C, Procedure::Attr::BindC},
       });
-  if (result.attrs.test(Procedure::Attr::Elemental) &&
-      !symbol.attrs().test(semantics::Attr::IMPURE)) {
-    result.attrs.set(Procedure::Attr::Pure); // explicitly flag pure procedures
+  if (IsPureProcedure(symbol) || // works for ENTRY too
+      (!symbol.attrs().test(semantics::Attr::IMPURE) &&
+          result.attrs.test(Procedure::Attr::Elemental))) {
+    result.attrs.set(Procedure::Attr::Pure);
   }
   return std::visit(
       common::visitors{
@@ -809,8 +810,8 @@ std::optional<Procedure> Procedure::Characterize(
 std::optional<Procedure> Procedure::Characterize(
     const ProcedureDesignator &proc, FoldingContext &context) {
   if (const auto *symbol{proc.GetSymbol()}) {
-    if (auto result{characteristics::Procedure::Characterize(
-            ResolveAssociations(*symbol), context)}) {
+    if (auto result{
+            characteristics::Procedure::Characterize(*symbol, context)}) {
       return result;
     }
   } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {

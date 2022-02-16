@@ -136,7 +136,7 @@ class TargetAPITestCase(TestBase):
         sb_addr = lldb.SBAddress(data_section, 0)
         error = lldb.SBError()
         content = target.ReadMemory(sb_addr, 1, error)
-        self.assertTrue(error.Success(), "Make sure memory read succeeded")
+        self.assertSuccess(error, "Make sure memory read succeeded")
         self.assertEqual(len(content), 1)
 
 

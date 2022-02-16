@@ -45,11 +45,11 @@ struct foo2 foo2;
 // Radar 7325611
 // CHECK-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "barfoo"
 typedef int barfoo;
-barfoo foo() {
+barfoo foo(void) {
 }
 
 // CHECK-DAG: __uint128_t
-__uint128_t foo128 ()
+__uint128_t foo128 (void)
 {
   __uint128_t int128 = 44;
   return int128;

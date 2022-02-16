@@ -2,7 +2,7 @@
 // clean directory, put the source there, and cd into it.
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/root/nested
-// RUN: echo "void f1() {}" > %t/root/nested/coverage-prefix-map.c
+// RUN: echo "void f1(void) {}" > %t/root/nested/coverage-prefix-map.c
 // RUN: cd %t/root
 
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -mllvm -enable-name-compression=false -main-file-name coverage-prefix-map.c %t/root/nested/coverage-prefix-map.c -o - | FileCheck --check-prefix=ABSOLUTE %s

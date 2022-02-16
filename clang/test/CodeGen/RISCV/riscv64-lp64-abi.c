@@ -38,7 +38,7 @@ struct large f_scalar_stack_2(double a, __int128_t b, long double c, v32i8 d,
 void f_floatcomplex(float __complex__ a) {}
 
 // CHECK: define{{.*}} i64 @f_ret_floatcomplex()
-float __complex__ f_ret_floatcomplex() {
+float __complex__ f_ret_floatcomplex(void) {
   return 1.0;
 }
 
@@ -48,6 +48,6 @@ struct floatcomplex_s { float __complex__ c; };
 void f_floatcomplex_s_arg(struct floatcomplex_s a) {}
 
 // CHECK: define{{.*}} i64 @f_ret_floatcomplex_s()
-struct floatcomplex_s f_ret_floatcomplex_s() {
+struct floatcomplex_s f_ret_floatcomplex_s(void) {
   return (struct floatcomplex_s){1.0};
 }

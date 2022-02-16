@@ -80,71 +80,80 @@ PACKED(struct SegmentEntry {
   }
 });
 
+// Packed struct definition for MSVC. We can't use the PACKED macro defined in
+// MemProfData.inc since it would mean we are embedding a directive (the
+// #include for MIBEntryDef) into the macros which is undefined behaviour.
+#ifdef _MSC_VER
+__pragma(pack(push,1))
+#endif
+
 // A struct representing the heap allocation characteristics of a particular
 // runtime context. This struct is shared between the compiler-rt runtime and
 // the raw profile reader. The indexed format uses a separate, self-describing
 // backwards compatible format.
-PACKED(struct MemInfoBlock {
-  uint32_t alloc_count;
-  uint64_t total_access_count, min_access_count, max_access_count;
-  uint64_t total_size;
-  uint32_t min_size, max_size;
-  uint32_t alloc_timestamp, dealloc_timestamp;
-  uint64_t total_lifetime;
-  uint32_t min_lifetime, max_lifetime;
-  uint32_t alloc_cpu_id, dealloc_cpu_id;
-  uint32_t num_migrated_cpu;
+struct MemInfoBlock{
 
-  // Only compared to prior deallocated object currently.
-  uint32_t num_lifetime_overlaps;
-  uint32_t num_same_alloc_cpu;
-  uint32_t num_same_dealloc_cpu;
+#define MIBEntryDef(NameTag, Name, Type) Type Name;
+#include "MIBEntryDef.inc"
+#undef MIBEntryDef
 
-  uint64_t data_type_id; // TODO: hash of type name
+bool operator==(const MemInfoBlock& Other) const {
+  bool IsEqual = true;
+#define MIBEntryDef(NameTag, Name, Type) \
+  IsEqual = (IsEqual && Name == Other.Name);
+#include "MIBEntryDef.inc"
+#undef MIBEntryDef
+  return IsEqual;
+}
 
-  MemInfoBlock() : alloc_count(0) {}
+MemInfoBlock() : AllocCount(0) {}
 
-  MemInfoBlock(uint32_t size, uint64_t access_count, uint32_t alloc_timestamp,
-               uint32_t dealloc_timestamp, uint32_t alloc_cpu, uint32_t dealloc_cpu)
-      : alloc_count(1), total_access_count(access_count),
-        min_access_count(access_count), max_access_count(access_count),
-        total_size(size), min_size(size), max_size(size),
-        alloc_timestamp(alloc_timestamp), dealloc_timestamp(dealloc_timestamp),
-        total_lifetime(dealloc_timestamp - alloc_timestamp),
-        min_lifetime(total_lifetime), max_lifetime(total_lifetime),
-        alloc_cpu_id(alloc_cpu), dealloc_cpu_id(dealloc_cpu),
-        num_lifetime_overlaps(0), num_same_alloc_cpu(0),
-        num_same_dealloc_cpu(0) {
-    num_migrated_cpu = alloc_cpu_id != dealloc_cpu_id;
-  }
+MemInfoBlock(uint32_t size, uint64_t access_count, uint32_t alloc_timestamp,
+             uint32_t dealloc_timestamp, uint32_t alloc_cpu, uint32_t dealloc_cpu)
+    : AllocCount(1), TotalAccessCount(access_count),
+      MinAccessCount(access_count), MaxAccessCount(access_count),
+      TotalSize(size), MinSize(size), MaxSize(size),
+      AllocTimestamp(alloc_timestamp), DeallocTimestamp(dealloc_timestamp),
+      TotalLifetime(dealloc_timestamp - alloc_timestamp),
+      MinLifetime(TotalLifetime), MaxLifetime(TotalLifetime),
+      AllocCpuId(alloc_cpu), DeallocCpuId(dealloc_cpu),
+      NumLifetimeOverlaps(0), NumSameAllocCpu(0),
+      NumSameDeallocCpu(0) {
+  NumMigratedCpu = AllocCpuId != DeallocCpuId;
+}
 
-  void Merge(const MemInfoBlock &newMIB) {
-    alloc_count += newMIB.alloc_count;
+void Merge(const MemInfoBlock &newMIB) {
+  AllocCount += newMIB.AllocCount;
 
-    total_access_count += newMIB.total_access_count;
-    min_access_count = newMIB.min_access_count < min_access_count ? newMIB.min_access_count : min_access_count;
-    max_access_count = newMIB.max_access_count < max_access_count ? newMIB.max_access_count : max_access_count;
+  TotalAccessCount += newMIB.TotalAccessCount;
+  MinAccessCount = newMIB.MinAccessCount < MinAccessCount ? newMIB.MinAccessCount : MinAccessCount;
+  MaxAccessCount = newMIB.MaxAccessCount < MaxAccessCount ? newMIB.MaxAccessCount : MaxAccessCount;
 
-    total_size += newMIB.total_size;
-    min_size = newMIB.min_size < min_size ? newMIB.min_size : min_size;
-    max_size = newMIB.max_size < max_size ? newMIB.max_size : max_size;
+  TotalSize += newMIB.TotalSize;
+  MinSize = newMIB.MinSize < MinSize ? newMIB.MinSize : MinSize;
+  MaxSize = newMIB.MaxSize < MaxSize ? newMIB.MaxSize : MaxSize;
 
-    total_lifetime += newMIB.total_lifetime;
-    min_lifetime = newMIB.min_lifetime < min_lifetime ? newMIB.min_lifetime : min_lifetime;
-    max_lifetime = newMIB.max_lifetime > max_lifetime ? newMIB.max_lifetime : max_lifetime;
+  TotalLifetime += newMIB.TotalLifetime;
+  MinLifetime = newMIB.MinLifetime < MinLifetime ? newMIB.MinLifetime : MinLifetime;
+  MaxLifetime = newMIB.MaxLifetime > MaxLifetime ? newMIB.MaxLifetime : MaxLifetime;
 
-    // We know newMIB was deallocated later, so just need to check if it was
-    // allocated before last one deallocated.
-    num_lifetime_overlaps += newMIB.alloc_timestamp < dealloc_timestamp;
-    alloc_timestamp = newMIB.alloc_timestamp;
-    dealloc_timestamp = newMIB.dealloc_timestamp;
+  // We know newMIB was deallocated later, so just need to check if it was
+  // allocated before last one deallocated.
+  NumLifetimeOverlaps += newMIB.AllocTimestamp < DeallocTimestamp;
+  AllocTimestamp = newMIB.AllocTimestamp;
+  DeallocTimestamp = newMIB.DeallocTimestamp;
 
-    num_same_alloc_cpu += alloc_cpu_id == newMIB.alloc_cpu_id;
-    num_same_dealloc_cpu += dealloc_cpu_id == newMIB.dealloc_cpu_id;
-    alloc_cpu_id = newMIB.alloc_cpu_id;
-    dealloc_cpu_id = newMIB.dealloc_cpu_id;
-  }
-});
+  NumSameAllocCpu += AllocCpuId == newMIB.AllocCpuId;
+  NumSameDeallocCpu += DeallocCpuId == newMIB.DeallocCpuId;
+  AllocCpuId = newMIB.AllocCpuId;
+  DeallocCpuId = newMIB.DeallocCpuId;
+}
+
+#ifdef _MSC_VER
+} __pragma(pack(pop));
+#else
+} __attribute__((__packed__));
+#endif
 
 } // namespace memprof
 } // namespace llvm

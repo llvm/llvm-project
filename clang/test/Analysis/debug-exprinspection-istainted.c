@@ -8,7 +8,7 @@ void clang_analyzer_isTainted(char);
 void clang_analyzer_isTainted_any_suffix(char);
 void clang_analyzer_isTainted_many_arguments(char, int, int);
 
-void foo() {
+void foo(void) {
   char buf[32] = "";
   clang_analyzer_isTainted(buf[0]);            // expected-warning {{NO}}
   clang_analyzer_isTainted_any_suffix(buf[0]); // expected-warning {{NO}}
@@ -19,7 +19,7 @@ void foo() {
   int tainted_value = buf[0]; // no-warning
 }
 
-void exactly_one_argument_required() {
+void exactly_one_argument_required(void) {
   char buf[32] = "";
   scanf("%s", buf);
   clang_analyzer_isTainted_many_arguments(buf[0], 42, 42);

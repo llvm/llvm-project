@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-void *f0()
+void *f0(void)
 {
   return __builtin_thread_pointer();
 }
@@ -32,7 +32,7 @@ double test_vcvtrd1(double d) {
   return __builtin_arm_vcvtr_d(d, 1);
 }
 
-void test_eh_return_data_regno()
+void test_eh_return_data_regno(void)
 {
   // CHECK: store volatile i32 0
   // CHECK: store volatile i32 1
@@ -41,42 +41,42 @@ void test_eh_return_data_regno()
   res = __builtin_eh_return_data_regno(1);
 }
 
-void nop() {
+void nop(void) {
   // CHECK: call {{.*}} @llvm.arm.hint(i32 0)
   __builtin_arm_nop();
 }
 
-void yield() {
+void yield(void) {
   // CHECK: call {{.*}} @llvm.arm.hint(i32 1)
   __builtin_arm_yield();
 }
 
-void wfe() {
+void wfe(void) {
   // CHECK: call {{.*}} @llvm.arm.hint(i32 2)
   __builtin_arm_wfe();
 }
 
-void wfi() {
+void wfi(void) {
   // CHECK: call {{.*}} @llvm.arm.hint(i32 3)
   __builtin_arm_wfi();
 }
 
-void sev() {
+void sev(void) {
   // CHECK: call {{.*}} @llvm.arm.hint(i32 4)
   __builtin_arm_sev();
 }
 
-void sevl() {
+void sevl(void) {
   // CHECK: call {{.*}} @llvm.arm.hint(i32 5)
   __builtin_arm_sevl();
 }
 
-void dbg() {
+void dbg(void) {
   // CHECK: call {{.*}} @llvm.arm.dbg(i32 0)
   __builtin_arm_dbg(0);
 }
 
-void test_barrier() {
+void test_barrier(void) {
   //CHECK: call {{.*}} @llvm.arm.dmb(i32 1)
   //CHECK: call {{.*}} @llvm.arm.dsb(i32 2)
   //CHECK: call {{.*}} @llvm.arm.isb(i32 3)
@@ -157,28 +157,28 @@ void stc2l(void *i) {
   __builtin_arm_stc2l(1, 2, i);
 }
 
-void cdp() {
+void cdp(void) {
   // CHECK: define{{.*}} void @cdp()
   // CHECK: call void @llvm.arm.cdp(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6)
   // CHECK-NEXT: ret void
   __builtin_arm_cdp(1, 2, 3, 4, 5, 6);
 }
 
-void cdp2() {
+void cdp2(void) {
   // CHECK: define{{.*}} void @cdp2()
   // CHECK: call void @llvm.arm.cdp2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6)
   // CHECK-NEXT: ret void
   __builtin_arm_cdp2(1, 2, 3, 4, 5, 6);
 }
 
-unsigned mrc() {
+unsigned mrc(void) {
   // CHECK: define{{.*}} i32 @mrc()
   // CHECK: [[R:%.*]] = call i32 @llvm.arm.mrc(i32 15, i32 0, i32 13, i32 0, i32 3)
   // CHECK-NEXT: ret i32 [[R]]
   return __builtin_arm_mrc(15, 0, 13, 0, 3);
 }
 
-unsigned mrc2() {
+unsigned mrc2(void) {
   // CHECK: define{{.*}} i32 @mrc2()
   // CHECK: [[R:%.*]] = call i32 @llvm.arm.mrc2(i32 15, i32 0, i32 13, i32 0, i32 3)
   // CHECK-NEXT: ret i32 [[R]]
@@ -209,31 +209,31 @@ void mcrr2(uint64_t a) {
   __builtin_arm_mcrr2(15, 0, a, 0);
 }
 
-uint64_t mrrc() {
+uint64_t mrrc(void) {
   // CHECK: define{{.*}} i64 @mrrc()
   // CHECK: call { i32, i32 } @llvm.arm.mrrc(i32 15, i32 0, i32 0)
   return __builtin_arm_mrrc(15, 0, 0);
 }
 
-uint64_t mrrc2() {
+uint64_t mrrc2(void) {
   // CHECK: define{{.*}} i64 @mrrc2()
   // CHECK: call { i32, i32 } @llvm.arm.mrrc2(i32 15, i32 0, i32 0)
   return __builtin_arm_mrrc2(15, 0, 0);
 }
 
-unsigned rsr() {
+unsigned rsr(void) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_volatile_register.i32(metadata ![[M0:.*]])
   // CHECK-NEXT: ret i32 [[V0]]
   return __builtin_arm_rsr("cp1:2:c3:c4:5");
 }
 
-unsigned long long rsr64() {
+unsigned long long rsr64(void) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M1:.*]])
   // CHECK-NEXT: ret i64 [[V0]]
   return __builtin_arm_rsr64("cp1:2:c3");
 }
 
-void *rsrp() {
+void *rsrp(void) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_volatile_register.i32(metadata ![[M2:.*]])
   // CHECK-NEXT: [[V1:[%A-Za-z0-9.]+]] = inttoptr i32 [[V0]] to i8*
   // CHECK-NEXT: ret i8* [[V1]]

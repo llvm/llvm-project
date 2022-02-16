@@ -177,7 +177,7 @@ void test9(void) {
   __unsafe_unretained Foo *p = get_object();
   use_block(^{ [p run]; });
 }
-void test9_fin() {}
+void test9_fin(void) {}
 
 // CHECK-LABEL: define{{.*}} void @test10()
 // CHECK-NOT:   define linkonce_odr hidden void @__copy_helper
@@ -188,4 +188,4 @@ void test10(void) {
   UnsafeFooPtr p = get_object();
   use_block(^{ [p run]; });
 }
-void test10_fin() {}
+void test10_fin(void) {}

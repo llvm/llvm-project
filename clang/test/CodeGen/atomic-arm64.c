@@ -26,7 +26,7 @@ extern _Atomic(pointer_quad_t) a_pointer_quad;
 // CHECK-NEXT: store i8 1, i8* [[TEMP]]
 // CHECK-NEXT: [[T0:%.*]] = load i8, i8* [[TEMP]], align 1
 // CHECK-NEXT: store atomic i8 [[T0]], i8* @a_bool seq_cst, align 1
-void test0() {
+void test0(void) {
   __c11_atomic_store(&a_bool, 1, memory_order_seq_cst);
 }
 
@@ -36,7 +36,7 @@ void test0() {
 // CHECK-NEXT: [[T0:%.*]] = bitcast float* [[TEMP]] to i32*
 // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[T0]], align 4
 // CHECK-NEXT: store atomic i32 [[T1]], i32* bitcast (float* @a_float to i32*) seq_cst, align 4
-void test1() {
+void test1(void) {
   __c11_atomic_store(&a_float, 3, memory_order_seq_cst);
 }
 
@@ -46,7 +46,7 @@ void test1() {
 // CHECK-NEXT: [[T0:%.*]] = bitcast i8** [[TEMP]] to i64*
 // CHECK-NEXT: [[T1:%.*]] = load i64, i64* [[T0]], align 8
 // CHECK-NEXT: store atomic i64 [[T1]], i64* bitcast (i8** @a_pointer to i64*) seq_cst, align 8
-void test2() {
+void test2(void) {
   __c11_atomic_store(&a_pointer, &a_bool, memory_order_seq_cst);
 }
 

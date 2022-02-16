@@ -35,12 +35,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
+
   // [range.range]
+
   template <class _Tp>
   concept range = requires(_Tp& __t) {
     ranges::begin(__t); // sometimes equality-preserving
     ranges::end(__t);
   };
+
+  template <class _Tp>
+  concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp>>;
 
   template<class _Range>
   concept borrowed_range = range<_Range> &&
@@ -62,6 +67,8 @@ namespace ranges {
 
   template <range _Rp>
   using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp>>;
+
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
   // [range.sized]
   template <class _Tp>
@@ -92,9 +99,6 @@ namespace ranges {
   // [range.refinements], other range refinements
   template <class _Rp, class _Tp>
   concept output_range = range<_Rp> && output_iterator<iterator_t<_Rp>, _Tp>;
-
-  template <class _Tp>
-  concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp>>;
 
   template <class _Tp>
   concept forward_range = input_range<_Tp> && forward_iterator<iterator_t<_Tp>>;
@@ -130,6 +134,8 @@ namespace ranges {
      (!view<remove_cvref_t<_Tp>> &&
       (is_lvalue_reference_v<_Tp> ||
        (movable<remove_reference_t<_Tp>> && !__is_std_initializer_list<remove_cvref_t<_Tp>>))));
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 } // namespace ranges
 

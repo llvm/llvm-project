@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::ranges::end
 // std::ranges::cend
@@ -16,6 +15,7 @@
 #include <ranges>
 
 #include <cassert>
+#include <utility>
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -28,6 +28,10 @@ static_assert(!std::is_invocable_v<RangeEndT, int (&&)[]>);
 static_assert(!std::is_invocable_v<RangeEndT, int (&)[]>);
 static_assert(!std::is_invocable_v<RangeEndT, int (&&)[10]>);
 static_assert( std::is_invocable_v<RangeEndT, int (&)[10]>);
+static_assert(!std::is_invocable_v<RangeCEndT, int (&&)[]>);
+static_assert(!std::is_invocable_v<RangeCEndT, int (&)[]>);
+static_assert(!std::is_invocable_v<RangeCEndT, int (&&)[10]>);
+static_assert( std::is_invocable_v<RangeCEndT, int (&)[10]>);
 
 struct Incomplete;
 static_assert(!std::is_invocable_v<RangeEndT, Incomplete(&&)[]>);
@@ -91,39 +95,17 @@ constexpr bool testArray() {
   return true;
 }
 
-struct EndMemberFunction {
-  int x;
-  constexpr const int *begin() const { return nullptr; }
-  constexpr const int *end() const { return &x; }
-  friend constexpr int *end(EndMemberFunction const&);
-};
-
 struct EndMemberReturnsInt {
   int begin() const;
   int end() const;
 };
-
 static_assert(!std::is_invocable_v<RangeEndT, EndMemberReturnsInt const&>);
 
 struct EndMemberReturnsVoidPtr {
   const void *begin() const;
   const void *end() const;
 };
-
 static_assert(!std::is_invocable_v<RangeEndT, EndMemberReturnsVoidPtr const&>);
-
-struct Empty { };
-struct EmptyEndMember {
-  Empty begin() const;
-  Empty end() const;
-};
-struct EmptyPtrEndMember {
-  Empty x;
-  constexpr const Empty *begin() const { return nullptr; }
-  constexpr const Empty *end() const { return &x; }
-};
-
-static_assert(!std::is_invocable_v<RangeEndT, EmptyEndMember const&>);
 
 struct PtrConvertible {
   operator int*() const;
@@ -132,13 +114,11 @@ struct PtrConvertibleEndMember {
   PtrConvertible begin() const;
   PtrConvertible end() const;
 };
-
 static_assert(!std::is_invocable_v<RangeEndT, PtrConvertibleEndMember const&>);
 
 struct NoBeginMember {
   constexpr const int *end();
 };
-
 static_assert(!std::is_invocable_v<RangeEndT, NoBeginMember const&>);
 
 struct NonConstEndMember {
@@ -146,7 +126,6 @@ struct NonConstEndMember {
   constexpr int *begin() { return nullptr; }
   constexpr int *end() { return &x; }
 };
-
 static_assert( std::is_invocable_v<RangeEndT,  NonConstEndMember &>);
 static_assert(!std::is_invocable_v<RangeEndT,  NonConstEndMember const&>);
 static_assert(!std::is_invocable_v<RangeCEndT, NonConstEndMember &>);
@@ -159,6 +138,26 @@ struct EnabledBorrowingEndMember {
 
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<EnabledBorrowingEndMember> = true;
+
+struct EndMemberFunction {
+  int x;
+  constexpr const int *begin() const { return nullptr; }
+  constexpr const int *end() const { return &x; }
+  friend constexpr int *end(EndMemberFunction const&);
+};
+
+struct Empty { };
+struct EmptyEndMember {
+  Empty begin() const;
+  Empty end() const;
+};
+static_assert(!std::is_invocable_v<RangeEndT, EmptyEndMember const&>);
+
+struct EmptyPtrEndMember {
+  Empty x;
+  constexpr const Empty *begin() const { return nullptr; }
+  constexpr const Empty *end() const { return &x; }
+};
 
 constexpr bool testEndMember() {
   EndMember a;
@@ -199,18 +198,47 @@ static_assert(!std::is_invocable_v<RangeEndT,  EndFunction &>);
 static_assert( std::is_invocable_v<RangeCEndT, EndFunction const&>);
 static_assert( std::is_invocable_v<RangeCEndT, EndFunction &>);
 
-struct EndFunctionWithDataMember {
-  int x;
-  int end;
-  friend constexpr const int *begin(EndFunctionWithDataMember const&) { return nullptr; }
-  friend constexpr const int *end(EndFunctionWithDataMember const& bf) { return &bf.x; }
+struct EndFunctionReturnsInt {
+  friend constexpr int begin(EndFunctionReturnsInt const&);
+  friend constexpr int end(EndFunctionReturnsInt const&);
 };
+static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsInt const&>);
 
-struct EndFunctionWithPrivateEndMember : private EndMember {
-  int y;
-  friend constexpr const int *begin(EndFunctionWithPrivateEndMember const&) { return nullptr; }
-  friend constexpr const int *end(EndFunctionWithPrivateEndMember const& bf) { return &bf.y; }
+struct EndFunctionReturnsVoidPtr {
+  friend constexpr void *begin(EndFunctionReturnsVoidPtr const&);
+  friend constexpr void *end(EndFunctionReturnsVoidPtr const&);
 };
+static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsVoidPtr const&>);
+
+struct EndFunctionReturnsEmpty {
+  friend constexpr Empty begin(EndFunctionReturnsEmpty const&);
+  friend constexpr Empty end(EndFunctionReturnsEmpty const&);
+};
+static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsEmpty const&>);
+
+struct EndFunctionReturnsPtrConvertible {
+  friend constexpr PtrConvertible begin(EndFunctionReturnsPtrConvertible const&);
+  friend constexpr PtrConvertible end(EndFunctionReturnsPtrConvertible const&);
+};
+static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsPtrConvertible const&>);
+
+struct NoBeginFunction {
+  friend constexpr const int *end(NoBeginFunction const&);
+};
+static_assert(!std::is_invocable_v<RangeEndT, NoBeginFunction const&>);
+
+struct EndFunctionByValue {
+  friend constexpr int *begin(EndFunctionByValue) { return nullptr; }
+  friend constexpr int *end(EndFunctionByValue) { return &globalBuff[1]; }
+};
+static_assert(!std::is_invocable_v<RangeCEndT, EndFunctionByValue>);
+
+struct EndFunctionEnabledBorrowing {
+  friend constexpr int *begin(EndFunctionEnabledBorrowing) { return nullptr; }
+  friend constexpr int *end(EndFunctionEnabledBorrowing) { return &globalBuff[2]; }
+};
+template<>
+inline constexpr bool std::ranges::enable_borrowed_range<EndFunctionEnabledBorrowing> = true;
 
 struct EndFunctionReturnsEmptyPtr {
   Empty x;
@@ -218,54 +246,20 @@ struct EndFunctionReturnsEmptyPtr {
   friend constexpr const Empty *end(EndFunctionReturnsEmptyPtr const& bf) { return &bf.x; }
 };
 
-struct EndFunctionByValue {
-  friend constexpr int *begin(EndFunctionByValue) { return nullptr; }
-  friend constexpr int *end(EndFunctionByValue) { return &globalBuff[1]; }
+struct EndFunctionWithDataMember {
+  int x;
+  int end;
+  friend constexpr const int *begin(EndFunctionWithDataMember const&) { return nullptr; }
+  friend constexpr const int *end(EndFunctionWithDataMember const& bf) { return &bf.x; }
 };
 
-static_assert(!std::is_invocable_v<RangeCEndT, EndFunctionByValue>);
-
-struct EndFunctionEnabledBorrowing {
-  friend constexpr int *begin(EndFunctionEnabledBorrowing) { return nullptr; }
-  friend constexpr int *end(EndFunctionEnabledBorrowing) { return &globalBuff[2]; }
+struct EndFunctionWithPrivateEndMember {
+  int y;
+  friend constexpr const int *begin(EndFunctionWithPrivateEndMember const&) { return nullptr; }
+  friend constexpr const int *end(EndFunctionWithPrivateEndMember const& bf) { return &bf.y; }
+private:
+  const int *end() const;
 };
-
-template<>
-inline constexpr bool std::ranges::enable_borrowed_range<EndFunctionEnabledBorrowing> = true;
-
-struct EndFunctionReturnsInt {
-  friend constexpr int begin(EndFunctionReturnsInt const&);
-  friend constexpr int end(EndFunctionReturnsInt const&);
-};
-
-static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsInt const&>);
-
-struct EndFunctionReturnsVoidPtr {
-  friend constexpr void *begin(EndFunctionReturnsVoidPtr const&);
-  friend constexpr void *end(EndFunctionReturnsVoidPtr const&);
-};
-
-static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsVoidPtr const&>);
-
-struct EndFunctionReturnsEmpty {
-  friend constexpr Empty begin(EndFunctionReturnsEmpty const&);
-  friend constexpr Empty end(EndFunctionReturnsEmpty const&);
-};
-
-static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsEmpty const&>);
-
-struct EndFunctionReturnsPtrConvertible {
-  friend constexpr PtrConvertible begin(EndFunctionReturnsPtrConvertible const&);
-  friend constexpr PtrConvertible end(EndFunctionReturnsPtrConvertible const&);
-};
-
-static_assert(!std::is_invocable_v<RangeEndT, EndFunctionReturnsPtrConvertible const&>);
-
-struct NoBeginFunction {
-  friend constexpr const int *end(NoBeginFunction const&);
-};
-
-static_assert(!std::is_invocable_v<RangeEndT, NoBeginFunction const&>);
 
 struct BeginMemberEndFunction {
   int x;

@@ -331,35 +331,35 @@ __m128 test_mm_div_ss(__m128 A, __m128 B) {
   return _mm_div_ss(A, B);
 }
 
-unsigned int test_MM_GET_EXCEPTION_MASK() {
+unsigned int test_MM_GET_EXCEPTION_MASK(void) {
   // CHECK-LABEL: test_MM_GET_EXCEPTION_MASK
   // CHECK: call void @llvm.x86.sse.stmxcsr(i8* %{{.*}})
   // CHECK: and i32 %{{.*}}, 8064
   return _MM_GET_EXCEPTION_MASK();
 }
 
-unsigned int test_MM_GET_EXCEPTION_STATE() {
+unsigned int test_MM_GET_EXCEPTION_STATE(void) {
   // CHECK-LABEL: test_MM_GET_EXCEPTION_STATE
   // CHECK: call void @llvm.x86.sse.stmxcsr(i8* %{{.*}})
   // CHECK: and i32 %{{.*}}, 63
   return _MM_GET_EXCEPTION_STATE();
 }
 
-unsigned int test_MM_GET_FLUSH_ZERO_MODE() {
+unsigned int test_MM_GET_FLUSH_ZERO_MODE(void) {
   // CHECK-LABEL: test_MM_GET_FLUSH_ZERO_MODE
   // CHECK: call void @llvm.x86.sse.stmxcsr(i8* %{{.*}})
   // CHECK: and i32 %{{.*}}, 32768
   return _MM_GET_FLUSH_ZERO_MODE();
 }
 
-unsigned int test_MM_GET_ROUNDING_MODE() {
+unsigned int test_MM_GET_ROUNDING_MODE(void) {
   // CHECK-LABEL: test_MM_GET_ROUNDING_MODE
   // CHECK: call void @llvm.x86.sse.stmxcsr(i8* %{{.*}})
   // CHECK: and i32 %{{.*}}, 24576
   return _MM_GET_ROUNDING_MODE();
 }
 
-unsigned int test_mm_getcsr() {
+unsigned int test_mm_getcsr(void) {
   // CHECK-LABEL: test_mm_getcsr
   // CHECK: call void @llvm.x86.sse.stmxcsr(i8* %{{.*}})
   // CHECK: load i32
@@ -627,13 +627,13 @@ __m128 test_mm_setr_ps(float A, float B, float C, float D) {
   return _mm_setr_ps(A, B, C, D);
 }
 
-__m128 test_mm_setzero_ps() {
+__m128 test_mm_setzero_ps(void) {
   // CHECK-LABEL: test_mm_setzero_ps
   // CHECK: store <4 x float> zeroinitializer
   return _mm_setzero_ps();
 }
 
-void test_mm_sfence() {
+void test_mm_sfence(void) {
   // CHECK-LABEL: test_mm_sfence
   // CHECK: call void @llvm.x86.sse.sfence()
   _mm_sfence();
@@ -784,7 +784,7 @@ int test_mm_ucomineq_ss(__m128 A, __m128 B) {
   return _mm_ucomineq_ss(A, B);
 }
 
-__m128 test_mm_undefined_ps() {
+__m128 test_mm_undefined_ps(void) {
   // CHECK-LABEL: test_mm_undefined_ps
   // CHECK: ret <4 x float> zeroinitializer
   return _mm_undefined_ps();

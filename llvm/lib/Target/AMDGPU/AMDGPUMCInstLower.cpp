@@ -240,7 +240,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       raw_svector_ostream CodeStream(CodeBytes);
 
       std::unique_ptr<MCCodeEmitter> InstEmitter(createSIMCCodeEmitter(
-          *STI.getInstrInfo(), *OutContext.getRegisterInfo(), OutContext));
+          *STI.getInstrInfo(), OutContext));
       InstEmitter->encodeInstruction(TmpInst, CodeStream, Fixups, STI);
 
       assert(CodeBytes.size() == STI.getInstrInfo()->getInstSizeInBytes(*MI));

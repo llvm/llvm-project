@@ -17,15 +17,14 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& lhs, SV rhs, bool x)
 {
     assert((lhs < rhs) == x);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     typedef std::string_view SV;
     test(S(""), SV(""), false);
@@ -44,9 +43,9 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), SV("abcde"), false);
     test(S("abcdefghijklmnopqrst"), SV("abcdefghij"), false);
     test(S("abcdefghijklmnopqrst"), SV("abcdefghijklmnopqrst"), false);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     typedef std::basic_string_view<char, std::char_traits<char>> SV;
     test(S(""), SV(""), false);
@@ -65,7 +64,17 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), SV("abcde"), false);
     test(S("abcdefghijklmnopqrst"), SV("abcdefghij"), false);
     test(S("abcdefghijklmnopqrst"), SV("abcdefghijklmnopqrst"), false);
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

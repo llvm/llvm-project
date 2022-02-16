@@ -422,7 +422,7 @@ static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
   // shared-memory module, which we don't want to be responsible for.
   auto *Subtarget = TM.getSubtargetImpl();
   auto TLS = Subtarget->hasAtomics() && Subtarget->hasBulkMemory()
-                 ? GlobalValue::LocalExecTLSModel
+                 ? GlobalValue::GeneralDynamicTLSModel
                  : GlobalValue::NotThreadLocal;
   GV->setThreadLocalMode(TLS);
   return GV;

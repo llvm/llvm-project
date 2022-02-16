@@ -9,12 +9,12 @@ typedef const void * CFTypeRef;
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 
-extern CFTypeRef CFCreateSomethingAudited();
+extern CFTypeRef CFCreateSomethingAudited(void);
 #pragma clang arc_cf_code_audited end
 
-extern CFTypeRef CFCreateSomethingUnaudited();
+extern CFTypeRef CFCreateSomethingUnaudited(void);
 
-void testAudited() {
+void testAudited(void) {
   CFTypeRef obj = CFCreateSomethingAudited(); // no-warning
   CFRelease(obj); // no-warning
 
@@ -23,7 +23,7 @@ void testAudited() {
   CFRelease(obj2); // no-warning
 }
 
-void testUnaudited() {
+void testUnaudited(void) {
   CFTypeRef obj = CFCreateSomethingUnaudited(); // no-warning
   CFRelease(obj); // no-warning
 

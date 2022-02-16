@@ -18,15 +18,14 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& lhs, const typename S::value_type* rhs, bool x)
 {
     assert((lhs != rhs) == x);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     test(S(""), "", false);
     test(S(""), "abcde", true);
@@ -44,9 +43,9 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), "abcde", true);
     test(S("abcdefghijklmnopqrst"), "abcdefghij", true);
     test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", false);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(""), "", false);
     test(S(""), "abcde", true);
@@ -64,7 +63,17 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), "abcde", true);
     test(S("abcdefghijklmnopqrst"), "abcdefghij", true);
     test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", false);
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

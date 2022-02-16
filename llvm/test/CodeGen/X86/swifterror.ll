@@ -98,17 +98,15 @@ define float @caller(i8* %error_ref) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -16
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    movq %rdi, (%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
 ; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB1_2
 ; CHECK-O0-NEXT:  ## %bb.1: ## %cont
-; CHECK-O0-NEXT:    movq (%rsp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
@@ -201,8 +199,8 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0:       ## %bb.0: ## %entry
 ; CHECK-O0-NEXT:    pushq %r12
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    subq $48, %rsp
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-O0-NEXT:    subq $32, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -16
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
@@ -213,8 +211,6 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:    callq _foo
 ; CHECK-O0-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB2_4
 ; CHECK-O0-NEXT:  ## %bb.2: ## %cont
@@ -233,7 +229,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    addq $48, %rsp
+; CHECK-O0-NEXT:    addq $32, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
 ;
@@ -656,23 +652,21 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0:       ## %bb.0: ## %entry
 ; CHECK-O0-NEXT:    pushq %r12
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    subq $64, %rsp
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-O0-NEXT:    subq $48, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -16
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, (%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
-; CHECK-O0-NEXT:    leaq 40(%rsp), %rdi
+; CHECK-O0-NEXT:    leaq 24(%rsp), %rdi
 ; CHECK-O0-NEXT:    movl $1, %esi
 ; CHECK-O0-NEXT:    callq _foo_sret
 ; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB6_2
 ; CHECK-O0-NEXT:  ## %bb.1: ## %cont
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq (%rsp), %rax ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
@@ -680,7 +674,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    addq $64, %rsp
+; CHECK-O0-NEXT:    addq $48, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
 ;
@@ -790,7 +784,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-O0-NEXT:    movq %rsp, %rbp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-O0-NEXT:    pushq %r12
-; CHECK-O0-NEXT:    subq $56, %rsp
+; CHECK-O0-NEXT:    subq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -24
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
@@ -800,8 +794,6 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
 ; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB7_2
 ; CHECK-O0-NEXT:  ## %bb.1: ## %cont
@@ -819,8 +811,6 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
 ; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB7_4
 ; CHECK-O0-NEXT:  ## %bb.3: ## %cont2

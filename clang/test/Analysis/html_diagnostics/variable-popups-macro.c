@@ -8,7 +8,7 @@ void bar(int);
 
 #define MACRO if (b)
 
-void foo2() {
+void foo2(void) {
   int a;
   int b = 1;
   MACRO

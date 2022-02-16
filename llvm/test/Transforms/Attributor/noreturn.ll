@@ -17,7 +17,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; }
 ;
 define void @srec0() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@srec0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -36,7 +36,7 @@ entry:
 ; }
 ;
 define i32 @srec16(i32 %a) #0 {
-; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@srec16
 ; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -128,7 +128,7 @@ return:                                           ; No predecessors!
 ; }
 ;
 define i32 @multiple_noreturn_calls(i32 %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@multiple_noreturn_calls
 ; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -192,9 +192,9 @@ entry:
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
-; CHECK: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone uwtable willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
+; CHECK: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone willreturn uwtable }
 ; CHECK: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; CHECK: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn }
+; CHECK: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable }
 ; CHECK: attributes #[[ATTR4]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.

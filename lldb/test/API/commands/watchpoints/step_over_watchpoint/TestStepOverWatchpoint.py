@@ -54,9 +54,7 @@ class TestStepOverWatchpoint(TestBase):
 
         # resolve_location=True, read=True, write=False
         read_watchpoint = read_value.Watch(True, True, False, error)
-        self.assertTrue(error.Success(),
-                        "Error while setting watchpoint: %s" %
-                        error.GetCString())
+        self.assertSuccess(error, "Error while setting watchpoint")
         self.assertTrue(read_watchpoint, "Failed to set read watchpoint.")
 
         thread.StepOver()
@@ -84,9 +82,7 @@ class TestStepOverWatchpoint(TestBase):
         # resolve_location=True, read=False, write=True
         write_watchpoint = write_value.Watch(True, False, True, error)
         self.assertTrue(write_watchpoint, "Failed to set write watchpoint.")
-        self.assertTrue(error.Success(),
-                        "Error while setting watchpoint: %s" %
-                        error.GetCString())
+        self.assertSuccess(error, "Error while setting watchpoint")
 
         thread.StepOver()
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonWatchpoint,

@@ -19,7 +19,7 @@ struct X { int a[2]; };
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @test.i23, align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int test() {
+int test(void) {
   static int i23 = (int) &(((struct X *)0)->a[1]);
   return i23;
 }

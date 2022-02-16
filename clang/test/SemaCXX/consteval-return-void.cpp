@@ -10,8 +10,8 @@ template <> consteval int FunT2<int>() { return; } // expected-error {{non-void 
 enum E {};
 
 constexpr E operator+(E,E) { return; }	// expected-error {{non-void constexpr function 'operator+' should return a value}}
-consteval E operator+(E,E) { return; }  // expected-error {{non-void consteval function 'operator+' should return a value}}
-template <typename T> constexpr E operator-(E,E) { return; } // expected-error {{non-void constexpr function 'operator-' should return a value}}
+consteval E operator-(E,E) { return; }  // expected-error {{non-void consteval function 'operator-' should return a value}}
+template <typename T> constexpr E operator+(E,E) { return; } // expected-error {{non-void constexpr function 'operator+' should return a value}}
 template <typename T> consteval E operator-(E,E) { return; } // expected-error {{non-void consteval function 'operator-' should return a value}}
 
 template <typename T> constexpr E operator*(E,E);

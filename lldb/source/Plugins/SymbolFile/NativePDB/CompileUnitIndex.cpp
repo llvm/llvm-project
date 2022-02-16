@@ -162,7 +162,7 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
   ParseExtendedInfo(m_index, *cci);
   ParseInlineeLineTableForCompileUnit(*cci);
 
-  cci->m_strings.initialize(debug_stream.getSubsectionsArray());
+  cci->m_strings.initialize(cci->m_debug_stream.getSubsectionsArray());
   PDBStringTable &strings = cantFail(m_index.pdb().getStringTable());
   cci->m_strings.setStrings(strings.getStringTable());
 

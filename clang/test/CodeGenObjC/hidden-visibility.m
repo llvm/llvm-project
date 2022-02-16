@@ -18,7 +18,7 @@
 
 @protocol Prot0 @end
 
-id f0() {
+id f0(void) {
   return @protocol(Prot0);
 }
 

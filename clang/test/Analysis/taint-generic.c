@@ -116,7 +116,7 @@ void bufferScanfAssignment(int x) {
   }
 }
 
-void scanfArg() {
+void scanfArg(void) {
   int t = 0;
   scanf("%d", t); // expected-warning {{format specifies type 'int *' but the argument has type 'int'}}
 }
@@ -160,7 +160,7 @@ void testUncontrolledFormatString(char **p) {
 }
 
 int system(const char *command);
-void testTaintSystemCall() {
+void testTaintSystemCall(void) {
   char buffer[156];
   char addr[128];
   scanf("%s", addr);
@@ -171,7 +171,7 @@ void testTaintSystemCall() {
   system(buffer); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-void testTaintSystemCall2() {
+void testTaintSystemCall2(void) {
   // Test that snpintf transfers taint.
   char buffern[156];
   char addr[128];
@@ -180,7 +180,7 @@ void testTaintSystemCall2() {
   system(buffern); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-void testTaintSystemCall3() {
+void testTaintSystemCall3(void) {
   char buffern2[156];
   int numt;
   char addr[128];
@@ -189,13 +189,13 @@ void testTaintSystemCall3() {
   system(buffern2); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-void testGets() {
+void testGets(void) {
   char str[50];
   gets(str);
   system(str); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-void testTaintedBufferSize() {
+void testTaintedBufferSize(void) {
   size_t ts;
   scanf("%zd", &ts);
 
@@ -217,7 +217,7 @@ int socket(int, int, int);
 size_t read(int, void *, size_t);
 int  execl(const char *, const char *, ...);
 
-void testSocket() {
+void testSocket(void) {
   int sock;
   char buffer[100];
 
@@ -235,7 +235,7 @@ void testSocket() {
   execl(buffer, "filename", 0); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-void testStruct() {
+void testStruct(void) {
   struct {
     char buf[16];
     int length;
@@ -249,7 +249,7 @@ void testStruct() {
   __builtin_memcpy(buffer, tainted.buf, tainted.length); // expected-warning {{Untrusted data is used to specify the buffer size}}
 }
 
-void testStructArray() {
+void testStructArray(void) {
   struct {
     int length;
   } tainted[4];
@@ -274,7 +274,7 @@ void testStructArray() {
   __builtin_memcpy(dstbuf, srcbuf, tainted[2].length); // no-warning
 }
 
-void testUnion() {
+void testUnion(void) {
   union {
     int x;
     char y[4];
@@ -288,14 +288,14 @@ void testUnion() {
   __builtin_memcpy(buffer, tainted.y, tainted.x);
 }
 
-int testDivByZero() {
+int testDivByZero(void) {
   int x;
   scanf("%d", &x);
   return 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
 }
 
 // Zero-sized VLAs.
-void testTaintedVLASize() {
+void testTaintedVLASize(void) {
   int x;
   scanf("%d", &x);
   int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted size}}
@@ -353,7 +353,7 @@ int sprintf_propagates_taint(char *buf, char *msg) {
 }
 
 // Test configuration
-int mySource1();
+int mySource1(void);
 void mySource2(int*);
 void myScanf(const char*, ...);
 int myPropagator(int, int*);
@@ -361,38 +361,38 @@ int mySnprintf(char*, size_t, const char*, ...);
 bool isOutOfRange(const int*);
 void mySink(int, int, int);
 
-void testConfigurationSources1() {
+void testConfigurationSources1(void) {
   int x = mySource1();
   Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
 }
 
-void testConfigurationSources2() {
+void testConfigurationSources2(void) {
   int x;
   mySource2(&x);
   Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
 }
 
-void testConfigurationSources3() {
+void testConfigurationSources3(void) {
   int x, y;
   myScanf("%d %d", &x, &y);
   Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
 }
 
-void testConfigurationPropagation() {
+void testConfigurationPropagation(void) {
   int x = mySource1();
   int y;
   myPropagator(x, &y);
   Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
 }
 
-void testConfigurationFilter() {
+void testConfigurationFilter(void) {
   int x = mySource1();
   if (isOutOfRange(&x)) // the filter function
     return;
   Buffer[x] = 1; // no-warning
 }
 
-void testConfigurationSinks() {
+void testConfigurationSinks(void) {
   int x = mySource1();
   mySink(x, 1, 2);
   // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}

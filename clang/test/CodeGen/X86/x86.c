@@ -8,7 +8,7 @@
 // RUN: grep "st" %t1
 // RUN: grep "st(1)" %t1
 
-void test1() {
+void test1(void) {
   int d1, d2;
   asm ("" : "=a" (d1), "=b" (d2) :
        "c" (0), "d" (0), "S" (0), "D" (0), "t" (0), "u" (0));

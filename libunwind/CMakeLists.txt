@@ -88,6 +88,16 @@ option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requ
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
 option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." OFF)
 
+if(NOT CMAKE_SYSROOT AND LIBUNWIND_SYSROOT)
+  message(WARNING "LIBUNWIND_SYSROOT is deprecated, please use CMAKE_SYSROOT instead")
+endif()
+if(NOT CMAKE_CXX_COMPILER_TARGET AND LIBUNWIND_TARGET_TRIPLE)
+  message(WARNING "LIBUNWIND_TARGET_TRIPLE is deprecated, please use CMAKE_CXX_COMPILER_TARGET instead")
+endif()
+if(NOT CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN AND LIBUNWIND_GCC_TOOLCHAIN)
+  message(WARNING "LIBUNWIND_GCC_TOOLCHAIN is deprecated, please use CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN instead")
+endif()
+
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBUNWIND_INSTALL_LIBRARY "Install the libunwind library." ON)

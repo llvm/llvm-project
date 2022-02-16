@@ -25,8 +25,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <class _Ip, class _Fp>
 struct in_fun_result {
-  [[no_unique_address]] _Ip in;
-  [[no_unique_address]] _Fp fun;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Ip in;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Fp fun;
 
   template <class _I2, class _F2>
     requires convertible_to<const _Ip&, _I2> && convertible_to<const _Fp&, _F2>

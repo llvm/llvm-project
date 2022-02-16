@@ -142,6 +142,9 @@
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #endif
 
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+
 #if __cplusplus < 201103L
 #define _LIBCPP_CXX03_LANG
 #endif
@@ -561,8 +564,6 @@ typedef __char32_t char32_t;
 
 #elif defined(_LIBCPP_COMPILER_MSVC)
 
-#define _LIBCPP_TOSTRING2(x) #x
-#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 #define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
 
 #if _MSC_VER < 1900
@@ -1238,10 +1239,12 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #   define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #endif
 
-#if __has_attribute(require_constant_initialization)
-#  define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
+#if _LIBCPP_STD_VER > 17
+#  define _LIBCPP_CONSTINIT constinit
+#elif __has_attribute(require_constant_initialization)
+#  define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
 #else
-#  define _LIBCPP_SAFE_STATIC
+#  define _LIBCPP_CONSTINIT
 #endif
 
 #if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
@@ -1396,6 +1399,45 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
     __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
 #else
 # define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
+#endif
+
+#if __has_cpp_attribute(msvc::no_unique_address)
+   // MSVC implements [[no_unique_address]] as a silent no-op currently.
+   // (If/when MSVC breaks its C++ ABI, it will be changed to work as intended.)
+   // However, MSVC implements [[msvc::no_unique_address]] which does what
+   // [[no_unique_address]] is supposed to do, in general.
+
+   // Clang-cl does not yet (14.0) implement either [[no_unique_address]] or
+   // [[msvc::no_unique_address]] though. If/when it does implement
+   // [[msvc::no_unique_address]], this should be preferred though.
+#  define _LIBCPP_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+#  define _LIBCPP_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#  define _LIBCPP_NO_UNIQUE_ADDRESS /* nothing */
+   // Note that this can be replaced by #error as soon as clang-cl
+   // implements msvc::no_unique_address, since there should be no C++20
+   // compiler that doesn't support one of the two attributes at that point.
+   // We generally don't want to use this macro outside of C++20-only code,
+   // because using it conditionally in one language version only would make
+   // the ABI inconsistent.
+#endif
+
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_DIAGNOSTIC_PUSH _Pragma("clang diagnostic push")
+#  define _LIBCPP_DIAGNOSTIC_POP _Pragma("clang diagnostic pop")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str) _Pragma(_LIBCPP_TOSTRING(clang diagnostic ignored str))
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
+#elif defined(_LIBCPP_COMPILER_GCC)
+#  define _LIBCPP_DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
+#  define _LIBCPP_DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str) _Pragma(_LIBCPP_TOSTRING(GCC diagnostic ignored str))
+#else
+#  define _LIBCPP_DIAGNOSTIC_PUSH
+#  define _LIBCPP_DIAGNOSTIC_POP
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
 #endif
 
 #endif // __cplusplus

@@ -1396,10 +1396,6 @@ def LDUX : XForm_1_memOp<31, 53, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
                         "ldux $rD, $addr", IIC_LdStLDUX,
                         []>, RegConstraint<"$addr.ptrreg = $ea_result">,
                         NoEncode<"$ea_result">, isPPC64;
-
-def LDMX : XForm_1<31, 309, (outs g8rc:$rD), (ins memrr:$src),
-                   "ldmx $rD, $src", IIC_LdStLD, []>, isPPC64,
-                   Requires<[IsISA3_0]>;
 }
 
 let mayLoad = 1, hasNoSchedulingInfo = 1 in {

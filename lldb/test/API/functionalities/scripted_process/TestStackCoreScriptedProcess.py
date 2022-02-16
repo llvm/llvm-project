@@ -48,7 +48,7 @@ class StackCoreScriptedProcesTestCase(TestBase):
 
         self.assertTrue(main_module, "Invalid main module.")
         error = target.SetModuleLoadAddress(main_module, 0)
-        self.assertTrue(error.Success(), "Reloading main module at offset 0 failed.")
+        self.assertSuccess(error, "Reloading main module at offset 0 failed.")
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
         def cleanup():
@@ -77,7 +77,7 @@ class StackCoreScriptedProcesTestCase(TestBase):
 
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
-        self.assertTrue(error.Success(), error.GetCString())
+        self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
 

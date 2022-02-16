@@ -770,6 +770,10 @@ struct DSEState {
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
   /// basic block.
   MapVector<BasicBlock *, InstOverlapIntervalsTy> IOLs;
+  // Check if there are root nodes that are terminated by UnreachableInst.
+  // Those roots pessimize post-dominance queries. If there are such roots,
+  // fall back to CFG scan starting from all non-unreachable roots.
+  bool AnyUnreachableExit;
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
@@ -805,6 +809,10 @@ struct DSEState {
 
     // Collect whether there is any irreducible control flow in the function.
     ContainsIrreducibleLoops = mayContainIrreducibleControl(F, &LI);
+
+    AnyUnreachableExit = any_of(PDT.roots(), [](const BasicBlock *E) {
+      return isa<UnreachableInst>(E->getTerminator());
+    });
   }
 
   /// Return 'OW_Complete' if a store to the 'KillingLoc' location (by \p
@@ -1508,54 +1516,56 @@ struct DSEState {
         CommonPred = PDT.findNearestCommonDominator(CommonPred, BB);
       }
 
-      // If CommonPred is in the set of killing blocks, just check if it
-      // post-dominates MaybeDeadAccess.
-      if (KillingBlocks.count(CommonPred)) {
-        if (PDT.dominates(CommonPred, MaybeDeadAccess->getBlock()))
-          return {MaybeDeadAccess};
-        return None;
-      }
-
       // If the common post-dominator does not post-dominate MaybeDeadAccess,
       // there is a path from MaybeDeadAccess to an exit not going through a
       // killing block.
-      if (PDT.dominates(CommonPred, MaybeDeadAccess->getBlock())) {
-        SetVector<BasicBlock *> WorkList;
+      if (!PDT.dominates(CommonPred, MaybeDeadAccess->getBlock())) {
+        if (!AnyUnreachableExit)
+          return None;
 
-        // If CommonPred is null, there are multiple exits from the function.
-        // They all have to be added to the worklist.
-        if (CommonPred)
-          WorkList.insert(CommonPred);
-        else
-          for (BasicBlock *R : PDT.roots())
-            WorkList.insert(R);
-
-        NumCFGTries++;
-        // Check if all paths starting from an exit node go through one of the
-        // killing blocks before reaching MaybeDeadAccess.
-        for (unsigned I = 0; I < WorkList.size(); I++) {
-          NumCFGChecks++;
-          BasicBlock *Current = WorkList[I];
-          if (KillingBlocks.count(Current))
-            continue;
-          if (Current == MaybeDeadAccess->getBlock())
-            return None;
-
-          // MaybeDeadAccess is reachable from the entry, so we don't have to
-          // explore unreachable blocks further.
-          if (!DT.isReachableFromEntry(Current))
-            continue;
-
-          for (BasicBlock *Pred : predecessors(Current))
-            WorkList.insert(Pred);
-
-          if (WorkList.size() >= MemorySSAPathCheckLimit)
-            return None;
-        }
-        NumCFGSuccess++;
-        return {MaybeDeadAccess};
+        // Fall back to CFG scan starting at all non-unreachable roots if not
+        // all paths to the exit go through CommonPred.
+        CommonPred = nullptr;
       }
-      return None;
+
+      // If CommonPred itself is in the set of killing blocks, we're done.
+      if (KillingBlocks.count(CommonPred))
+        return {MaybeDeadAccess};
+
+      SetVector<BasicBlock *> WorkList;
+      // If CommonPred is null, there are multiple exits from the function.
+      // They all have to be added to the worklist.
+      if (CommonPred)
+        WorkList.insert(CommonPred);
+      else
+        for (BasicBlock *R : PDT.roots()) {
+          if (!isa<UnreachableInst>(R->getTerminator()))
+            WorkList.insert(R);
+        }
+
+      NumCFGTries++;
+      // Check if all paths starting from an exit node go through one of the
+      // killing blocks before reaching MaybeDeadAccess.
+      for (unsigned I = 0; I < WorkList.size(); I++) {
+        NumCFGChecks++;
+        BasicBlock *Current = WorkList[I];
+        if (KillingBlocks.count(Current))
+          continue;
+        if (Current == MaybeDeadAccess->getBlock())
+          return None;
+
+        // MaybeDeadAccess is reachable from the entry, so we don't have to
+        // explore unreachable blocks further.
+        if (!DT.isReachableFromEntry(Current))
+          continue;
+
+        for (BasicBlock *Pred : predecessors(Current))
+          WorkList.insert(Pred);
+
+        if (WorkList.size() >= MemorySSAPathCheckLimit)
+          return None;
+      }
+      NumCFGSuccess++;
     }
 
     // No aliasing MemoryUses of MaybeDeadAccess found, MaybeDeadAccess is

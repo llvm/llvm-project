@@ -115,7 +115,7 @@ struct tiny f_tiny(struct tiny x) {
 // CHECK: %[[XV:[^ ]+]] = zext i8 %{{[^ ]+}} to i64
 // CHECK: %[[HB:[^ ]+]] = shl i64 %[[XV]], 56
 // CHECK: = call i64 @f_tiny(i64 %[[HB]])
-void call_tiny() {
+void call_tiny(void) {
   struct tiny x = { 1 };
   f_tiny(x);
 }

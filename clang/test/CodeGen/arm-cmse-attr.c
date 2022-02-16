@@ -20,12 +20,12 @@ void f2(callback2_t *fptr)
     fptr();
 }
 
-void f3() __attribute__((cmse_nonsecure_entry));
-void f3()
+void f3(void) __attribute__((cmse_nonsecure_entry));
+void f3(void)
 {
 }
 
-void f4() __attribute__((cmse_nonsecure_entry))
+void f4(void) __attribute__((cmse_nonsecure_entry))
 {
 }
 

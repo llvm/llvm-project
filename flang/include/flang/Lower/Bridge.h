@@ -84,7 +84,7 @@ public:
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext() const;
 
-  bool validModule() { return getModule(); }
+  bool validModule() { return (module != nullptr); }
 
   //===--------------------------------------------------------------------===//
   // Perform the creation of an mlir::ModuleOp

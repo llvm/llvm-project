@@ -249,9 +249,6 @@ namespace llvm {
     SCALEFS,
     SCALEFS_RND,
 
-    // Unsigned Integer average.
-    AVG,
-
     /// Integer horizontal add/sub.
     HADD,
     HSUB,

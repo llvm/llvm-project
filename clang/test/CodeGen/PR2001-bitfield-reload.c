@@ -10,7 +10,7 @@ static int foo(int i) {
   return (x.f0 = i);
 }
 
-int bar() {
+int bar(void) {
   // CHECK: ret i32 1
   return foo(-5) == -1;
 }

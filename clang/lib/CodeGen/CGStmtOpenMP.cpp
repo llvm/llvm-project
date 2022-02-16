@@ -6817,10 +6817,10 @@ void CodeGenFunction::EmitOMPUseDevicePtrClause(
           // because it is always a void *. References are materialized in the
           // privatization scope, so the initialization here disregards the fact
           // the original variable is a reference.
-          QualType AddrQTy = getContext().getPointerType(
-              OrigVD->getType().getNonReferenceType());
-          llvm::Type *AddrTy = ConvertTypeForMem(AddrQTy);
-          Address InitAddr = Builder.CreateBitCast(InitAddrIt->second, AddrTy);
+          llvm::Type *Ty =
+              ConvertTypeForMem(OrigVD->getType().getNonReferenceType());
+          Address InitAddr =
+              Builder.CreateElementBitCast(InitAddrIt->second, Ty);
           setAddrOfLocalVar(InitVD, InitAddr);
 
           // Emit private declaration, it will be initialized by the value we

@@ -74,10 +74,10 @@ bool lldb_private::formatters::CFBagSummaryProvider(
   if (descriptor->IsCFType()) {
     ConstString type_name(valobj.GetTypeName());
 
-    static ConstString g___CFBag("__CFBag");
+    static ConstString g_CFBag("__CFBag");
     static ConstString g_conststruct__CFBag("const struct __CFBag");
 
-    if (type_name == g___CFBag || type_name == g_conststruct__CFBag) {
+    if (type_name == g_CFBag || type_name == g_conststruct__CFBag) {
       if (valobj.IsPointerType())
         is_type_ok = true;
     }
@@ -257,12 +257,12 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
   if (descriptor->IsCFType()) {
     ConstString type_name(valobj.GetTypeName());
 
-    static ConstString g___CFBinaryHeap("__CFBinaryHeap");
+    static ConstString g_CFBinaryHeap("__CFBinaryHeap");
     static ConstString g_conststruct__CFBinaryHeap(
         "const struct __CFBinaryHeap");
     static ConstString g_CFBinaryHeapRef("CFBinaryHeapRef");
 
-    if (type_name == g___CFBinaryHeap ||
+    if (type_name == g_CFBinaryHeap ||
         type_name == g_conststruct__CFBinaryHeap ||
         type_name == g_CFBinaryHeapRef) {
       if (valobj.IsPointerType())

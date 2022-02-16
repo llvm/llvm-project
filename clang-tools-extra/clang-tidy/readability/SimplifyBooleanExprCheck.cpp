@@ -750,7 +750,7 @@ void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
 void SimplifyBooleanExprCheck::replaceCaseCompoundReturnWithCondition(
     const MatchFinder::MatchResult &Result, bool Negated) {
   const auto *CaseDefault = Result.Nodes.getNodeAs<CaseStmt>(CaseId);
-  const auto *If = dyn_cast<IfStmt>(CaseDefault->getSubStmt());
+  const auto *If = cast<IfStmt>(CaseDefault->getSubStmt());
   replaceCompoundReturnWithCondition(Result, Negated, If);
 }
 
@@ -758,14 +758,14 @@ void SimplifyBooleanExprCheck::replaceDefaultCompoundReturnWithCondition(
     const MatchFinder::MatchResult &Result, bool Negated) {
   const SwitchCase *CaseDefault =
       Result.Nodes.getNodeAs<DefaultStmt>(DefaultId);
-  const auto *If = dyn_cast<IfStmt>(CaseDefault->getSubStmt());
+  const auto *If = cast<IfStmt>(CaseDefault->getSubStmt());
   replaceCompoundReturnWithCondition(Result, Negated, If);
 }
 
 void SimplifyBooleanExprCheck::replaceLabelCompoundReturnWithCondition(
     const MatchFinder::MatchResult &Result, bool Negated) {
   const auto *Label = Result.Nodes.getNodeAs<LabelStmt>(LabelId);
-  const auto *If = dyn_cast<IfStmt>(Label->getSubStmt());
+  const auto *If = cast<IfStmt>(Label->getSubStmt());
   replaceCompoundReturnWithCondition(Result, Negated, If);
 }
 

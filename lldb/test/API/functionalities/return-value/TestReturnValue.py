@@ -50,7 +50,7 @@ class ReturnValueTestCase(TestBase):
         # inner_sint returns the variable value, so capture that here:
         in_int = thread.GetFrameAtIndex(0).FindVariable(
             "value").GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         thread.StepOut()
 
@@ -65,7 +65,7 @@ class ReturnValueTestCase(TestBase):
         self.assertTrue(return_value.IsValid())
 
         ret_int = return_value.GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEquals(in_int, ret_int)
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
@@ -82,7 +82,7 @@ class ReturnValueTestCase(TestBase):
         fun_name = frame.GetFunctionName()
         self.assertEquals(fun_name, "outer_sint(int)")
         in_int = frame.FindVariable("value").GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         thread.StepOutOfFrame(frame)
 
@@ -95,7 +95,7 @@ class ReturnValueTestCase(TestBase):
         ret_value = thread.GetStopReturnValue()
         self.assertTrue(return_value.IsValid())
         ret_int = ret_value.GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEquals(2 * in_int, ret_int)
 
         # Now try some simple returns that have different types:

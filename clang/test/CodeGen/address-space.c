@@ -12,7 +12,7 @@ int a __attribute__((address_space(0)));
 
 // CHECK-LABEL: define{{.*}} i32 @test1()
 // CHECK: load i32, i32 addrspace(1)* @foo
-int test1() { return foo; }
+int test1(void) { return foo; }
 
 // CHECK-LABEL: define{{.*}} i32 @test2(i32 noundef %i)
 // CHECK: load i32, i32 addrspace(1)*
@@ -29,7 +29,7 @@ __attribute__((address_space(2))) int *A, *B;
 // X86: load i32 addrspace(2)*, i32 addrspace(2)** @A
 // AMDGCN: load i32 addrspace(2)*, i32 addrspace(2)** addrspacecast (i32 addrspace(2)* addrspace(1)* @A to i32 addrspace(2)**)
 // CHECK: store i32 {{.*}}, i32 addrspace(2)*
-void test3() {
+void test3(void) {
   *A = *B;
 }
 
@@ -61,7 +61,7 @@ void_ptr_arithmetic_test(void __attribute__((address_space(1))) *arg) {
 }
 
 // CHECK-LABEL: define{{.*}} i32* @test5(
-const unsigned *test5() {
+const unsigned *test5(void) {
   // Intentionally leave a part of an array uninitialized. This triggers a
   // different code path contrary to a fully initialized array.
   // CHECK: ret i32* getelementptr inbounds ([256 x i32]

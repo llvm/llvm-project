@@ -54,5 +54,5 @@ class SBModuleAPICase(TestBase):
                          "The module should not be backed by a file on disk.")
 
         error = process.Destroy()
-        self.assertTrue(error.Success(), "couldn't destroy process %s" % background_process.pid)
+        self.assertSuccess(error, "couldn't destroy process %s" % background_process.pid)
 

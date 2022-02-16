@@ -5,9 +5,9 @@
 @interface NSString : NSObject
 - (id)lastPathComponent;
 @end
-int getBool();
-int *getPtr();
-int foo() {
+int getBool(void);
+int *getPtr(void);
+int foo(void) {
   int r = 0;
   NSString *filename = @"filename";
   for (int x = 0; x< 10; x++) {

@@ -176,8 +176,7 @@ contains
     procedure(s), pointer :: p, q
     procedure(), pointer :: r
     external :: s_external
-    !ERROR: Procedure pointer 'p' with explicit interface may not be associated with procedure designator 's_external' with implicit interface
-    p => s_external
+    p => s_external ! OK for a pointer with an explicit interface to be associated with a procedure with an implicit interface
     r => s_module ! OK for a pointer with implicit interface to be associated with a procedure with an explicit interface.  See 10.2.2.4 (3)
   end
 
@@ -219,6 +218,13 @@ contains
     p(1:5,1:5) => x(:,1:2)
     !OK - rhs has rank 1 and enough elements
     p(1:5,1:5) => y(1:100:2)
+    !OK - same, but from function result
+    p(1:5,1:5) => f()
+   contains
+    function f()
+      real, pointer :: f(:)
+      f => y
+    end function
   end
 
   subroutine s10

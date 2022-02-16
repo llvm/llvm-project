@@ -880,10 +880,6 @@ def : PatGprGpr<riscv_gorcw, GORCW>;
 def : PatGprImm<riscv_grevw, GREVIW, uimm5>;
 def : PatGprImm<riscv_gorcw, GORCIW, uimm5>;
 
-// FIXME: Move to DAG combine.
-def : Pat<(riscv_rorw (riscv_grevw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
-def : Pat<(riscv_rolw (riscv_grevw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
-
 def : PatGprGpr<riscv_shflw, SHFLW>;
 def : PatGprGpr<riscv_unshflw, UNSHFLW>;
 } // Predicates = [HasStdExtZbp, IsRV64]
@@ -892,10 +888,6 @@ let Predicates = [HasStdExtZbp, IsRV64] in
 def : PatGprGpr<int_riscv_xperm_w, XPERM_W>;
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
-// FIXME : Move to DAG combine.
-def : Pat<(i32 (rotr (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
-def : Pat<(i32 (rotl (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
-
 // We treat rev8 as a separate instruction, so match it directly.
 def : Pat<(i32 (riscv_grev GPR:$rs1, 24)), (REV8_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV32]

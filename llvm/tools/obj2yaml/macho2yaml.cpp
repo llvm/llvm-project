@@ -11,6 +11,7 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
@@ -34,6 +35,7 @@ class MachODumper {
   Error dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpFunctionStarts(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpBindOpcodes(std::vector<MachOYAML::BindOpcode> &BindOpcodes,
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
@@ -353,6 +355,15 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
   dumpExportTrie(Y);
   dumpSymbols(Y);
   dumpIndirectSymbols(Y);
+  dumpFunctionStarts(Y);
+}
+
+void MachODumper::dumpFunctionStarts(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+
+  auto FunctionStarts = Obj.getFunctionStarts();
+  for (auto Addr : FunctionStarts)
+    LEData.FunctionStarts.push_back(Addr);
 }
 
 void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {

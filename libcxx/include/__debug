@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_DEBUG_H
 #define _LIBCPP_DEBUG_H
 
+#include <__assert>
 #include <__config>
 #include <iosfwd>
 #include <type_traits>
@@ -24,56 +25,15 @@
 #   include <cstdlib>
 #endif
 
-#if _LIBCPP_DEBUG_LEVEL == 0
+#if _LIBCPP_DEBUG_LEVEL == 0 || _LIBCPP_DEBUG_LEVEL == 1
 #   define _LIBCPP_DEBUG_ASSERT(x, m) ((void)0)
-#   define _LIBCPP_ASSERT_IMPL(x, m) ((void)0)
-#elif _LIBCPP_DEBUG_LEVEL == 1
-#   define _LIBCPP_DEBUG_ASSERT(x, m) ((void)0)
-#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : ::std::__libcpp_debug_function(::std::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
 #elif _LIBCPP_DEBUG_LEVEL == 2
 #   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(::std::__libcpp_is_constant_evaluated() || (x), m)
-#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : ::std::__libcpp_debug_function(::std::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
 #else
 #   error _LIBCPP_DEBUG_LEVEL must be one of 0, 1, 2
 #endif
 
-#if !defined(_LIBCPP_ASSERT)
-#   define _LIBCPP_ASSERT(x, m) _LIBCPP_ASSERT_IMPL(x, m)
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-struct _LIBCPP_TEMPLATE_VIS __libcpp_debug_info {
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-  __libcpp_debug_info()
-      : __file_(nullptr), __line_(-1), __pred_(nullptr), __msg_(nullptr) {}
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-  __libcpp_debug_info(const char* __f, int __l, const char* __p, const char* __m)
-    : __file_(__f), __line_(__l), __pred_(__p), __msg_(__m) {}
-
-  _LIBCPP_FUNC_VIS string what() const;
-
-  const char* __file_;
-  int __line_;
-  const char* __pred_;
-  const char* __msg_;
-};
-
-/// __libcpp_debug_function_type - The type of the assertion failure handler.
-typedef void(*__libcpp_debug_function_type)(__libcpp_debug_info const&);
-
-/// __libcpp_debug_function - The handler function called when a _LIBCPP_ASSERT
-///    fails.
-extern _LIBCPP_EXPORTED_FROM_ABI __libcpp_debug_function_type __libcpp_debug_function;
-
-/// __libcpp_abort_debug_function - A debug handler that aborts when called.
-_LIBCPP_NORETURN _LIBCPP_FUNC_VIS
-void __libcpp_abort_debug_function(__libcpp_debug_info const&);
-
-/// __libcpp_set_debug_function - Set the debug handler to the specified
-///    function.
-_LIBCPP_FUNC_VIS
-bool __libcpp_set_debug_function(__libcpp_debug_function_type __func);
 
 #if _LIBCPP_DEBUG_LEVEL == 2 || defined(_LIBCPP_BUILDING_LIBRARY)
 

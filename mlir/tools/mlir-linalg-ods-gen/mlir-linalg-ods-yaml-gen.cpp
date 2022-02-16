@@ -61,14 +61,15 @@ struct SerializedAffineMap {
   AffineMap affineMap() { return affineMapAttr.getValue(); }
 };
 
-enum class LinalgOperandDefUsage { input, output, attribute };
+enum class LinalgOperandDefUsage { Input, Output, IndexAttr };
 
 struct LinalgOperandDef {
   std::string name;
   LinalgOperandDefUsage usage;
-  std::string typeVar;
+  Optional<std::string> typeVar;
   Optional<SerializedAffineMap> shapeMap;
-  Optional<SerializedAffineMap> attributeMap;
+  Optional<SerializedAffineMap> indexAttrMap;
+  Optional<SmallVector<int64_t>> defaultVals;
 };
 
 enum class LinalgIteratorTypeDef {
@@ -175,18 +176,21 @@ struct MappingTraits<LinalgStructuredOpConfig> {
 ///     the argument. Only tensor arguments have a `shape_map`. Each shape must
 ///     be normalized over the same list of symbols and have no dimension
 ///     inputs.
-///   - `attribute_map`: An optional AffineMap from all op symbols to the
-///     attribute symbols. During op creation these symbols are replaced by the
-///     corresponding `name` attribute values. Only attribute arguments have
-///     an `attribute_map`.
+///   - `index_attr_map`: An optional AffineMap from all op symbols to the
+///     index attribute symbols. During op creation these symbols are replaced
+///     by the corresponding `name` index attribue values. Only index attribute
+///     arguments have an `index_attr_map`.
+///   - `default_vals`: An optional default initialization for index attribute
+///     arguments.
 template <>
 struct MappingTraits<LinalgOperandDef> {
   static void mapping(IO &io, LinalgOperandDef &info) {
     io.mapRequired("name", info.name);
     io.mapRequired("usage", info.usage);
-    io.mapRequired("type_var", info.typeVar);
+    io.mapOptional("type_var", info.typeVar);
     io.mapOptional("shape_map", info.shapeMap);
-    io.mapOptional("attribute_map", info.attributeMap);
+    io.mapOptional("index_attr_map", info.indexAttrMap);
+    io.mapOptional("default_vals", info.defaultVals);
   }
 };
 
@@ -194,9 +198,9 @@ struct MappingTraits<LinalgOperandDef> {
 template <>
 struct ScalarEnumerationTraits<LinalgOperandDefUsage> {
   static void enumeration(IO &io, LinalgOperandDefUsage &value) {
-    io.enumCase(value, "InputOperand", LinalgOperandDefUsage::input);
-    io.enumCase(value, "OutputOperand", LinalgOperandDefUsage::output);
-    io.enumCase(value, "IndexAttribute", LinalgOperandDefUsage::attribute);
+    io.enumCase(value, "Input", LinalgOperandDefUsage::Input);
+    io.enumCase(value, "Output", LinalgOperandDefUsage::Output);
+    io.enumCase(value, "IndexAttr", LinalgOperandDefUsage::IndexAttr);
   }
 };
 
@@ -395,7 +399,10 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
 
   // Search all argument types.
   for (const auto &it : llvm::enumerate(args)) {
-    if (it.value().typeVar == typeVar)
+    if (it.value().usage != LinalgOperandDefUsage::Input &&
+        it.value().usage != LinalgOperandDefUsage::Output)
+      continue;
+    if (it.value().typeVar.getValue() == typeVar)
       return llvm::formatv("block.getArgument({0}).getType()", it.index())
           .str();
   }
@@ -516,8 +523,10 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       // Auto-generated.
       ArrayAttr iterator_types();
       ArrayAttr indexing_maps();
-      static void regionBuilder(ImplicitLocOpBuilder &b, Block &block);
-      static std::function<void(ImplicitLocOpBuilder &b, Block &)>
+      static void regionBuilder(ImplicitLocOpBuilder &b,
+                                Block &block, ArrayRef<NamedAttribute> attrs);
+      static std::function<void(ImplicitLocOpBuilder &,
+                                Block &, ArrayRef<NamedAttribute>)>
       getRegionBuilder() {{
         return regionBuilder;
       }
@@ -674,20 +683,32 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
 
   // Assemble the attribute specific logic required for the op definition.
   if (llvm::any_of(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
-        return arg.usage == LinalgOperandDefUsage::attribute;
+        return arg.usage == LinalgOperandDefUsage::IndexAttr;
       })) {
     SmallVector<std::string> attrDefs;
     SmallVector<std::string> attrParams;
     SmallVector<std::string> attrStmts;
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
-      if (arg.usage != LinalgOperandDefUsage::attribute)
+      if (arg.usage != LinalgOperandDefUsage::IndexAttr)
         continue;
-      assert(arg.attributeMap.hasValue() && arg.typeVar == "I64");
-      static const char defFmt[] = "RankedI64ElementsAttr<[{0}]>:${1}";
+      assert(arg.indexAttrMap.hasValue());
+      assert(arg.defaultVals.hasValue());
+      size_t size = arg.indexAttrMap->affineMap().getNumResults();
+      assert(arg.defaultVals.getValue().size() == size);
+      static const char typeFmt[] = "RankedI64ElementsAttr<[{0}]>";
+      static const char defFmt[] = "DefaultValuedAttr<{0}, \"{1}\">:${2}";
       static const char paramFmt[] = "\"Attribute\":${0}";
       static const char stmtFmt[] = "$_state.addAttribute(\"{0}\", {0});";
-      attrDefs.push_back(llvm::formatv(
-          defFmt, arg.attributeMap->affineMap().getNumResults(), arg.name));
+      std::string defaultVals;
+      llvm::raw_string_ostream ss(defaultVals);
+      ss << "{ ";
+      llvm::interleave(
+          arg.defaultVals.getValue(), ss,
+          [&](int64_t val) { ss << "static_cast<int64_t>(" << val << ")"; },
+          ", ");
+      ss << " }";
+      attrDefs.push_back(llvm::formatv(defFmt, llvm::formatv(typeFmt, size),
+                                       ss.str(), arg.name));
       attrParams.push_back(llvm::formatv(paramFmt, arg.name));
       attrStmts.push_back(llvm::formatv(stmtFmt, arg.name));
     }
@@ -725,7 +746,7 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
   // Compute the number of scalar and tensor arguments.
   int64_t numOfArgs =
       llvm::count_if(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
-        return arg.usage != LinalgOperandDefUsage::attribute;
+        return arg.usage != LinalgOperandDefUsage::IndexAttr;
       });
 
   // An operation that accesses only scalars and scalar/rank zero tensors is
@@ -796,11 +817,11 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
 )FMT";
         // Update all symbol bindings mapped to an attribute.
         for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
-          if (arg.usage != LinalgOperandDefUsage::attribute)
+          if (arg.usage != LinalgOperandDefUsage::IndexAttr)
             continue;
-          assert(arg.attributeMap.hasValue());
+          assert(arg.indexAttrMap.hasValue());
           for (auto &en :
-               llvm::enumerate(arg.attributeMap->affineMap().getResults())) {
+               llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
             if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
               symbolBindings[symbol.getPosition()] =
                   llvm::formatv(structuredOpAccessAttrFormat, arg.name,
@@ -889,31 +910,26 @@ std::string {0}::getLibraryCallName() {{
 
   // hasDynamicIndexingMaps() and verifyIndexingMapRequiredAttributes()
   if (llvm::any_of(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
-        return arg.usage == LinalgOperandDefUsage::attribute;
+        return arg.usage == LinalgOperandDefUsage::IndexAttr;
       })) {
     std::vector<std::string> attrVerifications;
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
-      if (arg.usage != LinalgOperandDefUsage::attribute)
+      if (arg.usage != LinalgOperandDefUsage::IndexAttr)
         continue;
-      assert(arg.attributeMap.hasValue() && arg.typeVar == "I64");
+      assert(arg.indexAttrMap.hasValue());
       // Verify index attribute. Paramters:
       // {0}: Attribute name
       // {1}: Attribute size
       static const char attrFmt[] = R"FMT(
 if (auto attr = op->getAttrOfType<DenseElementsAttr>("{0}")) {{
   if (!attr.getType().getElementType().isInteger(64))
-    return op->emitError(
-      "incorrect element type for indexing map required attribute '{0}'");
+    return op->emitError("incorrect element type for index attribute '{0}'");
   if (attr.getType().getShape() != ArrayRef<int64_t>{{ {1} })
-    return op->emitError(
-      "incorrect shape for indexing map required attribute '{0}'");
-} else {
-  return op->emitError(
-    "missing indexing map required attribute '{0}'");
+    return op->emitError("incorrect shape for index attribute '{0}'");
 }
 )FMT";
       attrVerifications.push_back(llvm::formatv(
-          attrFmt, arg.name, arg.attributeMap->affineMap().getNumResults()));
+          attrFmt, arg.name, arg.indexAttrMap->affineMap().getNumResults()));
     }
 
     // Generates the verifyIndexingMapRequiredAttributes method. Parameters:
@@ -938,7 +954,8 @@ LogicalResult {0}::verifyIndexingMapRequiredAttributes() {{
     // {1}: Number of args
     // {2}: Statements
     static const char structuredOpRegionBuilderFormat[] = R"FMT(
-void {0}::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {{
+void {0}::regionBuilder(ImplicitLocOpBuilder &b,
+                        Block &block, ArrayRef<NamedAttribute> attrs) {{
   assert({1} > 0 && block.getNumArguments() == {1} &&
          "{0} regionBuilder expects {1} (>=0) args");
   RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
@@ -953,7 +970,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {{
     int localCounter = 0;
     SmallVector<std::string> stmts;
     for (LinalgOperandDef &arg : args) {
-      if (arg.usage != LinalgOperandDefUsage::output)
+      if (arg.usage != LinalgOperandDefUsage::Output)
         continue;
 
       // Find the assignment that correlates with the argument.

@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PPC32
 static unsigned char dwarf_reg_size_table[1024];
 
-int test() {
+int test(void) {
   __builtin_init_dwarf_reg_size_table(dwarf_reg_size_table);
 
   return __builtin_dwarf_sp_column();

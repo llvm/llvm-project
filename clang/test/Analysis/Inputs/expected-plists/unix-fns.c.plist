@@ -561,7 +561,7 @@
    <key>type</key><string>Improper use of &apos;dispatch_once&apos;</string>
    <key>check_name</key><string>osx.API</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>173fbcac3fc64dbaec32768d4cfda250</string>
+   <key>issue_hash_content_of_line_in_context</key><string>3c7c4524233ba46b615e7c4c2ce7c20d</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_dispatch_once</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -1473,7 +1473,7 @@
    <key>type</key><string>Improper use of &apos;dispatch_once&apos;</string>
    <key>check_name</key><string>osx.API</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>8ded1f2025c1e4a4bcd5302dc97006d9</string>
+   <key>issue_hash_content_of_line_in_context</key><string>6fec229f3dde6d311481c6a64eeffefa</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_dispatch_once_in_macro</string>
   <key>issue_hash_function_offset</key><string>2</string>

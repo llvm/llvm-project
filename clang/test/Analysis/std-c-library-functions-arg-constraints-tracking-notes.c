@@ -12,7 +12,7 @@
 typedef typeof(sizeof(int)) size_t;
 
 int __buf_size_arg_constraint(const void *, size_t);
-void test_buf_size_concrete() {
+void test_buf_size_concrete(void) {
   char buf[3];                       // bugpath-note{{'buf' initialized here}}
   int s = 4;                         // bugpath-note{{'s' initialized to 4}}
   __buf_size_arg_constraint(buf, s); // \
@@ -22,7 +22,7 @@ void test_buf_size_concrete() {
 }
 
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
-void test_buf_size_concrete_with_multiplication() {
+void test_buf_size_concrete_with_multiplication(void) {
   short buf[3];                               // bugpath-note{{'buf' initialized here}}
   int s1 = 4;                                 // bugpath-note{{'s1' initialized to 4}}
   int s2 = sizeof(short);                     // bugpath-note{{'s2' initialized to}}

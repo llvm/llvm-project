@@ -449,6 +449,20 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     } else if (Opts.LongDoubleSize == 128) {
       LongDoubleWidth = LongDoubleAlign = 128;
       LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    } else if (Opts.LongDoubleSize == 80) {
+      LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
+      if (getTriple().isWindowsMSVCEnvironment()) {
+        LongDoubleWidth = 128;
+        LongDoubleAlign = 128;
+      } else { // Linux
+        if (getTriple().getArch() == llvm::Triple::x86) {
+          LongDoubleWidth = 96;
+          LongDoubleAlign = 32;
+        } else {
+          LongDoubleWidth = 128;
+          LongDoubleAlign = 128;
+        }
+      }
     }
   }
 

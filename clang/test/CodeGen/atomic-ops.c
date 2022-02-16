@@ -320,7 +320,7 @@ _Bool fsb(_Bool *c) {
 
 char flag1;
 volatile char flag2;
-void test_and_set() {
+void test_and_set(void) {
   // CHECK: atomicrmw xchg i8* @flag1, i8 1 seq_cst, align 1
   __atomic_test_and_set(&flag1, memory_order_seq_cst);
   // CHECK: atomicrmw volatile xchg i8* @flag2, i8 1 acquire, align 1
@@ -388,7 +388,7 @@ struct bar smallThing, thing1, thing2;
 struct foo bigThing;
 _Atomic(struct foo) bigAtomic;
 
-void structAtomicStore() {
+void structAtomicStore(void) {
   // CHECK-LABEL: @structAtomicStore
   struct foo f = {0};
   struct bar b = {0};
@@ -398,7 +398,7 @@ void structAtomicStore() {
   __atomic_store(&bigThing, &f, 5);
   // CHECK: call void @__atomic_store(i32 noundef 512, i8* noundef {{.*}} @bigThing
 }
-void structAtomicLoad() {
+void structAtomicLoad(void) {
   // CHECK-LABEL: @structAtomicLoad
   struct bar b;
   __atomic_load(&smallThing, &b, 5);
@@ -408,7 +408,7 @@ void structAtomicLoad() {
   __atomic_load(&bigThing, &f, 5);
   // CHECK: call void @__atomic_load(i32 noundef 512, i8* noundef {{.*}} @bigThing
 }
-struct foo structAtomicExchange() {
+struct foo structAtomicExchange(void) {
   // CHECK-LABEL: @structAtomicExchange
   struct foo f = {0};
   struct foo old;
@@ -418,7 +418,7 @@ struct foo structAtomicExchange() {
   return __c11_atomic_exchange(&bigAtomic, f, 5);
   // CHECK: call void @__atomic_exchange(i32 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
 }
-int structAtomicCmpExchange() {
+int structAtomicCmpExchange(void) {
   // CHECK-LABEL: @structAtomicCmpExchange
   // CHECK: %[[x_mem:.*]] = alloca i8
   _Bool x = __atomic_compare_exchange(&smallThing, &thing1, &thing2, 1, 5, 5);
@@ -444,7 +444,7 @@ int structAtomicCmpExchange() {
 _Atomic(int) atomic_init_i = 42;
 
 // CHECK-LABEL: @atomic_init_foo
-void atomic_init_foo()
+void atomic_init_foo(void)
 {
   // CHECK-NOT: }
   // CHECK-NOT: atomic
@@ -651,7 +651,7 @@ void EMIT_ALL_THE_THINGS(int *ptr, int *ptr2, int new, _Bool weak, int success, 
   // CHECK: = cmpxchg weak {{.*}} seq_cst seq_cst, align
 }
 
-int PR21643() {
+int PR21643(void) {
   return __atomic_or_fetch((int __attribute__((address_space(257))) *)0x308, 1,
                            __ATOMIC_RELAXED);
   // CHECK: %[[atomictmp:.*]] = alloca i32, align 4
@@ -698,7 +698,7 @@ int PR17306_2(volatile int *i, int value) {
   return __atomic_add_fetch(i, value, memory_order_seq_cst);
 }
 
-void test_underaligned() {
+void test_underaligned(void) {
   // CHECK-LABEL: @test_underaligned
   struct Underaligned { char c[8]; } underaligned_a, underaligned_b, underaligned_c;
 

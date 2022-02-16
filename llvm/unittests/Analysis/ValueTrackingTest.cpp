@@ -1725,6 +1725,84 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsCrash) {
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
 }
 
+TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
+  {
+    // Check for an inverted mask: (X & ~M) op (Y & M).
+    auto M = parseModule(R"(
+  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+    %1 = xor i32 %M, -1
+    %LHS = and i32 %1, %X
+    %RHS = and i32 %Y, %M
+    %Ret = add i32 %LHS, %RHS
+    ret i32 %Ret
+  })");
+
+    auto *F = M->getFunction("test");
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+
+    const DataLayout &DL = M->getDataLayout();
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+  }
+  {
+    // Check for (A & B) and ~(A | B)
+    auto M = parseModule(R"(
+  define void @test(i32 %A, i32 %B) {
+    %LHS = and i32 %A, %B
+    %or = or i32 %A, %B
+    %RHS = xor i32 %or, -1
+
+    %LHS2 = and i32 %B, %A
+    %or2 = or i32 %A, %B
+    %RHS2 = xor i32 %or2, -1
+
+    ret void
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+
+    auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
+    auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+  }
+  {
+    // Check for (A & B) and ~(A | B) in vector version
+    auto M = parseModule(R"(
+  define void @test(<2 x i32> %A, <2 x i32> %B) {
+    %LHS = and <2 x i32> %A, %B
+    %or = or <2 x i32> %A, %B
+    %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>
+
+    %LHS2 = and <2 x i32> %B, %A
+    %or2 = or <2 x i32> %A, %B
+    %RHS2 = xor <2 x i32> %or2, <i32 -1, i32 -1>
+
+    ret void
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+
+    auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
+    auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+  }
+}
+
 class IsBytewiseValueTest : public ValueTrackingTest,
                             public ::testing::WithParamInterface<
                                 std::pair<const char *, const char *>> {

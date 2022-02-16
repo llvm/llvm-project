@@ -1120,6 +1120,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
+  Info.flags = MachineMemOperand::MONone;
+  if (CI.hasMetadata(LLVMContext::MD_invariant_load))
+    Info.flags |= MachineMemOperand::MOInvariant;
+
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
     AttributeList Attr = Intrinsic::getAttributes(CI.getContext(),
@@ -1138,7 +1142,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
           MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     }
 
-    Info.flags = MachineMemOperand::MODereferenceable;
+    Info.flags |= MachineMemOperand::MODereferenceable;
     if (Attr.hasFnAttr(Attribute::ReadOnly) ||
         IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load) {
       unsigned DMaskLanes = 4;
@@ -1181,9 +1185,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
       Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-      Info.flags = MachineMemOperand::MOLoad |
-                   MachineMemOperand::MOStore |
-                   MachineMemOperand::MODereferenceable;
+      Info.flags |= MachineMemOperand::MOLoad |
+                    MachineMemOperand::MOStore |
+                    MachineMemOperand::MODereferenceable;
 
       // XXX - Should this be volatile without known ordering?
       Info.flags |= MachineMemOperand::MOVolatile;
@@ -1203,7 +1207,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(4));
     if (!Vol->isZero())
@@ -1219,7 +1223,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal =
         MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
     if (!Vol || !Vol->isZero())
@@ -1233,7 +1237,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(1));
     if (!Vol->isZero())
@@ -1246,9 +1250,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MOVolatile;
+    Info.flags |= MachineMemOperand::MOLoad |
+                  MachineMemOperand::MOStore |
+                  MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
@@ -1258,8 +1262,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal =
         MFI->getImagePSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MODereferenceable;
+    Info.flags |= MachineMemOperand::MOLoad |
+                  MachineMemOperand::MODereferenceable;
     return true;
   }
   case Intrinsic::amdgcn_global_atomic_fadd:
@@ -1272,10 +1276,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable |
-                 MachineMemOperand::MOVolatile;
+    Info.flags |= MachineMemOperand::MOLoad |
+                  MachineMemOperand::MOStore |
+                  MachineMemOperand::MODereferenceable |
+                  MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -1295,9 +1299,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = 4;
     Info.align = Align(4);
 
-    Info.flags = MachineMemOperand::MOStore;
     if (IntrID == Intrinsic::amdgcn_ds_gws_barrier)
-      Info.flags = MachineMemOperand::MOLoad;
+      Info.flags |= MachineMemOperand::MOLoad;
+    else
+      Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
   default:

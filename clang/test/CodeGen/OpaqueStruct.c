@@ -7,6 +7,6 @@ struct a {
   b* p;
 };
 
-void f() {
+void f(void) {
   b* z = x->p;
 }

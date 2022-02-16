@@ -3060,9 +3060,8 @@ profile.
 Starting from clang 9 a C++ mode is available for OpenCL (see
 :ref:`C++ for OpenCL <cxx_for_opencl>`).
 
-There is ongoing support for OpenCL v3.0 that is documented along with other
-experimental functionality and features in development on :doc:`OpenCLSupport`
-page.
+OpenCL v3.0 support is complete but it remains in experimental state, see more
+details about the experimental features in :doc:`OpenCLSupport` page.
 
 OpenCL Specific Options
 -----------------------

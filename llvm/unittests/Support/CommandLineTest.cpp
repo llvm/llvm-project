@@ -743,21 +743,24 @@ TEST(CommandLineTest, ArgumentLimit) {
   EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
   std::string args2(256, 'a');
   EXPECT_TRUE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args2.data()));
-  if (Triple(sys::getProcessTriple()).isOSWindows()) {
-    // We use 32000 as a limit for command line length. Program name ('cl'),
-    // separating spaces and termination null character occupy 5 symbols.
-    std::string long_arg(32000 - 5, 'b');
-    EXPECT_TRUE(
-        llvm::sys::commandLineFitsWithinSystemLimits("cl", long_arg.data()));
-    long_arg += 'b';
-    EXPECT_FALSE(
-        llvm::sys::commandLineFitsWithinSystemLimits("cl", long_arg.data()));
-  }
+}
+
+TEST(CommandLineTest, ArgumentLimitWindows) {
+  if (!Triple(sys::getProcessTriple()).isOSWindows())
+    GTEST_SKIP();
+  // We use 32000 as a limit for command line length. Program name ('cl'),
+  // separating spaces and termination null character occupy 5 symbols.
+  std::string long_arg(32000 - 5, 'b');
+  EXPECT_TRUE(
+      llvm::sys::commandLineFitsWithinSystemLimits("cl", long_arg.data()));
+  long_arg += 'b';
+  EXPECT_FALSE(
+      llvm::sys::commandLineFitsWithinSystemLimits("cl", long_arg.data()));
 }
 
 TEST(CommandLineTest, ResponseFileWindows) {
   if (!Triple(sys::getProcessTriple()).isOSWindows())
-    return;
+    GTEST_SKIP();
 
   StackOption<std::string, cl::list<std::string>> InputFilenames(
       cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);

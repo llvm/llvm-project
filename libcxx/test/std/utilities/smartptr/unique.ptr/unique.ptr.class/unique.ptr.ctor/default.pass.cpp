@@ -31,8 +31,8 @@
 #include "unique_ptr_test_helper.h"
 
 #if TEST_STD_VER >= 11
-TEST_SAFE_STATIC std::unique_ptr<int> global_static_unique_ptr_single;
-TEST_SAFE_STATIC std::unique_ptr<int[]> global_static_unique_ptr_runtime;
+TEST_CONSTINIT std::unique_ptr<int> global_static_unique_ptr_single;
+TEST_CONSTINIT std::unique_ptr<int[]> global_static_unique_ptr_runtime;
 
 struct NonDefaultDeleter {
   NonDefaultDeleter() = delete;

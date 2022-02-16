@@ -9,14 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
+#include "omp_testsuite.h"
 
 int main(int argc, char** argv) {
   omp_set_affinity_format("TESTER: tl:%L tn:%n nt:%N");
-  #pragma omp parallel
-  { }
-  #pragma omp parallel
-  { }
-  return 0;
+  go_parallel();
+  go_parallel();
+  return get_exit_value();
 }
 
 // NOTHING: NO_OUTPUT

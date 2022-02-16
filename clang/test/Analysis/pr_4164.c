@@ -16,7 +16,7 @@ typedef __uint32_t __darwin_socklen_t;
 typedef __darwin_socklen_t socklen_t;
 int getsockopt(int, int, int, void * restrict, socklen_t * restrict);
 
-int test1() {
+int test1(void) {
   int s = -1;
   int size;
   socklen_t size_len = sizeof(size);
@@ -32,7 +32,7 @@ int test1() {
 // ElementRegion itself has elements whose type are integral (essentially raw
 // data) we strip off the ElementRegion when doing the invalidation.
 int takes_charptr(char* p);
-int test2() {
+int test2(void) {
   int size;
   if (takes_charptr((char*)&size))
     return -1;

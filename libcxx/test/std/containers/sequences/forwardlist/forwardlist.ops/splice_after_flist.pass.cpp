@@ -36,7 +36,7 @@ testd(const C& c, int p, int l)
         assert(*i == t2[n2]);
     for (; n1 < size_t1; ++n1, ++i)
         assert(*i == t1[n1]);
-    assert(distance(c.begin(), c.end()) == size_t1 + l);
+    assert(std::distance(c.begin(), c.end()) == size_t1 + l);
 }
 
 int main(int, char**)
@@ -51,7 +51,7 @@ int main(int, char**)
             C c1(std::begin(t1), std::end(t1));
             C c2(t2, t2+l);
 
-            c1.splice_after(next(c1.cbefore_begin(), p), std::move(c2));
+            c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c2));
             testd(c1, p, l);
         }
     }
@@ -67,7 +67,7 @@ int main(int, char**)
             C c1(std::begin(t1), std::end(t1));
             C c2(t2, t2+l);
 
-            c1.splice_after(next(c1.cbefore_begin(), p), std::move(c2));
+            c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c2));
             testd(c1, p, l);
         }
     }

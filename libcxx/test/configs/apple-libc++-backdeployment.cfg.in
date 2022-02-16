@@ -30,6 +30,15 @@ BACKDEPLOYMENT_PARAMETERS = [
         The dylib in that hierarchy is the one that will be used at runtime when running
         the tests.
         """),
+    libcxx.test.dsl.Parameter(name='unwind_runtime_root', type=str,
+        actions=lambda root: [libcxx.test.dsl.AddSubstitution('%{unwind-runtime-root}', root)],
+        help="""
+        The simulated root of the system (for libunwind) when running tests.
+
+        This should be a directory hierarchy under which the libunwind dylib can be found.
+        The dylib in that hierarchy is the one that will be used at runtime when running
+        the tests.
+        """),
 ]
 
 config.substitutions.append(('%{flags}',
@@ -42,7 +51,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{install}/lib -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}" -- '
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '
 ))
 
 libcxx.test.newconfig.configure(

@@ -5,7 +5,7 @@
 #include <immintrin.h>
 
 // The ebx may be use for base pointer, we need to restore it in time.
-void ssc_mark() {
+void ssc_mark(void) {
 // CHECK-LABEL: ssc_mark
 // CHECK: #APP
 // CHECK: movl    %ebx, %eax

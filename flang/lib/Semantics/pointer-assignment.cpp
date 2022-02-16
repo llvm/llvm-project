@@ -172,7 +172,8 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
     if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape,
-            "pointer", "function result", false /*elemental*/,
+            "pointer", "function result",
+            isBoundsRemapping_ /*omit shape check*/,
             evaluate::CheckConformanceFlags::BothDeferredShape)) {
       return false; // IsCompatibleWith() emitted message
     }

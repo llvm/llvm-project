@@ -1216,6 +1216,9 @@ public:
   /// Get the state used for SSA names.
   SSANameState &getSSANameState() { return nameState; }
 
+  /// Get the printer flags.
+  const OpPrintingFlags &getPrinterFlags() const { return printerFlags; }
+
   /// Register the location, line and column, within the buffer that the given
   /// operation was printed at.
   void registerOperationLocation(Operation *op, unsigned line, unsigned col) {
@@ -1246,6 +1249,10 @@ AsmState::AsmState(Operation *op, const OpPrintingFlags &printerFlags,
                    LocationMap *locationMap)
     : impl(std::make_unique<AsmStateImpl>(op, printerFlags, locationMap)) {}
 AsmState::~AsmState() = default;
+
+const OpPrintingFlags &AsmState::getPrinterFlags() const {
+  return impl->getPrinterFlags();
+}
 
 //===----------------------------------------------------------------------===//
 // AsmPrinter::Impl
@@ -2405,9 +2412,9 @@ public:
   using Impl = AsmPrinter::Impl;
   using Impl::printType;
 
-  explicit OperationPrinter(raw_ostream &os, OpPrintingFlags flags,
-                            AsmStateImpl &state)
-      : Impl(os, flags, &state), OpAsmPrinter(static_cast<Impl &>(*this)) {}
+  explicit OperationPrinter(raw_ostream &os, AsmStateImpl &state)
+      : Impl(os, state.getPrinterFlags(), &state),
+        OpAsmPrinter(static_cast<Impl &>(*this)) {}
 
   /// Print the given top-level operation.
   void printTopLevelOperation(Operation *op);
@@ -2893,7 +2900,7 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
   if (!getParent() && !printerFlags.shouldUseLocalScope()) {
     AsmState state(this, printerFlags);
     state.getImpl().initializeAliases(this);
-    print(os, state, printerFlags);
+    print(os, state);
     return;
   }
 
@@ -2914,12 +2921,11 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
   } while (true);
 
   AsmState state(op, printerFlags);
-  print(os, state, printerFlags);
+  print(os, state);
 }
-void Operation::print(raw_ostream &os, AsmState &state,
-                      const OpPrintingFlags &flags) {
-  OperationPrinter printer(os, flags, state.getImpl());
-  if (!getParent() && !flags.shouldUseLocalScope())
+void Operation::print(raw_ostream &os, AsmState &state) {
+  OperationPrinter printer(os, state.getImpl());
+  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope())
     printer.printTopLevelOperation(this);
   else
     printer.print(this);
@@ -2944,7 +2950,7 @@ void Block::print(raw_ostream &os) {
   print(os, state);
 }
 void Block::print(raw_ostream &os, AsmState &state) {
-  OperationPrinter(os, /*flags=*/llvm::None, state.getImpl()).print(this);
+  OperationPrinter(os, state.getImpl()).print(this);
 }
 
 void Block::dump() { print(llvm::errs()); }
@@ -2960,6 +2966,6 @@ void Block::printAsOperand(raw_ostream &os, bool printType) {
   printAsOperand(os, state);
 }
 void Block::printAsOperand(raw_ostream &os, AsmState &state) {
-  OperationPrinter printer(os, /*flags=*/llvm::None, state.getImpl());
+  OperationPrinter printer(os, state.getImpl());
   printer.printBlockName(this);
 }

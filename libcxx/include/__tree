@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___TREE
 #define _LIBCPP___TREE
 
+#include <__algorithm/min.h>
 #include <__config>
 #include <__utility/forward.h>
-#include <algorithm>
 #include <iterator>
 #include <limits>
 #include <memory>

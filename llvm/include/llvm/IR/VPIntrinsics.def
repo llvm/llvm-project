@@ -121,6 +121,11 @@
 #define VP_PROPERTY_BINARYOP
 #endif
 
+// A property to infer VP type casts automatically.
+#ifndef VP_PROPERTY_CASTOP
+#define VP_PROPERTY_CASTOP
+#endif
+
 /// } Property Macros
 
 ///// Integer Arithmetic {
@@ -222,6 +227,27 @@ VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
 END_REGISTER_VP(vp_fma, VP_FMA)
 
 ///// } Floating-Point Arithmetic
+
+///// Type Casts {
+// Specialized helper macro for type conversions.
+// <operation>(%x, %mask, %evl).
+#ifdef HELPER_REGISTER_CAST_VP
+#error                                                                         \
+    "The internal helper macro HELPER_REGISTER_CAST_VP is already defined!"
+#endif
+#define HELPER_REGISTER_CAST_VP(OPSUFFIX, VPSD, IROPC, HASROUND)                    \
+  BEGIN_REGISTER_VP(vp_##OPSUFFIX, 1, 2, VPSD, -1)                             \
+  VP_PROPERTY_FUNCTIONAL_OPC(IROPC)                                            \
+  VP_PROPERTY_CONSTRAINEDFP(HASROUND, 1, experimental_constrained_##OPSUFFIX)         \
+  VP_PROPERTY_CASTOP                                                         \
+  END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
+
+// llvm.vp.fptosi(x,mask,vlen)
+HELPER_REGISTER_CAST_VP(fptosi, VP_FPTOSI, FPToSI, 0)
+
+#undef HELPER_REGISTER_CAST_VP
+
+///// } Type Casts
 
 ///// Memory Operations {
 // llvm.vp.store(val,ptr,mask,vlen)
@@ -354,13 +380,13 @@ HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
 
 ///// Shuffles {
 
-// llvm.vp.select(mask,on_true,on_false,vlen)
-BEGIN_REGISTER_VP(vp_select, 0, 3, VP_SELECT, -1)
+// llvm.vp.select(cond,on_true,on_false,vlen)
+BEGIN_REGISTER_VP(vp_select, None, 3, VP_SELECT, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(Select)
 END_REGISTER_VP(vp_select, VP_SELECT)
 
-// llvm.vp.merge(mask,on_true,on_false,pivot)
-BEGIN_REGISTER_VP(vp_merge, 0, 3, VP_MERGE, -1)
+// llvm.vp.merge(cond,on_true,on_false,pivot)
+BEGIN_REGISTER_VP(vp_merge, None, 3, VP_MERGE, -1)
 END_REGISTER_VP(vp_merge, VP_MERGE)
 
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
@@ -375,6 +401,7 @@ END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 #undef END_REGISTER_VP_INTRINSIC
 #undef END_REGISTER_VP_SDNODE
 #undef VP_PROPERTY_BINARYOP
+#undef VP_PROPERTY_CASTOP
 #undef VP_PROPERTY_CONSTRAINEDFP
 #undef VP_PROPERTY_FUNCTIONAL_INTRINSIC
 #undef VP_PROPERTY_FUNCTIONAL_OPC

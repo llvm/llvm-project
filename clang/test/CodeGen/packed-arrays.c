@@ -152,6 +152,6 @@ int f3_d(struct s3 *a) {
 // CHECK:   load double, double* {{.*}}, align 8
 // CHECK: }
 extern double g4[5] __attribute__((aligned(16)));
-double f4() {
+double f4(void) {
   return g4[1];
 }

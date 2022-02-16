@@ -179,7 +179,7 @@ void testBitwiseRules(unsigned int a, int b, int c) {
   }
 }
 
-unsigned reset();
+unsigned reset(void);
 
 void testCombinedSources(unsigned a, unsigned b) {
   if (b >= 10 && (a | b) <= 30) {

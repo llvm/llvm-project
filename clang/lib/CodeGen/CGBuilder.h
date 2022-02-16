@@ -151,18 +151,13 @@ public:
                                             Ordering, SSID);
   }
 
-  using CGBuilderBaseTy::CreateBitCast;
-  Address CreateBitCast(Address Addr, llvm::Type *Ty,
-                        const llvm::Twine &Name = "") {
-    return Address(CreateBitCast(Addr.getPointer(), Ty, Name),
-                   Addr.getAlignment());
-  }
-
   using CGBuilderBaseTy::CreateAddrSpaceCast;
   Address CreateAddrSpaceCast(Address Addr, llvm::Type *Ty,
                               const llvm::Twine &Name = "") {
-    return Address(CreateAddrSpaceCast(Addr.getPointer(), Ty, Name),
-                   Addr.getAlignment());
+    assert(cast<llvm::PointerType>(Ty)->isOpaqueOrPointeeTypeMatches(
+               Addr.getElementType()) &&
+           "Should not change the element type");
+    return Addr.withPointer(CreateAddrSpaceCast(Addr.getPointer(), Ty, Name));
   }
 
   /// Cast the element type of the given address to a different type,
