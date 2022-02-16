@@ -143,9 +143,9 @@
 # RUN:   %t/weak-private-extern.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
 
-# EXP-AUTOHIDE: T _foo        
+# EXP-AUTOHIDE: T _foo
 # AUTOHIDE-PRIVATE: error: cannot export hidden symbol _foo
-        
+
 #--- default.s
 
 .globl _keep_globl, _hide_globl
@@ -214,6 +214,6 @@ _foo:
 #--- weak-private-extern.s
 .global _foo
 .weak_definition _foo
-.private_extern _foo        
+.private_extern _foo
 _foo:
   retq
