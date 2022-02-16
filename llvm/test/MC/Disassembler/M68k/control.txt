@@ -1,4 +1,5 @@
 # RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
+# XFAIL: *
 
 # CHECK: bra $0
 0x60 0x00 0x00 0x00
