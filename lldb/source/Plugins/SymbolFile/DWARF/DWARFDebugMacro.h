@@ -43,9 +43,9 @@ private:
   SkipOperandTable(const lldb_private::DWARFDataExtractor &debug_macro_data,
                    lldb::offset_t *offset);
 
-  uint16_t m_version;
-  bool m_offset_is_64_bit;
-  uint64_t m_debug_line_offset;
+  uint16_t m_version = 0;
+  bool m_offset_is_64_bit = false;
+  uint64_t m_debug_line_offset = 0;
 };
 
 class DWARFDebugMacroEntry {
