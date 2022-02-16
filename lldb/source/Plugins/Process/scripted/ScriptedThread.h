@@ -42,6 +42,8 @@ public:
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
+  bool LoadArtificialStackFrames();
+
   bool CalculateStopInfo() override;
 
   const char *GetInfo() override { return nullptr; }

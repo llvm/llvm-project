@@ -14,7 +14,7 @@ void foo (int _nextId)
 typedef struct {
     unsigned long state;
     id *itemsPtr;
-    void (^bp)();
+    void (^bp)(void);
     unsigned long *mutationsPtr;
     unsigned long extra[5];
 } NSFastEnumerationState;

@@ -135,7 +135,7 @@ void test6(id a, id b) {
 // CHECK-ARC-NOT: define internal void @__Block_byref_object_copy_
 // CHECK-ARC-NOT: define internal void @__Block_byref_object_dispose_
 
-void test7() {
+void test7(void) {
   id a;
   __block id b0;
   noescapeFunc0(a, ^{ (void)b0; });
@@ -161,7 +161,7 @@ struct S0 {
   id a, b;
 };
 
-void test8() {
+void test8(void) {
   id a;
   __block struct S0 b0;
   noescapeFunc0(a, ^{ (void)b0; });

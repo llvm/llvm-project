@@ -48,7 +48,7 @@ void foo(const id a) {
   void *p = @protocol(P3);
 }
 
-int main() {
+int main(void) {
   Protocol *P0 = @protocol(P0);
   Protocol *P1 = @protocol(P1);
   Protocol *P2 = @protocol(P2);
@@ -67,6 +67,6 @@ int main() {
 
 // rdar://problem/7992749
 typedef Root<P1> P1Object;
-int test10() {
+int test10(void) {
   return [P1Object maxValue];
 }

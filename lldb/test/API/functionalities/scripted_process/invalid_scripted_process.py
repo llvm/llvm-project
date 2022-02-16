@@ -57,21 +57,6 @@ class InvalidScriptedThread(ScriptedThread):
             "signal": signal.SIGTRAP
         } }
 
-    def get_stackframes(self):
-        class ScriptedStackFrame:
-            def __init__(idx, cfa, pc, symbol_ctx):
-                self.idx = idx
-                self.cfa = cfa
-                self.pc = pc
-                self.symbol_ctx = symbol_ctx
-
-
-        symbol_ctx = lldb.SBSymbolContext()
-        frame_zero = ScriptedStackFrame(0, 0x42424242, 0x5000000, symbol_ctx)
-        self.frames.append(frame_zero)
-
-        return self.frame_zero[0:0]
-
     def get_register_context(self) -> str:
         return None
 

@@ -15,7 +15,7 @@ int __CFConstantStringClassReference[24];
 @end
 
 
-static inline void _inlineFunction() {
+static inline void _inlineFunction(void) {
     [Bar format:@" "];
 }
 

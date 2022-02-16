@@ -79,7 +79,12 @@ uint32_t getNumberOfWarpsInBlock();
 uint32_t getBlockId();
 
 /// Return the block size, thus number of threads in the block.
+///
+/// Note: The version taking \p IsSPMD mode explicitly can be used during the
+/// initialization of the target region, that is before `mapping::isSPMDMode()`
+/// can be called by any thread other than the main one.
 uint32_t getBlockSize();
+uint32_t getBlockSize(bool IsSPMD);
 
 /// Return the number of blocks in the kernel.
 uint32_t getNumberOfBlocks();
