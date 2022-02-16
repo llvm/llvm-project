@@ -957,6 +957,9 @@ let Command = "target modules lookup" in {
   def target_modules_lookup_type : Option<"type", "t">, Group<6>, Arg<"Name">,
     Required, Desc<"Lookup a type by name in the debug symbols in one or more "
     "target modules.">;
+  def target_modules_lookup_variables_ranges : Option<"show-variable-ranges", 
+    "\\x01">, GroupRange<1, 6>, Desc<"Dump valid ranges of variables (must be "
+    "used in conjunction with --verbose">;
   def target_modules_lookup_verbose : Option<"verbose", "v">,
     Desc<"Enable verbose lookup information.">;
   def target_modules_lookup_all : Option<"all", "A">, Desc<"Print all matches, "
