@@ -235,6 +235,24 @@ public:
     FPE_Strict
   };
 
+  /// Possible float expression evaluation method choices.
+  enum FPEvalMethodKind {
+    /// The evaluation method cannot be determined or is inconsistent for this
+    /// target.
+    FEM_Indeterminable = -1,
+    /// Use the declared type for fp arithmetic.
+    FEM_Source = 0,
+    /// Use the type double for fp arithmetic.
+    FEM_Double = 1,
+    /// Use extended type for fp arithmetic.
+    FEM_Extended = 2,
+    /// Used only for FE option processing; this is only used to indicate that
+    /// the user did not specify an explicit evaluation method on the command
+    /// line and so the target should be queried for its default evaluation
+    /// method instead.
+    FEM_UnsetOnCommandLine = 3
+  };
+
   /// Possible exception handling behavior.
   enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
 

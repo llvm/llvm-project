@@ -470,6 +470,27 @@ void Sema::ActOnPragmaDetectMismatch(SourceLocation Loc, StringRef Name,
   Consumer.HandleTopLevelDecl(DeclGroupRef(PDMD));
 }
 
+void Sema::ActOnPragmaFPEvalMethod(SourceLocation Loc,
+                                   LangOptions::FPEvalMethodKind Value) {
+  FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
+  switch (Value) {
+  default:
+    llvm_unreachable("invalid pragma eval_method kind");
+  case LangOptions::FEM_Source:
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Source);
+    break;
+  case LangOptions::FEM_Double:
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Double);
+    break;
+  case LangOptions::FEM_Extended:
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Extended);
+    break;
+  }
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
+  PP.setCurrentFPEvalMethod(Loc, Value);
+}
+
 void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
                                    PragmaMsStackAction Action,
                                    PragmaFloatControlKind Value) {

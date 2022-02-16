@@ -318,6 +318,11 @@ def err_opt_not_valid_on_target : Error<
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
 
+// Eval method
+def warn_no_support_for_eval_method_source_on_m32 : Warning<
+  "Setting FPEvalMethod to source on a 32bit target, with no SSE is"
+  " not supported.">;
+
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
 def err_file_modified : Error<
