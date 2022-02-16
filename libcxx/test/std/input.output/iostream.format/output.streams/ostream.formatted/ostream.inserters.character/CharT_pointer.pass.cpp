@@ -82,7 +82,7 @@ int main(int, char**)
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os.width(5);
-        left(os);
+        std::left(os);
         const wchar_t* c = L"123";
         os << c;
         assert(sb.str() == L"123  ");

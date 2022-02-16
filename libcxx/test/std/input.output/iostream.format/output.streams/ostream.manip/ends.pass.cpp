@@ -56,7 +56,7 @@ int main(int, char**)
     {
         testbuf<char> sb;
         std::ostream os(&sb);
-        ends(os);
+        std::ends(os);
         assert(sb.str().size() == 1);
         assert(sb.str().back() == 0);
         assert(os.good());
@@ -65,7 +65,7 @@ int main(int, char**)
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
-        ends(os);
+        std::ends(os);
         assert(sb.str().size() == 1);
         assert(sb.str().back() == 0);
         assert(os.good());

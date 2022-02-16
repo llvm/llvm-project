@@ -80,7 +80,7 @@ int main(int, char**)
         testbuf<char> sb;
         std::ostream os(&sb);
         os.width(5);
-        left(os);
+        std::left(os);
         const unsigned char* c = (const unsigned char*)"123";
         os << c;
         assert(sb.str() == "123  ");

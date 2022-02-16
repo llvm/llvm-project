@@ -65,7 +65,7 @@ int main(int, char**)
     {
         testbuf<char> sb;
         std::ostream os(&sb);
-        endl(os);
+        std::endl(os);
         assert(sb.str() == "\n");
         assert(sync_called == 1);
         assert(os.good());
@@ -74,7 +74,7 @@ int main(int, char**)
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
-        endl(os);
+        std::endl(os);
         assert(sb.str() == L"\n");
         assert(sync_called == 2);
         assert(os.good());
