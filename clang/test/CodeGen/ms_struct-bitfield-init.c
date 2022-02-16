@@ -42,7 +42,7 @@ struct {
   int i4;
 } t3 = {1,2,3,4};
 
-int main() {
+int main(void) {
   if (sizeof(t1) != 2)
     abort();
   if (t1.foo != 'a')

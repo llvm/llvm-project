@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fasm-blocks -emit-llvm -o - | FileCheck %s
 
-void t1() {
+void t1(void) {
   int var = 10;
   __asm mov rax, offset var ; rax = address of myvar
 // CHECK: t1
@@ -10,7 +10,7 @@ void t1() {
 // CHECK-SAME: "r,~{rax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
 }
 
-void t2() {
+void t2(void) {
   int var = 10;
   __asm mov qword ptr [eax], offset var
 // CHECK: t2
@@ -21,7 +21,7 @@ void t2() {
 
 struct t3_type { int a, b; };
 
-int t3() {
+int t3(void) {
   struct t3_type foo;
   foo.a = 1;
   foo.b = 2;
@@ -39,7 +39,7 @@ int t3() {
 // CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* elementtype(%struct.t3_type) %{{.*}})
 }
 
-int t4() {
+int t4(void) {
   struct t3_type foo;
   foo.a = 1;
   foo.b = 2;
@@ -61,7 +61,7 @@ int t4() {
 
 void bar() {}
 
-void t5() {
+void t5(void) {
   __asm {
     call bar
     jmp bar

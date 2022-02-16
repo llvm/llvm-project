@@ -15,14 +15,14 @@ int min1;
 int marray[2];
 
 // CHECK: @single_m
-void single_m()
+void single_m(void)
 {
   // CHECK: call void asm "foo $1,$0", "=*m,*m[[CLOBBERS:[a-zA-Z0-9@%{},~_$ ]*\"]](i32* elementtype(i32) {{[a-zA-Z0-9@%]+}}, i32* elementtype(i32) {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=m" (mout0) : "m" (min1));
 }
 
 // CHECK: @single_o
-void single_o()
+void single_o(void)
 {
   register int out0 = 0;
   register int index = 1;
@@ -31,13 +31,13 @@ void single_o()
 }
 
 // CHECK: @single_V
-void single_V()
+void single_V(void)
 {
 //  asm("foo %1,%0" : "=m" (mout0) : "V" (min1));
 }
 
 // CHECK: @single_lt
-void single_lt()
+void single_lt(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -48,7 +48,7 @@ void single_lt()
 }
 
 // CHECK: @single_gt
-void single_gt()
+void single_gt(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -59,7 +59,7 @@ void single_gt()
 }
 
 // CHECK: @single_r
-void single_r()
+void single_r(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -68,7 +68,7 @@ void single_r()
 }
 
 // CHECK: @single_i
-void single_i()
+void single_i(void)
 {
   register int out0 = 0;
   // CHECK: call i32 asm "foo $1,$0", "=r,i[[CLOBBERS]](i32 1)
@@ -76,7 +76,7 @@ void single_i()
 }
 
 // CHECK: @single_n
-void single_n()
+void single_n(void)
 {
   register int out0 = 0;
   // CHECK: call i32 asm "foo $1,$0", "=r,n[[CLOBBERS]](i32 1)
@@ -84,7 +84,7 @@ void single_n()
 }
 
 // CHECK: @single_E
-void single_E()
+void single_E(void)
 {
   register double out0 = 0.0;
   // CHECK: call double asm "foo $1,$0", "=r,E[[CLOBBERS]](double {{[0-9.eE+-]+}})
@@ -92,7 +92,7 @@ void single_E()
 }
 
 // CHECK: @single_F
-void single_F()
+void single_F(void)
 {
   register double out0 = 0.0;
   // CHECK: call double asm "foo $1,$0", "=r,F[[CLOBBERS]](double {{[0-9.eE+-]+}})
@@ -100,14 +100,14 @@ void single_F()
 }
 
 // CHECK: @single_s
-void single_s()
+void single_s(void)
 {
   register int out0 = 0;
   //asm("foo %1,%0" : "=r" (out0) : "s" (single_s));
 }
 
 // CHECK: @single_g
-void single_g()
+void single_g(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -120,7 +120,7 @@ void single_g()
 }
 
 // CHECK: @single_X
-void single_X()
+void single_X(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -139,7 +139,7 @@ void single_X()
 }
 
 // CHECK: @single_p
-void single_p()
+void single_p(void)
 {
   register int out0 = 0;
   // Constraint converted differently on different platforms moved to platform-specific.
@@ -148,14 +148,14 @@ void single_p()
 }
 
 // CHECK: @multi_m
-void multi_m()
+void multi_m(void)
 {
   // CHECK: call void asm "foo $1,$0", "=*m|r,m|r[[CLOBBERS]](i32* elementtype(i32) {{[a-zA-Z0-9@%]+}}, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=m,r" (mout0) : "m,r" (min1));
 }
 
 // CHECK: @multi_o
-void multi_o()
+void multi_o(void)
 {
   register int out0 = 0;
   register int index = 1;
@@ -164,13 +164,13 @@ void multi_o()
 }
 
 // CHECK: @multi_V
-void multi_V()
+void multi_V(void)
 {
 //  asm("foo %1,%0" : "=m,r" (mout0) : "r,V" (min1));
 }
 
 // CHECK: @multi_lt
-void multi_lt()
+void multi_lt(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -181,7 +181,7 @@ void multi_lt()
 }
 
 // CHECK: @multi_gt
-void multi_gt()
+void multi_gt(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -192,7 +192,7 @@ void multi_gt()
 }
 
 // CHECK: @multi_r
-void multi_r()
+void multi_r(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -201,7 +201,7 @@ void multi_r()
 }
 
 // CHECK: @multi_i
-void multi_i()
+void multi_i(void)
 {
   register int out0 = 0;
   // CHECK: call i32 asm "foo $1,$0", "=r|r,r|i[[CLOBBERS]](i32 1)
@@ -209,7 +209,7 @@ void multi_i()
 }
 
 // CHECK: @multi_n
-void multi_n()
+void multi_n(void)
 {
   register int out0 = 0;
   // CHECK: call i32 asm "foo $1,$0", "=r|r,r|n[[CLOBBERS]](i32 1)
@@ -217,7 +217,7 @@ void multi_n()
 }
 
 // CHECK: @multi_E
-void multi_E()
+void multi_E(void)
 {
   register double out0 = 0.0;
   // CHECK: call double asm "foo $1,$0", "=r|r,r|E[[CLOBBERS]](double {{[0-9.eE+-]+}})
@@ -225,7 +225,7 @@ void multi_E()
 }
 
 // CHECK: @multi_F
-void multi_F()
+void multi_F(void)
 {
   register double out0 = 0.0;
   // CHECK: call double asm "foo $1,$0", "=r|r,r|F[[CLOBBERS]](double {{[0-9.eE+-]+}})
@@ -233,14 +233,14 @@ void multi_F()
 }
 
 // CHECK: @multi_s
-void multi_s()
+void multi_s(void)
 {
   register int out0 = 0;
   //asm("foo %1,%0" : "=r,r" (out0) : "r,s" (multi_s));
 }
 
 // CHECK: @multi_g
-void multi_g()
+void multi_g(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -253,7 +253,7 @@ void multi_g()
 }
 
 // CHECK: @multi_X
-void multi_X()
+void multi_X(void)
 {
   register int out0 = 0;
   register int in1 = 1;
@@ -272,7 +272,7 @@ void multi_X()
 }
 
 // CHECK: @multi_p
-void multi_p()
+void multi_p(void)
 {
   register int out0 = 0;
   // Constraint converted differently on different platforms moved to platform-specific.

@@ -13,7 +13,7 @@
 // RUN: %clang_cc1 -triple arm-unknown-unknown -emit-llvm -o - %s -target-feature +soft-float | FileCheck %s -check-prefix=SOFT-FLOAT
 // RUN: %clang_cc1 -triple mips-unknown-unknown -emit-llvm -o - %s -target-feature +soft-float | FileCheck %s -check-prefix=SOFT-FLOAT
 
-void foo() {}
+void foo(void) {}
 
 // AVX-FEATURE: "target-features"{{.*}}+avx
 // AVX-NO-CPU-NOT: target-cpu

@@ -21,7 +21,7 @@ struct test {
 };
 
 
-void foo()
+void foo(void)
 {
   // CHECK: %var = alloca %struct.test, align 4
   struct test var;

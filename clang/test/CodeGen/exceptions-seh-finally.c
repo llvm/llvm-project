@@ -104,7 +104,7 @@ void use_abnormal_termination(void) {
 // CHECK: store i32 %[[abnormal_zext]], i32* @crashed
 // CHECK-NEXT: ret void
 
-void noreturn_noop_finally() {
+void noreturn_noop_finally(void) {
   __try {
     __noop();
   } __finally {
@@ -121,7 +121,7 @@ void noreturn_noop_finally() {
 // CHECK: call void @abort()
 // CHECK: unreachable
 
-void noreturn_finally() {
+void noreturn_finally(void) {
   __try {
     might_crash();
   } __finally {
@@ -147,7 +147,7 @@ void noreturn_finally() {
 // CHECK: call void @abort()
 // CHECK: unreachable
 
-int finally_with_return() {
+int finally_with_return(void) {
   __try {
     return 42;
   } __finally {
@@ -163,7 +163,7 @@ int finally_with_return() {
 // CHECK-NOT: br label
 // CHECK: ret void
 
-int nested___finally___finally() {
+int nested___finally___finally(void) {
   __try {
     __try {
     } __finally {
@@ -198,7 +198,7 @@ int nested___finally___finally() {
 
 // FIXME: Our behavior seems suspiciously different.
 
-int nested___finally___finally_with_eh_edge() {
+int nested___finally___finally_with_eh_edge(void) {
   __try {
     __try {
       might_crash();
@@ -243,7 +243,7 @@ int nested___finally___finally_with_eh_edge() {
 // CHECK-SAME: [[finally_attrs]]
 // CHECK: unreachable
 
-void finally_within_finally() {
+void finally_within_finally(void) {
   __try {
     might_crash();
   } __finally {
@@ -271,7 +271,7 @@ void finally_within_finally() {
 // CHECK-SAME: [[finally_attrs]]
 
 void cleanup_with_func(const char *);
-void finally_with_func() {
+void finally_with_func(void) {
   __try {
     might_crash();
   } __finally {

@@ -8,7 +8,7 @@ extern int fake(void);
 int name;
 
 // __PRAGMA_REDEFINE_EXTNAME should be defined.  This will fail if it isn't...
-int fish() { return fake() + __PRAGMA_REDEFINE_EXTNAME + name; }
+int fish(void) { return fake() + __PRAGMA_REDEFINE_EXTNAME + name; }
 // Check that the call to fake() is emitted as a call to real()
 // CHECK:   call i32 @real()
 // Check that this also works with variables names
@@ -17,17 +17,17 @@ int fish() { return fake() + __PRAGMA_REDEFINE_EXTNAME + name; }
 // This is a case when redefenition is deferred *and* we have a local of the
 // same name. PR23923.
 #pragma redefine_extname foo bar
-int f() {
+int f(void) {
   int foo = 0;
   return foo;
 }
-extern int foo() { return 1; }
+extern int foo(void) { return 1; }
 // CHECK: define{{.*}} i32 @bar()
 
 // Check that pragma redefine_extname applies to external declarations only.
 #pragma redefine_extname foo_static bar_static
-static int foo_static() { return 1; }
-int baz() { return foo_static(); }
+static int foo_static(void) { return 1; }
+int baz(void) { return foo_static(); }
 // CHECK-NOT: call i32 @bar_static()
 
 // Check that pragma redefine_extname applies to builtin functions.

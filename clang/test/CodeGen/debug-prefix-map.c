@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void test_rewrite_includes() {
+void test_rewrite_includes(void) {
   __builtin_va_list argp;
   vprintf("string", argp);
 }

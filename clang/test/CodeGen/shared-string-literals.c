@@ -4,6 +4,6 @@ char *globalString = "abc";
 char *globalStringArray[5] = { "123", "abc" };
 char *anotherGlobalString = "123";
 
-int main() {
+int main(void) {
     printf("123");
 }

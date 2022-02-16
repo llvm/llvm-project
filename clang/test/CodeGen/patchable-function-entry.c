@@ -3,29 +3,29 @@
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -fms-hotpatch -o - | FileCheck --check-prefixes=HOTPATCH %s
 
 // CHECK: define{{.*}} void @f0() #0
-__attribute__((patchable_function_entry(0))) void f0() {}
+__attribute__((patchable_function_entry(0))) void f0(void) {}
 
 // CHECK: define{{.*}} void @f00() #0
-__attribute__((patchable_function_entry(0, 0))) void f00() {}
+__attribute__((patchable_function_entry(0, 0))) void f00(void) {}
 
 // CHECK: define{{.*}} void @f2() #1
-__attribute__((patchable_function_entry(2))) void f2() {}
+__attribute__((patchable_function_entry(2))) void f2(void) {}
 
 // CHECK: define{{.*}} void @f20() #1
-__attribute__((patchable_function_entry(2, 0))) void f20() {}
+__attribute__((patchable_function_entry(2, 0))) void f20(void) {}
 
 // CHECK: define{{.*}} void @f20decl() #1
-__attribute__((patchable_function_entry(2, 0))) void f20decl();
-void f20decl() {}
+__attribute__((patchable_function_entry(2, 0))) void f20decl(void);
+void f20decl(void) {}
 
 // CHECK: define{{.*}} void @f44() #2
-__attribute__((patchable_function_entry(4, 4))) void f44() {}
+__attribute__((patchable_function_entry(4, 4))) void f44(void) {}
 
 // CHECK: define{{.*}} void @f52() #3
-__attribute__((patchable_function_entry(5, 2))) void f52() {}
+__attribute__((patchable_function_entry(5, 2))) void f52(void) {}
 
 // OPT: define{{.*}} void @f() #4
-void f() {}
+void f(void) {}
 
 /// No need to emit "patchable-function-entry"="0"
 // CHECK: attributes #0 = { {{.*}}
