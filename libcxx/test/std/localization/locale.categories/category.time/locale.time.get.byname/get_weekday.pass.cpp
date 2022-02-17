@@ -11,8 +11,6 @@
 // REQUIRES: locale.ru_RU.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <locale>
 
 // class time_get_byname<charT, InputIterator>
