@@ -320,6 +320,7 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override;
 
   void addIRPasses() override;
+  void addISelPrepare() override;
   bool addInstSelector() override;
   void addPostRegAlloc() override;
   bool addGCPasses() override { return false; }
@@ -407,12 +408,6 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  // Lower atomics and TLS if necessary
-  addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
-
-  // This is a no-op if atomics are not used in the module
-  addPass(createAtomicExpandPass());
-
   // Add signatures to prototype-less function declarations
   addPass(createWebAssemblyAddMissingPrototypes());
 
@@ -453,6 +448,16 @@ void WebAssemblyPassConfig::addIRPasses() {
   addPass(createIndirectBrExpandPass());
 
   TargetPassConfig::addIRPasses();
+}
+
+void WebAssemblyPassConfig::addISelPrepare() {
+  // Lower atomics and TLS if necessary
+  addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
+
+  // This is a no-op if atomics are not used in the module
+  addPass(createAtomicExpandPass());
+
+  TargetPassConfig::addISelPrepare();
 }
 
 bool WebAssemblyPassConfig::addInstSelector() {

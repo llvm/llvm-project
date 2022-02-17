@@ -1,11 +1,10 @@
-; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasmehprepare -S | FileCheck %s --check-prefixes=CHECK,NO-TLS
-; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasmehprepare -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS
+; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasmehprepare -S | FileCheck %s
+; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasmehprepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-; NO-TLS: @__wasm_lpad_context = external global { i32, i8*, i32 }
-; TLS: @__wasm_lpad_context = external thread_local global { i32, i8*, i32 }
+; CHECK: @__wasm_lpad_context = external thread_local global { i32, i8*, i32 }
 
 @_ZTIi = external constant i8*
 %struct.Temp = type { i8 }
