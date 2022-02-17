@@ -75,10 +75,10 @@ class TestStructuredBinding(TestBase):
         self.expect_expr("iarr_copy2", result_type="int", result_value="33")
         self.expect_expr("iarr_copy3", result_type="int", result_value="44")
 
-        self.expect_expr("tx1", result_type="float", result_value="4")
-        self.expect_expr("ty1", result_type="char", result_value="'z'")
-        self.expect_expr("tz1", result_type="int", result_value="10")
+        self.expect_expr("tx1", result_value="4")
+        self.expect_expr("ty1", result_value="'z'")
+        self.expect_expr("tz1", result_value="10")
 
-        self.expect_expr("tx2", result_type="float", result_value="4")
-        self.expect_expr("ty2", result_type="char", result_value="'z'")
-        self.expect_expr("tz2", result_type="int", result_value="10")
+        self.expect_expr("tx2", result_value="4")
+        self.expect_expr("ty2", result_value="'z'")
+        self.expect_expr("tz2", result_value="10")
