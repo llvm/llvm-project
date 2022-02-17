@@ -41,7 +41,6 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/zero.mtx
           DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
 endif()
 
