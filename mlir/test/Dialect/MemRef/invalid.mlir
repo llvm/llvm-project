@@ -516,7 +516,7 @@ func @collapse_shape_illegal_mixed_memref_2(%arg0 : memref<?x4x5xf32>)
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
-  // expected-error@+1 {{expects 1 offset operand}}
+  // expected-error@+1 {{expected SSA operand}}
   %1 = memref.view %0[][%arg0, %arg1]
     : memref<2048xi8> to memref<?x?xf32>
   return
