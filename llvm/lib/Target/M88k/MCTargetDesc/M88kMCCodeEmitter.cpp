@@ -36,13 +36,12 @@ namespace {
 
 class M88kMCCodeEmitter : public MCCodeEmitter {
   const MCInstrInfo &MCII;
-  const MCRegisterInfo &MRI;
   MCContext &Ctx;
 
 public:
-  M88kMCCodeEmitter(const MCInstrInfo &MCII, const MCRegisterInfo &MRI,
+  M88kMCCodeEmitter(const MCInstrInfo &MCII,
                     MCContext &Ctx)
-      : MCII(MCII), MRI(MRI), Ctx(Ctx) {}
+      : MCII(MCII), Ctx(Ctx) {}
 
   ~M88kMCCodeEmitter() override = default;
 
@@ -105,7 +104,7 @@ M88kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      const MCSubtargetInfo &STI) const {
   if (MO.isReg())
-    return MRI.getEncodingValue(MO.getReg());
+    return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
   if (MO.isImm())
     return static_cast<uint64_t>(MO.getImm());
 
@@ -155,7 +154,6 @@ unsigned M88kMCCodeEmitter::getPC26Encoding(const MCInst &MI, unsigned OpNo,
 #include "M88kGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createM88kMCCodeEmitter(const MCInstrInfo &MCII,
-                                             const MCRegisterInfo &MRI,
                                              MCContext &Ctx) {
-  return new M88kMCCodeEmitter(MCII, MRI, Ctx);
+  return new M88kMCCodeEmitter(MCII, Ctx);
 }
