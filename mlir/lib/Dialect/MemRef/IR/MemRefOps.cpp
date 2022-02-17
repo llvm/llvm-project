@@ -2278,39 +2278,6 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
 // ViewOp
 //===----------------------------------------------------------------------===//
 
-ParseResult ViewOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  SmallVector<OpAsmParser::OperandType, 1> offsetInfo;
-  SmallVector<OpAsmParser::OperandType, 4> sizesInfo;
-  auto indexType = parser.getBuilder().getIndexType();
-  Type srcType, dstType;
-  SMLoc offsetLoc;
-  if (parser.parseOperand(srcInfo) || parser.getCurrentLocation(&offsetLoc) ||
-      parser.parseOperandList(offsetInfo, OpAsmParser::Delimiter::Square))
-    return failure();
-
-  if (offsetInfo.size() != 1)
-    return parser.emitError(offsetLoc) << "expects 1 offset operand";
-
-  return failure(
-      parser.parseOperandList(sizesInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(srcType) ||
-      parser.resolveOperand(srcInfo, srcType, result.operands) ||
-      parser.resolveOperands(offsetInfo, indexType, result.operands) ||
-      parser.resolveOperands(sizesInfo, indexType, result.operands) ||
-      parser.parseKeywordType("to", dstType) ||
-      parser.addTypeToList(dstType, result.types));
-}
-
-void ViewOp::print(OpAsmPrinter &p) {
-  p << ' ' << getOperand(0) << '[';
-  p.printOperand(byte_shift());
-  p << "][" << sizes() << ']';
-  p.printOptionalAttrDict((*this)->getAttrs());
-  p << " : " << getOperand(0).getType() << " to " << getType();
-}
-
 LogicalResult ViewOp::verify() {
   auto baseType = getOperand(0).getType().cast<MemRefType>();
   auto viewType = getType();

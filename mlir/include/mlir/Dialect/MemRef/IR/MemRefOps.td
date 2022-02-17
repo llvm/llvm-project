@@ -1771,8 +1771,12 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     }
   }];
 
+  let assemblyFormat = [{
+    $source `[` $byte_shift `]` `` `[` $sizes `]` attr-dict
+    `:` type($source) `to` type(results)
+  }];
+
   let hasCanonicalizer = 1;
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
