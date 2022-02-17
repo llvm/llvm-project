@@ -139,27 +139,35 @@ TEST(AutomemcpyJsonResultsAnalyzer, castVotes) {
   EXPECT_THAT(Data[1].Id, Foo2);
   EXPECT_THAT(Data[2].Id, Foo3);
 
+  const auto GetDistData = [&Data](size_t Index, StringRef Name) {
+    return Data[Index].PerDistributionData.lookup(Name);
+  };
+
   // Distribution A
   // Throughput is 0, 1 and 7, so normalized scores are 0, 1/7 and 1.
-  EXPECT_NEAR(Data[0].PerDistributionData.lookup("A").Score, 0, kAbsErr);
-  EXPECT_NEAR(Data[1].PerDistributionData.lookup("A").Score, 1. / 7, kAbsErr);
-  EXPECT_NEAR(Data[2].PerDistributionData.lookup("A").Score, 1, kAbsErr);
+  EXPECT_THAT(GetDistData(0, "A").Score, DoubleNear(0, kAbsErr));
+  EXPECT_THAT(GetDistData(1, "A").Score, DoubleNear(1. / 7, kAbsErr));
+  EXPECT_THAT(GetDistData(2, "A").Score, DoubleNear(1, kAbsErr));
   // which are turned into grades BAD,  MEDIOCRE and EXCELLENT.
-  EXPECT_THAT(Data[0].PerDistributionData.lookup("A").Grade, Grade::BAD);
-  EXPECT_THAT(Data[1].PerDistributionData.lookup("A").Grade, Grade::MEDIOCRE);
-  EXPECT_THAT(Data[2].PerDistributionData.lookup("A").Grade, Grade::EXCELLENT);
+  EXPECT_THAT(GetDistData(0, "A").Grade, Grade::BAD);
+  EXPECT_THAT(GetDistData(1, "A").Grade, Grade::MEDIOCRE);
+  EXPECT_THAT(GetDistData(2, "A").Grade, Grade::EXCELLENT);
 
   // Distribution B
   // Throughput is 30, 100 and 100, so normalized scores are 0, 1 and 1.
-  EXPECT_NEAR(Data[0].PerDistributionData.lookup("B").Score, 0, kAbsErr);
-  EXPECT_NEAR(Data[1].PerDistributionData.lookup("B").Score, 1, kAbsErr);
-  EXPECT_NEAR(Data[2].PerDistributionData.lookup("B").Score, 1, kAbsErr);
+  EXPECT_THAT(GetDistData(0, "B").Score, DoubleNear(0, kAbsErr));
+  EXPECT_THAT(GetDistData(1, "B").Score, DoubleNear(1, kAbsErr));
+  EXPECT_THAT(GetDistData(2, "B").Score, DoubleNear(1, kAbsErr));
   // which are turned into grades BAD, EXCELLENT and EXCELLENT.
-  EXPECT_THAT(Data[0].PerDistributionData.lookup("B").Grade, Grade::BAD);
-  EXPECT_THAT(Data[1].PerDistributionData.lookup("B").Grade, Grade::EXCELLENT);
-  EXPECT_THAT(Data[2].PerDistributionData.lookup("B").Grade, Grade::EXCELLENT);
+  EXPECT_THAT(GetDistData(0, "B").Grade, Grade::BAD);
+  EXPECT_THAT(GetDistData(1, "B").Grade, Grade::EXCELLENT);
+  EXPECT_THAT(GetDistData(2, "B").Grade, Grade::EXCELLENT);
 
   // Now looking from the functions point of view.
+  EXPECT_THAT(Data[0].ScoresGeoMean, DoubleNear(0, kAbsErr));
+  EXPECT_THAT(Data[1].ScoresGeoMean, DoubleNear(1. * (1. / 7), kAbsErr));
+  EXPECT_THAT(Data[2].ScoresGeoMean, DoubleNear(1, kAbsErr));
+
   // Note the array is indexed by GradeEnum values (EXCELLENT=0 / BAD = 6)
   EXPECT_THAT(Data[0].GradeHisto, ElementsAre(0, 0, 0, 0, 0, 0, 2));
   EXPECT_THAT(Data[1].GradeHisto, ElementsAre(1, 0, 0, 0, 0, 1, 0));

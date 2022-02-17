@@ -168,14 +168,17 @@ void fillScores(MutableArrayRef<FunctionData> Functions) {
 }
 
 void castVotes(MutableArrayRef<FunctionData> Functions) {
-  for (FunctionData &Function : Functions)
+  for (FunctionData &Function : Functions) {
+    Function.ScoresGeoMean = 1.0;
     for (const auto &Pair : Function.PerDistributionData) {
       const StringRef Distribution = Pair.getKey();
       const double Score = Pair.getValue().Score;
+      Function.ScoresGeoMean *= Score;
       const auto G = Grade::judge(Score);
       ++(Function.GradeHisto[G]);
       Function.PerDistributionData[Distribution].Grade = G;
     }
+  }
 
   for (FunctionData &Function : Functions) {
     const auto &GradeHisto = Function.GradeHisto;
