@@ -482,3 +482,14 @@ define ptr @select_of_gep_different_type(i1 %c, ptr %p) {
   %s = select i1 %c, ptr %gep1, ptr %gep2
   ret ptr %s
 }
+
+define void @dse(ptr %p) {
+; CHECK-LABEL: @dse(
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i8 1, ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p
+  store i8 1, ptr %p
+  ret void
+}
