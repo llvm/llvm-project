@@ -21,7 +21,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/StringSaver.h"
 
 namespace llvm {
@@ -42,9 +41,6 @@ public:
   llvm::DenseMap<void *, SpecificAllocBase *> instances;
 
   ErrorHandler e;
-
-private:
-  llvm::codegen::RegisterCodeGenFlags cgf;
 };
 
 // Retrieve the global state. Currently only one state can exist per process,
