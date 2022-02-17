@@ -2844,9 +2844,9 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
 
 void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.insert<RemoveLoopInvariantArgsFromBeforeBlock,
-                 RemoveLoopInvariantValueYielded, WhileConditionTruth,
-                 WhileCmpCond, WhileUnusedResult>(context);
+  results.add<RemoveLoopInvariantArgsFromBeforeBlock,
+              RemoveLoopInvariantValueYielded, WhileConditionTruth,
+              WhileCmpCond, WhileUnusedResult>(context);
 }
 
 //===----------------------------------------------------------------------===//

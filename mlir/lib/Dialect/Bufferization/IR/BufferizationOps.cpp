@@ -170,7 +170,7 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
 
 void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.insert<SimplifyClones>(context);
+  results.add<SimplifyClones>(context);
 }
 
 //===----------------------------------------------------------------------===//

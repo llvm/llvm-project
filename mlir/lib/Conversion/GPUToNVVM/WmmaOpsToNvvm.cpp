@@ -370,7 +370,7 @@ LLVM::LLVMStructType mlir::convertMMAToLLVMType(gpu::MMAMatrixType type) {
 
 void mlir::populateGpuWMMAToNVVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.insert<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
-                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
-                  WmmaElementwiseOpToNVVMLowering>(converter);
+  patterns.add<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
+               WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
+               WmmaElementwiseOpToNVVMLowering>(converter);
 }

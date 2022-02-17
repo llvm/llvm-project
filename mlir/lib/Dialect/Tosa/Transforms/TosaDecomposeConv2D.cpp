@@ -111,5 +111,5 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
 
 void mlir::tosa::populateTosaDecomposeConv2D(MLIRContext *ctx,
                                              RewritePatternSet &patterns) {
-  patterns.insert<Conv2DIsFullyConnected>(ctx);
+  patterns.add<Conv2DIsFullyConnected>(ctx);
 }

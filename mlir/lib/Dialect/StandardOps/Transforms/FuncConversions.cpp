@@ -110,7 +110,7 @@ public:
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
     RewritePatternSet &patterns, TypeConverter &typeConverter,
     function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand) {
-  patterns.insert<BranchOpInterfaceTypeConversion>(
+  patterns.add<BranchOpInterfaceTypeConversion>(
       typeConverter, patterns.getContext(), shouldConvertBranchOperand);
 }
 

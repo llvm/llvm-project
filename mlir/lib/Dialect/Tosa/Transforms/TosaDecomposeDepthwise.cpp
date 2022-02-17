@@ -117,5 +117,5 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
 
 void mlir::tosa::populateTosaDecomposeDepthwise(MLIRContext *ctx,
                                                 RewritePatternSet &patterns) {
-  patterns.insert<DepthwiseConv2DIsMul>(ctx);
+  patterns.add<DepthwiseConv2DIsMul>(ctx);
 }
