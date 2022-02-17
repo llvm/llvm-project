@@ -7,6 +7,7 @@ class TestStructuredBinding(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIf(oslist=["linux"], archs=["arm"])
     @skipIf(compiler="clang", compiler_version=['<', '14.0'])
     def test(self):
         self.build()
