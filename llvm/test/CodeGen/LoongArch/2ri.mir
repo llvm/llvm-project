@@ -16,7 +16,7 @@
 ---
 # CHECK-LABEL: test_SLLI_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: slli.w	a0, a1, 0
+# CHECK-ASM: slli.w	$a0, $a1, 0
 name: test_SLLI_W
 body: |
   bb.0:
@@ -25,7 +25,7 @@ body: |
 ---
 # CHECK-LABEL: test_SRLI_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 0 1 1 1 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: srli.w	a0, a1, 30
+# CHECK-ASM: srli.w	$a0, $a1, 30
 name: test_SRLI_W
 body: |
   bb.0:
@@ -34,7 +34,7 @@ body: |
 ---
 # CHECK-LABEL: test_SRAI_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 1 1 1 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: srai.w	a0, a1, 24
+# CHECK-ASM: srai.w	$a0, $a1, 24
 name: test_SRAI_W
 body: |
   bb.0:
@@ -43,7 +43,7 @@ body: |
 ---
 # CHECK-LABEL: test_ROTRI_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0 0 1 1 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: rotri.w	a0, a1, 23
+# CHECK-ASM: rotri.w	$a0, $a1, 23
 name: test_ROTRI_W
 body: |
   bb.0:
@@ -62,7 +62,7 @@ body: |
 ---
 # CHECK-LABEL: test_SLLI_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 1 0 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: slli.d	a0, a1, 39
+# CHECK-ASM: slli.d	$a0, $a1, 39
 name: test_SLLI_D
 body: |
   bb.0:
@@ -71,7 +71,7 @@ body: |
 ---
 # CHECK-LABEL: test_SRLI_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: srli.d	a0, a1, 38
+# CHECK-ASM: srli.d	$a0, $a1, 38
 name: test_SRLI_D
 body: |
   bb.0:
@@ -80,7 +80,7 @@ body: |
 ---
 # CHECK-LABEL: test_SRAI_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 1 0 1 1 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: srai.d	a0, a1, 27
+# CHECK-ASM: srai.d	$a0, $a1, 27
 name: test_SRAI_D
 body: |
   bb.0:
@@ -89,7 +89,7 @@ body: |
 ---
 # CHECK-LABEL: test_ROTRI_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0 1 0 0 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: rotri.d	a0, a1, 7
+# CHECK-ASM: rotri.d	$a0, $a1, 7
 name: test_ROTRI_D
 body: |
   bb.0:
@@ -108,7 +108,7 @@ body: |
 ---
 # CHECK-LABEL: test_SLTI:
 # CHECK-ENC: 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 1 1 0 1 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: slti	a0, a1, 235
+# CHECK-ASM: slti	$a0, $a1, 235
 name: test_SLTI
 body: |
   bb.0:
@@ -117,7 +117,7 @@ body: |
 ---
 # CHECK-LABEL: test_SLTUI:
 # CHECK-ENC: 0 0 0 0 0 0 1 0 0 1 0 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: sltui	a0, a1, 162
+# CHECK-ASM: sltui	$a0, $a1, 162
 name: test_SLTUI
 body: |
   bb.0:
@@ -126,7 +126,7 @@ body: |
 ---
 # CHECK-LABEL: test_ADDI_W:
 # CHECK-ENC: 0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 1 1 1 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: addi.w	a0, a1, 246
+# CHECK-ASM: addi.w	$a0, $a1, 246
 name: test_ADDI_W
 body: |
   bb.0:
@@ -135,7 +135,7 @@ body: |
 ---
 # CHECK-LABEL: test_ADDI_D:
 # CHECK-ENC: 0 0 0 0 0 0 1 0 1 1 0 0 0 0 0 1 0 0 1 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: addi.d	a0, a1, 75
+# CHECK-ASM: addi.d	$a0, $a1, 75
 name: test_ADDI_D
 body: |
   bb.0:
@@ -144,7 +144,7 @@ body: |
 ---
 # CHECK-LABEL: test_LU52I_D:
 # CHECK-ENC: 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 1 0 0 0 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: lu52i.d	a0, a1, 195
+# CHECK-ASM: lu52i.d	$a0, $a1, 195
 name: test_LU52I_D
 body: |
   bb.0:
@@ -153,7 +153,7 @@ body: |
 ---
 # CHECK-LABEL: test_ANDI:
 # CHECK-ENC: 0 0 0 0 0 0 1 1 0 1 0 0 0 0 0 1 1 0 1 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: andi	a0, a1, 106
+# CHECK-ASM: andi	$a0, $a1, 106
 name: test_ANDI
 body: |
   bb.0:
@@ -162,7 +162,7 @@ body: |
 ---
 # CHECK-LABEL: test_ORI:
 # CHECK-ENC: 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 0 1 0 1 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ori	a0, a1, 47
+# CHECK-ASM: ori	$a0, $a1, 47
 name: test_ORI
 body: |
   bb.0:
@@ -171,7 +171,7 @@ body: |
 ---
 # CHECK-LABEL: test_XORI:
 # CHECK-ENC: 0 0 0 0 0 0 1 1 1 1 0 0 0 0 0 1 1 0 0 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: xori	a0, a1, 99
+# CHECK-ASM: xori	$a0, $a1, 99
 name: test_XORI
 body: |
   bb.0:
@@ -180,7 +180,7 @@ body: |
 ---
 # CHECK-LABEL: test_LD_B:
 # CHECK-ENC: 0 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ld.b	a0, a1, 21
+# CHECK-ASM: ld.b	$a0, $a1, 21
 name: test_LD_B
 body: |
   bb.0:
@@ -189,7 +189,7 @@ body: |
 ---
 # CHECK-LABEL: test_LD_H:
 # CHECK-ENC: 0 0 1 0 1 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ld.h	a0, a1, 80
+# CHECK-ASM: ld.h	$a0, $a1, 80
 name: test_LD_H
 body: |
   bb.0:
@@ -198,7 +198,7 @@ body: |
 ---
 # CHECK-LABEL: test_LD_W:
 # CHECK-ENC: 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0 1 0 1 1 1 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ld.w	a0, a1, 92
+# CHECK-ASM: ld.w	$a0, $a1, 92
 name: test_LD_W
 body: |
   bb.0:
@@ -207,7 +207,7 @@ body: |
 ---
 # CHECK-LABEL: test_LD_BU:
 # CHECK-ENC: 0 0 1 0 1 0 1 0 0 0 0 0 0 0 1 0 0 1 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ld.bu	a0, a1, 150
+# CHECK-ASM: ld.bu	$a0, $a1, 150
 name: test_LD_BU
 body: |
   bb.0:
@@ -216,7 +216,7 @@ body: |
 ---
 # CHECK-LABEL: test_LD_HU:
 # CHECK-ENC: 0 0 1 0 1 0 1 0 0 1 0 0 0 0 1 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ld.hu	a0, a1, 198
+# CHECK-ASM: ld.hu	$a0, $a1, 198
 name: test_LD_HU
 body: |
   bb.0:
@@ -225,7 +225,7 @@ body: |
 ---
 # CHECK-LABEL: test_LD_WU:
 # CHECK-ENC: 0 0 1 0 1 0 1 0 1 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ld.wu	a0, a1, 31
+# CHECK-ASM: ld.wu	$a0, $a1, 31
 name: test_LD_WU
 body: |
   bb.0:
@@ -234,7 +234,7 @@ body: |
 ---
 # CHECK-LABEL: test_ST_B:
 # CHECK-ENC: 0 0 1 0 1 0 0 1 0 0 0 0 0 0 0 1 0 1 1 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: st.b	a0, a1, 95
+# CHECK-ASM: st.b	$a0, $a1, 95
 name: test_ST_B
 body: |
   bb.0:
@@ -243,7 +243,7 @@ body: |
 ---
 # CHECK-LABEL: test_ST_H:
 # CHECK-ENC: 0 0 1 0 1 0 0 1 0 1 0 0 0 0 0 1 1 1 1 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: st.h	a0, a1, 122
+# CHECK-ASM: st.h	$a0, $a1, 122
 name: test_ST_H
 body: |
   bb.0:
@@ -252,7 +252,7 @@ body: |
 ---
 # CHECK-LABEL: test_ST_W:
 # CHECK-ENC: 0 0 1 0 1 0 0 1 1 0 0 0 0 0 1 0 1 0 1 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: st.w	a0, a1, 175
+# CHECK-ASM: st.w	$a0, $a1, 175
 name: test_ST_W
 body: |
   bb.0:
@@ -261,7 +261,7 @@ body: |
 ---
 # CHECK-LABEL: test_ST_D:
 # CHECK-ENC: 0 0 1 0 1 0 0 1 1 1 0 0 0 0 0 0 1 1 1 1 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: st.d	a0, a1, 60
+# CHECK-ASM: st.d	$a0, $a1, 60
 name: test_ST_D
 body: |
   bb.0:
@@ -280,7 +280,7 @@ body: |
 ---
 # CHECK-LABEL: test_LDPTR_W:
 # CHECK-ENC: 0 0 1 0 0 1 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ldptr.w	a0, a1, 66
+# CHECK-ASM: ldptr.w	$a0, $a1, 66
 name: test_LDPTR_W
 body: |
   bb.0:
@@ -289,7 +289,7 @@ body: |
 ---
 # CHECK-LABEL: test_LDPTR_D:
 # CHECK-ENC: 0 0 1 0 0 1 1 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ldptr.d	a0, a1, 56
+# CHECK-ASM: ldptr.d	$a0, $a1, 56
 name: test_LDPTR_D
 body: |
   bb.0:
@@ -298,7 +298,7 @@ body: |
 ---
 # CHECK-LABEL: test_STPTR_W:
 # CHECK-ENC: 0 0 1 0 0 1 0 1 0 0 0 0 0 0 0 1 0 1 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: stptr.w	a0, a1, 87
+# CHECK-ASM: stptr.w	$a0, $a1, 87
 name: test_STPTR_W
 body: |
   bb.0:
@@ -307,7 +307,7 @@ body: |
 ---
 # CHECK-LABEL: test_STPTR_D:
 # CHECK-ENC: 0 0 1 0 0 1 1 1 0 0 0 0 0 0 1 0 0 1 0 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: stptr.d	a0, a1, 145
+# CHECK-ASM: stptr.d	$a0, $a1, 145
 name: test_STPTR_D
 body: |
   bb.0:
@@ -316,7 +316,7 @@ body: |
 ---
 # CHECK-LABEL: test_LL_W:
 # CHECK-ENC: 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ll.w	a0, a1, 243
+# CHECK-ASM: ll.w	$a0, $a1, 243
 name: test_LL_W
 body: |
   bb.0:
@@ -325,7 +325,7 @@ body: |
 ---
 # CHECK-LABEL: test_LL_D:
 # CHECK-ENC: 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ll.d	a0, a1, 74
+# CHECK-ASM: ll.d	$a0, $a1, 74
 name: test_LL_D
 body: |
   bb.0:
@@ -334,7 +334,7 @@ body: |
 ---
 # CHECK-LABEL: test_SC_W:
 # CHECK-ENC: 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: sc.w	a0, a1, 96
+# CHECK-ASM: sc.w	$a0, $a1, 96
 name: test_SC_W
 body: |
   bb.0:
@@ -343,7 +343,7 @@ body: |
 ---
 # CHECK-LABEL: test_SC_D:
 # CHECK-ENC: 0 0 1 0 0 0 1 1 0 0 0 0 0 0 0 1 1 0 1 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: sc.d	a0, a1, 105
+# CHECK-ASM: sc.d	$a0, $a1, 105
 name: test_SC_D
 body: |
   bb.0:
@@ -362,7 +362,7 @@ body: |
 ---
 # CHECK-LABEL: test_ADDU16I_D:
 # CHECK-ENC: 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: addu16i.d	a0, a1, 23
+# CHECK-ASM: addu16i.d	$a0, $a1, 23
 name: test_ADDU16I_D
 body: |
   bb.0:
@@ -371,7 +371,7 @@ body: |
 ---
 # CHECK-LABEL: test_JIRL:
 # CHECK-ENC: 0 1 0 0 1 1 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: jirl	a0, a1, 49
+# CHECK-ASM: jirl	$a0, $a1, 49
 name: test_JIRL
 body: |
   bb.0:
@@ -380,7 +380,7 @@ body: |
 ---
 # CHECK-LABEL: test_BEQ:
 # CHECK-ENC: 0 1 0 1 1 0 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 1
-# CHECK-ASM: beq	a0, a1, 196
+# CHECK-ASM: beq	$a0, $a1, 196
 name: test_BEQ
 body: |
   bb.0:
@@ -389,7 +389,7 @@ body: |
 ---
 # CHECK-LABEL: test_BNE:
 # CHECK-ENC: 0 1 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0 0 1 0 0 0 0 1 0 1
-# CHECK-ASM: bne	a0, a1, 19
+# CHECK-ASM: bne	$a0, $a1, 19
 name: test_BNE
 body: |
   bb.0:
@@ -398,7 +398,7 @@ body: |
 ---
 # CHECK-LABEL: test_BLT:
 # CHECK-ENC: 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 1 1 0 0 1 0 0 0 0 1 0 1
-# CHECK-ASM: blt	a0, a1, 123
+# CHECK-ASM: blt	$a0, $a1, 123
 name: test_BLT
 body: |
   bb.0:
@@ -407,7 +407,7 @@ body: |
 ---
 # CHECK-LABEL: test_BGE:
 # CHECK-ENC: 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 1 0 1
-# CHECK-ASM: bge	a0, a1, 12
+# CHECK-ASM: bge	$a0, $a1, 12
 name: test_BGE
 body: |
   bb.0:
@@ -416,7 +416,7 @@ body: |
 ---
 # CHECK-LABEL: test_BLTU:
 # CHECK-ENC: 0 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 0 1 0 0 0 0 1 0 1
-# CHECK-ASM: bltu	a0, a1, 17
+# CHECK-ASM: bltu	$a0, $a1, 17
 name: test_BLTU
 body: |
   bb.0:
@@ -425,7 +425,7 @@ body: |
 ---
 # CHECK-LABEL: test_BGEU:
 # CHECK-ENC: 0 1 1 0 1 1 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 0 0 0 1 0 0 0 0 1 0 1
-# CHECK-ASM: bgeu	a0, a1, 88
+# CHECK-ASM: bgeu	$a0, $a1, 88
 name: test_BGEU
 body: |
   bb.0:
