@@ -65,7 +65,15 @@ class MachORewriteInstance {
   void rewriteFile();
 
 public:
-  MachORewriteInstance(object::MachOObjectFile *InputFile, StringRef ToolPath);
+  // This constructor has complex initialization that can fail during
+  // construction. Constructors can’t return errors, so clients must test \p Err
+  // after the object is constructed. Use createMachORewriteInstance instead.
+  MachORewriteInstance(object::MachOObjectFile *InputFile, StringRef ToolPath,
+                       Error &Err);
+
+  static Expected<std::unique_ptr<MachORewriteInstance>>
+  createMachORewriteInstance(object::MachOObjectFile *InputFile,
+                             StringRef ToolPath);
   ~MachORewriteInstance();
 
   Error setProfile(StringRef FileName);
