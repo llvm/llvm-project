@@ -55,6 +55,11 @@ std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 /// spv.CompositeInsert into spv.CompositeConstruct.
 std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
 
+/// Creates an operation pass that unifies access of multiple aliased resources
+/// into access of one single resource.
+std::unique_ptr<OperationPass<spirv::ModuleOp>>
+createUnifyAliasedResourcePass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

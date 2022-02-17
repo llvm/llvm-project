@@ -28,6 +28,13 @@ def SPIRVRewriteInsertsPass : Pass<"spirv-rewrite-inserts", "spirv::ModuleOp"> {
   let constructor = "mlir::spirv::createRewriteInsertsPass()";
 }
 
+def SPIRVUnifyAliasedResourcePass
+    : Pass<"spirv-unify-aliased-resource", "spirv::ModuleOp"> {
+  let summary = "Unify access of multiple aliased resources into access of one "
+                "single resource";
+  let constructor = "mlir::spirv::createUnifyAliasedResourcePass()";
+}
+
 def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
   let summary = "Deduce and attach minimal (version, capabilities, extensions) "
                 "requirements to spv.module ops";
