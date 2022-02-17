@@ -12,6 +12,7 @@
 #include "Symbols.h"
 #include "UnwindInfoSection.h"
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 

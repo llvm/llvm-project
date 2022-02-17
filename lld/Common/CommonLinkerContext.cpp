@@ -10,6 +10,8 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 
+#include "llvm/CodeGen/CommandFlags.h"
+
 using namespace llvm;
 using namespace lld;
 
@@ -20,7 +22,11 @@ using namespace lld;
 // state.
 static CommonLinkerContext *lctx;
 
-CommonLinkerContext::CommonLinkerContext() { lctx = this; }
+CommonLinkerContext::CommonLinkerContext() {
+  lctx = this;
+  // Fire off the static initializations in CGF's constructor.
+  codegen::RegisterCodeGenFlags CGF;
+}
 
 CommonLinkerContext::~CommonLinkerContext() {
   assert(lctx);
