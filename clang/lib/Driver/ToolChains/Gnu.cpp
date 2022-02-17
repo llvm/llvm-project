@@ -1339,7 +1339,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
                            .flag("+msoft-float")
                            .flag("-mnan=2008")
                            .flag("+mmicromips");
-    auto ElNanoSoft = makeMultilib("/nanomips-r6-soft-small")
+    auto ElNanoSoft = makeMultilib("/nanomips-r6-soft-newlib")
                           .flag("+EL")
                           .flag("+msoft-float")
                           .flag("-mnan=2008")
