@@ -1370,21 +1370,6 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
-ParseResult ExpandShapeOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseReshapeLikeOp(parser, result);
-}
-void ExpandShapeOp::print(OpAsmPrinter &p) {
-  ::mlir::printReshapeOp<ExpandShapeOp>(p, *this);
-}
-
-ParseResult CollapseShapeOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  return parseReshapeLikeOp(parser, result);
-}
-void CollapseShapeOp::print(OpAsmPrinter &p) {
-  ::mlir::printReshapeOp<CollapseShapeOp>(p, *this);
-}
-
 /// Detect whether memref dims [dim, dim + extent) can be reshaped without
 /// copies.
 static bool isReshapableDimBand(unsigned dim, unsigned extent,

@@ -733,17 +733,6 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
-ParseResult ExpandShapeOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseReshapeLikeOp(parser, result);
-}
-void ExpandShapeOp::print(OpAsmPrinter &p) { printReshapeOp(p, *this); }
-
-ParseResult CollapseShapeOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  return parseReshapeLikeOp(parser, result);
-}
-void CollapseShapeOp::print(OpAsmPrinter &p) { printReshapeOp(p, *this); }
-
 /// Compute the RankedTensorType obtained by applying `reassociation` to `type`.
 static RankedTensorType
 computeTensorReshapeCollapsedType(RankedTensorType type,
