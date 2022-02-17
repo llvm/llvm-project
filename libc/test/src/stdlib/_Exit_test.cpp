@@ -8,9 +8,13 @@
 
 #include "include/stdlib.h"
 #include "src/stdlib/_Exit.h"
+#include "src/stdlib/exit.h"
 #include "utils/UnitTest/Test.h"
 
 TEST(LlvmLibcStdlib, _Exit) {
   EXPECT_EXITS([] { __llvm_libc::_Exit(1); }, 1);
   EXPECT_EXITS([] { __llvm_libc::_Exit(65); }, 65);
+
+  EXPECT_EXITS([] { __llvm_libc::exit(1); }, 1);
+  EXPECT_EXITS([] { __llvm_libc::exit(65); }, 65);
 }
