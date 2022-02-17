@@ -66,21 +66,35 @@ namespace {
 class VarLenCodeEmitterGen {
   RecordKeeper &Records;
 
+  struct EncodingSegment {
+    unsigned BitWidth;
+    const Init *Value;
+    StringRef CustomEncoder = "";
+  };
+
   class VarLenInst {
+    RecordVal *TheDef;
     size_t NumBits;
 
     // Set if any of the segment is not fixed value.
     bool HasDynamicSegment;
 
-    // {Number of bits, Value}
-    SmallVector<std::pair<unsigned, const Init *>, 4> Segments;
+    SmallVector<EncodingSegment, 4> Segments;
 
     void buildRec(const DagInit *DI);
 
-  public:
-    VarLenInst() : NumBits(0U), HasDynamicSegment(false) {}
+    StringRef getCustomEncoderName(const Init *EI) const {
+      if (const auto *DI = dyn_cast<DagInit>(EI)) {
+        if (DI->getNumArgs() && isa<StringInit>(DI->getArg(0)))
+          return cast<StringInit>(DI->getArg(0))->getValue();
+      }
+      return "";
+    }
 
-    explicit VarLenInst(const DagInit *DI);
+  public:
+    VarLenInst() : TheDef(nullptr), NumBits(0U), HasDynamicSegment(false) {}
+
+    explicit VarLenInst(const DagInit *DI, RecordVal *TheDef);
 
     /// Number of bits
     size_t size() const { return NumBits; }
@@ -114,13 +128,17 @@ public:
 
 } // end anonymous namespace
 
-VarLenCodeEmitterGen::VarLenInst::VarLenInst(const DagInit *DI) : NumBits(0U) {
+VarLenCodeEmitterGen::VarLenInst::VarLenInst(const DagInit *DI,
+                                             RecordVal *TheDef)
+    : TheDef(TheDef), NumBits(0U) {
   buildRec(DI);
   for (const auto &S : Segments)
-    NumBits += S.first;
+    NumBits += S.BitWidth;
 }
 
 void VarLenCodeEmitterGen::VarLenInst::buildRec(const DagInit *DI) {
+  assert(TheDef && "The def record is nullptr ?");
+
   std::string Op = DI->getOperator()->getAsString();
 
   if (Op == "ascend" || Op == "descend") {
@@ -132,48 +150,57 @@ void VarLenCodeEmitterGen::VarLenInst::buildRec(const DagInit *DI) {
       const Init *Arg = DI->getArg(i);
       if (const auto *BI = dyn_cast<BitsInit>(Arg)) {
         if (!BI->isComplete())
-          PrintFatalError("Expecting complete bits init in `" + Op + "`");
+          PrintFatalError(TheDef->getLoc(),
+                          "Expecting complete bits init in `" + Op + "`");
         Segments.push_back({BI->getNumBits(), BI});
       } else if (const auto *BI = dyn_cast<BitInit>(Arg)) {
         if (!BI->isConcrete())
-          PrintFatalError("Expecting concrete bit init in `" + Op + "`");
+          PrintFatalError(TheDef->getLoc(),
+                          "Expecting concrete bit init in `" + Op + "`");
         Segments.push_back({1, BI});
       } else if (const auto *SubDI = dyn_cast<DagInit>(Arg)) {
         buildRec(SubDI);
       } else {
-        PrintFatalError("Unrecognized type of argument in `" + Op +
-                        "`: " + Arg->getAsString());
+        PrintFatalError(TheDef->getLoc(), "Unrecognized type of argument in `" +
+                                              Op + "`: " + Arg->getAsString());
       }
     }
   } else if (Op == "operand") {
-    // (operand <operand name>, <# of bits>)
-    if (DI->getNumArgs() != 2)
-      PrintFatalError("Expecting 2 arguments for `operand`");
+    // (operand <operand name>, <# of bits>, [(encoder <custom encoder>)])
+    if (DI->getNumArgs() < 2)
+      PrintFatalError(TheDef->getLoc(),
+                      "Expecting at least 2 arguments for `operand`");
     HasDynamicSegment = true;
     const Init *OperandName = DI->getArg(0), *NumBits = DI->getArg(1);
     if (!isa<StringInit>(OperandName) || !isa<IntInit>(NumBits))
-      PrintFatalError("Invalid argument types for `operand`");
+      PrintFatalError(TheDef->getLoc(), "Invalid argument types for `operand`");
 
     auto NumBitsVal = cast<IntInit>(NumBits)->getValue();
     if (NumBitsVal <= 0)
-      PrintFatalError("Invalid number of bits for `operand`");
+      PrintFatalError(TheDef->getLoc(), "Invalid number of bits for `operand`");
 
-    Segments.push_back({NumBitsVal, OperandName});
+    StringRef CustomEncoder;
+    if (DI->getNumArgs() >= 3)
+      CustomEncoder = getCustomEncoderName(DI->getArg(2));
+    Segments.push_back(
+        {static_cast<unsigned>(NumBitsVal), OperandName, CustomEncoder});
   } else if (Op == "slice") {
-    // (slice <operand name>, <high / low bit>, <low / high bit>)
-    if (DI->getNumArgs() != 3)
-      PrintFatalError("Expecting 3 arguments for `slice`");
+    // (slice <operand name>, <high / low bit>, <low / high bit>,
+    //        [(encoder <custom encoder>)])
+    if (DI->getNumArgs() < 3)
+      PrintFatalError(TheDef->getLoc(),
+                      "Expecting at least 3 arguments for `slice`");
     HasDynamicSegment = true;
     Init *OperandName = DI->getArg(0), *HiBit = DI->getArg(1),
          *LoBit = DI->getArg(2);
     if (!isa<StringInit>(OperandName) || !isa<IntInit>(HiBit) ||
         !isa<IntInit>(LoBit))
-      PrintFatalError("Invalid argument types for `slice`");
+      PrintFatalError(TheDef->getLoc(), "Invalid argument types for `slice`");
 
     auto HiBitVal = cast<IntInit>(HiBit)->getValue(),
          LoBitVal = cast<IntInit>(LoBit)->getValue();
     if (HiBitVal < 0 || LoBitVal < 0)
-      PrintFatalError("Invalid bit range for `slice`");
+      PrintFatalError(TheDef->getLoc(), "Invalid bit range for `slice`");
     bool NeedSwap = false;
     unsigned NumBits = 0U;
     if (HiBitVal < LoBitVal) {
@@ -183,13 +210,18 @@ void VarLenCodeEmitterGen::VarLenInst::buildRec(const DagInit *DI) {
       NumBits = static_cast<unsigned>(HiBitVal - LoBitVal + 1);
     }
 
+    StringRef CustomEncoder;
+    if (DI->getNumArgs() >= 4)
+      CustomEncoder = getCustomEncoderName(DI->getArg(3));
+
     if (NeedSwap) {
       // Normalization: Hi bit should always be the second argument.
       Init *const NewArgs[] = {OperandName, LoBit, HiBit};
-      Segments.push_back(
-          {NumBits, DagInit::get(DI->getOperator(), nullptr, NewArgs, {})});
+      Segments.push_back({NumBits,
+                          DagInit::get(DI->getOperator(), nullptr, NewArgs, {}),
+                          CustomEncoder});
     } else {
-      Segments.push_back({NumBits, DI});
+      Segments.push_back({NumBits, DI, CustomEncoder});
     }
   }
 }
@@ -217,14 +249,16 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
         for (auto &KV : EBM) {
           HwModes.insert(KV.first);
           Record *EncodingDef = KV.second;
-          auto *DI = EncodingDef->getValueAsDag("Inst");
-          VarLenInsts.insert({EncodingDef, VarLenInst(DI)});
+          RecordVal *RV = EncodingDef->getValue("Inst");
+          DagInit *DI = cast<DagInit>(RV->getValue());
+          VarLenInsts.insert({EncodingDef, VarLenInst(DI, RV)});
         }
         continue;
       }
     }
-    auto *DI = R->getValueAsDag("Inst");
-    VarLenInsts.insert({R, VarLenInst(DI)});
+    RecordVal *RV = R->getValue("Inst");
+    DagInit *DI = cast<DagInit>(RV->getValue());
+    VarLenInsts.insert({R, VarLenInst(DI, RV)});
   }
 
   // Emit function declaration
@@ -372,14 +406,14 @@ void VarLenCodeEmitterGen::emitInstructionBaseValues(
     auto SI = VLI.begin(), SE = VLI.end();
     // Scan through all the segments that have fixed-bits values.
     while (i < BitWidth && SI != SE) {
-      unsigned SegmentNumBits = SI->first;
-      if (const auto *BI = dyn_cast<BitsInit>(SI->second)) {
+      unsigned SegmentNumBits = SI->BitWidth;
+      if (const auto *BI = dyn_cast<BitsInit>(SI->Value)) {
         for (unsigned Idx = 0U; Idx != SegmentNumBits; ++Idx) {
           auto *B = cast<BitInit>(BI->getBit(Idx));
           Value.setBitVal(i + Idx, B->getValue());
         }
       }
-      if (const auto *BI = dyn_cast<BitInit>(SI->second))
+      if (const auto *BI = dyn_cast<BitInit>(SI->Value))
         Value.setBitVal(i, BI->getValue());
 
       i += SegmentNumBits;
@@ -439,9 +473,9 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
 
   // Process each segment in VLI.
   size_t Offset = 0U;
-  for (const auto &Pair : VLI) {
-    unsigned NumBits = Pair.first;
-    const Init *Val = Pair.second;
+  for (const auto &ES : VLI) {
+    unsigned NumBits = ES.BitWidth;
+    const Init *Val = ES.Value;
     // If it's a StringInit or DagInit, it's a reference to an operand
     // or part of an operand.
     if (isa<StringInit>(Val) || isa<DagInit>(Val)) {
@@ -458,15 +492,20 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
 
       auto OpIdx = CGI.Operands.ParseOperandName(OperandName);
       unsigned FlatOpIdx = CGI.Operands.getFlattenedOperandNumber(OpIdx);
-      StringRef EncoderMethodName = "getMachineOpValue";
-      auto &CustomEncoder = CGI.Operands[OpIdx.first].EncoderMethodName;
-      if (!CustomEncoder.empty())
-        EncoderMethodName = CustomEncoder;
+      StringRef CustomEncoder = CGI.Operands[OpIdx.first].EncoderMethodName;
+      if (ES.CustomEncoder.size())
+        CustomEncoder = ES.CustomEncoder;
 
       SS.indent(6) << "Scratch.clearAllBits();\n";
       SS.indent(6) << "// op: " << OperandName.drop_front(1) << "\n";
-      SS.indent(6) << EncoderMethodName << "(MI, MI.getOperand("
-                   << utostr(FlatOpIdx) << "), Scratch, Fixups, STI);\n";
+      if (CustomEncoder.empty())
+        SS.indent(6) << "getMachineOpValue(MI, MI.getOperand("
+                     << utostr(FlatOpIdx) << ")";
+      else
+        SS.indent(6) << CustomEncoder << "(MI, /*OpIdx=*/" << utostr(FlatOpIdx);
+
+      SS << ", /*Pos=*/" << utostr(Offset) << ", Scratch, Fixups, STI);\n";
+
       SS.indent(6) << "Inst.insertBits("
                    << "Scratch.extractBits(" << utostr(NumBits) << ", "
                    << utostr(LoBit) << ")"

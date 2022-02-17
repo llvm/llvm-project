@@ -94,6 +94,15 @@ The presence of ``address`` can cause the condition unsatisfied. LLD will warn.
 GNU ld from Binutils 2.35 onwards will reduce sh_addralign so that
 sh_addr=0 (modulo sh_addralign).
 
+Output section type
+-------------------
+
+When an *OutputSection* *S* has ``(type)``, LLD will set ``sh_type`` or
+``sh_flags`` of *S*. ``type`` is one of:
+
+- ``NOLOAD``: set ``sh_type`` to ``SHT_NOBITS``.
+- ``COPY``, ``INFO``, ``OVERLAY``: clear the ``SHF_ALLOC`` bit in ``sh_flags``.
+
 Output section alignment
 ------------------------
 

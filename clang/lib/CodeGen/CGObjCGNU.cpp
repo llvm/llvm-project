@@ -318,8 +318,9 @@ protected:
     return B.CreateBitCast(V, Ty);
   }
   Address EnforceType(CGBuilderTy &B, Address V, llvm::Type *Ty) {
-    if (V.getType() == Ty) return V;
-    return B.CreateBitCast(V, Ty);
+    if (V.getType() == Ty)
+      return V;
+    return B.CreateElementBitCast(V, Ty->getPointerElementType());
   }
 
   // Some zeros used for GEPs in lots of places.

@@ -11,7 +11,7 @@ extern void __assert_fail(__const char *__assertion, __const char *__file,
 
 void clang_analyzer_eval(int);
 
-int g();
+int g(void);
 
 int f(int y) {
   return y + g();

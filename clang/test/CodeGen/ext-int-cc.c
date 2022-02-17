@@ -152,7 +152,7 @@ void ParamPassing4(_BitInt(129) a) {}
 // ARM-NOT: define{{.*}} arm_aapcscc void @ParamPassing4(i129* byval(i129) align 8 %{{.+}})
 #endif
 
-_BitInt(63) ReturnPassing(){}
+_BitInt(63) ReturnPassing(void){}
 // LIN64: define{{.*}} i64 @ReturnPassing(
 // WIN64: define dso_local i63 @ReturnPassing(
 // LIN32: define{{.*}} i63 @ReturnPassing(
@@ -181,7 +181,7 @@ _BitInt(63) ReturnPassing(){}
 // AARCH64DARWIN: define{{.*}} i63 @ReturnPassing(
 // ARM: define{{.*}} arm_aapcscc i63 @ReturnPassing(
 
-_BitInt(64) ReturnPassing2(){}
+_BitInt(64) ReturnPassing2(void){}
 // LIN64: define{{.*}} i64 @ReturnPassing2(
 // WIN64: define dso_local i64 @ReturnPassing2(
 // LIN32: define{{.*}} i64 @ReturnPassing2(
@@ -210,7 +210,7 @@ _BitInt(64) ReturnPassing2(){}
 // AARCH64DARWIN: define{{.*}} i64 @ReturnPassing2(
 // ARM: define{{.*}} arm_aapcscc i64 @ReturnPassing2(
 
-_BitInt(127) ReturnPassing3(){}
+_BitInt(127) ReturnPassing3(void){}
 // LIN64: define{{.*}} { i64, i64 } @ReturnPassing3(
 // WIN64: define dso_local void @ReturnPassing3(i127* noalias sret
 // LIN32: define{{.*}} void @ReturnPassing3(i127* noalias sret
@@ -241,7 +241,7 @@ _BitInt(127) ReturnPassing3(){}
 // AARCH64DARWIN: define{{.*}} i127 @ReturnPassing3(
 // ARM: define{{.*}} arm_aapcscc void @ReturnPassing3(i127* noalias sret
 
-_BitInt(128) ReturnPassing4(){}
+_BitInt(128) ReturnPassing4(void){}
 // LIN64: define{{.*}} { i64, i64 } @ReturnPassing4(
 // WIN64: define dso_local void @ReturnPassing4(i128* noalias sret
 // LIN32: define{{.*}} void @ReturnPassing4(i128* noalias sret
@@ -271,7 +271,7 @@ _BitInt(128) ReturnPassing4(){}
 // ARM: define{{.*}} arm_aapcscc void @ReturnPassing4(i128* noalias sret
 
 #if __BITINT_MAXWIDTH__ > 128
-_BitInt(129) ReturnPassing5(){}
+_BitInt(129) ReturnPassing5(void){}
 // LIN64-NOT: define{{.*}} void @ReturnPassing5(i129* noalias sret
 // WIN64-NOT: define dso_local void @ReturnPassing5(i129* noalias sret
 // LIN32-NOT: define{{.*}} void @ReturnPassing5(i129* noalias sret
@@ -302,8 +302,8 @@ _BitInt(129) ReturnPassing5(){}
 
 // SparcV9 is odd in that it has a return-size limit of 256, not 128 or 64
 // like other platforms, so test to make sure this behavior will still work.
-_BitInt(256) ReturnPassing6() {}
+_BitInt(256) ReturnPassing6(void) {}
 // SPARCV9-NOT: define{{.*}} i256 @ReturnPassing6(
-_BitInt(257) ReturnPassing7() {}
+_BitInt(257) ReturnPassing7(void) {}
 // SPARCV9-NOT: define{{.*}} void @ReturnPassing7(i257* noalias sret
 #endif

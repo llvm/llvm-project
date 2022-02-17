@@ -70,7 +70,7 @@ void test6(float4align64 *p) {
 // CHECK:       load <4 x float>, <4 x float>* {{.*}}, align 2
 
 typedef int __attribute__((ext_vector_type(200 * 16))) BigVecTy;
-void test7() {
+void test7(void) {
   BigVecTy V;
 }
 // CHECK-LABEL: @test7

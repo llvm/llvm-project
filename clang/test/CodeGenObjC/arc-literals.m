@@ -13,7 +13,7 @@
 // CHECK: c"prop\00"
 
 // CHECK-LABEL: define{{.*}} void @test_numeric()
-void test_numeric() {
+void test_numeric(void) {
   // CHECK: {{call.*objc_msgSend.*i32 17.* [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]}}
   id ilit = @17;
   // CHECK: {{call.*objc_msgSend.*i32 25.* [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]}}

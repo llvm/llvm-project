@@ -193,6 +193,10 @@ void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// OpaqueType
+//===----------------------------------------------------------------------===//
+
 Type emitc::OpaqueType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return Type();

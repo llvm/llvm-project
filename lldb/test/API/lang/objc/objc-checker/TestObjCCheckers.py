@@ -85,5 +85,5 @@ class ObjCCheckerTestCase(TestBase):
         expr_value = frame.EvaluateExpression("[my_simple getBigStruct]", False)
         expr_error = expr_value.GetError()
         
-        self.assertTrue(expr_error.Success())
+        self.assertSuccess(expr_error)
         

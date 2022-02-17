@@ -4,7 +4,7 @@
 
 int printf(const char * restrict format, ...);
 
-int main() {
+int main(void) {
   long long Var = 123455678902ll;
   printf("%lld\n", Var);
 }

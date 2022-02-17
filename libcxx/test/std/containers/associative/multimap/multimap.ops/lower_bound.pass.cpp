@@ -46,13 +46,13 @@ int main(int, char**)
         r = m.lower_bound(5);
         assert(r == m.begin());
         r = m.lower_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(7);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(9);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(10);
         assert(r == m.end());
     }
@@ -76,13 +76,13 @@ int main(int, char**)
         r = m.lower_bound(5);
         assert(r == m.begin());
         r = m.lower_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(7);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(9);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(10);
         assert(r == m.end());
     }
@@ -110,13 +110,13 @@ int main(int, char**)
         r = m.lower_bound(5);
         assert(r == m.begin());
         r = m.lower_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(7);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(9);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(10);
         assert(r == m.end());
     }
@@ -140,13 +140,13 @@ int main(int, char**)
         r = m.lower_bound(5);
         assert(r == m.begin());
         r = m.lower_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(7);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.lower_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(9);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.lower_bound(10);
         assert(r == m.end());
     }
@@ -174,13 +174,13 @@ int main(int, char**)
     r = m.lower_bound(5);
     assert(r == m.begin());
     r = m.lower_bound(6);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.lower_bound(7);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.lower_bound(8);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(9);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(10);
     assert(r == m.end());
 
@@ -189,13 +189,13 @@ int main(int, char**)
     r = m.lower_bound(C2Int(5));
     assert(r == m.begin());
     r = m.lower_bound(C2Int(6));
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.lower_bound(C2Int(7));
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.lower_bound(C2Int(8));
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(C2Int(9));
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(C2Int(10));
     assert(r == m.end());
     }
@@ -221,13 +221,13 @@ int main(int, char**)
     r = m.lower_bound(5);
     assert(r == m.begin());
     r = m.lower_bound(6);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.lower_bound(7);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.lower_bound(8);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(9);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.lower_bound(10);
     assert(r == m.end());
     }

@@ -12,8 +12,8 @@
 
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__format/format_arg.h>
 #include <__format/format_error.h>
 #include <__format/format_string.h>
@@ -45,7 +45,7 @@ namespace __format_spec {
 /**
  * Contains the flags for the std-format-spec.
  *
- * Some format-options can only be used for specific C++types and may depend on
+ * Some format-options can only be used for specific C++ types and may depend on
  * the selected format-type.
  * * The C++type filtering can be done using the proper policies for
  *   @ref __parser_std.

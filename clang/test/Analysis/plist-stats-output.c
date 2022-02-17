@@ -2,7 +2,7 @@
 // REQUIRES: asserts
 // RUN: FileCheck --input-file=%t.plist %s
 
-int foo() {}
+int foo(void) {}
 
 
 // CHECK:  <key>diagnostics</key>

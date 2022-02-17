@@ -2,7 +2,7 @@
 // rdar://10033986
 
 typedef void (^BLOCK)(void);
-int main ()
+int main (void)
 {
     _Complex double c;
     BLOCK b =  ^() {

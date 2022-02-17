@@ -70,7 +70,7 @@ class ScriptedProcesTestCase(TestBase):
 
         process = target.Launch(launch_info, error)
 
-        self.assertTrue(error.Success(), error.GetCString())
+        self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 666)
         self.assertEqual(process.GetNumThreads(), 0)
@@ -133,3 +133,6 @@ class ScriptedProcesTestCase(TestBase):
                 break
             self.assertEqual(idx, int(reg.value, 16))
 
+        self.assertTrue(frame.IsArtificial(), "Frame is not artificial")
+        pc = frame.GetPCAddress().GetLoadAddress(target)
+        self.assertEqual(pc, 0x0100001b00)

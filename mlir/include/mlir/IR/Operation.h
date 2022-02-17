@@ -192,8 +192,7 @@ public:
   bool isBeforeInBlock(Operation *other);
 
   void print(raw_ostream &os, const OpPrintingFlags &flags = llvm::None);
-  void print(raw_ostream &os, AsmState &state,
-             const OpPrintingFlags &flags = llvm::None);
+  void print(raw_ostream &os, AsmState &state);
   void dump();
 
   //===--------------------------------------------------------------------===//

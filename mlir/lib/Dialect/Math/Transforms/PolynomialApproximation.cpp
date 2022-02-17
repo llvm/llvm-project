@@ -930,6 +930,8 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 
   Value x = op.getOperand();
 
+  Value isNan = builder.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, x, x);
+
   // Reduced y = x - floor(x / ln(2)) * ln(2) = x - k * ln(2)
   Value xL2Inv = mul(x, cstLog2E);
   Value kF32 = floor(xL2Inv);
@@ -985,13 +987,15 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   Value isComputable = builder.create<arith::AndIOp>(rightBound, leftBound);
 
   expY = builder.create<arith::SelectOp>(
-      isNegInfinityX, zerof32Const,
+      isNan, x,
       builder.create<arith::SelectOp>(
-          isPosInfinityX, constPosInfinity,
+          isNegInfinityX, zerof32Const,
           builder.create<arith::SelectOp>(
-              isComputable, expY,
-              builder.create<arith::SelectOp>(isPostiveX, constPosInfinity,
-                                              underflow))));
+              isPosInfinityX, constPosInfinity,
+              builder.create<arith::SelectOp>(
+                  isComputable, expY,
+                  builder.create<arith::SelectOp>(isPostiveX, constPosInfinity,
+                                                  underflow)))));
 
   rewriter.replaceOp(op, expY);
 
@@ -1033,8 +1037,8 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   Value cstNegOne = bcast(f32Cst(builder, -1.0f));
   Value x = op.getOperand();
   Value u = builder.create<math::ExpOp>(x);
-  Value uEqOne =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, cstOne);
+  Value uEqOneOrNaN =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::UEQ, u, cstOne);
   Value uMinusOne = builder.create<arith::SubFOp>(u, cstOne);
   Value uMinusOneEqNegOne = builder.create<arith::CmpFOp>(
       arith::CmpFPredicate::OEQ, uMinusOne, cstNegOne);
@@ -1050,7 +1054,7 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
       uMinusOne, builder.create<arith::DivFOp>(x, logU));
   expm1 = builder.create<arith::SelectOp>(isInf, u, expm1);
   Value approximation = builder.create<arith::SelectOp>(
-      uEqOne, x,
+      uEqOneOrNaN, x,
       builder.create<arith::SelectOp>(uMinusOneEqNegOne, cstNegOne, expm1));
   rewriter.replaceOp(op, approximation);
   return success();

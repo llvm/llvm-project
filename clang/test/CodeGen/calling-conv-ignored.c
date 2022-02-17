@@ -8,7 +8,7 @@ void __stdcall foo_std(const char *lpString1, const char *lpString2);
 void __fastcall foo_fast(const char *lpString1, const char *lpString2);
 void __vectorcall foo_vector(const char *lpString1, const char *lpString2);
 
-void __cdecl bar() {
+void __cdecl bar(void) {
   foo_default(0, 0);
   foo_std(0, 0);
   foo_fast(0, 0);

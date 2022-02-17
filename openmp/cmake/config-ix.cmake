@@ -1,4 +1,20 @@
 include(CheckCXXCompilerFlag)
+include(CheckCXXSourceCompiles)
+
+# Check for oneAPI compiler (some older CMake versions detect as Clang)
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+  check_cxx_source_compiles("#if (defined(__INTEL_CLANG_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+                             int main() { return 0; }
+                             #else
+                             not oneAPI
+                             #endif" OPENMP_HAVE_ONEAPI_COMPILER)
+  if (OPENMP_HAVE_ONEAPI_COMPILER)
+    # According to CMake documentation, the compiler id should
+    # be IntelLLVM when detected oneAPI
+    set(CMAKE_C_COMPILER_ID "IntelLLVM")
+    set(CMAKE_CXX_COMPILER_ID "IntelLLVM")
+  endif()
+endif()
 
 check_cxx_compiler_flag(-Wall OPENMP_HAVE_WALL_FLAG)
 check_cxx_compiler_flag(-Werror OPENMP_HAVE_WERROR_FLAG)

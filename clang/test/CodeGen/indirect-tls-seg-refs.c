@@ -6,5 +6,5 @@
 // NO-TLSDIRECT: attributes #{{[0-9]+}} = {{{.*}} "indirect-tls-seg-refs"
 // TLSDIRECT-NOT: attributes #{{[0-9]+}} = {{{.*}} "indirect-tls-seg-refs"
 
-void test1() {
+void test1(void) {
 }

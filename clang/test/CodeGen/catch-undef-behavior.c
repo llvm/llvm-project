@@ -29,7 +29,7 @@
 
 // PR6805
 // CHECK-COMMON-LABEL: @foo
-void foo() {
+void foo(void) {
   union { int i; } u;
 
   // CHECK-COMMON:      %[[I8PTR:.*]] = bitcast i32* %[[PTR:.*]] to i8*
@@ -168,7 +168,7 @@ int signed_overflow(int a, int b) {
 }
 
 // CHECK-COMMON-LABEL: @no_return
-int no_return() {
+int no_return(void) {
   // Reaching the end of a noreturn function is fine in C.
   // FIXME: If the user explicitly requests -fsanitize=return, we should catch
   //        that here even though it's not undefined behavior.

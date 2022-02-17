@@ -8,14 +8,14 @@
 // Check that the preserve_most calling convention attribute at the source level
 // is lowered to the corresponding calling convention attrribute at the LLVM IR
 // level.
-void foo() __attribute__((preserve_most)) {
+void foo(void) __attribute__((preserve_most)) {
   // CHECK-LABEL: define {{(dso_local )?}}preserve_mostcc void @foo()
 }
 
 // Check that the preserve_most calling convention attribute at the source level
 // is lowered to the corresponding calling convention attrribute at the LLVM IR
 // level.
-void boo() __attribute__((preserve_all)) {
+void boo(void) __attribute__((preserve_all)) {
   // CHECK-LABEL: define {{(dso_local )?}}preserve_allcc void @boo()
 }
 

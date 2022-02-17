@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
   template<copy_constructible _Tp>
@@ -40,13 +40,13 @@ namespace ranges {
     constexpr explicit single_view(const _Tp& __t) : __value_(in_place, __t) {}
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr explicit single_view(_Tp&& __t) : __value_(in_place, _VSTD::move(__t)) {}
+    constexpr explicit single_view(_Tp&& __t) : __value_(in_place, std::move(__t)) {}
 
     template<class... _Args>
       requires constructible_from<_Tp, _Args...>
     _LIBCPP_HIDE_FROM_ABI
     constexpr explicit single_view(in_place_t, _Args&&... __args)
-      : __value_{in_place, _VSTD::forward<_Args>(__args)...} {}
+      : __value_{in_place, std::forward<_Args>(__args)...} {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _Tp* begin() noexcept { return data(); }
@@ -74,7 +74,7 @@ namespace ranges {
   single_view(_Tp) -> single_view<_Tp>;
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

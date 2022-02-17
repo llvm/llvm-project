@@ -34,12 +34,12 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
   template<view _View>
   class take_view : public view_interface<take_view<_View>> {
-    [[no_unique_address]] _View __base_ = _View();
+    _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
     range_difference_t<_View> __count_ = 0;
 
     template<bool> class __sentinel;
@@ -50,13 +50,13 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr take_view(_View __base, range_difference_t<_View> __count)
-      : __base_(_VSTD::move(__base)), __count_(__count) {}
+      : __base_(std::move(__base)), __count_(__count) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr _View base() && { return _VSTD::move(__base_); }
+    constexpr _View base() && { return std::move(__base_); }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() requires (!__simple_view<_View>) {
@@ -119,14 +119,14 @@ namespace ranges {
     constexpr auto size() requires sized_range<_View> {
       auto __n = ranges::size(__base_);
       // TODO: use ranges::min here.
-      return _VSTD::min(__n, static_cast<decltype(__n)>(__count_));
+      return std::min(__n, static_cast<decltype(__n)>(__count_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto size() const requires sized_range<const _View> {
       auto __n = ranges::size(__base_);
       // TODO: use ranges::min here.
-      return _VSTD::min(__n, static_cast<decltype(__n)>(__count_));
+      return std::min(__n, static_cast<decltype(__n)>(__count_));
     }
   };
 
@@ -136,7 +136,7 @@ namespace ranges {
     using _Base = __maybe_const<_Const, _View>;
     template<bool _OtherConst>
     using _Iter = counted_iterator<iterator_t<__maybe_const<_OtherConst, _View>>>;
-    [[no_unique_address]] sentinel_t<_Base> __end_ = sentinel_t<_Base>();
+    _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
     template<bool>
     friend class take_view<_View>::__sentinel;
@@ -146,12 +146,12 @@ public:
     __sentinel() = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(_VSTD::move(__end)) {}
+    constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(std::move(__end)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __sentinel(__sentinel<!_Const> __s)
       requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
-      : __end_(_VSTD::move(__s.__end_)) {}
+      : __end_(std::move(__s.__end_)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr sentinel_t<_Base> base() const { return __end_; }
@@ -176,7 +176,7 @@ public:
   inline constexpr bool enable_borrowed_range<take_view<_Tp>> = enable_borrowed_range<_Tp>;
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -4,7 +4,7 @@
 // There are no lexical blocks, but we need two DILexicalBlockFiles to
 // correctly represent file info.
 
-int foo() {
+int foo(void) {
   int i = 1;
 # 4 "m.c"
 # 1 "m.h" 1

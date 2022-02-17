@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -fexceptions -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck -check-prefix CHECK-NOEXC %s
 
-int opaque();
+int opaque(void);
 
 // CHECK:       define{{.*}} [[INT:i.*]] @test0() [[TF:#[0-9]+]] {
 // CHECK-NOEXC: define{{.*}} [[INT:i.*]] @test0() [[NUW:#[0-9]+]] {

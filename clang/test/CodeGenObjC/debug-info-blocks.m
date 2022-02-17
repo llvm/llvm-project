@@ -76,7 +76,7 @@ static void run(void (^block)(void))
 
 @end
 
-int main()
+int main(void)
 {
 	A *a = [[A alloc] init];
 	return 0;

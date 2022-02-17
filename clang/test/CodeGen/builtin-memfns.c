@@ -84,7 +84,7 @@ void test8(int *arg) {
 }
 
 __attribute((aligned(16))) int x[4], y[4];
-void test9() {
+void test9(void) {
   // CHECK: @test9
   // CHECK: call void @llvm.memcpy{{.*}} align 16 {{.*}} align 16 {{.*}} 16, i1 false)
   __builtin_memcpy(x, y, sizeof(y));
@@ -95,7 +95,7 @@ wchar_t src;
 
 // CHECK-LABEL: @test10
 // FIXME: Consider lowering these to llvm.memcpy / llvm.memmove.
-void test10() {
+void test10(void) {
   // CHECK: call i32* @wmemcpy(i32* noundef @dest, i32* noundef @src, i32 noundef 4)
   __builtin_wmemcpy(&dest, &src, 4);
 
@@ -104,7 +104,7 @@ void test10() {
 }
 
 // CHECK-LABEL: @test11
-void test11() {
+void test11(void) {
   typedef struct { int a; } b;
   int d;
   b e;
@@ -115,7 +115,7 @@ void test11() {
 // CHECK-LABEL: @test12
 extern char dest_array[];
 extern char src_array[];
-void test12() {
+void test12(void) {
   // CHECK: call void @llvm.memcpy{{.*}}(
   memcpy(&dest_array, &dest_array, 2);
 }

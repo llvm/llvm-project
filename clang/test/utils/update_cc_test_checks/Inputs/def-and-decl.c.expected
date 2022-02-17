@@ -14,7 +14,7 @@ void empty_function(void);
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 noundef 1)
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
-int main() {
+int main(void) {
   empty_function();
   return foo(1);
 }

@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -w -fblocks -analyze -analyzer-checker=core,deadcode,alpha.core,debug.ExprInspection -verify %s
 
 void *malloc(unsigned long);
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
-void test_static_from_block() {
+void test_static_from_block(void) {
   static int *x;
   ^{
     *x; // no-warning
   };
 }
 
-void test_static_within_block() {
+void test_static_within_block(void) {
   ^{
     static int *x;
     *x; // expected-warning{{Dereference of null pointer}}

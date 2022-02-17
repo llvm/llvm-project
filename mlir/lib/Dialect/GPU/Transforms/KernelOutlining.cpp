@@ -59,7 +59,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 /// Identifies operations that are beneficial to sink into kernels. These
 /// operations may not have side-effects, as otherwise sinking (and hence
 /// duplicating them) is not legal.
-static bool isSinkingBeneficiary(Operation *op) {
+static bool isLikelyAnIndexComputation(Operation *op) {
   return isa<arith::ConstantOp, ConstantOp, memref::DimOp, arith::SelectOp,
              arith::CmpIOp>(op);
 }
@@ -75,11 +75,11 @@ static bool isSinkingBeneficiary(Operation *op) {
 /// the order they should appear in the kernel. Furthermore, `availableValues`
 /// is updated with results that will be available after sinking the identified
 /// ops.
-static bool
-extractBeneficiaryOps(Operation *op,
-                      const SetVector<Value> &existingDependencies,
-                      SetVector<Operation *> &beneficiaryOps,
-                      llvm::SmallPtrSetImpl<Value> &availableValues) {
+static bool extractBeneficiaryOps(
+    Operation *op, const SetVector<Value> &existingDependencies,
+    SetVector<Operation *> &beneficiaryOps,
+    llvm::SmallPtrSetImpl<Value> &availableValues,
+    llvm::function_ref<bool(Operation *)> isSinkingBeneficiary) {
   if (beneficiaryOps.count(op))
     return true;
 
@@ -93,9 +93,9 @@ extractBeneficiaryOps(Operation *op,
     // Else check whether it can be made available via sinking or already is a
     // dependency.
     Operation *definingOp = operand.getDefiningOp();
-    if ((!definingOp ||
-         !extractBeneficiaryOps(definingOp, existingDependencies,
-                                beneficiaryOps, availableValues)) &&
+    if ((!definingOp || !extractBeneficiaryOps(definingOp, existingDependencies,
+                                               beneficiaryOps, availableValues,
+                                               isSinkingBeneficiary)) &&
         !existingDependencies.count(operand))
       return false;
   }
@@ -106,7 +106,10 @@ extractBeneficiaryOps(Operation *op,
   return true;
 }
 
-LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
+LogicalResult mlir::sinkOperationsIntoLaunchOp(
+    gpu::LaunchOp launchOp,
+    llvm::function_ref<bool(Operation *)> isSinkingBeneficiary) {
+  assert(isSinkingBeneficiary);
   Region &launchOpBody = launchOp.body();
 
   // Identify uses from values defined outside of the scope of the launch
@@ -120,7 +123,8 @@ LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
     Operation *operandOp = operand.getDefiningOp();
     if (!operandOp)
       continue;
-    extractBeneficiaryOps(operandOp, sinkCandidates, toBeSunk, availableValues);
+    extractBeneficiaryOps(operandOp, sinkCandidates, toBeSunk, availableValues,
+                          isSinkingBeneficiary);
   }
 
   // Insert operations so that the defs get cloned before uses.
@@ -228,6 +232,26 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
 }
 
 namespace {
+/// Pass that moves ops which are likely an index computation into gpu.launch
+/// body.
+class GpuLaunchSinkIndexComputationsPass
+    : public GpuLaunchSinkIndexComputationsBase<
+          GpuLaunchSinkIndexComputationsPass> {
+public:
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    if (op->walk([](gpu::LaunchOp launch) {
+            // Pull in instructions that can be sunk
+            if (failed(sinkOperationsIntoLaunchOp(launch,
+                                                  isLikelyAnIndexComputation)))
+              return WalkResult::interrupt();
+
+            return WalkResult::advance();
+          }).wasInterrupted())
+      signalPassFailure();
+  }
+};
+
 /// Pass that moves the kernel of each LaunchOp into its separate nested module.
 ///
 /// This pass moves the kernel code of each LaunchOp into a function created
@@ -276,9 +300,6 @@ public:
         std::string kernelFnName =
             Twine(op->getParentOfType<FuncOp>().getName(), "_kernel").str();
 
-        // Pull in instructions that can be sunk
-        if (failed(sinkOperationsIntoLaunchOp(op)))
-          return WalkResult::interrupt();
         gpu::GPUFuncOp outlinedFunc =
             outlineKernelFuncImpl(op, kernelFnName, operands);
 
@@ -355,6 +376,10 @@ private:
 };
 
 } // namespace
+
+std::unique_ptr<Pass> mlir::createGpuLauchSinkIndexComputationsPass() {
+  return std::make_unique<GpuLaunchSinkIndexComputationsPass>();
+}
 
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createGpuKernelOutliningPass(StringRef dataLayoutStr) {

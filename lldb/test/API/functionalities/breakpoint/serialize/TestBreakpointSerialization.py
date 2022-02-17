@@ -119,11 +119,11 @@ class BreakpointSerialization(TestBase):
 
         if (do_write):
             error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, source_bps)
-            self.assertTrue(error.Success(), "Failed writing breakpoints to file: %s."%(error.GetCString()))
+            self.assertSuccess(error, "Failed writing breakpoints to file")
 
         copy_bps = lldb.SBBreakpointList(self.copy_target)
         error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, copy_bps)
-        self.assertTrue(error.Success(), "Failed reading breakpoints from file: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed reading breakpoints from file")
 
         num_source_bps = source_bps.GetSize()
         num_copy_bps = copy_bps.GetSize()
@@ -279,7 +279,7 @@ class BreakpointSerialization(TestBase):
 
         error = lldb.SBError()
         error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, source_bps)
-        self.assertTrue(error.Success(), "Failed writing breakpoints to file: %s."%(error.GetCString()))
+        self.assertSuccess(error, "Failed writing breakpoints to file")
 
         source_bps.Clear()
 
@@ -299,7 +299,7 @@ class BreakpointSerialization(TestBase):
         all_bps.Append(bkpt)
 
         error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, source_bps, True)
-        self.assertTrue(error.Success(), "Failed appending breakpoints to file: %s."%(error.GetCString()))
+        self.assertSuccess(error, "Failed appending breakpoints to file")
 
         self.check_equivalence(all_bps)
 
@@ -313,19 +313,19 @@ class BreakpointSerialization(TestBase):
 
         error = lldb.SBError()
         error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, write_bps)
-        self.assertTrue(error.Success(), "Failed writing breakpoints to file: %s."%(error.GetCString()))
+        self.assertSuccess(error, "Failed writing breakpoints to file")
 
         copy_bps = lldb.SBBreakpointList(self.copy_target)
         names_list = lldb.SBStringList()
         names_list.AppendString("NoSuchName")
 
         error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, names_list, copy_bps)
-        self.assertTrue(error.Success(), "Failed reading breakpoints from file: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed reading breakpoints from file")
         self.assertEqual(copy_bps.GetSize(), 0, "Found breakpoints with a nonexistent name.")
 
         names_list.AppendString(good_bkpt_name)
         error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, names_list, copy_bps)
-        self.assertTrue(error.Success(), "Failed reading breakpoints from file: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed reading breakpoints from file")
         self.assertEqual(copy_bps.GetSize(), 1, "Found the matching breakpoint.")
 
     def do_check_extra_args(self):
@@ -348,12 +348,12 @@ class BreakpointSerialization(TestBase):
         write_bps = lldb.SBBreakpointList(self.orig_target)
 
         error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, write_bps)
-        self.assertTrue(error.Success(), "Failed writing breakpoints: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed writing breakpoints")
 
         side_effect.g_extra_args = None
         copy_bps = lldb.SBBreakpointList(self.copy_target)
         error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, copy_bps)
-        self.assertTrue(error.Success(), "Failed reading breakpoints: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed reading breakpoints")
 
         self.assertEqual(copy_bps.GetSize(), 1, "Got one breakpoint from file.")
         no_keys = lldb.SBStringList()
@@ -377,7 +377,7 @@ class BreakpointSerialization(TestBase):
         write_bps = lldb.SBBreakpointList(self.orig_target)
 
         error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, write_bps)
-        self.assertTrue(error.Success(), "Failed writing breakpoints: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed writing breakpoints")
 
         orig_extra_args = side_effect.g_extra_args
         self.assertTrue(orig_extra_args.IsValid(), "Extra args originally valid")
@@ -390,7 +390,7 @@ class BreakpointSerialization(TestBase):
 
         copy_bps = lldb.SBBreakpointList(self.copy_target)
         error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, copy_bps)
-        self.assertTrue(error.Success(), "Failed reading breakpoints: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed reading breakpoints")
 
         self.assertEqual(copy_bps.GetSize(), 1, "Got one breakpoint from file.")
 

@@ -85,6 +85,26 @@ class CallInterface {
   friend CallInterfaceImpl<T>;
 
 public:
+  /// Enum the different ways an entity can be passed-by
+  enum class PassEntityBy {
+    BaseAddress,
+    BoxChar,
+    // passing a read-only descriptor
+    Box,
+    // passing a writable descriptor
+    MutableBox,
+    AddressAndLength,
+    /// Value means passed by value at the mlir level, it is not necessarily
+    /// implied by Fortran Value attribute.
+    Value,
+    /// ValueAttribute means dummy has the the Fortran VALUE attribute.
+    BaseAddressValueAttribute,
+    CharBoxValueAttribute, // BoxChar with VALUE
+    // Passing a character procedure as a <procedure address, result length>
+    // tuple.
+    CharProcTuple
+  };
+
   /// Different properties of an entity that can be passed/returned.
   /// One-to-One mapping with PassEntityBy but for
   /// PassEntityBy::AddressAndLength that has two properties.
@@ -102,8 +122,65 @@ public:
   using FortranEntity = typename PassedEntityTypes<T>::FortranEntity;
   using FirValue = typename PassedEntityTypes<T>::FirValue;
 
+  /// FirPlaceHolder are place holders for the mlir inputs and outputs that are
+  /// created during the first pass before the mlir::FuncOp is created.
+  struct FirPlaceHolder {
+    FirPlaceHolder(mlir::Type t, int passedPosition, Property p,
+                   llvm::ArrayRef<mlir::NamedAttribute> attrs)
+        : type{t}, passedEntityPosition{passedPosition}, property{p},
+          attributes{attrs.begin(), attrs.end()} {}
+    /// Type for this input/output
+    mlir::Type type;
+    /// Position of related passedEntity in passedArguments.
+    /// (passedEntity is the passedResult this value is resultEntityPosition).
+    int passedEntityPosition;
+    static constexpr int resultEntityPosition = -1;
+    /// Indicate property of the entity passedEntityPosition that must be passed
+    /// through this argument.
+    Property property;
+    /// MLIR attributes for this argument
+    llvm::SmallVector<mlir::NamedAttribute> attributes;
+  };
+
+  /// PassedEntity is what is provided back to the CallInterface user.
+  /// It describe how the entity is plugged in the interface
+  struct PassedEntity {
+    /// Is the dummy argument optional ?
+    bool isOptional() const;
+    /// Can the argument be modified by the callee ?
+    bool mayBeModifiedByCall() const;
+    /// Can the argument be read by the callee ?
+    bool mayBeReadByCall() const;
+    /// How entity is passed by.
+    PassEntityBy passBy;
+    /// What is the entity (SymbolRef for callee/ActualArgument* for caller)
+    /// What is the related mlir::FuncOp argument(s) (mlir::Value for callee /
+    /// index for the caller).
+    FortranEntity entity;
+    FirValue firArgument;
+    FirValue firLength; /* only for AddressAndLength */
+
+    /// Pointer to the argument characteristics. Nullptr for results.
+    const Fortran::evaluate::characteristics::DummyArgument *characteristics =
+        nullptr;
+  };
+
+  /// Return a container of Symbol/ActualArgument* and how they must
+  /// be plugged with the mlir::FuncOp.
+  llvm::ArrayRef<PassedEntity> getPassedArguments() const {
+    return passedArguments;
+  }
+  /// In case the result must be passed by the caller, indicate how.
+  /// nullopt if the result is not passed by the caller.
+  std::optional<PassedEntity> getPassedResult() const { return passedResult; }
   /// Returns the mlir function type
   mlir::FunctionType genFunctionType();
+
+  /// determineInterface is the entry point of the first pass that defines the
+  /// interface and is required to get the mlir::FuncOp.
+  void
+  determineInterface(bool isImplicit,
+                     const Fortran::evaluate::characteristics::Procedure &);
 
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
@@ -112,10 +189,22 @@ protected:
   /// Entry point to be called by child ctor to analyze the signature and
   /// create/find the mlir::FuncOp. Child needs to be initialized first.
   void declare();
+  /// Second pass entry point, once the mlir::FuncOp is created.
+  /// Nothing is done if it was already called.
+  void mapPassedEntities();
+  void mapBackInputToPassedEntity(const FirPlaceHolder &, FirValue);
 
+  llvm::SmallVector<FirPlaceHolder> outputs;
+  llvm::SmallVector<FirPlaceHolder> inputs;
   mlir::FuncOp func;
+  llvm::SmallVector<PassedEntity> passedArguments;
+  std::optional<PassedEntity> passedResult;
 
   Fortran::lower::AbstractConverter &converter;
+  /// Store characteristic once created, it is required for further information
+  /// (e.g. getting the length of character result)
+  std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
+      std::nullopt;
 };
 
 //===----------------------------------------------------------------------===//
@@ -132,9 +221,15 @@ public:
     declare();
   }
 
+  bool hasAlternateReturns() const;
   std::string getMangledName() const;
   mlir::Location getCalleeLocation() const;
   Fortran::evaluate::characteristics::Procedure characterize() const;
+  bool isMainProgram() const;
+
+  Fortran::lower::pft::FunctionLikeUnit &getCallDescription() const {
+    return funit;
+  }
 
   /// On the callee side it does not matter whether the procedure is
   /// called through pointers or not.

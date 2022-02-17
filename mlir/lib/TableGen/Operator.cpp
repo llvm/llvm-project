@@ -701,8 +701,7 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
   // is safer).
   auto skip = [&](StringRef newName) {
     bool shouldSkip = newName == "getAttributeNames" ||
-                      newName == "getAttributes" || newName == "getOperation" ||
-                      newName == "getType";
+                      newName == "getAttributes" || newName == "getOperation";
     if (newName == "getOperands") {
       // To reduce noise, skip generating the prefixed form and the warning if
       // $operands correspond to single variadic argument.
@@ -713,6 +712,11 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
     if (newName == "getRegions") {
       if (op.getNumRegions() == 1 && op.getNumVariadicRegions() == 1)
         return true;
+      shouldSkip = true;
+    }
+    if (newName == "getType") {
+      if (op.getNumResults() == 0)
+        return false;
       shouldSkip = true;
     }
     if (!shouldSkip)

@@ -60,7 +60,7 @@ typedef struct CGPoint CGPoint;
 NSString *ForceLocalized(NSString *str)
     __attribute__((annotate("returns_localized_nsstring")));
 CGPoint CGPointMake(CGFloat x, CGFloat y);
-int random();
+int random(void);
 // This next one is a made up API
 NSString *CFNumberFormatterCreateStringWithNumber(float x);
 + (NSString *)forceLocalized:(NSString *)str

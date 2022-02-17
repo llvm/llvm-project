@@ -2,7 +2,7 @@
 
 int tcount;
 void test(char *, const char*, int);
-void foo() {
+void foo(void) {
   char Buf[10];
   test(Buf, "n%%%d", tcount++);
 }

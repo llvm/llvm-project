@@ -7,36 +7,36 @@
 extern void NSLog(NSString *format, ...);
 extern int printf(const char *, ...);
 
-int main() {
+int main(void) {
   NSString *strong;
   unsigned long long eightByte = 0x8001800181818181ull;
   // Test1
   // CHECK: Inline block variable layout: 0x0100, BL_STRONG:1, BL_OPERATOR:0
-  void (^block1)() = ^{ printf("%#llx", eightByte); NSLog(@"%@", strong); };
+  void (^block1)(void) = ^{ printf("%#llx", eightByte); NSLog(@"%@", strong); };
 
   // Test2
   int i = 1;
   // CHECK: Inline block variable layout: 0x0100, BL_STRONG:1, BL_OPERATOR:0
-  void (^block2)() = ^{ printf("%#llx, %d", eightByte, i); NSLog(@"%@", strong); };
+  void (^block2)(void) = ^{ printf("%#llx, %d", eightByte, i); NSLog(@"%@", strong); };
 
   //  Test3
   char ch = 'a';
   // CHECK: Inline block variable layout: 0x0100, BL_STRONG:1, BL_OPERATOR:0
-  void (^block3)() = ^{ printf("%c %#llx", ch, eightByte); NSLog(@"%@", strong); };
+  void (^block3)(void) = ^{ printf("%c %#llx", ch, eightByte); NSLog(@"%@", strong); };
 
   // Test4
   unsigned long fourByte = 0x8001ul;
   // CHECK: Inline block variable layout: 0x0100, BL_STRONG:1, BL_OPERATOR:0
-  void (^block4)() = ^{ printf("%c %#lx", ch, fourByte); NSLog(@"%@", strong); };
+  void (^block4)(void) = ^{ printf("%c %#lx", ch, fourByte); NSLog(@"%@", strong); };
 
   // Test5
   // Nothing gets printed here since the descriptor of this block is merged with
   // the descriptor of Test3's block.
-  void (^block5)() = ^{ NSLog(@"%@", strong); printf("%c %#llx", ch, eightByte); };
+  void (^block5)(void) = ^{ NSLog(@"%@", strong); printf("%c %#llx", ch, eightByte); };
 
   // Test6
   // CHECK: Block variable layout: BL_OPERATOR:0
-  void (^block6)() = ^{ printf("%#llx", eightByte); };
+  void (^block6)(void) = ^{ printf("%#llx", eightByte); };
 }
 
 /**

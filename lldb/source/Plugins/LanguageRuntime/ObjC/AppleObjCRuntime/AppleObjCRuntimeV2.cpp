@@ -3011,8 +3011,8 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
   if (m_CFBoolean_values)
     return true;
 
-  static ConstString g___kCFBooleanFalse("__kCFBooleanFalse");
-  static ConstString g___kCFBooleanTrue("__kCFBooleanTrue");
+  static ConstString g_dunder_kCFBooleanFalse("__kCFBooleanFalse");
+  static ConstString g_dunder_kCFBooleanTrue("__kCFBooleanTrue");
   static ConstString g_kCFBooleanFalse("kCFBooleanFalse");
   static ConstString g_kCFBooleanTrue("kCFBooleanTrue");
 
@@ -3045,8 +3045,8 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
     return addr;
   };
 
-  lldb::addr_t false_addr = get_symbol(g___kCFBooleanFalse, g_kCFBooleanFalse);
-  lldb::addr_t true_addr = get_symbol(g___kCFBooleanTrue, g_kCFBooleanTrue);
+  lldb::addr_t false_addr = get_symbol(g_dunder_kCFBooleanFalse, g_kCFBooleanFalse);
+  lldb::addr_t true_addr = get_symbol(g_dunder_kCFBooleanTrue, g_kCFBooleanTrue);
 
   return (m_CFBoolean_values = {false_addr, true_addr}).operator bool();
 }

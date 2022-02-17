@@ -8,37 +8,37 @@ _Float16 test_mm512_cvtsh_h(__m512h __A) {
   return _mm512_cvtsh_h(__A);
 }
 
-__m128h test_mm_setzero_ph() {
+__m128h test_mm_setzero_ph(void) {
   // CHECK-LABEL: @test_mm_setzero_ph
   // CHECK: zeroinitializer
   return _mm_setzero_ph();
 }
 
-__m256h test_mm256_setzero_ph() {
+__m256h test_mm256_setzero_ph(void) {
   // CHECK-LABEL: @test_mm256_setzero_ph
   // CHECK: zeroinitializer
   return _mm256_setzero_ph();
 }
 
-__m256h test_mm256_undefined_ph() {
+__m256h test_mm256_undefined_ph(void) {
   // CHECK-LABEL: @test_mm256_undefined_ph
   // CHECK: ret <16 x half> zeroinitializer
   return _mm256_undefined_ph();
 }
 
-__m512h test_mm512_setzero_ph() {
+__m512h test_mm512_setzero_ph(void) {
   // CHECK-LABEL: @test_mm512_setzero_ph
   // CHECK: zeroinitializer
   return _mm512_setzero_ph();
 }
 
-__m128h test_mm_undefined_ph() {
+__m128h test_mm_undefined_ph(void) {
   // CHECK-LABEL: @test_mm_undefined_ph
   // CHECK: ret <8 x half> zeroinitializer
   return _mm_undefined_ph();
 }
 
-__m512h test_mm512_undefined_ph() {
+__m512h test_mm512_undefined_ph(void) {
   // CHECK-LABEL: @test_mm512_undefined_ph
   // CHECK: ret <32 x half> zeroinitializer
   return _mm512_undefined_ph();

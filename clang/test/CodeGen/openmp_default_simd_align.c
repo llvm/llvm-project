@@ -5,7 +5,7 @@ struct s0 {
   enum e0         a:31;
 };
 
-int f0() {
+int f0(void) {
   return __builtin_omp_required_simd_align(struct s0);
   // CHECK: ret i32 16
 }

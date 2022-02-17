@@ -6,7 +6,7 @@
 
 void bar(int);
 
-void foo() {
+void foo(void) {
   int a;
   for (unsigned i = 0; i < 3; ++i)
     if (i)

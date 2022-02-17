@@ -251,6 +251,9 @@ struct KMP_DO_ALIGN(4) kmp_cmplx128_a4_t {
 
   kmp_cmplx128_a4_t() : q() {}
 
+#if defined(__cplusplus) && (KMP_OS_WINDOWS)
+  kmp_cmplx128_a4_t(const std::complex<_Quad> &c128) : q(c128) {}
+#endif
   kmp_cmplx128_a4_t(const kmp_cmplx128 &c128) : q(c128) {}
 
   kmp_cmplx128_a4_t operator+(const kmp_cmplx128_a4_t &b) {
@@ -314,6 +317,9 @@ struct KMP_DO_ALIGN(16) kmp_cmplx128_a16_t {
 
   kmp_cmplx128_a16_t() : q() {}
 
+#if defined(__cplusplus) && (KMP_OS_WINDOWS)
+  kmp_cmplx128_a16_t(const std::complex<_Quad> &c128) : q(c128) {}
+#endif
   kmp_cmplx128_a16_t(const kmp_cmplx128 &c128) : q(c128) {}
 
   kmp_cmplx128_a16_t operator+(const kmp_cmplx128_a16_t &b) {

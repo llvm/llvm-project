@@ -23,6 +23,7 @@ static_library("COFF") {
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/ToolDrivers/llvm-lib:LibDriver",
+    "//llvm/lib/WindowsDriver",
     "//llvm/lib/WindowsManifest",
   ]
   sources = [

@@ -3,7 +3,7 @@
 
 void free(void *);
 void (*fnptr)(int);
-void foo() {
+void foo(void) {
   free((void *)fnptr);
   // expected-warning@-1{{Argument to free() is a function pointer}}
   // expected-warning@-2{{attempt to call free on non-heap object '(void *)fnptr'}}

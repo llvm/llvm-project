@@ -317,3 +317,10 @@ bool fir::NameUniquer::needExternalNameMangling(llvm::StringRef uniquedName) {
   return result.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
          fir::NameUniquer::isExternalFacingUniquedName(result);
 }
+
+bool fir::NameUniquer::belongsToModule(llvm::StringRef uniquedName,
+                                       llvm::StringRef moduleName) {
+  auto result = fir::NameUniquer::deconstruct(uniquedName);
+  return !result.second.modules.empty() &&
+         result.second.modules[0] == moduleName;
+}

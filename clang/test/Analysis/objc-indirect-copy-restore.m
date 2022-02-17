@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -fobjc-arc -analyzer-checker=core,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,
     unsigned int __line, __const char *__function)

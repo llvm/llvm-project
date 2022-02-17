@@ -15,11 +15,11 @@
     br i1 %tobool, label %if.else, label %if.then
 
   if.then:                                          ; preds = %entry
-    %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
+    %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     br label %if.end
 
   if.else:                                          ; preds = %entry
-    %c = call <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
+    %c = call <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     br label %if.end
 
   if.end:                                           ; preds = %if.else, %if.then
@@ -34,11 +34,11 @@
     br i1 %tobool, label %if.else, label %if.then
 
   if.then:                                          ; preds = %entry
-    %b = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i32> %a, i64 %2)
+    %b = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> %a, i64 %2)
     br label %if.end
 
   if.else:                                          ; preds = %entry
-    %c = call <vscale x 1 x i64> @llvm.riscv.vsext.nxv1i64.nxv1i32.i64(<vscale x 1 x i32> %a, i64 %2)
+    %c = call <vscale x 1 x i64> @llvm.riscv.vsext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> %a, i64 %2)
     br label %if.end
 
   if.end:                                           ; preds = %if.else, %if.then
@@ -56,11 +56,11 @@
     br i1 %tobool, label %if.else, label %if.then
 
   if.then:                                          ; preds = %entry
-    %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %2)
     br label %if.end
 
   if.else:                                          ; preds = %entry
-    %b = call <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %1, <vscale x 1 x i64> %1, i64 %2)
+    %b = call <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %1, i64 %2)
     br label %if.end
 
   if.end:                                           ; preds = %if.else, %if.then
@@ -79,11 +79,11 @@
     br i1 %tobool, label %if.else, label %if.then
 
   if.then:                                          ; preds = %entry
-    %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %vl)
+    %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %vl)
     br label %if.end
 
   if.else:                                          ; preds = %entry
-    %c = call <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %vl)
+    %c = call <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %vl)
     br label %if.end
 
   if.end:                                           ; preds = %if.else, %if.then
@@ -125,10 +125,10 @@
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
   ; Function Attrs: nounwind readnone
-  declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
+  declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
   ; Function Attrs: nounwind readnone
-  declare <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
+  declare <vscale x 1 x i64> @llvm.riscv.vsub.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
   ; Function Attrs: nounwind readonly
   declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64) #3
@@ -140,10 +140,10 @@
   declare void @llvm.riscv.vse.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64) #4
 
   ; Function Attrs: nounwind readnone
-  declare <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i32>, i64) #1
+  declare <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>, <vscale x 1 x i32>, i64) #1
 
   ; Function Attrs: nounwind readnone
-  declare <vscale x 1 x i64> @llvm.riscv.vsext.nxv1i64.nxv1i32.i64(<vscale x 1 x i32>, i64) #1
+  declare <vscale x 1 x i64> @llvm.riscv.vsext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>, <vscale x 1 x i32>, i64) #1
 
   attributes #0 = { "target-features"="+v" }
   attributes #1 = { nounwind readnone }

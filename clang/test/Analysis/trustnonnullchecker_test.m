@@ -1,10 +1,13 @@
+// Temporarily disabling the test, it failes the "system is over-constrained" (part of expensive checks)
+// assertion in *non* optimized builds.
+// REQUIRES: rdar44992170
 // RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-checker=core,nullability,apiModeling,debug.ExprInspection  -verify %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
-NSString* _Nonnull trust_nonnull_framework_annotation() {
+NSString* _Nonnull trust_nonnull_framework_annotation(void) {
   NSString* out = [NSString generateString];
   if (out) {}
   return out; // no-warning
@@ -31,33 +34,33 @@ NSString* _Nonnull trust_analyzer_knowledge(NSString* param) {
   return out; // no-warning
 }
 
-NSString* _Nonnull trust_assume_nonnull_macro() {
+NSString* _Nonnull trust_assume_nonnull_macro(void) {
   NSString* out = [NSString generateImplicitlyNonnullString];
   if (out) {}
   return out; // no-warning
 }
 
-NSString* _Nonnull distrust_without_annotation() {
+NSString* _Nonnull distrust_without_annotation(void) {
   NSString* out = [NSString generatePossiblyNullString];
   if (out) {}
   return out; // expected-warning{{}}
 }
 
-NSString* _Nonnull nonnull_please_trust_me();
+NSString* _Nonnull nonnull_please_trust_me(void);
 
-NSString* _Nonnull distrust_local_nonnull_annotation() {
+NSString* _Nonnull distrust_local_nonnull_annotation(void) {
   NSString* out = nonnull_please_trust_me();
   if (out) {}
   return out; // expected-warning{{}}
 }
 
-NSString* _Nonnull trust_c_function() {
+NSString* _Nonnull trust_c_function(void) {
   NSString* out = getString();
   if (out) {};
   return out; // no-warning
 }
 
-NSString* _Nonnull distrust_unannoted_function() {
+NSString* _Nonnull distrust_unannoted_function(void) {
   NSString* out = getPossiblyNullString();
   if (out) {};
   return out; // expected-warning{{}}

@@ -14,6 +14,6 @@ size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 
 // Must have at least one call expression to initialize the summary map.
 int bar(void);
-void foo() {
+void foo(void) {
   bar();
 }

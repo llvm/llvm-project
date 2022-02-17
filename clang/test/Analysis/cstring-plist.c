@@ -14,7 +14,7 @@ char *strncpy(char *restrict s1, const char *restrict s2, size_t n);
 
 
 
-void cstringchecker_bounds_nocrash() {
+void cstringchecker_bounds_nocrash(void) {
   char *p = malloc(2);
   strncpy(p, "AAA", sizeof("AAA")); // we don't expect warning as the checker is disabled
   free(p);

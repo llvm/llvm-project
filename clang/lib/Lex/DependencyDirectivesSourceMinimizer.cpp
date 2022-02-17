@@ -270,6 +270,15 @@ static const char *findLastNonSpace(const char *First, const char *Last) {
   return Last;
 }
 
+static const char *findLastNonSpaceNonBackslash(const char *First,
+                                                const char *Last) {
+  assert(First <= Last);
+  while (First != Last &&
+         (isHorizontalWhitespace(Last[-1]) || Last[-1] == '\\'))
+    --Last;
+  return Last;
+}
+
 static const char *findFirstTrailingSpace(const char *First,
                                           const char *Last) {
   const char *LastNonSpace = findLastNonSpace(First, Last);
@@ -392,7 +401,7 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
     do {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*Last == '"' || *Last == '\'' ||
-          (*Last == '<' && top() == pp_include)) {
+          (*Last == '<' && (top() == pp_include || top() == pp_import))) {
         if (LLVM_UNLIKELY(isRawStringLiteral(First, Last)))
           skipRawString(Last, End);
         else
@@ -434,11 +443,11 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
       return;
     }
 
-    // Print up to the backslash, backing up over spaces. Preserve at least one
-    // space, as the space matters when tokens are separated by a line
-    // continuation.
-    append(First, findFirstTrailingSpace(
-                      First, LastBeforeTrailingSpace - 1));
+    // Print up to the last character that's not a whitespace or backslash.
+    // Then print exactly one space, which matters when tokens are separated by
+    // a line continuation.
+    append(First, findLastNonSpaceNonBackslash(First, Last));
+    put(' ');
 
     First = Last;
     skipNewline(First, End);

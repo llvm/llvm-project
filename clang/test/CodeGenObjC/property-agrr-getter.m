@@ -31,7 +31,7 @@ typedef struct _NSSize {
 
 @end
 
-float f ()
+float f (void)
 {
   AnObject* obj;
   return (obj.size).width;

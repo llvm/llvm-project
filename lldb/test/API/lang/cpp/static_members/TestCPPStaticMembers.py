@@ -71,3 +71,18 @@ class TestCase(TestBase):
         # Evaluating the expression via JIT should work fine.
         value = self.target().EvaluateExpression(expr)
         self.assertSuccess(value.GetError())
+
+    def test_IR_interpreter_can_handle_getelementptr_constants_args(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
+
+        # This expression contains the following IR code:
+        # ... getelementptr inbounds [2 x i32], [2 x i32]* %4, i64 0, i64 0
+        expr = "arr[0]"
+
+        # The IR interpreter supports const operands to the `GetElementPtr` IR
+        # instruction, so it should be able to evaluate expression without JIT.
+        opts = lldb.SBExpressionOptions()
+        opts.SetAllowJIT(False)
+        value = self.target().EvaluateExpression(expr, opts)
+        self.assertSuccess(value.GetError())

@@ -24,7 +24,7 @@ void foo(const int *p) {
 }
 
 // CHECK-LABEL: define{{.*}} void @ub_constant_arithmetic
-void ub_constant_arithmetic() {
+void ub_constant_arithmetic(void) {
   // Check that we still instrument unsafe arithmetic, even if it is known to
   // be unsafe at compile time.
 

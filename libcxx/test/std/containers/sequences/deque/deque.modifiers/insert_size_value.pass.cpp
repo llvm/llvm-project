@@ -50,7 +50,7 @@ test(int P, C& c1, int size, int x)
     CI i = c1.insert(c1.begin() + P, size, x);
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + size);
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -120,7 +120,7 @@ self_reference_test()
             CI jt = c.cbegin() + j;
             c.insert(it, 5, *jt);
             assert(c.size() == 25);
-            assert(static_cast<std::size_t>(distance(c.begin(), c.end())) == c.size());
+            assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
             it = c.cbegin();
             for (int k = 0; k < i; ++k, ++it)
                 assert(*it == k);

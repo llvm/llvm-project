@@ -22,7 +22,9 @@
 #define stringer(x) _stringer(x)
 
 // Detect compiler.
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICX
+#define KMP_COMPILER __VERSION__
+#elif KMP_COMPILER_ICC
 #if __INTEL_COMPILER == 1010
 #define KMP_COMPILER "Intel(R) C++ Compiler 10.1"
 #elif __INTEL_COMPILER == 1100
@@ -53,8 +55,10 @@
 #define KMP_COMPILER "Intel(R) C++ Compiler 19.0"
 #elif __INTEL_COMPILER == 1910
 #define KMP_COMPILER "Intel(R) C++ Compiler 19.1"
-#elif __INTEL_COMPILER >= 9900
-#define KMP_COMPILER "Intel(R) C++ Compiler mainline"
+#elif __INTEL_COMPILER > 1910
+#define KMP_COMPILER                                                           \
+  "Intel(R) C++ Compiler Classic " stringer(__INTEL_COMPILER) "." stringer(    \
+      __INTEL_COMPILER_UPDATE)
 #endif
 #elif KMP_COMPILER_CLANG
 #define KMP_COMPILER                                                           \

@@ -8,7 +8,7 @@
 
 #define X86_ARRAY_SIZE (UINT_MAX/2 + 4)
 
-void testIndexTooBig() {
+void testIndexTooBig(void) {
   char arr[X86_ARRAY_SIZE];
   char *ptr = arr + UINT_MAX/2;
   ptr += 2;  // index shouldn't overflow
@@ -19,7 +19,7 @@ void testIndexTooBig() {
 
 #define ARRAY_SIZE 0x100000000
 
-void testIndexOverflow64() {
+void testIndexOverflow64(void) {
   char arr[ARRAY_SIZE];
   char *ptr = arr + UINT_MAX/2;
   ptr += 2;  // don't overflow 64-bit index
@@ -29,7 +29,7 @@ void testIndexOverflow64() {
 #define ULONG_MAX (~0ul)
 #define BIG_INDEX (ULONG_MAX/16)
 
-void testIndexTooBig64() {
+void testIndexTooBig64(void) {
   char arr[ULONG_MAX/8-1];
   char *ptr = arr + BIG_INDEX;
   ptr += 2;  // don't overflow 64-bit index
@@ -42,16 +42,16 @@ static unsigned size;
 static void * addr;
 static unsigned buf[SIZE];
 
-void testOutOfBounds() {
+void testOutOfBounds(void) {
   // Not out of bounds.
   buf[SIZE-1] = 1; // no-warning
 }
 
-void testOutOfBoundsCopy1() {
+void testOutOfBoundsCopy1(void) {
   memcpy(buf, addr, size); // no-warning
 }
 
-void testOutOfBoundsCopy2() {
+void testOutOfBoundsCopy2(void) {
   memcpy(addr, buf, size); // no-warning
 }
 

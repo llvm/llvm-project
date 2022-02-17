@@ -6,8 +6,8 @@
 
 void clang_analyzer_dump(int x);
 void clang_analyzer_dump_pointer(int *p);
-void clang_analyzer_printState();
-void clang_analyzer_numTimesReached();
+void clang_analyzer_printState(void);
+void clang_analyzer_numTimesReached(void);
 
 void foo(int x) {
   clang_analyzer_dump(x); // expected-warning{{reg_$0<int x>}}

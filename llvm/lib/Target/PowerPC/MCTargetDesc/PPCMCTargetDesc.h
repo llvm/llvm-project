@@ -34,7 +34,6 @@ class MCTargetOptions;
 class Target;
 
 MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
                                       MCContext &Ctx);
 
 MCAsmBackend *createPPCAsmBackend(const Target &T, const MCSubtargetInfo &STI,

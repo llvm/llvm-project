@@ -14,6 +14,14 @@ def run(f):
   return f
 
 
+def expect_index_error(callback):
+  try:
+    _ = callback()
+    raise RuntimeError("Expected IndexError")
+  except IndexError:
+    pass
+
+
 # Verify iterator based traversal of the op/region/block hierarchy.
 # CHECK-LABEL: TEST: testTraverseOpRegionBlockIterators
 @run
@@ -418,7 +426,9 @@ def testOperationResultList():
   for t in call.results.types:
     print(f"Result type {t}")
 
-
+  # Out of range
+  expect_index_error(lambda: call.results[3])
+  expect_index_error(lambda: call.results[-4])
 
 
 # CHECK-LABEL: TEST: testOperationResultListSlice
@@ -468,8 +478,6 @@ def testOperationResultListSlice():
     inverted_middle = producer.results[-2:0:-2]
     for res in inverted_middle:
       print(f"Result {res.result_number}, type {res.type}")
-
-
 
 
 # CHECK-LABEL: TEST: testOperationAttributes

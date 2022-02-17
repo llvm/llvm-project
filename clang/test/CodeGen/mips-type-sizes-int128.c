@@ -7,7 +7,7 @@
 // O32 does not support __int128 so it must be tested separately
 // N32/N64 behave the same way so their tests have been combined into NEW
 
-int check_int128() {
+int check_int128(void) {
   return sizeof(__int128); // O32: :[[@LINE]]:17: error: __int128 is not supported on this target
 // NEW: ret i32 16
 }

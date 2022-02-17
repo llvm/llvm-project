@@ -16,14 +16,14 @@ v4i32 *y = &(v4i32){1,2,3,4};
 // CHECK: @compound_array ={{.*}} global [8 x i32] [i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8]
 int compound_array[] = __extension__(__builtin_choose_expr(0, 0, _Generic(1, int: (int[]){1, 2, 3, 4, 5, 6, 7, 8})));
 
-void xxx() {
+void xxx(void) {
 int* a = &(int){1};
 struct s {int a, b, c;} * b = &(struct s) {1, 2, 3};
 _Complex double * x = &(_Complex double){1.0f};
 }
 
 // CHECK-LABEL: define{{.*}} void @f()
-void f() {
+void f(void) {
   typedef struct S { int x,y; } S;
   // CHECK: [[S:%[a-zA-Z0-9.]+]] = alloca [[STRUCT:%[a-zA-Z0-9.]+]],
   struct S s;
@@ -80,7 +80,7 @@ struct G g(int x, int y, int z) {
 // We had a bug where we'd emit a new GlobalVariable for each time we used a
 // const pointer to a variable initialized by a compound literal.
 // CHECK-LABEL: define{{.*}} i32 @compareMyCLH() #0
-int compareMyCLH() {
+int compareMyCLH(void) {
   // CHECK: store i8* bitcast ([[MY_CLH]] to i8*)
   const void *a = MyCLH;
   // CHECK: store i8* bitcast ([[MY_CLH]] to i8*)
@@ -93,7 +93,7 @@ int compareMyCLH() {
 // CHECK-LABEL: define{{.*}} i32 @compound_array_fn()
 // CHECK: [[COMPOUND_ARRAY:%.*]] = alloca [8 x i32]
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}}, i64 32, i1 false)
-int compound_array_fn() {
+int compound_array_fn(void) {
   int compound_array[] = (int[]){1,2,3,4,5,6,7,8};
   return compound_array[0];
 }

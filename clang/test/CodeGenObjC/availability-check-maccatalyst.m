@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-ios13.1-macabi -emit-llvm -o - %s | FileCheck %s
 
-void use_at_available() {
+void use_at_available(void) {
   // CHECK: call i32 @__isPlatformVersionAtLeast(i32 2, i32 14, i32 0, i32 0)
   // CHECK-NEXT: icmp ne i32
   if (__builtin_available(ios 14, *))

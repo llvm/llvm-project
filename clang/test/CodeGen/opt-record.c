@@ -11,8 +11,8 @@
 // RUN: not %clang_cc1 -O3 -triple x86_64-unknown-linux-gnu -target-cpu x86-64 %s -o %t -opt-record-file %t.yaml -opt-record-format "unknown-format" -emit-obj 2>&1 | FileCheck -check-prefix=CHECK-FORMAT-ERROR %s
 // REQUIRES: x86-registered-target
 
-void bar();
-void foo() { bar(); }
+void bar(void);
+void foo(void) { bar(); }
 
 void Test(int *res, int *c, int *d, int *p, int n) {
   int i;

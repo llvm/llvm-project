@@ -20,5 +20,5 @@ entry:
   ret i32 %r
 }
 
-; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone ssp uwtable willreturn }
-; CHECK: attributes #1 = { mustprogress nofree norecurse nounwind ssp uwtable willreturn }
+; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone ssp willreturn uwtable }
+; CHECK: attributes #1 = { mustprogress nofree norecurse nounwind ssp willreturn uwtable }

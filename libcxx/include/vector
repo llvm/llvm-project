@@ -271,14 +271,23 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 
 */
 
+#include <__algorithm/copy.h>
+#include <__algorithm/equal.h>
+#include <__algorithm/fill_n.h>
+#include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/remove.h>
+#include <__algorithm/remove_if.h>
+#include <__algorithm/rotate.h>
+#include <__algorithm/unwrap_iter.h>
+#include <__assert>
 #include <__bit_reference>
 #include <__config>
 #include <__debug>
+#include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/wrap_iter.h>
 #include <__split_buffer>
 #include <__utility/forward.h>
-#include <algorithm>
 #include <climits>
 #include <compare>
 #include <cstdlib>

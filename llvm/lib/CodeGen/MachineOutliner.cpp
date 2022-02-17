@@ -623,6 +623,15 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
   TII.mergeOutliningCandidateAttributes(*F, OF.Candidates);
 
+  // Set uwtable, so we generate eh_frame.
+  UWTableKind UW = std::accumulate(
+      OF.Candidates.cbegin(), OF.Candidates.cend(), UWTableKind::None,
+      [](UWTableKind K, const outliner::Candidate &C) {
+        return std::max(K, C.getMF()->getFunction().getUWTableKind());
+      });
+  if (UW != UWTableKind::None)
+    F->setUWTableKind(UW);
+
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
   Builder.CreateRetVoid();

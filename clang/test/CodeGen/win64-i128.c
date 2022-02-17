@@ -5,7 +5,7 @@
 
 typedef int int128_t __attribute__((mode(TI)));
 
-int128_t foo() { return 0; }
+int128_t foo(void) { return 0; }
 
 // GNU64: define dso_local <2 x i64> @foo()
 // MSC64: define dso_local <2 x i64> @foo()

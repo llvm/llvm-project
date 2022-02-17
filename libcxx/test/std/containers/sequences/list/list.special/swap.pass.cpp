@@ -39,7 +39,7 @@ int main(int, char**)
         swap(c1, c2);
         assert(c1 == std::list<int>(a2, a2 + 7));
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
     }
     {
         int a1[] = {1, 3, 7, 9, 10};
@@ -47,7 +47,7 @@ int main(int, char**)
         std::list<int> c2;
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert(c2 == std::list<int>(a1, a1 + 5));
     }
     {
@@ -55,9 +55,9 @@ int main(int, char**)
         std::list<int> c2;
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
     }
     {
         int a1[] = {1, 3, 7, 9, 10};
@@ -100,7 +100,7 @@ int main(int, char**)
         swap(c1, c2);
         assert((c1 == std::list<int, min_allocator<int>>(a2, a2 + 7)));
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
     }
     {
         int a1[] = {1, 3, 7, 9, 10};
@@ -108,7 +108,7 @@ int main(int, char**)
         std::list<int, min_allocator<int>> c2;
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert((c2 == std::list<int, min_allocator<int>>(a1, a1 + 5)));
     }
     {
@@ -116,9 +116,9 @@ int main(int, char**)
         std::list<int, min_allocator<int>> c2;
         swap(c1, c2);
         assert(c1.empty());
-        assert(distance(c1.begin(), c1.end()) == 0);
+        assert(std::distance(c1.begin(), c1.end()) == 0);
         assert(c2.empty());
-        assert(distance(c2.begin(), c2.end()) == 0);
+        assert(std::distance(c2.begin(), c2.end()) == 0);
     }
     {
         int a1[] = {1, 3, 7, 9, 10};

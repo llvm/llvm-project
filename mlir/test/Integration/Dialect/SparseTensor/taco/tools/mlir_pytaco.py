@@ -298,19 +298,12 @@ class Format:
                        f"len({self.format_pack}) != "
                        f"len({self.ordering})")
 
-  def is_dense(self) -> bool:
-    """Returns true if all the Tensor dimensions have a dense format."""
-    return all([f == ModeFormat.DENSE for f in self.format_pack.formats])
-
   def rank(self) -> int:
     """Returns the number of dimensions represented by the format."""
     return self.format_pack.rank()
 
   def mlir_tensor_attr(self) -> Optional[sparse_tensor.EncodingAttr]:
     """Constructs the MLIR attributes for the tensor format."""
-    if self.is_dense():
-      return None
-
     order = (
         range(self.rank()) if
         (self.ordering is None) else self.ordering.ordering)
@@ -467,22 +460,22 @@ class _StructOpInfo:
       op.
     dst_dtype: A DType representing the data type of the structured op result.
     dst_name: A string representing the name of the structured op result.
-    dst_format: A Format object representing the destination tensor format.
+    dst_format: An optional Format object representing the destination tensor
+      format. None represents a true dense tensor.
   """
   dst_indices: Tuple[IndexVar, ...]
   dst_dims: Tuple[int, ...]
   dst_dtype: DType
   dst_name: str
-  dst_format: Format
+  dst_format: Optional[Format]
 
   def __post_init__(self) -> None:
     """Verifies the integrity of the attribute values."""
     assert len(self.dst_indices) == len(self.dst_dims)
-    assert self.dst_format is not None
 
   def emit_tensor_init(self) -> ir.RankedTensorType:
     """Returns an initialization for the destination tensor."""
-    if self.dst_format.is_dense():
+    if self.dst_format is None:
       # Initialize the dense tensor.
       ir_type = _mlir_type_from_taco_type(self.dst_dtype)
       tensor = linalg.InitTensorOp(self.dst_dims, ir_type).result
@@ -613,7 +606,8 @@ class Tensor:
                fmt: Optional[Union[ModeFormat, List[ModeFormat],
                                    Format]] = None,
                dtype: Optional[DType] = None,
-               name: Optional[str] = None):
+               name: Optional[str] = None,
+               is_dense: bool = False):
     """The tensor constructor interface defined by TACO API.
 
     Args:
@@ -630,25 +624,35 @@ class Tensor:
       dtype: An object of dtype, representing the data type of the tensor.
       name: A string name of the tensor. If a name is not given, creates a
         unique name for the tensor.
+      is_dense: A boolean variable to indicate whether the tensor is a dense
+        tensor without any sparsity annotation.
 
     Raises:
       ValueError: If there is any inconsistency among the input arguments.
     """
-    # Take care of the argument default values.
-    fmt = fmt or ModeFormat.COMPRESSED
+    # Take care of the argument default values common to both sparse tensors
+    # and dense tensors.
     dtype = dtype or DType(Type.FLOAT64)
     self._name = name or self._get_unique_name()
-
-    self._dtype = dtype
     self._assignment = None
-    # We currently use _coords and _values to host the sparse tensor value with
-    # COO format, and _dense_storage to host the dense tensor value. We haven't
-    # implement the conversion between the two storages yet. This will be
-    # improved in a follow up CL.
-    self._coords = []
-    self._values = []
     self._sparse_value_location = _SparseValueInfo._UNPACKED
     self._dense_storage = None
+    self._dtype = dtype
+
+    if is_dense:
+      assert (fmt is None)
+      assert (isinstance(value_or_shape, tuple) or isinstance(
+          value_or_shape, list)) and _all_instance_of(value_or_shape, int)
+      self._shape = value_or_shape
+      self._format = None
+      return
+
+    fmt = fmt or ModeFormat.COMPRESSED
+    # We currently use _coords and _values to host the sparse tensor value with
+    # COO format, and _dense_storage to host the dense tensor value. We don't
+    # support the conversion between the two storages.
+    self._coords = []
+    self._values = []
     self._stats = _Stats()
     if value_or_shape is None or isinstance(value_or_shape, int) or isinstance(
         value_or_shape, float):
@@ -694,7 +698,7 @@ class Tensor:
 
   def __repr__(self) -> str:
     self._sync_value()
-    self._unpack()
+    self.unpack()
     value_str = (f"{repr(self._dense_storage)})" if self.is_dense() else
                  f"{repr(self._coords)} {repr(self._values)})")
     return (f"Tensor(_name={repr(self._name)} "
@@ -733,8 +737,8 @@ class Tensor:
     self._values.append(self._dtype.value(val))
 
   def is_dense(self) -> bool:
-    """Returns true if all the Tensor dimensions have a dense format."""
-    return self._format.is_dense()
+    """Returns true if the tensor doesn't have sparsity annotation."""
+    return self._format is None
 
   def to_array(self) -> np.ndarray:
     """Returns the numpy array for the Tensor.
@@ -767,7 +771,7 @@ class Tensor:
     """
     if array.dtype != np.float64:
       raise ValueError(f"Expected float64 value type: {array.dtype}.")
-    tensor = Tensor(array.shape, ModeFormat.DENSE)
+    tensor = Tensor(array.shape, is_dense=True)
     tensor._dense_storage = np.copy(array)
     return tensor
 
@@ -843,26 +847,22 @@ class Tensor:
 
     Args:
       filename: A string file name.
+
+    Raises:
+       ValueError: If the tensor is dense, or an unpacked sparse tensor.
     """
     self._sync_value()
-    if not self.is_unpacked():
-      utils.output_sparse_tensor(self._packed_sparse_value, filename,
-                                 self._format.format_pack.formats)
-      return
 
-    # TODO: Use MLIR code to output the value.
-    coords, values = self.get_coordinates_and_values()
-    assert len(coords) == len(values)
-    with open(filename, "w") as file:
-      # Output a comment line and the meta data.
-      file.write("; extended FROSTT format\n")
-      file.write(f"{self.order} {len(coords)}\n")
-      file.write(f"{' '.join(map(lambda i: str(i), self.shape))}\n")
-      # Output each (coordinate value) pair in a line.
-      for c, v in zip(coords, values):
-        # The coordinates are 1-based in the text file and 0-based in memory.
-        plus_one_to_str = lambda x: str(x + 1)
-        file.write(f"{' '.join(map(plus_one_to_str,c))} {v}\n")
+    if self.is_dense():
+      raise ValueError("Writing dense tensors without sparsity annotation to "
+                       "file is not supported.")
+
+    if self.is_unpacked():
+      raise ValueError("Writing unpacked sparse tensors to file is not "
+                       "supported.")
+
+    utils.output_sparse_tensor(self._packed_sparse_value, filename,
+                               self._format.format_pack.formats)
 
   @property
   def dtype(self) -> DType:
@@ -956,8 +956,9 @@ class Tensor:
 
   def mlir_tensor_type(self) -> ir.RankedTensorType:
     """Returns the MLIR type for the tensor."""
-    return _mlir_tensor_type(self._dtype, tuple(self._shape),
-                             self._format.mlir_tensor_attr())
+    mlir_attr = None if (
+        self._format is None) else self._format.mlir_tensor_attr()
+    return _mlir_tensor_type(self._dtype, tuple(self._shape), mlir_attr)
 
   def dense_dst_ctype_pointer(self) -> ctypes.pointer:
     """Returns the ctypes pointer for the pointer to an MemRefDescriptor.
@@ -990,9 +991,15 @@ class Tensor:
 
   def get_coordinates_and_values(
       self) -> Tuple[List[Tuple[int, ...]], List[_AnyRuntimeType]]:
-    """Returns the coordinates and values for the non-zero elements."""
+    """Returns the coordinates and values for the non-zero elements.
+
+    This method also evaluate the assignment to the tensor and unpack the
+    sparse tensor.
+    """
+    self._sync_value()
+
     if not self.is_dense():
-      assert (self.is_unpacked())
+      self.unpack()
       return (self._coords, self._values)
 
     # Coordinates for non-zero elements, grouped by dimensions.
@@ -1627,7 +1634,12 @@ def _validate_and_collect_expr_info(
   if isinstance(expr, Access):
     src_indices = expr.indices
     src_dims = tuple(expr.tensor.shape)
-    mode_formats = tuple(expr.tensor.format.format_pack.formats)
+    if expr.tensor.format is None:
+      # Treat each dimension of a dense tensor as DENSE for the purpose of
+      # calculating temporary tensor storage format.
+      mode_formats = tuple([ModeFormat.DENSE] * len(src_dims))
+    else:
+      mode_formats = tuple(expr.tensor.format.format_pack.formats)
     assert len(src_dims) == len(mode_formats)
     dim_infos = tuple([_DimInfo(d, m) for d, m in zip(src_dims, mode_formats)])
   else:
@@ -1671,10 +1683,16 @@ def _mark_structured_op_root(
       to perform a reduction.
     expr_to_info: The dictionary to look up _ExprInfo for IndexExpr.
   """
+  expr_info = expr_to_info[expr]
+  if isinstance(expr, Access):
+    # Handle simple reduction expression in the format of A[i] = B[i, j].
+    if reduce_index in expr_info.src_indices:
+      expr_info.reduce_indices.add(reduce_index)
+    return
+
   assert (isinstance(expr, _BinaryExpr))
   a_info = expr_to_info[expr.a]
   b_info = expr_to_info[expr.b]
-  expr_info = expr_to_info[expr]
 
   if reduce_index in a_info.src_indices and reduce_index in b_info.src_indices:
     expr_info.reduce_indices.add(reduce_index)
@@ -1712,6 +1730,9 @@ def _accumulate_reduce_indices(
         | expr_info.reduce_indices)
   else:
     assert isinstance(expr, Access)
+    # Handle simple reduction expression in the format of A[i] = B[i, j].
+    expr_info.acc_reduce_indices = expr_info.reduce_indices
+
 
 
 def _gather_structured_op(
@@ -1809,9 +1830,10 @@ def _gather_structured_op_input(
     structop_inputs: The resulting list of IndexExpr that provide input to the
       current structured op.
   """
-  if (expr != root and expr not in structop_inputs) and (
-      isinstance(expr, Access) or
-      (expr in expr_to_info and expr_to_info[expr].structop_info)):
+  if ((expr != root or isinstance(expr, Access)) and
+      expr not in structop_inputs) and (isinstance(expr, Access) or
+                                        (expr in expr_to_info and
+                                         expr_to_info[expr].structop_info)):
     structop_inputs.append(expr)
 
 
@@ -1831,7 +1853,7 @@ def _emit_structured_op_input(
     An OperandDef in the linalg dialect for the input IndexExpr.
   """
   op_info = expr_to_info[expr].structop_info
-  if op_info:
+  if op_info and not isinstance(expr, Access):
     # The input is a temporary tensor produced by another structured op.
     indices = op_info.dst_indices
     name = op_info.dst_name

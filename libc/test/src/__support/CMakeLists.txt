@@ -49,4 +49,6 @@ add_custom_command(TARGET libc_str_to_float_comparison_test
                    COMMENT "Test the strtof and strtod implementations against precomputed results." 
                    VERBATIM)
 
+add_subdirectory(CPP)
+add_subdirectory(File)
 add_subdirectory(OSUtil)

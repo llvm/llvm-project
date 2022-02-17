@@ -13,7 +13,7 @@ char buffer[32] = "This is a largely unused buffer";
 // CHECK-NEXT:    call void @llvm.clear_cache(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i64 0, i64 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i64 1, i64 0))
 // CHECK-NEXT:    ret i32 0
 //
-int main() {
+int main(void) {
   __builtin___clear_cache(buffer, buffer+32);
   return 0;
 }

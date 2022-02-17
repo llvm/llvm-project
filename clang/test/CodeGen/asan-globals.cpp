@@ -48,7 +48,7 @@ void func() {
 // RUN: %clang_cc1 -emit-llvm -fsanitize=address -funwind-tables=2 -o - %s | FileCheck %s --check-prefixes=UWTABLE
 // UWTABLE: define internal void @asan.module_dtor() #[[#ATTR:]] {
 // UWTABLE: attributes #[[#ATTR]] = { nounwind uwtable }
-// UWTABLE: ![[#]] = !{i32 7, !"uwtable", i32 1}
+// UWTABLE: ![[#]] = !{i32 7, !"uwtable", i32 2}
 
 // CHECK: !llvm.asan.globals = !{![[EXTRA_GLOBAL:[0-9]+]], ![[GLOBAL:[0-9]+]], ![[DYN_INIT_GLOBAL:[0-9]+]], ![[ATTR_GLOBAL:[0-9]+]], ![[IGNORELISTED_GLOBAL:[0-9]+]], ![[SECTIONED_GLOBAL:[0-9]+]], ![[SPECIAL_GLOBAL:[0-9]+]], ![[STATIC_VAR:[0-9]+]], ![[LITERAL:[0-9]+]]}
 // CHECK: ![[EXTRA_GLOBAL]] = !{{{.*}} ![[EXTRA_GLOBAL_LOC:[0-9]+]], !"extra_global", i1 false, i1 false}

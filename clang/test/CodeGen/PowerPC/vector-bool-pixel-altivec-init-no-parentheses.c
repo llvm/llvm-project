@@ -46,7 +46,7 @@ vector bool long long vbi64_2;
 vector pixel p1;
 
 ////////////////////////////////////////////////////////////////////////////////
-void test_vector_bool_pixel_init_no_parentheses() {
+void test_vector_bool_pixel_init_no_parentheses(void) {
   // vector bool char initialization
   vbi8_1 = (vector bool char)'a';
   // MIXED-ERR: error: invalid conversion between vector type '__vector __bool unsigned char'

@@ -8,7 +8,7 @@ void test_llwpcb(void *ptr) {
   __llwpcb(ptr);
 }
 
-void* test_slwpcb() {
+void* test_slwpcb(void) {
   // CHECK-LABEL: @test_slwpcb
   // CHECK: call i8* @llvm.x86.slwpcb()
   return __slwpcb();

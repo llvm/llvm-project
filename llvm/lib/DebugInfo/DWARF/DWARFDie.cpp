@@ -14,20 +14,20 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
@@ -250,6 +250,7 @@ struct DWARFTypePrinter {
         OS << ' ';
       if (DWARFDie Cont = resolveReferencedType(D, DW_AT_containing_type)) {
         appendQualifiedName(Cont);
+        EndedWithTemplate = false;
         OS << "::";
       }
       OS << "*";
@@ -532,8 +533,10 @@ struct DWARFTypePrinter {
       appendQualifiedName(TypeAttr ? resolveReferencedType(C, *TypeAttr)
                                    : DWARFDie());
     }
-    if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue)
+    if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
       OS << '<';
+      EndedWithTemplate = false;
+    }
     return IsTemplate;
   }
   void decomposeConstVolatile(DWARFDie &N, DWARFDie &T, DWARFDie &C,

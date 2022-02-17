@@ -13,8 +13,9 @@
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-constexpr int N_HARD_TO_ROUND = 1216;
+constexpr int N_HARD_TO_ROUND = 1217;
 constexpr mpfr::BinaryInput<float> HYPOTF_HARD_TO_ROUND[N_HARD_TO_ROUND] = {
+    {0x1.faf49ep+25f, 0x1.480002p+23f},
     {0x1.ffffecp-1f, 0x1.000002p+27},
     {0x1.900004p+34, 0x1.400002p+23}, /* 45 identical bits */
     {0x1.05555p+34, 0x1.bffffep+23},  /* 44 identical bits */

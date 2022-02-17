@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___RANGES_DROP_VIEW_H
 #define _LIBCPP___RANGES_DROP_VIEW_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -31,7 +31,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
   template<view _View>
@@ -45,7 +45,7 @@ namespace ranges {
     // one can't call begin() on it more than once.
     static constexpr bool _UseCache = forward_range<_View> && !(random_access_range<_View> && sized_range<_View>);
     using _Cache = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
-    [[no_unique_address]] _Cache __cached_begin_ = _Cache();
+    _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
     range_difference_t<_View> __count_ = 0;
     _View __base_ = _View();
 
@@ -55,13 +55,13 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view(_View __base, range_difference_t<_View> __count)
       : __count_(__count)
-      , __base_(_VSTD::move(__base))
+      , __base_(std::move(__base))
     {
       _LIBCPP_ASSERT(__count_ >= 0, "count must be greater than or equal to zero.");
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
-    _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return _VSTD::move(__base_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin()
@@ -120,7 +120,7 @@ public:
   inline constexpr bool enable_borrowed_range<drop_view<_Tp>> = enable_borrowed_range<_Tp>;
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -3816,7 +3816,7 @@ entry:
 }
 
 define internal fastcc void @nested_memory_callee(%struct.STy* nocapture readonly %S) nofree norecurse nounwind uwtable {
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@nested_memory_callee
 ; IS__TUNIT_OPM-SAME: () #[[ATTR12:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
@@ -3830,7 +3830,7 @@ define internal fastcc void @nested_memory_callee(%struct.STy* nocapture readonl
 ; IS__TUNIT_OPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@nested_memory_callee
 ; IS________NPM-SAME: () #[[ATTR9:[0-9]+]] {
 ; IS________NPM-NEXT:  entry:
@@ -3844,7 +3844,7 @@ define internal fastcc void @nested_memory_callee(%struct.STy* nocapture readonl
 ; IS________NPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
 ; IS________NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nested_memory_callee
 ; IS__CGSCC_OPM-SAME: () #[[ATTR11:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
@@ -4100,7 +4100,7 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__TUNIT_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
 ; IS__TUNIT_OPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR12]] = { nofree norecurse nosync nounwind uwtable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR12]] = { nofree norecurse nosync nounwind willreturn uwtable }
 ; IS__TUNIT_OPM: attributes #[[ATTR13]] = { argmemonly nofree nosync nounwind }
 ; IS__TUNIT_OPM: attributes #[[ATTR14]] = { willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR15]] = { nofree nosync nounwind willreturn writeonly }
@@ -4117,7 +4117,7 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__TUNIT_NPM: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind writeonly }
-; IS__TUNIT_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind uwtable willreturn }
+; IS__TUNIT_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind willreturn uwtable }
 ; IS__TUNIT_NPM: attributes #[[ATTR10:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR11]] = { willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn writeonly }
@@ -4135,7 +4135,7 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind uwtable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind willreturn uwtable }
 ; IS__CGSCC_OPM: attributes #[[ATTR12]] = { argmemonly nofree nosync nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR13]] = { willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind willreturn writeonly }
@@ -4151,7 +4151,7 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__CGSCC_NPM: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind uwtable willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind willreturn uwtable }
 ; IS__CGSCC_NPM: attributes #[[ATTR10:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR11]] = { willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR12]] = { nounwind willreturn writeonly }

@@ -3188,15 +3188,6 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
 
   Node *SoFar = nullptr;
   while (!consumeIf('E')) {
-    consumeIf('L'); // extension
-
-    if (consumeIf('M')) {
-      // <data-member-prefix> := <member source-name> [<template-args>] M
-      if (SoFar == nullptr)
-        return nullptr;
-      continue;
-    }
-
     if (State)
       // Only set end-with-template on the case that does that.
       State->EndsWithTemplateArgs = false;
@@ -3241,12 +3232,17 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
         return nullptr;
       continue; // Do not push a new substitution.
     } else {
+      consumeIf('L'); // extension
       //          ::= [<prefix>] <unqualified-name>
       SoFar = getDerived().parseUnqualifiedName(State, SoFar);
     }
     if (SoFar == nullptr)
       return nullptr;
     Subs.push_back(SoFar);
+
+    // No longer used.
+    // <data-member-prefix> := <member source-name> [<template-args>] M
+    consumeIf('M');
   }
 
   if (SoFar == nullptr || Subs.empty())
@@ -5032,30 +5028,29 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     // interpreted as <type> node 'short' or 'ellipsis'. However, neither
     // __uuidof(short) nor __uuidof(...) can actually appear, so there is no
     // actual conflict here.
+    bool IsUUID = false;
+    Node *UUID = nullptr;
     if (Name->getBaseName() == "__uuidof") {
-      if (numLeft() < 2)
-        return nullptr;
-      if (*First == 't') {
-        ++First;
-        Node *Ty = getDerived().parseType();
-        if (!Ty)
-          return nullptr;
-        return make<CallExpr>(Name, makeNodeArray(&Ty, &Ty + 1));
-      }
-      if (*First == 'z') {
-        ++First;
-        Node *Ex = getDerived().parseExpr();
-        if (!Ex)
-          return nullptr;
-        return make<CallExpr>(Name, makeNodeArray(&Ex, &Ex + 1));
+      if (consumeIf('t')) {
+        UUID = getDerived().parseType();
+        IsUUID = true;
+      } else if (consumeIf('z')) {
+        UUID = getDerived().parseExpr();
+        IsUUID = true;
       }
     }
     size_t ExprsBegin = Names.size();
-    while (!consumeIf('E')) {
-      Node *E = getDerived().parseTemplateArg();
-      if (E == nullptr)
-        return E;
-      Names.push_back(E);
+    if (IsUUID) {
+      if (UUID == nullptr)
+        return nullptr;
+      Names.push_back(UUID);
+    } else {
+      while (!consumeIf('E')) {
+        Node *E = getDerived().parseTemplateArg();
+        if (E == nullptr)
+          return E;
+        Names.push_back(E);
+      }
     }
     return make<CallExpr>(Name, popTrailingNodeArray(ExprsBegin));
   }

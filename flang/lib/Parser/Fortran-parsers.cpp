@@ -202,9 +202,8 @@ TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
             "CHARACTER" >> maybe(Parser<CharSelector>{}))),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Logical>(
             "LOGICAL" >> maybe(kindSelector))),
-        construct<IntrinsicTypeSpec>("DOUBLE COMPLEX" >>
-            extension<LanguageFeature::DoubleComplex>(
-                construct<IntrinsicTypeSpec::DoubleComplex>())),
+        extension<LanguageFeature::DoubleComplex>(construct<IntrinsicTypeSpec>(
+            "DOUBLE COMPLEX" >> construct<IntrinsicTypeSpec::DoubleComplex>())),
         extension<LanguageFeature::Byte>(
             construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>(
                 "BYTE" >> construct<std::optional<KindSelector>>(pure(1)))))))

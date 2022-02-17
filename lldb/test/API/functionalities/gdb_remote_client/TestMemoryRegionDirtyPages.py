@@ -37,14 +37,14 @@ class TestMemoryRegionDirtyPages(GDBRemoteTestBase):
         # A memory region where we don't know anything about dirty pages
         region = lldb.SBMemoryRegionInfo()
         err = process.GetMemoryRegionInfo(0, region)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertFalse(region.HasDirtyMemoryPageList())
         self.assertEqual(region.GetNumDirtyPages(), 0)
         region.Clear()
 
         # A memory region with dirty page information -- and zero dirty pages
         err = process.GetMemoryRegionInfo(0x100000000, region)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertTrue(region.HasDirtyMemoryPageList())
         self.assertEqual(region.GetNumDirtyPages(), 0)
         self.assertEqual(region.GetPageSize(), 4096)
@@ -52,7 +52,7 @@ class TestMemoryRegionDirtyPages(GDBRemoteTestBase):
 
         # A memory region with one dirty page
         err = process.GetMemoryRegionInfo(0x100004000, region)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertTrue(region.HasDirtyMemoryPageList())
         self.assertEqual(region.GetNumDirtyPages(), 1)
         self.assertEqual(region.GetDirtyPageAddressAtIndex(0), 0x100004000)
@@ -60,7 +60,7 @@ class TestMemoryRegionDirtyPages(GDBRemoteTestBase):
 
         # A memory region with multple dirty pages
         err = process.GetMemoryRegionInfo(0x1000a2000, region)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertTrue(region.HasDirtyMemoryPageList())
         self.assertEqual(region.GetNumDirtyPages(), 5)
         self.assertEqual(region.GetDirtyPageAddressAtIndex(4), 0x1000a6000)

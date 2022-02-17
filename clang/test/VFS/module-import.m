@@ -4,7 +4,7 @@
 
 @import not_real;
 
-void foo() {
+void foo(void) {
   bar();
 }
 

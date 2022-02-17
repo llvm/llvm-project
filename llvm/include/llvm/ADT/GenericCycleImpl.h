@@ -267,8 +267,8 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
       DFSTreeStack.emplace_back(TraverseStack.size());
       llvm::append_range(TraverseStack, successors(Block));
 
-      LLVM_ATTRIBUTE_UNUSED
       bool Added = BlockDFSInfo.try_emplace(Block, ++Counter).second;
+      (void)Added;
       assert(Added);
       BlockPreorder.push_back(Block);
       LLVM_DEBUG(errs() << "  preorder number: " << Counter << "\n");

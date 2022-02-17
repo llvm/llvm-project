@@ -5,7 +5,7 @@ union u_tag {
   float b;
 } u;
 
-void f() {
+void f(void) {
   u.b = 11;
 }
 
@@ -29,12 +29,12 @@ int f3(value v) {
 
 enum E9 { one, two };
 union S65 { enum E9 a; } ; union S65 s65;
-void fS65() { enum E9 e = s65.a; } 
+void fS65(void) { enum E9 e = s65.a; } 
 
 typedef union{
   unsigned char x[65536];
 } q;
-int qfunc() {q buf; unsigned char* x = buf.x;}
+int qfunc(void) {q buf; unsigned char* x = buf.x;}
 
 union RR {_Bool a : 1;} RRU;
 int RRF(void) {return RRU.a;}

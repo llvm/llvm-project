@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
   if (!MII)
     return error("no instr info info for target " + TripleName, Context);
 
-  MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, MC);
+  MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, MC);
   if (!MCE)
     return error("no code emitter for target " + TripleName, Context);
 

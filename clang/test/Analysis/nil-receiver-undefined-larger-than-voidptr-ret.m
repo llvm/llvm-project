@@ -24,39 +24,39 @@
 - (void)voidM {}
 @end
 
-void createFoo() {
+void createFoo(void) {
   MyClass *obj = 0;  
   
   void *v = [obj voidPtrM]; // no-warning
   int i = [obj intM]; // no-warning
 }
 
-void createFoo2() {
+void createFoo2(void) {
   MyClass *obj = 0;  
   
   long double ld = [obj longDoubleM];
 }
 
-void createFoo3() {
+void createFoo3(void) {
   MyClass *obj;
   obj = 0;  
   
   long long ll = [obj longlongM];
 }
 
-void createFoo4() {
+void createFoo4(void) {
   MyClass *obj = 0;  
   
   double d = [obj doubleM];
 }
 
-void createFoo5() {
+void createFoo5(void) {
   MyClass *obj = (id)@"";  
   
   double d = [obj doubleM]; // no-warning
 }
 
-void createFoo6() {
+void createFoo6(void) {
   MyClass *obj;
   obj = 0;  
   
@@ -75,7 +75,7 @@ void handleNilPruneLoop(MyClass *obj) {
   long long j = [obj longlongM];
 }
 
-int handleVoidInComma() {
+int handleVoidInComma(void) {
   MyClass *obj = 0;
   return [obj voidM], 0;
 }

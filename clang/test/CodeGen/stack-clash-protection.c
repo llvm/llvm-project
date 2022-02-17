@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple powerpc64-linux-gnu -O0 -S -emit-llvm -o- %s -fstack-clash-protection | FileCheck %s
 
 // CHECK: define{{.*}} void @large_stack() #[[A:.*]] {
-void large_stack() {
+void large_stack(void) {
   volatile int stack[20000], i;
   for (i = 0; i < sizeof(stack) / sizeof(int); ++i)
     stack[i] = i;

@@ -51,8 +51,6 @@ def read(filename: str, fmt: Format) -> Tensor:
     raise ValueError("Expected string filename ends with "
                      f"{_MTX_FILENAME_SUFFIX} or {_TNS_FILENAME_SUFFIX}: "
                      f"{filename}.")
-  if not isinstance(fmt, Format) or fmt.is_dense():
-    raise ValueError(f"Expected a sparse Format object: {fmt}.")
 
   return Tensor.from_file(filename, fmt, DType(Type.FLOAT64))
 

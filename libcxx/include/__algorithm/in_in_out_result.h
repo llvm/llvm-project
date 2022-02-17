@@ -20,15 +20,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
 
 template <class _I1, class _I2, class _O1>
 struct in_in_out_result {
-  [[no_unique_address]] _I1 in1;
-  [[no_unique_address]] _I2 in2;
-  [[no_unique_address]] _O1 out;
+  _LIBCPP_NO_UNIQUE_ADDRESS _I1 in1;
+  _LIBCPP_NO_UNIQUE_ADDRESS _I2 in2;
+  _LIBCPP_NO_UNIQUE_ADDRESS _O1 out;
 
   template <class _II1, class _II2, class _OO1>
     requires convertible_to<const _I1&, _II1> && convertible_to<const _I2&, _II2> && convertible_to<const _O1&, _OO1>
@@ -47,7 +47,7 @@ struct in_in_out_result {
 
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

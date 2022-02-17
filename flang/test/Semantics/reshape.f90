@@ -35,6 +35,8 @@ program reshaper
   integer, parameter :: array16(1) = RESHAPE([(n,n=1,8)],[1], [0], array15)
   integer, parameter, dimension(3,4) :: array17 = 3
   integer, parameter, dimension(3,4) :: array18 = RESHAPE(array17, [3,4])
+  integer, parameter, dimension(2,2) :: bad_order = reshape([1, 2, 3, 4], [2,2])
+  real :: array20(2,3)
   ! Implicit reshape of array of components
   type :: dType
     integer :: field(2)
@@ -47,4 +49,6 @@ program reshaper
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
   !ERROR: 'shape=' argument must not have a negative extent
   CALL ext_sub(RESHAPE([(n, n=1,20)], [1, -5, 3]))
+  !ERROR: 'order=' argument has unacceptable rank 2
+  array20 = RESHAPE([(n, n = 1, 4)], [2, 3], order = bad_order)
 end program reshaper

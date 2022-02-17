@@ -1337,9 +1337,9 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
         m_options.m_flags, funct_name_str.c_str(), code.c_str());
   } else {
     // Use an IOHandler to grab Python code from the user
-    ScriptAddOptions *options =
-        new ScriptAddOptions(m_options.m_flags, m_options.m_regex,
-                             m_options.m_name, m_options.m_category);
+    auto options = std::make_unique<ScriptAddOptions>(
+        m_options.m_flags, m_options.m_regex, m_options.m_name,
+        m_options.m_category);
 
     for (auto &entry : command.entries()) {
       if (entry.ref().empty()) {
@@ -1351,10 +1351,10 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     }
 
     m_interpreter.GetPythonCommandsFromIOHandler(
-        "    ",   // Prompt
-        *this,    // IOHandlerDelegate
-        options); // Baton for the "io_handler" that will be passed back into
-                  // our IOHandlerDelegate functions
+        "    ",             // Prompt
+        *this,              // IOHandlerDelegate
+        options.release()); // Baton for the "io_handler" that will be passed
+                            // back into our IOHandlerDelegate functions
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
     return result.Succeeded();
@@ -2252,7 +2252,7 @@ public:
 
 bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
     Args &command, CommandReturnObject &result) {
-  SynthAddOptions *options = new SynthAddOptions(
+  auto options = std::make_unique<SynthAddOptions>(
       m_options.m_skip_pointers, m_options.m_skip_references,
       m_options.m_cascade, m_options.m_regex, m_options.m_category);
 
@@ -2266,10 +2266,10 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
   }
 
   m_interpreter.GetPythonCommandsFromIOHandler(
-      "    ",   // Prompt
-      *this,    // IOHandlerDelegate
-      options); // Baton for the "io_handler" that will be passed back into our
-                // IOHandlerDelegate functions
+      "    ",             // Prompt
+      *this,              // IOHandlerDelegate
+      options.release()); // Baton for the "io_handler" that will be passed back
+                          // into our IOHandlerDelegate functions
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   return result.Succeeded();
 }

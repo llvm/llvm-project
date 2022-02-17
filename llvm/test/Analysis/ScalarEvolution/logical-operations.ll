@@ -463,10 +463,100 @@ define i32 @umin_seq_x_y(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin_seq %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y
 ;
   %umin = call i32 @llvm.umin(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_tautological(i32 %x, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_tautological'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_tautological
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %umin.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_tautological
+;
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x)
+  %umin.is.zero = icmp eq i32 %umin, 0
+  %r = select i1 %umin.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+define i32 @umin_seq_x_y_tautological_wrongtype(i32 %x, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_tautological_wrongtype'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_tautological_wrongtype
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %umax.is.zero, i32 0, i32 %umax
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_tautological_wrongtype
+;
+  %umax = call i32 @llvm.umax(i32 %y, i32 %x)
+  %umax.is.zero = icmp eq i32 %umax, 0
+  %r = select i1 %umax.is.zero, i32 0, i32 %umax
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_wrongtype0(i32 %x, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_wrongtype0'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_wrongtype0
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umax
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_wrongtype0
+;
+  %umax = call i32 @llvm.umax(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umax
+  ret i32 %r
+}
+define i32 @umin_seq_x_y_wrongtype1(i32 %x, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_wrongtype1'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_wrongtype1
+; CHECK-NEXT:    %smax = call i32 @llvm.smax.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> (%x smax %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %smax
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_wrongtype1
+;
+  %smax = call i32 @llvm.smax(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %smax
+  ret i32 %r
+}
+define i32 @umin_seq_x_y_wrongtype2(i32 %x, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_wrongtype2'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_wrongtype2
+; CHECK-NEXT:    %smin = call i32 @llvm.smin.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> (%x smin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %smin
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_wrongtype2
+;
+  %smin = call i32 @llvm.smin(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %smin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_wrongtype3(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: 'umin_seq_x_y_wrongtype3'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_wrongtype3
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %x, i32 %z)
+; CHECK-NEXT:    --> (%x umax %z) U: full-set S: full-set
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %umax, i32 %y)
+; CHECK-NEXT:    --> ((%x umax %z) umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_wrongtype3
+;
+  %umax = call i32 @llvm.umax(i32 %x, i32 %z)
+  %umin = call i32 @llvm.umin(i32 %umax, i32 %y)
   %x.is.zero = icmp eq i32 %x, 0
   %r = select i1 %x.is.zero, i32 0, i32 %umin
   ret i32 %r
@@ -478,12 +568,33 @@ define i32 @umin_seq_y_x(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %x, i32 %y)
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%y umin_seq %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_y_x
 ;
   %umin = call i32 @llvm.umin(i32 %x, i32 %y)
   %x.is.zero = icmp eq i32 %y, 0
   %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_x_y_z(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: 'umin_seq_x_x_y_z'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_x_y_z
+; CHECK-NEXT:    %umin0 = call i32 @llvm.umin.i32(i32 %z, i32 %x)
+; CHECK-NEXT:    --> (%x umin %z) U: full-set S: full-set
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %umin0, i32 %y)
+; CHECK-NEXT:    --> (%x umin %y umin %z) U: full-set S: full-set
+; CHECK-NEXT:    %r0 = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> (%x umin_seq (%y umin %z)) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %r0
+; CHECK-NEXT:    --> (%x umin_seq (%y umin %z)) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_x_y_z
+;
+  %umin0 = call i32 @llvm.umin(i32 %z, i32 %x)
+  %umin = call i32 @llvm.umin(i32 %umin0, i32 %y)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r0 = select i1 %x.is.zero, i32 0, i32 %umin
+  %r = select i1 %x.is.zero, i32 0, i32 %r0
   ret i32 %r
 }
 
@@ -495,9 +606,9 @@ define i32 @umin_seq_x_y_z(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %umin0, i32 %y)
 ; CHECK-NEXT:    --> (%x umin %y umin %z) U: full-set S: full-set
 ; CHECK-NEXT:    %r0 = select i1 %y.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r0 U: full-set S: full-set
+; CHECK-NEXT:    --> (%y umin_seq (%x umin %z)) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %r0
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin_seq %y umin_seq %z) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_z
 ;
   %umin0 = call i32 @llvm.umin(i32 %z, i32 %x)
@@ -509,6 +620,217 @@ define i32 @umin_seq_x_y_z(i32 %x, i32 %y, i32 %z) {
   ret i32 %r
 }
 
+define i32 @umin_seq_a_b_c_d(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: 'umin_seq_a_b_c_d'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_a_b_c_d
+; CHECK-NEXT:    %umin1 = call i32 @llvm.umin.i32(i32 %c, i32 %d)
+; CHECK-NEXT:    --> (%c umin %d) U: full-set S: full-set
+; CHECK-NEXT:    %r1 = select i1 %c.is.zero, i32 0, i32 %umin1
+; CHECK-NEXT:    --> (%c umin_seq %d) U: full-set S: full-set
+; CHECK-NEXT:    %umin0 = call i32 @llvm.umin.i32(i32 %a, i32 %b)
+; CHECK-NEXT:    --> (%a umin %b) U: full-set S: full-set
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %umin0, i32 %r1)
+; CHECK-NEXT:    --> ((%c umin_seq %d) umin %a umin %b) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %d.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> (%d umin_seq (%a umin %b umin %c)) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_a_b_c_d
+;
+  %umin1 = call i32 @llvm.umin(i32 %c, i32 %d)
+  %c.is.zero = icmp eq i32 %c, 0
+  %r1 = select i1 %c.is.zero, i32 0, i32 %umin1
+
+  %umin0 = call i32 @llvm.umin(i32 %a, i32 %b)
+  %umin = call i32 @llvm.umin(i32 %umin0, i32 %r1)
+  %d.is.zero = icmp eq i32 %d, 0
+  %r = select i1 %d.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_zext_both(i8 %x.narrow, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_zext_both'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_zext_both
+; CHECK-NEXT:    %x = zext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (zext i8 %x.narrow to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin %y) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin_seq %y) U: [0,256) S: [0,256)
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_both
+;
+  %x = zext i8 %x.narrow to i32
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_zext_in_umin(i8 %x.narrow, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_zext_in_umin'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_zext_in_umin
+; CHECK-NEXT:    %x = zext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (zext i8 %x.narrow to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin %y) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin_seq %y) U: [0,256) S: [0,256)
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_in_umin
+;
+  %x = zext i8 %x.narrow to i32
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i8 %x.narrow, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i8 @umin_seq_x_y_zext_in_iszero(i8 %x, i8 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_zext_in_iszero'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_zext_in_iszero
+; CHECK-NEXT:    %x.wide = zext i8 %x to i32
+; CHECK-NEXT:    --> (zext i8 %x to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umin = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i8 0, i8 %umin
+; CHECK-NEXT:    --> (%x umin_seq %y) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_in_iszero
+;
+  %x.wide = zext i8 %x to i32
+  %umin = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  %x.is.zero = icmp eq i32 %x.wide, 0
+  %r = select i1 %x.is.zero, i8 0, i8 %umin
+  ret i8 %r
+}
+
+define i32 @umin_seq_x_y_zext_of_umin(i8 %x, i8 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_zext_of_umin'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_zext_of_umin
+; CHECK-NEXT:    %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %umin = zext i8 %umin.narrow to i32
+; CHECK-NEXT:    --> (zext i8 (%x umin %y) to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> ((zext i8 %x to i32) umin_seq (zext i8 (%x umin %y) to i32)) U: [0,256) S: [0,256)
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_of_umin
+;
+  %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  %umin = zext i8 %umin.narrow to i32
+  %x.is.zero = icmp eq i8 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_sext_both(i8 %x.narrow, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_sext_both'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_sext_both
+; CHECK-NEXT:    %x = sext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (sext i8 %x.narrow to i32) U: [-128,128) S: [-128,128)
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> ((sext i8 %x.narrow to i32) umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> ((sext i8 %x.narrow to i32) umin_seq %y) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_sext_both
+;
+  %x = sext i8 %x.narrow to i32
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i32 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_sext_in_umin(i8 %x.narrow, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_sext_in_umin'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_sext_in_umin
+; CHECK-NEXT:    %x = sext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (sext i8 %x.narrow to i32) U: [-128,128) S: [-128,128)
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+; CHECK-NEXT:    --> ((sext i8 %x.narrow to i32) umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_sext_in_umin
+;
+  %x = sext i8 %x.narrow to i32
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x)
+  %x.is.zero = icmp eq i8 %x.narrow, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i8 @umin_seq_x_y_sext_in_iszero(i8 %x, i8 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_sext_in_iszero'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_sext_in_iszero
+; CHECK-NEXT:    %x.wide = sext i8 %x to i32
+; CHECK-NEXT:    --> (sext i8 %x to i32) U: [-128,128) S: [-128,128)
+; CHECK-NEXT:    %umin = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i8 0, i8 %umin
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_sext_in_iszero
+;
+  %x.wide = sext i8 %x to i32
+  %umin = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  %x.is.zero = icmp eq i32 %x.wide, 0
+  %r = select i1 %x.is.zero, i8 0, i8 %umin
+  ret i8 %r
+}
+
+define i32 @umin_seq_x_y_sext_of_umin(i8 %x, i8 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_sext_of_umin'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_sext_of_umin
+; CHECK-NEXT:    %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %umin = sext i8 %umin.narrow to i32
+; CHECK-NEXT:    --> (sext i8 (%x umin %y) to i32) U: [-128,128) S: [-128,128)
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> %r U: [-128,128) S: [-128,128)
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_sext_of_umin
+;
+  %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  %umin = sext i8 %umin.narrow to i32
+  %x.is.zero = icmp eq i8 %x, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
+define i32 @umin_seq_x_y_zext_vs_sext(i8 %x.narrow, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_zext_vs_sext'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_zext_vs_sext
+; CHECK-NEXT:    %x.zext = zext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (zext i8 %x.narrow to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %x.sext = sext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (sext i8 %x.narrow to i32) U: [-128,128) S: [-128,128)
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x.zext)
+; CHECK-NEXT:    --> ((zext i8 %x.narrow to i32) umin %y) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> %r U: [0,256) S: [0,256)
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_vs_sext
+;
+  %x.zext = zext i8 %x.narrow to i32
+  %x.sext = sext i8 %x.narrow to i32
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x.zext)
+  %x.is.zero = icmp eq i32 %x.sext, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+define i32 @umin_seq_x_y_sext_vs_zext(i8 %x.narrow, i32 %y) {
+; CHECK-LABEL: 'umin_seq_x_y_sext_vs_zext'
+; CHECK-NEXT:  Classifying expressions for: @umin_seq_x_y_sext_vs_zext
+; CHECK-NEXT:    %x.zext = zext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (zext i8 %x.narrow to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %x.sext = sext i8 %x.narrow to i32
+; CHECK-NEXT:    --> (sext i8 %x.narrow to i32) U: [-128,128) S: [-128,128)
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x.sext)
+; CHECK-NEXT:    --> ((sext i8 %x.narrow to i32) umin %y) U: full-set S: full-set
+; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
+; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_sext_vs_zext
+;
+  %x.zext = zext i8 %x.narrow to i32
+  %x.sext = sext i8 %x.narrow to i32
+  %umin = call i32 @llvm.umin(i32 %y, i32 %x.sext)
+  %x.is.zero = icmp eq i32 %x.zext, 0
+  %r = select i1 %x.is.zero, i32 0, i32 %umin
+  ret i32 %r
+}
+
 define i32 @select_x_or_zero_expanded(i1 %c, i32 %x) {
 ; CHECK-LABEL: 'select_x_or_zero_expanded'
 ; CHECK-NEXT:  Classifying expressions for: @select_x_or_zero_expanded
@@ -517,7 +839,7 @@ define i32 @select_x_or_zero_expanded(i1 %c, i32 %x) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c.splat, i32 %x)
 ; CHECK-NEXT:    --> ((sext i1 %c to i32) umin %x) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %v0.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> ((sext i1 %c to i32) umin_seq %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_zero_expanded
 ;
   %c.splat = sext i1 %c to i32
@@ -537,7 +859,7 @@ define i32 @select_zero_or_x_expanded(i1 %c, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c.splat.not, i32 %y)
 ; CHECK-NEXT:    --> ((-1 + (-1 * (sext i1 %c to i32))<nsw>)<nsw> umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %v0.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 + (-1 * (sext i1 %c to i32))<nsw>)<nsw> umin_seq %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_zero_or_x_expanded
 ;
   %c.splat = sext i1 %c to i32
@@ -557,7 +879,7 @@ define i32 @select_zero_or_x_expanded2(i1 %c, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c.not.splat, i32 %y)
 ; CHECK-NEXT:    --> ((sext i1 (true + %c) to i32) umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %v0.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> ((sext i1 (true + %c) to i32) umin_seq %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_zero_or_x_expanded2
 ;
   %c.not = xor i1 %c, -1
@@ -578,9 +900,9 @@ define i32 @select_x_or_constant_expanded(i1 %c, i32 %x) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c.splat, i32 %x.off)
 ; CHECK-NEXT:    --> ((sext i1 %c to i32) umin (-42 + %x)) U: full-set S: full-set
 ; CHECK-NEXT:    %r.off = select i1 %v0.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r.off U: full-set S: full-set
+; CHECK-NEXT:    --> ((sext i1 %c to i32) umin_seq (-42 + %x)) U: full-set S: full-set
 ; CHECK-NEXT:    %r = add i32 %r.off, 42
-; CHECK-NEXT:    --> (42 + %r.off) U: full-set S: full-set
+; CHECK-NEXT:    --> (42 + ((sext i1 %c to i32) umin_seq (-42 + %x))) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_constant_expanded
 ;
   %c.splat = sext i1 %c to i32
@@ -604,9 +926,9 @@ define i32 @select_constant_or_y_expanded(i1 %c, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c.splat.not, i32 %y.off)
 ; CHECK-NEXT:    --> ((-42 + %y) umin (-1 + (-1 * (sext i1 %c to i32))<nsw>)<nsw>) U: full-set S: full-set
 ; CHECK-NEXT:    %r.off = select i1 %v0.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r.off U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 + (-1 * (sext i1 %c to i32))<nsw>)<nsw> umin_seq (-42 + %y)) U: full-set S: full-set
 ; CHECK-NEXT:    %r = add i32 %r.off, 42
-; CHECK-NEXT:    --> (42 + %r.off) U: full-set S: full-set
+; CHECK-NEXT:    --> (42 + ((-1 + (-1 * (sext i1 %c to i32))<nsw>)<nsw> umin_seq (-42 + %y))) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_constant_or_y_expanded
 ;
   %c.splat = sext i1 %c to i32
@@ -619,4 +941,12 @@ define i32 @select_constant_or_y_expanded(i1 %c, i32 %y) {
   ret i32 %r
 }
 
+declare i8 @llvm.umin.i8(i8, i8)
+declare i8 @llvm.umax.i8(i8, i8)
+declare i8 @llvm.smin.i8(i8, i8)
+declare i8 @llvm.smax.i8(i8, i8)
+
 declare i32 @llvm.umin(i32, i32)
+declare i32 @llvm.umax(i32, i32)
+declare i32 @llvm.smin(i32, i32)
+declare i32 @llvm.smax(i32, i32)

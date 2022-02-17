@@ -7,7 +7,7 @@ void foo(int m) __attribute__((overloadable, enable_if(m > 0, "")));
 void foo(int m) __attribute__((overloadable));
 
 // CHECK-LABEL: define{{.*}} void @test1
-void test1() {
+void test1(void) {
   // CHECK: store void (i32)* @_Z3fooi
   void (*p)(int) = foo;
   // CHECK: store void (i32)* @_Z3fooi
@@ -30,7 +30,7 @@ void test1() {
 void bar(int m) __attribute__((overloadable, enable_if(m > 0, "")));
 void bar(int m) __attribute__((overloadable, enable_if(1, "")));
 // CHECK-LABEL: define{{.*}} void @test2
-void test2() {
+void test2(void) {
   // CHECK: store void (i32)* @_Z3barUa9enable_ifILi1EEi
   void (*p)(int) = bar;
   // CHECK: store void (i32)* @_Z3barUa9enable_ifILi1EEi
@@ -53,7 +53,7 @@ void test2() {
 void baz(int m) __attribute__((overloadable, enable_if(1, "")));
 void baz(int m) __attribute__((overloadable));
 // CHECK-LABEL: define{{.*}} void @test3
-void test3() {
+void test3(void) {
   // CHECK: store void (i32)* @_Z3bazUa9enable_ifILi1EEi
   void (*p)(int) = baz;
   // CHECK: store void (i32)* @_Z3bazUa9enable_ifILi1EEi
@@ -70,7 +70,7 @@ void qux(int m) __attribute__((overloadable, enable_if(1, ""),
                                enable_if(TRUEFACTS, "")));
 void qux(int m) __attribute__((overloadable, enable_if(1, "")));
 // CHECK-LABEL: define{{.*}} void @test4
-void test4() {
+void test4(void) {
   // CHECK: store void (i32)* @_Z3quxUa9enable_ifILi1ELi1EEi
   void (*p)(int) = qux;
   // CHECK: store void (i32)* @_Z3quxUa9enable_ifILi1ELi1EEi
@@ -85,7 +85,7 @@ void test4() {
 // wouldn't pay attention to lower-priority attributes.
 // (N.B. `foo` with pass_object_size should always be preferred)
 // CHECK-LABEL: define{{.*}} void @test5
-void test5() {
+void test5(void) {
   int foo(char *i) __attribute__((enable_if(1, ""), overloadable));
   int foo(char *i __attribute__((pass_object_size(0))))
       __attribute__((enable_if(1, ""), overloadable));

@@ -24,7 +24,7 @@ int main(int, char**)
     {
         std::ofstream fso(temp.c_str());
         std::ofstream fs;
-        fs = move(fso);
+        fs = std::move(fso);
         fs << 3.25;
     }
     {
@@ -39,7 +39,7 @@ int main(int, char**)
     {
         std::wofstream fso(temp.c_str());
         std::wofstream fs;
-        fs = move(fso);
+        fs = std::move(fso);
         fs << 3.25;
     }
     {

@@ -303,23 +303,6 @@ func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tens
 // CHECK:           return %[[OUT_TENSOR]] : tensor<4x?x?x?xf32>
 // CHECK:         }
 
-
-// -----
-
-// CHECK-LABEL:   func @vector_transfer
-func @vector_transfer(%in: tensor<4xf32>, %out: tensor<4xf32>) {
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant 0.000000e+00 : f32
-  %read = vector.transfer_read %in[%c0], %cst {in_bounds = [true]}
-      : tensor<4xf32>, vector<4xf32>
-  %tanh = math.tanh %read : vector<4xf32>
-  %write = vector.transfer_write %tanh, %out[%c0] {in_bounds = [true]}
-      : vector<4xf32>, tensor<4xf32>
-  return
-  // CHECK: vector.transfer_read {{.*}} : memref<4xf32>, vector<4xf32>
-  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, memref<4xf32>
-}
-
 // -----
 
 // CHECK-LABEL:   func @bufferize_dot

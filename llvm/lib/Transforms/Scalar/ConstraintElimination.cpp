@@ -229,6 +229,12 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))))
     return {{CI->getSExtValue(), nullptr}, {1, Op0}};
+  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative()) {
+    Preconditions.emplace_back(
+        CmpInst::ICMP_UGE, Op0,
+        ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
+    return {{CI->getSExtValue(), nullptr}, {1, Op0}};
+  }
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1))))
     return {{0, nullptr}, {1, Op0}, {1, Op1}};
 

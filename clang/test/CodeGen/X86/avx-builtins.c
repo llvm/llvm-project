@@ -1827,19 +1827,19 @@ __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, floa
   return _mm256_setr_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
 
-__m256d test_mm256_setzero_pd() {
+__m256d test_mm256_setzero_pd(void) {
   // CHECK-LABEL: test_mm256_setzero_pd
   // CHECK: store <4 x double> zeroinitializer
   return _mm256_setzero_pd();
 }
 
-__m256 test_mm256_setzero_ps() {
+__m256 test_mm256_setzero_ps(void) {
   // CHECK-LABEL: test_mm256_setzero_ps
   // CHECK: store <8 x float> zeroinitializer
   return _mm256_setzero_ps();
 }
 
-__m256i test_mm256_setzero_si256() {
+__m256i test_mm256_setzero_si256(void) {
   // CHECK-LABEL: test_mm256_setzero_si256
   // CHECK: store <4 x i64> zeroinitializer
   return _mm256_setzero_si256();
@@ -2055,19 +2055,19 @@ int test_mm256_testz_si256(__m256i A, __m256i B) {
   return _mm256_testz_si256(A, B);
 }
 
-__m256 test_mm256_undefined_ps() {
+__m256 test_mm256_undefined_ps(void) {
   // CHECK-LABEL: test_mm256_undefined_ps
   // CHECK: ret <8 x float> zeroinitializer
   return _mm256_undefined_ps();
 }
 
-__m256d test_mm256_undefined_pd() {
+__m256d test_mm256_undefined_pd(void) {
   // CHECK-LABEL: test_mm256_undefined_pd
   // CHECK: ret <4 x double> zeroinitializer
   return _mm256_undefined_pd();
 }
 
-__m256i test_mm256_undefined_si256() {
+__m256i test_mm256_undefined_si256(void) {
   // CHECK-LABEL: test_mm256_undefined_si256
   // CHECK: ret <4 x i64> zeroinitializer
   return _mm256_undefined_si256();
@@ -2109,13 +2109,13 @@ __m256 test_mm256_xor_ps(__m256 A, __m256 B) {
   return _mm256_xor_ps(A, B);
 }
 
-void test_mm256_zeroall() {
+void test_mm256_zeroall(void) {
   // CHECK-LABEL: test_mm256_zeroall
   // CHECK: call void @llvm.x86.avx.vzeroall()
   return _mm256_zeroall();
 }
 
-void test_mm256_zeroupper() {
+void test_mm256_zeroupper(void) {
   // CHECK-LABEL: test_mm256_zeroupper
   // CHECK: call void @llvm.x86.avx.vzeroupper()
   return _mm256_zeroupper();

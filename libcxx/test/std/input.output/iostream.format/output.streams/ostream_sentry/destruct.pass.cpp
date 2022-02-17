@@ -55,7 +55,7 @@ int main(int, char**)
         std::ostream os(&sb);
         std::ostream::sentry s(os);
         assert(bool(s));
-        unitbuf(os);
+        std::unitbuf(os);
     }
     assert(sync_called == 1);
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -66,7 +66,7 @@ int main(int, char**)
         {
             std::ostream::sentry s(os);
             assert(bool(s));
-            unitbuf(os);
+            std::unitbuf(os);
             throw 1;
         }
         catch (...)

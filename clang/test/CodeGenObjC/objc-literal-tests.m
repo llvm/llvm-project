@@ -51,10 +51,10 @@ typedef signed char BOOL;
 @end
 #endif
 
-id NSUserName();
+id NSUserName(void);
 
 // CHECK: define{{.*}} i32 @main() [[NUW:#[0-9]+]]
-int main() {
+int main(void) {
   // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 97
   NSNumber *aNumber = @'a';
   // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 noundef 42

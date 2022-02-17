@@ -35,7 +35,7 @@ int f0_reload(struct s0 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i64 @test_0()
 // CHECK-OPT:  ret i64 1
 // CHECK-OPT: }
-unsigned long long test_0() {
+unsigned long long test_0(void) {
   struct s0 g0 = { 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g0.f0;
@@ -81,7 +81,7 @@ int f1_reload(struct s1 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i64 @test_1()
 // CHECK-OPT:  ret i64 210
 // CHECK-OPT: }
-unsigned long long test_1() {
+unsigned long long test_1(void) {
   struct s1 g1 = { 0xdeadbeef, 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g1.f0 ^ g1.f1;
@@ -123,7 +123,7 @@ int f2_reload(union u2 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i64 @test_2()
 // CHECK-OPT:  ret i64 2
 // CHECK-OPT: }
-unsigned long long test_2() {
+unsigned long long test_2(void) {
   union u2 g2 = { 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g2.f0;
@@ -159,7 +159,7 @@ int f3_reload(struct s3 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i64 @test_3()
 // CHECK-OPT:  ret i64 -559039940
 // CHECK-OPT: }
-unsigned long long test_3() {
+unsigned long long test_3(void) {
   struct s3 g3 = { 0xdeadbeef, 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g3.f0 ^ g3.f1;
@@ -193,7 +193,7 @@ int f4_reload(struct s4 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i64 @test_4()
 // CHECK-OPT:  ret i64 4860
 // CHECK-OPT: }
-unsigned long long test_4() {
+unsigned long long test_4(void) {
   struct s4 g4 = { 0xdeadbeef, 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g4.f0 ^ g4.f1;
@@ -225,7 +225,7 @@ int f5_reload(struct s5 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i64 @test_5()
 // CHECK-OPT:  ret i64 2
 // CHECK-OPT: }
-unsigned long long test_5() {
+unsigned long long test_5(void) {
   struct s5 g5 = { 0xdeadbeef, 0xdeadbeef, 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g5.f0 ^ g5.f1 ^ g5.f2;
@@ -255,7 +255,7 @@ int f6_reload(struct s6 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} zeroext i1 @test_6()
 // CHECK-OPT:  ret i1 true
 // CHECK-OPT: }
-_Bool test_6() {
+_Bool test_6(void) {
   struct s6 g6 = { 0xF };
   unsigned long long res = 0;
   res ^= g6.f0;
@@ -313,7 +313,7 @@ int f8_reload(struct s8 *a0) {
 // CHECK-OPT-LABEL: define{{.*}} i32 @test_8()
 // CHECK-OPT:  ret i32 -3
 // CHECK-OPT: }
-unsigned test_8() {
+unsigned test_8(void) {
   struct s8 g8 = { 0xdeadbeef, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef };
   unsigned long long res = 0;
   res ^= g8.f0 ^ g8.f2 ^ g8.f3;

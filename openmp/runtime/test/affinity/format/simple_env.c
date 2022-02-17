@@ -4,13 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
+#include "omp_testsuite.h"
 
 int main(int argc, char** argv) {
-  #pragma omp parallel
-  { }
-  #pragma omp parallel
-  { }
-  return 0;
+  go_parallel();
+  go_parallel();
+  return get_exit_value();
 }
 
 // CHECK-8: num_threads=8 TESTER-ENV: tl:1 tn:[0-7] nt:8$

@@ -126,6 +126,21 @@ OPTIONS
 
  Use BSD output format. Alias for ``--format=bsd``.
 
+.. option:: -X
+
+ Specify the type of XCOFF object file, ELF object file, or IR object file input
+ from command line or from archive files that llvm-nm should examine. The
+ mode must be one of the following:
+ 
+   32
+         Process only 32-bit object files.
+   64
+         Process only 64-bit object files.
+   32_64
+         Process both 32-bit and 64-bit object files.
+   any
+         Process all the supported object files.
+
 .. option:: --debug-syms, -a
 
  Show all symbols, even those usually suppressed.

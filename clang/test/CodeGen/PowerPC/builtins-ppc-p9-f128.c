@@ -6,43 +6,43 @@ __float128 B;
 __float128 C;
 
 
-__float128 testSqrtOdd() {
+__float128 testSqrtOdd(void) {
   return __builtin_sqrtf128_round_to_odd(A);
 // CHECK: @llvm.ppc.sqrtf128.round.to.odd(fp128
 // CHECK-NEXT: ret fp128
 }
 
-__float128 testFMAOdd() {
+__float128 testFMAOdd(void) {
   return __builtin_fmaf128_round_to_odd(A, B, C);
 // CHECK: @llvm.ppc.fmaf128.round.to.odd(fp128 %{{.+}}, fp128 %{{.+}}, fp128
 // CHECK-NEXT: ret fp128
 }
 
-__float128 testAddOdd() {
+__float128 testAddOdd(void) {
   return __builtin_addf128_round_to_odd(A, B);
 // CHECK: @llvm.ppc.addf128.round.to.odd(fp128 %{{.+}}, fp128
 // CHECK-NEXT: ret fp128
 }
 
-__float128 testSubOdd() {
+__float128 testSubOdd(void) {
   return __builtin_subf128_round_to_odd(A, B);
 // CHECK: @llvm.ppc.subf128.round.to.odd(fp128 %{{.+}}, fp128
 // CHECK-NEXT: ret fp128
 }
 
-__float128 testMulOdd() {
+__float128 testMulOdd(void) {
   return __builtin_mulf128_round_to_odd(A, B);
 // CHECK: @llvm.ppc.mulf128.round.to.odd(fp128 %{{.+}}, fp128
 // CHECK-NEXT: ret fp128
 }
 
-__float128 testDivOdd() {
+__float128 testDivOdd(void) {
   return __builtin_divf128_round_to_odd(A, B);
 // CHECK: @llvm.ppc.divf128.round.to.odd(fp128 %{{.+}}, fp128
 // CHECK-NEXT: ret fp128
 }
 
-double testTruncOdd() {
+double testTruncOdd(void) {
   return __builtin_truncf128_round_to_odd(A);
 // CHECK: @llvm.ppc.truncf128.round.to.odd(fp128
 // CHECK-NEXT: ret double
@@ -54,7 +54,7 @@ __float128 insert_exp_qp(unsigned long long int b) {
 // CHECK-NEXT: ret fp128
 }
 
-unsigned long long int extract_exp() {
+unsigned long long int extract_exp(void) {
   return __builtin_vsx_scalar_extract_expq(A);
 // CHECK: @llvm.ppc.scalar.extract.expq(fp128
 // CHECK-NEXT: ret i64

@@ -110,7 +110,7 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         stream.Print('{"side_effect" : "I am fancy"}')
         extra_args.SetFromJSON(stream)
         error = fancy_bkpt.SetScriptCallbackFunction("bktptcmd.another_function", extra_args)
-        self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed to add callback")
 
         stream.Clear()
         stream.Print('{"side_effect" : "I am so much fancier"}')
@@ -123,14 +123,14 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         # Not so fancy gets an empty extra_args:
         empty_args = lldb.SBStructuredData()
         error = not_so_fancy_bkpt.SetScriptCallbackFunction("bktptcmd.empty_extra_args", empty_args)
-        self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed to add callback")
 
         # Do list breakpoint like fancy:
         stream.Clear()
         stream.Print('{"side_effect" : "I come from list input"}')
         extra_args.SetFromJSON(stream)
         error = list_bkpt.SetScriptCallbackFunction("bktptcmd.a_list_function", extra_args)
-        self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
+        self.assertSuccess(error, "Failed to add callback")
         
         # Clear out canary variables
         side_effect.bktptcmd = None

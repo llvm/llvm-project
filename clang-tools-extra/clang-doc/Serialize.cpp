@@ -357,7 +357,7 @@ template <typename T>
 static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsInAnonymousNamespace) {
-  const auto *DC = dyn_cast<DeclContext>(D);
+  const auto *DC = cast<DeclContext>(D);
   while ((DC = DC->getParent())) {
     if (const auto *N = dyn_cast<NamespaceDecl>(DC)) {
       std::string Namespace;

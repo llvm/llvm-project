@@ -8,7 +8,7 @@ double A[size];
 
 void foo(void);
 
-int main() {
+int main(void) {
   int i = 0;
 
 #pragma omp parallel for

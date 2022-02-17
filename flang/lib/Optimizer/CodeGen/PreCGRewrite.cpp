@@ -31,15 +31,15 @@ using namespace fir;
 
 static void populateShape(llvm::SmallVectorImpl<mlir::Value> &vec,
                           ShapeOp shape) {
-  vec.append(shape.extents().begin(), shape.extents().end());
+  vec.append(shape.getExtents().begin(), shape.getExtents().end());
 }
 
 // Operands of fir.shape_shift split into two vectors.
 static void populateShapeAndShift(llvm::SmallVectorImpl<mlir::Value> &shapeVec,
                                   llvm::SmallVectorImpl<mlir::Value> &shiftVec,
                                   ShapeShiftOp shift) {
-  auto endIter = shift.pairs().end();
-  for (auto i = shift.pairs().begin(); i != endIter;) {
+  auto endIter = shift.getPairs().end();
+  for (auto i = shift.getPairs().begin(); i != endIter;) {
     shiftVec.push_back(*i++);
     shapeVec.push_back(*i++);
   }
@@ -47,7 +47,7 @@ static void populateShapeAndShift(llvm::SmallVectorImpl<mlir::Value> &shapeVec,
 
 static void populateShift(llvm::SmallVectorImpl<mlir::Value> &vec,
                           ShiftOp shift) {
-  vec.append(shift.origins().begin(), shift.origins().end());
+  vec.append(shift.getOrigins().begin(), shift.getOrigins().end());
 }
 
 namespace {
@@ -101,8 +101,8 @@ public:
       shapeOpers.push_back(extVal);
     }
     auto xbox = rewriter.create<cg::XEmboxOp>(
-        loc, embox.getType(), embox.memref(), shapeOpers, llvm::None,
-        llvm::None, llvm::None, llvm::None, embox.typeparams());
+        loc, embox.getType(), embox.getMemref(), shapeOpers, llvm::None,
+        llvm::None, llvm::None, llvm::None, embox.getTypeparams());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -127,13 +127,16 @@ public:
     llvm::SmallVector<mlir::Value> substrOpers;
     if (auto s = embox.getSlice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
-        sliceOpers.assign(sliceOp.triples().begin(), sliceOp.triples().end());
-        subcompOpers.assign(sliceOp.fields().begin(), sliceOp.fields().end());
-        substrOpers.assign(sliceOp.substr().begin(), sliceOp.substr().end());
+        sliceOpers.assign(sliceOp.getTriples().begin(),
+                          sliceOp.getTriples().end());
+        subcompOpers.assign(sliceOp.getFields().begin(),
+                            sliceOp.getFields().end());
+        substrOpers.assign(sliceOp.getSubstr().begin(),
+                           sliceOp.getSubstr().end());
       }
     auto xbox = rewriter.create<cg::XEmboxOp>(
-        loc, embox.getType(), embox.memref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, substrOpers, embox.typeparams());
+        loc, embox.getType(), embox.getMemref(), shapeOpers, shiftOpers,
+        sliceOpers, subcompOpers, substrOpers, embox.getTypeparams());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -162,7 +165,7 @@ public:
     auto loc = rebox.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;
-    if (auto shapeVal = rebox.shape()) {
+    if (auto shapeVal = rebox.getShape()) {
       if (auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
       else if (auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp()))
@@ -175,16 +178,19 @@ public:
     llvm::SmallVector<mlir::Value> sliceOpers;
     llvm::SmallVector<mlir::Value> subcompOpers;
     llvm::SmallVector<mlir::Value> substrOpers;
-    if (auto s = rebox.slice())
+    if (auto s = rebox.getSlice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
-        sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
-        subcompOpers.append(sliceOp.fields().begin(), sliceOp.fields().end());
-        substrOpers.append(sliceOp.substr().begin(), sliceOp.substr().end());
+        sliceOpers.append(sliceOp.getTriples().begin(),
+                          sliceOp.getTriples().end());
+        subcompOpers.append(sliceOp.getFields().begin(),
+                            sliceOp.getFields().end());
+        substrOpers.append(sliceOp.getSubstr().begin(),
+                           sliceOp.getSubstr().end());
       }
 
     auto xRebox = rewriter.create<cg::XReboxOp>(
-        loc, rebox.getType(), rebox.box(), shapeOpers, shiftOpers, sliceOpers,
-        subcompOpers, substrOpers);
+        loc, rebox.getType(), rebox.getBox(), shapeOpers, shiftOpers,
+        sliceOpers, subcompOpers, substrOpers);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << rebox << " to " << xRebox << '\n');
     rewriter.replaceOp(rebox, xRebox.getOperation()->getResults());
@@ -215,7 +221,7 @@ public:
     auto loc = arrCoor.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;
-    if (auto shapeVal = arrCoor.shape()) {
+    if (auto shapeVal = arrCoor.getShape()) {
       if (auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
       else if (auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp()))
@@ -227,17 +233,20 @@ public:
     }
     llvm::SmallVector<mlir::Value> sliceOpers;
     llvm::SmallVector<mlir::Value> subcompOpers;
-    if (auto s = arrCoor.slice())
+    if (auto s = arrCoor.getSlice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
-        sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
-        subcompOpers.append(sliceOp.fields().begin(), sliceOp.fields().end());
-        assert(sliceOp.substr().empty() &&
+        sliceOpers.append(sliceOp.getTriples().begin(),
+                          sliceOp.getTriples().end());
+        subcompOpers.append(sliceOp.getFields().begin(),
+                            sliceOp.getFields().end());
+        assert(sliceOp.getSubstr().empty() &&
                "Don't allow substring operations on array_coor. This "
                "restriction may be lifted in the future.");
       }
     auto xArrCoor = rewriter.create<cg::XArrayCoorOp>(
-        loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, arrCoor.indices(), arrCoor.typeparams());
+        loc, arrCoor.getType(), arrCoor.getMemref(), shapeOpers, shiftOpers,
+        sliceOpers, subcompOpers, arrCoor.getIndices(),
+        arrCoor.getTypeparams());
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());

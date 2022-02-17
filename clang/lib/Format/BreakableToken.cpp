@@ -747,6 +747,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
   assert(Tok.is(TT_LineComment) &&
          "line comment section must start with a line comment");
   FormatToken *LineTok = nullptr;
+  const int Minimum = Style.SpacesInLineCommentPrefix.Minimum;
   // How many spaces we changed in the first line of the section, this will be
   // applied in all following lines
   int FirstLineSpaceChange = 0;
@@ -769,7 +770,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       Lines[i] = Lines[i].ltrim(Blanks);
       StringRef IndentPrefix = getLineCommentIndentPrefix(Lines[i], Style);
       OriginalPrefix[i] = IndentPrefix;
-      const unsigned SpacesInPrefix = llvm::count(IndentPrefix, ' ');
+      const int SpacesInPrefix = llvm::count(IndentPrefix, ' ');
 
       // This lambda also considers multibyte character that is not handled in
       // functions like isPunctuation provided by CharInfo.
@@ -792,12 +793,11 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       // e.g. from "///" to "//".
       if (i == 0 || OriginalPrefix[i].rtrim(Blanks) !=
                         OriginalPrefix[i - 1].rtrim(Blanks)) {
-        if (SpacesInPrefix < Style.SpacesInLineCommentPrefix.Minimum &&
-            Lines[i].size() > IndentPrefix.size() &&
+        if (SpacesInPrefix < Minimum && Lines[i].size() > IndentPrefix.size() &&
             !NoSpaceBeforeFirstCommentChar()) {
-          FirstLineSpaceChange =
-              Style.SpacesInLineCommentPrefix.Minimum - SpacesInPrefix;
-        } else if (SpacesInPrefix > Style.SpacesInLineCommentPrefix.Maximum) {
+          FirstLineSpaceChange = Minimum - SpacesInPrefix;
+        } else if (static_cast<unsigned>(SpacesInPrefix) >
+                   Style.SpacesInLineCommentPrefix.Maximum) {
           FirstLineSpaceChange =
               Style.SpacesInLineCommentPrefix.Maximum - SpacesInPrefix;
         } else {
@@ -808,10 +808,9 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       if (Lines[i].size() != IndentPrefix.size()) {
         PrefixSpaceChange[i] = FirstLineSpaceChange;
 
-        if (SpacesInPrefix + PrefixSpaceChange[i] <
-            Style.SpacesInLineCommentPrefix.Minimum) {
-          PrefixSpaceChange[i] += Style.SpacesInLineCommentPrefix.Minimum -
-                                  (SpacesInPrefix + PrefixSpaceChange[i]);
+        if (SpacesInPrefix + PrefixSpaceChange[i] < Minimum) {
+          PrefixSpaceChange[i] +=
+              Minimum - (SpacesInPrefix + PrefixSpaceChange[i]);
         }
 
         assert(Lines[i].size() > IndentPrefix.size());

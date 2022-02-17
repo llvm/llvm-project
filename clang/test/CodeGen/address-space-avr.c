@@ -21,7 +21,7 @@ int i;
 
 void foo();
 
-void bar() {
+void bar(void) {
   static __flash const int var2[] = {555, 666, 777};
   static __flash3 const int f3var2[] = {5555, 6666, 7787};
   foo(var1[i]);

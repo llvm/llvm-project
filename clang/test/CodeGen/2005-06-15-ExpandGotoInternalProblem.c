@@ -3,7 +3,7 @@
 // PR580
 
 int X, Y;
-int foo() {
+int foo(void) {
   int i;
         for (i=0; i<100; i++ )
         {

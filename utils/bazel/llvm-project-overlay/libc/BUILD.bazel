@@ -400,7 +400,12 @@ libc_math_function(name = "frexpl")
 
 libc_math_function(name = "hypot")
 
-libc_math_function(name = "hypotf")
+libc_math_function(
+    name = "hypotf",
+    additional_deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
 
 libc_math_function(name = "logb")
 

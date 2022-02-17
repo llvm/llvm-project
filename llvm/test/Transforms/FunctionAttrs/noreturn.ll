@@ -40,9 +40,8 @@ end:
   ret i32 %c
 }
 
-; CHECK-NOT: Function Attrs: {{.*}}noreturn
+; CHECK: Function Attrs: {{.*}}noreturn
 ; CHECK: @caller5()
-; We currently don't handle unreachable blocks.
 define i32 @caller5() {
 entry:
   %c = call i32 @noreturn()

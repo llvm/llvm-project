@@ -40,7 +40,7 @@ class TestLinux64LaunchingViaDynamicLoader(TestBase):
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         # Stopped on main here.
         self.assertEqual(process.GetState(), lldb.eStateStopped)

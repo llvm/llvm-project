@@ -7,6 +7,7 @@ declare i64 @llvm.riscv.vsetvlimax(i64, i64)
 declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
+  <vscale x 1 x double>,
   i64)
 declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
   <vscale x 1 x i64>,
@@ -23,6 +24,7 @@ define <vscale x 1 x double> @test1(i64 %avl, <vscale x 1 x double> %a, <vscale 
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 %0)
@@ -38,6 +40,7 @@ define <vscale x 1 x double> @test2(i64 %avl, <vscale x 1 x double> %a, <vscale 
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 %avl)
@@ -247,6 +250,7 @@ define <vscale x 1 x double> @test13(<vscale x 1 x double> %a, <vscale x 1 x dou
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 -1)

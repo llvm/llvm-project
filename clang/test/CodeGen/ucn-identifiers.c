@@ -6,7 +6,7 @@
 extern void \u00FCber(int);
 extern void \U000000FCber(int); // redeclaration, no warning
 
-void goodCalls() {
+void goodCalls(void) {
   \u00FCber(0);
   \u00fcber(1);
   über(2);

@@ -1717,7 +1717,6 @@ class piecewise_linear_distribution
 #include <initializer_list>
 #include <version>
 
-#include <algorithm>   // for backward compatibility; TODO remove it
 #include <cmath>       // for backward compatibility; TODO remove it
 #include <cstddef>     // for backward compatibility; TODO remove it
 #include <cstdint>     // for backward compatibility; TODO remove it

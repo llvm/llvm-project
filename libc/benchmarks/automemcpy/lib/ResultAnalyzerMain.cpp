@@ -94,7 +94,7 @@ JsonFile parseJsonResultFile(StringRef Filename) {
   json::Path::Root Root;
   JsonFile JF;
   if (!fromJSON(JsonValue, JF, Root))
-    ExitOnErr(Root.get_error());
+    ExitOnErr(Root.getError());
   return JF;
 }
 
