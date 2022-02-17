@@ -103,6 +103,9 @@ cl::opt<bool>
     StripUndefined("strip-undefined",
                    cl::desc("Strip undefined symbols from IFS output"),
                    cl::cat(IfsCategory));
+cl::opt<bool> StripNeededLibs("strip-needed",
+                              cl::desc("Strip needed libs from output"),
+                              cl::cat(IfsCategory));
 
 cl::opt<std::string>
     SoName("soname",
@@ -416,6 +419,9 @@ int main(int argc, char *argv[]) {
       Stub, OverrideArch, OverrideEndianness, OverrideBitWidth, OverrideTriple);
   if (OverrideError)
     fatalError(std::move(OverrideError));
+
+  if (StripNeededLibs)
+    Stub.NeededLibs.clear();
 
   if (OutputELFFilePath.getNumOccurrences() == 0 &&
       OutputIFSFilePath.getNumOccurrences() == 0 &&
