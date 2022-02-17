@@ -3105,6 +3105,51 @@ bool AArch64InstrInfo::isPreLdSt(const MachineInstr &MI) {
   return isPreLd(MI) || isPreSt(MI);
 }
 
+static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
+                                              Register Reg) {
+  if (MI.getParent() == nullptr)
+    return nullptr;
+  const MachineFunction *MF = MI.getParent()->getParent();
+  return MF ? MF->getRegInfo().getRegClassOrNull(Reg) : nullptr;
+}
+
+bool AArch64InstrInfo::isQForm(const MachineInstr &MI) {
+  auto IsQFPR = [&](const MachineOperand &Op) {
+    if (!Op.isReg())
+      return false;
+    auto Reg = Op.getReg();
+    if (Reg.isPhysical())
+      return AArch64::FPR128RegClass.contains(Reg);
+    const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
+    return TRC == &AArch64::FPR128RegClass ||
+           TRC == &AArch64::FPR128_loRegClass;
+  };
+  return llvm::any_of(MI.operands(), IsQFPR);
+}
+
+bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
+  auto IsFPR = [&](const MachineOperand &Op) {
+    if (!Op.isReg())
+      return false;
+    auto Reg = Op.getReg();
+    if (Reg.isPhysical())
+      return AArch64::FPR128RegClass.contains(Reg) ||
+             AArch64::FPR64RegClass.contains(Reg) ||
+             AArch64::FPR32RegClass.contains(Reg) ||
+             AArch64::FPR16RegClass.contains(Reg) ||
+             AArch64::FPR8RegClass.contains(Reg);
+
+    const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
+    return TRC == &AArch64::FPR128RegClass ||
+           TRC == &AArch64::FPR128_loRegClass ||
+           TRC == &AArch64::FPR64RegClass ||
+           TRC == &AArch64::FPR64_loRegClass ||
+           TRC == &AArch64::FPR32RegClass || TRC == &AArch64::FPR16RegClass ||
+           TRC == &AArch64::FPR8RegClass;
+  };
+  return llvm::any_of(MI.operands(), IsFPR);
+}
+
 // Scale the unscaled offsets.  Returns false if the unscaled offset can't be
 // scaled.
 static bool scaleOffset(unsigned Opc, int64_t &Offset) {
