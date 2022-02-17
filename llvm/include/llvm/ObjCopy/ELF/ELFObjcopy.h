@@ -23,12 +23,25 @@ struct CommonConfig;
 struct ELFConfig;
 
 namespace elf {
+/// Apply the transformations described by \p Config and \p ELFConfig to
+/// \p In, which must represent an IHex file, and writes the result
+/// into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnIHex(const CommonConfig &Config,
                            const ELFConfig &ELFConfig, MemoryBuffer &In,
                            raw_ostream &Out);
+
+/// Apply the transformations described by \p Config and \p ELFConfig to
+/// \p In, which is treated as a raw binary input, and writes the result
+/// into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnRawBinary(const CommonConfig &Config,
                                 const ELFConfig &ELFConfig, MemoryBuffer &In,
                                 raw_ostream &Out);
+
+/// Apply the transformations described by \p Config and \p ELFConfig to
+/// \p In and writes the result into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnBinary(const CommonConfig &Config,
                              const ELFConfig &ELFConfig,
                              object::ELFObjectFileBase &In, raw_ostream &Out);

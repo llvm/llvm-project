@@ -23,6 +23,9 @@ struct COFFConfig;
 
 namespace coff {
 
+/// Apply the transformations described by \p Config and \p COFFConfig
+/// to \p In and writes the result into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnBinary(const CommonConfig &Config, const COFFConfig &,
                              object::COFFObjectFile &In, raw_ostream &Out);
 
