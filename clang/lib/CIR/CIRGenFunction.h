@@ -60,6 +60,11 @@ public:
 
   CIRGenFunction(CIRGenModule &CGM);
 
+  // TODO: This is currently just a dumb stub. But we want to be able to clearly
+  // assert where we arne't doing things that we know we should and will crash
+  // as soon as we add a DebugInfo type to this class.
+  std::nullptr_t *getDebugInfo() { return nullptr; }
+
   /// buildAnyExpr - Emit code to compute the specified expression which can
   /// have any type. The result is returned as an RValue struct. If this is an
   /// aggregate expression, the aggloc/agglocvolatile arguments indicate where
