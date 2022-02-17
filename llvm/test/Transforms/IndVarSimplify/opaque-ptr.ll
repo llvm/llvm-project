@@ -8,12 +8,13 @@ define void @test(ptr %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[O:%.*]] = getelementptr ptr, ptr [[ARG:%.*]], i64 16
 ; CHECK-NEXT:    call void @c(ptr [[O]])
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[INC]], 16
-; CHECK-NEXT:    call void @c(ptr [[O]])
+; CHECK-NEXT:    call void @c(ptr [[UGLYGEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
