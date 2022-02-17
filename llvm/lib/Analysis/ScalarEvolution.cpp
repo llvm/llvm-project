@@ -526,12 +526,13 @@ void SCEVUnknown::deleted() {
 }
 
 void SCEVUnknown::allUsesReplacedWith(Value *New) {
+  // Clear this SCEVUnknown from various maps.
+  SE->forgetMemoizedResults(this);
+
   // Remove this SCEVUnknown from the uniquing map.
   SE->UniqueSCEVs.RemoveNode(this);
 
-  // Update this SCEVUnknown to point to the new value. This is needed
-  // because there may still be outstanding SCEVs which still point to
-  // this SCEVUnknown.
+  // Replace the value pointer in case someone is still using this SCEVUnknown.
   setValPtr(New);
 }
 
