@@ -1,3 +1,5 @@
+# REQUIRES: python, native && target-aarch64 && system-darwin
+
 # RUN: %clang_host -g %S/Inputs/test.c -o %t.out
 
 # RUN: cp %S/Inputs/scripted_crashlog.ips %t.crash
