@@ -256,6 +256,28 @@ define <8 x float> @slidedown_v8f32(<8 x float> %x) {
   ret <8 x float> %s
 }
 
+define <4 x half> @slideup_v4f16(<4 x half> %x) {
+; CHECK-LABEL: slideup_v4f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %s = shufflevector <4 x half> %x, <4 x half> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
+  ret <4 x half> %s
+}
+
+define <8 x float> @slideup_v8f32(<8 x float> %x) {
+; CHECK-LABEL: slideup_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vslideup.vi v10, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 2, i32 3, i32 4>
+  ret <8 x float> %s
+}
+
 define <8 x float> @splice_unary(<8 x float> %x) {
 ; CHECK-LABEL: splice_unary:
 ; CHECK:       # %bb.0:
