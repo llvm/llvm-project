@@ -67,7 +67,6 @@ void StackInfoBuilder::visit(Instruction &Inst) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
     if (IsInterestingAlloca(*AI)) {
       Info.AllocasToInstrument[AI].AI = AI;
-      Info.AllocasToInstrument[AI].OldAI = AI;
     }
     return;
   }
@@ -109,7 +108,7 @@ uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
   return AI.getAllocationSizeInBits(DL).getValue() / 8;
 }
 
-bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
+void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   const Align NewAlignment = max(MaybeAlign(Info.AI->getAlign()), Alignment);
   Info.AI->setAlignment(NewAlignment);
   auto &Ctx = Info.AI->getFunction()->getContext();
@@ -117,7 +116,7 @@ bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   uint64_t Size = getAllocaSizeInBytes(*Info.AI);
   uint64_t AlignedSize = alignTo(Size, Alignment);
   if (Size == AlignedSize)
-    return false;
+    return;
 
   // Add padding to the alloca.
   Type *AllocatedType =
@@ -139,8 +138,8 @@ bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 
   auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
   Info.AI->replaceAllUsesWith(NewPtr);
+  Info.AI->eraseFromParent();
   Info.AI = NewAI;
-  return true;
 }
 
 } // namespace memtag
