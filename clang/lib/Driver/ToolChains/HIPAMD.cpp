@@ -127,6 +127,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
 
+  // Look for archive of bundled bitcode in arguments, and add temporary files
+  // for the extracted archive of bitcode to inputs.
+  auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LldArgs, "amdgcn",
+                             TargetID,
+                             /*IsBitCodeSDL=*/true,
+                             /*PostClangLink=*/false);
+
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Lld, LldArgs, Inputs, Output));
@@ -172,9 +180,12 @@ void HIPAMDToolChain::addActionsFromClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     const JobAction &JA, Compilation &C, const InputInfoList &Inputs) const {
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *getTool(JA.getKind()), JA, Inputs, DriverArgs,
-                      CC1Args, "amdgcn", GpuArch,
-                      /* bitcode SDL?*/ true, /* PostClang Link? */ true);
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                          false))
+    AddStaticDeviceLibsLinking(C, *getTool(JA.getKind()), JA, Inputs,
+                               DriverArgs, CC1Args, "amdgcn", GpuArch,
+                               /* bitcode SDL?*/ true,
+                               /* PostClang Link? */ true);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(

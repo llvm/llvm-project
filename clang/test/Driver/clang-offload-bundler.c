@@ -366,6 +366,28 @@
 // CKLST2-NOT: openmp-x86_64-pc-linux-gnu
 
 //
+// Check unbundling archive for HIP.
+//
+// When the input to clang-offload-bundler is an archive of bundled bitcodes,
+// for each target, clang-offload-bundler extracts the bitcode from each
+// bundle and archives them. Therefore for each target, the output is an
+// archive of unbundled bitcodes.
+//
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -inputs=%t.tgt1,%t.tgt2 -outputs=%T/hip_bundle1.bc
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -inputs=%t.tgt1,%t.tgt2 -outputs=%T/hip_bundle2.bc
+// RUN: llvm-ar cr %T/hip_archive.a %T/hip_bundle1.bc %T/hip_bundle2.bc
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -outputs=%T/hip_900.a,%T/hip_906.a -inputs=%T/hip_archive.a
+// RUN: llvm-ar t %T/hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
+// RUN: llvm-ar t %T/hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
+// HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
+// HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
+// HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
+// HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
+
+//
 // Check bundling without host target is allowed for HIP.
 //
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
