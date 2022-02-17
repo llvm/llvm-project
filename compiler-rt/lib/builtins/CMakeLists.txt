@@ -740,6 +740,7 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
+      test_arm_smp_support(${arch} BUILTIN_CFLAGS_${arch})
       # For RISCV32, we must force enable int128 for compiling long
       # double routines.
       if("${arch}" STREQUAL "riscv32")
