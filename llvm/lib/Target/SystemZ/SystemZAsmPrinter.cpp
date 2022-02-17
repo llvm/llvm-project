@@ -88,13 +88,19 @@ static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
 // an instruction with the corresponding hint set.
 static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
                                unsigned Opcode) {
-  if (!MI->hasOneMemOperand())
+  if (MI->memoperands_empty())
     return;
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
+
+  Align Alignment = Align(16);
+  for (MachineInstr::mmo_iterator MMOI = MI->memoperands_begin(),
+         EE = MI->memoperands_end(); MMOI != EE; ++MMOI)
+    if ((*MMOI)->getAlign() < Alignment)
+      Alignment = (*MMOI)->getAlign();
+
   unsigned AlignmentHint = 0;
-  if (MMO->getAlign() >= Align(16))
+  if (Alignment >= Align(16))
     AlignmentHint = 4;
-  else if (MMO->getAlign() >= Align(8))
+  else if (Alignment >= Align(8))
     AlignmentHint = 3;
   if (AlignmentHint == 0)
     return;
