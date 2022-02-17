@@ -81,3 +81,18 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     llvm_unreachable("unknown type kind!");
   }
 }
+/// Emit code to compute the specified expression which
+/// can have any type.  The result is returned as an RValue struct.
+/// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
+/// where the result should be returned.
+RValue CIRGenFunction::buildAnyExpr(const Expr *E) {
+  switch (CIRGenFunction::getEvaluationKind(E->getType())) {
+  case TEK_Scalar:
+    return RValue::get(CGM.buildScalarExpr(E));
+  case TEK_Complex:
+    assert(0 && "not implemented");
+  case TEK_Aggregate:
+    assert(0 && "not implemented");
+  }
+  llvm_unreachable("bad evaluation kind");
+}

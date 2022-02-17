@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 #define LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 
+#include "CIRGenValue.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
@@ -58,6 +59,14 @@ public:
   }
 
   CIRGenFunction(CIRGenModule &CGM);
+
+  /// buildAnyExpr - Emit code to compute the specified expression which can
+  /// have any type. The result is returned as an RValue struct. If this is an
+  /// aggregate expression, the aggloc/agglocvolatile arguments indicate where
+  /// the result should be returned.
+  /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
+  /// where the result should be returned.
+  RValue buildAnyExpr(const clang::Expr *E);
 };
 
 } // namespace cir
