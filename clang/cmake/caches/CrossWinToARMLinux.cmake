@@ -10,7 +10,7 @@
 #
 # Configure:
 #  cmake -G Ninja ^
-#       -DTARGET_TRIPLE=armv7-linux-gnueabihf ^
+#       -DTARGET_TRIPLE=armv7-unknown-linux-gnueabihf ^
 #       -DCMAKE_INSTALL_PREFIX=../install ^
 #       -DDEFAULT_SYSROOT=<path-to-develop-arm-linux-root-fs> ^
 #       -DLLVM_AR=<llvm_obj_root>/bin/llvm-ar[.exe] ^
@@ -25,10 +25,10 @@
 #  cmake --build . --target check-llvm
 #  cmake --build . --target check-clang
 #  cmake --build . --target check-lld
-#  cmake --build . --target check-compiler-rt
-#  cmake --build . --target check-cxxabi
-#  cmake --build . --target check-unwind
-#  cmake --build . --target check-cxx
+#  cmake --build . --target check-compiler-rt-<TARGET_TRIPLE>
+#  cmake --build . --target check-cxxabi-<TARGET_TRIPLE>
+#  cmake --build . --target check-unwind-<TARGET_TRIPLE>
+#  cmake --build . --target check-cxx-<TARGET_TRIPLE>
 
 # LLVM_PROJECT_DIR is the path to the llvm-project directory.
 # The right way to compute it would probably be to use "${CMAKE_SOURCE_DIR}/../",
@@ -86,49 +86,20 @@ message(STATUS "Toolchain target triple: ${TARGET_TRIPLE}")
 set(CMAKE_CROSSCOMPILING                    ON CACHE BOOL "")
 set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRING "")
 # Required if COMPILER_RT_DEFAULT_TARGET_ONLY is ON
-set(CMAKE_C_COMPILER_TARGET         "${TARGET_TRIPLE}" CACHE STRING "")
+set(CMAKE_C_COMPILER_TARGET                 "${TARGET_TRIPLE}" CACHE STRING "")
+set(CMAKE_CXX_COMPILER_TARGET               "${TARGET_TRIPLE}" CACHE STRING "")
 
-set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR    ON CACHE BOOL "")
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR      ON CACHE BOOL "")
 set(LLVM_DEFAULT_TARGET_TRIPLE              "${TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_TARGET_ARCH                        "${TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_LIT_ARGS                           "-vv ${LLVM_LIT_ARGS}" CACHE STRING "" FORCE)
 
 set(CLANG_DEFAULT_LINKER                    "lld" CACHE STRING "")
 
-set(COMPILER_RT_BUILD_BUILTINS              ON CACHE BOOL "")
-set(COMPILER_RT_BUILD_SANITIZERS            OFF CACHE BOOL "")
-set(COMPILER_RT_BUILD_XRAY                  OFF CACHE BOOL "")
-set(COMPILER_RT_BUILD_LIBFUZZER             OFF CACHE BOOL "")
-set(COMPILER_RT_BUILD_PROFILE               OFF CACHE BOOL "")
-set(COMPILER_RT_BUILD_CRT                   OFF CACHE BOOL "")
-set(COMPILER_RT_BUILD_ORC                   OFF CACHE BOOL "")
-set(COMPILER_RT_DEFAULT_TARGET_ONLY         ON CACHE BOOL "")
-set(COMPILER_RT_INCLUDE_TESTS               ON CACHE BOOL "")
-
-set(LIBUNWIND_USE_COMPILER_RT               ON CACHE BOOL "")
-set(LIBUNWIND_TARGET_TRIPLE                 "${TARGET_TRIPLE}" CACHE STRING "")
-set(LIBUNWIND_SYSROOT                       "${DEFAULT_SYSROOT}" CACHE STRING "")
-set(LIBUNWIND_ENABLE_SHARED                 OFF CACHE BOOL "")
-
-set(LIBCXXABI_USE_LLVM_UNWINDER             ON CACHE BOOL "")
-set(LIBCXXABI_ENABLE_STATIC_UNWINDER        ON CACHE BOOL "")
-set(LIBCXXABI_USE_COMPILER_RT               ON CACHE BOOL "")
-set(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
-set(LIBCXXABI_TARGET_TRIPLE                 "${TARGET_TRIPLE}" CACHE STRING "")
-set(LIBCXXABI_SYSROOT                       "${DEFAULT_SYSROOT}" CACHE STRING "")
-set(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI OFF CACHE BOOL "")
-set(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX    OFF CACHE BOOL "")
-set(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI    OFF CACHE BOOL "")
-set(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX       OFF CACHE BOOL "")
-
-set(LIBCXX_USE_COMPILER_RT                  ON CACHE BOOL "")
-set(LIBCXX_TARGET_TRIPLE                    "${TARGET_TRIPLE}" CACHE STRING "")
-set(LIBCXX_SYSROOT                          "${DEFAULT_SYSROOT}" CACHE STRING "")
-set(LIBCXX_ENABLE_SHARED                    OFF CACHE BOOL "")
-set(LIBCXX_CXX_ABI                          "libcxxabi" CACHE STRING "")
-set(LIBCXX_CXX_ABI_INCLUDE_PATHS            "${LLVM_PROJECT_DIR}/libcxxabi/include" CACHE PATH "")
-set(LIBCXX_CXX_ABI_LIBRARY_PATH             "${CMAKE_BINARY_DIR}/lib/${LIBCXX_TARGET_TRIPLE}" CACHE PATH "")
-set(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS    ON CACHE BOOL "")
+if(WIN32)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY            "MultiThreaded" CACHE STRING "")
+  set(LLVM_USE_CRT_RELEASE                  "MT" CACHE STRING "")
+endif()
 
 # Set up RPATH for the target runtime/builtin libraries.
 # See some details here: https://reviews.llvm.org/D91099
@@ -136,44 +107,90 @@ if (NOT DEFINED RUNTIMES_INSTALL_RPATH)
   set(RUNTIMES_INSTALL_RPATH                "\$ORIGIN/../lib;${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
-set(BUILTINS_CMAKE_ARGS                     "-DCMAKE_SYSTEM_NAME=Linux;-DCMAKE_AR=${CMAKE_AR};-DCMAKE_INSTALL_RPATH=${RUNTIMES_INSTALL_RPATH};-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON" CACHE STRING "")
-set(RUNTIMES_CMAKE_ARGS                     "-DCMAKE_SYSTEM_NAME=Linux;-DCMAKE_AR=${CMAKE_AR};-DCMAKE_INSTALL_RPATH=${RUNTIMES_INSTALL_RPATH};-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON" CACHE STRING "")
+set(LLVM_BUILTIN_TARGETS                    "${TARGET_TRIPLE}" CACHE STRING "")
+
+set(BUILTINS_${TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                         "Linux" CACHE STRING "")
+set(BUILTINS_${TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
+set(BUILTINS_${TARGET_TRIPLE}_CMAKE_AR                                  "${CMAKE_AR}"  CACHE STRING "")
+set(BUILTINS_${TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
+set(BUILTINS_${TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
+
+
+set(LLVM_RUNTIME_TARGETS                    "${TARGET_TRIPLE}" CACHE STRING "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_LLVM_ENABLE_RUNTIMES                      "${LLVM_ENABLE_RUNTIMES}" CACHE STRING "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                         "Linux" CACHE STRING "")
+set(RUNTIMES_${TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
+set(RUNTIMES_${TARGET_TRIPLE}_CMAKE_AR                                  "${CMAKE_AR}"  CACHE STRING "")
+set(RUNTIMES_${TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
+set(RUNTIMES_${TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_BUILTINS                ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_SANITIZERS              OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_XRAY                    OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_LIBFUZZER               OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_PROFILE                 OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_CRT                     OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_BUILD_ORC                     OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_DEFAULT_TARGET_ONLY           ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_INCLUDE_TESTS                 ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_CAN_EXECUTE_TESTS             ON CACHE BOOL "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_USE_BUILTINS_LIBRARY          ON CACHE BOOL "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_LIBUNWIND_USE_COMPILER_RT                 ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBUNWIND_ENABLE_SHARED                   OFF CACHE BOOL "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_USE_LLVM_UNWINDER               ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_ENABLE_STATIC_UNWINDER          ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_USE_COMPILER_RT                 ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS   OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX   OFF CACHE BOOL "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI   OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX      OFF CACHE BOOL "")
+
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_USE_COMPILER_RT                    ON CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_ENABLE_SHARED                      OFF CACHE BOOL "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_ABI_VERSION                        2 CACHE STRING "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_CXX_ABI_INCLUDE_PATHS              "${LLVM_PROJECT_DIR}/libcxxabi/include" CACHE PATH "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_CXX_ABI_LIBRARY_PATH               "${CMAKE_BINARY_DIR}/lib/${TARGET_TRIPLE}" CACHE PATH "")
+set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
+
 
 find_package(Python3 COMPONENTS Interpreter)
 
 # Remote test configuration.
 if(DEFINED REMOTE_TEST_HOST)
-  set(DEFAULT_TEST_EXECUTOR                 "\\\"${Python3_EXECUTABLE}\\\" \\\"${LLVM_PROJECT_DIR}/libcxx/utils/ssh.py\\\" --host='${REMOTE_TEST_USER}@${REMOTE_TEST_HOST}'")
-  set(DEFAULT_TEST_TARGET_INFO              "libcxx.test.target_info.LinuxRemoteTI")
-
   # Allow override with the custom values.
-  if(NOT DEFINED COMPILER_RT_EMULATOR)
-    set(COMPILER_RT_EMULATOR                "\\\"${Python3_EXECUTABLE}\\\" \\\"${LLVM_PROJECT_DIR}/llvm/utils/remote-exec.py\\\" --execdir %%T --exec-pattern='.*\\.c.*\\.tmp.*' --host='${REMOTE_TEST_USER}@${REMOTE_TEST_HOST}'" CACHE STRING "")
+  if(NOT DEFINED DEFAULT_TEST_EXECUTOR)
+    set(DEFAULT_TEST_EXECUTOR                 "\\\"${Python3_EXECUTABLE}\\\" \\\"${LLVM_PROJECT_DIR}/libcxx/utils/ssh.py\\\" --host='${REMOTE_TEST_USER}@${REMOTE_TEST_HOST}'")
   endif()
-  if(NOT DEFINED LIBUNWIND_TARGET_INFO)
-    set(LIBUNWIND_TARGET_INFO               "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
+  if(NOT DEFINED DEFAULT_TEST_TARGET_INFO)
+    set(DEFAULT_TEST_TARGET_INFO              "libcxx.test.target_info.LinuxRemoteTI")
   endif()
-  if(NOT DEFINED LIBUNWIND_EXECUTOR)
-    set(LIBUNWIND_EXECUTOR                  "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
-  endif()
+
+  set(RUNTIMES_${TARGET_TRIPLE}_COMPILER_RT_EMULATOR
+        "\\\"${Python3_EXECUTABLE}\\\" \\\"${LLVM_PROJECT_DIR}/llvm/utils/remote-exec.py\\\" --execdir %%T --exec-pattern='.*\\.c.*\\.tmp.*' --host='${REMOTE_TEST_USER}@${REMOTE_TEST_HOST}'"
+        CACHE STRING "")
+
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBUNWIND_TARGET_INFO                   "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBUNWIND_EXECUTOR                      "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
+
   #NOTE: temporary workaround to fix the remote execution for libunwind tests.
   # https://reviews.llvm.org/D112082
-  set(LIBUNWIND_TEST_CONFIG                 "${LLVM_PROJECT_DIR}/libunwind/test/lit.site.cfg.in" CACHE PATH "")  
-  if(NOT DEFINED LIBCXXABI_TARGET_INFO)
-    set(LIBCXXABI_TARGET_INFO               "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
-  endif()
-  if(NOT DEFINED LIBCXXABI_EXECUTOR)
-    set(LIBCXXABI_EXECUTOR                  "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
-  endif()
-  if(NOT DEFINED LIBCXX_TARGET_INFO)
-    set(LIBCXX_TARGET_INFO                  "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
-  endif()
-  if(NOT DEFINED LIBCXX_EXECUTOR)
-    set(LIBCXX_EXECUTOR                     "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
-  endif()
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBUNWIND_TEST_CONFIG                   "${LLVM_PROJECT_DIR}/libunwind/test/lit.site.cfg.in" CACHE PATH "")
+
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_TARGET_INFO                   "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBCXXABI_EXECUTOR                      "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_TARGET_INFO                      "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
+  set(RUNTIMES_${TARGET_TRIPLE}_LIBCXX_EXECUTOR                         "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
 endif()
 
-set(LLVM_INSTALL_TOOLCHAIN_ONLY             ON CACHE BOOL "")
+set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
 set(LLVM_TOOLCHAIN_TOOLS
   llvm-ar
   llvm-cov
