@@ -270,6 +270,30 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}._Exit
 )
 
+add_entrypoint_object(
+  atexit
+  SRCS
+    atexit.cpp
+  HDRS
+    atexit.h
+  DEPENDS
+    libc.src.__support.CPP.vector
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+)
+
+add_entrypoint_object(
+  exit
+  SRCS
+    exit.cpp
+  HDRS
+    exit.h
+  DEPENDS
+    ._Exit
+    .atexit
+)
+
 # add_entrypoint_object(
 #   abort
 #   ALIAS
