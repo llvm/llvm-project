@@ -1,6 +1,7 @@
 // Test that TLS is unpoisoned on thread death.
 // REQUIRES: x86-target-arch && !android
 
+// RUN: %clangxx_asan -O0 %s -pthread -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -O1 %s -pthread -o %t && %run %t 2>&1
 
 #include <assert.h>
