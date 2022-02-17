@@ -733,6 +733,20 @@ static std::pair<unsigned, unsigned> isOpenCLBuiltin(llvm::StringRef Name) {
   OS << "} // isOpenCLBuiltin\n";
 }
 
+// Emit an if-statement with an isMacroDefined call for each extension in
+// the space-separated list of extensions.
+static void EmitMacroChecks(raw_ostream &OS, StringRef Extensions) {
+  SmallVector<StringRef, 2> ExtVec;
+  Extensions.split(ExtVec, " ");
+  OS << "      if (";
+  for (StringRef Ext : ExtVec) {
+    if (Ext != ExtVec.front())
+      OS << " && ";
+    OS << "S.getPreprocessor().isMacroDefined(\"" << Ext << "\")";
+  }
+  OS << ") {\n  ";
+}
+
 void BuiltinNameEmitter::EmitQualTypeFinder() {
   OS << R"(
 
@@ -825,15 +839,14 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
     // Collect all QualTypes for a single vector size into TypeList.
     OS << "      SmallVector<QualType, " << BaseTypes.size() << "> TypeList;\n";
     for (const auto *T : BaseTypes) {
-      StringRef Ext =
+      StringRef Exts =
           T->getValueAsDef("Extension")->getValueAsString("ExtName");
-      if (!Ext.empty()) {
-        OS << "      if (S.getPreprocessor().isMacroDefined(\"" << Ext
-           << "\")) {\n  ";
+      if (!Exts.empty()) {
+        EmitMacroChecks(OS, Exts);
       }
       OS << "      TypeList.push_back("
          << T->getValueAsDef("QTExpr")->getValueAsString("TypeExpr") << ");\n";
-      if (!Ext.empty()) {
+      if (!Exts.empty()) {
         OS << "      }\n";
       }
     }
@@ -877,15 +890,14 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
     // Emit the cases for non generic, non image types.
     OS << "    case OCLT_" << T->getValueAsString("Name") << ":\n";
 
-    StringRef Ext = T->getValueAsDef("Extension")->getValueAsString("ExtName");
-    // If this type depends on an extension, ensure the extension macro is
+    StringRef Exts = T->getValueAsDef("Extension")->getValueAsString("ExtName");
+    // If this type depends on an extension, ensure the extension macros are
     // defined.
-    if (!Ext.empty()) {
-      OS << "      if (S.getPreprocessor().isMacroDefined(\"" << Ext
-         << "\")) {\n  ";
+    if (!Exts.empty()) {
+      EmitMacroChecks(OS, Exts);
     }
     OS << "      QT.push_back(" << QT->getValueAsString("TypeExpr") << ");\n";
-    if (!Ext.empty()) {
+    if (!Exts.empty()) {
       OS << "      }\n";
     }
     OS << "      break;\n";
