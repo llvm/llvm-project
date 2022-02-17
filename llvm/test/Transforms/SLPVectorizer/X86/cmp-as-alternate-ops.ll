@@ -41,3 +41,50 @@ define void @test(double* %0, double %1) {
   store double %15, double* %4, align 8
   br label %6
 }
+
+define { <2 x float>, <2 x float> } @test1(i32 %conv.i32.i.i.i) {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV_I32_I_I_I1:%.*]] = fptosi float 0.000000e+00 to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[CONV_I32_I_I_I:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[CONV_I32_I_I_I1]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x float> zeroinitializer, <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i32 0
+; CHECK-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT4:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP5]], i32 1
+; CHECK-NEXT:    [[RETVAL_SROA_0_4_VEC_INSERT7:%.*]] = insertelement <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT4]], float [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP5]], i32 2
+; CHECK-NEXT:    [[RETVAL_SROA_7_8_VEC_INSERT11:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[TMP5]], i32 3
+; CHECK-NEXT:    [[RETVAL_SROA_7_12_VEC_INSERT13:%.*]] = insertelement <2 x float> [[RETVAL_SROA_7_8_VEC_INSERT11]], float [[TMP9]], i64 1
+; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } zeroinitializer, <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT7]], 0
+; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[RETVAL_SROA_7_12_VEC_INSERT13]], 1
+; CHECK-NEXT:    ret { <2 x float>, <2 x float> } zeroinitializer
+;
+entry:
+  %cmp.i.i.i.i.i = icmp slt i32 0, 0
+  %cond.i.i.i.i = select i1 %cmp.i.i.i.i.i, float 0.000000e+00, float 0.000000e+00
+  %conv.i32.i.i.i1 = fptosi float 0.000000e+00 to i32
+  %cmp.i.i34.i.i.i = icmp slt i32 %conv.i32.i.i.i1, 0
+  %cond.i35.i.i.i = select i1 %cmp.i.i34.i.i.i, float 0.000000e+00, float 0.000000e+00
+  %cmp.i.i38.i.i.i = icmp sgt i32 0, 0
+  %cond.i39.i.i.i = select i1 %cmp.i.i38.i.i.i, float 0.000000e+00, float 0.000000e+00
+  %cmp.i.i42.i.i.i = icmp sgt i32 %conv.i32.i.i.i, 0
+  %cond.i43.i.i.i = select i1 %cmp.i.i42.i.i.i, float 0.000000e+00, float 0.000000e+00
+  %add.i.i = fadd float 0.000000e+00, 0.000000e+00
+  %add4.i.i = fadd float 0.000000e+00, 0.000000e+00
+  %add.i9.i = fadd float %cond.i43.i.i.i, %add.i.i
+  %retval.sroa.0.0.vec.insert4 = insertelement <2 x float> zeroinitializer, float %add.i9.i, i64 0
+  %add4.i12.i = fadd float %cond.i39.i.i.i, %add4.i.i
+  %retval.sroa.0.4.vec.insert7 = insertelement <2 x float> %retval.sroa.0.0.vec.insert4, float %add4.i12.i, i64 1
+  %add.i15.i = fadd float %cond.i35.i.i.i, %add.i.i
+  %retval.sroa.7.8.vec.insert11 = insertelement <2 x float> zeroinitializer, float %add.i15.i, i64 0
+  %add4.i18.i = fadd float %cond.i.i.i.i, %add4.i.i
+  %retval.sroa.7.12.vec.insert13 = insertelement <2 x float> %retval.sroa.7.8.vec.insert11, float %add4.i18.i, i64 1
+  %.fca.0.insert = insertvalue { <2 x float>, <2 x float> } zeroinitializer, <2 x float> %retval.sroa.0.4.vec.insert7, 0
+  %.fca.1.insert = insertvalue { <2 x float>, <2 x float> } %.fca.0.insert, <2 x float> %retval.sroa.7.12.vec.insert13, 1
+  ret { <2 x float>, <2 x float> } zeroinitializer
+}
