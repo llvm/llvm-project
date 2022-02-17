@@ -2727,5 +2727,15 @@ define i1 @zero_sized_alloca2() {
   ret i1 %res
 }
 
+define i1 @scalar_vectors_are_non_empty() {
+; CHECK-LABEL: @scalar_vectors_are_non_empty(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = alloca <vscale x 2 x i32>
+  %b = alloca <vscale x 2 x i32>
+  %res = icmp ne <vscale x 2 x i32>* %a, %b
+  ret i1 %res
+}
+
 
 attributes #0 = { null_pointer_is_valid }
