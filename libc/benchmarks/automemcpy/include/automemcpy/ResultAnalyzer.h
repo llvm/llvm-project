@@ -60,7 +60,8 @@ struct PerDistributionData {
 struct FunctionData {
   FunctionId Id;
   StringMap<PerDistributionData> PerDistributionData;
-  GradeHistogram GradeHisto = {};           // GradeEnum indexed array
+  double ScoresGeoMean;           // Geomean of scores for each distribution.
+  GradeHistogram GradeHisto = {}; // GradeEnum indexed array
   Grade::GradeEnum FinalGrade = Grade::BAD; // Overall grade for this function
 };
 

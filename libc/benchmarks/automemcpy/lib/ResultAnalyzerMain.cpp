@@ -141,17 +141,15 @@ int Main(int argc, char **argv) {
   fillScores(Functions);
   castVotes(Functions);
 
-  // TODO: Implement tie breaking algorithm.
+  // Present data by function type, Grade and Geomean of scores.
   std::sort(Functions.begin(), Functions.end(),
             [](const FunctionData &A, const FunctionData &B) {
-              return A.FinalGrade < B.FinalGrade;
+              const auto Less = [](const FunctionData &FD) {
+                return std::make_tuple(FD.Id.Type, FD.FinalGrade,
+                                       -FD.ScoresGeoMean);
+              };
+              return Less(A) < Less(B);
             });
-
-  // Present data by function type.
-  std::stable_sort(Functions.begin(), Functions.end(),
-                   [](const FunctionData &A, const FunctionData &B) {
-                     return A.Id.Type < B.Id.Type;
-                   });
 
   // Print result.
   for (const FunctionData &Function : Functions) {
