@@ -59,8 +59,8 @@ void foo(void) {
   }
 }
 
-// CHECK: void bar();
-// CHECK: void foo()
+// CHECK: void bar(void);
+// CHECK: void foo(void)
 // CHECK-NEXT: #pragma omp parallel
 // CHECK-NEXT: bar()
 // CHECK-NEXT: #pragma omp parallel

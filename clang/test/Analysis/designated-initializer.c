@@ -16,7 +16,7 @@ void test(void) {
   }; 
 }
 
-// CHECK: void test()
+// CHECK: void test(void)
 // CHECK: [B1]
 // CHECK:   1: getUQ
 // CHECK:   2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, union UQ (*)(void))
