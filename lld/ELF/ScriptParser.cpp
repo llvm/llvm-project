@@ -786,19 +786,45 @@ Expr ScriptParser::readAssert() {
   };
 }
 
+#define ECase(X)                                                               \
+  { #X, X }
+constexpr std::pair<const char *, unsigned> typeMap[] = {
+    ECase(SHT_PROGBITS),   ECase(SHT_NOTE),       ECase(SHT_NOBITS),
+    ECase(SHT_INIT_ARRAY), ECase(SHT_FINI_ARRAY), ECase(SHT_PREINIT_ARRAY),
+};
+#undef ECase
+
 // Tries to read the special directive for an output section definition which
-// can be one of following: "(NOLOAD)", "(COPY)", "(INFO)" or "(OVERLAY)".
-// Tok1 and Tok2 are next 2 tokens peeked. See comment for readSectionAddressType below.
+// can be one of following: "(NOLOAD)", "(COPY)", "(INFO)", "(OVERLAY)", and
+// "(TYPE=<value>)".
+// Tok1 and Tok2 are next 2 tokens peeked. See comment for
+// readSectionAddressType below.
 bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2) {
   if (tok1 != "(")
     return false;
-  if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" && tok2 != "OVERLAY")
+  if (tok2 != "NOLOAD" && tok2 != "COPY" && tok2 != "INFO" &&
+      tok2 != "OVERLAY" && tok2 != "TYPE")
     return false;
 
   expect("(");
   if (consume("NOLOAD")) {
-    cmd->noload = true;
     cmd->type = SHT_NOBITS;
+    cmd->typeIsSet = true;
+  } else if (consume("TYPE")) {
+    expect("=");
+    StringRef value = peek();
+    auto it = llvm::find_if(typeMap, [=](auto e) { return e.first == value; });
+    if (it != std::end(typeMap)) {
+      // The value is a recognized literal SHT_*.
+      cmd->type = it->second;
+      skip();
+    } else if (value.startswith("SHT_")) {
+      setError("unknown section type " + value);
+    } else {
+      // Otherwise, read an expression.
+      cmd->type = readExpr()().getValue();
+    }
+    cmd->typeIsSet = true;
   } else {
     skip(); // This is "COPY", "INFO" or "OVERLAY".
     cmd->nonAlloc = true;
@@ -819,7 +845,11 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, Stri
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
-  if (readSectionDirective(cmd, peek(), peek2()))
+  // Temporarily set inExpr to support TYPE=<value> without spaces.
+  bool saved = std::exchange(inExpr, true);
+  bool isDirective = readSectionDirective(cmd, peek(), peek2());
+  inExpr = saved;
+  if (isDirective)
     return;
 
   cmd->addrExpr = readExpr();
