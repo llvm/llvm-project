@@ -22,6 +22,9 @@ struct CommonConfig;
 struct WasmConfig;
 
 namespace wasm {
+/// Apply the transformations described by \p Config and \p WasmConfig
+/// to \p In and writes the result into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnBinary(const CommonConfig &Config, const WasmConfig &,
                              object::WasmObjectFile &In, raw_ostream &Out);
 

@@ -24,10 +24,16 @@ struct MachOConfig;
 class MultiFormatConfig;
 
 namespace macho {
+/// Apply the transformations described by \p Config and \p MachOConfig to
+/// \p In and writes the result into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnBinary(const CommonConfig &Config,
                              const MachOConfig &MachOConfig,
                              object::MachOObjectFile &In, raw_ostream &Out);
 
+/// Apply the transformations described by \p Config and \p MachOConfig to
+/// \p In and writes the result into \p Out.
+/// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnMachOUniversalBinary(
     const MultiFormatConfig &Config, const object::MachOUniversalBinary &In,
     raw_ostream &Out);
