@@ -679,6 +679,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "forward-switch-cond") {
       Result.forwardSwitchCondToPhi(Enable);
+    } else if (ParamName == "switch-range-to-icmp") {
+      Result.convertSwitchRangeToICmp(Enable);
     } else if (ParamName == "switch-to-lookup") {
       Result.convertSwitchToLookupTable(Enable);
     } else if (ParamName == "keep-loops") {
