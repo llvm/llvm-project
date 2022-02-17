@@ -112,6 +112,10 @@ protected:
   // Run semantic checks for the current input file. Return False if fatal
   // errors are reported, True otherwise.
   bool RunSemanticChecks();
+  // Generate run-time type information for derived types. This may lead to new
+  // semantic errors. Return False if fatal errors are reported, True
+  // otherwise.
+  bool GenerateRtTypeTables();
 
   // Report fatal semantic errors. Return True if present, false otherwise.
   bool reportFatalSemanticErrors();
