@@ -477,13 +477,13 @@ bool ListDirectedDefaultCharacterOutput(IoStatementState &io,
     ok = ok && list.EmitLeadingSpaceOrAdvance(io);
     // Value is delimited with ' or " marks, and interior
     // instances of that character are doubled.
-    ok = ok && io.Emit(&modes.delim, 1);
     auto EmitOne{[&](char ch) {
       if (connection.NeedAdvance(1)) {
         ok = ok && io.AdvanceRecord();
       }
       ok = ok && io.Emit(&ch, 1);
     }};
+    EmitOne(modes.delim);
     for (std::size_t j{0}; j < length; ++j) {
       // Doubled delimiters must be put on the same record
       // in order to be acceptable as list-directed or NAMELIST
@@ -502,9 +502,7 @@ bool ListDirectedDefaultCharacterOutput(IoStatementState &io,
     EmitOne(modes.delim);
   } else {
     // Undelimited list-directed output
-    ok = ok &&
-        list.EmitLeadingSpaceOrAdvance(
-            io, length > 0 && !list.lastWasUndelimitedCharacter());
+    ok = ok && list.EmitLeadingSpaceOrAdvance(io, length > 0 ? 1 : 0, true);
     std::size_t put{0};
     while (ok && put < length) {
       auto chunk{std::min(length - put, connection.RemainingSpaceInRecord())};

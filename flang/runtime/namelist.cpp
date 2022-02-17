@@ -54,9 +54,13 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   if (!(EmitWithAdvance('&') && EmitUpperCase(group.groupName))) {
     return false;
   }
+  auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
   for (std::size_t j{0}; j < group.items; ++j) {
     // [,]ITEM=...
     const NamelistGroup::Item &item{group.item[j]};
+    if (listOutput) {
+      listOutput->set_lastWasUndelimitedCharacter(false);
+    }
     if (!(EmitWithAdvance(j == 0 ? ' ' : comma) && EmitUpperCase(item.name) &&
             EmitWithAdvance('=') &&
             descr::DescriptorIO<Direction::Output>(io, item.descriptor))) {

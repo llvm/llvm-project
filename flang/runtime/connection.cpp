@@ -14,8 +14,8 @@
 namespace Fortran::runtime::io {
 
 std::size_t ConnectionState::RemainingSpaceInRecord() const {
-  auto recl{recordLength.value_or(
-      executionEnvironment.listDirectedOutputLineLengthLimit)};
+  auto recl{recordLength.value_or(openRecl.value_or(
+      executionEnvironment.listDirectedOutputLineLengthLimit))};
   return positionInRecord >= recl ? 0 : recl - positionInRecord;
 }
 
