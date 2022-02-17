@@ -781,6 +781,21 @@ private:
       return getLoadStorePointerOperand(Inst);
     }
 
+    Type *getValueType() const {
+      // TODO: handle target-specific intrinsics.
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::masked_load:
+          return II->getType();
+        case Intrinsic::masked_store:
+          return II->getArgOperand(0)->getType();
+        default:
+          return nullptr;
+        }
+      }
+      return getLoadStoreType(Inst);
+    }
+
     bool mayReadFromMemory() const {
       if (IntrID != 0)
         return Info.ReadMem;
@@ -1161,6 +1176,9 @@ bool EarlyCSE::overridingStores(const ParseMemoryInst &Earlier,
   assert(Earlier.isUnordered() && !Earlier.isVolatile() &&
          "Violated invariant");
   if (Earlier.getPointerOperand() != Later.getPointerOperand())
+    return false;
+  if (!Earlier.getValueType() || !Later.getValueType() ||
+      Earlier.getValueType() != Later.getValueType())
     return false;
   if (Earlier.getMatchingId() != Later.getMatchingId())
     return false;
