@@ -859,6 +859,21 @@ class VPseudoUnaryNoDummyMask<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoUnaryNoDummyMaskTU<VReg RetClass,
+                                DAGOperand Op2Class> :
+        Pseudo<(outs RetClass:$rd),
+               (ins RetClass:$dest, Op2Class:$rs1, AVL:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasMergeOp = 1;
+  let Constraints = "$rd = $dest";
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoNullaryNoMask<VReg RegClass>:
       Pseudo<(outs RegClass:$rd),
              (ins AVL:$vl, ixlenimm:$sew),
@@ -2000,6 +2015,12 @@ multiclass VPseudoUnaryVMV_V_X_I {
                          Sched<[WriteVIMovX, ReadVIMovX]>;
       def "_I_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, simm5>,
                          Sched<[WriteVIMovI]>;
+      def "_V_" # m.MX # "_TU": VPseudoUnaryNoDummyMaskTU<m.vrclass, m.vrclass>,
+                         Sched<[WriteVIMovV, ReadVIMovV]>;
+      def "_X_" # m.MX # "_TU": VPseudoUnaryNoDummyMaskTU<m.vrclass, GPR>,
+                         Sched<[WriteVIMovX, ReadVIMovX]>;
+      def "_I_" # m.MX # "_TU": VPseudoUnaryNoDummyMaskTU<m.vrclass, simm5>,
+                         Sched<[WriteVIMovI]>;
     }
   }
 }
@@ -2010,6 +2031,9 @@ multiclass VPseudoVMV_F {
       let VLMul = m.value in {
         def "_" # f.FX # "_" # m.MX :
           VPseudoUnaryNoDummyMask<m.vrclass, f.fprclass>,
+          Sched<[WriteVFMovV, ReadVFMovF]>;
+        def "_" # f.FX # "_" # m.MX # "_TU":
+          VPseudoUnaryNoDummyMaskTU<m.vrclass, f.fprclass>,
           Sched<[WriteVFMovV, ReadVFMovF]>;
       }
     }
@@ -5071,10 +5095,16 @@ defm : VPatBinaryV_VM_XM_IM<"int_riscv_vmerge", "PseudoVMERGE">;
 // 12.16. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 foreach vti = AllVectors in {
-  def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector vti.RegClass:$rs1),
+  def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector undef),
+                                           (vti.Vector vti.RegClass:$rs1),
                                            VLOpFrag)),
             (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
              $rs1, GPR:$vl, vti.Log2SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector vti.RegClass:$passthru),
+                                           (vti.Vector vti.RegClass:$rs1),
+                                           VLOpFrag)),
+            (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX#"_TU")
+             $passthru, $rs1, GPR:$vl, vti.Log2SEW)>;
 
   // vmv.v.x/vmv.v.i are handled in RISCInstrVInstrInfoVVLPatterns.td
 }

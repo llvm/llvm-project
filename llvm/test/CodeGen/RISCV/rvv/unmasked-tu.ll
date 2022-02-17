@@ -3235,3 +3235,112 @@ entry:
 
   ret <vscale x 1 x half> %a
 }
+
+declare <vscale x 1 x i8> @llvm.riscv.vmv.v.v.nxv1i8(
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  iXLen);
+
+define <vscale x 1 x i8> @intrinsic_vmv.v.v_v_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %2) nounwind {
+; RV32-LABEL: intrinsic_vmv.v.v_v_nxv1i8_nxv1i8:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV32-NEXT:    vmv.v.v v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vmv.v.v_v_nxv1i8_nxv1i8:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV64-NEXT:    vmv.v.v v8, v9
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i8> @llvm.riscv.vmv.v.v.nxv1i8(
+    <vscale x 1 x i8> %0,
+    <vscale x 1 x i8> %1,
+    iXLen %2)
+
+  ret <vscale x 1 x i8> %a
+}
+
+declare <vscale x 1 x float> @llvm.riscv.vmv.v.v.nxv1f32(
+  <vscale x 1 x float>,
+  <vscale x 1 x float>,
+  iXLen);
+
+define <vscale x 1 x float> @intrinsic_vmv.v.v_v_nxv1f32_nxv1f32(<vscale x 1 x float> %0, <vscale x 1 x float> %1, iXLen %2) nounwind {
+; RV32-LABEL: intrinsic_vmv.v.v_v_nxv1f32_nxv1f32:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; RV32-NEXT:    vmv.v.v v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vmv.v.v_v_nxv1f32_nxv1f32:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; RV64-NEXT:    vmv.v.v v8, v9
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vmv.v.v.nxv1f32(
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    iXLen %2)
+
+  ret <vscale x 1 x float> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vmv.v.x.nxv1i64(
+  <vscale x 1 x i64>,
+  i64,
+  iXLen);
+
+define <vscale x 1 x i64> @intrinsic_vmv.v.x_x_nxv1i64(<vscale x 1 x i64> %0, i64 %1, iXLen %2) nounwind {
+; RV32-LABEL: intrinsic_vmv.v.x_x_nxv1i64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vmv.v.x_x_nxv1i64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a1, e64, m1, tu, mu
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmv.v.x.nxv1i64(
+    <vscale x 1 x i64> %0,
+    i64 %1,
+    iXLen %2)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x float> @llvm.riscv.vfmv.v.f.nxv1f32(
+  <vscale x 1 x float>,
+  float,
+  iXLen);
+
+define <vscale x 1 x float> @intrinsic_vfmv.v.f_f_nxv1f32(<vscale x 1 x float> %0, float %1, iXLen %2) nounwind {
+; RV32-LABEL: intrinsic_vfmv.v.f_f_nxv1f32:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; RV32-NEXT:    vfmv.v.f v8, fa0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vfmv.v.f_f_nxv1f32:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; RV64-NEXT:    vfmv.v.f v8, fa0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfmv.v.f.nxv1f32(
+    <vscale x 1 x float> %0,
+    float %1,
+    iXLen %2)
+
+  ret <vscale x 1 x float> %a
+}

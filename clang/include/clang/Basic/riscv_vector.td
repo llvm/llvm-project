@@ -1755,7 +1755,7 @@ let HasMask = false, HasPolicy = false,
 }
 
 // 12.16. Vector Integer Move Instructions
-let HasMask = false, HasPolicy = false in {
+let HasMask = false, HasNoMaskPassThru = true, HasPolicy = false in {
   let MangledName = "vmv_v" in {
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csil",
                                    [["v", "Uv", "UvUv"]]>;
@@ -1890,7 +1890,8 @@ let HasMask = false, HasPolicy = false,
 }
 
 // 14.16. Vector Floating-Point Move Instruction
-let HasMask = false, HasNoMaskedOverloaded = false, HasPolicy = false in
+let HasMask = false, HasNoMaskPassThru = true, HasNoMaskedOverloaded = false,
+    HasPolicy = false in
   defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "xfd",
                                   [["f", "v", "ve"]]>;
 
