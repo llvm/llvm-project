@@ -13,7 +13,7 @@ typedef unsigned int size_t;
 - (void)setObject:(id)object forKeyedSubscript:(id)key;
 @end
 
-int main() {
+int main(void) {
   NSMutableArray *array;
   id val;
 

@@ -8,7 +8,7 @@ void EXIT(id e);
 +(id)blockOperationWithBlock:(void (^)(void))block ;
 @end
 
-void FUNC() {
+void FUNC(void) {
         [NSBlockOperation blockOperationWithBlock:^{
             @try {
 

@@ -8,10 +8,10 @@
 void x(id y) {}
 void y(int a) {}
 
-extern id opaque_id();
+extern id opaque_id(void);
 __weak id wid;
 
-void f() {
+void f(void) {
     __block int byref_int = 0;
     const id bar = (id) opaque_id();
     id baz = 0;
@@ -21,13 +21,13 @@ void f() {
 
 // block variable layout: BL_STRONG:1, BL_OPERATOR:0
 // CHECK: Inline block variable layout: 0x0100, BL_STRONG:1, BL_OPERATOR:0
-    void (^b)() = ^{
+    void (^b)(void) = ^{
         x(bar);
     };    
 
 // block variable layout: BL_STRONG:2, BL_BYREF:1, BL_OPERATOR:0
 // CHECK: Inline block variable layout: 0x0210, BL_STRONG:2, BL_BYREF:1, BL_OPERATOR:0
-    void (^c)() = ^{
+    void (^c)(void) = ^{
         x(bar);
         x(baz);
         byref_int = 1;
@@ -35,7 +35,7 @@ void f() {
 
 // block variable layout: BL_STRONG:2, BL_BYREF:3, BL_OPERATOR:0
 // CHECK: Inline block variable layout: 0x0230, BL_STRONG:2, BL_BYREF:3, BL_OPERATOR:0
-    void (^d)() = ^{
+    void (^d)(void) = ^{
         x(bar);
         x(baz);
         byref_int = 1;
@@ -45,7 +45,7 @@ void f() {
 
 // block variable layout: BL_STRONG:2, BL_BYREF:3, BL_OPERATOR:0
 // CHECK: Inline block variable layout: 0x0230, BL_STRONG:2, BL_BYREF:3, BL_OPERATOR:0
-    id (^e)() = ^{
+    id (^e)(void) = ^{
         x(bar);
         x(baz);
         byref_int = 1;
@@ -55,7 +55,7 @@ void f() {
     };
 
 // CHECK: Inline block variable layout: 0x020, BL_BYREF:2, BL_OPERATOR:0
-    void (^ii)() = ^{
+    void (^ii)(void) = ^{
        byref_int = 1;
        byref_bab = 0;
     };

@@ -13,7 +13,7 @@
 +(Class) getClass { return self; }
 @end
 
-int main() {
+int main(void) {
   Protocol *P0 = @protocol(P0);
   return 0;
 }
