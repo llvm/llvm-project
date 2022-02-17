@@ -243,6 +243,19 @@ struct VSCode {
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
 
+  /// Poll the process to wait for it to reach the eStateStopped state.
+  ///
+  /// We need to ensure the process is stopped and ready to resume before we
+  /// continue with the launch or attach. This is needed since we no longer play
+  /// with the synchronous mode in the debugger for launching (with or without
+  /// "launchCommands") or attaching (with or without "attachCommands").
+  ///
+  /// \param[in] seconds
+  ///   The number of seconds to poll the process to wait until it is stopped.
+  ///
+  /// \return Error if waiting for the process fails, no error if succeeds.
+  lldb::SBError WaitForProcessToStop(uint32_t seconds);
+
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
   // "Content-Length:" field followed by the length, followed by the raw

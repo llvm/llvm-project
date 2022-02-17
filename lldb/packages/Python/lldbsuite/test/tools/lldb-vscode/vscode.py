@@ -228,6 +228,9 @@ class DebugCommunication(object):
                 # 'stopped' event. We need to remember the thread stop
                 # reasons since the 'threads' command doesn't return
                 # that information.
+                if not self.configuration_done_sent:
+                    raise ValueError("'stopped' event received before "
+                                     "configuationDone packet was sent")
                 self._process_stopped()
                 tid = body['threadId']
                 self.thread_stop_reasons[tid] = body
