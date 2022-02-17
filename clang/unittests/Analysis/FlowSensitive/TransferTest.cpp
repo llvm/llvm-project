@@ -2006,6 +2006,42 @@ TEST_F(TransferTest, AssignFromBoolLiteral) {
       // [[p]]
     }
   )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const auto *FooVal = dyn_cast_or_null<AtomicBoolValue>(
+                    Env.getValue(*FooDecl, SkipPast::None));
+                ASSERT_THAT(FooVal, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *BarVal = dyn_cast_or_null<AtomicBoolValue>(
+                    Env.getValue(*BarDecl, SkipPast::None));
+                ASSERT_THAT(BarVal, NotNull());
+
+                EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
+                EXPECT_EQ(BarVal, &Env.getBoolLiteralValue(false));
+              });
+}
+
+TEST_F(TransferTest, AssignFromBoolConjunction) {
+  std::string Code = R"(
+    void target() {
+      bool Foo = true;
+      bool Bar = true;
+      bool Baz = (Foo) && (Bar);
+      // [[p]]
+    }
+  )";
   runDataflow(
       Code, [](llvm::ArrayRef<
                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
@@ -2028,9 +2064,93 @@ TEST_F(TransferTest, AssignFromBoolLiteral) {
             dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
         ASSERT_THAT(BarVal, NotNull());
 
-        EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
-        EXPECT_EQ(BarVal, &Env.getBoolLiteralValue(false));
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const auto *BazVal = dyn_cast_or_null<ConjunctionValue>(
+            Env.getValue(*BazDecl, SkipPast::None));
+        ASSERT_THAT(BazVal, NotNull());
+
+        EXPECT_EQ(&BazVal->getLeftSubValue(), FooVal);
+        EXPECT_EQ(&BazVal->getRightSubValue(), BarVal);
       });
+}
+
+TEST_F(TransferTest, AssignFromBoolDisjunction) {
+  std::string Code = R"(
+    void target() {
+      bool Foo = true;
+      bool Bar = true;
+      bool Baz = (Foo) || (Bar);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const auto *FooVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        ASSERT_THAT(FooVal, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto *BarVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        ASSERT_THAT(BarVal, NotNull());
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const auto *BazVal = dyn_cast_or_null<DisjunctionValue>(
+            Env.getValue(*BazDecl, SkipPast::None));
+        ASSERT_THAT(BazVal, NotNull());
+
+        EXPECT_EQ(&BazVal->getLeftSubValue(), FooVal);
+        EXPECT_EQ(&BazVal->getRightSubValue(), BarVal);
+      });
+}
+
+TEST_F(TransferTest, AssignFromBoolNegation) {
+  std::string Code = R"(
+    void target() {
+      bool Foo = true;
+      bool Bar = !(Foo);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const auto *FooVal = dyn_cast_or_null<AtomicBoolValue>(
+                    Env.getValue(*FooDecl, SkipPast::None));
+                ASSERT_THAT(FooVal, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *BarVal = dyn_cast_or_null<NegationValue>(
+                    Env.getValue(*BarDecl, SkipPast::None));
+                ASSERT_THAT(BarVal, NotNull());
+
+                EXPECT_EQ(&BarVal->getSubVal(), FooVal);
+              });
 }
 
 } // namespace
