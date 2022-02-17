@@ -2700,4 +2700,26 @@ define <2 x i1> @cttz_slt_bitwidth_splat(<2 x i13> %x) {
   ret <2 x i1> %cmp
 }
 
+; FIXME: A zero sized alloca *can* be equal to another alloca
+define i1 @zero_sized_alloca1() {
+; CHECK-LABEL: @zero_sized_alloca1(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = alloca i32, i32 0
+  %b = alloca i32, i32 0
+  %res = icmp ne i32* %a, %b
+  ret i1 %res
+}
+
+define i1 @zero_sized_alloca2() {
+; CHECK-LABEL: @zero_sized_alloca2(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = alloca i32, i32 0
+  %b = alloca i32
+  %res = icmp ne i32* %a, %b
+  ret i1 %res
+}
+
+
 attributes #0 = { null_pointer_is_valid }
