@@ -41,8 +41,15 @@ class ProfileReaderBase;
 /// events.
 class RewriteInstance {
 public:
+  // This constructor has complex initialization that can fail during
+  // construction. Constructors can’t return errors, so clients must test \p Err
+  // after the object is constructed. Use createRewriteInstance instead.
   RewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
-                  const char *const *Argv, StringRef ToolPath);
+                  const char *const *Argv, StringRef ToolPath, Error &Err);
+
+  static Expected<std::unique_ptr<RewriteInstance>>
+  createRewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
+                        const char *const *Argv, StringRef ToolPath);
   ~RewriteInstance();
 
   /// Assign profile from \p Filename to this instance.
