@@ -47,7 +47,7 @@ def sparse_tensor_to_coo_tensor(support_lib, sparse, dtype):
   Returns:
     A tuple that contains the following values:
     rank: An integer for the rank of the tensor.
-    nse: An interger for the number of non-zero values in the tensor.
+    nse: An integer for the number of non-zero values in the tensor.
     shape: A 1D numpy array of integers, for the shape of the tensor.
     values: A 1D numpy array, for the non-zero values in the tensor.
     indices: A 2D numpy array of integers, representing the indices for the
