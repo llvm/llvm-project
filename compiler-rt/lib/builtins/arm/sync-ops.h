@@ -36,7 +36,7 @@
   .thumb;                                                                      \
   .syntax unified;                                                             \
   DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  push{r4, r5, r6, lr};                                                        \
+  push {r4, r5, r6, lr};                                                       \
   dmb;                                                                         \
   mov r12, r0;                                                                 \
   LOCAL_LABEL(tryatomic_##op) : ldrexd r0, r1, [r12];                          \
@@ -52,7 +52,8 @@
 #define SYNC_OP_4(op)                                                          \
   .p2align 2;                                                                  \
   DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  LOCAL_LABEL(tryatomic_##op) : mov r12, r0;                                   \
+  LOCAL_LABEL(tryatomic_##op) :                                                \
+  mov r12, r0;                                                                 \
   op(r2, r0, r1);                                                              \
   str r2, [r12];                                                               \
   ldr r12, [r12];                                                              \
@@ -63,8 +64,9 @@
 #define SYNC_OP_8(op)                                                          \
   .p2align 2;                                                                  \
   DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  push{r4, r5, r6, lr};                                                        \
-  LOCAL_LABEL(tryatomic_##op) : mov r12, r0;                                   \
+  push {r4, r5, r6, lr};                                                       \
+  LOCAL_LABEL(tryatomic_##op) :                                                \
+  mov r12, r0;                                                                 \
   op(r4, r5, r0, r1, r2, r3);                                                  \
   stm r12, {r4, r5};                                                           \
   ldm r12, {r6, r12};                                                          \
