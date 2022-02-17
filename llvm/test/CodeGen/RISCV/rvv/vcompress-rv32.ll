@@ -814,21 +814,3 @@ entry:
 
   ret <vscale x 8 x double> %a
 }
-
-; Test with undef for the dest operand. This should use tail agnostic policy.
-define <vscale x 1 x i8> @intrinsic_vcompress_um_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i1> %1, i32 %2) nounwind {
-; CHECK-LABEL: intrinsic_vcompress_um_nxv1i8_nxv1i8:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
-entry:
-  %a = call <vscale x 1 x i8> @llvm.riscv.vcompress.nxv1i8(
-    <vscale x 1 x i8> undef,
-    <vscale x 1 x i8> %0,
-    <vscale x 1 x i1> %1,
-    i32 %2)
-
-  ret <vscale x 1 x i8> %a
-}
