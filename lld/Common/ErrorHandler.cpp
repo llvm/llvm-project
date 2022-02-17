@@ -53,6 +53,18 @@ void ErrorHandler::flushStreams() {
 
 ErrorHandler &lld::errorHandler() { return context().e; }
 
+void lld::error(const Twine &msg) { errorHandler().error(msg); }
+void lld::error(const Twine &msg, ErrorTag tag, ArrayRef<StringRef> args) {
+  errorHandler().error(msg, tag, args);
+}
+void lld::fatal(const Twine &msg) { errorHandler().fatal(msg); }
+void lld::log(const Twine &msg) { errorHandler().log(msg); }
+void lld::message(const Twine &msg, llvm::raw_ostream &s) {
+  errorHandler().message(msg, s);
+}
+void lld::warn(const Twine &msg) { errorHandler().warn(msg); }
+uint64_t lld::errorCount() { return errorHandler().errorCount; }
+
 raw_ostream &lld::outs() {
   ErrorHandler &e = errorHandler();
   return e.outs();
