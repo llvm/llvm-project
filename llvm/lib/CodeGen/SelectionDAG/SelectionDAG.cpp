@@ -9708,18 +9708,35 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
 
 namespace {
 
-  /// UseMemo - This class is used by SelectionDAG::ReplaceAllUsesOfValuesWith
-  /// to record information about a use.
-  struct UseMemo {
-    SDNode *User;
-    unsigned Index;
-    SDUse *Use;
-  };
+/// UseMemo - This class is used by SelectionDAG::ReplaceAllUsesOfValuesWith
+/// to record information about a use.
+struct UseMemo {
+  SDNode *User;
+  unsigned Index;
+  SDUse *Use;
+};
 
-  /// operator< - Sort Memos by User.
-  bool operator<(const UseMemo &L, const UseMemo &R) {
-    return (intptr_t)L.User < (intptr_t)R.User;
+/// operator< - Sort Memos by User.
+bool operator<(const UseMemo &L, const UseMemo &R) {
+  return (intptr_t)L.User < (intptr_t)R.User;
+}
+
+/// RAUOVWUpdateListener - Helper for ReplaceAllUsesOfValuesWith - When the node
+/// pointed to by a UseMemo is deleted, set the User to nullptr to indicate that
+/// the node already has been taken care of recursively.
+class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
+  SmallVector<UseMemo, 4> &Uses;
+
+  void NodeDeleted(SDNode *N, SDNode *E) override {
+    for (UseMemo &Memo : Uses)
+      if (Memo.User == N)
+        Memo.User = nullptr;
   }
+
+public:
+  RAUOVWUpdateListener(SelectionDAG &d, SmallVector<UseMemo, 4> &uses)
+      : SelectionDAG::DAGUpdateListener(d), Uses(uses) {}
+};
 
 } // end anonymous namespace
 
@@ -9812,12 +9829,19 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
 
   // Sort the uses, so that all the uses from a given User are together.
   llvm::sort(Uses);
+  RAUOVWUpdateListener Listener(*this, Uses);
 
   for (unsigned UseIndex = 0, UseIndexEnd = Uses.size();
        UseIndex != UseIndexEnd; ) {
     // We know that this user uses some value of From.  If it is the right
     // value, update it.
     SDNode *User = Uses[UseIndex].User;
+    // If the node has been deleted by recursive CSE updates when updating
+    // another node, then just skip this entry.
+    if (User == nullptr) {
+      ++UseIndex;
+      continue;
+    }
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
