@@ -29,6 +29,11 @@ func @tanh() {
   %5 = math.tanh %4 : vector<8xf32>
   vector.print %5 : vector<8xf32>
 
+  // CHECK-NEXT: nan
+  %nan = arith.constant 0x7fc00000 : f32
+  %6 = math.tanh %nan : f32
+  vector.print %6 : f32
+
   return
 }
 

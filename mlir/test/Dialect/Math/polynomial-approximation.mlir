@@ -225,7 +225,7 @@ func @expm1_vector(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
 // CHECK:           %[[VAL_20:.*]] = arith.constant 1056964608 : i32
 // CHECK:           %[[VAL_21:.*]] = arith.constant 23 : i32
 // CHECK:           %[[VAL_22:.*]] = arith.constant 0.693147182 : f32
-// CHECK:           %[[VAL_23:.*]] = arith.cmpf ogt, %[[X]], %[[VAL_4]] : f32
+// CHECK:           %[[VAL_23:.*]] = arith.cmpf ugt, %[[X]], %[[VAL_4]] : f32
 // CHECK:           %[[VAL_24:.*]] = arith.select %[[VAL_23]], %[[X]], %[[VAL_4]] : f32
 // CHECK-NOT:       frexp
 // CHECK:           %[[VAL_25:.*]] = arith.bitcast %[[VAL_24]] : f32 to i32
@@ -355,9 +355,9 @@ func @log1p_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[VAL_12:.*]] = arith.constant 0.00226843474 : f32
 // CHECK:           %[[VAL_13:.*]] = arith.constant 1.18534706E-4 : f32
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1.19825836E-6 : f32
-// CHECK:           %[[VAL_15:.*]] = arith.cmpf olt, %[[VAL_0]], %[[VAL_2]] : f32
+// CHECK:           %[[VAL_15:.*]] = arith.cmpf ult, %[[VAL_0]], %[[VAL_2]] : f32
 // CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_0]], %[[VAL_2]] : f32
-// CHECK:           %[[VAL_17:.*]] = arith.cmpf ogt, %[[VAL_16]], %[[VAL_1]] : f32
+// CHECK:           %[[VAL_17:.*]] = arith.cmpf ugt, %[[VAL_16]], %[[VAL_1]] : f32
 // CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_1]] : f32
 // CHECK:           %[[VAL_19:.*]] = math.abs %[[VAL_0]] : f32
 // CHECK:           %[[VAL_20:.*]] = arith.cmpf olt, %[[VAL_19]], %[[VAL_3]] : f32
