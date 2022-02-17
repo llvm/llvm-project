@@ -3762,8 +3762,8 @@ TypeLoc Sema::getReturnTypeLoc(FunctionDecl *FD) const {
 bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
                                             SourceLocation ReturnLoc,
                                             Expr *&RetExpr,
-                                            AutoType *AT) {
-  // If this is the conversion function for a lambda, we choose to deduce it
+                                            const AutoType *AT) {
+  // If this is the conversion function for a lambda, we choose to deduce its
   // type from the corresponding call operator, not from the synthesized return
   // statement within it. See Sema::DeduceReturnType.
   if (isLambdaConversionOperator(FD))
