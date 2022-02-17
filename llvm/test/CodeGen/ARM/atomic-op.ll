@@ -31,7 +31,7 @@ entry:
   ; CHECK: add
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_add_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_add_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_add_4
   ; CHECK-BAREMETAL: add
   ; CHECK-BAREMETAL-NOT: __sync
   %0 = atomicrmw add i32* %val1, i32 %tmp monotonic
@@ -41,7 +41,7 @@ entry:
   ; CHECK: sub
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_sub_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_sub_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_sub_4
   ; CHECK-BAREMETAL: sub
   ; CHECK-BAREMETAL-NOT: __sync
   %1 = atomicrmw sub i32* %val2, i32 30 monotonic
@@ -51,7 +51,7 @@ entry:
   ; CHECK: add
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_add_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_add_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_add_4
   ; CHECK-BAREMETAL: add
   ; CHECK-BAREMETAL-NOT: __sync
   %2 = atomicrmw add i32* %val2, i32 1 monotonic
@@ -61,7 +61,7 @@ entry:
   ; CHECK: sub
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_sub_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_sub_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_sub_4
   ; CHECK-BAREMETAL: sub
   ; CHECK-BAREMETAL-NOT: __sync
   %3 = atomicrmw sub i32* %val2, i32 1 monotonic
@@ -71,7 +71,7 @@ entry:
   ; CHECK: and
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_and_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_and_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_and_4
   ; CHECK-BAREMETAL: and
   ; CHECK-BAREMETAL-NOT: __sync
   %4 = atomicrmw and i32* %andt, i32 4080 monotonic
@@ -81,7 +81,7 @@ entry:
   ; CHECK: or
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_or_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_or_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_or_4
   ; CHECK-BAREMETAL: or
   ; CHECK-BAREMETAL-NOT: __sync
   %5 = atomicrmw or i32* %ort, i32 4080 monotonic
@@ -91,7 +91,7 @@ entry:
   ; CHECK: eor
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_xor_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_xor_4
+  ; CHECK-T1-M0: bl ___atomic_fetch_xor_4
   ; CHECK-BAREMETAL: eor
   ; CHECK-BAREMETAL-NOT: __sync
   %6 = atomicrmw xor i32* %xort, i32 4080 monotonic
@@ -101,7 +101,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_min_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_min_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %7 = atomicrmw min i32* %val2, i32 16 monotonic
@@ -112,7 +112,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_min_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_min_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %8 = atomicrmw min i32* %val2, i32 %neg monotonic
@@ -122,7 +122,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_max_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_max_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %9 = atomicrmw max i32* %val2, i32 1 monotonic
@@ -133,7 +133,7 @@ entry:
   ; CHECK-NOT: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_max_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_max_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: bic
   ; CHECK-BAREMETAL-NOT: __sync
   %10 = atomicrmw max i32* %val2, i32 0 monotonic
@@ -143,7 +143,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umin_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umin_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %11 = atomicrmw umin i32* %val2, i32 16 monotonic
@@ -154,7 +154,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umin_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umin_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %12 = atomicrmw umin i32* %val2, i32 %uneg monotonic
@@ -164,7 +164,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umax_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umax_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %13 = atomicrmw umax i32* %val2, i32 1 monotonic
@@ -174,7 +174,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umax_4
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umax_4
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %14 = atomicrmw umax i32* %val2, i32 0 monotonic
@@ -192,7 +192,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umin_2
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umin_2
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %0 = atomicrmw umin i16* %val, i16 16 monotonic
@@ -202,7 +202,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umin_2
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umin_2
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %1 = atomicrmw umin i16* %val, i16 %uneg monotonic
@@ -211,7 +211,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umax_2
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umax_2
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %2 = atomicrmw umax i16* %val, i16 1 monotonic
@@ -220,7 +220,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umax_2
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umax_2
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %3 = atomicrmw umax i16* %val, i16 0 monotonic
@@ -237,7 +237,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umin_1
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umin_1
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %0 = atomicrmw umin i8* %val, i8 16 monotonic
@@ -246,7 +246,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umin_1
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umin_1
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %uneg = sub i8 0, 1
@@ -256,7 +256,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umax_1
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umax_1
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %2 = atomicrmw umax i8* %val, i8 1 monotonic
@@ -265,7 +265,7 @@ entry:
   ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_umax_1
-  ; CHECK-T1-M0: bl ___sync_fetch_and_umax_1
+  ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %3 = atomicrmw umax i8* %val, i8 0 monotonic
@@ -360,10 +360,8 @@ define i32 @load_load_add_acquire(i32* %mem1, i32* %mem2) nounwind {
 ; CHECK: dmb
 ; CHECK: add r0,
 
-; CHECK-T1-M0: ldr {{r[0-9]}}, [r0]
-; CHECK-T1-M0: dmb
-; CHECK-T1-M0: ldr {{r[0-9]}}, [r1]
-; CHECK-T1-M0: dmb
+; CHECK-T1-M0: __atomic_load_4
+; CHECK-T1-M0: __atomic_load_4
 
 ; CHECK-T1: ___sync_val_compare_and_swap_4
 ; CHECK-T1: ___sync_val_compare_and_swap_4
@@ -390,10 +388,8 @@ define void @store_store_release(i32* %mem1, i32 %val1, i32* %mem2, i32 %val2) {
 ; CHECK-T1: ___sync_lock_test_and_set
 ; CHECK-T1: ___sync_lock_test_and_set
 
-; CHECK-T1-M0: dmb
-; CHECK-T1-M0: str r1, [r0]
-; CHECK-T1-M0: dmb
-; CHECK-T1-M0: str r3, [r2]
+; CHECK-T1-M0: __atomic_store_4
+; CHECK-T1-M0: __atomic_store_4
 
 ; CHECK-BAREMETAL-NOT: dmb
 ; CHECK-BAREMETAL: str r1, [r0]
@@ -413,9 +409,9 @@ define void @load_fence_store_monotonic(i32* %mem1, i32* %mem2) {
 ; CHECK: dmb
 ; CHECK: str [[R0]], [r1]
 
-; CHECK-T1-M0: ldr [[R0:r[0-9]]], [r0]
+; CHECK-T1-M0: __atomic_load_4
 ; CHECK-T1-M0: dmb
-; CHECK-T1-M0: str [[R0]], [r1]
+; CHECK-T1-M0: __atomic_store_4
 
 ; CHECK-T1: ldr [[R0:r[0-9]]], [{{r[0-9]+}}]
 ; CHECK-T1: {{dmb|bl ___sync_synchronize}}

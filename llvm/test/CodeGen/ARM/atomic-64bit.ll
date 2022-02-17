@@ -30,7 +30,7 @@ define i64 @test1(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_add_8
+; CHECK-M: __atomic_fetch_add_8
 
   %r = atomicrmw add i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -61,7 +61,7 @@ define i64 @test2(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_sub_8
+; CHECK-M: __atomic_fetch_sub_8
 
   %r = atomicrmw sub i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -92,7 +92,7 @@ define i64 @test3(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_and_8
+; CHECK-M: _atomic_fetch_and_8
 
   %r = atomicrmw and i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -123,7 +123,7 @@ define i64 @test4(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_or_8
+; CHECK-M: __atomic_fetch_or_8
 
   %r = atomicrmw or i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -154,7 +154,7 @@ define i64 @test5(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_xor_8
+; CHECK-M: __atomic_fetch_xor_8
 
   %r = atomicrmw xor i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -177,7 +177,7 @@ define i64 @test6(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_lock_test_and_set_8
+; CHECK-M: __atomic_exchange_8
 
   %r = atomicrmw xchg i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -213,7 +213,7 @@ define i64 @test7(i64* %ptr, i64 %val1, i64 %val2) {
 ; CHECK-THUMB: beq
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_val_compare_and_swap_8
+; CHECK-M: __atomic_compare_exchange_8
 
   %pair = cmpxchg i64* %ptr, i64 %val1, i64 %val2 seq_cst seq_cst
   %r = extractvalue { i64, i1 } %pair, 0
@@ -237,7 +237,7 @@ define i64 @test8(i64* %ptr) {
 ; CHECK-THUMB-NOT: strexd
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_val_compare_and_swap_8
+; CHECK-M: __atomic_load_8
 
   %r = load atomic i64, i64* %ptr seq_cst, align 8
   ret i64 %r
@@ -263,7 +263,7 @@ define void @test9(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_lock_test_and_set_8
+; CHECK-M: __atomic_store_8
 
   store atomic i64 %val, i64* %ptr seq_cst, align 8
   ret void
@@ -308,7 +308,7 @@ define i64 @test10(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_min_8
+; CHECK-M: __atomic_compare_exchange_8
 
   %r = atomicrmw min i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -353,7 +353,7 @@ define i64 @test11(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_umin_8
+; CHECK-M: __atomic_compare_exchange_8
 
   %r = atomicrmw umin i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -398,7 +398,7 @@ define i64 @test12(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_max_8
+; CHECK-M: __atomic_compare_exchange_8
 
   %r = atomicrmw max i64* %ptr, i64 %val seq_cst
   ret i64 %r
@@ -443,7 +443,7 @@ define i64 @test13(i64* %ptr, i64 %val) {
 ; CHECK-THUMB: bne
 ; CHECK-THUMB: dmb {{ish$}}
 
-; CHECK-M: __sync_fetch_and_umax_8
+; CHECK-M: __atomic_compare_exchange_8
 
   %r = atomicrmw umax i64* %ptr, i64 %val seq_cst
   ret i64 %r
