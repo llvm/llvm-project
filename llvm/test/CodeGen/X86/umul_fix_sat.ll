@@ -281,21 +281,21 @@ define i64 @func5(i64 %x, i64 %y) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    testl %edi, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    setne %dl
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setne %bl
 ; X86-NEXT:    andb %dl, %bl
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    seto %bh
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    seto %cl
 ; X86-NEXT:    orb %bh, %cl
-; X86-NEXT:    addl %eax, %esi
+; X86-NEXT:    leal (%edi,%eax), %esi
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    mull %ebp
 ; X86-NEXT:    addl %esi, %edx
