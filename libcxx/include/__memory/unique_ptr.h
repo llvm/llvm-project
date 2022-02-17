@@ -263,7 +263,6 @@ public:
   unique_ptr& operator=(unique_ptr const&) = delete;
 #endif
 
-
   _LIBCPP_INLINE_VISIBILITY
   ~unique_ptr() { reset(); }
 
@@ -485,7 +484,6 @@ public:
   unique_ptr(unique_ptr const&) = delete;
   unique_ptr& operator=(unique_ptr const&) = delete;
 #endif
-
 public:
   _LIBCPP_INLINE_VISIBILITY
   ~unique_ptr() { reset(); }
