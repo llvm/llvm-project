@@ -28,7 +28,7 @@
 
 // Verify that the summaries are loaded when the StdLibraryFunctionsChecker is
 // enabled.
-//      CHECK: Loaded summary for: int getchar()
+//      CHECK: Loaded summary for: int getchar(void)
 // CHECK-NEXT: Loaded summary for: unsigned long fread(void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: unsigned long fwrite(const void *restrict, size_t, size_t, FILE *restrict)
 
