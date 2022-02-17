@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using testing::DoubleNear;
 using testing::ElementsAre;
 using testing::Pair;
 using testing::SizeIs;
@@ -31,8 +32,10 @@ TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsOneSample) {
   EXPECT_THAT(Data[0].Id, Foo1);
   EXPECT_THAT(Data[0].PerDistributionData, SizeIs(1));
   // A single value is provided.
-  EXPECT_THAT(
-      Data[0].PerDistributionData.lookup(DistA.Name).MedianBytesPerSecond, 4);
+  const auto &DistributionData = Data[0].PerDistributionData.lookup(DistA.Name);
+  EXPECT_THAT(DistributionData.BytesPerSecondMedian, 4);
+  EXPECT_THAT(DistributionData.BytesPerSecondMean, 4);
+  EXPECT_THAT(DistributionData.BytesPerSecondVariance, 0);
 }
 
 TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsManySamplesSameBucket) {
@@ -48,8 +51,10 @@ TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsManySamplesSameBucket) {
   EXPECT_THAT(Data[0].PerDistributionData, SizeIs(1));
   // When multiple values are provided we pick the median one (here median of 4,
   // 5, 5).
-  EXPECT_THAT(
-      Data[0].PerDistributionData.lookup(DistA.Name).MedianBytesPerSecond, 5);
+  const auto &DistributionData = Data[0].PerDistributionData.lookup(DistA.Name);
+  EXPECT_THAT(DistributionData.BytesPerSecondMedian, 5);
+  EXPECT_THAT(DistributionData.BytesPerSecondMean, DoubleNear(4.6, 0.1));
+  EXPECT_THAT(DistributionData.BytesPerSecondVariance, DoubleNear(0.33, 0.01));
 }
 
 TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsServeralFunctionAndDist) {
@@ -86,11 +91,11 @@ TEST(AutomemcpyJsonResultsAnalyzer, getScore) {
       [](const FunctionData &A, const FunctionData &B) { return A.Id < B.Id; });
 
   EXPECT_THAT(Data[0].Id, Foo1);
-  EXPECT_THAT(Data[0].PerDistributionData.lookup("A").MedianBytesPerSecond, 1);
+  EXPECT_THAT(Data[0].PerDistributionData.lookup("A").BytesPerSecondMedian, 1);
   EXPECT_THAT(Data[1].Id, Foo2);
-  EXPECT_THAT(Data[1].PerDistributionData.lookup("A").MedianBytesPerSecond, 2);
+  EXPECT_THAT(Data[1].PerDistributionData.lookup("A").BytesPerSecondMedian, 2);
   EXPECT_THAT(Data[2].Id, Foo3);
-  EXPECT_THAT(Data[2].PerDistributionData.lookup("A").MedianBytesPerSecond, 3);
+  EXPECT_THAT(Data[2].PerDistributionData.lookup("A").BytesPerSecondMedian, 3);
 
   // Normalizes throughput per distribution.
   fillScores(Data);

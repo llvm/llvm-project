@@ -49,9 +49,12 @@ struct FunctionId {
 };
 
 struct PerDistributionData {
-  double MedianBytesPerSecond; // Median of samples for this distribution.
-  double Score;                // Normalized score for this distribution.
-  Grade::GradeEnum Grade;      // Grade for this distribution.
+  std::vector<double> BytesPerSecondSamples;
+  double BytesPerSecondMedian;   // Median of samples for this distribution.
+  double BytesPerSecondMean;     // Mean of samples for this distribution.
+  double BytesPerSecondVariance; // Variance of samples for this distribution.
+  double Score;                  // Normalized score for this distribution.
+  Grade::GradeEnum Grade;        // Grade for this distribution.
 };
 
 struct FunctionData {
