@@ -18,6 +18,7 @@ def debug_syms : FF<"debug-syms", "Show all symbols, even debugger only">;
 def defined_only : FF<"defined-only", "Show only defined symbols">;
 defm demangle : BB<"demangle", "Demangle C++ symbol names", "Don't demangle symbol names">;
 def dynamic : FF<"dynamic", "Display dynamic symbols instead of normal symbols">;
+def export_symbols : FF<"export-symbols", "Export symbol list for all inputs">;
 def extern_only : FF<"extern-only", "Show only external symbols">;
 defm format : Eq<"format", "Specify output format: bsd (default), posix, sysv, darwin, just-symbols">, MetaVarName<"<format>">;
 def help : FF<"help", "Display this help">;
@@ -48,6 +49,11 @@ def dyldinfo_only : FF<"dyldinfo-only", "Show only symbols from the dyldinfo">, 
 def no_dyldinfo : FF<"no-dyldinfo", "Don't add any symbols from the dyldinfo">, Group<grp_mach_o>;
 def s : F<"s", "Dump only symbols from this segment and section name">, Group<grp_mach_o>;
 def x : F<"x", "Print symbol entry in hex">, Group<grp_mach_o>;
+
+// XCOFF specific options.
+def grp_xcoff_o : OptionGroup<"kind">, HelpText<"llvm-nm XCOFF Specific Options">;
+
+def no_rsrc : FF<"no-rsrc", "Exclude resource file symbols (__rsrc) from the export symbol list.">, Group<grp_xcoff_o>;
 
 def : FF<"just-symbol-name", "Alias for --format=just-symbols">, Alias<format_EQ>, AliasArgs<["just-symbols"]>, Flags<[HelpHidden]>;
 def : FF<"portability", "Alias for --format=posix">, Alias<format_EQ>, AliasArgs<["posix"]>;

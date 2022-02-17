@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -92,6 +93,7 @@ static bool DebugSyms;
 static bool DefinedOnly;
 static bool Demangle;
 static bool DynamicSyms;
+static bool ExportSymbols;
 static bool ExternalOnly;
 static OutputFormatTy OutputFormat;
 static bool NoLLVMBitcode;
@@ -106,6 +108,9 @@ static bool SpecialSyms;
 static bool SizeSort;
 static bool UndefinedOnly;
 static bool WithoutAliases;
+
+// XCOFF-specific options.
+static bool NoRsrc;
 
 namespace {
 enum Radix { d, o, x };
@@ -130,7 +135,8 @@ static bool HadError = false;
 
 static StringRef ToolName;
 
-static void warn(Error Err, Twine FileName, Twine Context = Twine()) {
+static void warn(Error Err, Twine FileName, Twine Context = Twine(),
+                 Twine Archive = Twine()) {
   assert(Err);
 
   // Flush the standard output so that the warning isn't interleaved with other
@@ -139,8 +145,9 @@ static void warn(Error Err, Twine FileName, Twine Context = Twine()) {
 
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
     WithColor::warning(errs(), ToolName)
-        << FileName << ": " << (Context.str().empty() ? "" : Context + ": ")
-        << EI.message() << "\n";
+        << (Archive.str().empty() ? FileName : Archive + "(" + FileName + ")")
+        << ": " << (Context.str().empty() ? "" : Context + ": ") << EI.message()
+        << "\n";
   });
 }
 
@@ -213,6 +220,8 @@ struct NMSymbol {
   StringRef SectionName;
   StringRef TypeName;
   BasicSymbolRef Sym;
+  StringRef Visibility;
+
   // The Sym field above points to the native symbol in the object file,
   // for Mach-O when we are creating symbols from the dyld info the above
   // pointer is null as there is no native symbol.  In these cases the fields
@@ -232,6 +241,29 @@ struct NMSymbol {
     }
     return TypeChar != 'U';
   }
+
+  bool initializeFlags(const SymbolicFile &Obj) {
+    Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+    if (!SymFlagsOrErr) {
+      // TODO: Test this error.
+      error(SymFlagsOrErr.takeError(), Obj.getFileName());
+      return false;
+    }
+    SymFlags = *SymFlagsOrErr;
+    return true;
+  }
+
+  bool shouldPrint() const {
+    bool Undefined = SymFlags & SymbolRef::SF_Undefined;
+    bool Global = SymFlags & SymbolRef::SF_Global;
+    bool Weak = SymFlags & SymbolRef::SF_Weak;
+    bool FormatSpecific = SymFlags & SymbolRef::SF_FormatSpecific;
+    if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
+        (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
+        (FormatSpecific && !(SpecialSyms || DebugSyms)))
+      return false;
+    return true;
+  }
 };
 
 bool operator<(const NMSymbol &A, const NMSymbol &B) {
@@ -241,11 +273,17 @@ bool operator<(const NMSymbol &A, const NMSymbol &B) {
   if (SizeSort)
     return std::make_tuple(A.Size, A.Name, A.Address) <
            std::make_tuple(B.Size, B.Name, B.Address);
+  if (ExportSymbols)
+    return std::make_tuple(A.Name, A.Visibility) <
+           std::make_tuple(B.Name, B.Visibility);
   return std::make_tuple(A.Name, A.Size, A.Address) <
          std::make_tuple(B.Name, B.Size, B.Address);
 }
 
 bool operator>(const NMSymbol &A, const NMSymbol &B) { return B < A; }
+bool operator==(const NMSymbol &A, const NMSymbol &B) {
+  return !(A < B) && !(B < A);
+}
 } // anonymous namespace
 
 static char isSymbolList64Bit(SymbolicFile &Obj) {
@@ -659,6 +697,15 @@ static void sortSymbolList() {
     llvm::sort(SymbolList);
 }
 
+static void printExportSymbolList() {
+  for (const NMSymbol &Sym : SymbolList) {
+    outs() << Sym.Name;
+    if (!Sym.Visibility.empty())
+      outs() << ' ' << Sym.Visibility;
+    outs() << '\n';
+  }
+}
+
 static void printSymbolList(SymbolicFile &Obj, bool printName,
                             StringRef ArchiveName, StringRef ArchitectureName) {
   if (!PrintFileName) {
@@ -707,25 +754,7 @@ static void printSymbolList(SymbolicFile &Obj, bool printName,
   }
 
   for (const NMSymbol &S : SymbolList) {
-    uint32_t SymFlags;
-    if (S.Sym.getRawDataRefImpl().p) {
-      Expected<uint32_t> SymFlagsOrErr = S.Sym.getFlags();
-      if (!SymFlagsOrErr) {
-        // TODO: Test this error.
-        error(SymFlagsOrErr.takeError(), Obj.getFileName());
-        return;
-      }
-      SymFlags = *SymFlagsOrErr;
-    } else
-      SymFlags = S.SymFlags;
-
-    bool Undefined = SymFlags & SymbolRef::SF_Undefined;
-    bool Global = SymFlags & SymbolRef::SF_Global;
-    bool Weak = SymFlags & SymbolRef::SF_Weak;
-    bool FormatSpecific = SymFlags & SymbolRef::SF_FormatSpecific;
-    if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
-        (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
-        (FormatSpecific && !(SpecialSyms || DebugSyms)))
+    if (!S.shouldPrint())
       continue;
 
     std::string Name = S.Name;
@@ -1638,11 +1667,93 @@ static bool shouldDump(SymbolicFile &Obj) {
                                 : BitMode != BitModeTy::Bit64;
 }
 
+static void getXCOFFExports(XCOFFObjectFile *XCOFFObj, StringRef ArchiveName) {
+  // Skip Shared object file.
+  if (XCOFFObj->getFlags() & XCOFF::F_SHROBJ)
+    return;
+
+  for (SymbolRef Sym : XCOFFObj->symbols()) {
+    // There is no visibility in old 32 bit XCOFF object file interpret.
+    bool HasVisibilityAttr =
+        XCOFFObj->is64Bit() || (XCOFFObj->auxiliaryHeader32() &&
+                                (XCOFFObj->auxiliaryHeader32()->getVersion() ==
+                                 XCOFF::NEW_XCOFF_INTERPRET));
+
+    if (HasVisibilityAttr) {
+      XCOFFSymbolRef XCOFFSym = XCOFFObj->toSymbolRef(Sym.getRawDataRefImpl());
+      uint16_t SymType = XCOFFSym.getSymbolType();
+      if ((SymType & XCOFF::VISIBILITY_MASK) == XCOFF::SYM_V_INTERNAL)
+        continue;
+      if ((SymType & XCOFF::VISIBILITY_MASK) == XCOFF::SYM_V_HIDDEN)
+        continue;
+    }
+
+    Expected<section_iterator> SymSecOrErr = Sym.getSection();
+    if (!SymSecOrErr) {
+      warn(SymSecOrErr.takeError(), XCOFFObj->getFileName(),
+           "for symbol with index " +
+               Twine(XCOFFObj->getSymbolIndex(Sym.getRawDataRefImpl().p)),
+           ArchiveName);
+      continue;
+    }
+    section_iterator SecIter = *SymSecOrErr;
+    // If the symbol is not in a text or data section, it is not exported.
+    if (SecIter == XCOFFObj->section_end())
+      continue;
+    if (!(SecIter->isText() || SecIter->isData() || SecIter->isBSS()))
+      continue;
+
+    StringRef SymName = cantFail(Sym.getName());
+    if (SymName.empty())
+      continue;
+    if (SymName.startswith("__sinit") || SymName.startswith("__sterm") ||
+        SymName.front() == '.' || SymName.front() == '(')
+      continue;
+
+    // Check the SymName regex matching with "^__[0-9]+__".
+    if (SymName.size() > 4 && SymName.startswith("__") &&
+        SymName.endswith("__")) {
+      if (std::all_of(SymName.begin() + 2, SymName.end() - 2, isDigit))
+        continue;
+    }
+
+    if (SymName == "__rsrc" && NoRsrc)
+      continue;
+
+    if (SymName.startswith("__tf1"))
+      SymName = SymName.substr(6);
+    else if (SymName.startswith("__tf9"))
+      SymName = SymName.substr(14);
+
+    NMSymbol S = {};
+    S.Name = SymName.str();
+    S.Sym = Sym;
+
+    if (HasVisibilityAttr) {
+      XCOFFSymbolRef XCOFFSym = XCOFFObj->toSymbolRef(Sym.getRawDataRefImpl());
+      uint16_t SymType = XCOFFSym.getSymbolType();
+      if ((SymType & XCOFF::VISIBILITY_MASK) == XCOFF::SYM_V_PROTECTED)
+        S.Visibility = "protected";
+      else if ((SymType & XCOFF::VISIBILITY_MASK) == XCOFF::SYM_V_EXPORTED)
+        S.Visibility = "export";
+    }
+    if (S.initializeFlags(*XCOFFObj))
+      SymbolList.push_back(S);
+  }
+}
+
 static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
                                       StringRef ArchiveName = {},
                                       StringRef ArchitectureName = {}) {
   if (!shouldDump(Obj))
     return;
+
+  if (ExportSymbols && Obj.isXCOFF()) {
+    XCOFFObjectFile *XCOFFObj = cast<XCOFFObjectFile>(&Obj);
+    getXCOFFExports(XCOFFObj, ArchiveName);
+    return;
+  }
+
   auto Symbols = Obj.symbols();
   std::vector<VersionEntry> SymbolVersions;
   if (DynamicSyms) {
@@ -1672,6 +1783,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     if (Nsect == 0)
       return;
   }
+
   if (!(MachO && DyldInfoOnly)) {
     size_t I = -1;
     for (BasicSymbolRef Sym : Symbols) {
@@ -1732,7 +1844,8 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
             (SymbolVersions[I].IsVerDef ? "@@" : "@") + SymbolVersions[I].Name;
 
       S.Sym = Sym;
-      SymbolList.push_back(S);
+      if (S.initializeFlags(Obj))
+        SymbolList.push_back(S);
     }
   }
 
@@ -1744,6 +1857,9 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
   // all symbols from the dyld export trie as well as the bind info.
   if (MachO && !NoDyldInfo)
     dumpSymbolsFromDLInfoMachO(*MachO);
+
+  if (ExportSymbols)
+    return;
 
   CurrentFilename = Obj.getFileName();
 
@@ -1846,7 +1962,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
           }
           if (!checkMachOAndArchFlags(O, Filename))
             return;
-          if (!PrintFileName && shouldDump(*O)) {
+          if (!PrintFileName && shouldDump(*O) && !ExportSymbols) {
             outs() << "\n";
             if (isa<MachOObjectFile>(O)) {
               outs() << Filename << "(" << O->getFileName() << ")";
@@ -2168,6 +2284,12 @@ int main(int argc, char **argv) {
   PrintFileName = Args.hasArg(OPT_print_file_name);
   PrintSize = Args.hasArg(OPT_print_size);
   ReverseSort = Args.hasArg(OPT_reverse_sort);
+  ExportSymbols = Args.hasArg(OPT_export_symbols);
+  if (ExportSymbols) {
+    ExternalOnly = true;
+    DefinedOnly = true;
+  }
+
   Quiet = Args.hasArg(OPT_quiet);
   V = Args.getLastArgValue(OPT_radix_EQ, "x");
   if (V == "o")
@@ -2202,6 +2324,9 @@ int main(int argc, char **argv) {
   AddInlinedInfo = Args.hasArg(OPT_add_inlinedinfo);
   DyldInfoOnly = Args.hasArg(OPT_dyldinfo_only);
   NoDyldInfo = Args.hasArg(OPT_no_dyldinfo);
+
+  // XCOFF specific options.
+  NoRsrc = Args.hasArg(OPT_no_rsrc);
 
   // llvm-nm only reads binary files.
   if (error(sys::ChangeStdinToBinary()))
@@ -2261,6 +2386,18 @@ int main(int argc, char **argv) {
     error("--no-dyldinfo can't be used with --add-dyldinfo or --dyldinfo-only");
 
   llvm::for_each(InputFilenames, dumpSymbolNamesFromFile);
+
+  if (ExportSymbols) {
+    // Delete symbols which should not be printed from SymolList.
+    SymbolList.erase(
+        std::remove_if(SymbolList.begin(), SymbolList.end(),
+                       [](const NMSymbol &s) { return !s.shouldPrint(); }),
+        SymbolList.end());
+    sortSymbolList();
+    SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
+                     SymbolList.end());
+    printExportSymbolList();
+  }
 
   if (HadError)
     return 1;

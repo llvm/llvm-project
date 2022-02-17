@@ -60,10 +60,13 @@ public:
     return static_cast<const T *>(this)->FlagAndTDataAlignment &
            AuxiHeaderFlagMask;
   }
+
   uint8_t getTDataAlignment() const {
     return static_cast<const T *>(this)->FlagAndTDataAlignment &
            AuxiHeaderTDataAlignmentMask;
   }
+
+  uint16_t getVersion() const { return static_cast<const T *>(this)->Version; }
 };
 
 struct XCOFFAuxiliaryHeader32 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
