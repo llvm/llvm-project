@@ -117,6 +117,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-modules"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -130,6 +131,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -191,6 +193,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -204,6 +207,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-clang-12"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -217,6 +221,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-clang-13"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -233,6 +238,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-asan"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -246,6 +252,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-tsan"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -259,6 +266,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-ubsan"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -273,6 +281,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot bootstrapping-build"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -288,6 +297,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot legacy-test-config"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -301,6 +311,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot legacy-project-build"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -316,6 +327,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-static"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -357,6 +369,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-with_llvm_unwinder"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -372,6 +385,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-singlethreaded"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -385,6 +399,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-debug"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -398,6 +413,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-filesystem"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -411,6 +427,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-random_device"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -424,6 +441,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-localization"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -437,6 +455,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-unicode"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -450,6 +469,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-wide-characters"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -463,6 +483,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-no-experimental"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -476,6 +497,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -489,6 +511,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-abi-unstable"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -503,6 +526,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot benchmarks"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -519,6 +543,7 @@ steps:
       command: "bash libcxx/utils/ci/run-buildbot clang-cl-dll"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "windows"
       retry:
@@ -531,6 +556,7 @@ steps:
       command: "bash libcxx/utils/ci/run-buildbot clang-cl-static"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "windows"
       retry:
@@ -543,6 +569,7 @@ steps:
       command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "windows"
       retry:
@@ -555,6 +582,7 @@ steps:
       command: "bash libcxx/utils/ci/run-buildbot mingw-static"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "windows"
       retry:
@@ -600,6 +628,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot apple-system"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "macos"
@@ -615,6 +644,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "macos"
@@ -629,6 +659,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "macos"
@@ -645,6 +676,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot aarch64"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders-linaro-arm"
         arch: "aarch64"
@@ -658,6 +690,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders-linaro-arm"
         arch: "aarch64"
@@ -671,6 +704,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot armv8"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders-linaro-arm"
         arch: "armv8l"
@@ -684,6 +718,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders-linaro-arm"
         arch: "armv8l"
@@ -697,6 +732,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot armv7"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders-linaro-arm"
         arch: "armv8l" # Compiling for v7, running on v8 hardware
@@ -710,6 +746,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       agents:
         queue: "libcxx-builders-linaro-arm"
         arch: "armv8l" # Compiling for v7, running on v8 hardware
@@ -725,10 +762,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot aix"
       artifact_paths:
         - "**/test-results.xml"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
+        - "**/*.abilist"
       env:
           OBJECT_MODE: "32"
       agents:
@@ -744,6 +778,7 @@ steps:
       command: "libcxx/utils/ci/run-buildbot aix"
       artifact_paths:
         - "**/test-results.xml"
+        - "**/*.abilist"
       env:
           OBJECT_MODE: "64"
       agents:
