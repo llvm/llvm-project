@@ -25,9 +25,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp>
 struct is_bind_expression : _If<
-    _IsSame<_Tp, typename __uncvref<_Tp>::type>::value,
+    _IsSame<_Tp, __uncvref_t<_Tp> >::value,
     false_type,
-    is_bind_expression<typename __uncvref<_Tp>::type>
+    is_bind_expression<__uncvref_t<_Tp> >
 > {};
 
 #if _LIBCPP_STD_VER > 14
@@ -37,9 +37,9 @@ inline constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
 
 template<class _Tp>
 struct is_placeholder : _If<
-    _IsSame<_Tp, typename __uncvref<_Tp>::type>::value,
+    _IsSame<_Tp, __uncvref_t<_Tp> >::value,
     integral_constant<int, 0>,
-    is_placeholder<typename __uncvref<_Tp>::type>
+    is_placeholder<__uncvref_t<_Tp> >
 > {};
 
 #if _LIBCPP_STD_VER > 14
