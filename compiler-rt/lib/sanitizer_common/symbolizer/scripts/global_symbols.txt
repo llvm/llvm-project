@@ -110,6 +110,7 @@ mkdir U
 munmap U
 newlocale U
 perror U
+posix_madvise U
 posix_spawn U
 posix_spawn_file_actions_adddup2 U
 posix_spawn_file_actions_addopen U
@@ -175,4 +176,3 @@ wmemcpy U
 wmemmove U
 wmemset U
 write U
-posix_madvise U
