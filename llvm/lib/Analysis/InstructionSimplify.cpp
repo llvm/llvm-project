@@ -692,37 +692,29 @@ Value *llvm::SimplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 /// Compute the base pointer and cumulative constant offsets for V.
 ///
 /// This strips all constant offsets off of V, leaving it the base pointer, and
-/// accumulates the total constant offset applied in the returned constant. It
-/// returns 0 if V is not a pointer, and returns the constant '0' if there are
-/// no constant offsets applied.
+/// accumulates the total constant offset applied in the returned constant.
+/// It returns zero if there are no constant offsets applied.
 ///
-/// This is very similar to GetPointerBaseWithConstantOffset except it doesn't
-/// follow non-inbounds geps. This allows it to remain usable for icmp ult/etc.
-/// folding.
-static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
-                                                bool AllowNonInbounds = false) {
+/// This is very similar to stripAndAccumulateConstantOffsets(), except it
+/// normalizes the offset bitwidth to the stripped pointer type, not the
+/// original pointer type.
+static APInt stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
+                                            bool AllowNonInbounds = false) {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
   APInt Offset = APInt::getZero(DL.getIndexTypeSizeInBits(V->getType()));
-
   V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
   // the offset calculated.
-  Type *IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
-  Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
-
-  Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
-  if (VectorType *VecTy = dyn_cast<VectorType>(V->getType()))
-    return ConstantVector::getSplat(VecTy->getElementCount(), OffsetIntPtr);
-  return OffsetIntPtr;
+  return Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(V->getType()));
 }
 
 /// Compute the constant difference between two pointer values.
 /// If the difference is not a constant, returns zero.
 static Constant *computePointerDifference(const DataLayout &DL, Value *LHS,
                                           Value *RHS) {
-  Constant *LHSOffset = stripAndComputeConstantOffsets(DL, LHS);
-  Constant *RHSOffset = stripAndComputeConstantOffsets(DL, RHS);
+  APInt LHSOffset = stripAndComputeConstantOffsets(DL, LHS);
+  APInt RHSOffset = stripAndComputeConstantOffsets(DL, RHS);
 
   // If LHS and RHS are not related via constant offsets to the same base
   // value, there is nothing we can do here.
@@ -733,7 +725,10 @@ static Constant *computePointerDifference(const DataLayout &DL, Value *LHS,
   //    LHS - RHS
   //  = (LHSOffset + Base) - (RHSOffset + Base)
   //  = LHSOffset - RHSOffset
-  return ConstantExpr::getSub(LHSOffset, RHSOffset);
+  Constant *Res = ConstantInt::get(LHS->getContext(), LHSOffset - RHSOffset);
+  if (auto *VecTy = dyn_cast<VectorType>(LHS->getType()))
+    Res = ConstantVector::getSplat(VecTy->getElementCount(), Res);
+  return Res;
 }
 
 /// Given operands for a Sub, see if we can fold the result.
@@ -2592,15 +2587,14 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
   // Even if an non-inbounds GEP occurs along the path we can still optimize
   // equality comparisons concerning the result.
   bool AllowNonInbounds = ICmpInst::isEquality(Pred);
-  Constant *LHSOffset =
-      stripAndComputeConstantOffsets(DL, LHS, AllowNonInbounds);
-  Constant *RHSOffset =
-      stripAndComputeConstantOffsets(DL, RHS, AllowNonInbounds);
+  APInt LHSOffset = stripAndComputeConstantOffsets(DL, LHS, AllowNonInbounds);
+  APInt RHSOffset = stripAndComputeConstantOffsets(DL, RHS, AllowNonInbounds);
 
   // If LHS and RHS are related via constant offsets to the same base
   // value, we can replace it with an icmp which just compares the offsets.
   if (LHS == RHS)
-    return ConstantExpr::getICmp(Pred, LHSOffset, RHSOffset);
+    return ConstantInt::get(
+        GetCompareTy(LHS), ICmpInst::compare(LHSOffset, RHSOffset, Pred));
 
   // Various optimizations for (in)equality comparisons.
   if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) {
@@ -2635,32 +2629,23 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
     // address, due to canonicalization and constant folding.
     if (isa<AllocaInst>(LHS) &&
         (isa<AllocaInst>(RHS) || isa<GlobalVariable>(RHS))) {
-      ConstantInt *LHSOffsetCI = dyn_cast<ConstantInt>(LHSOffset);
-      ConstantInt *RHSOffsetCI = dyn_cast<ConstantInt>(RHSOffset);
       uint64_t LHSSize, RHSSize;
       ObjectSizeOpts Opts;
       Opts.NullIsUnknownSize =
           NullPointerIsDefined(cast<AllocaInst>(LHS)->getFunction());
-      if (LHSOffsetCI && RHSOffsetCI &&
-          getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
-          getObjectSize(RHS, RHSSize, DL, TLI, Opts)) {
-        const APInt &LHSOffsetValue = LHSOffsetCI->getValue();
-        const APInt &RHSOffsetValue = RHSOffsetCI->getValue();
-        if (!LHSOffsetValue.isNegative() &&
-            !RHSOffsetValue.isNegative() &&
-            LHSOffsetValue.ult(LHSSize) &&
-            RHSOffsetValue.ult(RHSSize)) {
-          return ConstantInt::get(GetCompareTy(LHS),
-                                  !CmpInst::isTrueWhenEqual(Pred));
-        }
+      if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
+          getObjectSize(RHS, RHSSize, DL, TLI, Opts) &&
+          !LHSOffset.isNegative() && !RHSOffset.isNegative() &&
+          LHSOffset.ult(LHSSize) && RHSOffset.ult(RHSSize)) {
+        return ConstantInt::get(GetCompareTy(LHS),
+                                !CmpInst::isTrueWhenEqual(Pred));
       }
 
       // Repeat the above check but this time without depending on DataLayout
       // or being able to compute a precise size.
       if (!cast<PointerType>(LHS->getType())->isEmptyTy() &&
           !cast<PointerType>(RHS->getType())->isEmptyTy() &&
-          LHSOffset->isNullValue() &&
-          RHSOffset->isNullValue())
+          LHSOffset.isNullValue() && RHSOffset.isNullValue())
         return ConstantInt::get(GetCompareTy(LHS),
                                 !CmpInst::isTrueWhenEqual(Pred));
     }
