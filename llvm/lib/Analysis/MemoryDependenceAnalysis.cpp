@@ -424,6 +424,16 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     return false;
   };
 
+  // Return "true" if and only if the instruction I is either a non-unordered
+  // load or a non-unordered store.
+  auto isNonUnorderedLoadOrStore = [](Instruction *I) -> bool {
+    if (auto *LI = dyn_cast<LoadInst>(I))
+      return !LI->isUnordered();
+    if (auto *SI = dyn_cast<StoreInst>(I))
+      return !SI->isUnordered();
+    return false;
+  };
+
   // Return "true" if I is not a load and not a store, but it does access
   // memory.
   auto isOtherMemAccess = [](Instruction *I) -> bool {
@@ -549,11 +559,18 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // A Monotonic store is OK if the query inst is itself not atomic.
       // FIXME: This is overly conservative.
       if (!SI->isUnordered() && SI->isAtomic()) {
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
+        if (!QueryInst || isNonUnorderedLoadOrStore(QueryInst) ||
             isOtherMemAccess(QueryInst))
           return MemDepResult::getClobber(SI);
-        if (SI->getOrdering() != AtomicOrdering::Monotonic)
-          return MemDepResult::getClobber(SI);
+        // Ok, if we are here the guard above guarantee us that
+        // QueryInst is a non-atomic or unordered load/store.
+        // SI is atomic with monotonic or release semantic (seq_cst for store
+        // is actually a release semantic plus total order over other seq_cst
+        // instructions, as soon as QueryInst is not seq_cst we can consider it
+        // as simple release semantic).
+        // Monotonic and Release semantic allows re-ordering before store
+        // so we are safe to go further and check the aliasing. It will prohibit
+        // re-ordering in case locations are may or must alias.
       }
 
       // While volatile access cannot be eliminated, they do not have to clobber
