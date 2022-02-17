@@ -29,9 +29,8 @@ define dso_local i8* @rv_marker_1_retain() {
 ; CHECK-LABEL:    rv_marker_1_retain:
 ; CHECK:           .cfi_offset w30, -16
 ; CHECK-NEXT:      bl foo1
-; SELDAG-NEXT:     mov x29, x29
-; SELDAG-NEXT:     bl objc_retainAutoreleasedReturnValue
-; GISEL-NOT:       mov x29, x29
+; CHECK-NEXT:     mov x29, x29
+; CHECK-NEXT:     bl objc_retainAutoreleasedReturnValue
 ;
 entry:
   %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
@@ -42,9 +41,8 @@ define dso_local i8* @rv_marker_1_unsafeClaim() {
 ; CHECK-LABEL:    rv_marker_1_unsafeClaim:
 ; CHECK:           .cfi_offset w30, -16
 ; CHECK-NEXT:      bl foo1
-; SELDAG-NEXT:     mov x29, x29
-; SELDAG-NEXT:     bl objc_unsafeClaimAutoreleasedReturnValue
-; GISEL-NOT:       mov x29, x29
+; CHECK-NEXT:     mov x29, x29
+; CHECK-NEXT:     bl objc_unsafeClaimAutoreleasedReturnValue
 ;
 entry:
   %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
@@ -56,8 +54,8 @@ define dso_local void @rv_marker_2_select(i32 %c) {
 ; SELDAG:        cinc  w0, w8, eq
 ; GISEL:         csinc w0, w8, wzr, eq
 ; CHECK-NEXT:    bl  foo0
-; SELDAG-NEXT:   mov x29, x29
-; SELDAG-NEXT:   bl objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:   mov x29, x29
+; CHECK-NEXT:   bl objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    b  foo2
 ;
@@ -73,8 +71,8 @@ define dso_local void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_
 ; CHECK-LABEL: rv_marker_3
 ; CHECK:         .cfi_offset w30, -32
 ; CHECK-NEXT:    bl  foo1
-; SELDAG-NEXT:   mov x29, x29
-; SELDAG-NEXT:   bl objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:   mov x29, x29
+; CHECK-NEXT:   bl objc_retainAutoreleasedReturnValue
 ;
 entry:
   %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
@@ -96,8 +94,8 @@ define dso_local void @rv_marker_4() personality i8* bitcast (i32 (...)* @__gxx_
 ; CHECK-LABEL: rv_marker_4
 ; CHECK:       .Ltmp3:
 ; CHECK-NEXT:     bl  foo1
-; SELDAG-NEXT:    mov x29, x29
-; SELDAG-NEXT:    bl objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT: .Ltmp4:
 ;
 entry:
@@ -139,10 +137,8 @@ define dso_local i8* @rv_marker_5_indirect_call() {
 ; CHECK-LABEL: rv_marker_5_indirect_call
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
 ; CHECK-NEXT:    blr [[ADDR]]
-; SELDAG-NEXT:   mov x29, x29
-; SELDAG-NEXT:   bl objc_retainAutoreleasedReturnValue
-; GISEL-NOT:     mov x29, x29
-;
+; CHECK-NEXT:   mov x29, x29
+; CHECK-NEXT:   bl objc_retainAutoreleasedReturnValue
 entry:
   %0 = load i8* ()*, i8* ()** @fptr, align 8
   %call = call i8* %0() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
@@ -158,9 +154,8 @@ define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:   mov x0, x2
 ; CHECK-NEXT:   mov x2, [[TMP]]
 ; CHECK-NEXT:   bl  foo
-; SELDAG-NEXT:  mov x29, x29
-; SELDAG-NEXT:  bl objc_retainAutoreleasedReturnValue
-; GISEL-NOT:    mov x29, x29
+; CHECK-NEXT:  mov x29, x29
+; CHECK-NEXT:  bl objc_retainAutoreleasedReturnValue
   call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   ret void
 }
