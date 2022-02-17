@@ -88,8 +88,8 @@ declare void @external_func()
 
 ; DISASSEM:       <__wasm_start>:
 ; DISASSEM-EMPTY:
-; DISASSEM-NEXT:   call 2
 ; DISASSEM-NEXT:   call 3
+; DISASSEM-NEXT:   call 2
 ; DISASSEM-NEXT:   end
 
 ; Run the same test with threading support.  In this mode
@@ -107,8 +107,8 @@ declare void @external_func()
 
 ; DISASSEM-SHMEM:       <__wasm_start>:
 ; DISASSEM-SHMEM-EMPTY:
-; DISASSEM-SHMEM-NEXT:   call 3
 ; DISASSEM-SHMEM-NEXT:   call 5
+; DISASSEM-SHMEM-NEXT:   call 3
 ; DISASSEM-SHMEM-NEXT:   end
 
 ; SHMEM:         FunctionNames:
