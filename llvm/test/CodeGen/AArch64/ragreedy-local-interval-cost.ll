@@ -119,12 +119,12 @@ define dso_local void @run_test() local_unnamed_addr #0 {
 ; CHECK-NEXT:    add v0.2d, v0.2d, v15.2d
 ; CHECK-NEXT:    add v11.2d, v11.2d, v14.2d
 ; CHECK-NEXT:    fmov d14, x3
-; CHECK-NEXT:    add v9.2d, v9.2d, v1.2d
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov d0, x13
+; CHECK-NEXT:    add v9.2d, v9.2d, v1.2d
 ; CHECK-NEXT:    mov v14.d[1], x15
-; CHECK-NEXT:    add v31.2d, v31.2d, v1.2d
 ; CHECK-NEXT:    mov v0.d[1], x12
+; CHECK-NEXT:    add v31.2d, v31.2d, v1.2d
 ; CHECK-NEXT:    add v26.2d, v26.2d, v1.2d
 ; CHECK-NEXT:    add v23.2d, v23.2d, v1.2d
 ; CHECK-NEXT:    add v21.2d, v21.2d, v1.2d

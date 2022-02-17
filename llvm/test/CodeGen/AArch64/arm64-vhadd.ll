@@ -787,10 +787,10 @@ define <4 x i64> @hadd32_zext_asr(<4 x i32> %src1, <4 x i32> %src2) nounwind {
 define <4 x i64> @hadd32_sext_lsr(<4 x i32> %src1, <4 x i32> %src2) nounwind {
 ; CHECK-LABEL: hadd32_sext_lsr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    saddl2.2d v2, v0, v1
-; CHECK-NEXT:    saddl.2d v0, v0, v1
-; CHECK-NEXT:    ushr.2d v1, v2, #1
-; CHECK-NEXT:    ushr.2d v0, v0, #1
+; CHECK-NEXT:    saddl.2d v2, v0, v1
+; CHECK-NEXT:    saddl2.2d v0, v0, v1
+; CHECK-NEXT:    ushr.2d v1, v0, #1
+; CHECK-NEXT:    ushr.2d v0, v2, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <4 x i32> %src1 to <4 x i64>
   %zextsrc2 = sext <4 x i32> %src2 to <4 x i64>

@@ -98,10 +98,10 @@ entry:
 define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {
 ; CHECK-LABEL: dupsext_v2i8_v2i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
+; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
+; CHECK-NEXT:    dup v1.2s, w8
 ; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:

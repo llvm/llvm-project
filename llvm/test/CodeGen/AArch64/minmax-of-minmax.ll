@@ -1079,8 +1079,8 @@ define <4 x i32> @notted_smin_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_smin_bc_ab:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1101,8 +1101,8 @@ define <4 x i32> @notted_smin_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_smin_bc_ba:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1167,8 +1167,8 @@ define <4 x i32> @notted_smin_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_smin_bc_ab_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1189,8 +1189,8 @@ define <4 x i32> @notted_smin_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_smin_bc_ba_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1255,8 +1255,8 @@ define <4 x i32> @notted_smin_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_smin_bc_ab_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1277,8 +1277,8 @@ define <4 x i32> @notted_smin_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_smin_bc_ba_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1343,8 +1343,8 @@ define <4 x i32> @notted_smin_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_smin_bc_ab_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1365,8 +1365,8 @@ define <4 x i32> @notted_smin_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_smin_bc_ba_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smin v0.4s, v2.4s, v0.4s
@@ -1431,8 +1431,8 @@ define <4 x i32> @notted_smax_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_smax_bc_ab:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1453,8 +1453,8 @@ define <4 x i32> @notted_smax_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_smax_bc_ba:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1519,8 +1519,8 @@ define <4 x i32> @notted_smax_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_smax_bc_ab_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1541,8 +1541,8 @@ define <4 x i32> @notted_smax_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_smax_bc_ba_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1607,8 +1607,8 @@ define <4 x i32> @notted_smax_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_smax_bc_ab_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1629,8 +1629,8 @@ define <4 x i32> @notted_smax_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_smax_bc_ba_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1695,8 +1695,8 @@ define <4 x i32> @notted_smax_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_smax_bc_ab_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1717,8 +1717,8 @@ define <4 x i32> @notted_smax_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_smax_bc_ba_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    smax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    smax v0.4s, v2.4s, v0.4s
@@ -1783,8 +1783,8 @@ define <4 x i32> @notted_umin_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_umin_bc_ab:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -1805,8 +1805,8 @@ define <4 x i32> @notted_umin_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_umin_bc_ba:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -1871,8 +1871,8 @@ define <4 x i32> @notted_umin_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_umin_bc_ab_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -1893,8 +1893,8 @@ define <4 x i32> @notted_umin_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_umin_bc_ba_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -1959,8 +1959,8 @@ define <4 x i32> @notted_umin_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_umin_bc_ab_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -1981,8 +1981,8 @@ define <4 x i32> @notted_umin_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_umin_bc_ba_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -2047,8 +2047,8 @@ define <4 x i32> @notted_umin_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_umin_bc_ab_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -2069,8 +2069,8 @@ define <4 x i32> @notted_umin_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_umin_bc_ba_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umin v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umin v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umin v0.4s, v2.4s, v0.4s
@@ -2135,8 +2135,8 @@ define <4 x i32> @notted_umax_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_umax_bc_ab:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2157,8 +2157,8 @@ define <4 x i32> @notted_umax_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: notted_umax_bc_ba:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2223,8 +2223,8 @@ define <4 x i32> @notted_umax_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_umax_bc_ab_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2245,8 +2245,8 @@ define <4 x i32> @notted_umax_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: notted_umax_bc_ba_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2311,8 +2311,8 @@ define <4 x i32> @notted_umax_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_umax_bc_ab_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2333,8 +2333,8 @@ define <4 x i32> @notted_umax_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK-LABEL: notted_umax_bc_ba_eq_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2399,8 +2399,8 @@ define <4 x i32> @notted_umax_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_umax_bc_ab_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s
@@ -2421,8 +2421,8 @@ define <4 x i32> @notted_umax_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 
 ; CHECK-LABEL: notted_umax_bc_ba_eq_swap_pred:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    umax v2.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    umax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    umax v0.4s, v2.4s, v0.4s

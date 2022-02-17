@@ -5,11 +5,11 @@ define <4 x i1> @t0_all_tautological(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t0_all_tautological:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    adrp x9, .LCPI0_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    adrp x8, .LCPI0_1
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI0_1]
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 2, i32 2>

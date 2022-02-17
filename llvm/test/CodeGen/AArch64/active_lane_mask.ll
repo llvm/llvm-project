@@ -428,10 +428,10 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI24_0
 ; CHECK-NEXT:    dup v0.8b, w0
+; CHECK-NEXT:    dup v2.8b, w1
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI24_0]
 ; CHECK-NEXT:    uqadd v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    dup v1.8b, w1
-; CHECK-NEXT:    cmhi v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    cmhi v0.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i8(i8 %index, i8 %TC)
   ret <8 x i1> %active.lane.mask
@@ -440,16 +440,16 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v4i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v0.4h, w0
 ; CHECK-NEXT:    adrp x8, .LCPI25_0
-; CHECK-NEXT:    dup v2.4h, w1
+; CHECK-NEXT:    dup v0.4h, w0
+; CHECK-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-NEXT:    dup v3.4h, w1
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI25_0]
 ; CHECK-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-NEXT:    bic v3.4h, #255, lsl #8
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-NEXT:    umin v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmhi v0.4h, v2.4h, v0.4h
+; CHECK-NEXT:    umin v0.4h, v0.4h, v2.4h
+; CHECK-NEXT:    cmhi v0.4h, v3.4h, v0.4h
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i8(i8 %index, i8 %TC)
   ret <4 x i1> %active.lane.mask
@@ -458,16 +458,16 @@ define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v2i1_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-NEXT:    movi d0, #0x0000ff000000ff
 ; CHECK-NEXT:    dup v1.2s, w0
-; CHECK-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-NEXT:    dup v3.2s, w1
-; CHECK-NEXT:    and v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI26_0]
+; CHECK-NEXT:    and v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    and v2.8b, v3.8b, v0.8b
-; CHECK-NEXT:    umin v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    cmhi v0.2s, v2.2s, v0.2s
+; CHECK-NEXT:    umin v1.2s, v1.2s, v0.2s
+; CHECK-NEXT:    and v0.8b, v3.8b, v0.8b
+; CHECK-NEXT:    cmhi v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i8(i8 %index, i8 %TC)
   ret <2 x i1> %active.lane.mask

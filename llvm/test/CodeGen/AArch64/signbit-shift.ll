@@ -30,9 +30,9 @@ define <4 x i32> @add_zext_ifpos_vec_splat(<4 x i32> %x) {
 ; CHECK-LABEL: add_zext_ifpos_vec_splat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-NEXT:    movi v2.4s, #41
 ; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #41
-; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = zext <4 x i1> %c to <4 x i32>
@@ -79,9 +79,9 @@ define <4 x i32> @add_sext_ifpos_vec_splat(<4 x i32> %x) {
 ; CHECK-LABEL: add_sext_ifpos_vec_splat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-NEXT:    movi v2.4s, #42
 ; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = sext <4 x i1> %c to <4 x i32>

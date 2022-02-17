@@ -8,15 +8,15 @@ define void @signbits_vXi1(<4 x i16> %a1) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w1, wzr
+; CHECK-NEXT:    movi v2.4h, #1
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
+; CHECK-NEXT:    mov w1, wzr
 ; CHECK-NEXT:    mov w2, wzr
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    adrp x8, .LCPI0_1
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    movi v1.4h, #1
-; CHECK-NEXT:    cmgt v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_1]
+; CHECK-NEXT:    cmgt v0.4h, v2.4h, v0.4h
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
