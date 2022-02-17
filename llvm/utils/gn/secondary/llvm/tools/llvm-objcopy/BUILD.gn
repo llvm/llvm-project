@@ -56,28 +56,13 @@ executable("llvm-objcopy") {
     ":ObjcopyOpts",
     ":StripOpts",
     "//llvm/lib/MC",
+    "//llvm/lib/ObjCopy",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
-  include_dirs = [ "." ]
   sources = [
-    "COFF/COFFObjcopy.cpp",
-    "COFF/Object.cpp",
-    "COFF/Reader.cpp",
-    "COFF/Writer.cpp",
-    "ConfigManager.cpp",
-    "ELF/ELFObjcopy.cpp",
-    "ELF/Object.cpp",
-    "MachO/MachOLayoutBuilder.cpp",
-    "MachO/MachOObjcopy.cpp",
-    "MachO/MachOReader.cpp",
-    "MachO/MachOWriter.cpp",
-    "MachO/Object.cpp",
+    "ObjcopyOptions.cpp",
     "llvm-objcopy.cpp",
-    "wasm/Object.cpp",
-    "wasm/Reader.cpp",
-    "wasm/WasmObjcopy.cpp",
-    "wasm/Writer.cpp",
   ]
 }
