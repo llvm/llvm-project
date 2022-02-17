@@ -100,35 +100,35 @@ instructions instead of querying the pointer type.
 
 Here are some common ways to avoid pointer element type accesses:
 
-* For loads, use ''getType()''.
-* For stores, use ''getValueOperand()->getType()''.
-* Use ''getLoadStoreType()'' to handle both of the above in one call.
-* For getelementptr instructions, use ''getSourceElementType()''.
-* For calls, use ''getFunctionType()''.
-* For allocas, use ''getAllocatedType()''.
-* For globals, use ''getValueType()''.
+* For loads, use ``getType()``.
+* For stores, use ``getValueOperand()->getType()``.
+* Use ``getLoadStoreType()`` to handle both of the above in one call.
+* For getelementptr instructions, use ``getSourceElementType()``.
+* For calls, use ``getFunctionType()``.
+* For allocas, use ``getAllocatedType()``.
+* For globals, use ``getValueType()``.
 * For consistency assertions, use
-  ''PointerType::isOpaqueOrPointeeTypeEquals()''.
+  ``PointerType::isOpaqueOrPointeeTypeEquals()``.
 * To create a pointer type in a different address space, use
-  ''PointerType::getWithSamePointeeType()''.
+  ``PointerType::getWithSamePointeeType()``.
 * To check that two pointers have the same element type, use
-  ''PointerType::hasSameElementTypeAs()''.
+  ``PointerType::hasSameElementTypeAs()``.
 * While it is preferred to write code in a way that accepts both typed and
-  opaque pointers, ''Type::isOpaquePointerTy()'' and
-  ''PointerType::isOpaque()'' can be used to handle opaque pointers specially.
-  ''PointerType::getNonOpaquePointerElementType()'' can be used as a marker in
+  opaque pointers, ``Type::isOpaquePointerTy()`` and
+  ``PointerType::isOpaque()`` can be used to handle opaque pointers specially.
+  ``PointerType::getNonOpaquePointerElementType()`` can be used as a marker in
   code-paths where opaque pointers have been explicitly excluded.
-* To get the type of a byval argument, use ''getParamByValType()''. Similar
+* To get the type of a byval argument, use ``getParamByValType()``. Similar
   method exists for other ABI-affecting attributes that need to know the
   element type, such as byref, sret, inalloca and preallocated.
-* Some intrinsics require an ''elementtype'' attribute, which can be retrieved
-  using ''getParamElementType()''. This attribute is required in cases where
+* Some intrinsics require an ``elementtype`` attribute, which can be retrieved
+  using ``getParamElementType()``. This attribute is required in cases where
   the intrinsic does not naturally encode a needed element type. This is also
   used for inline assembly.
 
 Note that some of the methods mentioned above only exist to support both typed
 and opaque pointers at the same time, and will be dropped once the migration
-has completed. For example, ''isOpaqueOrPointeeTypeEquals()'' becomes
+has completed. For example, ``isOpaqueOrPointeeTypeEquals()`` becomes
 meaningless once all pointers are opaque.
 
 While direct usage of pointer element types is immediately apparent in code,
