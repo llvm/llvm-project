@@ -8,7 +8,7 @@
 -(Foo *)something;
 @end
 
-void bar(void (^block)());
+void bar(void (^block)(void));
 
 void test1(Foo *p) {
   __block Foo *x = p; // __block used just to break cycle.

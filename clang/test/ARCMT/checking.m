@@ -124,7 +124,7 @@ struct S {
 - (id)initWithInt: (int) i;
 @end
 
-void rdar8861761() {
+void rdar8861761(void) {
   B *o1 = [[B alloc] initWithInt:0];
   B *o2 = [B alloc];
   [o2 initWithInt:0];
