@@ -5610,6 +5610,9 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::Module:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::SILBlockStorage:
@@ -5749,10 +5752,14 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
     assert(false && "Internal compiler type");
@@ -6232,16 +6239,20 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
@@ -6326,16 +6337,20 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
@@ -6456,16 +6471,20 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
@@ -6679,16 +6698,20 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
@@ -6859,16 +6882,20 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     return 0;
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
@@ -7038,16 +7065,20 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
@@ -7339,16 +7370,20 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinJob:
     case swift::TypeKind::BuiltinRawUnsafeContinuation:
     case swift::TypeKind::Error:
-    case swift::TypeKind::Module:
     case swift::TypeKind::InOut:
-    case swift::TypeKind::VariadicSequence:
+    case swift::TypeKind::Module:
+    case swift::TypeKind::Pack:
+    case swift::TypeKind::PackExpansion:
+    case swift::TypeKind::ParameterizedProtocol:
     case swift::TypeKind::Placeholder:
     case swift::TypeKind::SILBlockStorage:
     case swift::TypeKind::SILBox:
     case swift::TypeKind::SILFunction:
     case swift::TypeKind::SILToken:
+    case swift::TypeKind::SequenceArchetype:
     case swift::TypeKind::TypeVariable:
     case swift::TypeKind::Unresolved:
+    case swift::TypeKind::VariadicSequence:
       break;
     case swift::TypeKind::BuiltinInteger:
     case swift::TypeKind::BuiltinIntegerLiteral:
@@ -7711,16 +7746,20 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
-  case swift::TypeKind::Module:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
 
   case swift::TypeKind::Class:
