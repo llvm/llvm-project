@@ -2640,14 +2640,6 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
         return ConstantInt::get(GetCompareTy(LHS),
                                 !CmpInst::isTrueWhenEqual(Pred));
       }
-
-      // Repeat the above check but this time without depending on DataLayout
-      // or being able to compute a precise size.
-      if (!cast<PointerType>(LHS->getType())->isEmptyTy() &&
-          !cast<PointerType>(RHS->getType())->isEmptyTy() &&
-          LHSOffset.isNullValue() && RHSOffset.isNullValue())
-        return ConstantInt::get(GetCompareTy(LHS),
-                                !CmpInst::isTrueWhenEqual(Pred));
     }
 
     // If one side of the equality comparison must come from a noalias call
