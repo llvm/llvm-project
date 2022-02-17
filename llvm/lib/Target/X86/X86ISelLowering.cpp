@@ -54789,8 +54789,9 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
 
     // In any sort of PIC mode addresses need to be computed at runtime by
     // adding in a register or some sort of table lookup.  These can't
-    // be used as immediates.
-    if (Subtarget.isPICStyleGOT() || Subtarget.isPICStyleStubPIC())
+    // be used as immediates. BlockAddresses are fine though.
+    if ((Subtarget.isPICStyleGOT() || Subtarget.isPICStyleStubPIC()) &&
+        !isa<BlockAddressSDNode>(Op))
       return;
 
     // If we are in non-pic codegen mode, we allow the address of a global (with
