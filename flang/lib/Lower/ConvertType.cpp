@@ -9,8 +9,8 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/Todo.h"
-#include "flang/Lower/Utils.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
@@ -154,6 +154,39 @@ public:
   TypeBuilder(Fortran::lower::AbstractConverter &converter)
       : converter{converter}, context{&converter.getMLIRContext()} {}
 
+  mlir::Type genExprType(const Fortran::lower::SomeExpr &expr) {
+    std::optional<Fortran::evaluate::DynamicType> dynamicType = expr.GetType();
+    if (!dynamicType)
+      return genTypelessExprType(expr);
+    Fortran::common::TypeCategory category = dynamicType->category();
+
+    mlir::Type baseType;
+    if (category == Fortran::common::TypeCategory::Derived) {
+      TODO(converter.getCurrentLocation(), "genExprType derived");
+    } else {
+      // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
+      baseType = genFIRType(context, category, dynamicType->kind());
+    }
+    std::optional<Fortran::evaluate::Shape> shapeExpr =
+        Fortran::evaluate::GetShape(converter.getFoldingContext(), expr);
+    fir::SequenceType::Shape shape;
+    if (shapeExpr) {
+      translateShape(shape, std::move(*shapeExpr));
+    } else {
+      // Shape static analysis cannot return something useful for the shape.
+      // Use unknown extents.
+      int rank = expr.Rank();
+      if (rank < 0)
+        TODO(converter.getCurrentLocation(),
+             "Assumed rank expression type lowering");
+      for (int dim = 0; dim < rank; ++dim)
+        shape.emplace_back(fir::SequenceType::getUnknownExtent());
+    }
+    if (!shape.empty())
+      return fir::SequenceType::get(shape, baseType);
+    return baseType;
+  }
+
   template <typename A>
   void translateShape(A &shape, Fortran::evaluate::Shape &&shapeExpr) {
     for (Fortran::evaluate::MaybeExtentExpr extentExpr : shapeExpr) {
@@ -169,6 +202,34 @@ public:
   std::optional<std::int64_t> toInt64(A &&expr) {
     return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
         converter.getFoldingContext(), std::move(expr)));
+  }
+
+  mlir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
+    return std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::evaluate::BOZLiteralConstant &) -> mlir::Type {
+              return mlir::NoneType::get(context);
+            },
+            [&](const Fortran::evaluate::NullPointer &) -> mlir::Type {
+              return fir::ReferenceType::get(mlir::NoneType::get(context));
+            },
+            [&](const Fortran::evaluate::ProcedureDesignator &proc)
+                -> mlir::Type {
+              TODO(converter.getCurrentLocation(),
+                   "genTypelessExprType ProcedureDesignator");
+            },
+            [&](const Fortran::evaluate::ProcedureRef &) -> mlir::Type {
+              return mlir::NoneType::get(context);
+            },
+            [](const auto &x) -> mlir::Type {
+              using T = std::decay_t<decltype(x)>;
+              static_assert(!Fortran::common::HasMember<
+                                T, Fortran::evaluate::TypelessExpression>,
+                            "missing typeless expr handling in type lowering");
+              llvm::report_fatal_error("not a typeless expression");
+            },
+        },
+        expr.u);
   }
 
   mlir::Type genSymbolType(const Fortran::semantics::Symbol &symbol,
@@ -443,8 +504,8 @@ mlir::Type Fortran::lower::translateDataRefToFIRType(
 }
 
 mlir::Type Fortran::lower::translateSomeExprToFIRType(
-    Fortran::lower::AbstractConverter &converter, const SomeExpr *expr) {
-  return TypeBuilder{converter}.gen(*expr);
+    Fortran::lower::AbstractConverter &converter, const SomeExpr &expr) {
+  return TypeBuilder{converter}.genExprType(expr);
 }
 
 mlir::Type Fortran::lower::translateSymbolToFIRType(
