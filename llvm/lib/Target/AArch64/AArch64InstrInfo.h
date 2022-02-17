@@ -103,6 +103,12 @@ public:
   /// Returns whether the instruction is a pre-indexed load/store.
   static bool isPreLdSt(const MachineInstr &MI);
 
+  /// Returns whether the instruction is FP or NEON.
+  static bool isFpOrNEON(const MachineInstr &MI);
+
+  /// Returns whether the instruction is in Q form (128 bit operands)
+  static bool isQForm(const MachineInstr &MI);
+
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 
