@@ -260,12 +260,13 @@ public:
       auto *SubExprVal =
           dyn_cast_or_null<BoolValue>(Env.getValue(*SubExpr, SkipPast::None));
       if (SubExprVal == nullptr)
-        return;
+        break;
 
       auto &ExprLoc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, ExprLoc);
       Env.setValue(ExprLoc, Env.takeOwnership(
                                 std::make_unique<NegationValue>(*SubExprVal)));
+      break;
     }
     default:
       break;
