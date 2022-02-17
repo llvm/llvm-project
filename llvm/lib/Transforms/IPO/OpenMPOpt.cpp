@@ -129,6 +129,11 @@ static cl::opt<unsigned>
                           cl::desc("Maximal number of attributor iterations."),
                           cl::init(256));
 
+static cl::opt<unsigned>
+    SharedMemoryLimit("openmp-opt-shared-limit", cl::Hidden,
+                      cl::desc("Maximum amount of shared memory to use."),
+                      cl::init(std::numeric_limits<unsigned>::max()));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -3000,6 +3005,14 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
 
       auto *AllocSize = cast<ConstantInt>(CB->getArgOperand(0));
 
+      if (AllocSize->getZExtValue() + SharedMemoryUsed > SharedMemoryLimit) {
+        LLVM_DEBUG(dbgs() << TAG << "Cannot replace call " << *CB
+                          << " with shared memory."
+                          << " Shared memory usage is limited to "
+                          << SharedMemoryLimit << " bytes\n");
+        continue;
+      }
+
       LLVM_DEBUG(dbgs() << TAG << "Replace globalization call " << *CB
                         << " with " << AllocSize->getZExtValue()
                         << " bytes of shared memory\n");
@@ -3034,7 +3047,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       A.deleteAfterManifest(*CB);
       A.deleteAfterManifest(*FreeCalls.front());
 
-      NumBytesMovedToSharedMemory += AllocSize->getZExtValue();
+      SharedMemoryUsed += AllocSize->getZExtValue();
+      NumBytesMovedToSharedMemory = SharedMemoryUsed;
       Changed = ChangeStatus::CHANGED;
     }
 
@@ -3070,6 +3084,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   SmallSetVector<CallBase *, 4> MallocCalls;
   /// Collection of potentially removed free calls in a function.
   SmallPtrSet<CallBase *, 4> PotentialRemovedFreeCalls;
+  /// The total amount of shared memory that has been used for HeapToShared.
+  unsigned SharedMemoryUsed = 0;
 };
 
 struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
