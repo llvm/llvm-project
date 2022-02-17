@@ -73,10 +73,10 @@ using llvm::StringRef;
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &CGO)
-    : builder(&context), astCtx(astctx), target(astCtx.getTargetInfo()),
-      codeGenOpts(CGO), genTypes(*this), langOpts(astctx.getLangOpts()) {
-  theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
-}
+    : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
+      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
+                            builder.getUnknownLoc())},
+      target(astCtx.getTargetInfo()), genTypes{*this} {}
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
   const SourceManager &SM = astCtx.getSourceManager();
