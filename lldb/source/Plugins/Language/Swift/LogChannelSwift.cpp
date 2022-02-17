@@ -13,14 +13,18 @@ using namespace lldb_private;
 static constexpr Log::Category g_categories[] = {
     {{"health"},
      {"log all messages related to lldb Swift operational health"},
-     LIBLLDB_SWIFT_LOG_HEALTH},
+     SwiftLog::Health},
 };
 
-static Log::Channel g_channel(g_categories, LIBLLDB_SWIFT_LOG_HEALTH);
+static Log::Channel g_channel(g_categories, SwiftLog::Health);
 
 static std::string g_swift_log_buffer;
 
-Log::Channel LogChannelSwift::g_channel(g_categories, SWIFT_LOG_DEFAULT);
+Log::Channel LogChannelSwift::g_channel(g_categories, SwiftLog::Health);
+
+template <> Log::Channel &lldb_private::LogChannelFor<SwiftLog>() {
+  return g_channel;
+}
 
 void LogChannelSwift::Initialize() {
   Log::Register("swift", g_channel);

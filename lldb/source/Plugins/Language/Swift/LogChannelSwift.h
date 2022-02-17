@@ -14,6 +14,10 @@
 
 namespace lldb_private {
 
+enum class SwiftLog : Log::MaskType {
+  Health = Log::ChannelFlag<0>,
+  LLVM_MARK_AS_BITMASK_ENUM(Health)
+};
 #define LIBLLDB_SWIFT_LOG_HEALTH (1u << 1)
 #define SWIFT_LOG_DEFAULT (LIBLLDB_SWIFT_LOG_HEALTH)
 
@@ -24,9 +28,11 @@ public:
   static void Initialize();
   static void Terminate();
 
-  static Log *GetLogIfAll(uint32_t mask) { return g_channel.GetLogIfAll(mask); }
-  static Log *GetLogIfAny(uint32_t mask) { return g_channel.GetLogIfAny(mask); }
+  static Log *GetLogIfAll(SwiftLog mask) { return GetLog(mask); }
+  static Log *GetLogIfAny(SwiftLog mask) { return GetLog(mask); }
 };
+
+template <> Log::Channel &LogChannelFor<SwiftLog>();
 
 Log *GetSwiftHealthLog();
 llvm::StringRef GetSwiftHealthLogData();
