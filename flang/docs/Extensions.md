@@ -217,6 +217,8 @@ end
 * At runtime, `NAMELIST` input will skip over `NAMELIST` groups
   with other names, and will treat text before and between groups
   as if they were comment lines, even if not begun with `!`.
+* Commas are required in FORMAT statements and character variables
+  only when they prevent ambiguity.
 
 ### Extensions supported when enabled by options
 

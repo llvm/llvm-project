@@ -301,8 +301,14 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       if (ch != 'P') { // 1PE5.2 - comma not required (C1302)
         CharType peek{Capitalize(PeekNext())};
         if (peek >= 'A' && peek <= 'Z') {
-          next = peek;
-          ++offset_;
+          if (ch == 'A' /* anticipate F'202X AT editing */ || ch == 'B' ||
+              ch == 'D' || ch == 'E' || ch == 'R' || ch == 'S' || ch == 'T') {
+            // Assume a two-letter edit descriptor
+            next = peek;
+            ++offset_;
+          } else {
+            // extension: assume a comma between 'ch' and 'peek'
+          }
         }
       }
       if ((!next &&
