@@ -376,17 +376,20 @@ private:
 
     // Determine the actual operand to introduce a clone for and rewire the
     // operand to point to the clone instead.
-    Value operand =
-        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber())
-            [llvm::find(it->getSuccessorInputs(), blockArg).getIndex()];
+    auto operands =
+        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber());
+    size_t operandIndex =
+        llvm::find(it->getSuccessorInputs(), blockArg).getIndex() +
+        operands.getBeginOperandIndex();
+    Value operand = parentOp->getOperand(operandIndex);
+    assert(operand ==
+               operands[operandIndex - operands.getBeginOperandIndex()] &&
+           "region interface operands don't match parentOp operands");
     auto clone = introduceCloneBuffers(operand, parentOp);
     if (failed(clone))
       return failure();
 
-    auto op = llvm::find(parentOp->getOperands(), operand);
-    assert(op != parentOp->getOperands().end() &&
-           "parentOp does not contain operand");
-    parentOp->setOperand(op.getIndex(), *clone);
+    parentOp->setOperand(operandIndex, *clone);
     return success();
   }
 
