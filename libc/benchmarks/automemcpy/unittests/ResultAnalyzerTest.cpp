@@ -24,7 +24,8 @@ TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsOneSample) {
   static constexpr DistributionId DistA = {{"A"}};
   static constexpr SampleId Id = {Foo1, DistA};
   static constexpr Sample kSamples[] = {
-      Sample{Id, 4},
+      Sample{Id, SampleType::ITERATION, 4},
+      Sample{Id, SampleType::AGGREGATE, -1}, // Aggegates gets discarded
   };
 
   const std::vector<FunctionData> Data = getThroughputs(kSamples);
@@ -42,8 +43,9 @@ TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsManySamplesSameBucket) {
   static constexpr FunctionId Foo1 = {"memcpy1", FunctionType::MEMCPY};
   static constexpr DistributionId DistA = {{"A"}};
   static constexpr SampleId Id = {Foo1, DistA};
-  static constexpr Sample kSamples[] = {Sample{Id, 4}, Sample{Id, 5},
-                                        Sample{Id, 5}};
+  static constexpr Sample kSamples[] = {Sample{Id, SampleType::ITERATION, 4},
+                                        Sample{Id, SampleType::ITERATION, 5},
+                                        Sample{Id, SampleType::ITERATION, 5}};
 
   const std::vector<FunctionData> Data = getThroughputs(kSamples);
   EXPECT_THAT(Data, SizeIs(1));
@@ -63,8 +65,10 @@ TEST(AutomemcpyJsonResultsAnalyzer, getThroughputsServeralFunctionAndDist) {
   static constexpr FunctionId Foo2 = {"memcpy2", FunctionType::MEMCPY};
   static constexpr DistributionId DistB = {{"B"}};
   static constexpr Sample kSamples[] = {
-      Sample{{Foo1, DistA}, 1}, Sample{{Foo1, DistB}, 2},
-      Sample{{Foo2, DistA}, 3}, Sample{{Foo2, DistB}, 4}};
+      Sample{{Foo1, DistA}, SampleType::ITERATION, 1},
+      Sample{{Foo1, DistB}, SampleType::ITERATION, 2},
+      Sample{{Foo2, DistA}, SampleType::ITERATION, 3},
+      Sample{{Foo2, DistB}, SampleType::ITERATION, 4}};
   // Data is aggregated per function.
   const std::vector<FunctionData> Data = getThroughputs(kSamples);
   EXPECT_THAT(Data, SizeIs(2)); // 2 functions Foo1 and Foo2.
@@ -78,9 +82,10 @@ TEST(AutomemcpyJsonResultsAnalyzer, getScore) {
   static constexpr FunctionId Foo2 = {"memcpy2", FunctionType::MEMCPY};
   static constexpr FunctionId Foo3 = {"memcpy3", FunctionType::MEMCPY};
   static constexpr DistributionId Dist = {{"A"}};
-  static constexpr Sample kSamples[] = {Sample{{Foo1, Dist}, 1},
-                                        Sample{{Foo2, Dist}, 2},
-                                        Sample{{Foo3, Dist}, 3}};
+  static constexpr Sample kSamples[] = {
+      Sample{{Foo1, Dist}, SampleType::ITERATION, 1},
+      Sample{{Foo2, Dist}, SampleType::ITERATION, 2},
+      Sample{{Foo3, Dist}, SampleType::ITERATION, 3}};
 
   // Data is aggregated per function.
   std::vector<FunctionData> Data = getThroughputs(kSamples);
@@ -113,9 +118,12 @@ TEST(AutomemcpyJsonResultsAnalyzer, castVotes) {
   static constexpr DistributionId DistA = {{"A"}};
   static constexpr DistributionId DistB = {{"B"}};
   static constexpr Sample kSamples[] = {
-      Sample{{Foo1, DistA}, 0}, Sample{{Foo1, DistB}, 30},
-      Sample{{Foo2, DistA}, 1}, Sample{{Foo2, DistB}, 100},
-      Sample{{Foo3, DistA}, 7}, Sample{{Foo3, DistB}, 100},
+      Sample{{Foo1, DistA}, SampleType::ITERATION, 0},
+      Sample{{Foo1, DistB}, SampleType::ITERATION, 30},
+      Sample{{Foo2, DistA}, SampleType::ITERATION, 1},
+      Sample{{Foo2, DistB}, SampleType::ITERATION, 100},
+      Sample{{Foo3, DistA}, SampleType::ITERATION, 7},
+      Sample{{Foo3, DistB}, SampleType::ITERATION, 100},
   };
 
   // DistA Thoughput ranges from 0 to 7.
