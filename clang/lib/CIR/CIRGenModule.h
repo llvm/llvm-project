@@ -40,11 +40,13 @@ namespace cir {
 /// preserving the semantics of the language and (hopefully) allow to perform
 /// accurate analysis and transformation based on these high level semantics.
 class CIRGenModule {
+  CIRGenModule(CIRGenModule &) = delete;
+  CIRGenModule &operator=(CIRGenModule &) = delete;
+
 public:
   CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
                const clang::CodeGenOptions &CGO);
-  CIRGenModule(CIRGenModule &) = delete;
-  CIRGenModule &operator=(CIRGenModule &) = delete;
+
   ~CIRGenModule() = default;
 
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
@@ -52,13 +54,24 @@ public:
       llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
 
 private:
-  /// A "module" matches a c/cpp source file: containing a list of functions.
-  mlir::ModuleOp theModule;
-
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
   mlir::OpBuilder builder;
+
+  /// Hold Clang AST information.
+  clang::ASTContext &astCtx;
+
+  const clang::LangOptions &langOpts;
+
+  const clang::CodeGenOptions &codeGenOpts;
+
+  /// A "module" matches a c/cpp source file: containing a list of functions.
+  mlir::ModuleOp theModule;
+
+  const clang::TargetInfo &target;
+  /// Per-module type mapping from clang AST to CIR.
+  CIRGenTypes genTypes;
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
@@ -67,20 +80,10 @@ private:
   /// dropped.
   SymTableTy symbolTable;
 
-  /// Hold Clang AST information.
-  clang::ASTContext &astCtx;
-
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *CurCGF = nullptr;
 
-  const clang::TargetInfo &target;
-  const clang::CodeGenOptions &codeGenOpts;
-
-  /// Per-module type mapping from clang AST to CIR.
-  CIRGenTypes genTypes;
-
-  const clang::LangOptions &langOpts;
   /// -------
   /// Goto
   /// -------
