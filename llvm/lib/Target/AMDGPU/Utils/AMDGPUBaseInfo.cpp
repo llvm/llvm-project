@@ -1523,6 +1523,10 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
 }
 
+bool hasMAIInsts(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
+}
+
 int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
                          int32_t ArgNumVGPR) {
   if (has90AInsts && ArgNumAGPR)
