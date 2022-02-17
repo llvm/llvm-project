@@ -2119,6 +2119,8 @@ private:
                                        OMPRTL___kmpc_barrier_simple_generic);
     ExternalizationRAII ThreadId(OMPInfoCache,
                                  OMPRTL___kmpc_get_hardware_thread_id_in_block);
+    ExternalizationRAII NumThreads(
+        OMPInfoCache, OMPRTL___kmpc_get_hardware_num_threads_in_block);
     ExternalizationRAII WarpSize(OMPInfoCache, OMPRTL___kmpc_get_warp_size);
 
     registerAAs(IsModulePass);
