@@ -659,10 +659,10 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return unknown();
 
-  if (isa<ScalableVectorType>(I.getAllocatedType()))
+  TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
+  if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return unknown();
-
-  APInt Size(IntTyBits, DL.getTypeAllocSize(I.getAllocatedType()));
+  APInt Size(IntTyBits, ElemSize.getKnownMinSize());
   if (!I.isArrayAllocation())
     return std::make_pair(align(Size, I.getAlign()), Zero);
 
