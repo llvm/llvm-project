@@ -2782,10 +2782,10 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
       case X86ISD::SUB:
       case X86ISD::ADC:
       case X86ISD::SBB:
-      /* TODO: These opcodes can be added safely, but we may want to justify
-               their inclusion for different reasons (better for reg-alloc).
       case X86ISD::SMUL:
       case X86ISD::UMUL:
+      /* TODO: These opcodes can be added safely, but we may want to justify
+               their inclusion for different reasons (better for reg-alloc).
       case X86ISD::OR:
       case X86ISD::XOR:
       case X86ISD::AND:
