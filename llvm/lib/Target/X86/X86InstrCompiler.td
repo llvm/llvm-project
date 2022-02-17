@@ -1239,8 +1239,7 @@ def X86tcret_1reg : PatFrag<(ops node:$ptr, node:$off),
                              (X86tcret node:$ptr, node:$off), [{
   // X86tcret args: (*chain, ptr, imm, regs..., glue)
   unsigned NumRegs = 1;
-  LoadSDNode* ld = dyn_cast<LoadSDNode>(N->getOperand(1));
-  const SDValue& BasePtr = ld->getBasePtr();
+  const SDValue& BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
   if (isa<FrameIndexSDNode>(BasePtr))
     NumRegs = 3;
   else if (BasePtr->getNumOperands() && isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
