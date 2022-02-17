@@ -406,7 +406,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       Changes[i].Spaces += Shift;
 
     // We should not remove required spaces unless we break the line before.
-    assert(Changes[i].NewlinesBefore > 0 ||
+    assert(Shift >= 0 || Changes[i].NewlinesBefore > 0 ||
            Changes[i].Spaces >=
                static_cast<int>(Changes[i].Tok->SpacesRequiredBefore) ||
            Changes[i].Tok->is(tok::eof));
