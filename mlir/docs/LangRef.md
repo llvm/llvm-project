@@ -443,7 +443,8 @@ entry block cannot be listed as a successor of any other block. The syntax for a
 region is as follows:
 
 ```
-region ::= `{` block* `}`
+region      ::= `{` entry-block? block* `}`
+entry-block ::= operation+
 ```
 
 A function body is an example of a region: it consists of a CFG of blocks and
@@ -453,6 +454,11 @@ different block, or return from a function where the types of the `return`
 arguments must match the result types of the function signature. Similarly, the
 function arguments must match the types and count of the region arguments. In
 general, operations with regions can define these correspondences arbitrarily.
+
+An *entry block* is a block with no label and no arguments that may occur at
+the beginning of a region. It enables a common pattern of using a region to
+open a new scope.
+
 
 ### Value Scoping
 
