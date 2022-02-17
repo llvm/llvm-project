@@ -834,22 +834,6 @@ LValue CIRGenModule::buildDeclRefLValue(const DeclRefExpr *E) {
   llvm_unreachable("Unhandled DeclRefExpr?");
 }
 
-/// Emit code to compute the specified expression which
-/// can have any type.  The result is returned as an RValue struct.
-/// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
-/// where the result should be returned.
-RValue CIRGenModule::buildAnyExpr(const Expr *E) {
-  switch (CIRGenFunction::getEvaluationKind(E->getType())) {
-  case TEK_Scalar:
-    return RValue::get(buildScalarExpr(E));
-  case TEK_Complex:
-    assert(0 && "not implemented");
-  case TEK_Aggregate:
-    assert(0 && "not implemented");
-  }
-  llvm_unreachable("bad evaluation kind");
-}
-
 LValue CIRGenModule::buildBinaryOperatorLValue(const BinaryOperator *E) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (E->getOpcode() == BO_Comma) {
@@ -870,7 +854,7 @@ LValue CIRGenModule::buildBinaryOperatorLValue(const BinaryOperator *E) {
                clang::Qualifiers::ObjCLifetime::OCL_None &&
            "not implemented");
 
-    RValue RV = buildAnyExpr(E->getRHS());
+    RValue RV = CurCGF->buildAnyExpr(E->getRHS());
     LValue LV = buildLValue(E->getLHS());
 
     SourceLocRAIIObject Loc{*this, getLoc(E->getSourceRange())};

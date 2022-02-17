@@ -336,12 +336,6 @@ public:
 
   LValue buildDeclRefLValue(const clang::DeclRefExpr *E);
 
-  /// Emit code to compute the specified expression which
-  /// can have any type.  The result is returned as an RValue struct.
-  /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
-  /// where the result should be returned.
-  RValue buildAnyExpr(const clang::Expr *E);
-
   LValue buildBinaryOperatorLValue(const clang::BinaryOperator *E);
 
   /// FIXME: this could likely be a common helper and not necessarily related
