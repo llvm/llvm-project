@@ -1062,7 +1062,8 @@ LValue CIRGenModule::buildLValue(const Expr *E) {
 /// EmitIgnoredExpr - Emit code to compute the specified expression,
 /// ignoring the result.
 void CIRGenModule::buildIgnoredExpr(const Expr *E) {
-  assert(!E->isPRValue() && "not implemented");
+  if (E->isPRValue())
+    return (void)CurCGF->buildAnyExpr(E);
 
   // Just emit it as an l-value and drop the result.
   buildLValue(E);
