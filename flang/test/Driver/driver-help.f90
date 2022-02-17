@@ -65,6 +65,7 @@
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                   Enable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
+! HELP-FC1-NEXT: -emit-llvm Use the LLVM representation for assembler and object files
 ! HELP-FC1-NEXT: -emit-mlir Build the parse tree, then lower it to MLIR
 ! HELP-FC1-NEXT: -emit-obj Emit native object files
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
