@@ -194,5 +194,4 @@ mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
-  CUDA_REPORT_IF_ERROR(cudaSetDevice(device));
 }
