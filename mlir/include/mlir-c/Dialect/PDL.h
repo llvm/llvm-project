@@ -71,4 +71,4 @@ MLIR_CAPI_EXPORTED MlirType mlirPDLValueTypeGet(MlirContext ctx);
 }
 #endif
 
-#endif // MLIR_C_DIALECT_QUANT_H
+#endif // MLIR_C_DIALECT_PDL_H
