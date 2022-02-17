@@ -930,7 +930,9 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
-    expandSGPRCopy(*this, MBB, MI, DL, DestReg, SrcReg, KillSrc, RC, Forward);
+    const bool CanKillSuperReg = KillSrc && !RI.regsOverlap(SrcReg, DestReg);
+    expandSGPRCopy(*this, MBB, MI, DL, DestReg, SrcReg, CanKillSuperReg, RC,
+                   Forward);
     return;
   }
 
