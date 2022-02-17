@@ -6211,7 +6211,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   }
 
   // Try to transform the switch into an icmp and a branch.
-  if (TurnSwitchRangeIntoICmp(SI, Builder))
+  // The conversion from switch to comparison may lose information on
+  // impossible switch values, so disable it early in the pipeline.
+  if (Options.ConvertSwitchRangeToICmp && TurnSwitchRangeIntoICmp(SI, Builder))
     return requestResimplify();
 
   // Remove unreachable cases.

@@ -345,6 +345,7 @@ void HexagonPassConfig::addIRPasses() {
     if (EnableInitialCFGCleanup)
       addPass(createCFGSimplificationPass(SimplifyCFGOptions()
                                               .forwardSwitchCondToPhi(true)
+                                              .convertSwitchRangeToICmp(true)
                                               .convertSwitchToLookupTable(true)
                                               .needCanonicalLoops(false)
                                               .hoistCommonInsts(true)
