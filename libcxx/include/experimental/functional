@@ -208,11 +208,9 @@ public:
     pair<_RandomAccessIterator2, _RandomAccessIterator2>
     operator ()(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
-        static_assert ( std::is_same<
-                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type>::type,
-                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator2>::value_type>::type
-                    >::value,
-                "Corpus and Pattern iterators must point to the same type" );
+        static_assert(__is_same_uncvref<typename iterator_traits<_RandomAccessIterator1>::value_type,
+                                        typename iterator_traits<_RandomAccessIterator2>::value_type>::value,
+                      "Corpus and Pattern iterators must point to the same type");
 
         if (__f      == __l )    return make_pair(__l, __l); // empty corpus
         if (__first_ == __last_) return make_pair(__f, __f); // empty pattern
@@ -360,11 +358,9 @@ public:
     pair<_RandomAccessIterator2, _RandomAccessIterator2>
     operator ()(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
-        static_assert ( std::is_same<
-                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type>::type,
-                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator2>::value_type>::type
-                    >::value,
-                "Corpus and Pattern iterators must point to the same type" );
+        static_assert(__is_same_uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type,
+                                        typename std::iterator_traits<_RandomAccessIterator2>::value_type>::value,
+                      "Corpus and Pattern iterators must point to the same type");
 
         if (__f      == __l )    return make_pair(__l, __l); // empty corpus
         if (__first_ == __last_) return make_pair(__f, __f); // empty pattern
