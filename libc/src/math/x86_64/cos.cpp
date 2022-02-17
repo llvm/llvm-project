@@ -12,9 +12,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(double, cos, (double x)) {
-  double result;
-  __asm__ __volatile__("fcos" : "=t"(result) : "f"(x) : "cc");
-  return result;
+  __asm__ __volatile__("fcos" : "+t"(x));
+  return x;
 }
 
 } // namespace __llvm_libc
