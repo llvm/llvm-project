@@ -53,9 +53,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-z");
   CmdArgs.push_back("now");
 
-  bool IsLLD;
-  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath(&IsLLD));
-  if (IsLLD) {
+  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
+  if (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
+      llvm::sys::path::stem(Exec).equals_insensitive("ld.lld")) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back("rodynamic");
     CmdArgs.push_back("-z");
