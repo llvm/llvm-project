@@ -245,7 +245,7 @@ void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
 
 bool AArch64_MC::isQForm(const MCInst &MI, const MCInstrInfo *MCII) {
   const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
-  return llvm::any_of(MI, [](const MCOperand &Op) {
+  return llvm::any_of(MI, [&FPR128](const MCOperand &Op) {
     return Op.isReg() && FPR128.contains(Op.getReg());
   });
 }
