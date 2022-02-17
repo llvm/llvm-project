@@ -10,6 +10,7 @@
 #define liblldb_LogChannelSwift_h_
 
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {

@@ -21,6 +21,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "swift/ABI/Task.h"
 #include "swift/Demangling/Demangle.h"
