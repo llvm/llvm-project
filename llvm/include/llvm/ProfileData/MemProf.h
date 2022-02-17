@@ -161,7 +161,7 @@ struct MemProfRecord {
     bool operator!=(const Frame &Other) const { return !operator==(Other); }
 
     // Write the contents of the frame to the ostream \p OS.
-    void write(raw_ostream & OS) const {
+    void serialize(raw_ostream & OS) const {
       using namespace support;
 
       endian::Writer LE(OS, little);
@@ -175,6 +175,22 @@ struct MemProfRecord {
       LE.write<uint32_t>(LineOffset);
       LE.write<uint32_t>(Column);
       LE.write<bool>(IsInlineFrame);
+    }
+
+    // Read a frame from char data which has been serialized as little endian.
+    static Frame deserialize(const unsigned char *Ptr) {
+      using namespace support;
+      return Frame(
+          /*Function=*/endian::readNext<uint64_t, little, unaligned>(Ptr),
+          /*LineOffset=*/endian::readNext<uint32_t, little, unaligned>(Ptr),
+          /*Column=*/endian::readNext<uint32_t, little, unaligned>(Ptr),
+          /*IsInlineFrame=*/endian::readNext<bool, little, unaligned>(Ptr));
+    }
+
+    // Returns the size of the frame information.
+    static constexpr size_t serializedSize() {
+      return sizeof(Frame::Function) + sizeof(Frame::LineOffset) +
+             sizeof(Frame::Column) + sizeof(Frame::IsInlineFrame);
     }
   });
 
