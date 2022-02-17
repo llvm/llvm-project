@@ -153,6 +153,20 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
+// VariableOp
+//===----------------------------------------------------------------------===//
+
+/// The variable op requires that the attribute's type matches the return type.
+LogicalResult emitc::VariableOp::verify() {
+  Attribute value = valueAttr();
+  Type type = getType();
+  if (!value.getType().isa<NoneType>() && type != value.getType())
+    return emitOpError() << "requires attribute's type (" << value.getType()
+                         << ") to match op's return type (" << type << ")";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
