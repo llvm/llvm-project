@@ -1725,7 +1725,7 @@ void CGDebugInfo::CollectRecordFields(
 llvm::DISubroutineType *
 CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
                                    llvm::DIFile *Unit, bool decl) {
-  const FunctionProtoType *Func = Method->getType()->getAs<FunctionProtoType>();
+  const auto *Func = Method->getType()->castAs<FunctionProtoType>();
   if (Method->isStatic())
     return cast_or_null<llvm::DISubroutineType>(
         getOrCreateType(QualType(Func, 0), Unit));
