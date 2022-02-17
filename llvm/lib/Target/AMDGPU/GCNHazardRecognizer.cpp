@@ -930,6 +930,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixLdsDirectVMEMHazard(MI);
   }
   fixVALUPartialForwardingHazard(MI);
+  fixVALUTransUseHazard(MI);
   fixWMMAHazards(MI);
 }
 
@@ -1434,6 +1435,86 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
                             Visited))
     return false;
 
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0x0fff);
+
+  return true;
+}
+
+bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
+  if (!ST.hasVALUTransUseHazard())
+    return false;
+  if (!SIInstrInfo::isVALU(*MI))
+    return false;
+
+  SmallSet<Register, 4> SrcVGPRs;
+
+  for (const MachineOperand &Use : MI->explicit_uses()) {
+    if (Use.isReg() && TRI.isVGPR(MF.getRegInfo(), Use.getReg()))
+      SrcVGPRs.insert(Use.getReg());
+  }
+
+  // Look for the following pattern:
+  //   Va <- TRANS VALU
+  //   intv
+  //   MI Va (WaitState = 0)
+  //
+  // Where:
+  // intv <= 5 VALUs / 1 TRANS
+  //
+  // If found, insert an appropriate S_WAITCNT_DEPCTR before MI.
+
+  const int IntvMaxVALUs = 5;
+  const int IntvMaxTRANS = 1;
+
+  struct StateType {
+    int VALUs = 0;
+    int TRANS = 0;
+  };
+
+  StateType State;
+
+  // This overloads expiry testing with all the hazard detection
+  auto IsHazardFn = [&, this](StateType &State, const MachineInstr &I) {
+    // Too many VALU states have passed
+    if (State.VALUs > IntvMaxVALUs || State.TRANS > IntvMaxTRANS)
+      return HazardExpired;
+
+    // Instructions which cause va_vdst==0 expire hazard
+    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
+           SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+        (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         I.getOperand(0).getImm() == 0x0fff))
+      return HazardExpired;
+
+    // Track registers writes
+    if (SIInstrInfo::isTRANS(I)) {
+      for (Register Src : SrcVGPRs) {
+        if (I.modifiesRegister(Src, &TRI)) {
+          return HazardFound;
+        }
+      }
+    }
+
+    return NoHazardFound;
+  };
+  auto UpdateStateFn = [] (StateType &State, const MachineInstr &MI) {
+    if (SIInstrInfo::isVALU(MI))
+      State.VALUs += 1;
+    if (SIInstrInfo::isTRANS(MI))
+      State.TRANS += 1;
+  };
+
+  DenseSet<const MachineBasicBlock *> Visited;
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn,
+                            MI->getParent(),
+                            std::next(MI->getReverseIterator()),
+                            Visited))
+    return false;
+
+  // Hazard is observed - insert a wait on va_dst counter to ensure hazard is
+  // avoided (mask 0x0fff achieves this).
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(0x0fff);

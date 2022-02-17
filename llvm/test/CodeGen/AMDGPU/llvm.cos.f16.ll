@@ -182,6 +182,7 @@ define amdgpu_kernel void @cos_v2f16(<2 x half> addrspace(1)* %r, <2 x half> add
 ; GFX11-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
 ; GFX11-NEXT:    v_cos_f16_e32 v1, v1
 ; GFX11-NEXT:    v_cos_f16_e32 v2, v2
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm

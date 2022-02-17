@@ -138,6 +138,7 @@ define amdgpu_ps i7 @s_fshr_i7(i7 inreg %lhs, i7 inreg %rhs, i7 inreg %amt) {
 ; GFX11-NEXT:    s_and_b32 s2, s2, s3
 ; GFX11-NEXT:    s_and_b32 s1, s1, s3
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-NEXT:    v_mul_lo_u32 v1, -7, v0
@@ -299,6 +300,7 @@ define i7 @v_fshr_i7(i7 %lhs, i7 %rhs, i7 %amt) {
 ; GFX11-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x7f, v1
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v3, v3
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v3, 0x4f7ffffe, v3
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    v_mul_lo_u32 v4, -7, v3
@@ -1623,6 +1625,7 @@ define amdgpu_ps i24 @s_fshr_i24(i24 inreg %lhs, i24 inreg %rhs, i24 inreg %amt)
 ; GFX11-NEXT:    s_and_b32 s2, s2, s3
 ; GFX11-NEXT:    s_and_b32 s1, s1, s3
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-NEXT:    v_mul_lo_u32 v1, 0xffffffe8, v0
@@ -1783,6 +1786,7 @@ define i24 @v_fshr_i24(i24 %lhs, i24 %rhs, i24 %amt) {
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xffffff, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v3, v3
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v3, 0x4f7ffffe, v3
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    v_mul_lo_u32 v4, 0xffffffe8, v3
@@ -2345,6 +2349,7 @@ define amdgpu_ps i48 @s_fshr_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX11-NEXT:    s_or_b32 s13, s15, s13
 ; GFX11-NEXT:    s_bfe_u32 s14, s14, 0x100000
 ; GFX11-NEXT:    s_bfe_u32 s13, s13, 0x100000
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_dual_mul_f32 v0, 0x4f7ffffe, v0 :: v_dual_mul_f32 v1, 0x4f7ffffe, v1
 ; GFX11-NEXT:    s_lshl_b32 s14, s14, 16
 ; GFX11-NEXT:    s_lshr_b32 s15, s5, 8
@@ -2696,6 +2701,7 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %lhs, <2 x i24> %rhs, <2 x i24> %amt) {
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v6, v6
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v7, v7
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_dual_mul_f32 v6, 0x4f7ffffe, v6 :: v_dual_mul_f32 v7, 0x4f7ffffe, v7
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v6, v6
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v7, v7

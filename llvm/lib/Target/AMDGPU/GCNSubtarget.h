@@ -990,6 +990,10 @@ public:
     return getGeneration() >= GFX11;
   }
 
+  bool hasVALUTransUseHazard() const {
+    return getGeneration() >= GFX11;
+  }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 

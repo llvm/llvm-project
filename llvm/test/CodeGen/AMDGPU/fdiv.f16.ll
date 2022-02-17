@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS,GFX11 %s
 
 ; Make sure fdiv is promoted to f32.
 
@@ -168,6 +168,7 @@ entry:
 ; GFX8PLUS: {{flat|global}}_load_{{ushort|u16}} [[VAL:v[0-9]+]]
 ; GFX8PLUS-NOT: [[VAL]]
 ; GFX8PLUS: v_sqrt_f16_e32 [[SQRT:v[0-9]+]], [[VAL]]
+; GFX11: s_waitcnt_depctr 0xfff
 ; GFX8PLUS-NEXT: v_rcp_f16_e64 [[RESULT:v[0-9]+]], -[[SQRT]]
 ; GFX8PLUS-NOT: [RESULT]]
 ; GFX8PLUS: {{flat|global}}_store_{{short|b16}} v{{.+}}, [[RESULT]]
