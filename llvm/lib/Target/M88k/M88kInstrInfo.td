@@ -812,17 +812,17 @@ def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu (i32 R0), tglobaladdr:$dst)>;
 let isBarrier = 1, isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
   def JMP : F_JMP<0b11000, (outs), (ins GPR:$rs2), "jmp", [(brind GPR:$rs2)]>;
   let hasDelaySlot = 1 in
-    def JMPn : F_JMP<0b11000, (outs), (ins GPR:$rs2), "jmp.n">;
+    def JMPn : F_JMP<0b11000, (outs), (ins GPR:$rs2), "jmp">;
 }
 
 let isCall = 1 in {
   def JSR : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
   let hasDelaySlot = 1 in
-    def JSRn : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr.n">;
+    def JSRn : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
 
   def BSR : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr">;
   let hasDelaySlot = 1 in
-    def BSRn : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr.n">;
+    def BSRn : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr">;
 }
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R1] in {
@@ -833,7 +833,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   def BR : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br",
                     [(br bb:$d26)]>;
   let hasDelaySlot = 1 in
-    def BRn : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br.n">;
+    def BRn : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br">;
 }
 
 let isBranch = 1, isTerminator = 1 in {
@@ -849,13 +849,13 @@ let isBranch = 1, isTerminator = 1 in {
   let hasDelaySlot = 1 in {
     def BB0n : F_BCOND<0b11010,
                        (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
-                       "bb0.n">;
+                       "bb0">;
     def BB1n : F_BCOND<0b11011,
                       (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
-                      "bb1.n">;
+                      "bb1">;
     def BCNDn : F_BCOND<0b11101,
                         (outs), (ins ccode:$m5, GPR:$rs1, brtarget16:$d16),
-                        "bcnd.n">;
+                        "bcnd">;
   }
 }
 

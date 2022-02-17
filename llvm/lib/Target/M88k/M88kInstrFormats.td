@@ -18,10 +18,20 @@ class InstM88k<dag outs, dag ins, string asm, string operands,
 
   dag OutOperandList = outs;
   dag InOperandList = ins;
-  let AsmString = !if(!eq(operands, ""), asm, !strconcat(asm, " ", operands));
+  // Construct the assembler string from template parameters asm and operands.
+  // If the instruction has a delay slot, then append ".n" to the mnemonic.
+  let AsmString = !if(!eq(operands, ""),
+                     !if(hasDelaySlot, !strconcat(asm, ".n"), asm),
+                     !strconcat(!if(hasDelaySlot, !strconcat(asm, ".n"), asm), " ", operands));
   let Pattern = pattern;
 
   let DecoderNamespace = "M88k";
+
+  // Store the base opcode to enable grouping of instructions.
+  // For example, branch instructions with and without a delay slot have the
+  // same base opcode.
+  // TODO Works currently only for branches/jumps with and without a delay slot.
+  string Opcode = asm;
 }
 
 class Pseudo<dag outs, dag ins, list<dag> pattern>
@@ -31,7 +41,31 @@ class Pseudo<dag outs, dag ins, list<dag> pattern>
   let hasNoSchedulingInfo = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Mappings between instructions
+//===----------------------------------------------------------------------===//
+
+// Return the version of an instruction with delay slot.
+def getOpcodeWithDelaySlot : InstrMapping {
+  let FilterClass = "InstM88k";
+  let RowFields = ["Opcode"];
+  let ColFields = ["hasDelaySlot"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
+}
+
+// Return the version of an instruction without delay slot.
+def getOpcodeWithoutDelaySlot : InstrMapping {
+  let FilterClass = "InstM88k";
+  let RowFields = ["Opcode"];
+  let ColFields = ["hasDelaySlot"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
+}
+
+//===----------------------------------------------------------------------===//
 // The formats follow the categories specified in the User Manual.
+//===----------------------------------------------------------------------===//
 
 // Category: Logical.
 class F_L<dag outs, dag ins, string asm, string operands,
