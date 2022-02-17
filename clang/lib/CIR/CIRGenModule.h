@@ -202,6 +202,7 @@ public:
   mlir::OpBuilder &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() { return astCtx; }
   const clang::TargetInfo &getTarget() const { return target; }
+  const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
