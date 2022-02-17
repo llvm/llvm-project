@@ -583,6 +583,14 @@ private:
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
 
+  /// Emit call to llvm.dbg.declare for a binding declaration.
+  /// Returns a pointer to the DILocalVariable associated with the
+  /// llvm.dbg.declare, or nullptr otherwise.
+  llvm::DILocalVariable *EmitDeclare(const BindingDecl *decl, llvm::Value *AI,
+                                     llvm::Optional<unsigned> ArgNo,
+                                     CGBuilderTy &Builder,
+                                     const bool UsePointerValue = false);
+
   struct BlockByRefType {
     /// The wrapper struct used inside the __block_literal struct.
     llvm::DIType *BlockByRefWrapper;

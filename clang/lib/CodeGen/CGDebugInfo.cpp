@@ -4635,11 +4635,103 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   return D;
 }
 
+llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
+                                                llvm::Value *Storage,
+                                                llvm::Optional<unsigned> ArgNo,
+                                                CGBuilderTy &Builder,
+                                                const bool UsePointerValue) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  if (BD->hasAttr<NoDebugAttr>())
+    return nullptr;
+
+  // Skip the tuple like case, we don't handle that here
+  if (isa<DeclRefExpr>(BD->getBinding()))
+    return nullptr;
+
+  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
+  llvm::DIType *Ty = getOrCreateType(BD->getType(), Unit);
+
+  // If there is no debug info for this type then do not emit debug info
+  // for this variable.
+  if (!Ty)
+    return nullptr;
+
+  auto Align = getDeclAlignIfRequired(BD, CGM.getContext());
+  unsigned AddressSpace = CGM.getContext().getTargetAddressSpace(BD->getType());
+
+  SmallVector<uint64_t, 3> Expr;
+  AppendAddressSpaceXDeref(AddressSpace, Expr);
+
+  // Clang stores the sret pointer provided by the caller in a static alloca.
+  // Use DW_OP_deref to tell the debugger to load the pointer and treat it as
+  // the address of the variable.
+  if (UsePointerValue) {
+    assert(!llvm::is_contained(Expr, llvm::dwarf::DW_OP_deref) &&
+           "Debug info already contains DW_OP_deref.");
+    Expr.push_back(llvm::dwarf::DW_OP_deref);
+  }
+
+  unsigned Line = getLineNumber(BD->getLocation());
+  unsigned Column = getColumnNumber(BD->getLocation());
+  StringRef Name = BD->getName();
+  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
+  // Create the descriptor for the variable.
+  llvm::DILocalVariable *D = DBuilder.createAutoVariable(
+      Scope, Name, Unit, Line, Ty, CGM.getLangOpts().Optimize,
+      llvm::DINode::FlagZero, Align);
+
+  if (const MemberExpr *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
+    if (const FieldDecl *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      const unsigned fieldIndex = FD->getFieldIndex();
+      const clang::CXXRecordDecl *parent =
+          (const CXXRecordDecl *)FD->getParent();
+      const ASTRecordLayout &layout =
+          CGM.getContext().getASTRecordLayout(parent);
+      const uint64_t fieldOffset = layout.getFieldOffset(fieldIndex);
+
+      if (fieldOffset != 0) {
+        Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
+        Expr.push_back(
+            CGM.getContext().toCharUnitsFromBits(fieldOffset).getQuantity());
+      }
+    }
+  } else if (const ArraySubscriptExpr *ASE =
+                 dyn_cast<ArraySubscriptExpr>(BD->getBinding())) {
+    if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(ASE->getIdx())) {
+      const uint64_t value = IL->getValue().getZExtValue();
+      const uint64_t typeSize = CGM.getContext().getTypeSize(BD->getType());
+
+      if (value != 0) {
+        Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
+        Expr.push_back(CGM.getContext()
+                           .toCharUnitsFromBits(value * typeSize)
+                           .getQuantity());
+      }
+    }
+  }
+
+  // Insert an llvm.dbg.declare into the current block.
+  DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
+                         llvm::DILocation::get(CGM.getLLVMContext(), Line,
+                                               Column, Scope, CurInlinedAt),
+                         Builder.GetInsertBlock());
+
+  return D;
+}
+
 llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
                                        CGBuilderTy &Builder,
                                        const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+
+  if (auto *DD = dyn_cast<DecompositionDecl>(VD))
+    for (auto *B : DD->bindings()) {
+      EmitDeclare(B, Storage, llvm::None, Builder,
+                  VD->getType()->isReferenceType());
+    }
+
   return EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
 }
 
