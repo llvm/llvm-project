@@ -345,6 +345,57 @@ def LiteralValid : TestFormat_Op<[{
 }]>;
 
 //===----------------------------------------------------------------------===//
+// OIList Element
+//===----------------------------------------------------------------------===//
+
+// CHECK: error: format ambiguity because bar is used in two adjacent oilist elements.
+def OIListAdjacentOIList : TestFormat_Op<[{
+  oilist ( `foo` | `bar` ) oilist ( `bar` | `buzz` ) attr-dict
+}]>;
+// CHECK: error: expected literal, but got ')'
+def OIListErrorExpectedLiteral : TestFormat_Op<[{
+  oilist( `keyword` | ) attr-dict
+}]>;
+// CHECK: error: expected literal, but got ')'
+def OIListErrorExpectedEmpty : TestFormat_Op<[{
+  oilist() attr-dict
+}]>;
+// CHECK: error: expected literal, but got '$arg0'
+def OIListErrorNoLiteral : TestFormat_Op<[{
+  oilist( $arg0 `:` type($arg0) | $arg1 `:` type($arg1) ) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+// CHECK: error: format ambiguity because foo is used both in oilist element and the adjacent literal.
+def OIListLiteralAmbiguity : TestFormat_Op<[{
+  oilist( `foo` | `bar` ) `foo` attr-dict
+}]>;
+// CHECK: error: expected '(' before oilist argument list
+def OIListStartingToken : TestFormat_Op<[{
+  oilist `wrong` attr-dict
+}]>;
+
+// CHECK-NOT: error
+def OIListTrivial : TestFormat_Op<[{
+  oilist(`keyword` `(` `)` | `otherkeyword` `(` `)`) attr-dict
+}]>;
+def OIListSimple : TestFormat_Op<[{
+  oilist( `keyword` $arg0 `:` type($arg0)
+        | `otherkeyword` $arg1 `:` type($arg1)
+        | `thirdkeyword` $arg2 `:` type($arg2) )
+  attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1, Optional<AnyType>:$arg2)>;
+def OIListVariadic : TestFormat_Op<[{
+  oilist( `keyword` `(` $args0 `:` type($args0) `)`
+        | `otherkeyword` `(` $args1 `:` type($args1) `)`
+        | `thirdkeyword` `(` $args2 `:` type($args2) `)`)
+  attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Variadic<AnyType>:$args0, Variadic<AnyType>:$args1, Variadic<AnyType>:$args2)>;
+def OIListCustom : TestFormat_Op<[{
+  oilist( `private` `(` $arg0 `:` type($arg0) `)`
+        | `nowait`
+        | `reduction` custom<ReductionClause>($arg1, type($arg1))) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+
+//===----------------------------------------------------------------------===//
 // Optional Groups
 //===----------------------------------------------------------------------===//
 

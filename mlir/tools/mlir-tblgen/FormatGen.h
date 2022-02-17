@@ -54,6 +54,7 @@ public:
     greater,
     question,
     star,
+    pipe,
 
     // Keywords.
     keyword_start,
@@ -61,6 +62,7 @@ public:
     kw_attr_dict_w_keyword,
     kw_custom,
     kw_functional_type,
+    kw_oilist,
     kw_operands,
     kw_params,
     kw_qualified,
@@ -271,6 +273,7 @@ public:
     AttrDict,
     Custom,
     FunctionalType,
+    OIList,
     Operands,
     Ref,
     Regions,

@@ -387,6 +387,17 @@ void FoldToCallOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 // Parsing
 
+static ParseResult
+parseCustomOptionalOperand(OpAsmParser &parser,
+                           Optional<OpAsmParser::OperandType> &optOperand) {
+  if (succeeded(parser.parseOptionalLParen())) {
+    optOperand.emplace();
+    if (parser.parseOperand(*optOperand) || parser.parseRParen())
+      return failure();
+  }
+  return success();
+}
+
 static ParseResult parseCustomDirectiveOperands(
     OpAsmParser &parser, OpAsmParser::OperandType &operand,
     Optional<OpAsmParser::OperandType> &optOperand,
@@ -504,6 +515,12 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
 
 //===----------------------------------------------------------------------===//
 // Printing
+
+static void printCustomOptionalOperand(OpAsmPrinter &printer, Operation *,
+                                       Value optOperand) {
+  if (optOperand)
+    printer << "(" << optOperand << ") ";
+}
 
 static void printCustomDirectiveOperands(OpAsmPrinter &printer, Operation *,
                                          Value operand, Value optOperand,
