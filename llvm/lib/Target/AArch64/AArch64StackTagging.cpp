@@ -508,8 +508,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DT = &P->getDomTree();
 
-  if (DT == nullptr && (SInfo.AllocasToInstrument.size() > 1 ||
-                        !F->hasFnAttribute(Attribute::OptimizeNone))) {
+  if (DT == nullptr) {
     DeleteDT = std::make_unique<DominatorTree>(*F);
     DT = DeleteDT.get();
   }
@@ -519,7 +518,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (auto *P = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>())
     PDT = &P->getPostDomTree();
 
-  if (PDT == nullptr && !F->hasFnAttribute(Attribute::OptimizeNone)) {
+  if (PDT == nullptr) {
     DeletePDT = std::make_unique<PostDominatorTree>(*F);
     PDT = DeletePDT.get();
   }
