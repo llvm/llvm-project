@@ -1253,6 +1253,11 @@ void Writer::createStartFunction() {
     {
       raw_string_ostream os(bodyContent);
       writeUleb128(os, 0, "num locals");
+      if (WasmSym::applyGlobalRelocs) {
+        writeU8(os, WASM_OPCODE_CALL, "CALL");
+        writeUleb128(os, WasmSym::applyGlobalRelocs->getFunctionIndex(),
+                     "function index");
+      }
       if (WasmSym::initMemory) {
         writeU8(os, WASM_OPCODE_CALL, "CALL");
         writeUleb128(os, WasmSym::initMemory->getFunctionIndex(),
@@ -1262,11 +1267,6 @@ void Writer::createStartFunction() {
         // we must call it directly.
         writeU8(os, WASM_OPCODE_CALL, "CALL");
         writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
-                     "function index");
-      }
-      if (WasmSym::applyGlobalRelocs) {
-        writeU8(os, WASM_OPCODE_CALL, "CALL");
-        writeUleb128(os, WasmSym::applyGlobalRelocs->getFunctionIndex(),
                      "function index");
       }
       writeU8(os, WASM_OPCODE_END, "END");

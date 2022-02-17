@@ -212,9 +212,21 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
 
   assert(F.hasPersonalityFn() && "Personality function not found");
 
-  // __wasm_lpad_context global variable
+  // __wasm_lpad_context global variable.
+  // If the target supports TLS, make this thread-local. We can't just
+  // unconditionally make it thread-local and depend on
+  // CoalesceFeaturesAndStripAtomics to downgrade it, because stripping TLS has
+  // the side effect of disallowing the object from being linked into a
+  // shared-memory module, which we don't want to be responsible for.
   LPadContextGV = cast<GlobalVariable>(
       M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy));
+  Attribute FSAttr = F.getFnAttribute("target-features");
+  if (FSAttr.isValid()) {
+    StringRef FS = FSAttr.getValueAsString();
+    if (FS.contains("+atomics") && FS.contains("+bulk-memory"))
+      LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
+  }
+
   LPadIndexField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 0,
                                           "lpad_index_gep");
   LSDAField =

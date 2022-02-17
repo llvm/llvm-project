@@ -200,6 +200,11 @@ set(COMPILER_RT_SUPPORTED_ARCH)
 set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.cc)
 file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main() { printf(\"hello, world\"); }\n")
 
+# Check if we have SMP support for particular ARM architecture
+# If not use stubs instead of real atomic operations - see sync-ops.h
+set(ARM_SMP_CHECK_SRC ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/arm-barrier.cc)
+file(WRITE ${ARM_SMP_CHECK_SRC} "int main() { asm(\"dmb\"); return 0; }")
+
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND

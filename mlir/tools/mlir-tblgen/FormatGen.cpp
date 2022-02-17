@@ -115,6 +115,8 @@ FormatToken FormatLexer::lexToken() {
     return formToken(FormatToken::r_paren, tokStart);
   case '*':
     return formToken(FormatToken::star, tokStart);
+  case '|':
+    return formToken(FormatToken::pipe, tokStart);
 
   // Ignore whitespace characters.
   case 0:
@@ -164,6 +166,7 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("attr-dict-with-keyword", FormatToken::kw_attr_dict_w_keyword)
           .Case("custom", FormatToken::kw_custom)
           .Case("functional-type", FormatToken::kw_functional_type)
+          .Case("oilist", FormatToken::kw_oilist)
           .Case("operands", FormatToken::kw_operands)
           .Case("params", FormatToken::kw_params)
           .Case("ref", FormatToken::kw_ref)
@@ -230,7 +233,12 @@ FailureOr<FormatElement *> FormatParser::parseLiteral(Context ctx) {
         "literals may only be used in the top-level section of the format");
   }
   // Get the spelling without the surrounding backticks.
-  StringRef value = tok.getSpelling().drop_front().drop_back();
+  StringRef value = tok.getSpelling();
+  // Prevents things like `$arg0` or empty literals (when a literal is expected
+  // but not found) from getting segmentation faults.
+  if (value.size() < 2 || value[0] != '`' || value[value.size() - 1] != '`')
+    return emitError(tok.getLoc(), "expected literal, but got '" + value + "'");
+  value = value.drop_front().drop_back();
 
   // The parsed literal is a space element (`` or ` `) or a newline.
   if (value.empty() || value == " " || value == "\\n")

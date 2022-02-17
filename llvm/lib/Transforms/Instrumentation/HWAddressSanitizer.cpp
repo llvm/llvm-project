@@ -1378,8 +1378,7 @@ bool HWAddressSanitizer::instrumentStack(
           II->eraseFromParent();
       }
     }
-    if (memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment())))
-      AI->eraseFromParent();
+    memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment()));
   }
   for (auto &I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
