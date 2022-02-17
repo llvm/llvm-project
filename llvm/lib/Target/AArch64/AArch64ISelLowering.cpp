@@ -3477,7 +3477,6 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
         ISD::EXTRACT_VECTOR_ELT, dl, InVT.getScalarType(),
         Op.getOperand(IsStrict ? 1 : 0), DAG.getConstant(0, dl, MVT::i64));
     EVT ScalarVT = VT.getScalarType();
-    SDValue ScalarCvt;
     if (IsStrict)
       return DAG.getNode(Op.getOpcode(), dl, {ScalarVT, MVT::Other},
                          {Op.getOperand(0), Extract});
