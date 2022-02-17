@@ -336,11 +336,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
   Header.Version = IndexedInstrProf::ProfVersion::CurrentVersion;
-  if (static_cast<bool>(ProfileKind & InstrProfKind::IR))
+  if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
-  if (static_cast<bool>(ProfileKind & InstrProfKind::CS))
+  if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
     Header.Version |= VARIANT_MASK_CSIR_PROF;
-  if (static_cast<bool>(ProfileKind & InstrProfKind::BB))
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::FunctionEntryInstrumentation))
     Header.Version |= VARIANT_MASK_INSTR_ENTRY;
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     Header.Version |= VARIANT_MASK_BYTE_COVERAGE;
@@ -381,7 +382,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     OS.write(0);
   uint64_t CSSummaryOffset = 0;
   uint64_t CSSummarySize = 0;
-  if (static_cast<bool>(ProfileKind & InstrProfKind::CS)) {
+  if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive)) {
     CSSummaryOffset = OS.tell();
     CSSummarySize = SummarySize / sizeof(uint64_t);
     for (unsigned I = 0; I < CSSummarySize; I++)
@@ -438,7 +439,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // For Context Sensitive summary.
   std::unique_ptr<IndexedInstrProf::Summary> TheCSSummary = nullptr;
-  if (static_cast<bool>(ProfileKind & InstrProfKind::CS)) {
+  if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive)) {
     TheCSSummary = IndexedInstrProf::allocSummary(SummarySize);
     std::unique_ptr<ProfileSummary> CSPS = CSISB.getSummary();
     setSummary(TheCSSummary.get(), *CSPS);
@@ -553,12 +554,13 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
 
 Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   // Check CS first since it implies an IR level profile.
-  if (static_cast<bool>(ProfileKind & InstrProfKind::CS))
+  if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
     OS << "# CSIR level Instrumentation Flag\n:csir\n";
-  else if (static_cast<bool>(ProfileKind & InstrProfKind::IR))
+  else if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     OS << "# IR level Instrumentation Flag\n:ir\n";
 
-  if (static_cast<bool>(ProfileKind & InstrProfKind::BB))
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::FunctionEntryInstrumentation))
     OS << "# Always instrument the function entry block\n:entry_first\n";
   InstrProfSymtab Symtab;
 
