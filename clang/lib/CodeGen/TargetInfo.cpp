@@ -323,10 +323,10 @@ static Address emitVoidPtrDirectVAArg(CodeGenFunction &CGF,
   // If the CC aligns values higher than the slot size, do so if needed.
   Address Addr = Address::invalid();
   if (AllowHigherAlign && DirectAlign > SlotSize) {
-    Addr = Address::deprecated(
-        emitRoundPointerUpToAlignment(CGF, Ptr, DirectAlign), DirectAlign);
+    Addr = Address(emitRoundPointerUpToAlignment(CGF, Ptr, DirectAlign),
+                   CGF.Int8Ty, DirectAlign);
   } else {
-    Addr = Address::deprecated(Ptr, SlotSize);
+    Addr = Address(Ptr, CGF.Int8Ty, SlotSize);
   }
 
   // Advance the pointer past the argument, then store that back.
