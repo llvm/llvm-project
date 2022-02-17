@@ -645,30 +645,74 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
 }
 
 bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
-    ModuleSP module, ObjectFile &obj_file) {
+    ModuleSP module) {
   auto obj_format_type =
-        module->GetArchitecture().GetTriple().getObjectFormat();
+      module->GetArchitecture().GetTriple().getObjectFormat();
 
   auto obj_file_format = GetObjectFileFormat(obj_format_type);
   if (!obj_file_format)
     return false;
 
-  llvm::Optional<llvm::StringRef> maybe_segment_name =
-      obj_file_format->getSegmentName();
+  bool should_register_with_symbol_obj_file = [&]() -> bool {
+    if (!m_process.GetTarget().GetSwiftReadMetadataFromDSYM())
+      return false;
+    auto *symbol_file = module->GetSymbolFile();
+    if (!symbol_file)
+      return false;
+    auto *sym_obj_file = symbol_file->GetObjectFile();
+    if (!sym_obj_file)
+      return false;
+
+    llvm::Optional<llvm::StringRef> maybe_segment_name =
+        obj_file_format->getSymbolRichSegmentName();
+    if (!maybe_segment_name)
+      return false;
+
+    llvm::StringRef segment_name = *maybe_segment_name;
+
+    auto *section_list = sym_obj_file->GetSectionList();
+    auto segment_iter = llvm::find_if(*section_list, [&](auto segment) {
+      return segment->GetName() == segment_name.begin();
+    });
+
+    if (segment_iter == section_list->end())
+      return false;
+
+    auto *segment = segment_iter->get();
+
+    auto section_iter =
+        llvm::find_if(segment->GetChildren(), [&](auto section) {
+          return obj_file_format->sectionContainsReflectionData(
+              section->GetName().GetStringRef());
+        });
+    return section_iter != segment->GetChildren().end();
+  }();
+
+  llvm::Optional<llvm::StringRef> maybe_segment_name;
+  ObjectFile *object_file;
+  if (should_register_with_symbol_obj_file) {
+    maybe_segment_name = obj_file_format->getSymbolRichSegmentName();
+    object_file = module->GetSymbolFile()->GetObjectFile();
+  } else {
+    maybe_segment_name = obj_file_format->getSegmentName();
+    object_file = module->GetObjectFile();
+  }
+
   if (!maybe_segment_name)
     return false;
 
   llvm::StringRef segment_name = *maybe_segment_name;
+
   auto lldb_memory_reader = GetMemoryReader();
-  auto maybe_start_and_end = 
-      lldb_memory_reader->addModuleToAddressMap(module);
+  auto maybe_start_and_end = lldb_memory_reader->addModuleToAddressMap(
+      module, should_register_with_symbol_obj_file);
   if (!maybe_start_and_end)
     return false;
 
   uint64_t start_address, end_address;
   std::tie(start_address, end_address) = *maybe_start_and_end;
 
-  auto *section_list = obj_file.GetSectionList();
+  auto *section_list = object_file->GetSectionList();
   auto segment_iter = llvm::find_if(*section_list, [&](auto segment) {
     return segment->GetName() == segment_name.begin();
   });
@@ -681,8 +725,7 @@ bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
   return m_reflection_ctx->addImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
-        auto section_name =
-            obj_file_format->getSectionName(section_kind);
+        auto section_name = obj_file_format->getSectionName(section_kind);
         for (auto section : segment->GetChildren()) {
           // Iterate over the sections until we find the reflection section we
           // need.
@@ -766,7 +809,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
         llvm::Optional<llvm::sys::MemoryBlock>(file_buffer));
   } else if (read_from_file_cache &&
              obj_file->GetPluginName().equals("mach-o")) {
-    if (!AddObjectFileToReflectionContext(module_sp, *obj_file))
+    if (!AddObjectFileToReflectionContext(module_sp))
       m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
   } else {
     m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));

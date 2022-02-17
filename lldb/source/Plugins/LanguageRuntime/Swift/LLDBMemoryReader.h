@@ -45,12 +45,17 @@ public:
   /// \return a pair of addresses indicating the start and end of this image in
   /// the tagged address space. None on failure.
   llvm::Optional<std::pair<uint64_t, uint64_t>>
-  addModuleToAddressMap(lldb::ModuleSP module);
-  
+  addModuleToAddressMap(lldb::ModuleSP module, bool register_symbol_obj_file);
+
   /// Returns whether the filecache optimization is enabled or not.
   bool readMetadataFromFileCacheEnabled() const;
 
 private:
+  /// Gets the file address and module that were mapped to a given tagged
+  /// address.
+  llvm::Optional<std::pair<uint64_t, lldb::ModuleSP>>
+  getFileAddressAndModuleForTaggedAddress(uint64_t tagged_address) const;
+
   /// Resolves the address by either mapping a tagged address back to an LLDB 
   /// Address with section + offset, or, in case the address is not tagged, 
   /// constructing an LLDB address with just the offset.
@@ -59,6 +64,11 @@ private:
   /// and None if the address was tagged but we couldn't convert it back to an 
   /// Address.
   llvm::Optional<Address> resolveRemoteAddress(uint64_t address) const;
+
+ /// Reads memory from the symbol rich binary from the address into dest.
+ /// \return true if it was able to successfully read memory.
+  bool readBytesFromSymbolObjectFile(uint64_t address, uint8_t *dest,
+                                     uint64_t size) const;
 
 private:
   Process &m_process;
@@ -76,6 +86,10 @@ private:
   /// lldb::Module and the first virtual address after the end of that
   /// module's virtual address space.
   std::vector<std::pair<uint64_t, lldb::ModuleSP>> m_range_module_map;
+
+  /// The set of modules where we should read memory from the symbol file's
+  /// object file instead of the main object file.
+  std::unordered_set<lldb::ModuleSP> m_modules_with_metadata_in_symbol_obj_file;
 
   /// The bit used to tag LLDB's virtual addresses as such. See \c
   /// m_range_module_map.

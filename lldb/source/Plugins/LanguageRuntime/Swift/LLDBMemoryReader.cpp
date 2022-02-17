@@ -243,6 +243,8 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
 
   LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
             size, address.getAddressData());
+  if (readBytesFromSymbolObjectFile(address.getAddressData(), dest, size))
+    return true;
 
   llvm::Optional<Address> maybeAddr =
       resolveRemoteAddress(address.getAddressData());
@@ -347,9 +349,14 @@ void LLDBMemoryReader::popLocalBuffer() {
 }
 
 llvm::Optional<std::pair<uint64_t, uint64_t>>
-LLDBMemoryReader::addModuleToAddressMap(ModuleSP module) {
+LLDBMemoryReader::addModuleToAddressMap(ModuleSP module, bool register_symbol_obj_file) {
   if (!readMetadataFromFileCacheEnabled())
     return {};
+
+  assert(register_symbol_obj_file <=
+             m_process.GetTarget().GetSwiftReadMetadataFromDSYM() &&
+         "Trying to register symbol object file, but reading from it is "
+         "disabled!");
 
   // The first available address is the mask, since subsequent images are mapped
   // in ascending order, all of them will contain this mask.
@@ -372,7 +379,20 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module) {
            "LLDB file address bit clashes with an obj-c bit!");
 #endif
 
-  SectionList *section_list = module->GetObjectFile()->GetSectionList();
+  ObjectFile *object_file;
+  if (register_symbol_obj_file) {
+    auto *symbol_file = module->GetSymbolFile();
+    if (!symbol_file)
+      return {};
+    object_file = symbol_file->GetObjectFile();
+  } else {
+    object_file = module->GetObjectFile();
+  }
+
+  if (!object_file)
+    return {};
+
+  SectionList *section_list = object_file->GetSectionList();
 
   auto section_list_size = section_list->GetSize();
   if (section_list_size == 0)
@@ -389,22 +409,27 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module) {
   // available after the end of the current image.
   uint64_t next_module_start_address = llvm::alignTo(module_end_address, 8);
   m_range_module_map.emplace_back(next_module_start_address, module);
+
+  if (register_symbol_obj_file)
+    m_modules_with_metadata_in_symbol_obj_file.insert(module);
+
   return {{module_start_address, module_end_address}};
 }
 
-llvm::Optional<Address>
-LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+llvm::Optional<std::pair<uint64_t, lldb::ModuleSP>>
+LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
+    uint64_t tagged_address) const {
+  Log *log(GetLog(LLDBLog::Types));
 
   if (!readMetadataFromFileCacheEnabled())
-    return Address(address);
+    return {};
 
   // If the address contains our mask, this is an image we registered.
-  if (!(address & LLDB_FILE_ADDRESS_BIT))
-    return Address(address);
+  if (!(tagged_address & LLDB_FILE_ADDRESS_BIT))
+    return {};
 
   // Dummy pair with the address we're looking for.
-  auto comparison_pair = std::make_pair(address, ModuleSP());
+  auto comparison_pair = std::make_pair(tagged_address, ModuleSP());
 
   // Explicitly compare only the addresses, never the modules in the pairs.
   auto pair_iterator = std::lower_bound(
@@ -414,9 +439,9 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   // If the address is larger than anything we have mapped the address is out
   if (pair_iterator == m_range_module_map.end()) {
     LLDB_LOG(log,
-              "[MemoryReader] Address {1:x} is larger than the upper bound "
-              "address of the mapped in modules",
-              address);
+             "[MemoryReader] Address {0:x} is larger than the upper bound "
+             "address of the mapped in modules",
+             tagged_address);
     return {};
   }
 
@@ -425,15 +450,31 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   if (pair_iterator == m_range_module_map.begin())
     // Since this is the first registered module,
     // clearing the tag bit will give the virtual file address.
-    file_address = address & ~LLDB_FILE_ADDRESS_BIT;
+    file_address = tagged_address & ~LLDB_FILE_ADDRESS_BIT;
   else
     // The end of the previous section is the start of the current one.
-    file_address = address - std::prev(pair_iterator)->first;
+    file_address = tagged_address - std::prev(pair_iterator)->first;
 
   LLDB_LOGV(log,
-            "[MemoryReader] Successfully resolved mapped address {1:x} "
-            "into file address {1:x}",
-            address, file_address);
+            "[MemoryReader] Successfully resolved mapped address {0:x} into "
+            "file address {1:x}",
+            tagged_address, file_address);
+  return {{file_address, module}};
+}
+
+llvm::Optional<Address>
+LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
+  Log *log(GetLog(LLDBLog::Types));
+  auto maybe_pair = getFileAddressAndModuleForTaggedAddress(address);
+  if (!maybe_pair)
+    return Address(address);
+
+  uint64_t file_address = maybe_pair->first;
+  ModuleSP module = maybe_pair->second;
+
+  if (m_modules_with_metadata_in_symbol_obj_file.count(module))
+    return Address(address);
+
   auto *object_file = module->GetObjectFile();
   if (!object_file)
     return {};
@@ -452,6 +493,47 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
             "into file address {1:x}",
             address, address);
   return resolved;
+}
+
+bool LLDBMemoryReader::readBytesFromSymbolObjectFile(uint64_t address, uint8_t *dest,
+                                             uint64_t size) const {
+  Log *log(GetLog(LLDBLog::Types));
+
+  if (!m_process.GetTarget().GetSwiftReadMetadataFromDSYM())
+    return false;
+
+  auto maybe_pair = getFileAddressAndModuleForTaggedAddress(address);
+  if (!maybe_pair)
+    return false;
+
+  uint64_t file_address = maybe_pair->first;
+  ModuleSP module = maybe_pair->second;
+
+  if (!m_modules_with_metadata_in_symbol_obj_file.count(module))
+    return false;
+
+  auto *symbol_file = module->GetSymbolFile();
+  if (!symbol_file)
+    return false;
+
+  auto *object_file = symbol_file->GetObjectFile();
+  if (!object_file)
+    return false;
+
+  Address resolved(file_address, object_file->GetSectionList());
+  if (!resolved.IsSectionOffset()) {
+    LLDB_LOG(log,
+             "[MemoryReader] Could not make a real address out of file address "
+             "{0:x} and object file {1}",
+             file_address, object_file->GetFileSpec().GetFilename());
+    return false;
+  }
+
+  LLDB_LOGV(log, "[MemoryReader] Reading memory from symbol rich binary");
+
+  auto section = resolved.GetSection();
+  return object_file->ReadSectionData(section.get(), resolved.GetOffset(),
+                                      dest, size);
 }
 
 bool LLDBMemoryReader::readMetadataFromFileCacheEnabled() const {
