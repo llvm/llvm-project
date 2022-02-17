@@ -1633,10 +1633,12 @@ let Log2LMUL = [-3, -2, -1, 0] in {
 
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 let HasMask = false, HasPolicy = false in {
-  defm vadc : RVVCarryinBuiltinSet;
+  let HasNoMaskPassThru = true in {
+    defm vadc : RVVCarryinBuiltinSet;
+    defm vsbc : RVVCarryinBuiltinSet;
+  }
   defm vmadc : RVVCarryOutInBuiltinSet<"vmadc_carry_in">;
   defm vmadc : RVVIntMaskOutBuiltinSet;
-  defm vsbc : RVVCarryinBuiltinSet;
   defm vmsbc : RVVCarryOutInBuiltinSet<"vmsbc_borrow_in">;
   defm vmsbc : RVVIntMaskOutBuiltinSet;
 }
@@ -1742,6 +1744,8 @@ let HasMask = false, HasPolicy = false,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      // insert undef passthru
+      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
                                     [["vvm", "v", "vmvv"],
@@ -1876,6 +1880,8 @@ let HasMask = false, HasPolicy = false,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      // insert undef passthru
+      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
                                     [["vvm", "v", "vmvv"]]>;

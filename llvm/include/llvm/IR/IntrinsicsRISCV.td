@@ -527,15 +527,15 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For binary operations with V0 as input.
-  // Input: (vector_in, vector_in/scalar_in, V0, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, V0, vl)
   class RISCVBinaryWithV0
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty,
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 1;
-    let VLOperand = 3;
+    let SplatOperand = 2;
+    let VLOperand = 4;
   }
   // For binary operations with mask type output and V0 as input.
   // Output: (mask type output)

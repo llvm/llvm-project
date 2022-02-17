@@ -2353,12 +2353,24 @@ multiclass VPseudoVCALU_VM_XM_IM {
             Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
   defm "" : VPseudoBinaryV_IM,
             Sched<[WriteVICALUI, ReadVIALUCV, ReadVMask]>;
+  // Tied versions to allow codegen control over the tail elements
+  defm "" : VPseudoTiedBinaryV_VM,
+            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+  defm "" : VPseudoTiedBinaryV_XM,
+            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+  defm "" : VPseudoTiedBinaryV_IM,
+            Sched<[WriteVICALUI, ReadVIALUCV, ReadVMask]>;
 }
 
 multiclass VPseudoVCALU_VM_XM {
   defm "" : VPseudoBinaryV_VM,
             Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
   defm "" : VPseudoBinaryV_XM,
+            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+  // Tied versions to allow codegen control over the tail elements
+  defm "" : VPseudoTiedBinaryV_VM,
+            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+  defm "" : VPseudoTiedBinaryV_XM,
             Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
 }
 
@@ -3383,6 +3395,42 @@ multiclass VPatBinarySwapped<string intrinsic,
                               op2_kind>;
 }
 
+multiclass VPatBinaryCarryInTAIL<string intrinsic,
+                                 string inst,
+                                 string kind,
+                                 ValueType result_type,
+                                 ValueType op1_type,
+                                 ValueType op2_type,
+                                 ValueType mask_type,
+                                 int sew,
+                                 LMULInfo vlmul,
+                                 VReg result_reg_class,
+                                 VReg op1_reg_class,
+                                 DAGOperand op2_kind>
+{
+  def : Pat<(result_type (!cast<Intrinsic>(intrinsic)
+                         (result_type undef),
+                         (op1_type op1_reg_class:$rs1),
+                         (op2_type op2_kind:$rs2),
+                         (mask_type V0),
+                         VLOpFrag)),
+                         (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
+                         (op1_type op1_reg_class:$rs1),
+                         (op2_type op2_kind:$rs2),
+                         (mask_type V0), GPR:$vl, sew)>;
+  def : Pat<(result_type (!cast<Intrinsic>(intrinsic)
+                         (result_type result_reg_class:$merge),
+                         (op1_type op1_reg_class:$rs1),
+                         (op2_type op2_kind:$rs2),
+                         (mask_type V0),
+                         VLOpFrag)),
+                         (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_TU")
+                         (result_type result_reg_class:$merge),
+                         (op1_type op1_reg_class:$rs1),
+                         (op2_type op2_kind:$rs2),
+                         (mask_type V0), GPR:$vl, sew)>;
+}
+
 multiclass VPatBinaryCarryIn<string intrinsic,
                              string inst,
                              string kind,
@@ -3672,6 +3720,39 @@ multiclass VPatBinaryV_IM<string intrinsic, string instruction,
                              vti.RegClass, simm5>;
 }
 
+multiclass VPatBinaryV_VM_TAIL<string intrinsic, string instruction,
+                               bit CarryOut = 0,
+                               list<VTypeInfo> vtilist = AllIntegerVectors> {
+  foreach vti = vtilist in
+    defm : VPatBinaryCarryInTAIL<intrinsic, instruction, "VVM",
+                                 !if(CarryOut, vti.Mask, vti.Vector),
+                                 vti.Vector, vti.Vector, vti.Mask,
+                                 vti.Log2SEW, vti.LMul, vti.RegClass,
+                                 vti.RegClass, vti.RegClass>;
+}
+
+multiclass VPatBinaryV_XM_TAIL<string intrinsic, string instruction,
+                               bit CarryOut = 0,
+                               list<VTypeInfo> vtilist = AllIntegerVectors> {
+  foreach vti = vtilist in
+    defm : VPatBinaryCarryInTAIL<intrinsic, instruction,
+                                 "V"#vti.ScalarSuffix#"M",
+                                 !if(CarryOut, vti.Mask, vti.Vector),
+                                 vti.Vector, vti.Scalar, vti.Mask,
+                                 vti.Log2SEW, vti.LMul, vti.RegClass,
+                                 vti.RegClass, vti.ScalarRegClass>;
+}
+
+multiclass VPatBinaryV_IM_TAIL<string intrinsic, string instruction,
+                               bit CarryOut = 0> {
+  foreach vti = AllIntegerVectors in
+    defm : VPatBinaryCarryInTAIL<intrinsic, instruction, "VIM",
+                                 !if(CarryOut, vti.Mask, vti.Vector),
+                                 vti.Vector, XLenVT, vti.Mask,
+                                 vti.Log2SEW, vti.LMul,
+                                 vti.RegClass, vti.RegClass, simm5>;
+}
+
 multiclass VPatBinaryV_V<string intrinsic, string instruction> {
   foreach vti = AllIntegerVectors in
     defm : VPatBinaryMaskOut<intrinsic, instruction, "VV",
@@ -3767,9 +3848,9 @@ multiclass VPatBinaryV_WV_WX_WI<string intrinsic, string instruction,
       VPatBinaryV_WI<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_VM_XM_IM<string intrinsic, string instruction>
-    : VPatBinaryV_VM<intrinsic, instruction>,
-      VPatBinaryV_XM<intrinsic, instruction>,
-      VPatBinaryV_IM<intrinsic, instruction>;
+    : VPatBinaryV_VM_TAIL<intrinsic, instruction>,
+      VPatBinaryV_XM_TAIL<intrinsic, instruction>,
+      VPatBinaryV_IM_TAIL<intrinsic, instruction>;
 
 multiclass VPatBinaryM_VM_XM_IM<string intrinsic, string instruction>
     : VPatBinaryV_VM<intrinsic, instruction, /*CarryOut=*/1>,
@@ -3782,8 +3863,8 @@ multiclass VPatBinaryM_V_X_I<string intrinsic, string instruction>
       VPatBinaryV_I<intrinsic, instruction>;
 
 multiclass VPatBinaryV_VM_XM<string intrinsic, string instruction>
-    : VPatBinaryV_VM<intrinsic, instruction>,
-      VPatBinaryV_XM<intrinsic, instruction>;
+    : VPatBinaryV_VM_TAIL<intrinsic, instruction>,
+      VPatBinaryV_XM_TAIL<intrinsic, instruction>;
 
 multiclass VPatBinaryM_VM_XM<string intrinsic, string instruction>
     : VPatBinaryV_VM<intrinsic, instruction, /*CarryOut=*/1>,
@@ -5134,19 +5215,27 @@ defm : VPatConversionVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
 // We can use vmerge.vvm to support vector-vector vfmerge.
 // NOTE: Clang previously used int_riscv_vfmerge for vector-vector, but now uses
 // int_riscv_vmerge. Support both for compatibility.
-defm : VPatBinaryV_VM<"int_riscv_vmerge", "PseudoVMERGE",
-                      /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
-defm : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
-                      /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
-defm : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",
-                      /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
+defm : VPatBinaryV_VM_TAIL<"int_riscv_vmerge", "PseudoVMERGE",
+                           /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
+defm : VPatBinaryV_VM_TAIL<"int_riscv_vfmerge", "PseudoVMERGE",
+                           /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
+defm : VPatBinaryV_XM_TAIL<"int_riscv_vfmerge", "PseudoVFMERGE",
+                           /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 
 foreach fvti = AllFloatVectors in {
   defvar instr = !cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX);
-  def : Pat<(fvti.Vector (int_riscv_vfmerge (fvti.Vector fvti.RegClass:$rs2),
+  def : Pat<(fvti.Vector (int_riscv_vfmerge (fvti.Vector undef),
+                                            (fvti.Vector fvti.RegClass:$rs2),
                                             (fvti.Scalar (fpimm0)),
                                             (fvti.Mask V0), VLOpFrag)),
             (instr fvti.RegClass:$rs2, 0, (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
+  defvar instr_tu = !cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX#"_TU");
+  def : Pat<(fvti.Vector (int_riscv_vfmerge (fvti.Vector fvti.RegClass:$merge),
+                                            (fvti.Vector fvti.RegClass:$rs2),
+                                            (fvti.Scalar (fpimm0)),
+                                            (fvti.Mask V0), VLOpFrag)),
+            (instr_tu fvti.RegClass:$merge, fvti.RegClass:$rs2, 0,
+                      (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
 }
 
 //===----------------------------------------------------------------------===//
