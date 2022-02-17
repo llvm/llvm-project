@@ -201,6 +201,13 @@ C++20 Feature Support
 
 - Implemented `__builtin_source_location()` which enables library support for std::source_location.
 
+- The mangling scheme for C++20 modules has incompatibly changed. The
+  initial mangling was discovered not to be reversible, and the weak
+  ownership design decision did not give the backwards compatibility
+  that was hoped for. C++20 since added ``extern "C++"`` semantics
+  that can be used for such compatibility. The demangler now demangles
+  symbols with named module attachment.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
