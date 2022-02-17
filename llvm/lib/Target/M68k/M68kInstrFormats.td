@@ -338,6 +338,16 @@ class MxEncAddrMode_abs<string opnd_name, bit size_w_l = false> : MxEncMemOp {
   );
 }
 
+class MxEncAddrMode_o<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b011,
+                    /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
+class MxEncAddrMode_e<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b100,
+                    /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
 // Allows you to specify each bit of opcode
 class MxEncOpMode<MxBead b0, MxBead b1 = MxBeadIgnore, MxBead b2 = MxBeadIgnore> {
   MxBead B0 = b0;
