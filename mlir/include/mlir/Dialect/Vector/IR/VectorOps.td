@@ -313,7 +313,8 @@ def Vector_ReductionOp :
 def Vector_MultiDimReductionOp :
   Vector_Op<"multi_reduction", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVector:$source,
                    I64ArrayAttr:$reduction_dims)>,
@@ -367,31 +368,10 @@ def Vector_MultiDimReductionOp :
         res[idx] = true;
       return res;
     }
-
-    static SmallVector<int64_t> inferDestShape(
-      ArrayRef<int64_t> sourceShape, ArrayRef<bool> reducedDimsMask) {
-      assert(sourceShape.size() == reducedDimsMask.size() &&
-             "sourceShape and maks of different sizes");
-      SmallVector<int64_t> res;
-      for (auto it : llvm::zip(reducedDimsMask, sourceShape))
-        if (!std::get<0>(it))
-          res.push_back(std::get<1>(it));
-      return res;
-    }
-
-    static Type inferDestType(
-      ArrayRef<int64_t> sourceShape, ArrayRef<bool> reducedDimsMask, Type elementType) {
-      auto targetShape = inferDestShape(sourceShape, reducedDimsMask);
-      // TODO: update to also allow 0-d vectors when available.
-      if (targetShape.empty())
-        return elementType;
-      return VectorType::get(targetShape, elementType);
-    }
   }];
   let assemblyFormat =
     "$kind `,` $source attr-dict $reduction_dims `:` type($source) `to` type($dest)";
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 def Vector_BroadcastOp :
