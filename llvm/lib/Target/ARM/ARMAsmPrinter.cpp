@@ -740,55 +740,53 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_FP_16bit_format,
                     ARMBuildAttrs::FP16FormatIEEE);
 
-  if (MMI) {
-    if (const Module *SourceModule = MMI->getModule()) {
-      // ABI_PCS_wchar_t to indicate wchar_t width
-      // FIXME: There is no way to emit value 0 (wchar_t prohibited).
-      if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
-              SourceModule->getModuleFlag("wchar_size"))) {
-        int WCharWidth = WCharWidthValue->getZExtValue();
-        assert((WCharWidth == 2 || WCharWidth == 4) &&
-               "wchar_t width must be 2 or 4 bytes");
-        ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
-      }
+  if (const Module *SourceModule = MMI->getModule()) {
+    // ABI_PCS_wchar_t to indicate wchar_t width
+    // FIXME: There is no way to emit value 0 (wchar_t prohibited).
+    if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
+            SourceModule->getModuleFlag("wchar_size"))) {
+      int WCharWidth = WCharWidthValue->getZExtValue();
+      assert((WCharWidth == 2 || WCharWidth == 4) &&
+             "wchar_t width must be 2 or 4 bytes");
+      ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
+    }
 
-      // ABI_enum_size to indicate enum width
-      // FIXME: There is no way to emit value 0 (enums prohibited) or value 3
-      //        (all enums contain a value needing 32 bits to encode).
-      if (auto EnumWidthValue = mdconst::extract_or_null<ConstantInt>(
-              SourceModule->getModuleFlag("min_enum_size"))) {
-        int EnumWidth = EnumWidthValue->getZExtValue();
-        assert((EnumWidth == 1 || EnumWidth == 4) &&
-               "Minimum enum width must be 1 or 4 bytes");
-        int EnumBuildAttr = EnumWidth == 1 ? 1 : 2;
-        ATS.emitAttribute(ARMBuildAttrs::ABI_enum_size, EnumBuildAttr);
-      }
+    // ABI_enum_size to indicate enum width
+    // FIXME: There is no way to emit value 0 (enums prohibited) or value 3
+    //        (all enums contain a value needing 32 bits to encode).
+    if (auto EnumWidthValue = mdconst::extract_or_null<ConstantInt>(
+            SourceModule->getModuleFlag("min_enum_size"))) {
+      int EnumWidth = EnumWidthValue->getZExtValue();
+      assert((EnumWidth == 1 || EnumWidth == 4) &&
+             "Minimum enum width must be 1 or 4 bytes");
+      int EnumBuildAttr = EnumWidth == 1 ? 1 : 2;
+      ATS.emitAttribute(ARMBuildAttrs::ABI_enum_size, EnumBuildAttr);
+    }
 
-      auto *PACValue = mdconst::extract_or_null<ConstantInt>(
-          SourceModule->getModuleFlag("sign-return-address"));
-      if (PACValue && PACValue->getZExtValue() == 1) {
-        // If "+pacbti" is used as an architecture extension,
-        // Tag_PAC_extension is emitted in
-        // ARMTargetStreamer::emitTargetAttributes().
-        if (!STI.hasPACBTI()) {
-          ATS.emitAttribute(ARMBuildAttrs::PAC_extension,
-                            ARMBuildAttrs::AllowPACInNOPSpace);
-        }
-        ATS.emitAttribute(ARMBuildAttrs::PACRET_use, ARMBuildAttrs::PACRETUsed);
+    auto *PACValue = mdconst::extract_or_null<ConstantInt>(
+        SourceModule->getModuleFlag("sign-return-address"));
+    if (PACValue && PACValue->getZExtValue() == 1) {
+      // If "+pacbti" is used as an architecture extension,
+      // Tag_PAC_extension is emitted in
+      // ARMTargetStreamer::emitTargetAttributes().
+      if (!STI.hasPACBTI()) {
+        ATS.emitAttribute(ARMBuildAttrs::PAC_extension,
+                          ARMBuildAttrs::AllowPACInNOPSpace);
       }
+      ATS.emitAttribute(ARMBuildAttrs::PACRET_use, ARMBuildAttrs::PACRETUsed);
+    }
 
-      auto *BTIValue = mdconst::extract_or_null<ConstantInt>(
-          SourceModule->getModuleFlag("branch-target-enforcement"));
-      if (BTIValue && BTIValue->getZExtValue() == 1) {
-        // If "+pacbti" is used as an architecture extension,
-        // Tag_BTI_extension is emitted in
-        // ARMTargetStreamer::emitTargetAttributes().
-        if (!STI.hasPACBTI()) {
-          ATS.emitAttribute(ARMBuildAttrs::BTI_extension,
-                            ARMBuildAttrs::AllowBTIInNOPSpace);
-        }
-        ATS.emitAttribute(ARMBuildAttrs::BTI_use, ARMBuildAttrs::BTIUsed);
+    auto *BTIValue = mdconst::extract_or_null<ConstantInt>(
+        SourceModule->getModuleFlag("branch-target-enforcement"));
+    if (BTIValue && BTIValue->getZExtValue() == 1) {
+      // If "+pacbti" is used as an architecture extension,
+      // Tag_BTI_extension is emitted in
+      // ARMTargetStreamer::emitTargetAttributes().
+      if (!STI.hasPACBTI()) {
+        ATS.emitAttribute(ARMBuildAttrs::BTI_extension,
+                          ARMBuildAttrs::AllowBTIInNOPSpace);
       }
+      ATS.emitAttribute(ARMBuildAttrs::BTI_use, ARMBuildAttrs::BTIUsed);
     }
   }
 
