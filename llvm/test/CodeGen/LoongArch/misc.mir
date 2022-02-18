@@ -94,7 +94,7 @@ body: |
 name: test_BSTRINS_W
 body: |
   bb.0:
-    $r4 = BSTRINS_W $r5, 7, 2
+    $r4 = BSTRINS_W $r4, $r5, 7, 2
 ...
 ---
 # CHECK-LABEL: test_BSTRPICK_W:
@@ -122,7 +122,7 @@ body: |
 name: test_BSTRINS_D
 body: |
   bb.0:
-    $r4 = BSTRINS_D $r5, 7, 2
+    $r4 = BSTRINS_D $r4, $r5, 7, 2
 ...
 ---
 # CHECK-LABEL: test_BSTRPICK_D:
