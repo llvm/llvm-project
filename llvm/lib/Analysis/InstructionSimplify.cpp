@@ -2507,6 +2507,25 @@ static Value *ExtractEquivalentCondition(Value *V, CmpInst::Predicate Pred,
   return nullptr;
 }
 
+/// Return true if the underlying object (storage) must be disjoint from
+/// storage returned by any noalias return call.
+static bool IsAllocDisjoint(const Value *V) {
+  // For allocas, we consider only static ones (dynamic
+  // allocas might be transformed into calls to malloc not simultaneously
+  // live with the compared-to allocation). For globals, we exclude symbols
+  // that might be resolve lazily to symbols in another dynamically-loaded
+  // library (and, thus, could be malloc'ed by the implementation).
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(V))
+    return AI->getParent() && AI->getFunction() && AI->isStaticAlloca();
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
+    return (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
+            GV->hasProtectedVisibility() || GV->hasGlobalUnnamedAddr()) &&
+      !GV->isThreadLocal();
+  if (const Argument *A = dyn_cast<Argument>(V))
+    return A->hasByValAttr();
+  return false;
+}
+
 /// Return true if V1 and V2 are each the base of some distict storage region
 /// [V, object_size(V)] which do not overlap.  Note that zero sized regions
 /// *are* possible, and that zero sized regions do not overlap with any other.
@@ -2666,23 +2685,10 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
     };
 
     // Is the set of underlying objects all things which must be disjoint from
-    // noalias calls. For allocas, we consider only static ones (dynamic
-    // allocas might be transformed into calls to malloc not simultaneously
-    // live with the compared-to allocation). For globals, we exclude symbols
-    // that might be resolve lazily to symbols in another dynamically-loaded
-    // library (and, thus, could be malloc'ed by the implementation).
+    // noalias calls.  We assume that indexing from such disjoint storage
+    // into the heap is undefined, and thus offsets can be safely ignored.
     auto IsAllocDisjoint = [](ArrayRef<const Value *> Objects) {
-      return all_of(Objects, [](const Value *V) {
-        if (const AllocaInst *AI = dyn_cast<AllocaInst>(V))
-          return AI->getParent() && AI->getFunction() && AI->isStaticAlloca();
-        if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
-          return (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
-                  GV->hasProtectedVisibility() || GV->hasGlobalUnnamedAddr()) &&
-                 !GV->isThreadLocal();
-        if (const Argument *A = dyn_cast<Argument>(V))
-          return A->hasByValAttr();
-        return false;
-      });
+      return all_of(Objects, ::IsAllocDisjoint);
     };
 
     if ((IsNAC(LHSUObjs) && IsAllocDisjoint(RHSUObjs)) ||
