@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "memory"
+#include <memory>
+
 #ifndef _LIBCPP_HAS_NO_THREADS
-#   include "mutex"
-#   include "thread"
-#   if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
-#       pragma comment(lib, "pthread")
-#   endif
+#  include <mutex>
+#  include <thread>
+#  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
+#    pragma comment(lib, "pthread")
+#  endif
 #endif
+
 #include "include/atomic_support.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD

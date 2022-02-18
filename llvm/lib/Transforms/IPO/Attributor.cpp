@@ -320,7 +320,8 @@ bool AA::getPotentialCopiesOfStoredValue(
 
   Value &Ptr = *SI.getPointerOperand();
   SmallVector<Value *, 8> Objects;
-  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, QueryingAA, &SI)) {
+  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, QueryingAA, &SI,
+                                       UsedAssumedInformation)) {
     LLVM_DEBUG(
         dbgs() << "Underlying objects stored into could not be determined\n";);
     return false;
@@ -514,10 +515,10 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
       return true;
     };
 
-    bool AllCallSitesKnown;
+    bool UsedAssumedInformation = false;
     Result = !A.checkForAllCallSites(CheckCallSite, *FromFn,
                                      /* RequireAllCallSites */ true,
-                                     &QueryingAA, AllCallSitesKnown);
+                                     &QueryingAA, UsedAssumedInformation);
     if (Result) {
       LLVM_DEBUG(dbgs() << "[AA] stepping back to call sites from " << *CurFromI
                         << " in @" << FromFn->getName()
@@ -1277,7 +1278,7 @@ bool Attributor::checkForAllUses(
 bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                                       const AbstractAttribute &QueryingAA,
                                       bool RequireAllCallSites,
-                                      bool &AllCallSitesKnown) {
+                                      bool &UsedAssumedInformation) {
   // We can try to determine information from
   // the call sites. However, this is only possible all call sites are known,
   // hence the function has internal linkage.
@@ -1286,30 +1287,25 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
   if (!AssociatedFunction) {
     LLVM_DEBUG(dbgs() << "[Attributor] No function associated with " << IRP
                       << "\n");
-    AllCallSitesKnown = false;
     return false;
   }
 
   return checkForAllCallSites(Pred, *AssociatedFunction, RequireAllCallSites,
-                              &QueryingAA, AllCallSitesKnown);
+                              &QueryingAA, UsedAssumedInformation);
 }
 
 bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                                       const Function &Fn,
                                       bool RequireAllCallSites,
                                       const AbstractAttribute *QueryingAA,
-                                      bool &AllCallSitesKnown) {
+                                      bool &UsedAssumedInformation) {
   if (RequireAllCallSites && !Fn.hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
         << "[Attributor] Function " << Fn.getName()
         << " has no internal linkage, hence not all call sites are known\n");
-    AllCallSitesKnown = false;
     return false;
   }
-
-  // If we do not require all call sites we might not see all.
-  AllCallSitesKnown = RequireAllCallSites;
 
   SmallVector<const Use *, 8> Uses(make_pointer_range(Fn.uses()));
   for (unsigned u = 0; u < Uses.size(); ++u) {
@@ -1322,7 +1318,6 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
         dbgs() << "[Attributor] Check use: " << *U << " in " << *U.getUser()
                << "\n";
     });
-    bool UsedAssumedInformation = false;
     if (isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
                       /* CheckBBLivenessOnly */ true)) {
       LLVM_DEBUG(dbgs() << "[Attributor] Dead use, skip!\n");
@@ -1795,7 +1790,7 @@ void Attributor::identifyDeadInternalFunctions() {
       if (!F)
         continue;
 
-      bool AllCallSitesKnown;
+      bool UsedAssumedInformation = false;
       if (checkForAllCallSites(
               [&](AbstractCallSite ACS) {
                 Function *Callee = ACS.getInstruction()->getFunction();
@@ -1803,7 +1798,7 @@ void Attributor::identifyDeadInternalFunctions() {
                        (Functions.count(Callee) && Callee->hasLocalLinkage() &&
                         !LiveInternalFns.count(Callee));
               },
-              *F, true, nullptr, AllCallSitesKnown)) {
+              *F, true, nullptr, UsedAssumedInformation)) {
         continue;
       }
 
@@ -2290,9 +2285,9 @@ bool Attributor::isValidFunctionSignatureRewrite(
   }
 
   // Avoid callbacks for now.
-  bool AllCallSitesKnown;
+  bool UsedAssumedInformation = false;
   if (!checkForAllCallSites(CallSiteCanBeChanged, *Fn, true, nullptr,
-                            AllCallSitesKnown)) {
+                            UsedAssumedInformation)) {
     LLVM_DEBUG(dbgs() << "[Attributor] Cannot rewrite all call sites\n");
     return false;
   }
@@ -2305,7 +2300,6 @@ bool Attributor::isValidFunctionSignatureRewrite(
 
   // Forbid must-tail calls for now.
   // TODO:
-  bool UsedAssumedInformation = false;
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
   if (!checkForAllInstructionsImpl(nullptr, OpcodeInstMap, InstPred, nullptr,
                                    nullptr, {Instruction::Call},
@@ -2514,9 +2508,9 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     };
 
     // Use the CallSiteReplacementCreator to create replacement call sites.
-    bool AllCallSitesKnown;
+    bool UsedAssumedInformation = false;
     bool Success = checkForAllCallSites(CallSiteReplacementCreator, *OldFn,
-                                        true, nullptr, AllCallSitesKnown);
+                                        true, nullptr, UsedAssumedInformation);
     (void)Success;
     assert(Success && "Assumed call site replacement to succeed!");
 

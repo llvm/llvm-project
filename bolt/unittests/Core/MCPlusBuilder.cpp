@@ -47,8 +47,8 @@ protected:
   }
 
   void initializeBolt() {
-    BC = BinaryContext::createBinaryContext(
-        ObjFile.get(), true, DWARFContext::create(*ObjFile.get()));
+    BC = cantFail(BinaryContext::createBinaryContext(
+        ObjFile.get(), true, DWARFContext::create(*ObjFile.get())));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
         GetParam(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));

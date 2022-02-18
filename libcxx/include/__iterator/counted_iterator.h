@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ITERATOR_COUNTED_ITERATOR_H
 #define _LIBCPP___ITERATOR_COUNTED_ITERATOR_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/incrementable_traits.h>

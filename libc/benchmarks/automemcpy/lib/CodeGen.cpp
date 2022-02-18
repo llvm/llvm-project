@@ -613,7 +613,7 @@ llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
 // Stores `VolatileStr` into a cache and returns a StringRef of the cached
 // version.
 StringRef getInternalizedString(std::string VolatileStr) {
-  static llvm::StringSet<> StringCache;
+  static llvm::StringSet StringCache;
   return StringCache.insert(std::move(VolatileStr)).first->getKey();
 }
 

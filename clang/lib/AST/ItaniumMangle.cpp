@@ -267,10 +267,10 @@ class CXXNameMangler {
   /// that's not a template specialization; otherwise it's the pattern
   /// for that specialization.
   const NamedDecl *Structor;
-  unsigned StructorType;
+  unsigned StructorType = 0;
 
   /// The next substitution sequence number.
-  unsigned SeqID;
+  unsigned SeqID = 0;
 
   class FunctionTypeDepthState {
     unsigned Bits;
@@ -430,32 +430,32 @@ class CXXNameMangler {
 public:
   CXXNameMangler(ItaniumMangleContextImpl &C, raw_ostream &Out_,
                  const NamedDecl *D = nullptr, bool NullOut_ = false)
-    : Context(C), Out(Out_), NullOut(NullOut_),  Structor(getStructor(D)),
-      StructorType(0), SeqID(0), AbiTagsRoot(AbiTags) {
+      : Context(C), Out(Out_), NullOut(NullOut_), Structor(getStructor(D)),
+        AbiTagsRoot(AbiTags) {
     // These can't be mangled without a ctor type or dtor type.
     assert(!D || (!isa<CXXDestructorDecl>(D) &&
                   !isa<CXXConstructorDecl>(D)));
   }
   CXXNameMangler(ItaniumMangleContextImpl &C, raw_ostream &Out_,
                  const CXXConstructorDecl *D, CXXCtorType Type)
-    : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
-      SeqID(0), AbiTagsRoot(AbiTags) { }
+      : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
+        AbiTagsRoot(AbiTags) {}
   CXXNameMangler(ItaniumMangleContextImpl &C, raw_ostream &Out_,
                  const CXXDestructorDecl *D, CXXDtorType Type)
-    : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
-      SeqID(0), AbiTagsRoot(AbiTags) { }
+      : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
+        AbiTagsRoot(AbiTags) {}
 
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
-      : Context(Outer.Context), Out(Out_), NullOut(false),
-        Structor(Outer.Structor), StructorType(Outer.StructorType),
-        SeqID(Outer.SeqID), FunctionTypeDepth(Outer.FunctionTypeDepth),
-        AbiTagsRoot(AbiTags), Substitutions(Outer.Substitutions) {}
+      : Context(Outer.Context), Out(Out_), Structor(Outer.Structor),
+        StructorType(Outer.StructorType), SeqID(Outer.SeqID),
+        FunctionTypeDepth(Outer.FunctionTypeDepth), AbiTagsRoot(AbiTags),
+        Substitutions(Outer.Substitutions),
+        ModuleSubstitutions(Outer.ModuleSubstitutions) {}
 
   CXXNameMangler(CXXNameMangler &Outer, llvm::raw_null_ostream &Out_)
-      : Context(Outer.Context), Out(Out_), NullOut(true),
-        Structor(Outer.Structor), StructorType(Outer.StructorType),
-        SeqID(Outer.SeqID), FunctionTypeDepth(Outer.FunctionTypeDepth),
-        AbiTagsRoot(AbiTags), Substitutions(Outer.Substitutions) {}
+      : CXXNameMangler(Outer, (raw_ostream &)Out_) {
+    NullOut = true;
+  }
 
   raw_ostream &getStream() { return Out; }
 

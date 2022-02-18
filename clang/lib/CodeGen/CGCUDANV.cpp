@@ -822,7 +822,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     if (Linkage != llvm::GlobalValue::InternalLinkage)
       GpuBinaryHandle->setVisibility(llvm::GlobalValue::HiddenVisibility);
     Address GpuBinaryAddr(
-        GpuBinaryHandle,
+        GpuBinaryHandle, VoidPtrPtrTy,
         CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
     {
       auto *HandleValue = CtorBuilder.CreateLoad(GpuBinaryAddr);
@@ -958,8 +958,9 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
   CGBuilderTy DtorBuilder(CGM, Context);
   DtorBuilder.SetInsertPoint(DtorEntryBB);
 
-  Address GpuBinaryAddr(GpuBinaryHandle, CharUnits::fromQuantity(
-                                             GpuBinaryHandle->getAlignment()));
+  Address GpuBinaryAddr = Address::deprecated(
+      GpuBinaryHandle,
+      CharUnits::fromQuantity( GpuBinaryHandle->getAlignment()));
   auto *HandleValue = DtorBuilder.CreateLoad(GpuBinaryAddr);
   // There is only one HIP fat binary per linked module, however there are
   // multiple destructor functions. Make sure the fat binary is unregistered

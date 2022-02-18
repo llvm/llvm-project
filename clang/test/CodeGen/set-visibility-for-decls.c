@@ -36,7 +36,7 @@ __attribute__((visibility("default"))) int func_default(void);
 // CHECK-DEFAULT: declare i32 @func()
 int func(void);
 
-int use() {
+int use(void) {
   return var_hidden + var_protected + var_default + var +
          func_hidden() + func_protected() + func_default() + func();
 }

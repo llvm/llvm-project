@@ -18,7 +18,7 @@ struct X0 {
   int x[6] PACKED; 
 };
 
-void use_X0() { struct X0 x0; x0.x[5] = sizeof(struct X0); };
+void use_X0(void) { struct X0 x0; x0.x[5] = sizeof(struct X0); };
 
 // CHECK: Type: struct X1
 struct X1 { 
@@ -26,7 +26,7 @@ struct X1 {
   struct X0 y; 
 } PACKED;
 
-void use_X1() { struct X1 x1; x1.x[5] = sizeof(struct X1); };
+void use_X1(void) { struct X1 x1; x1.x[5] = sizeof(struct X1); };
 
 // CHECK: Type: struct X2
 struct PACKED X2 {
@@ -34,7 +34,7 @@ struct PACKED X2 {
   int y;
 };
 
-void use_X2() { struct X2 x2; x2.y = sizeof(struct X2); };
+void use_X2(void) { struct X2 x2; x2.y = sizeof(struct X2); };
 
 // CHECK: Type: struct X3
 struct X3 {
@@ -42,7 +42,7 @@ struct X3 {
   int y;
 };
 
-void use_X3() { struct X3 x3; x3.y = sizeof(struct X3); };
+void use_X3(void) { struct X3 x3; x3.y = sizeof(struct X3); };
 
 #pragma pack(push,2)
 // CHECK: Type: struct X4
@@ -52,17 +52,17 @@ struct X4 {
 };
 #pragma pack(pop)
 
-void use_X4() { struct X4 x4; x4.y = sizeof(struct X4); };
+void use_X4(void) { struct X4 x4; x4.y = sizeof(struct X4); };
 
 // CHECK: Type: struct X5
 struct PACKED X5 { double a[19];  signed char b; };
 
-void use_X5() { struct X5 x5; x5.b = sizeof(struct X5); };
+void use_X5(void) { struct X5 x5; x5.b = sizeof(struct X5); };
 
 // CHECK: Type: struct X6
 struct PACKED X6 { long double a; char b; };
 
-void use_X6() { struct X6 x6; x6.b = sizeof(struct X6); };
+void use_X6(void) { struct X6 x6; x6.b = sizeof(struct X6); };
 
 // CHECK: Type: struct X7
 struct X7 {
@@ -70,7 +70,7 @@ struct X7 {
         unsigned char y;
 } PACKED;
 
-void use_X7() { struct X7 x7; x7.y = x7.x = sizeof(struct X7); }
+void use_X7(void) { struct X7 x7; x7.y = x7.x = sizeof(struct X7); }
 
 // CHECK: Type: union X8
 union X8 {
@@ -128,7 +128,7 @@ struct ALIGNED16 X16 {
   int y : 29;
 };
 
-void use_structs() {
+void use_structs(void) {
   union X8 x8;
   typedef int X8array[sizeof(union X8)];
   x8.y = sizeof(union X8);

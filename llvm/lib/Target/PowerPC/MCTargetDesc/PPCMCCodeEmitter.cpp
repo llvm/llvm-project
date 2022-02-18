@@ -34,7 +34,6 @@ using namespace llvm;
 STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
 MCCodeEmitter *llvm::createPPCMCCodeEmitter(const MCInstrInfo &MCII,
-                                            const MCRegisterInfo &MRI,
                                             MCContext &Ctx) {
   return new PPCMCCodeEmitter(MCII, Ctx);
 }

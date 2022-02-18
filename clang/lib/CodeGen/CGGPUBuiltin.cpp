@@ -479,7 +479,7 @@ RValue CodeGenFunction::EmitHostrpcVargsFn(const CallExpr *E,
   // ---  4th Pass: memcpy all strings after the data values ---
 
   // bitcast the struct in device global memory as a char buffer
-  Address BufferPtrByteAddr = Address(
+  Address BufferPtrByteAddr = Address::deprecated(
       Builder.CreatePointerCast(BufferPtr, llvm::PointerType::get(Int8Ty, AS)),
       CharUnits::fromQuantity(1));
   // BufferPtrByteAddr is a pointer to where we want to write the next string
@@ -494,11 +494,11 @@ RValue CodeGenFunction::EmitHostrpcVargsFn(const CallExpr *E,
       if (isVarString(argX, argXTy, Arg)) {
         llvm::Value *varStrLength = VarStrLengths[varstring_index];
         varstring_index++;
-        Address SrcAddr = Address(Arg, CharUnits::fromQuantity(1));
+        Address SrcAddr = Address::deprecated(Arg, CharUnits::fromQuantity(1));
         Builder.CreateMemCpy(BufferPtrByteAddr, SrcAddr, varStrLength);
         // update BufferPtrByteAddr for next string memcpy
         llvm::Value *PtrAsInt = BufferPtrByteAddr.getPointer();
-        BufferPtrByteAddr = Address(
+        BufferPtrByteAddr = Address::deprecated(
             Builder.CreateGEP(PtrAsInt->getType()->getScalarType()->getPointerElementType(),
 		    PtrAsInt, ArrayRef<llvm::Value*>(varStrLength)),
             CharUnits::fromQuantity(1));

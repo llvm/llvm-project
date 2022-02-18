@@ -24,7 +24,7 @@ unsigned CFBundleGetVersionNumber(CFBundleRef bundle);
 #define CHECK_OS macos 10.12
 #endif
 
-void use_at_available() {
+void use_at_available(void) {
 #ifdef DEF_CF
   CFBundleGetVersionNumber(0);
 #endif

@@ -1026,7 +1026,9 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
 
 namespace Hwreg {
 
-int64_t getHwregId(const StringRef Name) {
+int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
+  if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
+    return ID_HW_ID1;
   for (int Id = ID_SYMBOLIC_FIRST_; Id < ID_SYMBOLIC_LAST_; ++Id) {
     if (IdSymbolic[Id] && Name == IdSymbolic[Id])
       return Id;
@@ -1519,6 +1521,17 @@ bool isGFX90A(const MCSubtargetInfo &STI) {
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+}
+
+bool hasMAIInsts(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
+}
+
+int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
+                         int32_t ArgNumVGPR) {
+  if (has90AInsts && ArgNumAGPR)
+    return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
+  return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {

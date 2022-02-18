@@ -709,8 +709,9 @@ bool Dependences::isValidSchedule(
 // dimension, then the loop is parallel. The distance is zero in the current
 // dimension if it is a subset of a map with equal values for the current
 // dimension.
-bool Dependences::isParallel(isl_union_map *Schedule, isl_union_map *Deps,
-                             isl_pw_aff **MinDistancePtr) const {
+bool Dependences::isParallel(__isl_keep isl_union_map *Schedule,
+                             __isl_take isl_union_map *Deps,
+                             __isl_give isl_pw_aff **MinDistancePtr) const {
   isl_set *Deltas, *Distance;
   isl_map *ScheduleDeps;
   unsigned Dimension;
@@ -827,7 +828,8 @@ Dependences::getReductionDependences(MemoryAccess *MA) const {
   return isl_map_copy(ReductionDependences.lookup(MA));
 }
 
-void Dependences::setReductionDependences(MemoryAccess *MA, isl_map *D) {
+void Dependences::setReductionDependences(MemoryAccess *MA,
+                                          __isl_take isl_map *D) {
   assert(ReductionDependences.count(MA) == 0 &&
          "Reduction dependences set twice!");
   ReductionDependences[MA] = D;

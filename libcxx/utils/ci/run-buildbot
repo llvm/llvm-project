@@ -259,6 +259,7 @@ generic-noexceptions)
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
+    check-abi-list
 ;;
 generic-modules)
     clean
@@ -266,6 +267,7 @@ generic-modules)
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
+    check-abi-list
 ;;
 generic-static)
     clean
@@ -281,6 +283,7 @@ generic-clang-12)
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
+    check-abi-list
 ;;
 generic-clang-13)
     export CC=clang-13
@@ -289,6 +292,7 @@ generic-clang-13)
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
+    check-abi-list
 ;;
 generic-gcc)
     export CC=gcc-11
@@ -357,6 +361,7 @@ generic-no-debug)
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
+    check-abi-list
 ;;
 generic-no-filesystem)
     clean
@@ -399,6 +404,7 @@ generic-no-experimental)
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
+    check-abi-list
 ;;
 generic-abi-unstable)
     clean
@@ -410,20 +416,18 @@ generic-abi-unstable)
 apple-system)
     clean
 
-    sdk_root="$(xcrun --sdk macosx --show-sdk-path)"
     arch="$(uname -m)"
-
-    ${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh    \
-        --llvm-root ${MONOREPO_ROOT}                            \
-        --build-dir ${BUILD_DIR}                                \
-        --install-dir ${INSTALL_DIR}                            \
-        --symbols-dir "${BUILD_DIR}/symbols"                    \
-        --sdk "macosx"                                          \
-        --architectures "${arch}"                               \
-        --version "999.99"
+    xcrun --sdk macosx                                              \
+        ${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh    \
+            --llvm-root ${MONOREPO_ROOT}                            \
+            --build-dir ${BUILD_DIR}                                \
+            --install-dir ${INSTALL_DIR}                            \
+            --symbols-dir "${BUILD_DIR}/symbols"                    \
+            --architectures "${arch}"                               \
+            --version "999.99"
 
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
-    xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi
+    xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
 ;;
 apple-system-backdeployment-*)
     clean

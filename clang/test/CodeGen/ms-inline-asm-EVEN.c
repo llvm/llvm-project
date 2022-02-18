@@ -5,7 +5,7 @@
 // CHECK: .byte 64
 // CHECK: .byte 64
 // CHECK:  .even
-void t1() {
+void t1(void) {
   __asm {
     .byte 64
     .byte 64

@@ -13,9 +13,9 @@ define dso_local void @jsimd_idct_ifast_neon_intrinsic(i8* nocapture readonly %d
 ; CHECK-NEXT:    mul v0.8h, v2.8h, v0.8h
 ; CHECK-NEXT:    mul v1.8h, v3.8h, v1.8h
 ; CHECK-NEXT:    add v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    str q2, [x9, x8]
 ; CHECK-NEXT:    ldr x9, [x2, #56]
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    str q0, [x9, x8]
 ; CHECK-NEXT:    ret
 entry:

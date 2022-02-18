@@ -898,6 +898,9 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
                    Spacing.AfterFunctionDeclarationName);
     IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
     IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
+    IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
+    IO.mapOptional("AfterRequiresInExpression",
+                   Spacing.AfterRequiresInExpression);
     IO.mapOptional("BeforeNonEmptyParentheses",
                    Spacing.BeforeNonEmptyParentheses);
   }
@@ -1259,6 +1262,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
+  LLVMStyle.SpaceBeforeParensOptions = {};
   LLVMStyle.SpaceBeforeParensOptions.AfterControlStatements = true;
   LLVMStyle.SpaceBeforeParensOptions.AfterForeachMacros = true;
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;

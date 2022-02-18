@@ -22,7 +22,7 @@ void bar2(int * x, int * y) __attribute__((nonnull(2)))  {
 static int a;
 // NULL-INVALID: define{{.*}} nonnull i32* @bar3()
 // NULL-VALID: define{{.*}} i32* @bar3()
-int * bar3() __attribute__((returns_nonnull))  {
+int * bar3(void) __attribute__((returns_nonnull))  {
   return &a;
 }
 

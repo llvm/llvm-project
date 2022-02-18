@@ -67,8 +67,7 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
                     TheTargetMachine->getMCSubtargetInfo());
   std::unique_ptr<const MCCodeEmitter> CodeEmitter(
       TheTargetMachine->getTarget().createMCCodeEmitter(
-          *TheTargetMachine->getMCInstrInfo(), *TheTargetMachine->getMCRegisterInfo(),
-          Context));
+          *TheTargetMachine->getMCInstrInfo(), Context));
   assert(CodeEmitter && "unable to create code emitter");
   SmallVector<char, 16> Tmp;
   raw_svector_ostream OS(Tmp);

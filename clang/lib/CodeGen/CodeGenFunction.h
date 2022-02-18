@@ -1010,7 +1010,7 @@ public:
       if (VarTy->isReferenceType()) {
         Address Temp = CGF.CreateMemTemp(VarTy);
         if (Temp.getElementType() != TempAddr.getPointer()->getType())
-          Temp = Address(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Temp = Address::deprecated(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                              Temp.getPointer(),
                              TempAddr.getPointer()->getType()->getPointerTo()),
                          TempAddr.getAlignment());

@@ -6,7 +6,7 @@ void g(void);
 // __leave with __except
 
 // Nothing in the __try block can trap, so __try.cont isn't created.
-int __leave_with___except_simple() {
+int __leave_with___except_simple(void) {
   int myres = 0;
   __try {
     myres = 15;
@@ -26,7 +26,7 @@ int __leave_with___except_simple() {
 
 
 // The "normal" case.
-int __leave_with___except() {
+int __leave_with___except(void) {
   int myres = 0;
   __try {
     g();
@@ -58,7 +58,7 @@ void abort(void) __attribute__((noreturn));
 
 // Nothing in the __try block can trap, so __finally.cont and friends aren't
 // created.
-int __leave_with___finally_simple() {
+int __leave_with___finally_simple(void) {
   int myres = 0;
   __try {
     myres = 15;
@@ -78,7 +78,7 @@ int __leave_with___finally_simple() {
 // CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally_simple@@"(i8 noundef 0, i8* noundef %[[fp]])
 
 // __finally block doesn't return, __finally.cont doesn't exist.
-int __leave_with___finally_noreturn() {
+int __leave_with___finally_noreturn(void) {
   int myres = 0;
   __try {
     myres = 15;
@@ -98,7 +98,7 @@ int __leave_with___finally_noreturn() {
 // CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally_noreturn@@"(i8 noundef 0, i8* noundef %[[fp]])
 
 // The "normal" case.
-int __leave_with___finally() {
+int __leave_with___finally(void) {
   int myres = 0;
   __try {
     g();
@@ -125,7 +125,7 @@ int __leave_with___finally() {
 //////////////////////////////////////////////////////////////////////////////
 // Mixed, nested cases.
 
-int nested___except___finally() {
+int nested___except___finally(void) {
   int myres = 0;
   __try {
     __try {
@@ -175,7 +175,7 @@ int nested___except___finally() {
 // CHECK: call void @g()
 // CHECK: unreachable
 
-int nested___except___except() {
+int nested___except___except(void) {
   int myres = 0;
   __try {
     __try {
@@ -229,7 +229,7 @@ int nested___except___except() {
 // CHECK: [[tryleave]]
 // CHECK-NEXT: br label %[[trycont4]]
 
-int nested___finally___except() {
+int nested___finally___except(void) {
   int myres = 0;
   __try {
     __try {
@@ -283,7 +283,7 @@ int nested___finally___except() {
 // CHECK-LABEL: define internal void @"?fin$0@0@nested___finally___except@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer)
 // CHECK: ret void
 
-int nested___finally___finally() {
+int nested___finally___finally(void) {
   int myres = 0;
   __try {
     __try {

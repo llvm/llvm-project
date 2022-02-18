@@ -3129,6 +3129,16 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::udiv(Known, Known2);
     break;
   }
+  case ISD::AVGCEILU: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = Known.zext(BitWidth + 1);
+    Known2 = Known2.zext(BitWidth + 1);
+    KnownBits One = KnownBits::makeConstant(APInt(1, 1));
+    Known = KnownBits::computeForAddCarry(Known, Known2, One);
+    Known = Known.extractBits(BitWidth, 1);
+    break;
+  }
   case ISD::SELECT:
   case ISD::VSELECT:
     Known = computeKnownBits(Op.getOperand(2), DemandedElts, Depth+1);
@@ -9709,18 +9719,35 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
 
 namespace {
 
-  /// UseMemo - This class is used by SelectionDAG::ReplaceAllUsesOfValuesWith
-  /// to record information about a use.
-  struct UseMemo {
-    SDNode *User;
-    unsigned Index;
-    SDUse *Use;
-  };
+/// UseMemo - This class is used by SelectionDAG::ReplaceAllUsesOfValuesWith
+/// to record information about a use.
+struct UseMemo {
+  SDNode *User;
+  unsigned Index;
+  SDUse *Use;
+};
 
-  /// operator< - Sort Memos by User.
-  bool operator<(const UseMemo &L, const UseMemo &R) {
-    return (intptr_t)L.User < (intptr_t)R.User;
+/// operator< - Sort Memos by User.
+bool operator<(const UseMemo &L, const UseMemo &R) {
+  return (intptr_t)L.User < (intptr_t)R.User;
+}
+
+/// RAUOVWUpdateListener - Helper for ReplaceAllUsesOfValuesWith - When the node
+/// pointed to by a UseMemo is deleted, set the User to nullptr to indicate that
+/// the node already has been taken care of recursively.
+class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
+  SmallVector<UseMemo, 4> &Uses;
+
+  void NodeDeleted(SDNode *N, SDNode *E) override {
+    for (UseMemo &Memo : Uses)
+      if (Memo.User == N)
+        Memo.User = nullptr;
   }
+
+public:
+  RAUOVWUpdateListener(SelectionDAG &d, SmallVector<UseMemo, 4> &uses)
+      : SelectionDAG::DAGUpdateListener(d), Uses(uses) {}
+};
 
 } // end anonymous namespace
 
@@ -9813,12 +9840,19 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
 
   // Sort the uses, so that all the uses from a given User are together.
   llvm::sort(Uses);
+  RAUOVWUpdateListener Listener(*this, Uses);
 
   for (unsigned UseIndex = 0, UseIndexEnd = Uses.size();
        UseIndex != UseIndexEnd; ) {
     // We know that this user uses some value of From.  If it is the right
     // value, update it.
     SDNode *User = Uses[UseIndex].User;
+    // If the node has been deleted by recursive CSE updates when updating
+    // another node, then just skip this entry.
+    if (User == nullptr) {
+      ++UseIndex;
+      continue;
+    }
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11118,6 +11152,10 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
     return N.getNode();
 
   if (ISD::isBuildVectorOfConstantFPSDNodes(N.getNode()))
+    return N.getNode();
+
+  if ((N.getOpcode() == ISD::SPLAT_VECTOR) &&
+      isa<ConstantFPSDNode>(N.getOperand(0)))
     return N.getNode();
 
   return nullptr;

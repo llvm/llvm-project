@@ -8,7 +8,7 @@ inline int dont_inline_me(int a, int b) { return(a+b); }
 inline __attribute__ ((__always_inline__)) int inline_me(int a, int b) { return(a*b); }
 
 volatile int *pa = (int*) 0x1000;
-void foo() {
+void foo(void) {
 // NOINLINE: @foo
 // NOINLINE: dont_inline_me
 // NOINLINE-NOT: inlinehint

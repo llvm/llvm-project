@@ -374,8 +374,8 @@ define void @testLeftBad2x64(<2 x i64> %src1, <2 x i64> %src2, <2 x i64>* %dest)
 ; CHECK-LABEL: testLeftBad2x64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #10
-; CHECK-NEXT:    movk x8, #1, lsl #48
 ; CHECK-NEXT:    shl.2d v1, v1, #48
+; CHECK-NEXT:    movk x8, #1, lsl #48
 ; CHECK-NEXT:    dup.2d v2, x8
 ; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    orr.16b v0, v0, v1
@@ -405,8 +405,8 @@ define void @testRightBad2x64(<2 x i64> %src1, <2 x i64> %src2, <2 x i64>* %dest
 ; CHECK-LABEL: testRightBad2x64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #10
-; CHECK-NEXT:    movk x8, #1, lsl #48
 ; CHECK-NEXT:    ushr.2d v1, v1, #48
+; CHECK-NEXT:    movk x8, #1, lsl #48
 ; CHECK-NEXT:    dup.2d v2, x8
 ; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    orr.16b v0, v0, v1

@@ -162,6 +162,7 @@ private:
   bool IsMask;
   bool HasVL;
   bool HasPolicy;
+  bool HasNoMaskPassThru;
   bool HasNoMaskedOverloaded;
   bool HasAutoDef; // There is automiatic definition in header
   std::string ManualCodegen;
@@ -177,8 +178,8 @@ public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
                StringRef MangledSuffix, StringRef IRName, bool IsMask,
                bool HasMaskedOffOperand, bool HasVL, bool HasPolicy,
-               bool HasNoMaskedOverloaded, bool HasAutoDef,
-               StringRef ManualCodegen, const RVVTypes &Types,
+               bool HasNoMaskPassThru, bool HasNoMaskedOverloaded,
+               bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                const std::vector<StringRef> &RequiredFeatures, unsigned NF);
   ~RVVIntrinsic() = default;
@@ -188,6 +189,7 @@ public:
   StringRef getMangledName() const { return MangledName; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return HasPolicy; }
+  bool hasNoMaskPassThru() const { return HasNoMaskPassThru; }
   bool hasNoMaskedOverloaded() const { return HasNoMaskedOverloaded; }
   bool hasManualCodegen() const { return !ManualCodegen.empty(); }
   bool hasAutoDef() const { return HasAutoDef; }
@@ -770,12 +772,14 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            StringRef NewMangledName, StringRef MangledSuffix,
                            StringRef IRName, bool IsMask,
                            bool HasMaskedOffOperand, bool HasVL, bool HasPolicy,
-                           bool HasNoMaskedOverloaded, bool HasAutoDef,
-                           StringRef ManualCodegen, const RVVTypes &OutInTypes,
+                           bool HasNoMaskPassThru, bool HasNoMaskedOverloaded,
+                           bool HasAutoDef, StringRef ManualCodegen,
+                           const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
                            const std::vector<StringRef> &RequiredFeatures,
                            unsigned NF)
     : IRName(IRName), IsMask(IsMask), HasVL(HasVL), HasPolicy(HasPolicy),
+      HasNoMaskPassThru(HasNoMaskPassThru),
       HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
       ManualCodegen(ManualCodegen.str()), NF(NF) {
 
@@ -823,7 +827,7 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   // IntrinsicTypes is nonmasked version index. Need to update it
   // if there is maskedoff operand (It is always in first operand).
   IntrinsicTypes = NewIntrinsicTypes;
-  if (IsMask && HasMaskedOffOperand) {
+  if ((IsMask && HasMaskedOffOperand) || (!IsMask && HasNoMaskPassThru)) {
     for (auto &I : IntrinsicTypes) {
       if (I >= 0)
         I += NF;
@@ -860,6 +864,9 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
     } else {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
     }
+  } else if (hasNoMaskPassThru()) {
+    OS << "  Ops.push_back(llvm::UndefValue::get(ResultType));\n";
+    OS << "  std::rotate(Ops.rbegin(), Ops.rbegin() + 1,  Ops.rend());\n";
   }
 
   OS << "  IntrinsicTypes = {";
@@ -1107,6 +1114,8 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
       PrintFatalError("Builtin with same name has different HasPolicy");
     else if (P.first->second->hasPolicy() != Def->hasPolicy())
       PrintFatalError("Builtin with same name has different HasPolicy");
+    else if (P.first->second->hasNoMaskPassThru() != Def->hasNoMaskPassThru())
+      PrintFatalError("Builtin with same name has different HasNoMaskPassThru");
     else if (P.first->second->getIntrinsicTypes() != Def->getIntrinsicTypes())
       PrintFatalError("Builtin with same name has different IntrinsicTypes");
   }
@@ -1154,6 +1163,7 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasMaskedOffOperand = R->getValueAsBit("HasMaskedOffOperand");
     bool HasVL = R->getValueAsBit("HasVL");
     bool HasPolicy = R->getValueAsBit("HasPolicy");
+    bool HasNoMaskPassThru = R->getValueAsBit("HasNoMaskPassThru");
     bool HasNoMaskedOverloaded = R->getValueAsBit("HasNoMaskedOverloaded");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
     StringRef ManualCodegen = R->getValueAsString("ManualCodegen");
@@ -1228,8 +1238,8 @@ void RVVEmitter::createRVVIntrinsics(
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasPolicy,
-            HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
-            IntrinsicTypes, RequiredFeatures, NF));
+            HasNoMaskPassThru, HasNoMaskedOverloaded, HasAutoDef, ManualCodegen,
+            Types.getValue(), IntrinsicTypes, RequiredFeatures, NF));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -1237,8 +1247,9 @@ void RVVEmitter::createRVVIntrinsics(
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, MangledSuffixStr, IRNameMask,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasPolicy,
-              HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
-              MaskTypes.getValue(), IntrinsicTypes, RequiredFeatures, NF));
+              HasNoMaskPassThru, HasNoMaskedOverloaded, HasAutoDef,
+              ManualCodegenMask, MaskTypes.getValue(), IntrinsicTypes,
+              RequiredFeatures, NF));
         }
       } // end for Log2LMULList
     }   // end for TypeRange

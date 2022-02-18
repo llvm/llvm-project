@@ -17,7 +17,7 @@ struct S { ~S(); };
 extern "C" int f() { S s; g(); return 0;};
 #else
 void g(void);
-int f() { g(); return 0; };
+int f(void) { g(); return 0; };
 #endif
 
 // CHECK: define {{.*}} @f() #[[#F:]]

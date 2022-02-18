@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -819,9 +820,18 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       Type resultType = genericOp->getResult(yieldVal.index()).getType();
       // The input can have a different type than the result, e.g. a dynamic
       // input dimension can be turned into a static output dimension.
-      if (returnedArg.getType() != resultType)
-        returnedArg = rewriter.create<tensor::CastOp>(genericOp.getLoc(),
-                                                      resultType, returnedArg);
+      Type returnType = returnedArg.getType();
+      if (returnType != resultType) {
+        // Distinguish between sparse conversion or dense tensor casting.
+        // TODO: unify the two ops?
+        if (sparse_tensor::getSparseTensorEncoding(returnType) ||
+            sparse_tensor::getSparseTensorEncoding(resultType))
+          returnedArg = rewriter.create<sparse_tensor::ConvertOp>(
+              genericOp.getLoc(), resultType, returnedArg);
+        else
+          returnedArg = rewriter.create<tensor::CastOp>(
+              genericOp.getLoc(), resultType, returnedArg);
+      }
       returnedArgs.push_back(returnedArg);
     }
 

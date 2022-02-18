@@ -62,7 +62,6 @@ inline namespace fundamentals_v1 {
 
 #include <__debug>
 #include <__memory/uses_allocator.h>
-#include <algorithm>
 #include <array>
 #include <experimental/__config>
 #include <functional>

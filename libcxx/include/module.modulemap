@@ -50,10 +50,6 @@ module std [system] {
       header "setjmp.h"
       export *
     }
-    module stdatomic_h {
-      header "stdatomic.h"
-      export *
-    }
     // FIXME: <stdalign.h> is missing.
     // <signal.h> provided by C library.
     // <stdarg.h> provided by compiler.
@@ -993,6 +989,7 @@ module std [system] {
 
   // __config not modularised due to a bug in Clang
   // FIXME: These should be private.
+  module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
   module __bits              { private header "__bits"              export * }

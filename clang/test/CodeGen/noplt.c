@@ -3,8 +3,8 @@
 // CHECK-NOPLT: Function Attrs: nonlazybind
 // CHECK-NOPLT-NEXT: declare {{.*}}i32 @foo
 // CHECK-NOPLT-METADATA: !"RtLibUseGOT"
-int foo();
+int foo(void);
 
-int bar() {
+int bar(void) {
   return foo();
 }

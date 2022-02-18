@@ -49,15 +49,19 @@ struct FunctionId {
 };
 
 struct PerDistributionData {
-  double MedianBytesPerSecond; // Median of samples for this distribution.
-  double Score;                // Normalized score for this distribution.
-  Grade::GradeEnum Grade;      // Grade for this distribution.
+  std::vector<double> BytesPerSecondSamples;
+  double BytesPerSecondMedian;   // Median of samples for this distribution.
+  double BytesPerSecondMean;     // Mean of samples for this distribution.
+  double BytesPerSecondVariance; // Variance of samples for this distribution.
+  double Score;                  // Normalized score for this distribution.
+  Grade::GradeEnum Grade;        // Grade for this distribution.
 };
 
 struct FunctionData {
   FunctionId Id;
   StringMap<PerDistributionData> PerDistributionData;
-  GradeHistogram GradeHisto = {};           // GradeEnum indexed array
+  double ScoresGeoMean;           // Geomean of scores for each distribution.
+  GradeHistogram GradeHisto = {}; // GradeEnum indexed array
   Grade::GradeEnum FinalGrade = Grade::BAD; // Overall grade for this function
 };
 

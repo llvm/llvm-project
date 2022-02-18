@@ -1,0 +1,17 @@
+Check that /winsysroot results in the correct machine-specific subdirectory
+being searched for the defaultlibs, for a 32-bit .obj.
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: mkdir -p %t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86
+# RUN: mkdir -p %t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x64
+# RUN: cp %p/Inputs/std32.lib %t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86
+# RUN: cp %p/Inputs/std64.lib %t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x64
+# RUN: not lld-link %t.obj /winsysroot:%t.dir/sysroot /defaultlib:std32 2>&1 | FileCheck -check-prefix=MISSINGENTRY32 --implicit-check-not=_ExitProcess %s
+MISSINGENTRY32: undefined symbol: _mainCRTStartup
+
+Check the same for a 64-bit input .obj.
+# RUN: not lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot /defaultlib:std64 2>&1 | FileCheck -check-prefix=MISSINGENTRY64 --implicit-check-not=_ExitProcess %s
+MISSINGENTRY64: undefined symbol: mainCRTStartup
+
+Check that when /winsysroot is specified, %LIB% is ignored.
+# RUN: env LIB=foo.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86 not lld-link %t.obj /winsysroot:%t.dir/doesnotexist /defaultlib:std32 2>&1 | FileCheck -check-prefix=LIBIGNORED %s
+LIBIGNORED: could not open 'std32.lib'

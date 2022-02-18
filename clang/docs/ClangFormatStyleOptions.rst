@@ -4004,6 +4004,27 @@ the configuration (without a prefix: ``Auto``).
        void operator++ (int a);        vs.    void operator++(int a);
        object.operator++ (10);                object.operator++(10);
 
+  * ``bool AfterRequiresInClause`` If ``true``, put space between requires keyword in a requires clause and
+    opening parentheses, if there is one.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       template<typename T>            vs.    template<typename T>
+       requires (A<T> && B<T>)                requires(A<T> && B<T>)
+       ...                                    ...
+
+  * ``bool AfterRequiresInExpression`` If ``true``, put space between requires keyword in a requires expression
+    and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       template<typename T>            vs.    template<typename T>
+       concept C = requires (T t) {           concept C = requires(T t) {
+                     ...                                    ...
+                   }                                      }
+
   * ``bool BeforeNonEmptyParentheses`` If ``true``, put a space before opening parentheses only if the
     parentheses are not empty.
 

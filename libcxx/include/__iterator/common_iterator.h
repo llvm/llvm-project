@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___ITERATOR_COMMON_ITERATOR_H
 #define _LIBCPP___ITERATOR_COMMON_ITERATOR_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>

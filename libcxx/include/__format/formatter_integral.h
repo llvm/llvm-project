@@ -14,6 +14,7 @@
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/transform.h>
+#include <__assert>
 #include <__config>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>

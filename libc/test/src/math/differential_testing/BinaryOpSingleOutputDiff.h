@@ -78,6 +78,11 @@ public:
     log << "\n Performance tests with inputs in normal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ FPBits::MIN_NORMAL,
                       /* endingBit= */ FPBits::MAX_NORMAL, 100'000'001, log);
+    log << "\n Performance tests with inputs in normal range with exponents "
+           "close to each other:\n";
+    run_perf_in_range(
+        myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
+        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 10'000'001, log);
   }
 };
 

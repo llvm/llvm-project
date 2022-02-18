@@ -1518,4 +1518,15 @@ SemanticsContext &Symbol::GetSemanticsContext() const {
   return DEREF(owner_).context();
 }
 
+bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y) {
+  if (x && y) {
+    if (auto xDt{evaluate::DynamicType::From(*x)}) {
+      if (auto yDt{evaluate::DynamicType::From(*y)}) {
+        return xDt->IsTkCompatibleWith(*yDt);
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace Fortran::semantics

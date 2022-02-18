@@ -781,8 +781,6 @@ struct _LIBCPP_TEMPLATE_VIS hash<long double>
     }
 };
 
-#if _LIBCPP_STD_VER > 11
-
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, bool = is_enum<_Tp>::value>
 struct _LIBCPP_TEMPLATE_VIS __enum_hash
@@ -799,7 +797,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
         typedef typename underlying_type<_Tp>::type type;
-        return hash<type>{}(static_cast<type>(__v));
+        return hash<type>()(static_cast<type>(__v));
     }
 };
 template <class _Tp>
@@ -813,7 +811,6 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp>
 {
 };
-#endif
 
 #if _LIBCPP_STD_VER > 14
 

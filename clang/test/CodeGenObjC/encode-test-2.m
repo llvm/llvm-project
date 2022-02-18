@@ -28,7 +28,7 @@ Class <X> IVAR_Classx;
 @implementation Intf 
 @end
 
-int main()
+int main(void)
 {
 	const char * en = @encode(Intf);
 }

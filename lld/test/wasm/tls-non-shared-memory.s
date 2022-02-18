@@ -46,10 +46,10 @@ tls1:
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
-# RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
+# RUN: obj2yaml %t.so | FileCheck %s --check-prefixes=SHARED,PIC
 
 # RUN: wasm-ld --experimental-pic --no-gc-sections --no-entry -pie -o %t-pie.wasm %t.o
-# RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
+# RUN: obj2yaml %t-pie.wasm | FileCheck %s --check-prefixes=PIE,PIC
 
 #      CHECK:   - Type:            GLOBAL
 # __stack_pointer
@@ -98,17 +98,33 @@ tls1:
 # In PIC mode we expect TLS data and non-TLS data to be merged into
 # a single segment which is initialized via the  __memory_base import
 
-#      PIC:  - Type:            IMPORT
-# PIC-NEXT:    Imports:
-# PIC-NEXT:      - Module:          env
-# PIC-NEXT:        Field:           memory
-# PIC-NEXT:        Kind:            MEMORY
-# PIC-NEXT:        Memory:
-# PIC-NEXT:          Minimum:         0x1
-# PIC-NEXT:      - Module:          env
-# PIC-NEXT:        Field:           __memory_base
-# PIC-NEXT:        Kind:            GLOBAL
-# PIC-NEXT:        GlobalType:      I32
+#      SHARED:  - Type:            IMPORT
+# SHARED-NEXT:    Imports:
+# SHARED-NEXT:      - Module:          env
+# SHARED-NEXT:        Field:           memory
+# SHARED-NEXT:        Kind:            MEMORY
+# SHARED-NEXT:        Memory:
+# SHARED-NEXT:          Minimum:         0x1
+# SHARED-NEXT:      - Module:          env
+# SHARED-NEXT:        Field:           __memory_base
+# SHARED-NEXT:        Kind:            GLOBAL
+# SHARED-NEXT:        GlobalType:      I32
+
+# In SHARED mode we export the address of all data symbols.
+#      SHARED:   - Type:            EXPORT
+# SHARED-NEXT:     Exports:
+#      SHARED:     - Name:            tls1
+# SHARED-NEXT:       Kind:            GLOBAL
+#      SHARED:     - Name:            no_tls
+# SHARED-NEXT:       Kind:            GLOBAL
+
+# In PIE mode we don't export data address by default.
+#      PIE:   - Type:            EXPORT
+# PIE-NEXT:     Exports:
+# PIE-NEXT:       - Name:            memory
+# PIE-NEXT:         Kind:            MEMORY
+# PIE-NEXT:         Index:           0
+# PIE-NEXT:   - Type:
 
 # .tdata and .data are combined into single segment in PIC mode.
 #      PIC:  - Type:            DATA
@@ -117,6 +133,6 @@ tls1:
 # PIC-NEXT:        InitFlags:       0
 # PIC-NEXT:        Offset:
 # PIC-NEXT:          Opcode:          GLOBAL_GET
-# PIC-NEXT:          Index:           0
+# PIC-NEXT:          Index:           {{\d*}}
 # PIC-NEXT:        Content:         2B0000002A000000
 # PIC-NEXT:  - Type:            CUSTOM

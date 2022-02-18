@@ -20,7 +20,7 @@ int foo (int n) {
 }
 
 // CHECK-LABEL: @no_goto_bypass
-void no_goto_bypass() {
+void no_goto_bypass(void) {
   // O2: @llvm.lifetime.start.p0i8(i64 1
   char x;
 l1:
@@ -33,7 +33,7 @@ l1:
 }
 
 // CHECK-LABEL: @goto_bypass
-void goto_bypass() {
+void goto_bypass(void) {
   {
     // O2-NOT: @llvm.lifetime.start.p0i8(i64 1
     // O2-NOT: @llvm.lifetime.end.p0i8(i64 1

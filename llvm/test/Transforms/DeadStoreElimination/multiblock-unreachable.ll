@@ -63,12 +63,11 @@ declare void @exit()
 define void @unreachable_exit_with_no_call(i64* noalias %ptr, i1 %c.1) {
 ; CHECK-LABEL: @unreachable_exit_with_no_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 1, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    store i64 0, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -87,13 +86,12 @@ if.end:
 define void @unreachable_exit_with_nounwind_call_pr53800(i64* noalias %ptr, i1 %c.1) {
 ; CHECK-LABEL: @unreachable_exit_with_nounwind_call_pr53800(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 1, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @exit() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    store i64 0, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

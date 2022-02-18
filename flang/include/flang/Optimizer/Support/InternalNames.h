@@ -133,7 +133,7 @@ struct NameUniquer {
   /// Check whether the name should be re-mangle with external ABI convention.
   static bool needExternalNameMangling(llvm::StringRef uniquedName);
 
-  /// Does \p uniquedName belong to module \p moduleName ?
+  /// Does \p uniquedName belong to module \p moduleName?
   static bool belongsToModule(llvm::StringRef uniquedName,
                               llvm::StringRef moduleName);
 

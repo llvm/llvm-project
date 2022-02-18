@@ -12,7 +12,7 @@
 
 #include "literal-support.h"
 
-void test_empty_array() {
+void test_empty_array(void) {
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-LABEL: define{{.*}} void @test_empty_array
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*objc_msgSend}}
@@ -31,7 +31,7 @@ void test_empty_array() {
   NSArray *arr = @[];
 }
 
-void test_empty_dictionary() {
+void test_empty_dictionary(void) {
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-LABEL: define{{.*}} void @test_empty_dictionary
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*objc_msgSend}}

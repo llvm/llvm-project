@@ -2710,16 +2710,20 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
 
   if (FromVP) {
     // All upstream VP SDNodes always have a mask and avl.
-    auto MaskIdx = ISD::getVPMaskIdx(Opcode).getValue();
-    auto AVLIdx = ISD::getVPExplicitVectorLengthIdx(Opcode).getValue();
-    Mask = Op->getOperand(MaskIdx);
-    AVL = Op->getOperand(AVLIdx);
+    auto MaskIdx = ISD::getVPMaskIdx(Opcode);
+    auto AVLIdx = ISD::getVPExplicitVectorLengthIdx(Opcode);
+    if (MaskIdx)
+      Mask = Op->getOperand(*MaskIdx);
+    if (AVLIdx)
+      AVL = Op->getOperand(*AVLIdx);
 
-  } else {
-    // Materialize the VL parameter.
-    AVL = CDAG.getConstant(OpVecVT.getVectorNumElements(), MVT::i32);
-    Mask = CDAG.getConstantMask(Packing, true);
   }
+
+  // Materialize default mask and avl.
+  if (!AVL)
+    AVL = CDAG.getConstant(OpVecVT.getVectorNumElements(), MVT::i32);
+  if (!Mask)
+    Mask = CDAG.getConstantMask(Packing, true);
 
   if (isVVPBinaryOp(VVPOpcode)) {
     assert(LegalVecVT.isSimple());

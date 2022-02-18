@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/linux/app.h"
-#include "include/sys/mman.h"
-#include "include/sys/syscall.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/string/memcpy.h"
 
@@ -16,6 +14,8 @@
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 #include <stdint.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
 
 extern "C" int main(int, char **, char **);
 

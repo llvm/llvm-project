@@ -12,12 +12,12 @@ unsigned v2[2][3] = {[0 ... 1][0 ... 1] = 2222, 3333};
 // CHECK-DAG: [2 x [3 x i32]] {{[[][[]}}3 x i32] [i32 2222, i32 2222, i32 0], [3 x i32] [i32 2222, i32 2222, i32 3333]],
 // CHECK-DAG: [[INIT14:.*]] = private global [16 x i32] [i32 0, i32 0, i32 0, i32 0, i32 0, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 0, i32 0, i32 0, i32 0], align 4
 
-void f1() {
+void f1(void) {
   // Scalars in braces.
   int a = { 1 };
 }
 
-void f2() {
+void f2(void) {
   int a[2][2] = { { 1, 2 }, { 3, 4 } };
   int b[3][3] = { { 1, 2 }, { 3, 4 } };
   int *c[2] = { &a[1][1], &b[2][2] };
@@ -29,7 +29,7 @@ void f2() {
 typedef void (* F)(void);
 extern void foo(void);
 struct S { F f; };
-void f3() {
+void f3(void) {
   struct S a[1] = { { foo } };
 }
 
@@ -37,7 +37,7 @@ void f3() {
 // CHECK-DAG: @g3 ={{.*}} constant i32 10
 // CHECK-DAG: @f4.g4 = internal constant i32 12
 const int g3 = 10;
-int f4() {
+int f4(void) {
   static const int g4 = 12;
   return g4;
 }
@@ -54,7 +54,7 @@ vec3 f5(vec3 value) {
 }
 
 // rdar://problem/8154689
-void f6() {
+void f6(void) {
   int x;
   long ids[] = { (long) &x };  
 }
@@ -140,7 +140,7 @@ void test10(int X) {
   // CHECK: call void @bar
 }
 
-void nonzeroMemseti8() {
+void nonzeroMemseti8(void) {
   char arr[33] = { 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, };
   // CHECK-LABEL: @nonzeroMemseti8(
   // CHECK-NOT: store
@@ -148,7 +148,7 @@ void nonzeroMemseti8() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 42, i32 33, i1 false)
 }
 
-void nonzeroMemseti16() {
+void nonzeroMemseti16(void) {
   unsigned short arr[17] = { 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, };
   // CHECK-LABEL: @nonzeroMemseti16(
   // CHECK-NOT: store
@@ -156,7 +156,7 @@ void nonzeroMemseti16() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 66, i32 34, i1 false)
 }
 
-void nonzeroMemseti32() {
+void nonzeroMemseti32(void) {
   unsigned arr[9] = { 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, };
   // CHECK-LABEL: @nonzeroMemseti32(
   // CHECK-NOT: store
@@ -164,7 +164,7 @@ void nonzeroMemseti32() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
 }
 
-void nonzeroMemseti64() {
+void nonzeroMemseti64(void) {
   unsigned long long arr[7] = { 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA,  0xAAAAAAAAAAAAAAAA,  0xAAAAAAAAAAAAAAAA,  };
   // CHECK-LABEL: @nonzeroMemseti64(
   // CHECK-NOT: store
@@ -172,7 +172,7 @@ void nonzeroMemseti64() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -86, i32 56, i1 false)
 }
 
-void nonzeroMemsetf32() {
+void nonzeroMemsetf32(void) {
   float arr[9] = { 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, };
   // CHECK-LABEL: @nonzeroMemsetf32(
   // CHECK-NOT: store
@@ -180,7 +180,7 @@ void nonzeroMemsetf32() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 101, i32 36, i1 false)
 }
 
-void nonzeroMemsetf64() {
+void nonzeroMemsetf64(void) {
   double arr[7] = { 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, };
   // CHECK-LABEL: @nonzeroMemsetf64(
   // CHECK-NOT: store
@@ -188,7 +188,7 @@ void nonzeroMemsetf64() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 68, i32 56, i1 false)
 }
 
-void nonzeroPaddedUnionMemset() {
+void nonzeroPaddedUnionMemset(void) {
   union U { char c; int i; };
   union U arr[9] = { 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, };
   // CHECK-LABEL: @nonzeroPaddedUnionMemset(
@@ -197,7 +197,7 @@ void nonzeroPaddedUnionMemset() {
   // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
 }
 
-void nonzeroNestedMemset() {
+void nonzeroNestedMemset(void) {
   union U { char c; int i; };
   struct S { union U u; short i; };
   struct S arr[5] = { { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, };
@@ -237,7 +237,7 @@ void test13(int x) {
 }
 
 // CHECK-LABEL: @PR20473(
-void PR20473() {
+void PR20473(void) {
   // CHECK: memcpy{{.*}}getelementptr inbounds ([2 x i8], [2 x i8]* @
   bar((char[2]) {""});
   // CHECK: memcpy{{.*}}getelementptr inbounds ([3 x i8], [3 x i8]* @

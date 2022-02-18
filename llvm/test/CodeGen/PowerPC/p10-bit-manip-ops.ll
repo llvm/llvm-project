@@ -2,6 +2,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s
 
 ; These test cases aim to test the bit manipulation operations on Power10.
 

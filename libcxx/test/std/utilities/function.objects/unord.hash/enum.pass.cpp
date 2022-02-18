@@ -8,12 +8,9 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
-// UNSUPPORTED: c++03, c++11
-
 // <functional>
 
-// make sure that we can hash enumeration values
-// Not very portable
+// Make sure that we can hash enumeration values.
 
 #include "test_macros.h"
 

@@ -37,7 +37,7 @@ volatile struct {int x;} aggFct(void);
 typedef volatile int volatile_int;
 volatile_int vtS;
 
-int main() {
+int main(void) {
   int i;
 // CHECK: [[I:%[a-zA-Z0-9_.]+]] = alloca i32
   // load

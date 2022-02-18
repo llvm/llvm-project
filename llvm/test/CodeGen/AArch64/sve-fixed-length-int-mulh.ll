@@ -288,16 +288,16 @@ define <2 x i32> @smulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-LABEL: smulh_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
 ; CHECK-NEXT:    ret
 
 ; VBITS_EQ_128-LABEL: smulh_v2i32:
 ; VBITS_EQ_128:         sshll v0.2d, v0.2s, #0
-; VBITS_EQ_128-NEXT:    sshll v1.2d, v1.2s, #0
 ; VBITS_EQ_128-NEXT:    ptrue p0.d, vl2
+; VBITS_EQ_128-NEXT:    sshll v1.2d, v1.2s, #0
 ; VBITS_EQ_128-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; VBITS_EQ_128-NEXT:    shrn v0.2s, v0.2d, #32
 ; VBITS_EQ_128-NEXT:    ret
@@ -785,16 +785,16 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-LABEL: umulh_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
 ; CHECK-NEXT:    ret
 
 ; VBITS_EQ_128-LABEL: umulh_v2i32:
 ; VBITS_EQ_128:         ushll   v0.2d, v0.2s, #0
-; VBITS_EQ_128-NEXT:    ushll   v1.2d, v1.2s, #0
 ; VBITS_EQ_128-NEXT:    ptrue   p0.d, vl2
+; VBITS_EQ_128-NEXT:    ushll   v1.2d, v1.2s, #0
 ; VBITS_EQ_128-NEXT:    mul     z0.d, p0/m, z0.d, z1.d
 ; VBITS_EQ_128-NEXT:    shrn    v0.2s, v0.2d, #32
 ; VBITS_EQ_128-NEXT:    ret

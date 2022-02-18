@@ -209,6 +209,11 @@ void AMDGPUPALMetadata::setNumUsedVgprs(CallingConv::ID CC, unsigned Val) {
   getHwStage(CC)[".vgpr_count"] = MsgPackDoc.getNode(Val);
 }
 
+// Set the number of used agprs in the metadata.
+void AMDGPUPALMetadata::setNumUsedAgprs(CallingConv::ID CC, unsigned Val) {
+  getHwStage(CC)[".agpr_count"] = Val;
+}
+
 // Set the number of used sgprs in the metadata. This is an optional advisory
 // record for logging etc; wave dispatch actually uses the rsrc1 register for
 // the shader stage to determine the number of sgprs to allocate.

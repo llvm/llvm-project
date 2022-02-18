@@ -156,10 +156,11 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
           if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
             (void)PreCondVars.setVarAddr(
                 CGF, OrigVD,
-                Address(llvm::UndefValue::get(CGF.ConvertTypeForMem(
-                            CGF.getContext().getPointerType(
-                                OrigVD->getType().getNonReferenceType()))),
-                        CGF.getContext().getDeclAlign(OrigVD)));
+                Address::deprecated(
+                    llvm::UndefValue::get(
+                        CGF.ConvertTypeForMem(CGF.getContext().getPointerType(
+                            OrigVD->getType().getNonReferenceType()))),
+                    CGF.getContext().getDeclAlign(OrigVD)));
           }
         }
       }
@@ -624,8 +625,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       }
       if (!FO.RegisterCastedArgsOnly) {
         LocalAddrs.insert(
-            {Args[Cnt],
-             {Var, Address(ArgAddr.getPointer(), Ctx.getDeclAlign(Var))}});
+            {Args[Cnt], {Var, ArgAddr.withAlignment(Ctx.getDeclAlign(Var))}});
       }
     } else if (I->capturesVariableByCopy()) {
       assert(!FD->getType()->isAnyPointerType() &&
@@ -780,14 +780,14 @@ void CodeGenFunction::EmitOMPAggregateAssign(
       Builder.CreatePHI(SrcBegin->getType(), 2, "omp.arraycpy.srcElementPast");
   SrcElementPHI->addIncoming(SrcBegin, EntryBB);
   Address SrcElementCurrent =
-      Address(SrcElementPHI,
+      Address(SrcElementPHI, SrcAddr.getElementType(),
               SrcAddr.getAlignment().alignmentOfArrayElement(ElementSize));
 
   llvm::PHINode *DestElementPHI = Builder.CreatePHI(
       DestBegin->getType(), 2, "omp.arraycpy.destElementPast");
   DestElementPHI->addIncoming(DestBegin, EntryBB);
   Address DestElementCurrent =
-      Address(DestElementPHI,
+      Address(DestElementPHI, DestAddr.getElementType(),
               DestAddr.getAlignment().alignmentOfArrayElement(ElementSize));
 
   // Emit copy.
@@ -1061,10 +1061,10 @@ bool CodeGenFunction::EmitOMPCopyinClause(const OMPExecutableDirective &D) {
           MasterAddr = EmitLValue(&DRE).getAddress(*this);
           LocalDeclMap.erase(VD);
         } else {
-          MasterAddr =
-              Address(VD->isStaticLocal() ? CGM.getStaticLocalDeclAddress(VD)
-                                          : CGM.GetAddrOfGlobal(VD),
-                      getContext().getDeclAlign(VD));
+          MasterAddr = Address::deprecated(
+              VD->isStaticLocal() ? CGM.getStaticLocalDeclAddress(VD)
+                                  : CGM.GetAddrOfGlobal(VD),
+              getContext().getDeclAlign(VD));
         }
         // Get the address of the threadprivate variable.
         Address PrivateAddr = EmitLValue(*IRef).getAddress(*this);
@@ -1236,9 +1236,9 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
         // Get the address of the private variable.
         Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
         if (const auto *RefTy = PrivateVD->getType()->getAs<ReferenceType>())
-          PrivateAddr =
-              Address(Builder.CreateLoad(PrivateAddr),
-                      CGM.getNaturalTypeAlignment(RefTy->getPointeeType()));
+          PrivateAddr = Address::deprecated(
+              Builder.CreateLoad(PrivateAddr),
+              CGM.getNaturalTypeAlignment(RefTy->getPointeeType()));
         // Store the last value to the private copy in the last iteration.
         if (C->getKind() == OMPC_LASTPRIVATE_conditional)
           CGM.getOpenMPRuntime().emitLastprivateConditionalFinalUpdate(
@@ -1713,7 +1713,7 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddressOfLocalVariable(
       Addr,
       CGF.ConvertTypeForMem(CGM.getContext().getPointerType(CVD->getType())),
       getNameWithSeparators({CVD->getName(), ".addr"}, ".", "."));
-  return Address(Addr, Align);
+  return Address::deprecated(Addr, Align);
 }
 
 Address CodeGenFunction::OMPBuilderCBHelpers::getAddrOfThreadPrivate(
@@ -1736,7 +1736,7 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddrOfThreadPrivate(
   llvm::CallInst *ThreadPrivateCacheCall =
       OMPBuilder.createCachedThreadPrivate(CGF.Builder, Data, Size, CacheName);
 
-  return Address(ThreadPrivateCacheCall, VDAddr.getAlignment());
+  return Address::deprecated(ThreadPrivateCacheCall, VDAddr.getAlignment());
 }
 
 std::string CodeGenFunction::OMPBuilderCBHelpers::getNameWithSeparators(
@@ -4672,8 +4672,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         });
       }
       for (const auto &Pair : PrivatePtrs) {
-        Address Replacement(CGF.Builder.CreateLoad(Pair.second),
-                            CGF.getContext().getDeclAlign(Pair.first));
+        Address Replacement =
+            Address::deprecated(CGF.Builder.CreateLoad(Pair.second),
+                                CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, [Replacement]() { return Replacement; });
         if (auto *DI = CGF.getDebugInfo())
           if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
@@ -4686,14 +4687,16 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       for (auto &Pair : UntiedLocalVars) {
         if (isAllocatableDecl(Pair.first)) {
           llvm::Value *Ptr = CGF.Builder.CreateLoad(Pair.second.first);
-          Address Replacement(Ptr, CGF.getPointerAlign());
+          Address Replacement = Address::deprecated(Ptr, CGF.getPointerAlign());
           Pair.second.first = Replacement;
           Ptr = CGF.Builder.CreateLoad(Replacement);
-          Replacement = Address(Ptr, CGF.getContext().getDeclAlign(Pair.first));
+          Replacement = Address::deprecated(
+              Ptr, CGF.getContext().getDeclAlign(Pair.first));
           Pair.second.second = Replacement;
         } else {
           llvm::Value *Ptr = CGF.Builder.CreateLoad(Pair.second.first);
-          Address Replacement(Ptr, CGF.getContext().getDeclAlign(Pair.first));
+          Address Replacement = Address::deprecated(
+              Ptr, CGF.getContext().getDeclAlign(Pair.first));
           Pair.second.first = Replacement;
         }
       }
@@ -4701,8 +4704,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     if (Data.Reductions) {
       OMPPrivateScope FirstprivateScope(CGF);
       for (const auto &Pair : FirstprivatePtrs) {
-        Address Replacement(CGF.Builder.CreateLoad(Pair.second),
-                            CGF.getContext().getDeclAlign(Pair.first));
+        Address Replacement =
+            Address::deprecated(CGF.Builder.CreateLoad(Pair.second),
+                                CGF.getContext().getDeclAlign(Pair.first));
         FirstprivateScope.addPrivate(Pair.first,
                                      [Replacement]() { return Replacement; });
       }
@@ -4722,13 +4726,13 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
                                                            RedCG, Cnt);
         Address Replacement = CGF.CGM.getOpenMPRuntime().getTaskReductionItem(
             CGF, S.getBeginLoc(), ReductionsPtr, RedCG.getSharedLValue(Cnt));
-        Replacement =
-            Address(CGF.EmitScalarConversion(
-                        Replacement.getPointer(), CGF.getContext().VoidPtrTy,
-                        CGF.getContext().getPointerType(
-                            Data.ReductionCopies[Cnt]->getType()),
-                        Data.ReductionCopies[Cnt]->getExprLoc()),
-                    Replacement.getAlignment());
+        Replacement = Address::deprecated(
+            CGF.EmitScalarConversion(Replacement.getPointer(),
+                                     CGF.getContext().VoidPtrTy,
+                                     CGF.getContext().getPointerType(
+                                         Data.ReductionCopies[Cnt]->getType()),
+                                     Data.ReductionCopies[Cnt]->getExprLoc()),
+            Replacement.getAlignment());
         Replacement = RedCG.adjustPrivateAddress(CGF, Cnt, Replacement);
         Scope.addPrivate(RedCG.getBaseDecl(Cnt),
                          [Replacement]() { return Replacement; });
@@ -4778,7 +4782,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         }
         Address Replacement = CGF.CGM.getOpenMPRuntime().getTaskReductionItem(
             CGF, S.getBeginLoc(), ReductionsPtr, RedCG.getSharedLValue(Cnt));
-        Replacement = Address(
+        Replacement = Address::deprecated(
             CGF.EmitScalarConversion(
                 Replacement.getPointer(), CGF.getContext().VoidPtrTy,
                 CGF.getContext().getPointerType(InRedPrivs[Cnt]->getType()),
@@ -4937,8 +4941,9 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : PrivatePtrs) {
-        Address Replacement(CGF.Builder.CreateLoad(Pair.second),
-                            CGF.getContext().getDeclAlign(Pair.first));
+        Address Replacement =
+            Address::deprecated(CGF.Builder.CreateLoad(Pair.second),
+                                CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, [Replacement]() { return Replacement; });
       }
     }

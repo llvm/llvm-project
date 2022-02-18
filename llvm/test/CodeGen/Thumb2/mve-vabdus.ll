@@ -21,8 +21,7 @@ define arm_aapcs_vfpcc <8 x i8> @vabd_v8s8(<8 x i8> %src1, <8 x i8> %src2) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovlb.s8 q1, q1
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vsub.i16 q0, q0, q1
-; CHECK-NEXT:    vabs.s16 q0, q0
+; CHECK-NEXT:    vabd.s16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %sextsrc1 = sext <8 x i8> %src1 to <8 x i16>
   %sextsrc2 = sext <8 x i8> %src2 to <8 x i16>
@@ -74,8 +73,7 @@ define arm_aapcs_vfpcc <4 x i16> @vabd_v4s16(<4 x i16> %src1, <4 x i16> %src2) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q0, q1
-; CHECK-NEXT:    vabs.s32 q0, q0
+; CHECK-NEXT:    vabd.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %sextsrc1 = sext <4 x i16> %src1 to <4 x i32>
   %sextsrc2 = sext <4 x i16> %src2 to <4 x i32>
@@ -158,8 +156,7 @@ define arm_aapcs_vfpcc <8 x i8> @vabd_v8u8(<8 x i8> %src1, <8 x i8> %src2) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovlb.u8 q1, q1
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vsub.i16 q0, q0, q1
-; CHECK-NEXT:    vabs.s16 q0, q0
+; CHECK-NEXT:    vabd.u16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %zextsrc1 = zext <8 x i8> %src1 to <8 x i16>
   %zextsrc2 = zext <8 x i8> %src2 to <8 x i16>
@@ -210,8 +207,7 @@ define arm_aapcs_vfpcc <4 x i16> @vabd_v4u16(<4 x i16> %src1, <4 x i16> %src2) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovlb.u16 q1, q1
 ; CHECK-NEXT:    vmovlb.u16 q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q0, q1
-; CHECK-NEXT:    vabs.s32 q0, q0
+; CHECK-NEXT:    vabd.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %zextsrc1 = zext <4 x i16> %src1 to <4 x i32>
   %zextsrc2 = zext <4 x i16> %src2 to <4 x i32>

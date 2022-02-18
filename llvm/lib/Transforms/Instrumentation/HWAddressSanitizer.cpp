@@ -1378,19 +1378,7 @@ bool HWAddressSanitizer::instrumentStack(
           II->eraseFromParent();
       }
     }
-    if (memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment()))) {
-      for (auto DVI : Info.DbgVariableIntrinsics) {
-        SmallDenseSet<Value *> LocationOps(DVI->location_ops().begin(),
-                                           DVI->location_ops().end());
-        for (Value *V : LocationOps) {
-          if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-            if (V == AI)
-              DVI->replaceVariableLocationOp(V, Info.AI);
-          }
-        }
-      }
-      AI->eraseFromParent();
-    }
+    memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment()));
   }
   for (auto &I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();

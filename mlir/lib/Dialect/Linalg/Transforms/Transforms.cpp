@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -911,23 +912,26 @@ GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
 
 LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     tensor::ExtractSliceOp sliceOp, PatternRewriter &rewriter) const {
-  auto padOp = sliceOp.source().getDefiningOp<tensor::PadOp>();
-  if (!padOp)
-    return failure();
-  // Only unit stride supported.
   if (!sliceOp.hasUnitStride())
     return failure();
 
-  TilingInterface tilingInterface =
-      dyn_cast<TilingInterface>(padOp.getOperation());
+  auto padOp = sliceOp.source().getDefiningOp<tensor::PadOp>();
+  if (!padOp)
+    return failure();
+
+  bool zeroSliceGuard = true;
+  if (controlFn) {
+    if (Optional<bool> control = controlFn(sliceOp))
+      zeroSliceGuard = control.getValue();
+    else
+      return failure();
+  }
+
   Operation *tiledPadOp =
-      tilingInterface
-          .getTiledImplementation(
-              rewriter, /*dest=*/ValueRange{}, sliceOp.getMixedOffsets(),
-              sliceOp.getMixedSizes(), /*tileDestOperands=*/false)
-          .front();
+      tensor::bubbleUpPadSlice(rewriter, padOp, sliceOp.getMixedOffsets(),
+                               sliceOp.getMixedSizes(), zeroSliceGuard);
   // All shapes are static and the data source is actually used. Rewrite into
-  // pad_tensor(subtensor(x)).
+  // pad(extract_slice(x)).
   rewriter.replaceOp(sliceOp, tiledPadOp->getResults());
   return success();
 }

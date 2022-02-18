@@ -3395,10 +3395,43 @@ TEST_F(FormatTest, BreakInheritanceStyle) {
                StyleWithInheritanceBreakAfterComma);
 }
 
-TEST_F(FormatTest, FormatsVariableDeclarationsAfterStructOrClass) {
+TEST_F(FormatTest, FormatsVariableDeclarationsAfterRecord) {
   verifyFormat("class A {\n} a, b;");
   verifyFormat("struct A {\n} a, b;");
-  verifyFormat("union A {\n} a;");
+  verifyFormat("union A {\n} a, b;");
+
+  verifyFormat("constexpr class A {\n} a, b;");
+  verifyFormat("constexpr struct A {\n} a, b;");
+  verifyFormat("constexpr union A {\n} a, b;");
+
+  verifyFormat("namespace {\nclass A {\n} a, b;\n} // namespace");
+  verifyFormat("namespace {\nstruct A {\n} a, b;\n} // namespace");
+  verifyFormat("namespace {\nunion A {\n} a, b;\n} // namespace");
+
+  verifyFormat("namespace {\nconstexpr class A {\n} a, b;\n} // namespace");
+  verifyFormat("namespace {\nconstexpr struct A {\n} a, b;\n} // namespace");
+  verifyFormat("namespace {\nconstexpr union A {\n} a, b;\n} // namespace");
+
+  verifyFormat("namespace ns {\n"
+               "class {\n"
+               "} a, b;\n"
+               "} // namespace ns");
+  verifyFormat("namespace ns {\n"
+               "const class {\n"
+               "} a, b;\n"
+               "} // namespace ns");
+  verifyFormat("namespace ns {\n"
+               "constexpr class C {\n"
+               "} a, b;\n"
+               "} // namespace ns");
+  verifyFormat("namespace ns {\n"
+               "class { /* comment */\n"
+               "} a, b;\n"
+               "} // namespace ns");
+  verifyFormat("namespace ns {\n"
+               "const class { /* comment */\n"
+               "} a, b;\n"
+               "} // namespace ns");
 }
 
 TEST_F(FormatTest, FormatsEnum) {
@@ -3776,6 +3809,18 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "  }\n"
                "} // namespace\n",
                ShortInlineFunctions);
+  verifyFormat("namespace { /* comment */\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace { // comment\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
   verifyFormat("namespace {\n"
                "  int some_int;\n"
                "  void f() {\n"
@@ -3791,6 +3836,18 @@ TEST_F(FormatTest, FormatsNamespaces) {
                ShortInlineFunctions);
   verifyFormat("namespace {\n"
                "  class X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X { /* comment */\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X { // comment\n"
                "    void f() { return; }\n"
                "  };\n"
                "} // namespace\n",
@@ -8417,6 +8474,13 @@ TEST_F(FormatTest, DeclarationsOfMultipleVariables) {
   verifyFormat(
       "/*comment*/ switch (int *p, *q; p != q) {\n  default:\n    break;\n}",
       Style);
+
+  verifyFormat("if ([](int* p, int* q) {}()) {\n}", Style);
+  verifyFormat("for ([](int* p, int* q) {}();;) {\n}", Style);
+  verifyFormat("for (; [](int* p, int* q) {}();) {\n}", Style);
+  verifyFormat("for (;; [](int* p, int* q) {}()) {\n}", Style);
+  verifyFormat("switch ([](int* p, int* q) {}()) {\n  default:\n    break;\n}",
+               Style);
 }
 
 TEST_F(FormatTest, ConditionalExpressionsInBrackets) {
@@ -15005,6 +15069,84 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("X A::operator++();", SpaceAfterOverloadedOperator);
   verifyFormat("some_object.operator++();", SpaceAfterOverloadedOperator);
   verifyFormat("auto func() -> int;", SpaceAfterOverloadedOperator);
+
+  auto SpaceAfterRequires = getLLVMStyle();
+  SpaceAfterRequires.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  EXPECT_FALSE(
+      SpaceAfterRequires.SpaceBeforeParensOptions.AfterRequiresInClause);
+  EXPECT_FALSE(
+      SpaceAfterRequires.SpaceBeforeParensOptions.AfterRequiresInExpression);
+  verifyFormat("void f(auto x)\n"
+               "  requires requires(int i) { x + i; }\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("void f(auto x)\n"
+               "  requires(requires(int i) { x + i; })\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("if (requires(int i) { x + i; })\n"
+               "  return;",
+               SpaceAfterRequires);
+  verifyFormat("bool b = requires(int i) { x + i; };", SpaceAfterRequires);
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T>)\n"
+               "class Bar;",
+               SpaceAfterRequires);
+
+  SpaceAfterRequires.SpaceBeforeParensOptions.AfterRequiresInClause = true;
+  verifyFormat("void f(auto x)\n"
+               "  requires requires(int i) { x + i; }\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("void f(auto x)\n"
+               "  requires (requires(int i) { x + i; })\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("if (requires(int i) { x + i; })\n"
+               "  return;",
+               SpaceAfterRequires);
+  verifyFormat("bool b = requires(int i) { x + i; };", SpaceAfterRequires);
+  verifyFormat("template <typename T>\n"
+               "  requires (Foo<T>)\n"
+               "class Bar;",
+               SpaceAfterRequires);
+
+  SpaceAfterRequires.SpaceBeforeParensOptions.AfterRequiresInClause = false;
+  SpaceAfterRequires.SpaceBeforeParensOptions.AfterRequiresInExpression = true;
+  verifyFormat("void f(auto x)\n"
+               "  requires requires (int i) { x + i; }\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("void f(auto x)\n"
+               "  requires(requires (int i) { x + i; })\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("if (requires (int i) { x + i; })\n"
+               "  return;",
+               SpaceAfterRequires);
+  verifyFormat("bool b = requires (int i) { x + i; };", SpaceAfterRequires);
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T>)\n"
+               "class Bar;",
+               SpaceAfterRequires);
+
+  SpaceAfterRequires.SpaceBeforeParensOptions.AfterRequiresInClause = true;
+  verifyFormat("void f(auto x)\n"
+               "  requires requires (int i) { x + i; }\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("void f(auto x)\n"
+               "  requires (requires (int i) { x + i; })\n"
+               "{}",
+               SpaceAfterRequires);
+  verifyFormat("if (requires (int i) { x + i; })\n"
+               "  return;",
+               SpaceAfterRequires);
+  verifyFormat("bool b = requires (int i) { x + i; };", SpaceAfterRequires);
+  verifyFormat("template <typename T>\n"
+               "  requires (Foo<T>)\n"
+               "class Bar;",
+               SpaceAfterRequires);
 }
 
 TEST_F(FormatTest, SpaceAfterLogicalNot) {

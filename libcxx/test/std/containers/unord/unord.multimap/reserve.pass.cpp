@@ -32,7 +32,7 @@ void test(const C& c)
         s.insert("four");
         assert(s.find(c.find(1)->second) != s.end());
         s.erase(s.find(c.find(1)->second));
-        assert(s.find(next(c.find(1))->second) != s.end());
+        assert(s.find(std::next(c.find(1))->second) != s.end());
     }
     {
         std::set<std::string> s;
@@ -40,7 +40,7 @@ void test(const C& c)
         s.insert("four");
         assert(s.find(c.find(2)->second) != s.end());
         s.erase(s.find(c.find(2)->second));
-        assert(s.find(next(c.find(2))->second) != s.end());
+        assert(s.find(std::next(c.find(2))->second) != s.end());
     }
     assert(c.find(3)->second == "three");
     assert(c.find(4)->second == "four");

@@ -22,6 +22,7 @@ def Vector_Dialect : Dialect {
   let cppNamespace = "::mlir::vector";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // Base class for Vector dialect ops.
@@ -63,6 +64,15 @@ def Vector_CombiningKindAttr : DialectAttr<
           "::mlir::vector::CombiningKindAttr::get($0, $_builder.getContext())";
 }
 
+def Vector_AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
+                                      "AffineMap array attribute"> {
+  let returnType = [{ ::llvm::SmallVector<::mlir::AffineMap, 4> }];
+  let convertFromStorage = [{
+    llvm::to_vector<4>($_self.getAsValueRange<::mlir::AffineMapAttr>());
+  }];
+  let constBuilderCall = "$_builder.getAffineMapArrayAttr($0)";
+}
+
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
 def Vector_ContractionOp :
@@ -75,7 +85,8 @@ def Vector_ContractionOp :
     ]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
-               AffineMapArrayAttr:$indexing_maps, ArrayAttr:$iterator_types,
+               Vector_AffineMapArrayAttr:$indexing_maps,
+	       ArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
                                  "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyType)> {
@@ -223,7 +234,6 @@ def Vector_ContractionOp :
     }
     Type getResultType() { return getResult().getType(); }
     ArrayRef<StringRef> getTraitAttrNames();
-    SmallVector<AffineMap, 4> getIndexingMaps();
     static unsigned getAccOperandIndex() { return 2; }
 
     // Returns the bounds of each dimension in the iteration space spanned
@@ -240,7 +250,7 @@ def Vector_ContractionOp :
     std::vector<std::pair<int64_t, int64_t>> getContractingDimMap();
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
 
-    static constexpr StringRef getKindAttrName() { return "kind"; }
+    static constexpr StringRef getKindAttrStrName() { return "kind"; }
 
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
@@ -327,8 +337,8 @@ def Vector_MultiDimReductionOp :
                    "CombiningKind":$kind)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getKindAttrName() { return "kind"; }
-    static StringRef getReductionDimsAttrName() { return "reduction_dims"; }
+    static StringRef getKindAttrStrName() { return "kind"; }
+    static StringRef getReductionDimsAttrStrName() { return "reduction_dims"; }
 
     VectorType getSourceVectorType() {
       return source().getType().cast<VectorType>();
@@ -474,7 +484,7 @@ def Vector_ShuffleOp :
   ];
   let hasFolder = 1;
   let extraClassDeclaration = [{
-    static StringRef getMaskAttrName() { return "mask"; }
+    static StringRef getMaskAttrStrName() { return "mask"; }
     VectorType getV1VectorType() {
       return v1().getType().cast<VectorType>();
     }
@@ -561,7 +571,7 @@ def Vector_ExtractOp :
     OpBuilder<(ins "Value":$source, "ValueRange":$position)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getPositionAttrName() { return "position"; }
+    static StringRef getPositionAttrStrName() { return "position"; }
     VectorType getVectorType() {
       return vector().getType().cast<VectorType>();
     }
@@ -754,7 +764,7 @@ def Vector_InsertOp :
     OpBuilder<(ins "Value":$source, "Value":$dest, "ValueRange":$position)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getPositionAttrName() { return "position"; }
+    static StringRef getPositionAttrStrName() { return "position"; }
     Type getSourceType() { return source().getType(); }
     VectorType getDestVectorType() {
       return dest().getType().cast<VectorType>();
@@ -873,15 +883,15 @@ def Vector_InsertStridedSliceOp :
       "ArrayRef<int64_t>":$offsets, "ArrayRef<int64_t>":$strides)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getOffsetsAttrName() { return "offsets"; }
-    static StringRef getStridesAttrName() { return "strides"; }
+    static StringRef getOffsetsAttrStrName() { return "offsets"; }
+    static StringRef getStridesAttrStrName() { return "strides"; }
     VectorType getSourceVectorType() {
       return source().getType().cast<VectorType>();
     }
     VectorType getDestVectorType() {
       return dest().getType().cast<VectorType>();
     }
-    bool hasNonUnitStrides() { 
+    bool hasNonUnitStrides() {
       return llvm::any_of(strides(), [](Attribute attr) {
         return attr.cast<IntegerAttr>().getInt() != 1;
       });
@@ -970,7 +980,7 @@ def Vector_OuterProductOp :
     VectorType getVectorType() {
       return getResult().getType().cast<VectorType>();
     }
-    static constexpr StringRef getKindAttrName() {
+    static constexpr StringRef getKindAttrStrName() {
       return "kind";
     }
     static CombiningKind getDefaultKind() {
@@ -1089,11 +1099,11 @@ def Vector_ReshapeOp :
 
     void getFixedVectorSizes(SmallVectorImpl<int64_t> &results);
 
-    static StringRef getFixedVectorSizesAttrName() {
+    static StringRef getFixedVectorSizesAttrStrName() {
       return "fixed_vector_sizes";
     }
-    static StringRef getInputShapeAttrName() { return "input_shape"; }
-    static StringRef getOutputShapeAttrName() { return "output_shape"; }
+    static StringRef getInputShapeAttrStrName() { return "input_shape"; }
+    static StringRef getOutputShapeAttrStrName() { return "output_shape"; }
   }];
 
   let assemblyFormat = [{
@@ -1140,12 +1150,12 @@ def Vector_ExtractStridedSliceOp :
       "ArrayRef<int64_t>":$sizes, "ArrayRef<int64_t>":$strides)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getOffsetsAttrName() { return "offsets"; }
-    static StringRef getSizesAttrName() { return "sizes"; }
-    static StringRef getStridesAttrName() { return "strides"; }
+    static StringRef getOffsetsAttrStrName() { return "offsets"; }
+    static StringRef getSizesAttrStrName() { return "sizes"; }
+    static StringRef getStridesAttrStrName() { return "strides"; }
     VectorType getVectorType(){ return vector().getType().cast<VectorType>(); }
     void getOffsets(SmallVectorImpl<int64_t> &results);
-    bool hasNonUnitStrides() { 
+    bool hasNonUnitStrides() {
       return llvm::any_of(strides(), [](Attribute attr) {
         return attr.cast<IntegerAttr>().getInt() != 1;
       });
@@ -2190,7 +2200,7 @@ def Vector_ConstantMaskOp :
   }];
 
   let extraClassDeclaration = [{
-    static StringRef getMaskDimSizesAttrName() { return "mask_dim_sizes"; }
+    static StringRef getMaskDimSizesAttrStrName() { return "mask_dim_sizes"; }
   }];
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
@@ -2276,7 +2286,7 @@ def Vector_TransposeOp :
       return result().getType().cast<VectorType>();
     }
     void getTransp(SmallVectorImpl<int64_t> &results);
-    static StringRef getTranspAttrName() { return "transp"; }
+    static StringRef getTranspAttrStrName() { return "transp"; }
   }];
   let assemblyFormat = [{
     $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
@@ -2537,8 +2547,8 @@ def Vector_ScanOp :
                    CArg<"bool", "true">:$inclusive)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getKindAttrName() { return "kind"; }
-    static StringRef getReductionDimAttrName() { return "reduction_dim"; }
+    static StringRef getKindAttrStrName() { return "kind"; }
+    static StringRef getReductionDimAttrStrName() { return "reduction_dim"; }
     VectorType getSourceType() {
       return source().getType().cast<VectorType>();
     }

@@ -131,6 +131,7 @@ OPTIONS
  Specify the type of XCOFF object file, ELF object file, or IR object file input
  from command line or from archive files that llvm-nm should examine. The
  mode must be one of the following:
+ 
    32
          Process only 32-bit object files.
    64
@@ -155,6 +156,11 @@ OPTIONS
 .. option:: --dynamic, -D
 
  Display dynamic symbols instead of normal symbols.
+
+.. option:: --export-symbols
+
+ Print sorted symbols with their visibility (if applicable), with duplicates
+ removed.
 
 .. option:: --extern-only, -g
 
@@ -280,6 +286,13 @@ MACH-O SPECIFIC OPTIONS
 .. option:: -x
 
  Print symbol entry in hex.
+
+XCOFF SPECIFIC OPTIONS
+----------------------
+
+.. option:: --no-rsrc
+
+  Exclude resource file symbols (``__rsrc``) from export symbol list.
 
 BUGS
 ----

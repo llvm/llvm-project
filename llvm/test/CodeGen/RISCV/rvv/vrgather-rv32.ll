@@ -4,6 +4,7 @@
 declare <vscale x 1 x i8> @llvm.riscv.vrgather.vv.nxv1i8.i32(
   <vscale x 1 x i8>,
   <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
   i32);
 
 define <vscale x 1 x i8> @intrinsic_vrgather_vv_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, i32 %2) nounwind {
@@ -15,6 +16,7 @@ define <vscale x 1 x i8> @intrinsic_vrgather_vv_nxv1i8_nxv1i8_nxv1i8(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vrgather.vv.nxv1i8.i32(
+    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     i32 %2)
@@ -50,6 +52,7 @@ entry:
 declare <vscale x 2 x i8> @llvm.riscv.vrgather.vv.nxv2i8.i32(
   <vscale x 2 x i8>,
   <vscale x 2 x i8>,
+  <vscale x 2 x i8>,
   i32);
 
 define <vscale x 2 x i8> @intrinsic_vrgather_vv_nxv2i8_nxv2i8_nxv2i8(<vscale x 2 x i8> %0, <vscale x 2 x i8> %1, i32 %2) nounwind {
@@ -61,6 +64,7 @@ define <vscale x 2 x i8> @intrinsic_vrgather_vv_nxv2i8_nxv2i8_nxv2i8(<vscale x 2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vrgather.vv.nxv2i8.i32(
+    <vscale x 2 x i8> undef,
     <vscale x 2 x i8> %0,
     <vscale x 2 x i8> %1,
     i32 %2)
@@ -96,6 +100,7 @@ entry:
 declare <vscale x 4 x i8> @llvm.riscv.vrgather.vv.nxv4i8.i32(
   <vscale x 4 x i8>,
   <vscale x 4 x i8>,
+  <vscale x 4 x i8>,
   i32);
 
 define <vscale x 4 x i8> @intrinsic_vrgather_vv_nxv4i8_nxv4i8_nxv4i8(<vscale x 4 x i8> %0, <vscale x 4 x i8> %1, i32 %2) nounwind {
@@ -107,6 +112,7 @@ define <vscale x 4 x i8> @intrinsic_vrgather_vv_nxv4i8_nxv4i8_nxv4i8(<vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vrgather.vv.nxv4i8.i32(
+    <vscale x 4 x i8> undef,
     <vscale x 4 x i8> %0,
     <vscale x 4 x i8> %1,
     i32 %2)
@@ -142,6 +148,7 @@ entry:
 declare <vscale x 8 x i8> @llvm.riscv.vrgather.vv.nxv8i8.i32(
   <vscale x 8 x i8>,
   <vscale x 8 x i8>,
+  <vscale x 8 x i8>,
   i32);
 
 define <vscale x 8 x i8> @intrinsic_vrgather_vv_nxv8i8_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, <vscale x 8 x i8> %1, i32 %2) nounwind {
@@ -153,6 +160,7 @@ define <vscale x 8 x i8> @intrinsic_vrgather_vv_nxv8i8_nxv8i8_nxv8i8(<vscale x 8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vrgather.vv.nxv8i8.i32(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     <vscale x 8 x i8> %1,
     i32 %2)
@@ -188,6 +196,7 @@ entry:
 declare <vscale x 16 x i8> @llvm.riscv.vrgather.vv.nxv16i8.i32(
   <vscale x 16 x i8>,
   <vscale x 16 x i8>,
+  <vscale x 16 x i8>,
   i32);
 
 define <vscale x 16 x i8> @intrinsic_vrgather_vv_nxv16i8_nxv16i8_nxv16i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, i32 %2) nounwind {
@@ -199,6 +208,7 @@ define <vscale x 16 x i8> @intrinsic_vrgather_vv_nxv16i8_nxv16i8_nxv16i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vrgather.vv.nxv16i8.i32(
+    <vscale x 16 x i8> undef,
     <vscale x 16 x i8> %0,
     <vscale x 16 x i8> %1,
     i32 %2)
@@ -234,6 +244,7 @@ entry:
 declare <vscale x 32 x i8> @llvm.riscv.vrgather.vv.nxv32i8.i32(
   <vscale x 32 x i8>,
   <vscale x 32 x i8>,
+  <vscale x 32 x i8>,
   i32);
 
 define <vscale x 32 x i8> @intrinsic_vrgather_vv_nxv32i8_nxv32i8_nxv32i8(<vscale x 32 x i8> %0, <vscale x 32 x i8> %1, i32 %2) nounwind {
@@ -245,6 +256,7 @@ define <vscale x 32 x i8> @intrinsic_vrgather_vv_nxv32i8_nxv32i8_nxv32i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vrgather.vv.nxv32i8.i32(
+    <vscale x 32 x i8> undef,
     <vscale x 32 x i8> %0,
     <vscale x 32 x i8> %1,
     i32 %2)
@@ -280,6 +292,7 @@ entry:
 declare <vscale x 64 x i8> @llvm.riscv.vrgather.vv.nxv64i8.i32(
   <vscale x 64 x i8>,
   <vscale x 64 x i8>,
+  <vscale x 64 x i8>,
   i32);
 
 define <vscale x 64 x i8> @intrinsic_vrgather_vv_nxv64i8_nxv64i8_nxv64i8(<vscale x 64 x i8> %0, <vscale x 64 x i8> %1, i32 %2) nounwind {
@@ -291,6 +304,7 @@ define <vscale x 64 x i8> @intrinsic_vrgather_vv_nxv64i8_nxv64i8_nxv64i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vrgather.vv.nxv64i8.i32(
+    <vscale x 64 x i8> undef,
     <vscale x 64 x i8> %0,
     <vscale x 64 x i8> %1,
     i32 %2)
@@ -327,6 +341,7 @@ entry:
 declare <vscale x 1 x i16> @llvm.riscv.vrgather.vv.nxv1i16.i32(
   <vscale x 1 x i16>,
   <vscale x 1 x i16>,
+  <vscale x 1 x i16>,
   i32);
 
 define <vscale x 1 x i16> @intrinsic_vrgather_vv_nxv1i16_nxv1i16_nxv1i16(<vscale x 1 x i16> %0, <vscale x 1 x i16> %1, i32 %2) nounwind {
@@ -338,6 +353,7 @@ define <vscale x 1 x i16> @intrinsic_vrgather_vv_nxv1i16_nxv1i16_nxv1i16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vrgather.vv.nxv1i16.i32(
+    <vscale x 1 x i16> undef,
     <vscale x 1 x i16> %0,
     <vscale x 1 x i16> %1,
     i32 %2)
@@ -373,6 +389,7 @@ entry:
 declare <vscale x 2 x i16> @llvm.riscv.vrgather.vv.nxv2i16.i32(
   <vscale x 2 x i16>,
   <vscale x 2 x i16>,
+  <vscale x 2 x i16>,
   i32);
 
 define <vscale x 2 x i16> @intrinsic_vrgather_vv_nxv2i16_nxv2i16_nxv2i16(<vscale x 2 x i16> %0, <vscale x 2 x i16> %1, i32 %2) nounwind {
@@ -384,6 +401,7 @@ define <vscale x 2 x i16> @intrinsic_vrgather_vv_nxv2i16_nxv2i16_nxv2i16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vrgather.vv.nxv2i16.i32(
+    <vscale x 2 x i16> undef,
     <vscale x 2 x i16> %0,
     <vscale x 2 x i16> %1,
     i32 %2)
@@ -419,6 +437,7 @@ entry:
 declare <vscale x 4 x i16> @llvm.riscv.vrgather.vv.nxv4i16.i32(
   <vscale x 4 x i16>,
   <vscale x 4 x i16>,
+  <vscale x 4 x i16>,
   i32);
 
 define <vscale x 4 x i16> @intrinsic_vrgather_vv_nxv4i16_nxv4i16_nxv4i16(<vscale x 4 x i16> %0, <vscale x 4 x i16> %1, i32 %2) nounwind {
@@ -430,6 +449,7 @@ define <vscale x 4 x i16> @intrinsic_vrgather_vv_nxv4i16_nxv4i16_nxv4i16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vrgather.vv.nxv4i16.i32(
+    <vscale x 4 x i16> undef,
     <vscale x 4 x i16> %0,
     <vscale x 4 x i16> %1,
     i32 %2)
@@ -465,6 +485,7 @@ entry:
 declare <vscale x 8 x i16> @llvm.riscv.vrgather.vv.nxv8i16.i32(
   <vscale x 8 x i16>,
   <vscale x 8 x i16>,
+  <vscale x 8 x i16>,
   i32);
 
 define <vscale x 8 x i16> @intrinsic_vrgather_vv_nxv8i16_nxv8i16_nxv8i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, i32 %2) nounwind {
@@ -476,6 +497,7 @@ define <vscale x 8 x i16> @intrinsic_vrgather_vv_nxv8i16_nxv8i16_nxv8i16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vrgather.vv.nxv8i16.i32(
+    <vscale x 8 x i16> undef,
     <vscale x 8 x i16> %0,
     <vscale x 8 x i16> %1,
     i32 %2)
@@ -511,6 +533,7 @@ entry:
 declare <vscale x 16 x i16> @llvm.riscv.vrgather.vv.nxv16i16.i32(
   <vscale x 16 x i16>,
   <vscale x 16 x i16>,
+  <vscale x 16 x i16>,
   i32);
 
 define <vscale x 16 x i16> @intrinsic_vrgather_vv_nxv16i16_nxv16i16_nxv16i16(<vscale x 16 x i16> %0, <vscale x 16 x i16> %1, i32 %2) nounwind {
@@ -522,6 +545,7 @@ define <vscale x 16 x i16> @intrinsic_vrgather_vv_nxv16i16_nxv16i16_nxv16i16(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vrgather.vv.nxv16i16.i32(
+    <vscale x 16 x i16> undef,
     <vscale x 16 x i16> %0,
     <vscale x 16 x i16> %1,
     i32 %2)
@@ -557,6 +581,7 @@ entry:
 declare <vscale x 32 x i16> @llvm.riscv.vrgather.vv.nxv32i16.i32(
   <vscale x 32 x i16>,
   <vscale x 32 x i16>,
+  <vscale x 32 x i16>,
   i32);
 
 define <vscale x 32 x i16> @intrinsic_vrgather_vv_nxv32i16_nxv32i16_nxv32i16(<vscale x 32 x i16> %0, <vscale x 32 x i16> %1, i32 %2) nounwind {
@@ -568,6 +593,7 @@ define <vscale x 32 x i16> @intrinsic_vrgather_vv_nxv32i16_nxv32i16_nxv32i16(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vrgather.vv.nxv32i16.i32(
+    <vscale x 32 x i16> undef,
     <vscale x 32 x i16> %0,
     <vscale x 32 x i16> %1,
     i32 %2)
@@ -604,6 +630,7 @@ entry:
 declare <vscale x 1 x i32> @llvm.riscv.vrgather.vv.nxv1i32.i32(
   <vscale x 1 x i32>,
   <vscale x 1 x i32>,
+  <vscale x 1 x i32>,
   i32);
 
 define <vscale x 1 x i32> @intrinsic_vrgather_vv_nxv1i32_nxv1i32_nxv1i32(<vscale x 1 x i32> %0, <vscale x 1 x i32> %1, i32 %2) nounwind {
@@ -615,6 +642,7 @@ define <vscale x 1 x i32> @intrinsic_vrgather_vv_nxv1i32_nxv1i32_nxv1i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vrgather.vv.nxv1i32.i32(
+    <vscale x 1 x i32> undef,
     <vscale x 1 x i32> %0,
     <vscale x 1 x i32> %1,
     i32 %2)
@@ -650,6 +678,7 @@ entry:
 declare <vscale x 2 x i32> @llvm.riscv.vrgather.vv.nxv2i32.i32(
   <vscale x 2 x i32>,
   <vscale x 2 x i32>,
+  <vscale x 2 x i32>,
   i32);
 
 define <vscale x 2 x i32> @intrinsic_vrgather_vv_nxv2i32_nxv2i32_nxv2i32(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, i32 %2) nounwind {
@@ -661,6 +690,7 @@ define <vscale x 2 x i32> @intrinsic_vrgather_vv_nxv2i32_nxv2i32_nxv2i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vrgather.vv.nxv2i32.i32(
+    <vscale x 2 x i32> undef,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     i32 %2)
@@ -696,6 +726,7 @@ entry:
 declare <vscale x 4 x i32> @llvm.riscv.vrgather.vv.nxv4i32.i32(
   <vscale x 4 x i32>,
   <vscale x 4 x i32>,
+  <vscale x 4 x i32>,
   i32);
 
 define <vscale x 4 x i32> @intrinsic_vrgather_vv_nxv4i32_nxv4i32_nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, i32 %2) nounwind {
@@ -707,6 +738,7 @@ define <vscale x 4 x i32> @intrinsic_vrgather_vv_nxv4i32_nxv4i32_nxv4i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vrgather.vv.nxv4i32.i32(
+    <vscale x 4 x i32> undef,
     <vscale x 4 x i32> %0,
     <vscale x 4 x i32> %1,
     i32 %2)
@@ -742,6 +774,7 @@ entry:
 declare <vscale x 8 x i32> @llvm.riscv.vrgather.vv.nxv8i32.i32(
   <vscale x 8 x i32>,
   <vscale x 8 x i32>,
+  <vscale x 8 x i32>,
   i32);
 
 define <vscale x 8 x i32> @intrinsic_vrgather_vv_nxv8i32_nxv8i32_nxv8i32(<vscale x 8 x i32> %0, <vscale x 8 x i32> %1, i32 %2) nounwind {
@@ -753,6 +786,7 @@ define <vscale x 8 x i32> @intrinsic_vrgather_vv_nxv8i32_nxv8i32_nxv8i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vrgather.vv.nxv8i32.i32(
+    <vscale x 8 x i32> undef,
     <vscale x 8 x i32> %0,
     <vscale x 8 x i32> %1,
     i32 %2)
@@ -788,6 +822,7 @@ entry:
 declare <vscale x 16 x i32> @llvm.riscv.vrgather.vv.nxv16i32.i32(
   <vscale x 16 x i32>,
   <vscale x 16 x i32>,
+  <vscale x 16 x i32>,
   i32);
 
 define <vscale x 16 x i32> @intrinsic_vrgather_vv_nxv16i32_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32> %1, i32 %2) nounwind {
@@ -799,6 +834,7 @@ define <vscale x 16 x i32> @intrinsic_vrgather_vv_nxv16i32_nxv16i32_nxv16i32(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vrgather.vv.nxv16i32.i32(
+    <vscale x 16 x i32> undef,
     <vscale x 16 x i32> %0,
     <vscale x 16 x i32> %1,
     i32 %2)
@@ -834,6 +870,7 @@ entry:
 
 declare <vscale x 1 x half> @llvm.riscv.vrgather.vv.nxv1f16.i32(
   <vscale x 1 x half>,
+  <vscale x 1 x half>,
   <vscale x 1 x i16>,
   i32);
 
@@ -846,6 +883,7 @@ define <vscale x 1 x half> @intrinsic_vrgather_vv_nxv1f16_nxv1f16_nxv1i16(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vrgather.vv.nxv1f16.i32(
+    <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     <vscale x 1 x i16> %1,
     i32 %2)
@@ -880,6 +918,7 @@ entry:
 
 declare <vscale x 2 x half> @llvm.riscv.vrgather.vv.nxv2f16.i32(
   <vscale x 2 x half>,
+  <vscale x 2 x half>,
   <vscale x 2 x i16>,
   i32);
 
@@ -892,6 +931,7 @@ define <vscale x 2 x half> @intrinsic_vrgather_vv_nxv2f16_nxv2f16_nxv2i16(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vrgather.vv.nxv2f16.i32(
+    <vscale x 2 x half> undef,
     <vscale x 2 x half> %0,
     <vscale x 2 x i16> %1,
     i32 %2)
@@ -926,6 +966,7 @@ entry:
 
 declare <vscale x 4 x half> @llvm.riscv.vrgather.vv.nxv4f16.i32(
   <vscale x 4 x half>,
+  <vscale x 4 x half>,
   <vscale x 4 x i16>,
   i32);
 
@@ -938,6 +979,7 @@ define <vscale x 4 x half> @intrinsic_vrgather_vv_nxv4f16_nxv4f16_nxv4i16(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vrgather.vv.nxv4f16.i32(
+    <vscale x 4 x half> undef,
     <vscale x 4 x half> %0,
     <vscale x 4 x i16> %1,
     i32 %2)
@@ -972,6 +1014,7 @@ entry:
 
 declare <vscale x 8 x half> @llvm.riscv.vrgather.vv.nxv8f16.i32(
   <vscale x 8 x half>,
+  <vscale x 8 x half>,
   <vscale x 8 x i16>,
   i32);
 
@@ -984,6 +1027,7 @@ define <vscale x 8 x half> @intrinsic_vrgather_vv_nxv8f16_nxv8f16_nxv8i16(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vrgather.vv.nxv8f16.i32(
+    <vscale x 8 x half> undef,
     <vscale x 8 x half> %0,
     <vscale x 8 x i16> %1,
     i32 %2)
@@ -1018,6 +1062,7 @@ entry:
 
 declare <vscale x 16 x half> @llvm.riscv.vrgather.vv.nxv16f16.i32(
   <vscale x 16 x half>,
+  <vscale x 16 x half>,
   <vscale x 16 x i16>,
   i32);
 
@@ -1030,6 +1075,7 @@ define <vscale x 16 x half> @intrinsic_vrgather_vv_nxv16f16_nxv16f16_nxv16i16(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vrgather.vv.nxv16f16.i32(
+    <vscale x 16 x half> undef,
     <vscale x 16 x half> %0,
     <vscale x 16 x i16> %1,
     i32 %2)
@@ -1064,6 +1110,7 @@ entry:
 
 declare <vscale x 32 x half> @llvm.riscv.vrgather.vv.nxv32f16.i32(
   <vscale x 32 x half>,
+  <vscale x 32 x half>,
   <vscale x 32 x i16>,
   i32);
 
@@ -1076,6 +1123,7 @@ define <vscale x 32 x half> @intrinsic_vrgather_vv_nxv32f16_nxv32f16_nxv32i16(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vrgather.vv.nxv32f16.i32(
+    <vscale x 32 x half> undef,
     <vscale x 32 x half> %0,
     <vscale x 32 x i16> %1,
     i32 %2)
@@ -1111,6 +1159,7 @@ entry:
 
 declare <vscale x 1 x float> @llvm.riscv.vrgather.vv.nxv1f32.i32(
   <vscale x 1 x float>,
+  <vscale x 1 x float>,
   <vscale x 1 x i32>,
   i32);
 
@@ -1123,6 +1172,7 @@ define <vscale x 1 x float> @intrinsic_vrgather_vv_nxv1f32_nxv1f32_nxv1i32(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vrgather.vv.nxv1f32.i32(
+    <vscale x 1 x float> undef,
     <vscale x 1 x float> %0,
     <vscale x 1 x i32> %1,
     i32 %2)
@@ -1157,6 +1207,7 @@ entry:
 
 declare <vscale x 2 x float> @llvm.riscv.vrgather.vv.nxv2f32.i32(
   <vscale x 2 x float>,
+  <vscale x 2 x float>,
   <vscale x 2 x i32>,
   i32);
 
@@ -1169,6 +1220,7 @@ define <vscale x 2 x float> @intrinsic_vrgather_vv_nxv2f32_nxv2f32_nxv2i32(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vrgather.vv.nxv2f32.i32(
+    <vscale x 2 x float> undef,
     <vscale x 2 x float> %0,
     <vscale x 2 x i32> %1,
     i32 %2)
@@ -1203,6 +1255,7 @@ entry:
 
 declare <vscale x 4 x float> @llvm.riscv.vrgather.vv.nxv4f32.i32(
   <vscale x 4 x float>,
+  <vscale x 4 x float>,
   <vscale x 4 x i32>,
   i32);
 
@@ -1215,6 +1268,7 @@ define <vscale x 4 x float> @intrinsic_vrgather_vv_nxv4f32_nxv4f32_nxv4i32(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vrgather.vv.nxv4f32.i32(
+    <vscale x 4 x float> undef,
     <vscale x 4 x float> %0,
     <vscale x 4 x i32> %1,
     i32 %2)
@@ -1249,6 +1303,7 @@ entry:
 
 declare <vscale x 8 x float> @llvm.riscv.vrgather.vv.nxv8f32.i32(
   <vscale x 8 x float>,
+  <vscale x 8 x float>,
   <vscale x 8 x i32>,
   i32);
 
@@ -1261,6 +1316,7 @@ define <vscale x 8 x float> @intrinsic_vrgather_vv_nxv8f32_nxv8f32_nxv8i32(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vrgather.vv.nxv8f32.i32(
+    <vscale x 8 x float> undef,
     <vscale x 8 x float> %0,
     <vscale x 8 x i32> %1,
     i32 %2)
@@ -1295,6 +1351,7 @@ entry:
 
 declare <vscale x 16 x float> @llvm.riscv.vrgather.vv.nxv16f32.i32(
   <vscale x 16 x float>,
+  <vscale x 16 x float>,
   <vscale x 16 x i32>,
   i32);
 
@@ -1307,6 +1364,7 @@ define <vscale x 16 x float> @intrinsic_vrgather_vv_nxv16f32_nxv16f32_nxv16i32(<
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vrgather.vv.nxv16f32.i32(
+    <vscale x 16 x float> undef,
     <vscale x 16 x float> %0,
     <vscale x 16 x i32> %1,
     i32 %2)
@@ -1342,6 +1400,7 @@ entry:
 
 declare <vscale x 1 x double> @llvm.riscv.vrgather.vv.nxv1f64.i32(
   <vscale x 1 x double>,
+  <vscale x 1 x double>,
   <vscale x 1 x i64>,
   i32);
 
@@ -1354,6 +1413,7 @@ define <vscale x 1 x double> @intrinsic_vrgather_vv_nxv1f64_nxv1f64_nxv1i64(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vrgather.vv.nxv1f64.i32(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %0,
     <vscale x 1 x i64> %1,
     i32 %2)
@@ -1388,6 +1448,7 @@ entry:
 
 declare <vscale x 2 x double> @llvm.riscv.vrgather.vv.nxv2f64.i32(
   <vscale x 2 x double>,
+  <vscale x 2 x double>,
   <vscale x 2 x i64>,
   i32);
 
@@ -1400,6 +1461,7 @@ define <vscale x 2 x double> @intrinsic_vrgather_vv_nxv2f64_nxv2f64_nxv2i64(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vrgather.vv.nxv2f64.i32(
+    <vscale x 2 x double> undef,
     <vscale x 2 x double> %0,
     <vscale x 2 x i64> %1,
     i32 %2)
@@ -1434,6 +1496,7 @@ entry:
 
 declare <vscale x 4 x double> @llvm.riscv.vrgather.vv.nxv4f64.i32(
   <vscale x 4 x double>,
+  <vscale x 4 x double>,
   <vscale x 4 x i64>,
   i32);
 
@@ -1446,6 +1509,7 @@ define <vscale x 4 x double> @intrinsic_vrgather_vv_nxv4f64_nxv4f64_nxv4i64(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vrgather.vv.nxv4f64.i32(
+    <vscale x 4 x double> undef,
     <vscale x 4 x double> %0,
     <vscale x 4 x i64> %1,
     i32 %2)
@@ -1480,6 +1544,7 @@ entry:
 
 declare <vscale x 8 x double> @llvm.riscv.vrgather.vv.nxv8f64.i32(
   <vscale x 8 x double>,
+  <vscale x 8 x double>,
   <vscale x 8 x i64>,
   i32);
 
@@ -1492,6 +1557,7 @@ define <vscale x 8 x double> @intrinsic_vrgather_vv_nxv8f64_nxv8f64_nxv8i64(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vrgather.vv.nxv8f64.i32(
+    <vscale x 8 x double> undef,
     <vscale x 8 x double> %0,
     <vscale x 8 x i64> %1,
     i32 %2)
@@ -1527,6 +1593,7 @@ entry:
 
 declare <vscale x 1 x i8> @llvm.riscv.vrgather.vx.nxv1i8.i32(
   <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
   i32,
   i32);
 
@@ -1539,6 +1606,7 @@ define <vscale x 1 x i8> @intrinsic_vrgather_vx_nxv1i8_nxv1i8_i32(<vscale x 1 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vrgather.vx.nxv1i8.i32(
+    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1573,6 +1641,7 @@ entry:
 
 declare <vscale x 2 x i8> @llvm.riscv.vrgather.vx.nxv2i8.i32(
   <vscale x 2 x i8>,
+  <vscale x 2 x i8>,
   i32,
   i32);
 
@@ -1585,6 +1654,7 @@ define <vscale x 2 x i8> @intrinsic_vrgather_vx_nxv2i8_nxv2i8_i32(<vscale x 2 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vrgather.vx.nxv2i8.i32(
+    <vscale x 2 x i8> undef,
     <vscale x 2 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1619,6 +1689,7 @@ entry:
 
 declare <vscale x 4 x i8> @llvm.riscv.vrgather.vx.nxv4i8.i32(
   <vscale x 4 x i8>,
+  <vscale x 4 x i8>,
   i32,
   i32);
 
@@ -1631,6 +1702,7 @@ define <vscale x 4 x i8> @intrinsic_vrgather_vx_nxv4i8_nxv4i8_i32(<vscale x 4 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vrgather.vx.nxv4i8.i32(
+    <vscale x 4 x i8> undef,
     <vscale x 4 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1665,6 +1737,7 @@ entry:
 
 declare <vscale x 8 x i8> @llvm.riscv.vrgather.vx.nxv8i8.i32(
   <vscale x 8 x i8>,
+  <vscale x 8 x i8>,
   i32,
   i32);
 
@@ -1677,6 +1750,7 @@ define <vscale x 8 x i8> @intrinsic_vrgather_vx_nxv8i8_nxv8i8_i32(<vscale x 8 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vrgather.vx.nxv8i8.i32(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1711,6 +1785,7 @@ entry:
 
 declare <vscale x 16 x i8> @llvm.riscv.vrgather.vx.nxv16i8.i32(
   <vscale x 16 x i8>,
+  <vscale x 16 x i8>,
   i32,
   i32);
 
@@ -1723,6 +1798,7 @@ define <vscale x 16 x i8> @intrinsic_vrgather_vx_nxv16i8_nxv16i8_i32(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vrgather.vx.nxv16i8.i32(
+    <vscale x 16 x i8> undef,
     <vscale x 16 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1757,6 +1833,7 @@ entry:
 
 declare <vscale x 32 x i8> @llvm.riscv.vrgather.vx.nxv32i8.i32(
   <vscale x 32 x i8>,
+  <vscale x 32 x i8>,
   i32,
   i32);
 
@@ -1769,6 +1846,7 @@ define <vscale x 32 x i8> @intrinsic_vrgather_vx_nxv32i8_nxv32i8_i32(<vscale x 3
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vrgather.vx.nxv32i8.i32(
+    <vscale x 32 x i8> undef,
     <vscale x 32 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1803,6 +1881,7 @@ entry:
 
 declare <vscale x 64 x i8> @llvm.riscv.vrgather.vx.nxv64i8.i32(
   <vscale x 64 x i8>,
+  <vscale x 64 x i8>,
   i32,
   i32);
 
@@ -1815,6 +1894,7 @@ define <vscale x 64 x i8> @intrinsic_vrgather_vx_nxv64i8_nxv64i8_i32(<vscale x 6
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vrgather.vx.nxv64i8.i32(
+    <vscale x 64 x i8> undef,
     <vscale x 64 x i8> %0,
     i32 %1,
     i32 %2)
@@ -1849,6 +1929,7 @@ entry:
 
 declare <vscale x 1 x i16> @llvm.riscv.vrgather.vx.nxv1i16.i32(
   <vscale x 1 x i16>,
+  <vscale x 1 x i16>,
   i32,
   i32);
 
@@ -1861,6 +1942,7 @@ define <vscale x 1 x i16> @intrinsic_vrgather_vx_nxv1i16_nxv1i16_i32(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vrgather.vx.nxv1i16.i32(
+    <vscale x 1 x i16> undef,
     <vscale x 1 x i16> %0,
     i32 %1,
     i32 %2)
@@ -1895,6 +1977,7 @@ entry:
 
 declare <vscale x 2 x i16> @llvm.riscv.vrgather.vx.nxv2i16.i32(
   <vscale x 2 x i16>,
+  <vscale x 2 x i16>,
   i32,
   i32);
 
@@ -1907,6 +1990,7 @@ define <vscale x 2 x i16> @intrinsic_vrgather_vx_nxv2i16_nxv2i16_i32(<vscale x 2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vrgather.vx.nxv2i16.i32(
+    <vscale x 2 x i16> undef,
     <vscale x 2 x i16> %0,
     i32 %1,
     i32 %2)
@@ -1941,6 +2025,7 @@ entry:
 
 declare <vscale x 4 x i16> @llvm.riscv.vrgather.vx.nxv4i16.i32(
   <vscale x 4 x i16>,
+  <vscale x 4 x i16>,
   i32,
   i32);
 
@@ -1953,6 +2038,7 @@ define <vscale x 4 x i16> @intrinsic_vrgather_vx_nxv4i16_nxv4i16_i32(<vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vrgather.vx.nxv4i16.i32(
+    <vscale x 4 x i16> undef,
     <vscale x 4 x i16> %0,
     i32 %1,
     i32 %2)
@@ -1987,6 +2073,7 @@ entry:
 
 declare <vscale x 8 x i16> @llvm.riscv.vrgather.vx.nxv8i16.i32(
   <vscale x 8 x i16>,
+  <vscale x 8 x i16>,
   i32,
   i32);
 
@@ -1999,6 +2086,7 @@ define <vscale x 8 x i16> @intrinsic_vrgather_vx_nxv8i16_nxv8i16_i32(<vscale x 8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vrgather.vx.nxv8i16.i32(
+    <vscale x 8 x i16> undef,
     <vscale x 8 x i16> %0,
     i32 %1,
     i32 %2)
@@ -2033,6 +2121,7 @@ entry:
 
 declare <vscale x 16 x i16> @llvm.riscv.vrgather.vx.nxv16i16.i32(
   <vscale x 16 x i16>,
+  <vscale x 16 x i16>,
   i32,
   i32);
 
@@ -2045,6 +2134,7 @@ define <vscale x 16 x i16> @intrinsic_vrgather_vx_nxv16i16_nxv16i16_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vrgather.vx.nxv16i16.i32(
+    <vscale x 16 x i16> undef,
     <vscale x 16 x i16> %0,
     i32 %1,
     i32 %2)
@@ -2079,6 +2169,7 @@ entry:
 
 declare <vscale x 32 x i16> @llvm.riscv.vrgather.vx.nxv32i16.i32(
   <vscale x 32 x i16>,
+  <vscale x 32 x i16>,
   i32,
   i32);
 
@@ -2091,6 +2182,7 @@ define <vscale x 32 x i16> @intrinsic_vrgather_vx_nxv32i16_nxv32i16_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vrgather.vx.nxv32i16.i32(
+    <vscale x 32 x i16> undef,
     <vscale x 32 x i16> %0,
     i32 %1,
     i32 %2)
@@ -2125,6 +2217,7 @@ entry:
 
 declare <vscale x 1 x i32> @llvm.riscv.vrgather.vx.nxv1i32.i32(
   <vscale x 1 x i32>,
+  <vscale x 1 x i32>,
   i32,
   i32);
 
@@ -2137,6 +2230,7 @@ define <vscale x 1 x i32> @intrinsic_vrgather_vx_nxv1i32_nxv1i32_i32(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vrgather.vx.nxv1i32.i32(
+    <vscale x 1 x i32> undef,
     <vscale x 1 x i32> %0,
     i32 %1,
     i32 %2)
@@ -2171,6 +2265,7 @@ entry:
 
 declare <vscale x 2 x i32> @llvm.riscv.vrgather.vx.nxv2i32.i32(
   <vscale x 2 x i32>,
+  <vscale x 2 x i32>,
   i32,
   i32);
 
@@ -2183,6 +2278,7 @@ define <vscale x 2 x i32> @intrinsic_vrgather_vx_nxv2i32_nxv2i32_i32(<vscale x 2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vrgather.vx.nxv2i32.i32(
+    <vscale x 2 x i32> undef,
     <vscale x 2 x i32> %0,
     i32 %1,
     i32 %2)
@@ -2217,6 +2313,7 @@ entry:
 
 declare <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.i32(
   <vscale x 4 x i32>,
+  <vscale x 4 x i32>,
   i32,
   i32);
 
@@ -2229,6 +2326,7 @@ define <vscale x 4 x i32> @intrinsic_vrgather_vx_nxv4i32_nxv4i32_i32(<vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.i32(
+    <vscale x 4 x i32> undef,
     <vscale x 4 x i32> %0,
     i32 %1,
     i32 %2)
@@ -2263,6 +2361,7 @@ entry:
 
 declare <vscale x 8 x i32> @llvm.riscv.vrgather.vx.nxv8i32.i32(
   <vscale x 8 x i32>,
+  <vscale x 8 x i32>,
   i32,
   i32);
 
@@ -2275,6 +2374,7 @@ define <vscale x 8 x i32> @intrinsic_vrgather_vx_nxv8i32_nxv8i32_i32(<vscale x 8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vrgather.vx.nxv8i32.i32(
+    <vscale x 8 x i32> undef,
     <vscale x 8 x i32> %0,
     i32 %1,
     i32 %2)
@@ -2309,6 +2409,7 @@ entry:
 
 declare <vscale x 16 x i32> @llvm.riscv.vrgather.vx.nxv16i32.i32(
   <vscale x 16 x i32>,
+  <vscale x 16 x i32>,
   i32,
   i32);
 
@@ -2321,6 +2422,7 @@ define <vscale x 16 x i32> @intrinsic_vrgather_vx_nxv16i32_nxv16i32_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vrgather.vx.nxv16i32.i32(
+    <vscale x 16 x i32> undef,
     <vscale x 16 x i32> %0,
     i32 %1,
     i32 %2)
@@ -2355,6 +2457,7 @@ entry:
 
 declare <vscale x 1 x half> @llvm.riscv.vrgather.vx.nxv1f16.i32(
   <vscale x 1 x half>,
+  <vscale x 1 x half>,
   i32,
   i32);
 
@@ -2367,6 +2470,7 @@ define <vscale x 1 x half> @intrinsic_vrgather_vx_nxv1f16_nxv1f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vrgather.vx.nxv1f16.i32(
+    <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     i32 %1,
     i32 %2)
@@ -2401,6 +2505,7 @@ entry:
 
 declare <vscale x 2 x half> @llvm.riscv.vrgather.vx.nxv2f16.i32(
   <vscale x 2 x half>,
+  <vscale x 2 x half>,
   i32,
   i32);
 
@@ -2413,6 +2518,7 @@ define <vscale x 2 x half> @intrinsic_vrgather_vx_nxv2f16_nxv2f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vrgather.vx.nxv2f16.i32(
+    <vscale x 2 x half> undef,
     <vscale x 2 x half> %0,
     i32 %1,
     i32 %2)
@@ -2447,6 +2553,7 @@ entry:
 
 declare <vscale x 4 x half> @llvm.riscv.vrgather.vx.nxv4f16.i32(
   <vscale x 4 x half>,
+  <vscale x 4 x half>,
   i32,
   i32);
 
@@ -2459,6 +2566,7 @@ define <vscale x 4 x half> @intrinsic_vrgather_vx_nxv4f16_nxv4f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vrgather.vx.nxv4f16.i32(
+    <vscale x 4 x half> undef,
     <vscale x 4 x half> %0,
     i32 %1,
     i32 %2)
@@ -2493,6 +2601,7 @@ entry:
 
 declare <vscale x 8 x half> @llvm.riscv.vrgather.vx.nxv8f16.i32(
   <vscale x 8 x half>,
+  <vscale x 8 x half>,
   i32,
   i32);
 
@@ -2505,6 +2614,7 @@ define <vscale x 8 x half> @intrinsic_vrgather_vx_nxv8f16_nxv8f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vrgather.vx.nxv8f16.i32(
+    <vscale x 8 x half> undef,
     <vscale x 8 x half> %0,
     i32 %1,
     i32 %2)
@@ -2539,6 +2649,7 @@ entry:
 
 declare <vscale x 16 x half> @llvm.riscv.vrgather.vx.nxv16f16.i32(
   <vscale x 16 x half>,
+  <vscale x 16 x half>,
   i32,
   i32);
 
@@ -2551,6 +2662,7 @@ define <vscale x 16 x half> @intrinsic_vrgather_vx_nxv16f16_nxv16f16_i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vrgather.vx.nxv16f16.i32(
+    <vscale x 16 x half> undef,
     <vscale x 16 x half> %0,
     i32 %1,
     i32 %2)
@@ -2585,6 +2697,7 @@ entry:
 
 declare <vscale x 32 x half> @llvm.riscv.vrgather.vx.nxv32f16.i32(
   <vscale x 32 x half>,
+  <vscale x 32 x half>,
   i32,
   i32);
 
@@ -2597,6 +2710,7 @@ define <vscale x 32 x half> @intrinsic_vrgather_vx_nxv32f16_nxv32f16_i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vrgather.vx.nxv32f16.i32(
+    <vscale x 32 x half> undef,
     <vscale x 32 x half> %0,
     i32 %1,
     i32 %2)
@@ -2631,6 +2745,7 @@ entry:
 
 declare <vscale x 1 x float> @llvm.riscv.vrgather.vx.nxv1f32.i32(
   <vscale x 1 x float>,
+  <vscale x 1 x float>,
   i32,
   i32);
 
@@ -2643,6 +2758,7 @@ define <vscale x 1 x float> @intrinsic_vrgather_vx_nxv1f32_nxv1f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vrgather.vx.nxv1f32.i32(
+    <vscale x 1 x float> undef,
     <vscale x 1 x float> %0,
     i32 %1,
     i32 %2)
@@ -2677,6 +2793,7 @@ entry:
 
 declare <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i32(
   <vscale x 2 x float>,
+  <vscale x 2 x float>,
   i32,
   i32);
 
@@ -2689,6 +2806,7 @@ define <vscale x 2 x float> @intrinsic_vrgather_vx_nxv2f32_nxv2f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i32(
+    <vscale x 2 x float> undef,
     <vscale x 2 x float> %0,
     i32 %1,
     i32 %2)
@@ -2723,6 +2841,7 @@ entry:
 
 declare <vscale x 4 x float> @llvm.riscv.vrgather.vx.nxv4f32.i32(
   <vscale x 4 x float>,
+  <vscale x 4 x float>,
   i32,
   i32);
 
@@ -2735,6 +2854,7 @@ define <vscale x 4 x float> @intrinsic_vrgather_vx_nxv4f32_nxv4f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vrgather.vx.nxv4f32.i32(
+    <vscale x 4 x float> undef,
     <vscale x 4 x float> %0,
     i32 %1,
     i32 %2)
@@ -2769,6 +2889,7 @@ entry:
 
 declare <vscale x 8 x float> @llvm.riscv.vrgather.vx.nxv8f32.i32(
   <vscale x 8 x float>,
+  <vscale x 8 x float>,
   i32,
   i32);
 
@@ -2781,6 +2902,7 @@ define <vscale x 8 x float> @intrinsic_vrgather_vx_nxv8f32_nxv8f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vrgather.vx.nxv8f32.i32(
+    <vscale x 8 x float> undef,
     <vscale x 8 x float> %0,
     i32 %1,
     i32 %2)
@@ -2815,6 +2937,7 @@ entry:
 
 declare <vscale x 16 x float> @llvm.riscv.vrgather.vx.nxv16f32.i32(
   <vscale x 16 x float>,
+  <vscale x 16 x float>,
   i32,
   i32);
 
@@ -2827,6 +2950,7 @@ define <vscale x 16 x float> @intrinsic_vrgather_vx_nxv16f32_nxv16f32_i32(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vrgather.vx.nxv16f32.i32(
+    <vscale x 16 x float> undef,
     <vscale x 16 x float> %0,
     i32 %1,
     i32 %2)
@@ -2861,6 +2985,7 @@ entry:
 
 declare <vscale x 1 x double> @llvm.riscv.vrgather.vx.nxv1f64.i32(
   <vscale x 1 x double>,
+  <vscale x 1 x double>,
   i32,
   i32);
 
@@ -2873,6 +2998,7 @@ define <vscale x 1 x double> @intrinsic_vrgather_vx_nxv1f64_nxv1f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vrgather.vx.nxv1f64.i32(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %0,
     i32 %1,
     i32 %2)
@@ -2907,6 +3033,7 @@ entry:
 
 declare <vscale x 2 x double> @llvm.riscv.vrgather.vx.nxv2f64.i32(
   <vscale x 2 x double>,
+  <vscale x 2 x double>,
   i32,
   i32);
 
@@ -2919,6 +3046,7 @@ define <vscale x 2 x double> @intrinsic_vrgather_vx_nxv2f64_nxv2f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vrgather.vx.nxv2f64.i32(
+    <vscale x 2 x double> undef,
     <vscale x 2 x double> %0,
     i32 %1,
     i32 %2)
@@ -2953,6 +3081,7 @@ entry:
 
 declare <vscale x 4 x double> @llvm.riscv.vrgather.vx.nxv4f64.i32(
   <vscale x 4 x double>,
+  <vscale x 4 x double>,
   i32,
   i32);
 
@@ -2965,6 +3094,7 @@ define <vscale x 4 x double> @intrinsic_vrgather_vx_nxv4f64_nxv4f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vrgather.vx.nxv4f64.i32(
+    <vscale x 4 x double> undef,
     <vscale x 4 x double> %0,
     i32 %1,
     i32 %2)
@@ -2999,6 +3129,7 @@ entry:
 
 declare <vscale x 8 x double> @llvm.riscv.vrgather.vx.nxv8f64.i32(
   <vscale x 8 x double>,
+  <vscale x 8 x double>,
   i32,
   i32);
 
@@ -3011,6 +3142,7 @@ define <vscale x 8 x double> @intrinsic_vrgather_vx_nxv8f64_nxv8f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vrgather.vx.nxv8f64.i32(
+    <vscale x 8 x double> undef,
     <vscale x 8 x double> %0,
     i32 %1,
     i32 %2)
@@ -3052,6 +3184,7 @@ define <vscale x 1 x i8> @intrinsic_vrgather_vi_nxv1i8_nxv1i8_i32(<vscale x 1 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vrgather.vx.nxv1i8.i32(
+    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     i32 9,
     i32 %1)
@@ -3085,6 +3218,7 @@ define <vscale x 2 x i8> @intrinsic_vrgather_vi_nxv2i8_nxv2i8_i32(<vscale x 2 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vrgather.vx.nxv2i8.i32(
+    <vscale x 2 x i8> undef,
     <vscale x 2 x i8> %0,
     i32 9,
     i32 %1)
@@ -3118,6 +3252,7 @@ define <vscale x 4 x i8> @intrinsic_vrgather_vi_nxv4i8_nxv4i8_i32(<vscale x 4 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vrgather.vx.nxv4i8.i32(
+    <vscale x 4 x i8> undef,
     <vscale x 4 x i8> %0,
     i32 9,
     i32 %1)
@@ -3151,6 +3286,7 @@ define <vscale x 8 x i8> @intrinsic_vrgather_vi_nxv8i8_nxv8i8_i32(<vscale x 8 x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vrgather.vx.nxv8i8.i32(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     i32 9,
     i32 %1)
@@ -3184,6 +3320,7 @@ define <vscale x 16 x i8> @intrinsic_vrgather_vi_nxv16i8_nxv16i8_i32(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vrgather.vx.nxv16i8.i32(
+    <vscale x 16 x i8> undef,
     <vscale x 16 x i8> %0,
     i32 9,
     i32 %1)
@@ -3217,6 +3354,7 @@ define <vscale x 32 x i8> @intrinsic_vrgather_vi_nxv32i8_nxv32i8_i32(<vscale x 3
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vrgather.vx.nxv32i8.i32(
+    <vscale x 32 x i8> undef,
     <vscale x 32 x i8> %0,
     i32 9,
     i32 %1)
@@ -3250,6 +3388,7 @@ define <vscale x 64 x i8> @intrinsic_vrgather_vi_nxv64i8_nxv64i8_i32(<vscale x 6
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vrgather.vx.nxv64i8.i32(
+    <vscale x 64 x i8> undef,
     <vscale x 64 x i8> %0,
     i32 9,
     i32 %1)
@@ -3283,6 +3422,7 @@ define <vscale x 1 x i16> @intrinsic_vrgather_vi_nxv1i16_nxv1i16_i32(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vrgather.vx.nxv1i16.i32(
+    <vscale x 1 x i16> undef,
     <vscale x 1 x i16> %0,
     i32 9,
     i32 %1)
@@ -3316,6 +3456,7 @@ define <vscale x 2 x i16> @intrinsic_vrgather_vi_nxv2i16_nxv2i16_i32(<vscale x 2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vrgather.vx.nxv2i16.i32(
+    <vscale x 2 x i16> undef,
     <vscale x 2 x i16> %0,
     i32 9,
     i32 %1)
@@ -3349,6 +3490,7 @@ define <vscale x 4 x i16> @intrinsic_vrgather_vi_nxv4i16_nxv4i16_i32(<vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vrgather.vx.nxv4i16.i32(
+    <vscale x 4 x i16> undef,
     <vscale x 4 x i16> %0,
     i32 9,
     i32 %1)
@@ -3382,6 +3524,7 @@ define <vscale x 8 x i16> @intrinsic_vrgather_vi_nxv8i16_nxv8i16_i32(<vscale x 8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vrgather.vx.nxv8i16.i32(
+    <vscale x 8 x i16> undef,
     <vscale x 8 x i16> %0,
     i32 9,
     i32 %1)
@@ -3415,6 +3558,7 @@ define <vscale x 16 x i16> @intrinsic_vrgather_vi_nxv16i16_nxv16i16_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vrgather.vx.nxv16i16.i32(
+    <vscale x 16 x i16> undef,
     <vscale x 16 x i16> %0,
     i32 9,
     i32 %1)
@@ -3448,6 +3592,7 @@ define <vscale x 32 x i16> @intrinsic_vrgather_vi_nxv32i16_nxv32i16_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vrgather.vx.nxv32i16.i32(
+    <vscale x 32 x i16> undef,
     <vscale x 32 x i16> %0,
     i32 9,
     i32 %1)
@@ -3481,6 +3626,7 @@ define <vscale x 1 x i32> @intrinsic_vrgather_vi_nxv1i32_nxv1i32_i32(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vrgather.vx.nxv1i32.i32(
+    <vscale x 1 x i32> undef,
     <vscale x 1 x i32> %0,
     i32 9,
     i32 %1)
@@ -3514,6 +3660,7 @@ define <vscale x 2 x i32> @intrinsic_vrgather_vi_nxv2i32_nxv2i32_i32(<vscale x 2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vrgather.vx.nxv2i32.i32(
+    <vscale x 2 x i32> undef,
     <vscale x 2 x i32> %0,
     i32 9,
     i32 %1)
@@ -3547,6 +3694,7 @@ define <vscale x 4 x i32> @intrinsic_vrgather_vi_nxv4i32_nxv4i32_i32(<vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.i32(
+    <vscale x 4 x i32> undef,
     <vscale x 4 x i32> %0,
     i32 9,
     i32 %1)
@@ -3580,6 +3728,7 @@ define <vscale x 8 x i32> @intrinsic_vrgather_vi_nxv8i32_nxv8i32_i32(<vscale x 8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vrgather.vx.nxv8i32.i32(
+    <vscale x 8 x i32> undef,
     <vscale x 8 x i32> %0,
     i32 9,
     i32 %1)
@@ -3613,6 +3762,7 @@ define <vscale x 16 x i32> @intrinsic_vrgather_vi_nxv16i32_nxv16i32_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vrgather.vx.nxv16i32.i32(
+    <vscale x 16 x i32> undef,
     <vscale x 16 x i32> %0,
     i32 9,
     i32 %1)
@@ -3646,6 +3796,7 @@ define <vscale x 1 x half> @intrinsic_vrgather_vi_nxv1f16_nxv1f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vrgather.vx.nxv1f16.i32(
+    <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     i32 9,
     i32 %1)
@@ -3679,6 +3830,7 @@ define <vscale x 2 x half> @intrinsic_vrgather_vi_nxv2f16_nxv2f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vrgather.vx.nxv2f16.i32(
+    <vscale x 2 x half> undef,
     <vscale x 2 x half> %0,
     i32 9,
     i32 %1)
@@ -3712,6 +3864,7 @@ define <vscale x 4 x half> @intrinsic_vrgather_vi_nxv4f16_nxv4f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vrgather.vx.nxv4f16.i32(
+    <vscale x 4 x half> undef,
     <vscale x 4 x half> %0,
     i32 9,
     i32 %1)
@@ -3745,6 +3898,7 @@ define <vscale x 8 x half> @intrinsic_vrgather_vi_nxv8f16_nxv8f16_i32(<vscale x 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vrgather.vx.nxv8f16.i32(
+    <vscale x 8 x half> undef,
     <vscale x 8 x half> %0,
     i32 9,
     i32 %1)
@@ -3778,6 +3932,7 @@ define <vscale x 16 x half> @intrinsic_vrgather_vi_nxv16f16_nxv16f16_i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vrgather.vx.nxv16f16.i32(
+    <vscale x 16 x half> undef,
     <vscale x 16 x half> %0,
     i32 9,
     i32 %1)
@@ -3811,6 +3966,7 @@ define <vscale x 32 x half> @intrinsic_vrgather_vi_nxv32f16_nxv32f16_i32(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vrgather.vx.nxv32f16.i32(
+    <vscale x 32 x half> undef,
     <vscale x 32 x half> %0,
     i32 9,
     i32 %1)
@@ -3844,6 +4000,7 @@ define <vscale x 1 x float> @intrinsic_vrgather_vi_nxv1f32_nxv1f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vrgather.vx.nxv1f32.i32(
+    <vscale x 1 x float> undef,
     <vscale x 1 x float> %0,
     i32 9,
     i32 %1)
@@ -3877,6 +4034,7 @@ define <vscale x 2 x float> @intrinsic_vrgather_vi_nxv2f32_nxv2f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i32(
+    <vscale x 2 x float> undef,
     <vscale x 2 x float> %0,
     i32 9,
     i32 %1)
@@ -3910,6 +4068,7 @@ define <vscale x 4 x float> @intrinsic_vrgather_vi_nxv4f32_nxv4f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vrgather.vx.nxv4f32.i32(
+    <vscale x 4 x float> undef,
     <vscale x 4 x float> %0,
     i32 9,
     i32 %1)
@@ -3943,6 +4102,7 @@ define <vscale x 8 x float> @intrinsic_vrgather_vi_nxv8f32_nxv8f32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vrgather.vx.nxv8f32.i32(
+    <vscale x 8 x float> undef,
     <vscale x 8 x float> %0,
     i32 9,
     i32 %1)
@@ -3976,6 +4136,7 @@ define <vscale x 16 x float> @intrinsic_vrgather_vi_nxv16f32_nxv16f32_i32(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vrgather.vx.nxv16f32.i32(
+    <vscale x 16 x float> undef,
     <vscale x 16 x float> %0,
     i32 9,
     i32 %1)
@@ -4009,6 +4170,7 @@ define <vscale x 1 x double> @intrinsic_vrgather_vi_nxv1f64_nxv1f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vrgather.vx.nxv1f64.i32(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %0,
     i32 9,
     i32 %1)
@@ -4042,6 +4204,7 @@ define <vscale x 2 x double> @intrinsic_vrgather_vi_nxv2f64_nxv2f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vrgather.vx.nxv2f64.i32(
+    <vscale x 2 x double> undef,
     <vscale x 2 x double> %0,
     i32 9,
     i32 %1)
@@ -4075,6 +4238,7 @@ define <vscale x 4 x double> @intrinsic_vrgather_vi_nxv4f64_nxv4f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vrgather.vx.nxv4f64.i32(
+    <vscale x 4 x double> undef,
     <vscale x 4 x double> %0,
     i32 9,
     i32 %1)
@@ -4108,6 +4272,7 @@ define <vscale x 8 x double> @intrinsic_vrgather_vi_nxv8f64_nxv8f64_i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vrgather.vx.nxv8f64.i32(
+    <vscale x 8 x double> undef,
     <vscale x 8 x double> %0,
     i32 9,
     i32 %1)

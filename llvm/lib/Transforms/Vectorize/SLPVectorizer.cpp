@@ -4274,9 +4274,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // We can't combine several GEPs into one vector if they operate on
       // different types.
-      Type *Ty0 = VL0->getOperand(0)->getType();
+      Type *Ty0 = cast<GEPOperator>(VL0)->getSourceElementType();
       for (Value *V : VL) {
-        Type *CurTy = cast<Instruction>(V)->getOperand(0)->getType();
+        Type *CurTy = cast<GEPOperator>(V)->getSourceElementType();
         if (Ty0 != CurTy) {
           LLVM_DEBUG(dbgs()
                      << "SLP: not-vectorizable GEP (different types).\n");
@@ -4800,12 +4800,12 @@ computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
 /// Build shuffle mask for shuffle graph entries and lists of main and alternate
 /// operations operands.
 static void
-buildSuffleEntryMask(ArrayRef<Value *> VL, ArrayRef<unsigned> ReorderIndices,
-                     ArrayRef<int> ReusesIndices,
-                     const function_ref<bool(Instruction *)> IsAltOp,
-                     SmallVectorImpl<int> &Mask,
-                     SmallVectorImpl<Value *> *OpScalars = nullptr,
-                     SmallVectorImpl<Value *> *AltScalars = nullptr) {
+buildShuffleEntryMask(ArrayRef<Value *> VL, ArrayRef<unsigned> ReorderIndices,
+                      ArrayRef<int> ReusesIndices,
+                      const function_ref<bool(Instruction *)> IsAltOp,
+                      SmallVectorImpl<int> &Mask,
+                      SmallVectorImpl<Value *> *OpScalars = nullptr,
+                      SmallVectorImpl<Value *> *AltScalars = nullptr) {
   unsigned Sz = VL.size();
   Mask.assign(Sz, UndefMaskElem);
   SmallVector<int> OrderMask;
@@ -5556,7 +5556,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       }
 
       SmallVector<int> Mask;
-      buildSuffleEntryMask(
+      buildShuffleEntryMask(
           E->Scalars, E->ReorderIndices, E->ReuseShuffleIndices,
           [E](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
@@ -7106,7 +7106,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // each vector operation.
       ValueList OpScalars, AltScalars;
       SmallVector<int> Mask;
-      buildSuffleEntryMask(
+      buildShuffleEntryMask(
           E->Scalars, E->ReorderIndices, E->ReuseShuffleIndices,
           [E](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
@@ -7950,6 +7950,17 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   // Check that we didn't break any of our invariants.
 #ifdef EXPENSIVE_CHECKS
   BS->verify();
+#endif
+
+#ifndef NDEBUG
+  // Check that all schedulable entities got scheduled
+  for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
+    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
+      if (SD->isSchedulingEntity() && SD->hasValidDependencies()) {
+        assert(SD->IsScheduled && "must be scheduled at this point");
+      }
+    });
+  }
 #endif
 
   // Avoid duplicate scheduling of the block.

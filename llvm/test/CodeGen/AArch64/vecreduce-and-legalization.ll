@@ -96,9 +96,9 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov w8, #-1
 ; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v1.b[9], w8
 ; CHECK-NEXT:    mov v1.b[10], w8
 ; CHECK-NEXT:    mov v1.b[11], w8
@@ -129,8 +129,8 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.and.v3i32(<3 x i32> %a)

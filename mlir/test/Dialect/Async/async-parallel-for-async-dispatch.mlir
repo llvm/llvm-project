@@ -12,7 +12,7 @@ func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
 
   // CHECK:      scf.if %[[IS_NOOP]] {
   // CHECK-NEXT: } else {
-    // CHECK:        scf.if {{.*}} {
+  // CHECK:        scf.if {{.*}} {
   // CHECK:          call @parallel_compute_fn(%[[C0]]
   // CHECK:        } else {
   // CHECK:          %[[GROUP:.*]] = async.create_group

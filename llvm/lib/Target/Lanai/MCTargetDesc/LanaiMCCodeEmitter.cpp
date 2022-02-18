@@ -304,7 +304,6 @@ unsigned LanaiMCCodeEmitter::getBranchTargetOpValue(
 
 llvm::MCCodeEmitter *
 llvm::createLanaiMCCodeEmitter(const MCInstrInfo &InstrInfo,
-                               const MCRegisterInfo & /*MRI*/,
                                MCContext &context) {
   return new LanaiMCCodeEmitter(InstrInfo, context);
 }

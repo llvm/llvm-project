@@ -127,6 +127,7 @@ template<class R>
 
 */
 
+#include <__assert>
 #include <__config>
 #include <__debug>
 #include <__iterator/concepts.h>

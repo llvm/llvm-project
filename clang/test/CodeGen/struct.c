@@ -5,7 +5,7 @@ struct  {
   int y;
 } point;
 
-void fn1() {
+void fn1(void) {
   point.x = 42;
 }
 
@@ -17,7 +17,7 @@ struct  {
   } p1;
 } point2;
 
-void fn2() {
+void fn2(void) {
   point2.p1.a = 42;
 }
 
@@ -43,7 +43,7 @@ typedef struct NA {
   int data;
   struct NA *next;
 } NA;
-void f1() {  NA a; }
+void f1(void) {  NA a; }
 
 typedef struct NB {
   int d1;
@@ -53,14 +53,14 @@ typedef struct NB {
   } B2;
 } NB;
 
-void f2() { NB b; }
+void f2(void) { NB b; }
 
-extern NB *f3();
-void f4() {
+extern NB *f3(void);
+void f4(void) {
   f3()->d1 = 42;
 }
 
-void f5() {
+void f5(void) {
   (f3())->d1 = 42;
 }
 
@@ -69,8 +69,8 @@ typedef struct {
   int location;
   int length;
 } range;
-extern range f6();
-void f7() {
+extern range f6(void);
+void f7(void) {
   range r = f6();
 }
 
@@ -80,7 +80,7 @@ typedef struct {
   range range2;
 } rangepair;
 
-void f8() {
+void f8(void) {
   rangepair p;
 
   range r = p.range1;
@@ -112,7 +112,7 @@ typedef struct _a {
   int a;
 } a;
 
-void f11() {
+void f11(void) {
   struct _a a1;
   a a2;
     
@@ -121,7 +121,7 @@ void f11() {
 }
 
 /* Implicit casts (due to const) */
-void f12() {
+void f12(void) {
   struct _a a1;
   const struct _a a2;
 
@@ -139,7 +139,7 @@ struct a15 {char a; int b[];} c15;
 int a16(void) {c15.a = 1;}
 
 /* compound literals */
-void f13() {
+void f13(void) {
   a13 x; x = (a13){1,2};
 }
 
@@ -160,24 +160,24 @@ struct __attribute__((packed)) SS { long double a; char b; } SS;
 
 /* As lvalue */
 
-int f15() {
-  extern range f15_ext();
+int f15(void) {
+  extern range f15_ext(void);
   return f15_ext().location;
 }
 
-range f16() {
-  extern rangepair f16_ext();
+range f16(void) {
+  extern rangepair f16_ext(void);
   return f16_ext().range1;
 }
 
-int f17() {
-  extern range f17_ext();
+int f17(void) {
+  extern range f17_ext(void);
   range r;
   return (r = f17_ext()).location;
 }
 
-range f18() {
-  extern rangepair f18_ext();
+range f18(void) {
+  extern rangepair f18_ext(void);
   rangepair rp;
   return (rp = f18_ext()).range1;
 }

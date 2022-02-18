@@ -48,14 +48,13 @@ void doSomething() noexcept;
 // CHECK: define{{.*}} i32 @_Z1fv(
 int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
-  // CHECK: %[[GroActive:.+]] = alloca i1
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef %[[Size]])
-  // CHECK: store i1 false, i1* %[[GroActive]]
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_typeC1Ev(
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_type17get_return_objectEv(
-  // CHECK: store i1 true, i1* %[[GroActive]]
+  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_type17get_return_objectEv(%struct.GroType* sret(%struct.GroType) align {{[0-9]+}} %[[GRO:.+]],
+  // CHECK: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv({{.*}}[[GRO]]
+  // CHECK: store i32 %[[Conv]], i32* %[[RetVal]]
 
   Cleanup cleanup;
   doSomething();
@@ -71,18 +70,7 @@ int f() {
   // CHECK: %[[Mem:.+]] = call i8* @llvm.coro.free(
   // CHECK: call void @_ZdlPv(i8* noundef %[[Mem]])
 
-  // Initialize retval from Gro and destroy Gro
-
-  // CHECK: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv(
-  // CHECK: store i32 %[[Conv]], i32* %[[RetVal]]
-  // CHECK: %[[IsActive:.+]] = load i1, i1* %[[GroActive]]
-  // CHECK: br i1 %[[IsActive]], label %[[CleanupGro:.+]], label %[[Done:.+]]
-
-  // CHECK: [[CleanupGro]]:
-  // CHECK:   call void @_ZN7GroTypeD1Ev(
-  // CHECK:   br label %[[Done]]
-
-  // CHECK: [[Done]]:
+  // CHECK: coro.ret:
   // CHECK:   %[[LoadRet:.+]] = load i32, i32* %[[RetVal]]
   // CHECK:   ret i32 %[[LoadRet]]
 }

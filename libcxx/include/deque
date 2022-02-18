@@ -160,12 +160,20 @@ template <class T, class Allocator, class Predicate>
 
 */
 
+#include <__algorithm/copy.h>
+#include <__algorithm/copy_backward.h>
+#include <__algorithm/equal.h>
+#include <__algorithm/fill_n.h>
+#include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/min.h>
+#include <__algorithm/remove.h>
+#include <__algorithm/remove_if.h>
+#include <__algorithm/unwrap_iter.h>
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__iterator/iterator_traits.h>
 #include <__split_buffer>
 #include <__utility/forward.h>
-#include <algorithm>
 #include <compare>
 #include <initializer_list>
 #include <iterator>

@@ -1745,6 +1745,62 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
   }
+  {
+    // Check for (A & B) and ~(A | B)
+    auto M = parseModule(R"(
+  define void @test(i32 %A, i32 %B) {
+    %LHS = and i32 %A, %B
+    %or = or i32 %A, %B
+    %RHS = xor i32 %or, -1
+
+    %LHS2 = and i32 %B, %A
+    %or2 = or i32 %A, %B
+    %RHS2 = xor i32 %or2, -1
+
+    ret void
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+
+    auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
+    auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+  }
+  {
+    // Check for (A & B) and ~(A | B) in vector version
+    auto M = parseModule(R"(
+  define void @test(<2 x i32> %A, <2 x i32> %B) {
+    %LHS = and <2 x i32> %A, %B
+    %or = or <2 x i32> %A, %B
+    %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>
+
+    %LHS2 = and <2 x i32> %B, %A
+    %or2 = or <2 x i32> %A, %B
+    %RHS2 = xor <2 x i32> %or2, <i32 -1, i32 -1>
+
+    ret void
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+
+    auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
+    auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+  }
 }
 
 class IsBytewiseValueTest : public ValueTrackingTest,

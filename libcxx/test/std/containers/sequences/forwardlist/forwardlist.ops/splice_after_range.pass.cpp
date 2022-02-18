@@ -37,7 +37,7 @@ testd(const C& c, ptrdiff_t p, ptrdiff_t f, ptrdiff_t l)
         assert(*i == t2[n2]);
     for (; n1 < size_t1; ++n1, ++i)
         assert(*i == t1[n1]);
-    assert(distance(c.begin(), c.end()) == size_t1 + (l > f+1 ? l-1-f : 0));
+    assert(std::distance(c.begin(), c.end()) == size_t1 + (l > f+1 ? l-1-f : 0));
 }
 
 template <class C>
@@ -74,7 +74,7 @@ tests(const C& c, ptrdiff_t p, ptrdiff_t f, ptrdiff_t l)
         for (n = p; n < size_t1; ++n, ++i)
             assert(*i == t1[n]);
     }
-    assert(distance(c.begin(), c.end()) == size_t1);
+    assert(std::distance(c.begin(), c.end()) == size_t1);
 }
 
 int main(int, char**)
@@ -91,8 +91,8 @@ int main(int, char**)
                 C c1(std::begin(t1), std::end(t1));
                 C c2(std::begin(t2), std::end(t2));
 
-                c1.splice_after(next(c1.cbefore_begin(), p), std::move(c2),
-                      next(c2.cbefore_begin(), f), next(c2.cbefore_begin(), l));
+                c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c2),
+                      std::next(c2.cbefore_begin(), f), std::next(c2.cbefore_begin(), l));
                 testd(c1, p, f, l);
             }
         }
@@ -107,16 +107,16 @@ int main(int, char**)
             {
                 C c1(std::begin(t1), std::end(t1));
 
-                c1.splice_after(next(c1.cbefore_begin(), p), std::move(c1),
-                      next(c1.cbefore_begin(), f), next(c1.cbefore_begin(), l));
+                c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c1),
+                      std::next(c1.cbefore_begin(), f), std::next(c1.cbefore_begin(), l));
                 tests(c1, p, f, l);
             }
             for (ptrdiff_t p = l; p <= size_t1; ++p)
             {
                 C c1(std::begin(t1), std::end(t1));
 
-                c1.splice_after(next(c1.cbefore_begin(), p), std::move(c1),
-                      next(c1.cbefore_begin(), f), next(c1.cbefore_begin(), l));
+                c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c1),
+                      std::next(c1.cbefore_begin(), f), std::next(c1.cbefore_begin(), l));
                 tests(c1, p, f, l);
             }
         }
@@ -135,8 +135,8 @@ int main(int, char**)
                 C c1(std::begin(t1), std::end(t1));
                 C c2(std::begin(t2), std::end(t2));
 
-                c1.splice_after(next(c1.cbefore_begin(), p), std::move(c2),
-                      next(c2.cbefore_begin(), f), next(c2.cbefore_begin(), l));
+                c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c2),
+                      std::next(c2.cbefore_begin(), f), std::next(c2.cbefore_begin(), l));
                 testd(c1, p, f, l);
             }
         }
@@ -151,16 +151,16 @@ int main(int, char**)
             {
                 C c1(std::begin(t1), std::end(t1));
 
-                c1.splice_after(next(c1.cbefore_begin(), p), std::move(c1),
-                      next(c1.cbefore_begin(), f), next(c1.cbefore_begin(), l));
+                c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c1),
+                      std::next(c1.cbefore_begin(), f), std::next(c1.cbefore_begin(), l));
                 tests(c1, p, f, l);
             }
             for (ptrdiff_t p = l; p <= size_t1; ++p)
             {
                 C c1(std::begin(t1), std::end(t1));
 
-                c1.splice_after(next(c1.cbefore_begin(), p), std::move(c1),
-                      next(c1.cbefore_begin(), f), next(c1.cbefore_begin(), l));
+                c1.splice_after(std::next(c1.cbefore_begin(), p), std::move(c1),
+                      std::next(c1.cbefore_begin(), f), std::next(c1.cbefore_begin(), l));
                 tests(c1, p, f, l);
             }
         }

@@ -66,9 +66,10 @@ Post-release check list
 
 After branching for an LLVM release:
 
-1. Update ``_LIBCPP_VERSION`` in ``include/__config``
-2. Update the ``include/__libcpp_version`` file
-3. Update the version number in ``docs/conf.py``
+1. Update ``_LIBCPP_VERSION`` in ``libcxx/include/__config``
+2. Update the ``libcxx/include/__libcpp_version`` file
+3. Update the version number in ``libcxx/docs/conf.py``
+4. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
 
 Exporting new symbols from the library
 ======================================

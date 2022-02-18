@@ -514,6 +514,8 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 */
 
+#include <__algorithm/is_permutation.h>
+#include <__assert>
 #include <__config>
 #include <__debug>
 #include <__functional/is_transparent.h>

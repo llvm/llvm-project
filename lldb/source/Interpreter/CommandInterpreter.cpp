@@ -3162,6 +3162,10 @@ bool CommandInterpreter::SaveTranscript(
   return true;
 }
 
+bool CommandInterpreter::IsInteractive() {
+  return (GetIOHandler() ? GetIOHandler()->GetIsInteractive() : false);
+}
+
 FileSpec CommandInterpreter::GetCurrentSourceDir() {
   if (m_command_source_dirs.empty())
     return {};

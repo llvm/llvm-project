@@ -91,11 +91,11 @@ Section,Description,Dependencies,Assignee,Complete
 | [iterator.cust.move]
 | [default.sentinels]",Zoe Carver,✅
 `[stream.iterators] <https://wg21.link/stream.iterators>`_,"
-| Updates to istream_iterator
+| `Updates to istream_iterator <https://llvm.org/D119620>`_
 | `Updates to ostream_iterator <https://llvm.org/D103273>`_
-| Updates to istreambuf_iterator
+| `Updates to istreambuf_iterator <https://llvm.org/D119620>`_
 | `Updates to ostreambuf_iterator <https://llvm.org/D103273>`_
-",[default.sentinels],Various,In progress
+",[default.sentinels],Various,✅
 `[range.access] <https://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
 | `ranges::end <https://llvm.org/D100255>`_
 | `range::cbegin <https://llvm.org/D100255>`_
