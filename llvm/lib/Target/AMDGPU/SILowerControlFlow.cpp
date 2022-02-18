@@ -865,6 +865,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  bool Changed = false;
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
@@ -886,6 +887,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::SI_LOOP:
       case AMDGPU::SI_END_CF:
         SplitMBB = process(MI);
+        Changed = true;
         break;
 
       // FIXME: find a better place for this
@@ -894,6 +896,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         lowerInitExec(MBB, MI);
         if (LIS)
           LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
+        Changed = true;
         break;
 
       default:
@@ -913,5 +916,5 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   LoweredIf.clear();
   KillBlocks.clear();
 
-  return true;
+  return Changed;
 }
