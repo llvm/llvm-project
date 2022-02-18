@@ -44,15 +44,15 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; OLDPM_O2-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
 ; OLDPM_O2-SAME: (%"class.std::vector"* nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; OLDPM_O2-NEXT:  entry:
-; OLDPM_O2-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
 ; OLDPM_O2-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
+; OLDPM_O2-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
+; OLDPM_O2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; OLDPM_O2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
 ; OLDPM_O2-NEXT:    [[N_VEC:%.*]] = and i64 [[NUMELEMS]], -8
 ; OLDPM_O2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[NUMELEMS]]
 ; OLDPM_O2-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; OLDPM_O2:       for.cond1.preheader:
 ; OLDPM_O2-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC7:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
-; OLDPM_O2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; OLDPM_O2-NEXT:    br i1 [[CMP26_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4_PREHEADER:%.*]]
 ; OLDPM_O2:       for.body4.preheader:
 ; OLDPM_O2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY4_PREHEADER11:%.*]], label [[VECTOR_BODY:%.*]]
@@ -97,8 +97,9 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; OLDPM_O3-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
 ; OLDPM_O3-SAME: (%"class.std::vector"* nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; OLDPM_O3-NEXT:  entry:
-; OLDPM_O3-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
 ; OLDPM_O3-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
+; OLDPM_O3-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
+; OLDPM_O3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; OLDPM_O3-NEXT:    br i1 [[CMP26_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
 ; OLDPM_O3:       for.cond1.preheader.us.preheader:
 ; OLDPM_O3-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
@@ -107,7 +108,6 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; OLDPM_O3-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; OLDPM_O3:       for.cond1.preheader.us:
 ; OLDPM_O3-NEXT:    [[I_08_US:%.*]] = phi i64 [ [[INC7_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
-; OLDPM_O3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; OLDPM_O3-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY4_US_PREHEADER:%.*]], label [[VECTOR_BODY:%.*]]
 ; OLDPM_O3:       vector.body:
 ; OLDPM_O3-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[FOR_COND1_PREHEADER_US]] ]
@@ -150,12 +150,12 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; NEWPM_O1-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
 ; NEWPM_O1-SAME: (%"class.std::vector"* nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; NEWPM_O1-NEXT:  entry:
-; NEWPM_O1-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
 ; NEWPM_O1-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
+; NEWPM_O1-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
+; NEWPM_O1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; NEWPM_O1-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; NEWPM_O1:       for.cond1.preheader:
 ; NEWPM_O1-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC7:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
-; NEWPM_O1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; NEWPM_O1-NEXT:    br i1 [[CMP26_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4:%.*]]
 ; NEWPM_O1:       for.cond.cleanup:
 ; NEWPM_O1-NEXT:    ret void
@@ -176,15 +176,15 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; NEWPM_O2-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
 ; NEWPM_O2-SAME: (%"class.std::vector"* nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; NEWPM_O2-NEXT:  entry:
-; NEWPM_O2-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
 ; NEWPM_O2-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
+; NEWPM_O2-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
+; NEWPM_O2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; NEWPM_O2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
 ; NEWPM_O2-NEXT:    [[N_VEC:%.*]] = and i64 [[NUMELEMS]], -8
 ; NEWPM_O2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[NUMELEMS]]
 ; NEWPM_O2-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; NEWPM_O2:       for.cond1.preheader:
 ; NEWPM_O2-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC7:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
-; NEWPM_O2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; NEWPM_O2-NEXT:    br i1 [[CMP26_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4_PREHEADER:%.*]]
 ; NEWPM_O2:       for.body4.preheader:
 ; NEWPM_O2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY4_PREHEADER11:%.*]], label [[VECTOR_BODY:%.*]]
@@ -229,8 +229,9 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; NEWPM_O3-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
 ; NEWPM_O3-SAME: (%"class.std::vector"* nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; NEWPM_O3-NEXT:  entry:
-; NEWPM_O3-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
 ; NEWPM_O3-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
+; NEWPM_O3-NEXT:    [[_M_START_I:%.*]] = getelementptr inbounds %"class.std::vector", %"class.std::vector"* [[DATA]], i64 0, i32 0, i32 0, i32 0, i32 0
+; NEWPM_O3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; NEWPM_O3-NEXT:    br i1 [[CMP26_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
 ; NEWPM_O3:       for.cond1.preheader.us.preheader:
 ; NEWPM_O3-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
@@ -239,7 +240,6 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(%"class.std::vector"* nound
 ; NEWPM_O3-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; NEWPM_O3:       for.cond1.preheader.us:
 ; NEWPM_O3-NEXT:    [[I_08_US:%.*]] = phi i64 [ [[INC7_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
-; NEWPM_O3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[_M_START_I]], align 8
 ; NEWPM_O3-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY4_US_PREHEADER:%.*]], label [[VECTOR_BODY:%.*]]
 ; NEWPM_O3:       vector.body:
 ; NEWPM_O3-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[FOR_COND1_PREHEADER_US]] ]
