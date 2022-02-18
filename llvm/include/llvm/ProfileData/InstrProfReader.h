@@ -19,7 +19,6 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
-#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -472,9 +471,6 @@ struct InstrProfReaderIndexBase {
 using OnDiskHashTableImplV3 =
     OnDiskIterableChainedHashTable<InstrProfLookupTrait>;
 
-using MemProfHashTable =
-    OnDiskIterableChainedHashTable<memprof::MemProfRecordLookupTrait>;
-
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
 
@@ -560,11 +556,6 @@ private:
   std::unique_ptr<ProfileSummary> Summary;
   /// Context sensitive profile summary data.
   std::unique_ptr<ProfileSummary> CS_Summary;
-  /// MemProf profile schema (if available).
-  memprof::MemProfSchema Schema;
-  /// MemProf profile data on-disk indexed via llvm::md5(FunctionName).
-  std::unique_ptr<MemProfHashTable> MemProfTable;
-
   // Index to the current record in the record array.
   unsigned RecordIndex;
 
@@ -617,11 +608,6 @@ public:
   /// Return the NamedInstrProfRecord associated with FuncName and FuncHash
   Expected<InstrProfRecord> getInstrProfRecord(StringRef FuncName,
                                                uint64_t FuncHash);
-
-  /// Return the memprof records for the function identified by
-  /// llvm::md5(Name).
-  Expected<ArrayRef<memprof::MemProfRecord>>
-  getMemProfRecord(uint64_t FuncNameHash);
 
   /// Fill Counts with the profile data for the given function name.
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
