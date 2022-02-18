@@ -92,19 +92,19 @@ def IsVecOff : PatLeaf<(i32 imm), [{
 
 
 def alignedload: PatFrag<(ops node:$a), (load $a), [{
-  return isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 def unalignedload: PatFrag<(ops node:$a), (load $a), [{
-  return !isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return !isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 def alignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
-  return isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 def unalignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
-  return !isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return !isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 
