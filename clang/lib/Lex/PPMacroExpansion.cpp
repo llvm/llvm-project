@@ -342,7 +342,6 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__TIME__ = RegisterBuiltinMacro(*this, "__TIME__");
   Ident__COUNTER__ = RegisterBuiltinMacro(*this, "__COUNTER__");
   Ident_Pragma  = RegisterBuiltinMacro(*this, "_Pragma");
-  Ident__FLT_EVAL_METHOD__ = RegisterBuiltinMacro(*this, "__FLT_EVAL_METHOD__");
 
   // C++ Standing Document Extensions.
   if (getLangOpts().CPlusPlus)
@@ -1575,17 +1574,6 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // Surround the string with " and strip the trailing newline.
     OS << '"' << StringRef(Result).drop_back() << '"';
     Tok.setKind(tok::string_literal);
-  } else if (II == Ident__FLT_EVAL_METHOD__) {
-    // __FLT_EVAL_METHOD__ is set to the default value.
-    OS << getTUFPEvalMethod();
-    // __FLT_EVAL_METHOD__ expands to a simple numeric value.
-    Tok.setKind(tok::numeric_constant);
-    if (getLastFPEvalPragmaLocation().isValid()) {
-      // The program is ill-formed. The value of __FLT_EVAL_METHOD__ is altered
-      // by the pragma.
-      Diag(Tok, diag::err_illegal_use_of_flt_eval_macro);
-      Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
-    }
   } else if (II == Ident__COUNTER__) {
     // __COUNTER__ expands to a simple numeric value.
     OS << CounterValue++;

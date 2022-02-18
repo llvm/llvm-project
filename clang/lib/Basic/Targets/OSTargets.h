@@ -749,9 +749,7 @@ public:
   }
 
   // AIX sets FLT_EVAL_METHOD to be 1.
-  LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    return LangOptions::FPEvalMethodKind::FEM_Double;
-  }
+  unsigned getFloatEvalMethod() const override { return 1; }
 
   bool defaultsToAIXPowerAlignment() const override { return true; }
 };
