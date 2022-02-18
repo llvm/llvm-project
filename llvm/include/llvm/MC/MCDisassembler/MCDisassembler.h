@@ -46,8 +46,9 @@ public:
                Optional<XCOFF::StorageMappingClass> Smc, Optional<uint32_t> Idx,
                bool Label)
       : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true) {}
-  SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
-      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(false) {}
+  SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type,
+               bool IsXCOFF = false)
+      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(IsXCOFF) {}
   bool isXCOFF() const { return IsXCOFF; }
 
 private:
@@ -55,11 +56,11 @@ private:
     assert(P1.IsXCOFF == P2.IsXCOFF &&
            "P1.IsXCOFF should be equal to P2.IsXCOFF.");
     if (P1.IsXCOFF)
-      return std::tie(P1.Addr, P1.XCOFFSymInfo, P1.Name) <
-             std::tie(P2.Addr, P2.XCOFFSymInfo, P2.Name);
+      return std::tie(P1.Addr, P1.XCOFFSymInfo, P1.Type, P1.Name) <
+             std::tie(P2.Addr, P2.XCOFFSymInfo, P2.Type, P2.Name);
 
     return std::tie(P1.Addr, P1.Name, P1.Type) <
-             std::tie(P2.Addr, P2.Name, P2.Type);
+           std::tie(P2.Addr, P2.Name, P2.Type);
   }
 };
 

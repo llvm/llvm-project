@@ -422,7 +422,7 @@ declare i32 @bar(i32)
 
 ; DIS:      {{.*}}aix-xcoff-reloc.ll.tmp.o:   file format aixcoff-rs6000
 ; DIS:      Disassembly of section .text:
-; DIS:      00000000 <.text>:
+; DIS:      00000000 <.foo>:
 ; DIS-NEXT:        0: 7c 08 02 a6                   mflr 0
 ; DIS-NEXT:        4: 90 01 00 08                   stw 0, 8(1)
 ; DIS-NEXT:        8: 94 21 ff c0                   stwu 1, -64(1)

@@ -3,8 +3,7 @@
 ; RUN:   | FileCheck %s
 
 ;; Expect to find the branch labels.
-; CHECK-LABEL: <.text>:
-;; TODO: <.internal> should be printed instead of <.text>.
+; CHECK-LABEL: <.internal>:
 ; CHECK-NEXT:         0:      mr 4, 3
 ; CHECK-NEXT:         4:      li 3, 0
 ; CHECK-NEXT:         8:      mtctr 4
@@ -19,11 +18,11 @@
 ; CHECK-NEXT:        60:      	bf	8, 0x84 <L1>
 ; CHECK-NEXT:  <L0>:
 ; CHECK-NEXT:        64:      	mr	3, 31
-; CHECK-NEXT:        68:      	bl 0x0 <.text>
+; CHECK-NEXT:        68:      	bl 0x0 <.internal>
 ; CHECK-NEXT:        6c:      	mr	31, 3
 ; CHECK-NEXT:        70:      	cmplwi	3, 11
 ; CHECK-NEXT:        74:      	bt	0, 0x60 <L2>
-; CHECK-NEXT:        78:      	bl 0x0 <.text>
+; CHECK-NEXT:        78:      	bl 0x0 <.internal>
 ; CHECK-NEXT:        7c:      	nop
 ; CHECK-NEXT:        80:      	b 0x60 <L2>
 ; CHECK-NEXT:  <L1>:

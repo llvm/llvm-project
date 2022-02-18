@@ -13,7 +13,7 @@ entry:
 }
 
 ; CHECK:     Disassembly of section .text:{{[[:space:]] *}}
-; CHECK-NEXT:     00000000 <.text>:
+; CHECK-NEXT:     00000000 <.foo>:
 ; CHECK-NEXT:        0: 38 60 00 00                   li 3, 0
 ; CHECK-NEXT:        4: 4e 80 00 20                   blr
 ; CHECK-NEXT:        8: 60 00 00 00                   nop
