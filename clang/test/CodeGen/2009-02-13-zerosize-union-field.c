@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -disable-noundef-analysis -triple i686-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -no-enable-noundef-analysis -triple i686-apple-darwin -emit-llvm -o - | FileCheck %s
 // Every printf has 'i32 0' for the GEP of the string; no point counting those.
 typedef unsigned int Foo __attribute__((aligned(32)));
 typedef union{Foo:0;}a;
