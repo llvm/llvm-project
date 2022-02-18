@@ -16,7 +16,7 @@
 ---
 # CHECK-LABEL: test_CLO_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: clo.w	a0, a1
+# CHECK-ASM: clo.w	$a0, $a1
 name: test_CLO_W
 body: |
   bb.0:
@@ -25,7 +25,7 @@ body: |
 ---
 # CHECK-LABEL: test_CLZ_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: clz.w	a0, a1
+# CHECK-ASM: clz.w	$a0, $a1
 name: test_CLZ_W
 body: |
   bb.0:
@@ -34,7 +34,7 @@ body: |
 ---
 # CHECK-LABEL: test_CTO_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: cto.w	a0, a1
+# CHECK-ASM: cto.w	$a0, $a1
 name: test_CTO_W
 body: |
   bb.0:
@@ -43,7 +43,7 @@ body: |
 ---
 # CHECK-LABEL: test_CTZ_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ctz.w	a0, a1
+# CHECK-ASM: ctz.w	$a0, $a1
 name: test_CTZ_W
 body: |
   bb.0:
@@ -52,7 +52,7 @@ body: |
 ---
 # CHECK-LABEL: test_CLO_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: clo.d	a0, a1
+# CHECK-ASM: clo.d	$a0, $a1
 name: test_CLO_D
 body: |
   bb.0:
@@ -61,7 +61,7 @@ body: |
 ---
 # CHECK-LABEL: test_CLZ_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: clz.d	a0, a1
+# CHECK-ASM: clz.d	$a0, $a1
 name: test_CLZ_D
 body: |
   bb.0:
@@ -70,7 +70,7 @@ body: |
 ---
 # CHECK-LABEL: test_CTO_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: cto.d	a0, a1
+# CHECK-ASM: cto.d	$a0, $a1
 name: test_CTO_D
 body: |
   bb.0:
@@ -79,7 +79,7 @@ body: |
 ---
 # CHECK-LABEL: test_CTZ_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ctz.d	a0, a1
+# CHECK-ASM: ctz.d	$a0, $a1
 name: test_CTZ_D
 body: |
   bb.0:
@@ -88,7 +88,7 @@ body: |
 ---
 # CHECK-LABEL: test_REVB_2H:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: revb.2h	a0, a1
+# CHECK-ASM: revb.2h	$a0, $a1
 name: test_REVB_2H
 body: |
   bb.0:
@@ -97,7 +97,7 @@ body: |
 ---
 # CHECK-LABEL: test_REVB_4H:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: revb.4h	a0, a1
+# CHECK-ASM: revb.4h	$a0, $a1
 name: test_REVB_4H
 body: |
   bb.0:
@@ -106,7 +106,7 @@ body: |
 ---
 # CHECK-LABEL: test_REVB_2W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: revb.2w	a0, a1
+# CHECK-ASM: revb.2w	$a0, $a1
 name: test_REVB_2W
 body: |
   bb.0:
@@ -115,7 +115,7 @@ body: |
 ---
 # CHECK-LABEL: test_REVB_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: revb.d	a0, a1
+# CHECK-ASM: revb.d	$a0, $a1
 name: test_REVB_D
 body: |
   bb.0:
@@ -124,7 +124,7 @@ body: |
 ---
 # CHECK-LABEL: test_REVH_2W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: revh.2w	a0, a1
+# CHECK-ASM: revh.2w	$a0, $a1
 name: test_REVH_2W
 body: |
   bb.0:
@@ -133,7 +133,7 @@ body: |
 ---
 # CHECK-LABEL: test_REVH_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: revh.d	a0, a1
+# CHECK-ASM: revh.d	$a0, $a1
 name: test_REVH_D
 body: |
   bb.0:
@@ -142,7 +142,7 @@ body: |
 ---
 # CHECK-LABEL: test_BITREV_4B:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bitrev.4b	a0, a1
+# CHECK-ASM: bitrev.4b	$a0, $a1
 name: test_BITREV_4B
 body: |
   bb.0:
@@ -151,7 +151,7 @@ body: |
 ---
 # CHECK-LABEL: test_BITREV_8B:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bitrev.8b	a0, a1
+# CHECK-ASM: bitrev.8b	$a0, $a1
 name: test_BITREV_8B
 body: |
   bb.0:
@@ -160,7 +160,7 @@ body: |
 ---
 # CHECK-LABEL: test_BITREV_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bitrev.w	a0, a1
+# CHECK-ASM: bitrev.w	$a0, $a1
 name: test_BITREV_W
 body: |
   bb.0:
@@ -169,7 +169,7 @@ body: |
 ---
 # CHECK-LABEL: test_BITREV_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bitrev.d	a0, a1
+# CHECK-ASM: bitrev.d	$a0, $a1
 name: test_BITREV_D
 body: |
   bb.0:
@@ -178,7 +178,7 @@ body: |
 ---
 # CHECK-LABEL: test_EXT_W_H:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ext.w.h	a0, a1
+# CHECK-ASM: ext.w.h	$a0, $a1
 name: test_EXT_W_H
 body: |
   bb.0:
@@ -187,7 +187,7 @@ body: |
 ---
 # CHECK-LABEL: test_EXT_W_B:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: ext.w.b	a0, a1
+# CHECK-ASM: ext.w.b	$a0, $a1
 name: test_EXT_W_B
 body: |
   bb.0:
@@ -196,7 +196,7 @@ body: |
 ---
 # CHECK-LABEL: test_CPUCFG:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: cpucfg	a0, a1
+# CHECK-ASM: cpucfg	$a0, $a1
 name: test_CPUCFG
 body: |
   bb.0:
@@ -205,7 +205,7 @@ body: |
 ---
 # CHECK-LABEL: test_RDTIMEL_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: rdtimel.w	a0, a1
+# CHECK-ASM: rdtimel.w	$a0, $a1
 name: test_RDTIMEL_W
 body: |
   bb.0:
@@ -214,7 +214,7 @@ body: |
 ---
 # CHECK-LABEL: test_RDTIMEH_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: rdtimeh.w	a0, a1
+# CHECK-ASM: rdtimeh.w	$a0, $a1
 name: test_RDTIMEH_W
 body: |
   bb.0:
@@ -223,7 +223,7 @@ body: |
 ---
 # CHECK-LABEL: test_RDTIME_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: rdtime.d	a0, a1
+# CHECK-ASM: rdtime.d	$a0, $a1
 name: test_RDTIME_D
 body: |
   bb.0:
