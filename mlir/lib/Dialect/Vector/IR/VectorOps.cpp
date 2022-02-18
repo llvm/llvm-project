@@ -1837,14 +1837,7 @@ OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
 
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest) {
-  result.addOperands({source, dest});
-  result.addTypes(dest.getType());
-}
-
-void InsertElementOp::build(OpBuilder &builder, OperationState &result,
-                            Value source, Value dest, Value position) {
-  result.addOperands({source, dest, position});
-  result.addTypes(dest.getType());
+  build(builder, result, source, dest, {});
 }
 
 LogicalResult InsertElementOp::verify() {
