@@ -336,32 +336,31 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         OperationState &result, Value source,
                                         ArrayRef<bool> reductionMask,
                                         CombiningKind kind) {
-  result.addOperands(source);
-  auto sourceVectorType = source.getType().cast<VectorType>();
-  auto targetType = MultiDimReductionOp::inferDestType(
-      sourceVectorType.getShape(), reductionMask,
-      sourceVectorType.getElementType());
-  result.addTypes(targetType);
-
   SmallVector<int64_t> reductionDims;
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  result.addAttribute(getReductionDimsAttrStrName(),
-                      builder.getI64ArrayAttr(reductionDims));
-  result.addAttribute(getKindAttrStrName(),
-                      CombiningKindAttr::get(kind, builder.getContext()));
+  build(builder, result, kind, source, builder.getI64ArrayAttr(reductionDims));
 }
 
-LogicalResult MultiDimReductionOp::verify() {
-  auto reductionMask = getReductionMask();
-  auto targetType = MultiDimReductionOp::inferDestType(
-      getSourceVectorType().getShape(), reductionMask,
-      getSourceVectorType().getElementType());
-  // TODO: update to support 0-d vectors when available.
-  if (targetType != getDestType())
-    return emitError("invalid output vector type: ")
-           << getDestType() << " (expected: " << targetType << ")";
+LogicalResult MultiDimReductionOp::inferReturnTypes(
+    MLIRContext *, Optional<Location>, ValueRange operands,
+    DictionaryAttr attributes, RegionRange,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  MultiDimReductionOp::Adaptor op(operands, attributes);
+  auto vectorType = op.source().getType().cast<VectorType>();
+  SmallVector<int64_t> targetShape;
+  for (auto it : llvm::enumerate(vectorType.getShape()))
+    if (!llvm::any_of(op.reduction_dims().getValue(), [&](Attribute attr) {
+          return attr.cast<IntegerAttr>().getValue() == it.index();
+        }))
+      targetShape.push_back(it.value());
+  // TODO: update to also allow 0-d vectors when available.
+  if (targetShape.empty())
+    inferredReturnTypes.push_back(vectorType.getElementType());
+  else
+    inferredReturnTypes.push_back(
+        VectorType::get(targetShape, vectorType.getElementType()));
   return success();
 }
 

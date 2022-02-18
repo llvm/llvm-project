@@ -1137,6 +1137,13 @@ func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
 
 // -----
 
+func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.multi_reduction' op inferred type(s) 'vector<4xf32>' are incompatible with return type(s) of operation 'vector<16xf32>'}}
+  %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<4x16xf32> to vector<16xf32>
+}
+
+// -----
+
 func @transpose_rank_mismatch(%arg0: vector<4x16x11xf32>) {
   // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
   %0 = vector.transpose %arg0, [2, 1, 0] : vector<4x16x11xf32> to vector<100xf32>
