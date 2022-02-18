@@ -145,23 +145,6 @@ void ParallelOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion());
 }
 
-void TargetOp::print(OpAsmPrinter &p) {
-  p << " ";
-  if (auto ifCond = if_expr())
-    p << "if(" << ifCond << " : " << ifCond.getType() << ") ";
-
-  if (auto device = this->device())
-    p << "device(" << device << " : " << device.getType() << ") ";
-
-  if (auto threads = thread_limit())
-    p << "thread_limit(" << threads << " : " << threads.getType() << ") ";
-
-  if (nowait())
-    p << "nowait ";
-
-  p.printRegion(getRegion());
-}
-
 //===----------------------------------------------------------------------===//
 // Parser and printer for Linear Clause
 //===----------------------------------------------------------------------===//
@@ -837,33 +820,6 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 
   result.addAttribute("operand_segment_sizes",
                       parser.getBuilder().getI32VectorAttr(segments));
-
-  Region *body = result.addRegion();
-  SmallVector<OpAsmParser::OperandType> regionArgs;
-  SmallVector<Type> regionArgTypes;
-  if (parser.parseRegion(*body, regionArgs, regionArgTypes))
-    return failure();
-  return success();
-}
-
-/// Parses a target operation.
-///
-/// operation ::= `omp.target` clause-list
-/// clause-list ::= clause | clause clause-list
-/// clause ::= if | device | thread_limit | nowait
-///
-ParseResult TargetOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<ClauseType> clauses = {ifClause, deviceClause, threadLimitClause,
-                                     nowaitClause};
-
-  SmallVector<int> segments;
-
-  if (failed(parseClauses(parser, result, clauses, segments)))
-    return failure();
-
-  result.addAttribute(
-      TargetOp::AttrSizedOperandSegments::getOperandSegmentSizeAttr(),
-      parser.getBuilder().getI32VectorAttr(segments));
 
   Region *body = result.addRegion();
   SmallVector<OpAsmParser::OperandType> regionArgs;

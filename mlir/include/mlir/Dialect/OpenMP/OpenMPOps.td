@@ -372,7 +372,13 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
 
   let regions = (region AnyRegion:$region);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `if` `(` $if_expr `)`
+          | `device` `(` $device `:` type($device) `)`
+          | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+          | `nowait`
+    ) $region attr-dict
+  }];
 }
 
 

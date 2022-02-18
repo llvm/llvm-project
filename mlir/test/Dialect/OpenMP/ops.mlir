@@ -307,7 +307,7 @@ func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
     "omp.target"(%if_cond, %device, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, nowait } : ( i1, si32, si32 ) -> ()
+    }) {if, device, nowait, operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, thread_limit} : ( i1, si32, si32 ) -> ()
 
     // CHECK: omp.barrier
     omp.barrier
@@ -318,12 +318,12 @@ func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
 // CHECK-LABEL: omp_target_pretty
 func @omp_target_pretty(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
     // CHECK: omp.target if({{.*}}) device({{.*}})
-    omp.target if(%if_cond : i1) device(%device : si32) {
+    omp.target if(%if_cond) device(%device : si32) {
       omp.terminator
     }
 
     // CHECK: omp.target if({{.*}}) device({{.*}}) nowait
-    omp.target if(%if_cond : i1) device(%device : si32) thread_limit(%num_threads : si32) nowait {
+    omp.target if(%if_cond) device(%device : si32) thread_limit(%num_threads : si32) nowait {
       omp.terminator
     }
 
