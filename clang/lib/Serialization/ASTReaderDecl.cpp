@@ -2077,7 +2077,7 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
   unsigned NumParams = Record.readInt();
   D->NumParams = NumParams;
-  D->Params = new TemplateParameterList*[NumParams];
+  D->Params = new (Reader.getContext()) TemplateParameterList *[NumParams];
   for (unsigned i = 0; i != NumParams; ++i)
     D->Params[i] = Record.readTemplateParameterList();
   if (Record.readInt()) // HasFriendDecl
