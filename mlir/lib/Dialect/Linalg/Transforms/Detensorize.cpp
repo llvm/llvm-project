@@ -533,9 +533,9 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       return false;
     });
 
-    patterns.insert<DetensorizeGenericOp>(typeConverter, context);
-    patterns.insert<FunctionNonEntryBlockConversion>(context, typeConverter,
-                                                     blockArgsToDetensor);
+    patterns.add<DetensorizeGenericOp>(typeConverter, context);
+    patterns.add<FunctionNonEntryBlockConversion>(context, typeConverter,
+                                                  blockArgsToDetensor);
     // Since non-entry block arguments get detensorized, we also need to
     // update the control flow inside the function to reflect the correct
     // types.

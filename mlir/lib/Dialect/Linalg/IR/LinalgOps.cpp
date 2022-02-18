@@ -1702,11 +1702,11 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
 
 void TiledLoopOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<TiledLoopInputsFolder, TiledLoopResultsFolder,
-                 DimOfTiledLoopInsOutsFolder<tensor::DimOp>,
-                 DimOfTiledLoopInsOutsFolder<memref::DimOp>,
-                 DimOfTiledLoopResultFolder<tensor::DimOp>,
-                 DimOfTiledLoopResultFolder<memref::DimOp>>(context);
+  results.add<TiledLoopInputsFolder, TiledLoopResultsFolder,
+              DimOfTiledLoopInsOutsFolder<tensor::DimOp>,
+              DimOfTiledLoopInsOutsFolder<memref::DimOp>,
+              DimOfTiledLoopResultFolder<tensor::DimOp>,
+              DimOfTiledLoopResultFolder<memref::DimOp>>(context);
 }
 
 LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
