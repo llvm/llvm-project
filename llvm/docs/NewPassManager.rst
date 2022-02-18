@@ -28,10 +28,6 @@ Just Tell Me How To Run The Default Optimization Pipeline With The New Pass Mana
   // options.
   PassBuilder PB;
 
-  // Make sure to use the default alias analysis pipeline, otherwise we'll end
-  // up only using a subset of the available analyses.
-  FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
-
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
