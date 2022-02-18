@@ -137,7 +137,7 @@ inline bool operator==(const HoverInfo::Param &LHS,
 
 /// Get the hover information when hovering at \p Pos.
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   format::FormatStyle Style,
+                                   const format::FormatStyle &Style,
                                    const SymbolIndex *Index);
 
 } // namespace clangd
