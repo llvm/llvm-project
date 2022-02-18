@@ -243,6 +243,7 @@ set(files
   __iterator/iter_swap.h
   __iterator/iterator.h
   __iterator/iterator_traits.h
+  __iterator/mergeable.h
   __iterator/move_iterator.h
   __iterator/next.h
   __iterator/ostream_iterator.h
