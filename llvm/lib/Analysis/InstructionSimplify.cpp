@@ -2555,24 +2555,20 @@ static bool HaveNonOverlappingStorage(const Value *V1, const Value *V2) {
   //
   // So, we'll assume that two non-empty allocas have different addresses
   // for now.
-
-  auto isByValArgOrGlobalVarOrAlloca = [](const Value *V) {
-    if (const Argument *A = dyn_cast<Argument>(V))
-      return A->hasByValAttr();
-    return isa<AllocaInst>(V) || isa<GlobalVariable>(V);
+  auto isByValArg = [](const Value *V) {
+    const Argument *A = dyn_cast<Argument>(V);
+    return A && A->hasByValAttr();
   };
 
-  if (!isByValArgOrGlobalVarOrAlloca(V1) ||
-      !isByValArgOrGlobalVarOrAlloca(V2))
-    return false;
+  // Byval args are backed by store which does not overlap with each other,
+  // allocas, or globals.
+  if (isByValArg(V1))
+    return isa<AllocaInst>(V2) || isa<GlobalVariable>(V2) || isByValArg(V2);
+  if (isByValArg(V2))
+    return isa<AllocaInst>(V1) || isa<GlobalVariable>(V1) || isByValArg(V1);
 
-  // Both sides being globals shouldn't reach here - as the resulting compare
-  // is a constantexpr - but we want to guard against it to be safe.  The
-  // semantics of globals are complicated by e.g. unnamed_addr.  The assumption
-  // in this code is that while two globals could end up overlapping, they'll
-  // never overlap with any alloca or byval, and thus we can still reason about
-  // *one* global and one *non* global as disjoint storage.
-  return !isa<GlobalVariable>(V1) || !isa<GlobalVariable>(V2);
+ return isa<AllocaInst>(V1) &&
+    (isa<AllocaInst>(V2) || isa<GlobalVariable>(V2));
 }
 
 // A significant optimization not implemented here is assuming that alloca
