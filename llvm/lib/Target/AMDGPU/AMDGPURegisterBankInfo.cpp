@@ -1789,7 +1789,7 @@ bool AMDGPURegisterBankInfo::buildVCopy(MachineIRBuilder &B, Register DstReg,
 }
 
 /// Utility function for pushing dynamic vector indexes with a constant offset
-/// into waterwall loops.
+/// into waterfall loops.
 static void reinsertVectorIndexAdd(MachineIRBuilder &B,
                                    MachineInstr &IdxUseInstr,
                                    unsigned OpIdx,

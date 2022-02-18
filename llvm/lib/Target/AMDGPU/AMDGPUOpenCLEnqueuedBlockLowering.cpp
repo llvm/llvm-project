@@ -71,7 +71,7 @@ ModulePass* llvm::createAMDGPUOpenCLEnqueuedBlockLoweringPass() {
   return new AMDGPUOpenCLEnqueuedBlockLowering();
 }
 
-/// Collect direct or indrect callers of \p F and save them
+/// Collect direct or indirect callers of \p F and save them
 /// to \p Callers.
 static void collectCallers(Function *F, DenseSet<Function *> &Callers) {
   for (auto U : F->users()) {
