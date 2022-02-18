@@ -963,7 +963,7 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
 } // namespace
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   const format::FormatStyle &Style,
+                                   format::FormatStyle Style,
                                    const SymbolIndex *Index) {
   PrintingPolicy PP =
       getPrintingPolicy(AST.getASTContext().getPrintingPolicy());
