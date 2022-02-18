@@ -123,6 +123,7 @@ llvm::StringRef RichManglingContext::ParseFunctionBaseName() {
   case None:
     return {};
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 llvm::StringRef RichManglingContext::ParseFunctionDeclContextName() {
@@ -139,6 +140,7 @@ llvm::StringRef RichManglingContext::ParseFunctionDeclContextName() {
   case None:
     return {};
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 llvm::StringRef RichManglingContext::ParseFullName() {
@@ -156,4 +158,5 @@ llvm::StringRef RichManglingContext::ParseFullName() {
   case None:
     return {};
   }
+  llvm_unreachable("Fully covered switch above!");
 }
