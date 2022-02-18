@@ -1772,3 +1772,95 @@ TEST_F(MemorySSATest, TestInvariantGroup) {
     EXPECT_EQ(CallAccess, LClobber);
   }
 }
+
+static BasicBlock *getBasicBlockByName(Function &F, StringRef Name) {
+  for (BasicBlock &BB : F)
+    if (BB.getName() == Name)
+      return &BB;
+  llvm_unreachable("Expected to find basic block!");
+}
+
+static Instruction *getInstructionByName(Function &F, StringRef Name) {
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (I.getName() == Name)
+        return &I;
+  llvm_unreachable("Expected to find instruction!");
+}
+
+TEST_F(MemorySSATest, TestVisitedBlocks) {
+  SMDiagnostic E;
+  auto M = parseAssemblyString(
+      "define void @test(i64* noalias %P, i64 %N) {\n"
+      "preheader.n:\n"
+      "  br label %header.n\n"
+      "header.n:\n"
+      "  %n = phi i64 [ 0, %preheader.n ], [ %inc.n, %latch.n ]\n"
+      "  %guard.cond.i = icmp slt i64 0, %N\n"
+      "  br i1 %guard.cond.i, label %header.i.check, label %other.i\n"
+      "header.i.check:\n"
+      "  br label %preheader.i\n"
+      "preheader.i:\n"
+      "  br label %header.i\n"
+      "header.i:\n"
+      "  %i = phi i64 [ 0, %preheader.i ], [ %inc.i, %header.i ]\n"
+      "  %v1 = load i64, i64* %P, align 8\n"
+      "  %v2 = load i64, i64* %P, align 8\n"
+      "  %inc.i = add nsw i64 %i, 1\n"
+      "  %cmp.i = icmp slt i64 %inc.i, %N\n"
+      "  br i1 %cmp.i, label %header.i, label %exit.i\n"
+      "exit.i:\n"
+      "  br label %commonexit\n"
+      "other.i:\n"
+      "  br label %commonexit\n"
+      "commonexit:\n"
+      "  br label %latch.n\n"
+      "latch.n:\n"
+      "  %inc.n = add nsw i64 %n, 1\n"
+      "  %cmp.n = icmp slt i64 %inc.n, %N\n"
+      "  br i1 %cmp.n, label %header.n, label %exit.n\n"
+      "exit.n:\n"
+      "  ret void\n"
+      "}\n",
+      E, C);
+  ASSERT_TRUE(M);
+  F = M->getFunction("test");
+  ASSERT_TRUE(F);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  {
+    // Move %v1 before the terminator of %header.i.check
+    BasicBlock *BB = getBasicBlockByName(*F, "header.i.check");
+    Instruction *LI = getInstructionByName(*F, "v1");
+    LI->moveBefore(BB->getTerminator());
+    if (MemoryUseOrDef *MUD = MSSA.getMemoryAccess(LI))
+      Updater.moveToPlace(MUD, BB, MemorySSA::BeforeTerminator);
+
+    // Change the termiantor of %header.i.check to `br label true, label
+    // %preheader.i, label %other.i`
+    BB->getTerminator()->eraseFromParent();
+    ConstantInt *BoolTrue = ConstantInt::getTrue(F->getContext());
+    BranchInst::Create(getBasicBlockByName(*F, "preheader.i"),
+                       getBasicBlockByName(*F, "other.i"), BoolTrue, BB);
+    SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
+    DTUpdates.push_back(DominatorTree::UpdateType(
+        DominatorTree::Insert, BB, getBasicBlockByName(*F, "other.i")));
+    Updater.applyUpdates(DTUpdates, Analyses->DT, true);
+  }
+
+  // After the first moveToPlace(), %other.i is in VisitedBlocks, even after
+  // there is a new edge to %other.i, which makes the second moveToPlace()
+  // traverse incorrectly.
+  {
+    // Move %v2 before the terminator of %preheader.i
+    BasicBlock *BB = getBasicBlockByName(*F, "preheader.i");
+    Instruction *LI = getInstructionByName(*F, "v2");
+    LI->moveBefore(BB->getTerminator());
+    // Check that there is no assertion of "Incomplete phi during partial
+    // rename"
+    if (MemoryUseOrDef *MUD = MSSA.getMemoryAccess(LI))
+      Updater.moveToPlace(MUD, BB, MemorySSA::BeforeTerminator);
+  }
+}
