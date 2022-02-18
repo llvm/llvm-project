@@ -1231,6 +1231,7 @@ StringTableSection::StringTableSection(StringRef name, bool dynamic)
       dynamic(dynamic) {
   // ELF string tables start with a NUL byte.
   strings.push_back("");
+  stringMap.try_emplace(CachedHashStringRef(""), 0);
   size = 1;
 }
 
