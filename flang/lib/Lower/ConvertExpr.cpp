@@ -206,12 +206,27 @@ public:
     return builder.create<fir::NegcOp>(getLoc(), genunbox(op.left()));
   }
 
+  template <typename OpTy>
+  mlir::Value createBinaryOp(const ExtValue &left, const ExtValue &right) {
+    assert(fir::isUnboxedValue(left) && fir::isUnboxedValue(right));
+    mlir::Value lhs = fir::getBase(left);
+    mlir::Value rhs = fir::getBase(right);
+    assert(lhs.getType() == rhs.getType() && "types must be the same");
+    return builder.create<OpTy>(getLoc(), lhs, rhs);
+  }
+
+  template <typename OpTy, typename A>
+  mlir::Value createBinaryOp(const A &ex) {
+    ExtValue left = genval(ex.left());
+    return createBinaryOp<OpTy>(left, genval(ex.right()));
+  }
+
 #undef GENBIN
 #define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
   template <int KIND>                                                          \
   ExtValue genval(const Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type< \
                       Fortran::common::TypeCategory::GenBinTyCat, KIND>> &x) { \
-    TODO(getLoc(), "genval GenBinEvOp");                                       \
+    return createBinaryOp<GenBinFirOp>(x);                                     \
   }
 
   GENBIN(Add, Integer, mlir::arith::AddIOp)
