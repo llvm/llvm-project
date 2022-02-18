@@ -19,7 +19,7 @@
 
 ## The output SHT_PROBITS is contrary to the user expectation of SHT_NOBITS.
 ## Issue a warning. See https://github.com/ClangBuiltLinux/linux/issues/1597
-# RUN: ld.lld --script %t/lds %t.o %t/mismatch.o -o %t/out 2>&1 |& FileCheck %s --check-prefix=WARN
+# RUN: ld.lld --script %t/lds %t.o %t/mismatch.o -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readelf -S -l %t/out | FileCheck %s --check-prefix=CHECK2
 
 # WARN:   warning: section type mismatch for .data_noload_a
