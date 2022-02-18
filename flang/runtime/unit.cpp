@@ -310,6 +310,7 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
     handler.SignalError(IostatWriteAfterEndfile);
     return false;
   }
+  CheckDirectAccess(handler);
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
     std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
@@ -432,7 +433,7 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   if (!beganReadingRecord_) {
     beganReadingRecord_ = true;
     if (access == Access::Direct) {
-      RUNTIME_CHECK(handler, openRecl);
+      CheckDirectAccess(handler);
       auto need{static_cast<std::size_t>(recordOffsetInFrame_ + *openRecl)};
       auto got{ReadFrame(frameOffsetInFile_, need, handler)};
       if (got >= need) {
@@ -654,6 +655,9 @@ void ExternalFileUnit::SetPosition(std::int64_t pos, IoErrorHandler &handler) {
   DoImpliedEndfile(handler);
   frameOffsetInFile_ = pos;
   recordOffsetInFrame_ = 0;
+  if (access == Access::Direct) {
+    directAccessRecWasSet_ = true;
+  }
   BeginRecord();
 }
 
@@ -844,6 +848,17 @@ void ExternalFileUnit::CommitWrites() {
       recordOffsetInFrame_ + recordLength.value_or(furthestPositionInRecord);
   recordOffsetInFrame_ = 0;
   BeginRecord();
+}
+
+bool ExternalFileUnit::CheckDirectAccess(IoErrorHandler &handler) {
+  if (access == Access::Direct) {
+    RUNTIME_CHECK(handler, openRecl);
+    if (!directAccessRecWasSet_) {
+      handler.SignalError("No REC= was specified for a data transfer with ACCESS='DIRECT'");
+      return false;
+    }
+  }
+  return true;
 }
 
 ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
