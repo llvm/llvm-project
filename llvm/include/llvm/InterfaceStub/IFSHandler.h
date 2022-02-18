@@ -19,6 +19,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -51,8 +53,8 @@ Error validateIFSTarget(IFSStub &Stub, bool ParseTriple);
 void stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
                     bool StripEndianness, bool StripBitWidth);
 
-/// Strips symbols from IFS symbol table that are undefined.
-void stripIFSUndefinedSymbols(IFSStub &Stub);
+Error filterIFSSyms(IFSStub &Stub, bool StripUndefined,
+                    const std::vector<std::string> &Exclude = {});
 
 /// Parse llvm triple string into a IFSTarget struct.
 IFSTarget parseTriple(StringRef TripleStr);
