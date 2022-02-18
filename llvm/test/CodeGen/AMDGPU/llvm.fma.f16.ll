@@ -291,9 +291,9 @@ define amdgpu_kernel void @fma_v2f16_imm_c(
 }
 
 ; GCN-LABEL: {{^}}fma_v4f16
-; GCN: buffer_load_dwordx2 v{{\[}}[[A_V4_F16_LO:[0-9]+]]:[[A_V4_F16_HI:[0-9]+]]{{\]}}
-; GCN: buffer_load_dwordx2 v{{\[}}[[B_V4_F16_LO:[0-9]+]]:[[B_V4_F16_HI:[0-9]+]]{{\]}}
-; GCN: buffer_load_dwordx2 v{{\[}}[[C_V4_F16_LO:[0-9]+]]:[[C_V4_F16_HI:[0-9]+]]{{\]}}
+; GCN: buffer_load_dwordx2 v[[[A_V4_F16_LO:[0-9]+]]:[[A_V4_F16_HI:[0-9]+]]]
+; GCN: buffer_load_dwordx2 v[[[B_V4_F16_LO:[0-9]+]]:[[B_V4_F16_HI:[0-9]+]]]
+; GCN: buffer_load_dwordx2 v[[[C_V4_F16_LO:[0-9]+]]:[[C_V4_F16_HI:[0-9]+]]]
 
 ; SI-DAG: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V4_F16_LO]]
 ; SI-DAG: v_lshrrev_b32_e32 v[[A_F16_0:[0-9]+]], 16, v[[A_V4_F16_LO]]
@@ -345,7 +345,7 @@ define amdgpu_kernel void @fma_v2f16_imm_c(
 ; GFX9-DAG: v_pk_fma_f16 v[[R_V4_F16_LO:[0-9]+]], v[[A_V4_F16_LO]], v[[B_V4_F16_LO]], v[[C_V4_F16_LO]]
 ; GFX9-DAG: v_pk_fma_f16 v[[R_V4_F16_HI:[0-9]+]], v[[A_V4_F16_HI]], v[[B_V4_F16_HI]], v[[C_V4_F16_HI]]
 
-; GCN: buffer_store_dwordx2 v{{\[}}[[R_V4_F16_LO]]:[[R_V4_F16_HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[R_V4_F16_LO]]:[[R_V4_F16_HI]]]
 ; GCN: s_endpgm
 
 define amdgpu_kernel void @fma_v4f16(

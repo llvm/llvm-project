@@ -24,10 +24,10 @@ define amdgpu_kernel void @combine_ftrunc_frint_f32(float addrspace(1)* %p) {
 
 ; GCN-LABEL: {{^}}combine_ftrunc_frint_v2f32:
 ; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2 s{{\[}}[[SRC1:[0-9]+]]:[[SRC2:[0-9]+]]{{\]}}
+; GCN: s_load_dwordx2 s[[[SRC1:[0-9]+]]:[[SRC2:[0-9]+]]]
 ; GCN-DAG: v_rndne_f32_e32 v[[RND1:[0-9]+]], s[[SRC1]]
 ; GCN-DAG: v_rndne_f32_e32 v[[RND2:[0-9]+]], s[[SRC2]]
-; GCN: flat_store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[RND1]]:[[RND2]]{{\]}}
+; GCN: flat_store_dwordx2 v[{{[0-9:]+}}], v[[[RND1]]:[[RND2]]]
 define amdgpu_kernel void @combine_ftrunc_frint_v2f32(<2 x float> addrspace(1)* %p) {
   %v = load <2 x float>, <2 x float> addrspace(1)* %p, align 8
   %round = tail call <2 x float> @llvm.rint.v2f32(<2 x float> %v)

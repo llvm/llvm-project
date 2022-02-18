@@ -52,7 +52,7 @@ define amdgpu_kernel void @v_cnd_nan(float addrspace(1)* %out, i32 %c, float %f)
 ; (select (cmp (sgprX, constant)), constant, sgprZ)
 
 ; GCN-LABEL: {{^}}fcmp_sgprX_k0_select_k1_sgprZ_f32:
-; GCN: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Z:[0-9]+]]{{\]}}, s[0:1], {{0x4c|0x13}}
+; GCN: s_load_dwordx2 s[[[X:[0-9]+]]:[[Z:[0-9]+]]], s[0:1], {{0x4c|0x13}}
 
 ; SIVI-DAG:  v_cmp_nlg_f32_e64 [[CC:vcc]], s[[X]], 0
 ; GFX10-DAG: v_cmp_nlg_f32_e64 [[CC:s\[[0-9:]+\]]], s[[X]], 0
@@ -87,7 +87,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(float addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}fcmp_sgprX_k0_select_k0_sgprZ_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Z:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
+; GCN-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Z:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SIVI-DAG:  v_cmp_nlg_f32_e64 [[CC:vcc]], s[[X]], 0
 ; GFX10-DAG: v_cmp_nlg_f32_e64 [[CC:s\[[0-9:]+\]]], s[[X]], 0
 ; SIVI-DAG:  v_mov_b32_e32 [[VZ:v[0-9]+]], s[[Z]]
@@ -212,9 +212,9 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(i32 addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}icmp_vgprX_k0_select_k1_vgprZ_i64:
-; GCN: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[X_LO:[0-9]+]]:[[X_HI:[0-9]+]]{{\]}}
-; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[Z_LO:[0-9]+]]:[[Z_HI:[0-9]+]]{{\]}}
-; GCN-DAG: v_cmp_lt_i64_e32 vcc, -1, v{{\[}}[[X_LO]]:[[X_HI]]{{\]}}
+; GCN: {{buffer|flat|global}}_load_dwordx2 v[[[X_LO:[0-9]+]]:[[X_HI:[0-9]+]]]
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v[[[Z_LO:[0-9]+]]:[[Z_HI:[0-9]+]]]
+; GCN-DAG: v_cmp_lt_i64_e32 vcc, -1, v[[[X_LO]]:[[X_HI]]]
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v[[Z_HI]], vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2, v[[Z_LO]], vcc
 define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %x.ptr, i64 addrspace(1)* %z.ptr) #0 {

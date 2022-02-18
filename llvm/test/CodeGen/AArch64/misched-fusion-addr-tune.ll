@@ -15,9 +15,9 @@ define dso_local void @ldst_double() {
 
 ; CHECK-LABEL: ldst_double:
 ; CHECK: adrp [[RD:x[0-9]+]], var_double
-; CHECK-NEXT: ldr {{d[0-9]+}}, {{\[}}[[RD]], {{#?}}:lo12:var_double{{\]}}
+; CHECK-NEXT: ldr {{d[0-9]+}}, [[[RD]], {{#?}}:lo12:var_double]
 ; CHECK: adrp [[RQ:x[0-9]+]], var_double2
-; CHECK-NEXT: str {{q[0-9]+}}, {{\[}}[[RQ]], {{#?}}:lo12:var_double2{{\]}}
+; CHECK-NEXT: str {{q[0-9]+}}, [[[RQ]], {{#?}}:lo12:var_double2]
 }
 
 define dso_local void @ldst_double_tune_a53() #0 {
@@ -31,10 +31,10 @@ define dso_local void @ldst_double_tune_a53() #0 {
 
 ; CHECK-LABEL: ldst_double_tune_a53:
 ; CHECK: adrp [[RD:x[0-9]+]], var_double
-; CHECK-NEXT: ldr {{d[0-9]+}}, {{\[}}[[RD]], {{#?}}:lo12:var_double{{\]}}
+; CHECK-NEXT: ldr {{d[0-9]+}}, [[[RD]], {{#?}}:lo12:var_double]
 ; CHECK-NEXT: adrp [[RQ:x[0-9]+]], var_double2
 ; CHECK: fcvt
-; CHECK: str {{q[0-9]+}}, {{\[}}[[RQ]], {{#?}}:lo12:var_double2{{\]}}
+; CHECK: str {{q[0-9]+}}, [[[RQ]], {{#?}}:lo12:var_double2]
 }
 
 attributes #0 = { "tune-cpu"="cortex-a53" }

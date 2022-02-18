@@ -46,7 +46,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GFX90A-DAG:  v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX90A-DAG:  v_mov_b32_e32 v[[TWO:[0-9]+]], 2
 ; GFX90A-DAG:  v_mov_b32_e32 v[[ONE:[0-9]+]], 1
-; GFX90A:      v_mfma_f32_32x32x4bf16_1k a[{{[0-9]+:[0-9]+}}], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
+; GFX90A:      v_mfma_f32_32x32x4bf16_1k a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GCN-NOT:     v_accvgpr_read_b32
 ; GCN-COUNT-8: global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(<32 x float> addrspace(1)* %arg) #0 {
@@ -64,7 +64,7 @@ bb:
 ; GCN-DAG:         v_mov_b32_e32 v[[TWO:[0-9]+]], 2
 ; GCN-DAG:         v_mov_b32_e32 v[[ONE:[0-9]+]], 1
 ; GFX90A-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GFX90A:          v_mfma_f32_16x16x4bf16_1k a[{{[0-9]+:[0-9]+}}], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
+; GFX90A:          v_mfma_f32_16x16x4bf16_1k a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GCN-NOT:         v_accvgpr_read_b32
 ; GCN-COUNT-4:     global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(<16 x float> addrspace(1)* %arg) #0 {
@@ -82,7 +82,7 @@ bb:
 ; GCN-DAG:        v_mov_b32_e32 v[[TWO:[0-9]+]], 2
 ; GCN-DAG:        v_mov_b32_e32 v[[ONE:[0-9]+]], 1
 ; GFX90A-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GFX90A:         v_mfma_f32_4x4x4bf16_1k [[RES:a\[[0-9]+:[0-9]+\]]], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
+; GFX90A:         v_mfma_f32_4x4x4bf16_1k [[RES:a\[[0-9]+:[0-9]+\]]], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GCN-NOT:        v_accvgpr_read_b32
 ; GCN:            global_store_dwordx4 v{{[0-9]+}}, [[RES]],
 define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(<4 x float> addrspace(1)* %arg) #0 {
@@ -100,7 +100,7 @@ bb:
 ; GCN-DAG:         v_mov_b32_e32 v[[TWO:[0-9]+]], 2
 ; GCN-DAG:         v_mov_b32_e32 v[[ONE:[0-9]+]], 1
 ; GFX90A-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GFX90A:          v_mfma_f32_32x32x8bf16_1k a[{{[0-9]+:[0-9]+}}], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
+; GFX90A:          v_mfma_f32_32x32x8bf16_1k a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GCN-NOT:         v_accvgpr_read_b32
 ; GCN-COUNT-4:     global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
 define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(<16 x float> addrspace(1)* %arg) #0 {
@@ -118,7 +118,7 @@ bb:
 ; GCN-DAG:        v_mov_b32_e32 v[[TWO:[0-9]+]], 2
 ; GCN-DAG:        v_mov_b32_e32 v[[ONE:[0-9]+]], 1
 ; GFX90A-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GFX90A:         v_mfma_f32_16x16x16bf16_1k [[RES:a\[[0-9]+:[0-9]+\]]], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
+; GFX90A:         v_mfma_f32_16x16x16bf16_1k [[RES:a\[[0-9]+:[0-9]+\]]], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GCN-NOT:        v_accvgpr_read_b32
 ; GCN:            global_store_dwordx4 v{{[0-9]+}}, [[RES]],
 define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(<4 x float> addrspace(1)* %arg) #0 {

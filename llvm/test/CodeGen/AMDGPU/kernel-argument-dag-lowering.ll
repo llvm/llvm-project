@@ -248,7 +248,7 @@ define amdgpu_kernel void @byref_flat_i32_arg(i32 addrspace(1)* nocapture %out, 
 ; GCN-LABEL: {{^}}byref_constant_32bit_i32_arg:
 ; GCN: s_add_i32 s[[PTR_LO:[0-9]+]], s4, 8
 ; GCN: s_mov_b32 s[[PTR_HI:[0-9]+]], 0{{$}}
-; GCN: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x0{{$}}
+; GCN: s_load_dword s{{[0-9]+}}, s[[[PTR_LO]]:[[PTR_HI]]], 0x0{{$}}
 define amdgpu_kernel void @byref_constant_32bit_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(6)* byref(i32) %in.byref) {
   %in = load i32, i32 addrspace(6)* %in.byref
   store i32 %in, i32 addrspace(1)* %out, align 4

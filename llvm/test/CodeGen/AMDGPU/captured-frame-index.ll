@@ -181,7 +181,7 @@ define amdgpu_kernel void @stored_fi_to_global_huge_frame_offset(i32 addrspace(5
 ; on the leftover AssertZext's ValueType operand.
 
 ; GCN-LABEL: {{^}}cannot_select_assertzext_valuetype:
-; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
+; GCN: s_getpc_b64 s[[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]]
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[PC_LO]], g1@gotpcrel32@lo+4
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC_HI]], g1@gotpcrel32@hi+12
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}

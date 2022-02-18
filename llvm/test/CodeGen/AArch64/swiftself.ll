@@ -77,14 +77,14 @@ declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
 ; OPTAARCH64-DAG: ldr  x20, [x20]
 ; OPTAARCH64-DAG: mov [[CSREG:x[1-9].*]], x8
 ; OPTAARCH64: bl {{_?}}thisreturn_attribute
-; OPTAARCH64: str x0, {{\[}}[[CSREG]]
+; OPTAARCH64: str x0, [[[CSREG]]
 ; OPTAARCH64: ret
 
 ; OPTARM64_32-LABEL: swiftself_nothisreturn:
 ; OPTARM64_32-DAG: ldr  w20, [x20]
 ; OPTARM64_32-DAG: mov [[CSREG:x[1-9].*]], x8
 ; OPTARM64_32: bl {{_?}}thisreturn_attribute
-; OPTARM64_32: str w0, {{\[}}[[CSREG]]
+; OPTARM64_32: str w0, [[[CSREG]]
 ; OPTARM64_32: ret
 define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret(i8*), i8** noalias nocapture readonly swiftself) {
 entry:

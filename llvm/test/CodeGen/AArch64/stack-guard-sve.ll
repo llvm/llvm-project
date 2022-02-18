@@ -54,7 +54,7 @@ entry:
 ; CHECK: addvl sp, sp, #-2
 ; CHECK-DAG: addvl [[ADDR:x[0-9]+]], x29, #-1
 ; CHECK-DAG: ldr [[VAL:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
-; CHECK-DAG: str [[VAL]], {{\[}}[[ADDR]]]
+; CHECK-DAG: str [[VAL]], [[[ADDR]]]
 ; CHECK-DAG: addvl x0, x29, #-2
 ; CHECK: bl ptr_fn
 define void @call_ptr_strong() #1 {
@@ -90,7 +90,7 @@ entry:
 ; CHECK: addvl sp, sp, #-3
 ; CHECK-DAG: addvl [[ADDR:x[0-9]+]], x29, #-1
 ; CHECK-DAG: ldr [[VAL:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
-; CHECK-DAG: str [[VAL]], {{\[}}[[ADDR]]]
+; CHECK-DAG: str [[VAL]], [[[ADDR]]]
 ; CHECK-DAG: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [x29, #-2, mul vl]
 ; CHECK: bl val_fn
 ; CHECK: addvl x0, x29, #-3
@@ -116,7 +116,7 @@ entry:
 ; CHECK: addvl sp, sp, #-1
 ; CHECK-NOT: __stack_chk_guard
 ; CHECK: addvl [[REG:x[0-9]+]], x29, #-11
-; CHECK: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, {{\[}}[[REG]], #-8, mul vl]
+; CHECK: st1w { {{z[0-9]+.s}} }, {{p[0-9]+}}, [[[REG]], #-8, mul vl]
 define void @callee_save(<vscale x 4 x float> %x) #0 {
 entry:
   %x.addr = alloca <vscale x 4 x float>, align 16
@@ -132,9 +132,9 @@ entry:
 ; CHECK: addvl sp, sp, #-2
 ; CHECK-DAG: addvl [[ADDR:x[0-9]+]], x29, #-19
 ; CHECK-DAG: ldr [[VAL:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
-; CHECK-DAG: str [[VAL]], {{\[}}[[ADDR]]]
+; CHECK-DAG: str [[VAL]], [[[ADDR]]]
 ; CHECK-DAG: addvl [[ADDR2:x[0-9]+]], x29, #-12
-; CHECK-DAG: st1w { z0.s }, p0, {{\[}}[[ADDR2]], #-8, mul vl]
+; CHECK-DAG: st1w { z0.s }, p0, [[[ADDR2]], #-8, mul vl]
 define void @callee_save_strong(<vscale x 4 x float> %x) #1 {
 entry:
   %x.addr = alloca <vscale x 4 x float>, align 16
@@ -155,16 +155,16 @@ entry:
 ; Stack guard is placed below the SVE stack area
 ; CHECK-DAG: ldr [[STACK_GUARD:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
 ; CHECK-DAG: addvl [[STACK_GUARD_POS:x[0-9]+]], x29, #-2
-; CHECK-DAG: stur [[STACK_GUARD]], {{\[}}[[STACK_GUARD_POS]], #-8]
+; CHECK-DAG: stur [[STACK_GUARD]], [[[STACK_GUARD_POS]], #-8]
 
 ; char_arr is below the stack guard
 ; CHECK-DAG: sub [[CHAR_ARR_1:x[0-9]+]], x29, #16
 ; CHECK-DAG: addvl [[CHAR_ARR_2:x[0-9]+]], [[CHAR_ARR_1]], #-2
-; CHECK-DAG: strb wzr, {{\[}}[[CHAR_ARR_2]]]
+; CHECK-DAG: strb wzr, [[[CHAR_ARR_2]]]
 
 ; large1 is accessed via a virtual base register
 ; CHECK-DAG: add [[LARGE1:x[0-9]+]], sp, #8, lsl #12
-; CHECK-DAG: stp x0, x0, {{\[}}[[LARGE1]]]
+; CHECK-DAG: stp x0, x0, [[[LARGE1]]]
 
 ; large2 is at the bottom of the stack
 ; CHECK-DAG: stp x0, x0, [sp]
@@ -205,15 +205,15 @@ entry:
 ; Stack guard is placed at the top of the SVE stack area
 ; CHECK-DAG: ldr [[STACK_GUARD:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]
 ; CHECK-DAG: addvl [[STACK_GUARD_POS:x[0-9]+]], x29, #-1
-; CHECK-DAG: str [[STACK_GUARD]], {{\[}}[[STACK_GUARD_POS]]]
+; CHECK-DAG: str [[STACK_GUARD]], [[[STACK_GUARD_POS]]]
 
 ; char_arr is below the SVE stack area
 ; CHECK-DAG: addvl [[CHAR_ARR:x[0-9]+]], x29, #-3
-; CHECK-DAG: sturb wzr, {{\[}}[[CHAR_ARR]], #-8]
+; CHECK-DAG: sturb wzr, [[[CHAR_ARR]], #-8]
 
 ; large1 is accessed via a virtual base register
 ; CHECK-DAG: add [[LARGE1:x[0-9]+]], sp, #8, lsl #12
-; CHECK-DAG: stp x0, x0, {{\[}}[[LARGE1]], #8]
+; CHECK-DAG: stp x0, x0, [[[LARGE1]], #8]
 
 ; large2 is at the bottom of the stack
 ; CHECK-DAG: stp x0, x0, [sp, #8]

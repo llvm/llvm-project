@@ -39,13 +39,13 @@ define double @fmov_double2() {
 define float @cp_float() {
 ; CHECK-LABEL: cp_float
 ; CHECK:       adrp [[REG:x[0-9]+]], {{lCPI[0-9]+_0}}@PAGE
-; CHECK-NEXT:  ldr s0, {{\[}}[[REG]], {{lCPI[0-9]+_0}}@PAGEOFF{{\]}}
+; CHECK-NEXT:  ldr s0, [[[REG]], {{lCPI[0-9]+_0}}@PAGEOFF]
   ret float 0x400921FB60000000
 }
 
 define double @cp_double() {
 ; CHECK-LABEL: cp_double
 ; CHECK:       adrp [[REG:x[0-9]+]], {{lCPI[0-9]+_0}}@PAGE
-; CHECK-NEXT:  ldr d0, {{\[}}[[REG]], {{lCPI[0-9]+_0}}@PAGEOFF{{\]}}
+; CHECK-NEXT:  ldr d0, [[[REG]], {{lCPI[0-9]+_0}}@PAGEOFF]
   ret double 0x400921FB54442D18
 }
