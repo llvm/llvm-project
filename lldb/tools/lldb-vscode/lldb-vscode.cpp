@@ -449,18 +449,10 @@ void EventThreadFunction() {
           case lldb::eStateSuspended:
             break;
           case lldb::eStateStopped:
-            // Now that we don't mess with the async setting in the debugger
-            // when launching or attaching we will get the first process stop
-            // event which we do not want to send an event for. This is because
-            // we either manually deliver the event in by calling the
-            // SendThreadStoppedEvent() from request_configuarationDone() if we
-            // want to stop on entry, or we resume from that function.
-            if (process.GetStopID() > 1) {
-              // Only report a stopped event if the process was not restarted.
-              if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
-                SendStdOutStdErr(process);
-                SendThreadStoppedEvent();
-              }
+            // Only report a stopped event if the process was not restarted.
+            if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
+              SendStdOutStdErr(process);
+              SendThreadStoppedEvent();
             }
             break;
           case lldb::eStateRunning:
@@ -608,7 +600,6 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   llvm::StringRef core_file = GetString(arguments, "coreFile");
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
   g_vsc.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
   std::vector<std::string> postRunCommands =
@@ -649,10 +640,15 @@ void request_attach(const llvm::json::Object &request) {
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
+    // Disable async events so the attach will be successful when we return from
+    // the launch call and the launch will happen synchronously
+    g_vsc.debugger.SetAsync(false);
     if (core_file.empty())
       g_vsc.target.Attach(attach_info, error);
     else
       g_vsc.target.LoadCore(core_file.data(), error);
+    // Reenable async events
+    g_vsc.debugger.SetAsync(true);
   } else {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there
@@ -662,9 +658,6 @@ void request_attach(const llvm::json::Object &request) {
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
   }
-  // Make sure the process is attached and stopped before proceeding.
-  if (error.Success())
-    error = g_vsc.WaitForProcessToStop(timeout_seconds);
 
   if (error.Success() && core_file.empty()) {
     auto attached_pid = g_vsc.target.GetProcess().GetProcessID();
@@ -1659,7 +1652,6 @@ void request_launch(const llvm::json::Object &request) {
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1724,17 +1716,17 @@ void request_launch(const llvm::json::Object &request) {
     if (llvm::Error err = request_runInTerminal(request))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   } else if (launchCommands.empty()) {
+    // Disable async events so the launch will be successful when we return from
+    // the launch call and the launch will happen synchronously
+    g_vsc.debugger.SetAsync(false);
     g_vsc.target.Launch(launch_info, error);
+    g_vsc.debugger.SetAsync(true);
   } else {
     g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
   }
-  // Make sure the process is launched and stopped at the entry point before
-  // proceeding.
-  if (error.Success())
-    error = g_vsc.WaitForProcessToStop(timeout_seconds);
 
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);

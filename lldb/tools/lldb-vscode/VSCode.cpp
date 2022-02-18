@@ -528,58 +528,6 @@ void VSCode::RegisterRequestCallback(std::string request,
   request_handlers[request] = callback;
 }
 
-lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds) {
-  // Wait for the process hit a stopped state. When running a launch (with or
-  // without "launchCommands") or attach (with or without)= "attachCommands"),
-  // the calls might take some time to stop at the entry point since the command
-  // is asynchronous. So we need to sync up with the process and make sure it is
-  // stopped before we proceed to do anything else as we will soon be asked to
-  // set breakpoints and other things that require the process to be stopped.
-  // We must use polling because attach doesn't send a process state change
-  // event for the first stop, while launching does. Since both "attachCommands"
-  // and "launchCommands" could end up using any combination of LLDB commands,
-  // we must ensure we can also catch when the process stops, so we must poll
-  // the process to make sure we handle all cases.
-
-  lldb::SBError error;
-  lldb::SBProcess process = target.GetProcess();
-  if (!process.IsValid()) {
-    error.SetErrorString("invalid process");
-    return error;
-  }
-  auto timeout_time =
-      std::chrono::high_resolution_clock::now() + std::chrono::seconds(seconds);
-  while (std::chrono::high_resolution_clock::now() < timeout_time) {
-    const auto state = process.GetState();
-    switch (state) {
-      case lldb::eStateAttaching:
-      case lldb::eStateConnected:
-      case lldb::eStateInvalid:
-      case lldb::eStateLaunching:
-      case lldb::eStateRunning:
-      case lldb::eStateStepping:
-      case lldb::eStateSuspended:
-        break;
-      case lldb::eStateDetached:
-        error.SetErrorString("process detached during launch or attach");
-        return error;
-      case lldb::eStateExited:
-        error.SetErrorString("process exited during launch or attach");
-        return error;
-      case lldb::eStateUnloaded:
-        error.SetErrorString("process unloaded during launch or attach");
-        return error;
-      case lldb::eStateCrashed:
-      case lldb::eStateStopped:
-        return lldb::SBError(); // Success!
-    }
-    std::this_thread::sleep_for(std::chrono::microseconds(250));
-  }
-  error.SetErrorStringWithFormat("process failed to stop within %u seconds",
-                                 seconds);
-  return error;
-}
-
 void Variables::Clear() {
   locals.Clear();
   globals.Clear();
