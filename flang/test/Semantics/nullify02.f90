@@ -34,7 +34,7 @@ End Program
 ! that has reported errors
 module badNullify
   interface
-    module function ptrFun()
+    function ptrFun()
       integer, pointer :: ptrFun
     end function
   end interface

@@ -94,6 +94,9 @@ public:
   void add_alternateReturn() { dummyArgs_.push_back(nullptr); }
   const MaybeExpr &stmtFunction() const { return stmtFunction_; }
   void set_stmtFunction(SomeExpr &&expr) { stmtFunction_ = std::move(expr); }
+  Symbol *moduleInterface() { return moduleInterface_; }
+  const Symbol *moduleInterface() const { return moduleInterface_; }
+  void set_moduleInterface(Symbol &);
 
 private:
   bool isInterface_{false}; // true if this represents an interface-body
@@ -102,6 +105,11 @@ private:
   Symbol *result_{nullptr};
   Scope *entryScope_{nullptr}; // if ENTRY, points to subprogram's scope
   MaybeExpr stmtFunction_;
+  // For MODULE FUNCTION or SUBROUTINE, this is the symbol of its declared
+  // interface.  For MODULE PROCEDURE, this is the declared interface if it
+  // appeared in an ancestor (sub)module.
+  Symbol *moduleInterface_{nullptr};
+
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const SubprogramDetails &);
 };

@@ -1058,14 +1058,9 @@ const DeclTypeSpec &FindOrInstantiateDerivedType(
 
 const Symbol *FindSeparateModuleSubprogramInterface(const Symbol *proc) {
   if (proc) {
-    if (const Symbol * submodule{proc->owner().symbol()}) {
-      if (const auto *details{submodule->detailsIf<ModuleDetails>()}) {
-        if (const Scope * ancestor{details->ancestor()}) {
-          const Symbol *iface{ancestor->FindSymbol(proc->name())};
-          if (IsSeparateModuleProcedureInterface(iface)) {
-            return iface;
-          }
-        }
+    if (const auto *subprogram{proc->detailsIf<SubprogramDetails>()}) {
+      if (const Symbol * iface{subprogram->moduleInterface()}) {
+        return iface;
       }
     }
   }

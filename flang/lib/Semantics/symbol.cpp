@@ -70,6 +70,11 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+void SubprogramDetails::set_moduleInterface(Symbol &symbol) {
+  CHECK(!moduleInterface_);
+  moduleInterface_ = &symbol;
+}
+
 const Scope *ModuleDetails::parent() const {
   return isSubmodule_ && scope_ ? &scope_->parent() : nullptr;
 }
@@ -116,6 +121,9 @@ llvm::raw_ostream &operator<<(
   os << (sep == '(' ? "()" : ")");
   if (x.stmtFunction_) {
     os << " -> " << x.stmtFunction_->AsFortran();
+  }
+  if (x.moduleInterface_) {
+    os << " moduleInterface: " << *x.moduleInterface_;
   }
   return os;
 }
