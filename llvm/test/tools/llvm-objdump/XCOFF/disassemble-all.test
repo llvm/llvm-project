@@ -18,7 +18,7 @@
 
 CHECK:        Inputs/xcoff-section-headers.o:	file format aixcoff-rs6000
 CHECK:        Disassembly of section .text:
-CHECK:        00000000 <.text>:
+CHECK:        00000000 <.func>:
 CHECK-NEXT:        0: 80 62 00 04                  	lwz 3, 4(2)
 WITH-R-NEXT:                         00000002:  R_TOC        a
 CHECK-NEXT:        4: 80 63 00 00                  	lwz 3, 0(3)
