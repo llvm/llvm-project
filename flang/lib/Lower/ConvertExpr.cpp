@@ -189,18 +189,21 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Integer, KIND>> &op) {
-    TODO(getLoc(), "genval Negate integer");
+    mlir::Value input = genunbox(op.left());
+    // Like LLVM, integer negation is the binary op "0 - value"
+    mlir::Value zero = genIntegerConstant<KIND>(builder.getContext(), 0);
+    return builder.create<mlir::arith::SubIOp>(getLoc(), zero, input);
   }
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Real, KIND>> &op) {
-    TODO(getLoc(), "genval Negate real");
+    return builder.create<mlir::arith::NegFOp>(getLoc(), genunbox(op.left()));
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Complex, KIND>> &op) {
-    TODO(getLoc(), "genval Negate complex");
+    return builder.create<fir::NegcOp>(getLoc(), genunbox(op.left()));
   }
 
 #undef GENBIN
