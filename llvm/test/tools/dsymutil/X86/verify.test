@@ -18,9 +18,9 @@
 # RUN: not dsymutil -verify-dwarf=bogus -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=BOGUS
 # RUN: not dsymutil -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL,VERBOSE-INPUT-FAIL
 
-# VERBOSE-INPUT-FAIL: error: Abbreviation declaration contains multiple DW_AT_language attributes.
-# QUIET-INPUT-FAIL: warning: input verification failed
-# QUIET-OUTPUT-FAIL: error: output verification failed
+# VERBOSE-INPUT-FAIL-DAG: error: Abbreviation declaration contains multiple DW_AT_language attributes.
+# QUIET-INPUT-FAIL-DAG: warning: input verification failed
+# QUIET-OUTPUT-FAIL-DAG: error: output verification failed
 # QUIET-SUCCESS-NOT: input verification failed
 # QUIET-SUCCESS-NOT: output verification failed
 # BOGUS: error: invalid verify type specified: 'bogus'
