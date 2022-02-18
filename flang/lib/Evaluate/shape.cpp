@@ -654,10 +654,11 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
   } else if (const auto *intrinsic{call.proc().GetSpecificIntrinsic()}) {
     if (intrinsic->name == "shape" || intrinsic->name == "lbound" ||
         intrinsic->name == "ubound") {
-      // These are the array-valued cases for LBOUND and UBOUND (no DIM=).
-      const auto *expr{call.arguments().front().value().UnwrapExpr()};
-      CHECK(expr);
-      return Shape{MaybeExtentExpr{ExtentExpr{expr->Rank()}}};
+      // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
+      if (!call.arguments().empty() && call.arguments().front()) {
+        return Shape{
+            MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+      }
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
         intrinsic->name == "iany" || intrinsic->name == "iparity" ||
