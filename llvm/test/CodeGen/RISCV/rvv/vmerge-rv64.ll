@@ -4,6 +4,7 @@
 declare <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(
   <vscale x 1 x i8>,
   <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
   <vscale x 1 x i1>,
   i64);
 
@@ -15,6 +16,7 @@ define <vscale x 1 x i8> @intrinsic_vmerge_vvm_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(
+    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     <vscale x 1 x i1> %2,
@@ -24,6 +26,7 @@ entry:
 }
 
 declare <vscale x 2 x i8> @llvm.riscv.vmerge.nxv2i8.nxv2i8(
+  <vscale x 2 x i8>,
   <vscale x 2 x i8>,
   <vscale x 2 x i8>,
   <vscale x 2 x i1>,
@@ -37,6 +40,7 @@ define <vscale x 2 x i8> @intrinsic_vmerge_vvm_nxv2i8_nxv2i8_nxv2i8(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vmerge.nxv2i8.nxv2i8(
+    <vscale x 2 x i8> undef,
     <vscale x 2 x i8> %0,
     <vscale x 2 x i8> %1,
     <vscale x 2 x i1> %2,
@@ -46,6 +50,7 @@ entry:
 }
 
 declare <vscale x 4 x i8> @llvm.riscv.vmerge.nxv4i8.nxv4i8(
+  <vscale x 4 x i8>,
   <vscale x 4 x i8>,
   <vscale x 4 x i8>,
   <vscale x 4 x i1>,
@@ -59,6 +64,7 @@ define <vscale x 4 x i8> @intrinsic_vmerge_vvm_nxv4i8_nxv4i8_nxv4i8(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vmerge.nxv4i8.nxv4i8(
+    <vscale x 4 x i8> undef,
     <vscale x 4 x i8> %0,
     <vscale x 4 x i8> %1,
     <vscale x 4 x i1> %2,
@@ -68,6 +74,7 @@ entry:
 }
 
 declare <vscale x 8 x i8> @llvm.riscv.vmerge.nxv8i8.nxv8i8(
+  <vscale x 8 x i8>,
   <vscale x 8 x i8>,
   <vscale x 8 x i8>,
   <vscale x 8 x i1>,
@@ -81,6 +88,7 @@ define <vscale x 8 x i8> @intrinsic_vmerge_vvm_nxv8i8_nxv8i8_nxv8i8(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vmerge.nxv8i8.nxv8i8(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     <vscale x 8 x i8> %1,
     <vscale x 8 x i1> %2,
@@ -90,6 +98,7 @@ entry:
 }
 
 declare <vscale x 16 x i8> @llvm.riscv.vmerge.nxv16i8.nxv16i8(
+  <vscale x 16 x i8>,
   <vscale x 16 x i8>,
   <vscale x 16 x i8>,
   <vscale x 16 x i1>,
@@ -103,6 +112,7 @@ define <vscale x 16 x i8> @intrinsic_vmerge_vvm_nxv16i8_nxv16i8_nxv16i8(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vmerge.nxv16i8.nxv16i8(
+    <vscale x 16 x i8> undef,
     <vscale x 16 x i8> %0,
     <vscale x 16 x i8> %1,
     <vscale x 16 x i1> %2,
@@ -112,6 +122,7 @@ entry:
 }
 
 declare <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.nxv32i8(
+  <vscale x 32 x i8>,
   <vscale x 32 x i8>,
   <vscale x 32 x i8>,
   <vscale x 32 x i1>,
@@ -125,6 +136,7 @@ define <vscale x 32 x i8> @intrinsic_vmerge_vvm_nxv32i8_nxv32i8_nxv32i8(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.nxv32i8(
+    <vscale x 32 x i8> undef,
     <vscale x 32 x i8> %0,
     <vscale x 32 x i8> %1,
     <vscale x 32 x i1> %2,
@@ -134,6 +146,7 @@ entry:
 }
 
 declare <vscale x 64 x i8> @llvm.riscv.vmerge.nxv64i8.nxv64i8(
+  <vscale x 64 x i8>,
   <vscale x 64 x i8>,
   <vscale x 64 x i8>,
   <vscale x 64 x i1>,
@@ -147,6 +160,7 @@ define <vscale x 64 x i8> @intrinsic_vmerge_vvm_nxv64i8_nxv64i8_nxv64i8(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vmerge.nxv64i8.nxv64i8(
+    <vscale x 64 x i8> undef,
     <vscale x 64 x i8> %0,
     <vscale x 64 x i8> %1,
     <vscale x 64 x i1> %2,
@@ -156,6 +170,7 @@ entry:
 }
 
 declare <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.nxv1i16(
+  <vscale x 1 x i16>,
   <vscale x 1 x i16>,
   <vscale x 1 x i16>,
   <vscale x 1 x i1>,
@@ -169,6 +184,7 @@ define <vscale x 1 x i16> @intrinsic_vmerge_vvm_nxv1i16_nxv1i16_nxv1i16(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.nxv1i16(
+    <vscale x 1 x i16> undef,
     <vscale x 1 x i16> %0,
     <vscale x 1 x i16> %1,
     <vscale x 1 x i1> %2,
@@ -178,6 +194,7 @@ entry:
 }
 
 declare <vscale x 2 x i16> @llvm.riscv.vmerge.nxv2i16.nxv2i16(
+  <vscale x 2 x i16>,
   <vscale x 2 x i16>,
   <vscale x 2 x i16>,
   <vscale x 2 x i1>,
@@ -191,6 +208,7 @@ define <vscale x 2 x i16> @intrinsic_vmerge_vvm_nxv2i16_nxv2i16_nxv2i16(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vmerge.nxv2i16.nxv2i16(
+    <vscale x 2 x i16> undef,
     <vscale x 2 x i16> %0,
     <vscale x 2 x i16> %1,
     <vscale x 2 x i1> %2,
@@ -200,6 +218,7 @@ entry:
 }
 
 declare <vscale x 4 x i16> @llvm.riscv.vmerge.nxv4i16.nxv4i16(
+  <vscale x 4 x i16>,
   <vscale x 4 x i16>,
   <vscale x 4 x i16>,
   <vscale x 4 x i1>,
@@ -213,6 +232,7 @@ define <vscale x 4 x i16> @intrinsic_vmerge_vvm_nxv4i16_nxv4i16_nxv4i16(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vmerge.nxv4i16.nxv4i16(
+    <vscale x 4 x i16> undef,
     <vscale x 4 x i16> %0,
     <vscale x 4 x i16> %1,
     <vscale x 4 x i1> %2,
@@ -222,6 +242,7 @@ entry:
 }
 
 declare <vscale x 8 x i16> @llvm.riscv.vmerge.nxv8i16.nxv8i16(
+  <vscale x 8 x i16>,
   <vscale x 8 x i16>,
   <vscale x 8 x i16>,
   <vscale x 8 x i1>,
@@ -235,6 +256,7 @@ define <vscale x 8 x i16> @intrinsic_vmerge_vvm_nxv8i16_nxv8i16_nxv8i16(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vmerge.nxv8i16.nxv8i16(
+    <vscale x 8 x i16> undef,
     <vscale x 8 x i16> %0,
     <vscale x 8 x i16> %1,
     <vscale x 8 x i1> %2,
@@ -244,6 +266,7 @@ entry:
 }
 
 declare <vscale x 16 x i16> @llvm.riscv.vmerge.nxv16i16.nxv16i16(
+  <vscale x 16 x i16>,
   <vscale x 16 x i16>,
   <vscale x 16 x i16>,
   <vscale x 16 x i1>,
@@ -257,6 +280,7 @@ define <vscale x 16 x i16> @intrinsic_vmerge_vvm_nxv16i16_nxv16i16_nxv16i16(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vmerge.nxv16i16.nxv16i16(
+    <vscale x 16 x i16> undef,
     <vscale x 16 x i16> %0,
     <vscale x 16 x i16> %1,
     <vscale x 16 x i1> %2,
@@ -266,6 +290,7 @@ entry:
 }
 
 declare <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.nxv32i16(
+  <vscale x 32 x i16>,
   <vscale x 32 x i16>,
   <vscale x 32 x i16>,
   <vscale x 32 x i1>,
@@ -279,6 +304,7 @@ define <vscale x 32 x i16> @intrinsic_vmerge_vvm_nxv32i16_nxv32i16_nxv32i16(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.nxv32i16(
+    <vscale x 32 x i16> undef,
     <vscale x 32 x i16> %0,
     <vscale x 32 x i16> %1,
     <vscale x 32 x i1> %2,
@@ -288,6 +314,7 @@ entry:
 }
 
 declare <vscale x 1 x i32> @llvm.riscv.vmerge.nxv1i32.nxv1i32(
+  <vscale x 1 x i32>,
   <vscale x 1 x i32>,
   <vscale x 1 x i32>,
   <vscale x 1 x i1>,
@@ -301,6 +328,7 @@ define <vscale x 1 x i32> @intrinsic_vmerge_vvm_nxv1i32_nxv1i32_nxv1i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vmerge.nxv1i32.nxv1i32(
+    <vscale x 1 x i32> undef,
     <vscale x 1 x i32> %0,
     <vscale x 1 x i32> %1,
     <vscale x 1 x i1> %2,
@@ -310,6 +338,7 @@ entry:
 }
 
 declare <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
+  <vscale x 2 x i32>,
   <vscale x 2 x i32>,
   <vscale x 2 x i32>,
   <vscale x 2 x i1>,
@@ -323,6 +352,7 @@ define <vscale x 2 x i32> @intrinsic_vmerge_vvm_nxv2i32_nxv2i32_nxv2i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> undef,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i1> %2,
@@ -332,6 +362,7 @@ entry:
 }
 
 declare <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.nxv4i32(
+  <vscale x 4 x i32>,
   <vscale x 4 x i32>,
   <vscale x 4 x i32>,
   <vscale x 4 x i1>,
@@ -345,6 +376,7 @@ define <vscale x 4 x i32> @intrinsic_vmerge_vvm_nxv4i32_nxv4i32_nxv4i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.nxv4i32(
+    <vscale x 4 x i32> undef,
     <vscale x 4 x i32> %0,
     <vscale x 4 x i32> %1,
     <vscale x 4 x i1> %2,
@@ -354,6 +386,7 @@ entry:
 }
 
 declare <vscale x 8 x i32> @llvm.riscv.vmerge.nxv8i32.nxv8i32(
+  <vscale x 8 x i32>,
   <vscale x 8 x i32>,
   <vscale x 8 x i32>,
   <vscale x 8 x i1>,
@@ -367,6 +400,7 @@ define <vscale x 8 x i32> @intrinsic_vmerge_vvm_nxv8i32_nxv8i32_nxv8i32(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vmerge.nxv8i32.nxv8i32(
+    <vscale x 8 x i32> undef,
     <vscale x 8 x i32> %0,
     <vscale x 8 x i32> %1,
     <vscale x 8 x i1> %2,
@@ -376,6 +410,7 @@ entry:
 }
 
 declare <vscale x 16 x i32> @llvm.riscv.vmerge.nxv16i32.nxv16i32(
+  <vscale x 16 x i32>,
   <vscale x 16 x i32>,
   <vscale x 16 x i32>,
   <vscale x 16 x i1>,
@@ -389,6 +424,7 @@ define <vscale x 16 x i32> @intrinsic_vmerge_vvm_nxv16i32_nxv16i32_nxv16i32(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vmerge.nxv16i32.nxv16i32(
+    <vscale x 16 x i32> undef,
     <vscale x 16 x i32> %0,
     <vscale x 16 x i32> %1,
     <vscale x 16 x i1> %2,
@@ -398,6 +434,7 @@ entry:
 }
 
 declare <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.nxv1i64(
+  <vscale x 1 x i64>,
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,
   <vscale x 1 x i1>,
@@ -411,6 +448,7 @@ define <vscale x 1 x i64> @intrinsic_vmerge_vvm_nxv1i64_nxv1i64_nxv1i64(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> undef,
     <vscale x 1 x i64> %0,
     <vscale x 1 x i64> %1,
     <vscale x 1 x i1> %2,
@@ -420,6 +458,7 @@ entry:
 }
 
 declare <vscale x 2 x i64> @llvm.riscv.vmerge.nxv2i64.nxv2i64(
+  <vscale x 2 x i64>,
   <vscale x 2 x i64>,
   <vscale x 2 x i64>,
   <vscale x 2 x i1>,
@@ -433,6 +472,7 @@ define <vscale x 2 x i64> @intrinsic_vmerge_vvm_nxv2i64_nxv2i64_nxv2i64(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vmerge.nxv2i64.nxv2i64(
+    <vscale x 2 x i64> undef,
     <vscale x 2 x i64> %0,
     <vscale x 2 x i64> %1,
     <vscale x 2 x i1> %2,
@@ -442,6 +482,7 @@ entry:
 }
 
 declare <vscale x 4 x i64> @llvm.riscv.vmerge.nxv4i64.nxv4i64(
+  <vscale x 4 x i64>,
   <vscale x 4 x i64>,
   <vscale x 4 x i64>,
   <vscale x 4 x i1>,
@@ -455,6 +496,7 @@ define <vscale x 4 x i64> @intrinsic_vmerge_vvm_nxv4i64_nxv4i64_nxv4i64(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vmerge.nxv4i64.nxv4i64(
+    <vscale x 4 x i64> undef,
     <vscale x 4 x i64> %0,
     <vscale x 4 x i64> %1,
     <vscale x 4 x i1> %2,
@@ -464,6 +506,7 @@ entry:
 }
 
 declare <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.nxv8i64(
+  <vscale x 8 x i64>,
   <vscale x 8 x i64>,
   <vscale x 8 x i64>,
   <vscale x 8 x i1>,
@@ -477,6 +520,7 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vvm_nxv8i64_nxv8i64_nxv8i64(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.nxv8i64(
+    <vscale x 8 x i64> undef,
     <vscale x 8 x i64> %0,
     <vscale x 8 x i64> %1,
     <vscale x 8 x i1> %2,
@@ -486,6 +530,7 @@ entry:
 }
 
 declare <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.i8(
+  <vscale x 1 x i8>,
   <vscale x 1 x i8>,
   i8,
   <vscale x 1 x i1>,
@@ -499,6 +544,7 @@ define <vscale x 1 x i8> @intrinsic_vmerge_vxm_nxv1i8_nxv1i8_i8(<vscale x 1 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.i8(
+    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     i8 %1,
     <vscale x 1 x i1> %2,
@@ -508,6 +554,7 @@ entry:
 }
 
 declare <vscale x 2 x i8> @llvm.riscv.vmerge.nxv2i8.i8(
+  <vscale x 2 x i8>,
   <vscale x 2 x i8>,
   i8,
   <vscale x 2 x i1>,
@@ -521,6 +568,7 @@ define <vscale x 2 x i8> @intrinsic_vmerge_vxm_nxv2i8_nxv2i8_i8(<vscale x 2 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vmerge.nxv2i8.i8(
+    <vscale x 2 x i8> undef,
     <vscale x 2 x i8> %0,
     i8 %1,
     <vscale x 2 x i1> %2,
@@ -530,6 +578,7 @@ entry:
 }
 
 declare <vscale x 4 x i8> @llvm.riscv.vmerge.nxv4i8.i8(
+  <vscale x 4 x i8>,
   <vscale x 4 x i8>,
   i8,
   <vscale x 4 x i1>,
@@ -543,6 +592,7 @@ define <vscale x 4 x i8> @intrinsic_vmerge_vxm_nxv4i8_nxv4i8_i8(<vscale x 4 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vmerge.nxv4i8.i8(
+    <vscale x 4 x i8> undef,
     <vscale x 4 x i8> %0,
     i8 %1,
     <vscale x 4 x i1> %2,
@@ -552,6 +602,7 @@ entry:
 }
 
 declare <vscale x 8 x i8> @llvm.riscv.vmerge.nxv8i8.i8(
+  <vscale x 8 x i8>,
   <vscale x 8 x i8>,
   i8,
   <vscale x 8 x i1>,
@@ -565,6 +616,7 @@ define <vscale x 8 x i8> @intrinsic_vmerge_vxm_nxv8i8_nxv8i8_i8(<vscale x 8 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vmerge.nxv8i8.i8(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     i8 %1,
     <vscale x 8 x i1> %2,
@@ -574,6 +626,7 @@ entry:
 }
 
 declare <vscale x 16 x i8> @llvm.riscv.vmerge.nxv16i8.i8(
+  <vscale x 16 x i8>,
   <vscale x 16 x i8>,
   i8,
   <vscale x 16 x i1>,
@@ -587,6 +640,7 @@ define <vscale x 16 x i8> @intrinsic_vmerge_vxm_nxv16i8_nxv16i8_i8(<vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vmerge.nxv16i8.i8(
+    <vscale x 16 x i8> undef,
     <vscale x 16 x i8> %0,
     i8 %1,
     <vscale x 16 x i1> %2,
@@ -596,6 +650,7 @@ entry:
 }
 
 declare <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.i8(
+  <vscale x 32 x i8>,
   <vscale x 32 x i8>,
   i8,
   <vscale x 32 x i1>,
@@ -609,6 +664,7 @@ define <vscale x 32 x i8> @intrinsic_vmerge_vxm_nxv32i8_nxv32i8_i8(<vscale x 32 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.i8(
+    <vscale x 32 x i8> undef,
     <vscale x 32 x i8> %0,
     i8 %1,
     <vscale x 32 x i1> %2,
@@ -618,6 +674,7 @@ entry:
 }
 
 declare <vscale x 64 x i8> @llvm.riscv.vmerge.nxv64i8.i8(
+  <vscale x 64 x i8>,
   <vscale x 64 x i8>,
   i8,
   <vscale x 64 x i1>,
@@ -631,6 +688,7 @@ define <vscale x 64 x i8> @intrinsic_vmerge_vxm_nxv64i8_nxv64i8_i8(<vscale x 64 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vmerge.nxv64i8.i8(
+    <vscale x 64 x i8> undef,
     <vscale x 64 x i8> %0,
     i8 %1,
     <vscale x 64 x i1> %2,
@@ -640,6 +698,7 @@ entry:
 }
 
 declare <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.i16(
+  <vscale x 1 x i16>,
   <vscale x 1 x i16>,
   i16,
   <vscale x 1 x i1>,
@@ -653,6 +712,7 @@ define <vscale x 1 x i16> @intrinsic_vmerge_vxm_nxv1i16_nxv1i16_i16(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.i16(
+    <vscale x 1 x i16> undef,
     <vscale x 1 x i16> %0,
     i16 %1,
     <vscale x 1 x i1> %2,
@@ -662,6 +722,7 @@ entry:
 }
 
 declare <vscale x 2 x i16> @llvm.riscv.vmerge.nxv2i16.i16(
+  <vscale x 2 x i16>,
   <vscale x 2 x i16>,
   i16,
   <vscale x 2 x i1>,
@@ -675,6 +736,7 @@ define <vscale x 2 x i16> @intrinsic_vmerge_vxm_nxv2i16_nxv2i16_i16(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vmerge.nxv2i16.i16(
+    <vscale x 2 x i16> undef,
     <vscale x 2 x i16> %0,
     i16 %1,
     <vscale x 2 x i1> %2,
@@ -684,6 +746,7 @@ entry:
 }
 
 declare <vscale x 4 x i16> @llvm.riscv.vmerge.nxv4i16.i16(
+  <vscale x 4 x i16>,
   <vscale x 4 x i16>,
   i16,
   <vscale x 4 x i1>,
@@ -697,6 +760,7 @@ define <vscale x 4 x i16> @intrinsic_vmerge_vxm_nxv4i16_nxv4i16_i16(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vmerge.nxv4i16.i16(
+    <vscale x 4 x i16> undef,
     <vscale x 4 x i16> %0,
     i16 %1,
     <vscale x 4 x i1> %2,
@@ -706,6 +770,7 @@ entry:
 }
 
 declare <vscale x 8 x i16> @llvm.riscv.vmerge.nxv8i16.i16(
+  <vscale x 8 x i16>,
   <vscale x 8 x i16>,
   i16,
   <vscale x 8 x i1>,
@@ -719,6 +784,7 @@ define <vscale x 8 x i16> @intrinsic_vmerge_vxm_nxv8i16_nxv8i16_i16(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vmerge.nxv8i16.i16(
+    <vscale x 8 x i16> undef,
     <vscale x 8 x i16> %0,
     i16 %1,
     <vscale x 8 x i1> %2,
@@ -728,6 +794,7 @@ entry:
 }
 
 declare <vscale x 16 x i16> @llvm.riscv.vmerge.nxv16i16.i16(
+  <vscale x 16 x i16>,
   <vscale x 16 x i16>,
   i16,
   <vscale x 16 x i1>,
@@ -741,6 +808,7 @@ define <vscale x 16 x i16> @intrinsic_vmerge_vxm_nxv16i16_nxv16i16_i16(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vmerge.nxv16i16.i16(
+    <vscale x 16 x i16> undef,
     <vscale x 16 x i16> %0,
     i16 %1,
     <vscale x 16 x i1> %2,
@@ -750,6 +818,7 @@ entry:
 }
 
 declare <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.i16(
+  <vscale x 32 x i16>,
   <vscale x 32 x i16>,
   i16,
   <vscale x 32 x i1>,
@@ -763,6 +832,7 @@ define <vscale x 32 x i16> @intrinsic_vmerge_vxm_nxv32i16_nxv32i16_i16(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.i16(
+    <vscale x 32 x i16> undef,
     <vscale x 32 x i16> %0,
     i16 %1,
     <vscale x 32 x i1> %2,
@@ -772,6 +842,7 @@ entry:
 }
 
 declare <vscale x 1 x i32> @llvm.riscv.vmerge.nxv1i32.i32(
+  <vscale x 1 x i32>,
   <vscale x 1 x i32>,
   i32,
   <vscale x 1 x i1>,
@@ -785,6 +856,7 @@ define <vscale x 1 x i32> @intrinsic_vmerge_vxm_nxv1i32_nxv1i32_i32(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vmerge.nxv1i32.i32(
+    <vscale x 1 x i32> undef,
     <vscale x 1 x i32> %0,
     i32 %1,
     <vscale x 1 x i1> %2,
@@ -794,6 +866,7 @@ entry:
 }
 
 declare <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.i32(
+  <vscale x 2 x i32>,
   <vscale x 2 x i32>,
   i32,
   <vscale x 2 x i1>,
@@ -807,6 +880,7 @@ define <vscale x 2 x i32> @intrinsic_vmerge_vxm_nxv2i32_nxv2i32_i32(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.i32(
+    <vscale x 2 x i32> undef,
     <vscale x 2 x i32> %0,
     i32 %1,
     <vscale x 2 x i1> %2,
@@ -816,6 +890,7 @@ entry:
 }
 
 declare <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.i32(
+  <vscale x 4 x i32>,
   <vscale x 4 x i32>,
   i32,
   <vscale x 4 x i1>,
@@ -829,6 +904,7 @@ define <vscale x 4 x i32> @intrinsic_vmerge_vxm_nxv4i32_nxv4i32_i32(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.i32(
+    <vscale x 4 x i32> undef,
     <vscale x 4 x i32> %0,
     i32 %1,
     <vscale x 4 x i1> %2,
@@ -838,6 +914,7 @@ entry:
 }
 
 declare <vscale x 8 x i32> @llvm.riscv.vmerge.nxv8i32.i32(
+  <vscale x 8 x i32>,
   <vscale x 8 x i32>,
   i32,
   <vscale x 8 x i1>,
@@ -851,6 +928,7 @@ define <vscale x 8 x i32> @intrinsic_vmerge_vxm_nxv8i32_nxv8i32_i32(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vmerge.nxv8i32.i32(
+    <vscale x 8 x i32> undef,
     <vscale x 8 x i32> %0,
     i32 %1,
     <vscale x 8 x i1> %2,
@@ -860,6 +938,7 @@ entry:
 }
 
 declare <vscale x 16 x i32> @llvm.riscv.vmerge.nxv16i32.i32(
+  <vscale x 16 x i32>,
   <vscale x 16 x i32>,
   i32,
   <vscale x 16 x i1>,
@@ -873,6 +952,7 @@ define <vscale x 16 x i32> @intrinsic_vmerge_vxm_nxv16i32_nxv16i32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vmerge.nxv16i32.i32(
+    <vscale x 16 x i32> undef,
     <vscale x 16 x i32> %0,
     i32 %1,
     <vscale x 16 x i1> %2,
@@ -882,6 +962,7 @@ entry:
 }
 
 declare <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.i64(
+  <vscale x 1 x i64>,
   <vscale x 1 x i64>,
   i64,
   <vscale x 1 x i1>,
@@ -895,6 +976,7 @@ define <vscale x 1 x i64> @intrinsic_vmerge_vxm_nxv1i64_nxv1i64_i64(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.i64(
+    <vscale x 1 x i64> undef,
     <vscale x 1 x i64> %0,
     i64 %1,
     <vscale x 1 x i1> %2,
@@ -904,6 +986,7 @@ entry:
 }
 
 declare <vscale x 2 x i64> @llvm.riscv.vmerge.nxv2i64.i64(
+  <vscale x 2 x i64>,
   <vscale x 2 x i64>,
   i64,
   <vscale x 2 x i1>,
@@ -917,6 +1000,7 @@ define <vscale x 2 x i64> @intrinsic_vmerge_vxm_nxv2i64_nxv2i64_i64(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vmerge.nxv2i64.i64(
+    <vscale x 2 x i64> undef,
     <vscale x 2 x i64> %0,
     i64 %1,
     <vscale x 2 x i1> %2,
@@ -926,6 +1010,7 @@ entry:
 }
 
 declare <vscale x 4 x i64> @llvm.riscv.vmerge.nxv4i64.i64(
+  <vscale x 4 x i64>,
   <vscale x 4 x i64>,
   i64,
   <vscale x 4 x i1>,
@@ -939,6 +1024,7 @@ define <vscale x 4 x i64> @intrinsic_vmerge_vxm_nxv4i64_nxv4i64_i64(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vmerge.nxv4i64.i64(
+    <vscale x 4 x i64> undef,
     <vscale x 4 x i64> %0,
     i64 %1,
     <vscale x 4 x i1> %2,
@@ -948,6 +1034,7 @@ entry:
 }
 
 declare <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.i64(
+  <vscale x 8 x i64>,
   <vscale x 8 x i64>,
   i64,
   <vscale x 8 x i1>,
@@ -961,6 +1048,7 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vxm_nxv8i64_nxv8i64_i64(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.i64(
+    <vscale x 8 x i64> undef,
     <vscale x 8 x i64> %0,
     i64 %1,
     <vscale x 8 x i1> %2,
@@ -977,6 +1065,7 @@ define <vscale x 1 x i8> @intrinsic_vmerge_vim_nxv1i8_nxv1i8_i8(<vscale x 1 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.i8(
+    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     i8 9,
     <vscale x 1 x i1> %1,
@@ -993,6 +1082,7 @@ define <vscale x 2 x i8> @intrinsic_vmerge_vim_nxv2i8_nxv2i8_i8(<vscale x 2 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vmerge.nxv2i8.i8(
+    <vscale x 2 x i8> undef,
     <vscale x 2 x i8> %0,
     i8 9,
     <vscale x 2 x i1> %1,
@@ -1009,6 +1099,7 @@ define <vscale x 4 x i8> @intrinsic_vmerge_vim_nxv4i8_nxv4i8_i8(<vscale x 4 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vmerge.nxv4i8.i8(
+    <vscale x 4 x i8> undef,
     <vscale x 4 x i8> %0,
     i8 9,
     <vscale x 4 x i1> %1,
@@ -1025,6 +1116,7 @@ define <vscale x 8 x i8> @intrinsic_vmerge_vim_nxv8i8_nxv8i8_i8(<vscale x 8 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vmerge.nxv8i8.i8(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     i8 9,
     <vscale x 8 x i1> %1,
@@ -1041,6 +1133,7 @@ define <vscale x 16 x i8> @intrinsic_vmerge_vim_nxv16i8_nxv16i8_i8(<vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vmerge.nxv16i8.i8(
+    <vscale x 16 x i8> undef,
     <vscale x 16 x i8> %0,
     i8 9,
     <vscale x 16 x i1> %1,
@@ -1057,6 +1150,7 @@ define <vscale x 32 x i8> @intrinsic_vmerge_vim_nxv32i8_nxv32i8_i8(<vscale x 32 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.i8(
+    <vscale x 32 x i8> undef,
     <vscale x 32 x i8> %0,
     i8 9,
     <vscale x 32 x i1> %1,
@@ -1073,6 +1167,7 @@ define <vscale x 64 x i8> @intrinsic_vmerge_vim_nxv64i8_nxv64i8_i8(<vscale x 64 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vmerge.nxv64i8.i8(
+    <vscale x 64 x i8> undef,
     <vscale x 64 x i8> %0,
     i8 9,
     <vscale x 64 x i1> %1,
@@ -1089,6 +1184,7 @@ define <vscale x 1 x i16> @intrinsic_vmerge_vim_nxv1i16_nxv1i16_i16(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.i16(
+    <vscale x 1 x i16> undef,
     <vscale x 1 x i16> %0,
     i16 9,
     <vscale x 1 x i1> %1,
@@ -1105,6 +1201,7 @@ define <vscale x 2 x i16> @intrinsic_vmerge_vim_nxv2i16_nxv2i16_i16(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vmerge.nxv2i16.i16(
+    <vscale x 2 x i16> undef,
     <vscale x 2 x i16> %0,
     i16 9,
     <vscale x 2 x i1> %1,
@@ -1121,6 +1218,7 @@ define <vscale x 4 x i16> @intrinsic_vmerge_vim_nxv4i16_nxv4i16_i16(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vmerge.nxv4i16.i16(
+    <vscale x 4 x i16> undef,
     <vscale x 4 x i16> %0,
     i16 9,
     <vscale x 4 x i1> %1,
@@ -1137,6 +1235,7 @@ define <vscale x 8 x i16> @intrinsic_vmerge_vim_nxv8i16_nxv8i16_i16(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vmerge.nxv8i16.i16(
+    <vscale x 8 x i16> undef,
     <vscale x 8 x i16> %0,
     i16 9,
     <vscale x 8 x i1> %1,
@@ -1153,6 +1252,7 @@ define <vscale x 16 x i16> @intrinsic_vmerge_vim_nxv16i16_nxv16i16_i16(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vmerge.nxv16i16.i16(
+    <vscale x 16 x i16> undef,
     <vscale x 16 x i16> %0,
     i16 9,
     <vscale x 16 x i1> %1,
@@ -1169,6 +1269,7 @@ define <vscale x 32 x i16> @intrinsic_vmerge_vim_nxv32i16_nxv32i16_i16(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.i16(
+    <vscale x 32 x i16> undef,
     <vscale x 32 x i16> %0,
     i16 9,
     <vscale x 32 x i1> %1,
@@ -1185,6 +1286,7 @@ define <vscale x 1 x i32> @intrinsic_vmerge_vim_nxv1i32_nxv1i32_i32(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vmerge.nxv1i32.i32(
+    <vscale x 1 x i32> undef,
     <vscale x 1 x i32> %0,
     i32 9,
     <vscale x 1 x i1> %1,
@@ -1201,6 +1303,7 @@ define <vscale x 2 x i32> @intrinsic_vmerge_vim_nxv2i32_nxv2i32_i32(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.i32(
+    <vscale x 2 x i32> undef,
     <vscale x 2 x i32> %0,
     i32 9,
     <vscale x 2 x i1> %1,
@@ -1217,6 +1320,7 @@ define <vscale x 4 x i32> @intrinsic_vmerge_vim_nxv4i32_nxv4i32_i32(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.i32(
+    <vscale x 4 x i32> undef,
     <vscale x 4 x i32> %0,
     i32 9,
     <vscale x 4 x i1> %1,
@@ -1233,6 +1337,7 @@ define <vscale x 8 x i32> @intrinsic_vmerge_vim_nxv8i32_nxv8i32_i32(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vmerge.nxv8i32.i32(
+    <vscale x 8 x i32> undef,
     <vscale x 8 x i32> %0,
     i32 9,
     <vscale x 8 x i1> %1,
@@ -1249,6 +1354,7 @@ define <vscale x 16 x i32> @intrinsic_vmerge_vim_nxv16i32_nxv16i32_i32(<vscale x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vmerge.nxv16i32.i32(
+    <vscale x 16 x i32> undef,
     <vscale x 16 x i32> %0,
     i32 9,
     <vscale x 16 x i1> %1,
@@ -1265,6 +1371,7 @@ define <vscale x 1 x i64> @intrinsic_vmerge_vim_nxv1i64_nxv1i64_i64(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.i64(
+    <vscale x 1 x i64> undef,
     <vscale x 1 x i64> %0,
     i64 9,
     <vscale x 1 x i1> %1,
@@ -1281,6 +1388,7 @@ define <vscale x 2 x i64> @intrinsic_vmerge_vim_nxv2i64_nxv2i64_i64(<vscale x 2 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vmerge.nxv2i64.i64(
+    <vscale x 2 x i64> undef,
     <vscale x 2 x i64> %0,
     i64 9,
     <vscale x 2 x i1> %1,
@@ -1297,6 +1405,7 @@ define <vscale x 4 x i64> @intrinsic_vmerge_vim_nxv4i64_nxv4i64_i64(<vscale x 4 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vmerge.nxv4i64.i64(
+    <vscale x 4 x i64> undef,
     <vscale x 4 x i64> %0,
     i64 9,
     <vscale x 4 x i1> %1,
@@ -1313,6 +1422,7 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64(<vscale x 8 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.i64(
+    <vscale x 8 x i64> undef,
     <vscale x 8 x i64> %0,
     i64 9,
     <vscale x 8 x i1> %1,
@@ -1322,6 +1432,7 @@ entry:
 }
 
 declare <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
+  <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x i1>,
@@ -1335,6 +1446,7 @@ define <vscale x 1 x half> @intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
+    <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x i1> %2,
@@ -1344,6 +1456,7 @@ entry:
 }
 
 declare <vscale x 2 x half> @llvm.riscv.vmerge.nxv2f16.nxv2f16(
+  <vscale x 2 x half>,
   <vscale x 2 x half>,
   <vscale x 2 x half>,
   <vscale x 2 x i1>,
@@ -1357,6 +1470,7 @@ define <vscale x 2 x half> @intrinsic_vmerge_vvm_nxv2f16_nxv2f16_nxv2f16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vmerge.nxv2f16.nxv2f16(
+    <vscale x 2 x half> undef,
     <vscale x 2 x half> %0,
     <vscale x 2 x half> %1,
     <vscale x 2 x i1> %2,
@@ -1366,6 +1480,7 @@ entry:
 }
 
 declare <vscale x 4 x half> @llvm.riscv.vmerge.nxv4f16.nxv4f16(
+  <vscale x 4 x half>,
   <vscale x 4 x half>,
   <vscale x 4 x half>,
   <vscale x 4 x i1>,
@@ -1379,6 +1494,7 @@ define <vscale x 4 x half> @intrinsic_vmerge_vvm_nxv4f16_nxv4f16_nxv4f16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vmerge.nxv4f16.nxv4f16(
+    <vscale x 4 x half> undef,
     <vscale x 4 x half> %0,
     <vscale x 4 x half> %1,
     <vscale x 4 x i1> %2,
@@ -1388,6 +1504,7 @@ entry:
 }
 
 declare <vscale x 8 x half> @llvm.riscv.vmerge.nxv8f16.nxv8f16(
+  <vscale x 8 x half>,
   <vscale x 8 x half>,
   <vscale x 8 x half>,
   <vscale x 8 x i1>,
@@ -1401,6 +1518,7 @@ define <vscale x 8 x half> @intrinsic_vmerge_vvm_nxv8f16_nxv8f16_nxv8f16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vmerge.nxv8f16.nxv8f16(
+    <vscale x 8 x half> undef,
     <vscale x 8 x half> %0,
     <vscale x 8 x half> %1,
     <vscale x 8 x i1> %2,
@@ -1410,6 +1528,7 @@ entry:
 }
 
 declare <vscale x 16 x half> @llvm.riscv.vmerge.nxv16f16.nxv16f16(
+  <vscale x 16 x half>,
   <vscale x 16 x half>,
   <vscale x 16 x half>,
   <vscale x 16 x i1>,
@@ -1423,6 +1542,7 @@ define <vscale x 16 x half> @intrinsic_vmerge_vvm_nxv16f16_nxv16f16_nxv16f16(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vmerge.nxv16f16.nxv16f16(
+    <vscale x 16 x half> undef,
     <vscale x 16 x half> %0,
     <vscale x 16 x half> %1,
     <vscale x 16 x i1> %2,
@@ -1432,6 +1552,7 @@ entry:
 }
 
 declare <vscale x 32 x half> @llvm.riscv.vmerge.nxv32f16.nxv32f16(
+  <vscale x 32 x half>,
   <vscale x 32 x half>,
   <vscale x 32 x half>,
   <vscale x 32 x i1>,
@@ -1445,6 +1566,7 @@ define <vscale x 32 x half> @intrinsic_vmerge_vvm_nxv32f16_nxv32f16_nxv32f16(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vmerge.nxv32f16.nxv32f16(
+    <vscale x 32 x half> undef,
     <vscale x 32 x half> %0,
     <vscale x 32 x half> %1,
     <vscale x 32 x i1> %2,
@@ -1454,6 +1576,7 @@ entry:
 }
 
 declare <vscale x 1 x float> @llvm.riscv.vmerge.nxv1f32.nxv1f32(
+  <vscale x 1 x float>,
   <vscale x 1 x float>,
   <vscale x 1 x float>,
   <vscale x 1 x i1>,
@@ -1467,6 +1590,7 @@ define <vscale x 1 x float> @intrinsic_vmerge_vvm_nxv1f32_nxv1f32_nxv1f32(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vmerge.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     <vscale x 1 x i1> %2,
@@ -1476,6 +1600,7 @@ entry:
 }
 
 declare <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(
+  <vscale x 2 x float>,
   <vscale x 2 x float>,
   <vscale x 2 x float>,
   <vscale x 2 x i1>,
@@ -1489,6 +1614,7 @@ define <vscale x 2 x float> @intrinsic_vmerge_vvm_nxv2f32_nxv2f32_nxv2f32(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(
+    <vscale x 2 x float> undef,
     <vscale x 2 x float> %0,
     <vscale x 2 x float> %1,
     <vscale x 2 x i1> %2,
@@ -1498,6 +1624,7 @@ entry:
 }
 
 declare <vscale x 4 x float> @llvm.riscv.vmerge.nxv4f32.nxv4f32(
+  <vscale x 4 x float>,
   <vscale x 4 x float>,
   <vscale x 4 x float>,
   <vscale x 4 x i1>,
@@ -1511,6 +1638,7 @@ define <vscale x 4 x float> @intrinsic_vmerge_vvm_nxv4f32_nxv4f32_nxv4f32(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vmerge.nxv4f32.nxv4f32(
+    <vscale x 4 x float> undef,
     <vscale x 4 x float> %0,
     <vscale x 4 x float> %1,
     <vscale x 4 x i1> %2,
@@ -1520,6 +1648,7 @@ entry:
 }
 
 declare <vscale x 8 x float> @llvm.riscv.vmerge.nxv8f32.nxv8f32(
+  <vscale x 8 x float>,
   <vscale x 8 x float>,
   <vscale x 8 x float>,
   <vscale x 8 x i1>,
@@ -1533,6 +1662,7 @@ define <vscale x 8 x float> @intrinsic_vmerge_vvm_nxv8f32_nxv8f32_nxv8f32(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vmerge.nxv8f32.nxv8f32(
+    <vscale x 8 x float> undef,
     <vscale x 8 x float> %0,
     <vscale x 8 x float> %1,
     <vscale x 8 x i1> %2,
@@ -1542,6 +1672,7 @@ entry:
 }
 
 declare <vscale x 16 x float> @llvm.riscv.vmerge.nxv16f32.nxv16f32(
+  <vscale x 16 x float>,
   <vscale x 16 x float>,
   <vscale x 16 x float>,
   <vscale x 16 x i1>,
@@ -1555,6 +1686,7 @@ define <vscale x 16 x float> @intrinsic_vmerge_vvm_nxv16f32_nxv16f32_nxv16f32(<v
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vmerge.nxv16f32.nxv16f32(
+    <vscale x 16 x float> undef,
     <vscale x 16 x float> %0,
     <vscale x 16 x float> %1,
     <vscale x 16 x i1> %2,
@@ -1564,6 +1696,7 @@ entry:
 }
 
 declare <vscale x 1 x double> @llvm.riscv.vmerge.nxv1f64.nxv1f64(
+  <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x i1>,
@@ -1577,6 +1710,7 @@ define <vscale x 1 x double> @intrinsic_vmerge_vvm_nxv1f64_nxv1f64_nxv1f64(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vmerge.nxv1f64.nxv1f64(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %0,
     <vscale x 1 x double> %1,
     <vscale x 1 x i1> %2,
@@ -1586,6 +1720,7 @@ entry:
 }
 
 declare <vscale x 2 x double> @llvm.riscv.vmerge.nxv2f64.nxv2f64(
+  <vscale x 2 x double>,
   <vscale x 2 x double>,
   <vscale x 2 x double>,
   <vscale x 2 x i1>,
@@ -1599,6 +1734,7 @@ define <vscale x 2 x double> @intrinsic_vmerge_vvm_nxv2f64_nxv2f64_nxv2f64(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vmerge.nxv2f64.nxv2f64(
+    <vscale x 2 x double> undef,
     <vscale x 2 x double> %0,
     <vscale x 2 x double> %1,
     <vscale x 2 x i1> %2,
@@ -1608,6 +1744,7 @@ entry:
 }
 
 declare <vscale x 4 x double> @llvm.riscv.vmerge.nxv4f64.nxv4f64(
+  <vscale x 4 x double>,
   <vscale x 4 x double>,
   <vscale x 4 x double>,
   <vscale x 4 x i1>,
@@ -1621,6 +1758,7 @@ define <vscale x 4 x double> @intrinsic_vmerge_vvm_nxv4f64_nxv4f64_nxv4f64(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vmerge.nxv4f64.nxv4f64(
+    <vscale x 4 x double> undef,
     <vscale x 4 x double> %0,
     <vscale x 4 x double> %1,
     <vscale x 4 x i1> %2,
@@ -1630,6 +1768,7 @@ entry:
 }
 
 declare <vscale x 8 x double> @llvm.riscv.vmerge.nxv8f64.nxv8f64(
+  <vscale x 8 x double>,
   <vscale x 8 x double>,
   <vscale x 8 x double>,
   <vscale x 8 x i1>,
@@ -1643,6 +1782,7 @@ define <vscale x 8 x double> @intrinsic_vmerge_vvm_nxv8f64_nxv8f64_nxv8f64(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vmerge.nxv8f64.nxv8f64(
+    <vscale x 8 x double> undef,
     <vscale x 8 x double> %0,
     <vscale x 8 x double> %1,
     <vscale x 8 x i1> %2,

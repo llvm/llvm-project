@@ -2148,8 +2148,8 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
 
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
-    Address Src(Args[1].getRValue(*this).getScalarVal(),
-                CGM.getNaturalTypeAlignment(SrcTy));
+    Address Src = Address::deprecated(Args[1].getRValue(*this).getScalarVal(),
+                                      CGM.getNaturalTypeAlignment(SrcTy));
     LValue SrcLVal = MakeAddrLValue(Src, SrcTy);
     QualType DestTy = getContext().getTypeDeclType(ClassDecl);
     LValue DestLVal = MakeAddrLValue(This, DestTy);
@@ -2727,7 +2727,7 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T,
 
   llvm::Value *VTable;
   std::tie(VTable, ClassDecl) = CGM.getCXXABI().LoadVTablePtr(
-      *this, Address(Derived, getPointerAlign()), ClassDecl);
+      *this, Address::deprecated(Derived, getPointerAlign()), ClassDecl);
 
   EmitVTablePtrCheck(ClassDecl, VTable, TCK, Loc);
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -emit-llvm -fno-rtti %s -std=c++11 -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-rtti > %t
+// RUN: %clang_cc1 -no-enable-noundef-analysis -emit-llvm -fno-rtti %s -std=c++11 -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-rtti > %t
 // RUN: FileCheck %s < %t
 // vftables are emitted very late, so do another pass to try to keep the checks
 // in source order.

@@ -42,8 +42,8 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
 ; GFX9: s_getreg_b32 [[APERTURE_LOAD:s[0-9]+]]
 ; CIVI: v_mov_b32_e32 v[[LO:[0-9]+]], 16
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
-; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
-; CIVI: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]]
+; CIVI: {{flat|global}}_store_dword v[[[LO]]:[[HI]]]
 define hidden void @use_queue_ptr_addrspacecast() #1 {
   %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32*
   store volatile i32 0, i32* %asc

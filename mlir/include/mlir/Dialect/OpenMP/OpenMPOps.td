@@ -80,7 +80,8 @@ def ClauseDefault : I32EnumAttr<
 def ClauseDefaultAttr : EnumAttr<OpenMP_Dialect, ClauseDefault,
                                  "clause_default">;
 
-def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
+def ParallelOp : OpenMP_Op<"parallel", [AutomaticAllocationScope, 
+                                        AttrSizedOperandSegments,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>]> {
   let summary = "parallel construct";
   let description = [{

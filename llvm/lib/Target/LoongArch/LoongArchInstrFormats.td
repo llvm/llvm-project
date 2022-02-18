@@ -256,34 +256,34 @@ class FmtI26<bits<6> op, dag outs, dag ins, string asmstr,
 }
 
 // FmtBSTR_W
-// <opcode[11:1] | msb | opcode[0] | lsb | rj | rd>
+// <opcode[11:1] | msbw | opcode[0] | lsbw | rj | rd>
 class FmtBSTR_W<bits<12> op, dag outs, dag ins, string asmstr,
                 list<dag> pattern = []> : LAInst<outs, ins, asmstr, pattern> {
-  bits<5> msb;
-  bits<5> lsb;
+  bits<5> msbw;
+  bits<5> lsbw;
   bits<5> rj;
   bits<5> rd;
 
   let Inst{31-21} = op{11-1};
-  let Inst{20-16} = msb;
+  let Inst{20-16} = msbw;
   let Inst{15} = op{0};
-  let Inst{14-10} = lsb;
+  let Inst{14-10} = lsbw;
   let Inst{9-5} = rj;
   let Inst{4-0} = rd;
 }
 
 // FmtBSTR_D
-// <opcode | msb | lsb | rj | rd>
+// <opcode | msbd | lsbd | rj | rd>
 class FmtBSTR_D<bits<10> op, dag outs, dag ins, string asmstr,
                 list<dag> pattern = []> : LAInst<outs, ins, asmstr, pattern> {
-  bits<6> msb;
-  bits<6> lsb;
+  bits<6> msbd;
+  bits<6> lsbd;
   bits<5> rj;
   bits<5> rd;
 
   let Inst{31-22} = op;
-  let Inst{21-16} = msb;
-  let Inst{15-10} = lsb;
+  let Inst{21-16} = msbd;
+  let Inst{15-10} = lsbd;
   let Inst{9-5} = rj;
   let Inst{4-0} = rd;
 }

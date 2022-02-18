@@ -35,13 +35,12 @@ mlir::getReassociationIndicesForReshape(ShapedType sourceType,
   int64_t prodOfCollapsedDims = 1;
   while (sourceDim < sourceShape.size()) {
     unsigned targetDim = reassociationMap.size();
+    // If we have mapped all the target dimensions stop and handle the remaining
+    // tail of size-1 dimensions explictly.
+    if (targetDim == targetType.getRank())
+      break;
 
-    // If all the dimensions of the targetShape are exhausted, then the
-    // remaining dims in the source shape must be all 1s. So for such cases, set
-    // 1 as the target shape. The actual reassociation indices will be handled
-    // later.
-    int64_t currTargetShape =
-        (targetDim < targetType.getRank() ? targetShape[targetDim] : 1);
+    int64_t currTargetShape = targetShape[targetDim];
     while (sourceShape[sourceDim] != ShapedType::kDynamicSize &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape &&
            sourceDim < sourceShape.size()) {
@@ -69,82 +68,24 @@ mlir::getReassociationIndicesForReshape(ShapedType sourceType,
       return llvm::None;
 
     currIndices.push_back(sourceDim++);
-    // If the reassociation is empty but the currIndices is not, this by
-    // definition is folding unit-dimensions with the result being scalar type.
-    // So only append the `currIndices` if reassociation map is not empty.
-    if (targetDim == targetShape.size()) {
-      while (sourceDim < sourceShape.size())
-        currIndices.push_back(sourceDim++);
-      if (!reassociationMap.empty() && !currIndices.empty())
-        reassociationMap.back().append(currIndices.begin(), currIndices.end());
-      // Break out of the loops. We should be done here.
-      break;
-    }
     reassociationMap.emplace_back(ReassociationIndices{});
     std::swap(reassociationMap.back(), currIndices);
     prodOfCollapsedDims = 1;
   }
-  // All the dimensions in the two shapes must have been processed.
-  if (reassociationMap.size() != targetShape.size() ||
-      sourceDim != sourceShape.size())
+  // All the dimensions in the target must have been processed.
+  if (reassociationMap.size() != targetShape.size())
     return llvm::None;
-  return reassociationMap;
-}
-
-ParseResult mlir::parseReshapeLikeOp(OpAsmParser &parser,
-                                     OperationState &result) {
-  // Parse the operand.
-  OpAsmParser::OperandType src;
-  if (parser.parseOperand(src))
-    return failure();
-
-  // Parse reassociation indices.
-  Builder &b = parser.getBuilder();
-  SmallVector<Attribute, 4> reassociation;
-  if (parser.parseLSquare())
-    return failure();
-
-  while (true) {
-    if (succeeded(parser.parseOptionalRSquare()))
-      break;
-    if (parser.parseLSquare())
-      return failure();
-    SmallVector<int64_t> indices;
-    while (true) {
-      int64_t index;
-      if (parser.parseInteger(index))
-        return failure();
-      indices.push_back(index);
-
-      if (succeeded(parser.parseOptionalComma()))
-        continue;
-      if (failed(parser.parseRSquare()))
-        return failure();
-      break;
-    }
-    reassociation.push_back(b.getI64ArrayAttr(indices));
-    if (succeeded(parser.parseOptionalComma()))
-      continue;
-    if (failed(parser.parseRSquare()))
-      return failure();
-    break;
+  // Process any remaining entries in the source shape. They all need to be
+  // 1 or dynamic.
+  for (; sourceDim < sourceShape.size(); sourceDim++) {
+    if (sourceShape[sourceDim] != ShapedType::kDynamicSize &&
+        sourceShape[sourceDim] != 1)
+      return llvm::None;
+    // The map is empty when the target type is a scalar.
+    if (!reassociationMap.empty())
+      reassociationMap.back().push_back(sourceDim);
   }
-
-  result.addAttribute(getReassociationAttrName(),
-                      b.getArrayAttr(reassociation));
-
-  // Parse optional attributes.
-  parser.parseOptionalAttrDict(result.attributes);
-
-  // Parse types.
-  Type srcType;
-  Type resultType;
-  if (parser.parseColon() || parser.parseType(srcType) ||
-      parser.resolveOperand(src, srcType, result.operands) ||
-      parser.parseKeyword("into") || parser.parseType(resultType))
-    return failure();
-  result.addTypes(resultType);
-  return success();
+  return reassociationMap;
 }
 
 Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(

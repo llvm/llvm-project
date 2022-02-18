@@ -110,16 +110,6 @@ function(check_compile_definition def argstring out_var)
   cmake_pop_check_state()
 endfunction()
 
-macro(test_arm_smp_support arch cflags_var)
-  if (${arch} STREQUAL "arm")
-    try_compile(HAS_${arch}_SMP ${CMAKE_BINARY_DIR}
-	    ${ARM_SMP_CHECK_SRC} COMPILE_DEFINITIONS "${CMAKE_C_FLAGS} ${_TARGET_${arch}_CFLAGS}")
-    if (HAS_${arch}_SMP)
-      list(APPEND ${cflags_var} -DCOMPILER_RT_HAS_SMP_SUPPORT)
-    endif()
-  endif()
-endmacro()
-
 # test_target_arch(<arch> <def> <target flags...>)
 # Checks if architecture is supported: runs host compiler with provided
 # flags to verify that:

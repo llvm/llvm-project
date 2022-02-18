@@ -1071,7 +1071,7 @@ def d_Flag : Flag<["-"], "d">, Group<d_Group>;
 def d_Joined : Joined<["-"], "d">, Group<d_Group>;
 def emit_ast : Flag<["-"], "emit-ast">,
   HelpText<"Emit Clang AST files for source inputs">;
-def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option]>, Group<Action_Group>,
+def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option, FC1Option]>, Group<Action_Group>,
   HelpText<"Use the LLVM representation for assembler and object files">;
 def emit_interface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Generate Interface Stub Files.">;
@@ -2473,6 +2473,10 @@ def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-te
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">,
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
+def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Assert no thread in a parallel region modifies an ICV">,
+  MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
 defm openmp_target_new_runtime: BoolFOption<"openmp-target-new-runtime",
   LangOpts<"OpenMPTargetNewRuntime">, DefaultTrue,
   PosFlag<SetTrue, [CC1Option], "Use the new bitcode library for OpenMP offloading">,
@@ -5447,9 +5451,13 @@ defm clear_ast_before_backend : BoolOption<"",
   PosFlag<SetTrue, [], "Clear">,
   NegFlag<SetFalse, [], "Don't clear">,
   BothFlags<[], " the Clang AST before running backend code generation">>;
-def disable_noundef_analysis : Flag<["-"], "disable-noundef-analysis">, Group<f_Group>,
-  HelpText<"Disable analyzing function argument and return types for mandatory definedness">,
-  MarshallingInfoFlag<CodeGenOpts<"DisableNoundefAttrs">>;
+defm enable_noundef_analysis : BoolOption<"",
+  "enable-noundef-analysis",
+  CodeGenOpts<"EnableNoundefAttrs">,
+  DefaultTrue,
+  PosFlag<SetTrue, [], "Enable">,
+  NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[], " analyzing function argument and return types for mandatory definedness">>;
 def discard_value_names : Flag<["-"], "discard-value-names">,
   HelpText<"Discard value names in LLVM IR">,
   MarshallingInfoFlag<CodeGenOpts<"DiscardValueNames">>;

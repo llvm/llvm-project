@@ -78,6 +78,8 @@ class concatExtension<FunctionExtension Base, string NewExts> {
 def NoTypeExt   : TypeExtension<"">;
 def Fp16TypeExt : TypeExtension<"cl_khr_fp16">;
 def Fp64TypeExt : TypeExtension<"cl_khr_fp64">;
+def Atomic64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_extended_atomics">;
+def AtomicFp64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_extended_atomics cl_khr_fp64">;
 
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
@@ -389,10 +391,14 @@ def NDRange               : TypedefType<"ndrange_t">;
 // OpenCL v2.0 s6.13.11: Atomic integer and floating-point types.
 def AtomicInt             : Type<"atomic_int", QualType<"Context.getAtomicType(Context.IntTy)">>;
 def AtomicUInt            : Type<"atomic_uint", QualType<"Context.getAtomicType(Context.UnsignedIntTy)">>;
-def AtomicLong            : Type<"atomic_long", QualType<"Context.getAtomicType(Context.LongTy)">>;
-def AtomicULong           : Type<"atomic_ulong", QualType<"Context.getAtomicType(Context.UnsignedLongTy)">>;
+let Extension = Atomic64TypeExt in {
+  def AtomicLong            : Type<"atomic_long", QualType<"Context.getAtomicType(Context.LongTy)">>;
+  def AtomicULong           : Type<"atomic_ulong", QualType<"Context.getAtomicType(Context.UnsignedLongTy)">>;
+}
 def AtomicFloat           : Type<"atomic_float", QualType<"Context.getAtomicType(Context.FloatTy)">>;
-def AtomicDouble          : Type<"atomic_double", QualType<"Context.getAtomicType(Context.DoubleTy)">>;
+let Extension = AtomicFp64TypeExt in {
+  def AtomicDouble          : Type<"atomic_double", QualType<"Context.getAtomicType(Context.DoubleTy)">>;
+}
 def AtomicHalf            : Type<"atomic_half", QualType<"Context.getAtomicType(Context.HalfTy)">>;
 def AtomicIntPtr          : Type<"atomic_intptr_t", QualType<"Context.getAtomicType(Context.getIntPtrType())">>;
 def AtomicUIntPtr         : Type<"atomic_uintptr_t", QualType<"Context.getAtomicType(Context.getUIntPtrType())">>;

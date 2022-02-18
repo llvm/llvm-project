@@ -1295,7 +1295,7 @@ static void fixRegionTerminator(RegionMRT *Region) {
   }
 }
 
-// If a region region is just a sequence of regions (and the exit
+// If a region is just a sequence of regions (and the exit
 // block in the case of the top level region), we can simply skip
 // linearizing it, because it is already linear
 bool regionIsSequence(RegionMRT *Region) {

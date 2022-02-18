@@ -29,15 +29,15 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_offset(i32 addrspace(1)* %
 ; SICIVI-DAG: s_mov_b32 m0
 
 ; SICI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; SICI-DAG: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xd
+; SICI-DAG: s_load_dwordx2 s[[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
 ; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; GFX89-DAG: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x34
+; GFX89-DAG: s_load_dwordx2 s[[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x34
 ; GCN-DAG: v_mov_b32_e32 v[[LOVCMP:[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GCN-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
 ; GCN-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
-; GCN: ds_cmpst_rtn_b64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}}, v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}} offset:32
+; GCN: ds_cmpst_rtn_b64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v[[[LOVCMP]]:[[HIVCMP]]], v[[[LOSWAPV]]:[[HISWAPV]]] offset:32
 ; GCN: [[RESULT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i64_offset(i64 addrspace(1)* %out, i64 addrspace(3)* %ptr, i64 %swap) nounwind {
@@ -90,15 +90,15 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_noret_i32_offset(i32 addrspace(3)*
 ; SICIVI-DAG: s_mov_b32 m0
 
 ; SICI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x9
-; SICI-DAG: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
+; SICI-DAG: s_load_dwordx2 s[[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
 ; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
-; GFX89-DAG: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; GFX89-DAG: s_load_dwordx2 s[[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN-DAG: v_mov_b32_e32 v[[LOVCMP:[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GCN-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
 ; GCN-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
-; GCN: ds_cmpst_b64 [[VPTR]], v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}}, v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}} offset:32
+; GCN: ds_cmpst_b64 [[VPTR]], v[[[LOVCMP]]:[[HIVCMP]]], v[[[LOSWAPV]]:[[HISWAPV]]] offset:32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_cmpxchg_noret_i64_offset(i64 addrspace(3)* %ptr, i64 %swap) nounwind {
   %gep = getelementptr i64, i64 addrspace(3)* %ptr, i32 4

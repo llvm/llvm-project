@@ -173,7 +173,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(
 ; GFX9PLUS: v_pk_add_u16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9PLUS-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
 ; GFX9PLUS-DAG: v_lshrrev_b32_e32 v[[ELT1:[0-9]+]], 16, [[ADD]]
-; GFX9PLUS: buffer_store_dwordx2 v{{\[}}[[ELT0]]:[[ELT1]]{{\]}}
+; GFX9PLUS: buffer_store_dwordx2 v[[[ELT0]]:[[ELT1]]]
 
 ; VI: flat_load_dword v[[A:[0-9]+]]
 ; VI: flat_load_dword v[[B:[0-9]+]]
@@ -184,7 +184,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(
 ; VI: v_add_u16_sdwa v[[ADD_HI:[0-9]+]], v[[A]], v[[B]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NOT: and
 ; VI-NOT: shl
-; VI: buffer_store_dwordx2 v{{\[}}[[ADD_LO]]:[[ADD_HI]]{{\]}}
+; VI: buffer_store_dwordx2 v[[[ADD_LO]]:[[ADD_HI]]]
 define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(1)* %out, i32 %tid
@@ -238,7 +238,7 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)
 ; GFX9PLUS: v_pk_add_u16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9PLUS-DAG: v_bfe_i32 v[[ELT0:[0-9]+]], [[ADD]], 0, 16
 ; GFX9PLUS-DAG: v_ashrrev_i32_e32 v[[ELT1:[0-9]+]], 16, [[ADD]]
-; GFX9PLUS: buffer_store_dwordx2 v{{\[}}[[ELT0]]:[[ELT1]]{{\]}}
+; GFX9PLUS: buffer_store_dwordx2 v[[[ELT0]]:[[ELT1]]]
 
 ; VI: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_add_u16_e32

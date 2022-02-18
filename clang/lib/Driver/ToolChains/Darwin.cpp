@@ -219,9 +219,8 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       !Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("-demangle");
 
-  // FIXME: Pass most of the flags below that check Version if LinkerIsLLD too.
-
-  if (Args.hasArg(options::OPT_rdynamic) && Version >= VersionTuple(137))
+  if (Args.hasArg(options::OPT_rdynamic) &&
+      (Version >= VersionTuple(137) || LinkerIsLLD))
     CmdArgs.push_back("-export_dynamic");
 
   // If we are using App Extension restrictions, pass a flag to the linker
@@ -230,7 +229,8 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                    options::OPT_fno_application_extension, false))
     CmdArgs.push_back("-application_extension");
 
-  if (D.isUsingLTO() && Version >= VersionTuple(116) && NeedsTempPath(Inputs)) {
+  if (D.isUsingLTO() && (Version >= VersionTuple(116) || LinkerIsLLD) &&
+      NeedsTempPath(Inputs)) {
     std::string TmpPathName;
     if (D.getLTOMode() == LTOK_Full) {
       // If we are using full LTO, then automatically create a temporary file
@@ -269,8 +269,11 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     CmdArgs.push_back(C.getArgs().MakeArgString(LibLTOPath));
   }
 
-  // ld64 version 262 and above run the deduplicate pass by default.
-  if (Version >= VersionTuple(262) && shouldLinkerNotDedup(C.getJobs().empty(), Args))
+  // ld64 version 262 and above runs the deduplicate pass by default.
+  // FIXME: lld doesn't dedup by default. Should we pass `--icf=safe`
+  //        if `!shouldLinkerNotDedup()` if LinkerIsLLD here?
+  if (Version >= VersionTuple(262) &&
+      shouldLinkerNotDedup(C.getJobs().empty(), Args))
     CmdArgs.push_back("-no_deduplicate");
 
   // Derived from the "link" spec.
@@ -368,6 +371,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     // Check if the toolchain supports bitcode build flow.
     if (MachOTC.SupportsEmbeddedBitcode()) {
       CmdArgs.push_back("-bitcode_bundle");
+      // FIXME: Pass this if LinkerIsLLD too, once it implements this flag.
       if (C.getDriver().embedBitcodeMarkerOnly() &&
           Version >= VersionTuple(278)) {
         CmdArgs.push_back("-bitcode_process_mode");

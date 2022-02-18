@@ -13,7 +13,7 @@ define void @stgp1004(i64 %a, i64 %b, i8* %p) {
 entry:
 ; CHECK-LABEL: stgp1004:
 ; CHECK: add [[R:x[0-9]+]], x2, #1004
-; CHECK: stgp x0, x1, {{\[}}[[R]]{{\]}}
+; CHECK: stgp x0, x1, [[[R]]]
 ; CHECK: ret
   %q = getelementptr i8, i8* %p, i32 1004
   call void @llvm.aarch64.stgp(i8* %q, i64 %a, i64 %b)
@@ -34,7 +34,7 @@ define void @stgp1024(i64 %a, i64 %b, i8* %p) {
 entry:
 ; CHECK-LABEL: stgp1024:
 ; CHECK: add [[R:x[0-9]+]], x2, #1024
-; CHECK: stgp x0, x1, {{\[}}[[R]]{{\]}}
+; CHECK: stgp x0, x1, [[[R]]]
 ; CHECK: ret
   %q = getelementptr i8, i8* %p, i32 1024
   call void @llvm.aarch64.stgp(i8* %q, i64 %a, i64 %b)

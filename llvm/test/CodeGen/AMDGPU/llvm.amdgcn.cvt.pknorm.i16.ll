@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}s_cvt_pknorm_i16_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[SX:[0-9]+]]:[[SY:[0-9]+]]{{\]}}, s[0:1], 0x{{b|2c}}
+; GCN-DAG: s_load_dwordx2 s[[[SX:[0-9]+]]:[[SY:[0-9]+]]], s[0:1], 0x{{b|2c}}
 ; GCN: v_mov_b32_e32 [[VY:v[0-9]+]], s[[SY]]
 ; SI: v_cvt_pknorm_i16_f32_e32 v{{[0-9]+}}, s[[SX]], [[VY]]
 ; VI: v_cvt_pknorm_i16_f32 v{{[0-9]+}}, s[[SX]], [[VY]]

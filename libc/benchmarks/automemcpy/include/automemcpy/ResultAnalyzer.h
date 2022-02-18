@@ -49,15 +49,19 @@ struct FunctionId {
 };
 
 struct PerDistributionData {
-  double MedianBytesPerSecond; // Median of samples for this distribution.
-  double Score;                // Normalized score for this distribution.
-  Grade::GradeEnum Grade;      // Grade for this distribution.
+  std::vector<double> BytesPerSecondSamples;
+  double BytesPerSecondMedian;   // Median of samples for this distribution.
+  double BytesPerSecondMean;     // Mean of samples for this distribution.
+  double BytesPerSecondVariance; // Variance of samples for this distribution.
+  double Score;                  // Normalized score for this distribution.
+  Grade::GradeEnum Grade;        // Grade for this distribution.
 };
 
 struct FunctionData {
   FunctionId Id;
   StringMap<PerDistributionData> PerDistributionData;
-  GradeHistogram GradeHisto = {};           // GradeEnum indexed array
+  double ScoresGeoMean;           // Geomean of scores for each distribution.
+  GradeHistogram GradeHisto = {}; // GradeEnum indexed array
   Grade::GradeEnum FinalGrade = Grade::BAD; // Overall grade for this function
 };
 
@@ -75,9 +79,15 @@ struct SampleId {
                           Distribution.Name)
 };
 
+// The type of Samples as reported by the Google Benchmark's JSON result file.
+// We are only interested in the "iteration" samples, the "aggregate" ones
+// represent derived metrics such as 'mean' or 'median'.
+enum class SampleType { UNKNOWN, ITERATION, AGGREGATE };
+
 // A SampleId with an associated measured throughput.
 struct Sample {
   SampleId Id;
+  SampleType Type = SampleType::UNKNOWN;
   double BytesPerSecond = 0;
 };
 

@@ -327,9 +327,8 @@ void Operator::populateTypeInferenceInfo(
   if (getNumResults() == 0)
     return;
 
-  // Skip for ops with variadic operands/results.
-  // TODO: This can be relaxed.
-  if (isVariadic())
+  // Skip ops with variadic or optional results.
+  if (getNumVariableLengthResults() > 0)
     return;
 
   // Skip cases currently being custom generated.

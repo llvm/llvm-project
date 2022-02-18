@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// R600EmitClauseMarker pass emits CFAlu instruction in a conservative maneer.
+/// R600EmitClauseMarker pass emits CFAlu instruction in a conservative manner.
 /// This pass is merging consecutive CFAlus where applicable.
 /// It needs to be called after IfCvt for best results.
 //===----------------------------------------------------------------------===//

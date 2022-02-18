@@ -542,3 +542,111 @@ define <vscale x 16 x i1> @icmp_select_nxv16i1(<vscale x 16 x i1> %a, <vscale x 
     %sel = select i1 %mask, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b
     ret <vscale x 16 x i1> %sel
 }
+
+define <vscale x 4 x float> @select_f32_invert_fmul(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
+; CHECK-LABEL: select_f32_invert_fmul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %fmul = fmul <vscale x 4 x float> %a, %b
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %a, <vscale x 4 x float> %fmul
+  ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 4 x float> @select_f32_invert_fadd(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: select_f32_invert_fadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %fadd = fadd <vscale x 4 x float> %a, %b
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %a, <vscale x 4 x float> %fadd
+  ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 4 x float> @select_f32_invert_fsub(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: select_f32_invert_fsub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %fsub = fsub <vscale x 4 x float> %a, %b
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %a, <vscale x 4 x float> %fsub
+  ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 4 x float> @select_f32_no_invert_op_lhs(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: select_f32_no_invert_op_lhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %fmul = fmul <vscale x 4 x float> %a, %b
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %fmul, <vscale x 4 x float> %a
+  ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 4 x float> @select_f32_no_invert_2_op(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x float> %d) {
+; CHECK-LABEL: select_f32_no_invert_2_op:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmul z2.s, z2.s, z3.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %fmul1 = fmul <vscale x 4 x float> %a, %b
+  %fmul2 = fmul <vscale x 4 x float> %c, %d
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %fmul1, <vscale x 4 x float> %fmul2
+  ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 4 x float> @select_f32_no_invert_equal_ops(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: select_f32_no_invert_equal_ops:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %m = fmul <vscale x 4 x float> %a, %b
+  %p = fcmp oeq <vscale x 4 x float> %m, zeroinitializer
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %m, <vscale x 4 x float> %m
+  ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 4 x float> @select_f32_no_invert_fmul_two_setcc_uses(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, i32 %len) #0 {
+; CHECK-LABEL: select_f32_no_invert_fmul_two_setcc_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fadd z1.s, z0.s, z1.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, z2.s
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %fadd = fadd <vscale x 4 x float> %a, %b
+  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %a, <vscale x 4 x float> %fadd
+  %sel2 = select <vscale x 4 x i1> %p, <vscale x 4 x float> %c, <vscale x 4 x float> %sel
+  ret <vscale x 4 x float> %sel2
+}
+
+define <4 x float> @select_f32_no_invert_not_scalable(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: select_f32_no_invert_not_scalable:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v2.4s, v0.4s, #0.0
+; CHECK-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %p = fcmp oeq <4 x float> %a, zeroinitializer
+  %fmul = fmul <4 x float> %a, %b
+  %sel = select <4 x i1> %p, <4 x float> %a, <4 x float> %fmul
+  ret <4 x float> %sel
+}

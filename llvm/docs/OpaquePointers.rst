@@ -24,15 +24,15 @@ Issues with explicit pointee types
 ==================================
 
 LLVM IR pointers can be cast back and forth between pointers with different
-pointee types. The pointee type does not necessarily actually represent the
-actual underlying type in memory. In other words, the pointee type contains no
-real semantics.
+pointee types. The pointee type does not necessarily represent the actual
+underlying type in memory. In other words, the pointee type carries no real
+semantics.
 
 Lots of operations do not actually care about the underlying type. These
 operations, typically intrinsics, usually end up taking an ``i8*``. This causes
 lots of redundant no-op bitcasts in the IR to and from a pointer with a
 different pointee type. The extra bitcasts take up space and require extra work
-to look through in optimizations. And more bitcasts increases the chances of
+to look through in optimizations. And more bitcasts increase the chances of
 incorrect bitcasts, especially in regards to address spaces.
 
 Some instructions still need to know what type to treat the memory pointed to by
@@ -86,36 +86,6 @@ opaque pointers.
      ret ptr %p2
    }
 
-I Still Need Pointee Types!
-===========================
-
-The frontend should already know what type each operation operates on based on
-the input source code. However, some frontends like Clang may end up relying on
-LLVM pointer pointee types to keep track of pointee types. The frontend needs to
-keep track of frontend pointee types on its own.
-
-For optimizations around frontend types, pointee types are not useful due their
-lack of semantics. Rather, since LLVM IR works on untyped memory, for a frontend
-to tell LLVM about frontend types for the purposes of alias analysis, extra
-metadata is added to the IR. For more information, see `TBAA
-<LangRef.html#tbaa-metadata>`_.
-
-Some specific operations still need to know what type a pointer types to. For
-the most part, this is codegen and ABI specific. For example, `byval
-<LangRef.html#parameter-attributes>`_ arguments are pointers, but backends need
-to know the underlying type of the argument to properly lower it. In cases like
-these, the attributes contain a type argument. For example,
-
-.. code-block:: llvm
-
-  call void @f(ptr byval(i32) %p)
-
-signifies that ``%p`` as an argument should be lowered as an ``i32`` passed
-indirectly.
-
-If you have use cases that this sort of fix doesn't cover, please email
-llvm-dev.
-
 Migration Instructions
 ======================
 
@@ -128,14 +98,44 @@ the type of relevant operations instead. For example, memory access related
 analyses and optimizations should use the types encoded in the load and store
 instructions instead of querying the pointer type.
 
-Frontends need to be adjusted to track pointee types independently of LLVM,
-insofar as they are necessary for lowering. For example, clang now tracks the
-pointee type in the ``Address`` structure.
+Here are some common ways to avoid pointer element type accesses:
+
+* For loads, use ``getType()``.
+* For stores, use ``getValueOperand()->getType()``.
+* Use ``getLoadStoreType()`` to handle both of the above in one call.
+* For getelementptr instructions, use ``getSourceElementType()``.
+* For calls, use ``getFunctionType()``.
+* For allocas, use ``getAllocatedType()``.
+* For globals, use ``getValueType()``.
+* For consistency assertions, use
+  ``PointerType::isOpaqueOrPointeeTypeEquals()``.
+* To create a pointer type in a different address space, use
+  ``PointerType::getWithSamePointeeType()``.
+* To check that two pointers have the same element type, use
+  ``PointerType::hasSameElementTypeAs()``.
+* While it is preferred to write code in a way that accepts both typed and
+  opaque pointers, ``Type::isOpaquePointerTy()`` and
+  ``PointerType::isOpaque()`` can be used to handle opaque pointers specially.
+  ``PointerType::getNonOpaquePointerElementType()`` can be used as a marker in
+  code-paths where opaque pointers have been explicitly excluded.
+* To get the type of a byval argument, use ``getParamByValType()``. Similar
+  method exists for other ABI-affecting attributes that need to know the
+  element type, such as byref, sret, inalloca and preallocated.
+* Some intrinsics require an ``elementtype`` attribute, which can be retrieved
+  using ``getParamElementType()``. This attribute is required in cases where
+  the intrinsic does not naturally encode a needed element type. This is also
+  used for inline assembly.
+
+Note that some of the methods mentioned above only exist to support both typed
+and opaque pointers at the same time, and will be dropped once the migration
+has completed. For example, ``isOpaqueOrPointeeTypeEquals()`` becomes
+meaningless once all pointers are opaque.
 
 While direct usage of pointer element types is immediately apparent in code,
 there is a more subtle issue that opaque pointers need to contend with: A lot
 of code assumes that pointer equality also implies that the used load/store
-type is the same. Consider the following examples with typed an opaque pointers:
+type or GEP source element type is the same. Consider the following examples
+with typed an opaque pointers:
 
 .. code-block:: llvm
 
@@ -162,6 +162,13 @@ sufficient. In the above example, it could result in store to load forwarding
 of an incorrect type. Code making such assumptions needs to be adjusted to
 check the accessed type explicitly:
 ``LI->getType() == SI->getValueOperand()->getType()``.
+
+Frontends
+---------
+
+Frontends need to be adjusted to track pointee types independently of LLVM,
+insofar as they are necessary for lowering. For example, clang now tracks the
+pointee type in the ``Address`` structure.
 
 Frontends using the C API through an FFI interface should be aware that a
 number of C API functions are deprecated and will be removed as part of the
@@ -195,9 +202,9 @@ open problems:
   in opaque pointer mode.
 
 * While clang has limited support for opaque pointers (sufficient to compile
-  CTMark on Linux), a major effort will be needed to systematically remove all
-  uses of ``getPointerElementType()`` and the deprecated ``Address()``
-  constructor.
+  most C/C++ code on Linux), a major effort will be needed to systematically
+  remove all uses of ``getPointerElementType()`` and the deprecated
+  ``Address::deprecated()`` constructor.
 
 * We do not yet have a testing strategy for how we can test both typed and
   opaque pointers during the migration. Currently, individual tests for

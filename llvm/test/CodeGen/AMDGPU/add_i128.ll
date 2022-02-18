@@ -5,7 +5,7 @@
 ; GCN-NEXT: v_addc_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN-NEXT: v_addc_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN-NEXT: v_addc_u32_e32 v[[HI:[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc
-; GCN: buffer_store_dwordx4 v{{\[}}[[LO]]:[[HI]]],
+; GCN: buffer_store_dwordx4 v[[[LO]]:[[HI]]],
 define amdgpu_kernel void @test_i128_vreg(i128 addrspace(1)* noalias %out, i128 addrspace(1)* noalias %inA, i128 addrspace(1)* noalias %inB) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %a_ptr = getelementptr i128, i128 addrspace(1)* %inA, i32 %tid

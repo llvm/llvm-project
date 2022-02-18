@@ -14,8 +14,8 @@ declare <vscale x 1 x double> @llvm.riscv.vfsub.nxv1f64.nxv1f64(<vscale x 1 x do
 
 declare <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64)
 
-declare <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(double, i64)
-declare <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(float, i64)
+declare <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double>, double, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32( <vscale x 2 x float>, float, i64)
 
 declare void @llvm.riscv.vse.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)
 declare void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>* nocapture, i64)
@@ -156,16 +156,16 @@ entry:
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(double 1.000000e+00, i64 %avl)
-  %1 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(double 2.000000e+00, i64 %avl)
+  %0 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double> undef, double 1.000000e+00, i64 %avl)
+  %1 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double> undef, double 2.000000e+00, i64 %avl)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %0, <vscale x 1 x double> %1, i64 %avl)
   %3 = bitcast i8* @scratch to <vscale x 1 x double>*
   tail call void @llvm.riscv.vse.nxv1f64(<vscale x 1 x double> %2, <vscale x 1 x double>* %3, i64 %avl)
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %4 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(float 1.000000e+00, i64 %avl)
-  %5 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(float 2.000000e+00, i64 %avl)
+  %4 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(<vscale x 2 x float> undef, float 1.000000e+00, i64 %avl)
+  %5 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(<vscale x 2 x float> undef, float 2.000000e+00, i64 %avl)
   %6 = tail call <vscale x 2 x float> @llvm.riscv.vfadd.nxv2f32.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %4, <vscale x 2 x float> %5, i64 %avl)
   %7 = bitcast i8* @scratch to <vscale x 2 x float>*
   tail call void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float> %6, <vscale x 2 x float>* %7, i64 %avl)
@@ -299,8 +299,8 @@ if.end:                                           ; preds = %if.else, %if.then
 
 if.then4:                                         ; preds = %if.end
   %3 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
-  %4 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(double 1.000000e+00, i64 %3)
-  %5 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(double 2.000000e+00, i64 %3)
+  %4 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double> undef, double 1.000000e+00, i64 %3)
+  %5 = tail call <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double> undef, double 2.000000e+00, i64 %3)
   %6 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %4, <vscale x 1 x double> %5, i64 %3)
   %7 = bitcast i8* @scratch to <vscale x 1 x double>*
   tail call void @llvm.riscv.vse.nxv1f64(<vscale x 1 x double> %6, <vscale x 1 x double>* %7, i64 %3)
@@ -308,8 +308,8 @@ if.then4:                                         ; preds = %if.end
 
 if.else5:                                         ; preds = %if.end
   %8 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 0)
-  %9 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(float 1.000000e+00, i64 %8)
-  %10 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(float 2.000000e+00, i64 %8)
+  %9 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32(<vscale x 2 x float> undef, float 1.000000e+00, i64 %8)
+  %10 = tail call <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32( <vscale x 2 x float> undef, float 2.000000e+00, i64 %8)
   %11 = tail call <vscale x 2 x float> @llvm.riscv.vfadd.nxv2f32.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %9, <vscale x 2 x float> %10, i64 %8)
   %12 = bitcast i8* @scratch to <vscale x 2 x float>*
   tail call void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float> %11, <vscale x 2 x float>* %12, i64 %8)
@@ -479,7 +479,7 @@ for.body:                                         ; preds = %for.body, %entry
   %add.ptr = getelementptr inbounds float, float* %x.addr.015, i64 %1
   %4 = bitcast float* %y.addr.014 to <vscale x 16 x float>*
   %5 = tail call <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float> undef, <vscale x 16 x float>* %4, i64 %1)
-  %6 = tail call <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float> %5, float %a, <vscale x 16 x float> %3, i64 %1)
+  %6 = tail call <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float> %5, float %a, <vscale x 16 x float> %3, i64 %1, i64 0)
   tail call void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float> %6, <vscale x 16 x float>* %4, i64 %1)
   %add.ptr1 = getelementptr inbounds float, float* %y.addr.014, i64 %1
   %sub = sub i64 %n.addr.016, %1
@@ -493,7 +493,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
 declare <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>* nocapture, i64)
-declare <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float>, float, <vscale x 16 x float>, i64)
+declare <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float>, float, <vscale x 16 x float>, i64, i64)
 declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>* nocapture, i64)
 
 ; We need a vsetvli in the last block because the predecessors have different

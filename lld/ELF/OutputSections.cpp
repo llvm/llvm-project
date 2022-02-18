@@ -108,32 +108,34 @@ void OutputSection::recordSection(InputSectionBase *isec) {
 // isec. Also check whether the InputSection flags and type are consistent with
 // other InputSections.
 void OutputSection::commitSection(InputSection *isec) {
+  if (LLVM_UNLIKELY(type != isec->type)) {
+    if (hasInputSections || typeIsSet) {
+      if (typeIsSet || !canMergeToProgbits(type) ||
+          !canMergeToProgbits(isec->type)) {
+        errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
+                    toString(isec) + ": " +
+                    getELFSectionTypeName(config->emachine, isec->type) +
+                    "\n>>> output section " + name + ": " +
+                    getELFSectionTypeName(config->emachine, type));
+      }
+      type = SHT_PROGBITS;
+    } else {
+      type = isec->type;
+    }
+  }
   if (!hasInputSections) {
     // If IS is the first section to be added to this section,
     // initialize type, entsize and flags from isec.
     hasInputSections = true;
-    type = isec->type;
     entsize = isec->entsize;
     flags = isec->flags;
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
-      error("incompatible section flags for " + name + "\n>>> " + toString(isec) +
-            ": 0x" + utohexstr(isec->flags) + "\n>>> output section " + name +
-            ": 0x" + utohexstr(flags));
-
-    if (type != isec->type) {
-      if (!canMergeToProgbits(type) || !canMergeToProgbits(isec->type))
-        error("section type mismatch for " + isec->name + "\n>>> " +
-              toString(isec) + ": " +
-              getELFSectionTypeName(config->emachine, isec->type) +
-              "\n>>> output section " + name + ": " +
-              getELFSectionTypeName(config->emachine, type));
-      type = SHT_PROGBITS;
-    }
+      error("incompatible section flags for " + name + "\n>>> " +
+            toString(isec) + ": 0x" + utohexstr(isec->flags) +
+            "\n>>> output section " + name + ": 0x" + utohexstr(flags));
   }
-  if (noload)
-    type = SHT_NOBITS;
 
   isec->parent = this;
   uint64_t andMask =
@@ -448,13 +450,13 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
       writeInt(buf + data->offset, data->expression().getValue(), data->size);
 }
 
-static void finalizeShtGroup(OutputSection *os,
-                             InputSection *section) {
-  assert(config->relocatable);
-
+static void finalizeShtGroup(OutputSection *os, InputSection *section) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
   os->link = in.symTab->getParent()->sectionIndex;
+
+  if (!section)
+    return;
 
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.

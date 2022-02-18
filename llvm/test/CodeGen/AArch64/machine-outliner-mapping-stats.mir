@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %s -o - 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Check that instruction mapping stats work.
+
+# We ought to map all of the instructions (5 of them) as legal, and then
+# terminate the string with a single illegal character. Debug instructions are
+# always invisible, and don't contribute to the length of the string.
+
+# CHECK: 1 machine-outliner - Number of illegal instrs in unsigned vector
+# CHECK: 1 machine-outliner - Number of invisible instrs in unsigned vector
+# CHECK: 5 machine-outliner - Number of legal instrs in unsigned vector
+# CHECK: 6 machine-outliner - Size of unsigned vector
+
+...
+---
+name:            test
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+  liveins: $lr
+    $x0 = ORRXri $xzr, 1
+    $x1 = ORRXri $xzr, 1
+    $x2 = ORRXri $xzr, 1
+    DBG_VALUE $x3, $noreg
+    $x3 = ORRXri $xzr, 1
+    RET undef $lr

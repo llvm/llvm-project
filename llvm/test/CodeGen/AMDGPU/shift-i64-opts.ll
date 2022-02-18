@@ -7,7 +7,7 @@
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]]
 ; GCN-DAG: v_lshrrev_b32_e32 v[[LO:[0-9]+]], 3, [[VAL]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @lshr_i64_35(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = lshr i64 %val, 35
@@ -19,7 +19,7 @@ define amdgpu_kernel void @lshr_i64_35(i64 addrspace(1)* %out, i64 addrspace(1)*
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]]
 ; GCN-DAG: v_lshrrev_b32_e32 v[[LO:[0-9]+]], 31, [[VAL]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @lshr_i64_63(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = lshr i64 %val, 63
@@ -31,7 +31,7 @@ define amdgpu_kernel void @lshr_i64_63(i64 addrspace(1)* %out, i64 addrspace(1)*
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]]
 ; GCN-DAG: v_lshrrev_b32_e32 v[[LO:[0-9]+]], 1, [[VAL]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @lshr_i64_33(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = lshr i64 %val, 33
@@ -42,7 +42,7 @@ define amdgpu_kernel void @lshr_i64_33(i64 addrspace(1)* %out, i64 addrspace(1)*
 ; GCN-LABEL: {{^}}lshr_i64_32:
 ; GCN-DAG: buffer_load_dword v[[LO:[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @lshr_i64_32(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = lshr i64 %val, 32
@@ -57,7 +57,7 @@ define amdgpu_kernel void @lshr_i64_32(i64 addrspace(1)* %out, i64 addrspace(1)*
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN-DAG: buffer_load_dword v[[LO:[0-9]+]]
 ; GCN: v_bfe_u32 v[[BFE:[0-9]+]], v[[LO]], 8, 23
-; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[BFE]]:[[ZERO]]]
 define amdgpu_kernel void @lshr_and_i64_35(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %and = and i64 %val, 9223372036854775807 ; 0x7fffffffffffffff
@@ -72,7 +72,7 @@ define amdgpu_kernel void @lshr_and_i64_35(i64 addrspace(1)* %out, i64 addrspace
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_lshlrev_b32_e32 v[[HI:[0-9]+]], 3, [[VAL]]
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @shl_i64_const_35(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = shl i64 %val, 35
@@ -83,7 +83,7 @@ define amdgpu_kernel void @shl_i64_const_35(i64 addrspace(1)* %out, i64 addrspac
 ; GCN-LABEL: {{^}}shl_i64_const_32:
 ; GCN-DAG: buffer_load_dword v[[HI:[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @shl_i64_const_32(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = shl i64 %val, 32
@@ -95,7 +95,7 @@ define amdgpu_kernel void @shl_i64_const_32(i64 addrspace(1)* %out, i64 addrspac
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_lshlrev_b32_e32 v[[HI:[0-9]+]], 31, [[VAL]]
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @shl_i64_const_63(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = shl i64 %val, 63
@@ -218,10 +218,10 @@ define amdgpu_kernel void @trunc_shl_33_i32_i64(i32 addrspace(1)* %out, i64 addr
 }
 
 ; GCN-LABEL: {{^}}trunc_shl_16_v2i32_v2i64:
-; GCN: buffer_load_dwordx4 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; GCN: buffer_load_dwordx4 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; GCN-DAG: v_lshlrev_b32_e32 v[[RESHI:[0-9]+]], 16, v{{[0-9]+}}
 ; GCN-DAG: v_lshlrev_b32_e32 v[[RESLO:[0-9]+]], 16, v[[LO]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[RESLO]]:[[RESHI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[RESLO]]:[[RESHI]]]
 define amdgpu_kernel void @trunc_shl_16_v2i32_v2i64(<2 x i32> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) {
   %val = load <2 x i64>, <2 x i64> addrspace(1)* %in
   %shl = shl <2 x i64> %val, <i64 16, i64 16>
@@ -232,9 +232,9 @@ define amdgpu_kernel void @trunc_shl_16_v2i32_v2i64(<2 x i32> addrspace(1)* %out
 
 ; GCN-LABEL: {{^}}trunc_shl_31_i32_i64_multi_use:
 ; GCN: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]]
-; GCN: v_lshl_b64 v{{\[}}[[RESLO:[0-9]+]]:[[RESHI:[0-9]+]]{{\]}}, [[VAL]], 31
+; GCN: v_lshl_b64 v[[[RESLO:[0-9]+]]:[[RESHI:[0-9]+]]], [[VAL]], 31
 ; GCN: buffer_store_dword v[[RESLO]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[RESLO]]:[[RESHI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[RESLO]]:[[RESHI]]]
 define amdgpu_kernel void @trunc_shl_31_i32_i64_multi_use(i32 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
   %shl = shl i64 %val, 31

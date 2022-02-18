@@ -606,7 +606,7 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(<64 x i32> addrspace(
 ; GCN-DAG: ds_read_u16 v[[LO:[0-9]+]],
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 
-; GCN: ds_write_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]]
+; GCN: ds_write_b64 v{{[0-9]+}}, v[[[LO]]:[[HI]]]
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
 ; EG: LDS_USHORT_READ_RET {{.*}} [[FROM]]
@@ -633,7 +633,7 @@ define amdgpu_kernel void @local_zextload_i16_to_i64(i64 addrspace(3)* %out, i16
 ; GFX89: v_bfe_i32 v[[LO:[0-9]+]], v[[ULO]], 0, 16
 ; GCN-DAG: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
-; GCN: ds_write_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]]
+; GCN: ds_write_b64 v{{[0-9]+}}, v[[[LO]]:[[HI]]]
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
 ; EG: LDS_USHORT_READ_RET {{.*}} [[FROM]]

@@ -379,7 +379,7 @@ def get_index_vars(n: int) -> List[IndexVar]:
   This routine is defined by the TACO API.
 
   Args:
-    n: An interger representing the number of IndexVar to get.
+    n: An integer representing the number of IndexVar to get.
 
   Returns:
     A list of IndexVar.

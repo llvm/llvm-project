@@ -129,10 +129,12 @@ enum NodeType : unsigned {
   BFPW,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
-  // for the VL value to be used for the operation.
+  // for the VL value to be used for the operation. The first operand is
+  // passthru operand.
   VMV_V_X_VL,
   // VFMV_V_F_VL matches the semantics of vfmv.v.f but includes an extra operand
-  // for the VL value to be used for the operation.
+  // for the VL value to be used for the operation. The first operand is
+  // passthru operand.
   VFMV_V_F_VL,
   // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
   // extended from the vector element size.
@@ -143,6 +145,7 @@ enum NodeType : unsigned {
   VFMV_S_F_VL,
   // Splats an 64-bit value that has been split into two i32 parts. This is
   // expanded late to two scalar stores and a stride 0 vector load.
+  // The first operand is passthru operand.
   SPLAT_VECTOR_SPLIT_I64_VL,
   // Read VLENB CSR
   READ_VLENB,

@@ -998,8 +998,6 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return (MI.getOperand(1).isReg() &&
             MI.getOperand(1).getReg() == RISCV::X0) ||
            (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0);
-  case RISCV::LUI:
-    return MI.getOperand(1).getTargetFlags() != RISCVII::MO_HI;
   }
   return MI.isAsCheapAsAMove();
 }

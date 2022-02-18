@@ -34,8 +34,8 @@ namespace dataflow {
 class DataflowAnalysisContext {
 public:
   DataflowAnalysisContext()
-      : TrueVal(&takeOwnership(std::make_unique<BoolValue>())),
-        FalseVal(&takeOwnership(std::make_unique<BoolValue>())) {}
+      : TrueVal(takeOwnership(std::make_unique<AtomicBoolValue>())),
+        FalseVal(takeOwnership(std::make_unique<AtomicBoolValue>())) {}
 
   /// Takes ownership of `Loc` and returns a reference to it.
   ///
@@ -115,8 +115,8 @@ public:
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`.
-  BoolValue &getBoolLiteralValue(bool Value) const {
-    return Value ? *TrueVal : *FalseVal;
+  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
+    return Value ? TrueVal : FalseVal;
   }
 
 private:
@@ -135,8 +135,8 @@ private:
   StorageLocation *ThisPointeeLoc = nullptr;
 
   // FIXME: Add support for boolean expressions.
-  BoolValue *TrueVal;
-  BoolValue *FalseVal;
+  AtomicBoolValue &TrueVal;
+  AtomicBoolValue &FalseVal;
 };
 
 } // namespace dataflow

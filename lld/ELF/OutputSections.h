@@ -92,7 +92,7 @@ public:
   std::string memoryRegionName;
   std::string lmaRegionName;
   bool nonAlloc = false;
-  bool noload = false;
+  bool typeIsSet = false;
   bool expressionsUseSymbols = false;
   bool usedInExpression = false;
   bool inOverlay = false;

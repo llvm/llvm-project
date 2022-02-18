@@ -149,8 +149,36 @@ def : WriteRes<WriteFCmp, [CortexA55UnitFPALU]> { let Latency = 3; }
 def : WriteRes<WriteFCvt, [CortexA55UnitFPALU]> { let Latency = 4; }
 def : WriteRes<WriteFCopy, [CortexA55UnitFPALU]> { let Latency = 3; }
 def : WriteRes<WriteFImm, [CortexA55UnitFPALU]> { let Latency = 3; }
-def : WriteRes<WriteVd, [CortexA55UnitFPALU]> { let Latency = 4; }
-def : WriteRes<WriteVq, [CortexA55UnitFPALU,CortexA55UnitFPALU]> { let Latency = 4; let BeginGroup = 1; }
+
+// NEON
+class CortexA55WriteVd<int n, ProcResourceKind res> : SchedWriteRes<[res]> {
+  let Latency = n;
+}
+class CortexA55WriteVq<int n, ProcResourceKind res> : SchedWriteRes<[res, res]> {
+  let Latency = n;
+  let BeginGroup = 1;
+}
+class CortexA55WriteVqL<int n, ProcResourceKind res> : SchedWriteRes<[res, res, res, res]> {
+  let Latency = n;
+  let BeginGroup = 1;
+}
+def CortexA55WriteDotScVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
+def CortexA55WriteDotVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
+def CortexA55WriteDotVd_4 : CortexA55WriteVd<4, CortexA55UnitFPALU>;
+def CortexA55WriteMlaLVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
+def CortexA55WriteMlaIxVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
+def CortexA55WriteMlaVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
+def CortexA55WriteMlaVd_4 : CortexA55WriteVd<4, CortexA55UnitFPALU>;
+def CortexA55WriteAluVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
+def CortexA55WriteAluVd_3 : CortexA55WriteVd<3, CortexA55UnitFPALU>;
+def CortexA55WriteAluVq_3 : CortexA55WriteVq<3, CortexA55UnitFPALU>;
+def CortexA55WriteAluVd_2 : CortexA55WriteVd<2, CortexA55UnitFPALU>;
+def CortexA55WriteAluVq_2 : CortexA55WriteVq<2, CortexA55UnitFPALU>;
+def CortexA55WriteAluVd_1 : CortexA55WriteVd<1, CortexA55UnitFPALU>;
+def CortexA55WriteAluVq_1 : CortexA55WriteVq<1, CortexA55UnitFPALU>;
+def CortexA55WriteAluVqL_4 : CortexA55WriteVqL<4, CortexA55UnitFPALU>;
+def : SchedAlias<WriteVd, CortexA55WriteVd<4, CortexA55UnitFPALU>>;
+def : SchedAlias<WriteVq, CortexA55WriteVq<4, CortexA55UnitFPALU>>;
 
 // FP ALU specific new schedwrite definitions
 def CortexA55WriteFPALU_F2 : SchedWriteRes<[CortexA55UnitFPALU]> { let Latency = 2;}
@@ -228,6 +256,13 @@ def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
                               WriteISReg, WriteIEReg,WriteIS,
                               WriteID32,WriteID64,
                               WriteIM32,WriteIM64]>;
+
+// NEON ALU/MAC forwarding paths
+def CortexA55ReadMla : SchedReadAdvance<3, [CortexA55WriteMlaVd_4, CortexA55WriteMlaVq_4]>;
+def CortexA55ReadMlaIx : SchedReadAdvance<3, [CortexA55WriteMlaIxVq_4]>;
+def CortexA55ReadMlaL : SchedReadAdvance<3, [CortexA55WriteMlaLVq_4]>;
+def CortexA55ReadDot : SchedReadAdvance<3, [CortexA55WriteDotVd_4, CortexA55WriteDotVq_4]>;
+def CortexA55ReadDotSc : SchedReadAdvance<3, [CortexA55WriteDotScVq_4]>;
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific InstRWs.
@@ -357,5 +392,100 @@ def : InstRW<[CortexA55WriteFDivDP], (instregex "^FDIVv.*64$")>;
 def : InstRW<[CortexA55WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA55WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA55WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
+
+// 4.15. Advanced SIMD integer instructions
+// ASIMD absolute diff
+def : InstRW<[CortexA55WriteAluVd_3], (instregex "[SU]ABDv(2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]ABDv(16i8|4i32|8i16)")>;
+// ASIMD absolute diff accum
+def : InstRW<[CortexA55WriteAluVqL_4], (instregex "[SU]ABAL?v")>;
+// ASIMD absolute diff long
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]ABDLv")>;
+// ASIMD arith #1
+def : InstRW<[CortexA55WriteAluVd_2], (instregex "(ADD|SUB|NEG)v(1i64|2i32|4i16|8i8)",
+  "[SU]R?HADDv(2i32|4i16|8i8)", "[SU]HSUBv(2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_2], (instregex "(ADD|SUB|NEG)v(2i64|4i32|8i16|16i8)",
+  "[SU]R?HADDv(8i16|4i32|16i8)", "[SU]HSUBv(8i16|4i32|16i8)")>;
+// ASIMD arith #2
+def : InstRW<[CortexA55WriteAluVd_3], (instregex "ABSv(1i64|2i32|4i16|8i8)$",
+  "[SU]ADDLPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$", 
+  "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(1i16|1i32|1i64|1i8|2i32|4i16|8i8)$",
+  "ADDPv(2i32|4i16|8i8)$")>;
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "ABSv(2i64|4i32|8i16|16i8)$",
+  "[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$", 
+  "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$",
+  "ADDPv(16i8|2i64|4i32|8i16)$")>;
+// ASIMD arith #3
+def : InstRW<[CortexA55WriteAluVq_3], (instregex  "SADDLv", "UADDLv", "SADDWv",
+  "UADDWv", "SSUBLv", "USUBLv", "SSUBWv", "USUBWv", "ADDHNv", "SUBHNv")>;
+// ASIMD arith #5
+def : InstRW<[CortexA55WriteAluVqL_4], (instregex "RADDHNv", "RSUBHNv")>;
+// ASIMD arith, reduce
+def : InstRW<[CortexA55WriteAluVq_3], (instregex  "ADDVv", "SADDLVv", "UADDLVv")>;
+// ASIMD compare #1
+def : InstRW<[CortexA55WriteAluVd_2], (instregex "CM(EQ|GE|GT|HI|HS|LE|LT)v(1i64|2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_2], (instregex "CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)")>;
+// ASIMD compare #2
+def : InstRW<[CortexA55WriteAluVd_3], (instregex "CMTSTv(1i64|2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "CMTSTv(2i64|4i32|8i16|16i8)")>;
+// ASIMD logical $1
+def : InstRW<[CortexA55WriteAluVd_1], (instregex "(AND|EOR|NOT|ORN)v8i8",
+  "(ORR|BIC)v(2i32|4i16|8i8)$", "MVNIv(2i|2s|4i16)")>;
+def : InstRW<[CortexA55WriteAluVq_1], (instregex "(AND|EOR|NOT|ORN)v16i8",
+  "(ORR|BIC)v(16i8|4i32|8i16)$", "MVNIv(4i32|4s|8i16)")>;
+// ASIMD max/min, basic
+def : InstRW<[CortexA55WriteAluVd_2], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_2], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
+// SIMD max/min, reduce
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU](MAX|MIN)Vv")>;
+// ASIMD multiply, by element
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "MULv(2i32|4i16|4i32|8i16)_indexed$",
+  "SQR?DMULHv(1i16|1i32|2i32|4i16|4i32|8i16)_indexed$")>;
+// ASIMD multiply
+def : InstRW<[CortexA55WriteAluVd_3], (instrs PMULv8i8)>;
+def : InstRW<[CortexA55WriteAluVq_3], (instrs PMULv16i8)>;
+// ASIMD multiply accumulate
+def : InstRW<[CortexA55WriteMlaVd_4, CortexA55ReadMla], (instregex "ML[AS]v(2i32|4i16|8i8)$")>;
+def : InstRW<[CortexA55WriteMlaVq_4, CortexA55ReadMla], (instregex "ML[AS]v(16i8|4i32|8i16)$")>;
+def : InstRW<[CortexA55WriteMlaIxVq_4, CortexA55ReadMlaIx], (instregex "ML[AS]v(2i32|4i16|4i32|8i16)_indexed$")>;
+// ASIMD multiply accumulate half
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "SQRDML[AS]H[vi]")>;
+// ASIMD multiply accumulate long
+def : InstRW<[CortexA55WriteMlaLVq_4, CortexA55ReadMlaL], (instregex "[SU]ML[AS]Lv")>;
+// ASIMD multiply accumulate long #2
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "SQDML[AS]L[iv]")>;
+// ASIMD dot product
+def : InstRW<[CortexA55WriteDotVd_4, CortexA55ReadDot], (instregex "[SU]DOTv8i8")>;
+def : InstRW<[CortexA55WriteDotVq_4, CortexA55ReadDot], (instregex "[SU]DOTv16i8")>;
+// ASIMD dot product, by scalar
+def : InstRW<[CortexA55WriteDotScVq_4, CortexA55ReadDotSc], (instregex "[SU]DOTlanev")>;
+// ASIMD multiply long
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU]MULLv", "SQDMULL[iv]")>;
+// ASIMD polynomial (8x8) multiply long
+def : InstRW<[CortexA55WriteAluVq_3], (instrs PMULLv8i8, PMULLv16i8)>;
+// ASIMD pairwise add and accumulate
+def : InstRW<[CortexA55WriteAluVqL_4], (instregex "[SU]ADALPv")>;
+// ASIMD shift accumulate
+def : InstRW<[CortexA55WriteAluVd_3], (instregex "[SU]SRA(d|v2i32|v4i16|v8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]SRAv(16i8|2i64|4i32|8i16)")>;
+// ASIMD shift accumulate #2
+def : InstRW<[CortexA55WriteAluVqL_4], (instregex "[SU]RSRA[vd]")>;
+// ASIMD shift by immed
+def : InstRW<[CortexA55WriteAluVd_2], (instregex "SHLd$", "SHLv",
+  "SLId$", "SRId$", "[SU]SHR[vd]", "SHRNv")>;
+// ASIMD shift by immed
+// SXTL and UXTL are aliases for SHLL
+def : InstRW<[CortexA55WriteAluVq_2], (instregex "[US]?SHLLv")>;
+// ASIMD shift by immed #2
+def : InstRW<[CortexA55WriteAluVd_3], (instregex "[SU]RSHR(d|v2i32|v4i16|v8i8)",
+  "RSHRNv(2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]RSHRv(16i8|2i64|4i32|8i16)",
+  "RSHRNv(16i8|4i32|8i16)")>;
+// ASIMD shift by register
+def : InstRW<[CortexA55WriteAluVd_2], (instregex "[SU]SHLv(1i64|2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_2], (instregex "[SU]SHLv(2i64|4i32|8i16|16i8)")>;
+// ASIMD shift by register #2
+def : InstRW<[CortexA55WriteAluVd_3], (instregex "[SU]RSHLv(1i64|2i32|4i16|8i8)")>;
+def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]RSHLv(2i64|4i32|8i16|16i8)")>;
 
 }

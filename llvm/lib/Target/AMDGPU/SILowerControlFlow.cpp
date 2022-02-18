@@ -540,7 +540,7 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
     return;
 
   // Make sure we do not modify exec between def and use.
-  // A copy with implcitly defined exec inserted earlier is an exclusion, it
+  // A copy with implicitly defined exec inserted earlier is an exclusion, it
   // does not really modify exec.
   for (auto I = Def->getIterator(); I != MI.getIterator(); ++I)
     if (I->modifiesRegister(AMDGPU::EXEC, TRI) &&
@@ -580,7 +580,7 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
 }
 
 void SILowerControlFlow::optimizeEndCf() {
-  // If the only instruction immediately following this END_CF is an another
+  // If the only instruction immediately following this END_CF is another
   // END_CF in the only successor we can avoid emitting exec mask restore here.
   if (!EnableOptimizeEndCf)
     return;
@@ -865,6 +865,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  bool Changed = false;
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
@@ -886,6 +887,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::SI_LOOP:
       case AMDGPU::SI_END_CF:
         SplitMBB = process(MI);
+        Changed = true;
         break;
 
       // FIXME: find a better place for this
@@ -894,6 +896,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         lowerInitExec(MBB, MI);
         if (LIS)
           LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
+        Changed = true;
         break;
 
       default:
@@ -913,5 +916,5 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   LoweredIf.clear();
   KillBlocks.clear();
 
-  return true;
+  return Changed;
 }

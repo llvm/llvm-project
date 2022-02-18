@@ -1510,7 +1510,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampMaxNumElements(1, S16, 2) // TODO: Make 4?
     .clampMaxNumElements(0, S16, 64);
 
-  // TODO: Don't fully scalarize v2s16 pieces? Or combine out thosse
+  // TODO: Don't fully scalarize v2s16 pieces? Or combine out those
   // pre-legalize.
   if (ST.hasVOP3PInsts()) {
     getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
@@ -4377,7 +4377,7 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
 ///
 /// We don't want to directly select image instructions just yet, but also want
 /// to exposes all register repacking to the legalizer/combiners. We also don't
-/// want a selected instrution entering RegBankSelect. In order to avoid
+/// want a selected instruction entering RegBankSelect. In order to avoid
 /// defining a multitude of intermediate image instructions, directly hack on
 /// the intrinsic's arguments. In cases like a16 addresses, this requires
 /// padding now unnecessary arguments with $noreg.

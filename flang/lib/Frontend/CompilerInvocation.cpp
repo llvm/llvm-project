@@ -137,6 +137,9 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_emit_mlir:
       opts.programAction = EmitMLIR;
       break;
+    case clang::driver::options::OPT_emit_llvm:
+      opts.programAction = EmitLLVM;
+      break;
     case clang::driver::options::OPT_emit_obj:
       opts.programAction = EmitObj;
       break;

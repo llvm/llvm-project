@@ -615,6 +615,16 @@ Expected<uint32_t> XCOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   if (XCOFFSym.getSectionNumber() == XCOFF::N_UNDEF)
     Result |= SymbolRef::SF_Undefined;
 
+  // There is no visibility in old 32 bit XCOFF object file interpret.
+  if (is64Bit() || (auxiliaryHeader32() && (auxiliaryHeader32()->getVersion() ==
+                                            NEW_XCOFF_INTERPRET))) {
+    uint16_t SymType = XCOFFSym.getSymbolType();
+    if ((SymType & VISIBILITY_MASK) == SYM_V_HIDDEN)
+      Result |= SymbolRef::SF_Hidden;
+
+    if ((SymType & VISIBILITY_MASK) == SYM_V_EXPORTED)
+      Result |= SymbolRef::SF_Exported;
+  }
   return Result;
 }
 

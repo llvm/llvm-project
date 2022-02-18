@@ -387,7 +387,8 @@ protected:
             Code, "target",
             [this](ASTContext &Context, Environment &Env) {
               assert(HasValueTop == nullptr);
-              HasValueTop = &Env.takeOwnership(std::make_unique<BoolValue>());
+              HasValueTop =
+                  &Env.takeOwnership(std::make_unique<AtomicBoolValue>());
               return OptionalIntAnalysis(Context, *HasValueTop);
             },
             [&Match](

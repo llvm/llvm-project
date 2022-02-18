@@ -7,7 +7,7 @@
 ; GCN:     global_load_dwordx4 v[{{[0-9]*[02468]:[0-9]*[13579]}}], v{{[0-9]+}}, s[{{[0-9:]+}}]
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: v_mov_b32_e32 v{{[0-9]*}}[[LO:[02468]]], v{{[0-9]+}}
-; GCN-NEXT: global_store_dwordx2 v{{[0-9]+}}, v{{\[}}[[LO]]:{{[0-9]+\]}}, s[{{[0-9:]+}}]
+; GCN-NEXT: global_store_dwordx2 v{{[0-9]+}}, v[[[LO]]:{{[0-9]+\]}}, s[{{[0-9:]+}}]
 
 define amdgpu_kernel void @test_odd_int4(<4 x i32> addrspace(1)* %arg, <2 x i32> addrspace(1)* %arg1) {
 bb:

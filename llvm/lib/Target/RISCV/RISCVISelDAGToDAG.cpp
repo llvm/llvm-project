@@ -56,7 +56,8 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
           VT.isInteger() ? RISCVISD::VMV_V_X_VL : RISCVISD::VFMV_V_F_VL;
       SDLoc DL(N);
       SDValue VL = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
-      SDValue Result = CurDAG->getNode(Opc, DL, VT, N->getOperand(0), VL);
+      SDValue Result = CurDAG->getNode(Opc, DL, VT, CurDAG->getUNDEF(VT),
+                                       N->getOperand(0), VL);
 
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
@@ -71,11 +72,12 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
     if (N->getOpcode() != RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL)
       continue;
 
-    assert(N->getNumOperands() == 3 && "Unexpected number of operands");
+    assert(N->getNumOperands() == 4 && "Unexpected number of operands");
     MVT VT = N->getSimpleValueType(0);
-    SDValue Lo = N->getOperand(0);
-    SDValue Hi = N->getOperand(1);
-    SDValue VL = N->getOperand(2);
+    SDValue Passthru = N->getOperand(0);
+    SDValue Lo = N->getOperand(1);
+    SDValue Hi = N->getOperand(2);
+    SDValue VL = N->getOperand(3);
     assert(VT.getVectorElementType() == MVT::i64 && VT.isScalableVector() &&
            Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
            "Unexpected VTs!");
@@ -106,7 +108,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
         CurDAG->getTargetConstant(Intrinsic::riscv_vlse, DL, MVT::i64);
     SDValue Ops[] = {Chain,
                      IntID,
-                     CurDAG->getUNDEF(VT),
+                     Passthru,
                      StackSlot,
                      CurDAG->getRegister(RISCV::X0, MVT::i64),
                      VL};
@@ -1624,9 +1626,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Try to match splat of a scalar load to a strided load with stride of x0.
     bool IsScalarMove = Node->getOpcode() == RISCVISD::VMV_S_X_VL ||
                         Node->getOpcode() == RISCVISD::VFMV_S_F_VL;
-    if (IsScalarMove && !Node->getOperand(0).isUndef())
+    bool HasPassthruOperand = Node->getOpcode() != ISD::SPLAT_VECTOR;
+    if (HasPassthruOperand && !IsScalarMove && !Node->getOperand(0).isUndef())
       break;
-    SDValue Src = IsScalarMove ? Node->getOperand(1) : Node->getOperand(0);
+    SDValue Src = HasPassthruOperand ? Node->getOperand(1) : Node->getOperand(0);
     auto *Ld = dyn_cast<LoadSDNode>(Src);
     if (!Ld)
       break;
@@ -1648,7 +1651,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         break;
       selectVLOp(Node->getOperand(2), VL);
     } else
-      selectVLOp(Node->getOperand(1), VL);
+      selectVLOp(Node->getOperand(2), VL);
 
     unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
     SDValue SEW = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
@@ -1664,8 +1667,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MachineSDNode *Load =
         CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-    if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-      CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+    CurDAG->setNodeMemRefs(Load, {Ld->getMemOperand()});
 
     ReplaceNode(Node, Load);
     return;
@@ -1924,9 +1926,9 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 }
 
 bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
-  if (N.getOpcode() != RISCVISD::VMV_V_X_VL)
+  if (N.getOpcode() != RISCVISD::VMV_V_X_VL || !N.getOperand(0).isUndef())
     return false;
-  SplatVal = N.getOperand(0);
+  SplatVal = N.getOperand(1);
   return true;
 }
 
@@ -1936,11 +1938,12 @@ static bool selectVSplatSimmHelper(SDValue N, SDValue &SplatVal,
                                    SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget,
                                    ValidateFn ValidateImm) {
-  if (N.getOpcode() != RISCVISD::VMV_V_X_VL ||
-      !isa<ConstantSDNode>(N.getOperand(0)))
+  if (N.getOpcode() != RISCVISD::VMV_V_X_VL || !N.getOperand(0).isUndef() ||
+      !isa<ConstantSDNode>(N.getOperand(1)))
     return false;
 
-  int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
+  int64_t SplatImm =
+      cast<ConstantSDNode>(N.getOperand(1))->getSExtValue();
 
   // The semantics of RISCVISD::VMV_V_X_VL is that when the operand
   // type is wider than the resulting vector element type: an implicit
@@ -1950,7 +1953,7 @@ static bool selectVSplatSimmHelper(SDValue N, SDValue &SplatVal,
   // For example, we wish to match (i8 -1) -> (XLenVT 255) as a simm5 by first
   // sign-extending to (XLenVT -1).
   MVT XLenVT = Subtarget.getXLenVT();
-  assert(XLenVT == N.getOperand(0).getSimpleValueType() &&
+  assert(XLenVT == N.getOperand(1).getSimpleValueType() &&
          "Unexpected splat operand type");
   MVT EltVT = N.getSimpleValueType().getVectorElementType();
   if (EltVT.bitsLT(XLenVT))
@@ -1983,11 +1986,12 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
 }
 
 bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
-  if (N.getOpcode() != RISCVISD::VMV_V_X_VL ||
-      !isa<ConstantSDNode>(N.getOperand(0)))
+  if (N.getOpcode() != RISCVISD::VMV_V_X_VL || !N.getOperand(0).isUndef() ||
+      !isa<ConstantSDNode>(N.getOperand(1)))
     return false;
 
-  int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
+  int64_t SplatImm =
+      cast<ConstantSDNode>(N.getOperand(1))->getSExtValue();
 
   if (!isUInt<5>(SplatImm))
     return false;

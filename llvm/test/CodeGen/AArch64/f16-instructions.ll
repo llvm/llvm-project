@@ -1101,9 +1101,9 @@ define half @test_maxnum(half %a, half %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_copysign:
-; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bif.16b v0, v1, v2
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
@@ -1119,15 +1119,15 @@ define half @test_copysign(half %a, half %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_copysign_f32:
-; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bif.16b v0, v1, v2
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_copysign_f32:
-; CHECK-FP16-NEXT: mvni.8h	v2, #128, lsl #8
 ; CHECK-FP16-NEXT: fcvt h1, s1
+; CHECK-FP16-NEXT: mvni.8h	v2, #128, lsl #8
 ; CHECK-FP16-NEXT: bif.16b v0, v1, v2
 ; CHECK-FP16-NEXT: ret
 
@@ -1138,16 +1138,16 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_copysign_f64:
-; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s1, d1
 ; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bif.16b v0, v1, v2
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_copysign_f64:
-; CHECK-FP16-NEXT: mvni.8h v2, #128, lsl #8
 ; CHECK-FP16-NEXT: fcvt h1, d1
+; CHECK-FP16-NEXT: mvni.8h v2, #128, lsl #8
 ; CHECK-FP16-NEXT: bif.16b v0, v1, v2
 ; CHECK-FP16-NEXT: ret
 
@@ -1161,9 +1161,9 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; away the (fpext (fp_round <result>)) here.
 
 ; CHECK-CVT-LABEL: test_copysign_extended:
-; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: mvni.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bif.16b v0, v1, v2
 ; CHECK-CVT-NEXT: ret
 

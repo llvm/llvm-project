@@ -5995,6 +5995,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+      if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+        CmdArgs.push_back("-fopenmp-assume-no-thread-state");
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code
