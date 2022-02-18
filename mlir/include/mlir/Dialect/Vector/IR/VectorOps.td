@@ -447,7 +447,8 @@ def Vector_ShuffleOp :
      PredOpTrait<"first operand v1 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      PredOpTrait<"second operand v2 and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 1>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 1>>,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
      Arguments<(ins AnyVector:$v1, AnyVector:$v2, I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
@@ -496,7 +497,7 @@ def Vector_ShuffleOp :
       return vector().getType().cast<VectorType>();
     }
   }];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
   let hasVerifier = 1;
 }
 
