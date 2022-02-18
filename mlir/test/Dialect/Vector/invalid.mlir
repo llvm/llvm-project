@@ -104,7 +104,7 @@ func @extract_element(%arg0: vector<4x4xf32>) {
 // -----
 
 func @extract_vector_type(%arg0: index) {
-  // expected-error@+1 {{expected vector type}}
+  // expected-error@+1 {{invalid kind of type specified}}
   %1 = vector.extract %arg0[] : index
 }
 
