@@ -700,3 +700,48 @@ define i32 @ntest16(i32 %x) {
   %mul = mul nsw i32 %x, -16
   ret i32 %mul
 }
+
+define i32 @muladd_demand(i32 %x, i32 %y) {
+; CHECK-LABEL: muladd_demand:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #131008
+; CHECK-NEXT:    madd w8, w0, w8, w1
+; CHECK-NEXT:    and w0, w8, #0x1ffc0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: muladd_demand:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #131008
+; GISEL-NEXT:    madd w8, w0, w8, w1
+; GISEL-NEXT:    and w0, w8, #0x1ffc0
+; GISEL-NEXT:    ret
+  %m = mul i32 %x, 131008 ; 0x0001ffc0
+  %a = add i32 %y, %m
+  %r = and i32 %a, 131008
+  ret i32 %r
+}
+
+define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: muladd_demand_commute:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #131008
+; CHECK-NEXT:    dup v2.4s, w8
+; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
+; CHECK-NEXT:    movi v0.4s, #1, msl #16
+; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: muladd_demand_commute:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI42_1
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI42_1]
+; GISEL-NEXT:    adrp x8, .LCPI42_0
+; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
+; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI42_0]
+; GISEL-NEXT:    and v0.16b, v1.16b, v0.16b
+; GISEL-NEXT:    ret
+  %m = mul <4 x i32> %x, <i32 131008, i32 131008, i32 131008, i32 131008>
+  %a = add <4 x i32> %m, %y
+  %r = and <4 x i32> %a, <i32 131071, i32 131071, i32 131071, i32 131071>
+  ret <4 x i32> %r
+}

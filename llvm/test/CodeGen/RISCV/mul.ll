@@ -1547,3 +1547,54 @@ define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %5
 }
 
+define i8 @muladd_demand(i8 %x, i8 %y) nounwind {
+; RV32I-LABEL: muladd_demand:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    li a1, 14
+; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    add a0, s0, a0
+; RV32I-NEXT:    andi a0, a0, 15
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IM-LABEL: muladd_demand:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    li a2, 14
+; RV32IM-NEXT:    mul a0, a0, a2
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    andi a0, a0, 15
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: muladd_demand:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    li a1, 14
+; RV64I-NEXT:    call __muldi3@plt
+; RV64I-NEXT:    addw a0, s0, a0
+; RV64I-NEXT:    andi a0, a0, 15
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: muladd_demand:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    li a2, 14
+; RV64IM-NEXT:    mulw a0, a0, a2
+; RV64IM-NEXT:    addw a0, a1, a0
+; RV64IM-NEXT:    andi a0, a0, 15
+; RV64IM-NEXT:    ret
+  %m = mul i8 %x, 14
+  %a = add i8 %y, %m
+  %r = and i8 %a, 15
+  ret i8 %r
+}
