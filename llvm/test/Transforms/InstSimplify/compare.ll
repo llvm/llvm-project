@@ -2737,11 +2737,10 @@ define i1 @scalar_vectors_are_non_empty() {
   ret i1 %res
 }
 
-; TODO: Never equal
+; Never equal
 define i1 @byval_args_inequal(i32* byval(i32) %a, i32* byval(i32) %b) {
 ; CHECK-LABEL: @byval_args_inequal(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %res = icmp ne i32* %a, %b
   ret i1 %res
@@ -2759,12 +2758,10 @@ define i1 @neg_args_adjacent(i32* byval(i32) %a, i32* byval(i32) %b) {
   ret i1 %res
 }
 
-; TODO: Never equal
+; Never equal
 define i1 @test_byval_alloca_inequal(i32* byval(i32) %a) {
 ; CHECK-LABEL: @test_byval_alloca_inequal(
-; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = alloca i32
   %res = icmp ne i32* %a, %b
@@ -2812,11 +2809,10 @@ define i1 @globals_offset_inequal() {
 }
 
 
-; TODO: Never equal
+; Never equal
 define i1 @test_byval_global_inequal(i32* byval(i32) %a) {
 ; CHECK-LABEL: @test_byval_global_inequal(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A:%.*]], @B
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = alloca i32
   %res = icmp ne i32* %a, @B

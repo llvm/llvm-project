@@ -2555,7 +2555,19 @@ static bool HaveNonOverlappingStorage(const Value *V1, const Value *V2) {
   //
   // So, we'll assume that two non-empty allocas have different addresses
   // for now.
-  return isa<AllocaInst>(V1) &&
+  auto isByValArg = [](const Value *V) {
+    const Argument *A = dyn_cast<Argument>(V);
+    return A && A->hasByValAttr();
+  };
+
+  // Byval args are backed by store which does not overlap with each other,
+  // allocas, or globals.
+  if (isByValArg(V1))
+    return isa<AllocaInst>(V2) || isa<GlobalVariable>(V2) || isByValArg(V2);
+  if (isByValArg(V2))
+    return isa<AllocaInst>(V1) || isa<GlobalVariable>(V1) || isByValArg(V1);
+
+ return isa<AllocaInst>(V1) &&
     (isa<AllocaInst>(V2) || isa<GlobalVariable>(V2));
 }
 
@@ -2659,8 +2671,12 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
       uint64_t LHSSize, RHSSize;
       ObjectSizeOpts Opts;
       Opts.EvalMode = ObjectSizeOpts::Mode::Min;
-      Opts.NullIsUnknownSize =
-          NullPointerIsDefined(cast<AllocaInst>(LHS)->getFunction());
+      auto *F = [](Value *V) {
+        if (auto *I = dyn_cast<Instruction>(V))
+          return I->getFunction();
+        return cast<Argument>(V)->getParent();
+      }(LHS);
+      Opts.NullIsUnknownSize = NullPointerIsDefined(F);
       if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
           getObjectSize(RHS, RHSSize, DL, TLI, Opts) &&
           !LHSOffset.isNegative() && !RHSOffset.isNegative() &&
