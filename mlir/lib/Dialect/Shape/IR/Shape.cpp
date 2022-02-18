@@ -663,11 +663,6 @@ LogicalResult AssumingAllOp::verify() {
   return success();
 }
 
-void AssumingAllOp::build(OpBuilder &b, OperationState &state,
-                          ValueRange inputs) {
-  build(b, state, b.getType<WitnessType>(), inputs);
-}
-
 //===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
