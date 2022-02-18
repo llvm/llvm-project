@@ -4,28 +4,39 @@
 
 ; <256 x float>
 
-;; TODO v256i1 zero-mask isel
-;; ; Function Attrs: nounwind
-;; define fastcc <256 x i1> @fcmp_false_vv_v256f32(<256 x float> %x, <256 x float> %y) {
-;;   %z = fcmp false <256 x float> %x, %y
-;;   ret <256 x i1> %z
-;; }
-;;
-;; ; Function Attrs: nounwind
-;; define fastcc <256 x i1> @fcmp_false_sv_v256f32(float %x, <256 x float> %y) {
-;;   %xins = insertelement <256 x float> undef, float %x, i32 0
-;;   %vx = shufflevector <256 x float> %xins, <256 x float> undef, <256 x i32> zeroinitializer
-;;   %z = fcmp false <256 x float> %vx, %y
-;;   ret <256 x i1> %z
-;; }
-;;
-;; ; Function Attrs: nounwind
-;; define fastcc <256 x i1> @fcmp_false_vs_v256f32(<256 x float> %x, float %y) {
-;;   %yins = insertelement <256 x float> undef, float %y, i32 0
-;;   %vy = shufflevector <256 x float> %yins, <256 x float> undef, <256 x i32> zeroinitializer
-;;   %z = fcmp false <256 x float> %x, %vy
-;;   ret <256 x i1> %z
-;; }
+; Function Attrs: nounwind
+define fastcc <256 x i1> @fcmp_false_vv_v256f32(<256 x float> %x, <256 x float> %y) {
+; CHECK-LABEL: fcmp_false_vv_v256f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorm %vm1, %vm0, %vm0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %z = fcmp false <256 x float> %x, %y
+  ret <256 x i1> %z
+}
+
+; Function Attrs: nounwind
+define fastcc <256 x i1> @fcmp_false_sv_v256f32(float %x, <256 x float> %y) {
+; CHECK-LABEL: fcmp_false_sv_v256f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorm %vm1, %vm0, %vm0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %xins = insertelement <256 x float> undef, float %x, i32 0
+  %vx = shufflevector <256 x float> %xins, <256 x float> undef, <256 x i32> zeroinitializer
+  %z = fcmp false <256 x float> %vx, %y
+  ret <256 x i1> %z
+}
+
+; Function Attrs: nounwind
+define fastcc <256 x i1> @fcmp_false_vs_v256f32(<256 x float> %x, float %y) {
+; CHECK-LABEL: fcmp_false_vs_v256f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorm %vm1, %vm0, %vm0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %yins = insertelement <256 x float> undef, float %y, i32 0
+  %vy = shufflevector <256 x float> %yins, <256 x float> undef, <256 x i32> zeroinitializer
+  %z = fcmp false <256 x float> %x, %vy
+  ret <256 x i1> %z
+}
 
 ; Function Attrs: nounwind
 define fastcc <256 x i1> @fcmp_oeq_vv_v256f32(<256 x float> %x, <256 x float> %y) {
@@ -657,25 +668,36 @@ define fastcc <256 x i1> @fcmp_une_vs_v256f32(<256 x float> %x, float %y) {
   ret <256 x i1> %z
 }
 
-;; TODO v256i1 all-one mask isel.
-;; ; Function Attrs: nounwind
-;; define fastcc <256 x i1> @fcmp_true_vv_v256f32(<256 x float> %x, <256 x float> %y) {
-;;   %z = fcmp true <256 x float> %x, %y
-;;   ret <256 x i1> %z
-;; }
-;;
-;; ; Function Attrs: nounwind
-;; define fastcc <256 x i1> @fcmp_true_sv_v256f32(float %x, <256 x float> %y) {
-;;   %xins = insertelement <256 x float> undef, float %x, i32 0
-;;   %vx = shufflevector <256 x float> %xins, <256 x float> undef, <256 x i32> zeroinitializer
-;;   %z = fcmp true <256 x float> %vx, %y
-;;   ret <256 x i1> %z
-;; }
-;;
-;; ; Function Attrs: nounwind
-;; define fastcc <256 x i1> @fcmp_true_vs_v256f32(<256 x float> %x, float %y) {
-;;   %yins = insertelement <256 x float> undef, float %y, i32 0
-;;   %vy = shufflevector <256 x float> %yins, <256 x float> undef, <256 x i32> zeroinitializer
-;;   %z = fcmp true <256 x float> %x, %vy
-;;   ret <256 x i1> %z
-;; }
+; Function Attrs: nounwind
+define fastcc <256 x i1> @fcmp_true_vv_v256f32(<256 x float> %x, <256 x float> %y) {
+; CHECK-LABEL: fcmp_true_vv_v256f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andm %vm1, %vm0, %vm0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %z = fcmp true <256 x float> %x, %y
+  ret <256 x i1> %z
+}
+
+; Function Attrs: nounwind
+define fastcc <256 x i1> @fcmp_true_sv_v256f32(float %x, <256 x float> %y) {
+; CHECK-LABEL: fcmp_true_sv_v256f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andm %vm1, %vm0, %vm0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %xins = insertelement <256 x float> undef, float %x, i32 0
+  %vx = shufflevector <256 x float> %xins, <256 x float> undef, <256 x i32> zeroinitializer
+  %z = fcmp true <256 x float> %vx, %y
+  ret <256 x i1> %z
+}
+
+; Function Attrs: nounwind
+define fastcc <256 x i1> @fcmp_true_vs_v256f32(<256 x float> %x, float %y) {
+; CHECK-LABEL: fcmp_true_vs_v256f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andm %vm1, %vm0, %vm0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %yins = insertelement <256 x float> undef, float %y, i32 0
+  %vy = shufflevector <256 x float> %yins, <256 x float> undef, <256 x i32> zeroinitializer
+  %z = fcmp true <256 x float> %x, %vy
+  ret <256 x i1> %z
+}
