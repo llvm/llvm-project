@@ -37,9 +37,7 @@ void LogChannelSwift::Initialize() {
 
 void LogChannelSwift::Terminate() { Log::Unregister("swift"); }
 
-Log *lldb_private::GetSwiftHealthLog() {
-  return g_channel.GetLogIfAny(LIBLLDB_SWIFT_LOG_HEALTH);
-}
+Log *lldb_private::GetSwiftHealthLog() { return GetLog(SwiftLog::Health); }
 
 llvm::StringRef lldb_private::GetSwiftHealthLogData() {
   return g_swift_log_buffer;

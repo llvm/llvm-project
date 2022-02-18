@@ -18,8 +18,6 @@ enum class SwiftLog : Log::MaskType {
   Health = Log::ChannelFlag<0>,
   LLVM_MARK_AS_BITMASK_ENUM(Health)
 };
-#define LIBLLDB_SWIFT_LOG_HEALTH (1u << 1)
-#define SWIFT_LOG_DEFAULT (LIBLLDB_SWIFT_LOG_HEALTH)
 
 class LogChannelSwift {
   static Log::Channel g_channel;

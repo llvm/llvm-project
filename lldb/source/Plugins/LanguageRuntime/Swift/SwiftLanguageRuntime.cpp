@@ -221,8 +221,7 @@ public:
 
 #define STUB_LOG()                                                             \
   do {                                                                         \
-    LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | \
-                                                     LIBLLDB_LOG_TYPES),       \
+    LLDB_LOGF(GetLog(LLDBLog::Expressions | LLDBLog::Types),                   \
               g_stub_log_message,                                              \
               GetStandardLibraryName(m_process).AsCString());                  \
     assert(false && "called into swift language runtime stub");                \
@@ -468,19 +467,19 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
 
     auto &triple = exe_module->GetArchitecture().GetTriple();
     if (triple.isArch64Bit()) {
-      LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Initializing a 64-bit reflection context (%s) for \"%s\"",
                 triple.str().c_str(), objc_interop_msg);
       m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
           this->GetMemoryReader(), objc_interop);
     } else if (triple.isArch32Bit()) {
-      LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Initializing a 32-bit reflection context (%s) for \"%s\"",
                 triple.str().c_str(), objc_interop_msg);
       m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
           this->GetMemoryReader(), objc_interop);
     } else {
-      LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Could not initialize reflection context for \"%s\"",
                 triple.str().c_str());
     }
@@ -516,7 +515,7 @@ void SwiftLanguageRuntimeImpl::SetupExclusivity() {
   m_dynamic_exclusivity_flag_addr = FindSymbolForSwiftObject(
       m_process, RuntimeKind::Swift, "_swift_disableExclusivityChecking",
       eSymbolTypeData);
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log(GetLog(LLDBLog::Expressions));
   if (log)
     log->Printf(
         "SwiftLanguageRuntime: _swift_disableExclusivityChecking = %llu",
@@ -598,7 +597,7 @@ GetObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
     obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
     break;
   default:
-    if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES))
+    if (Log *log = GetLog(LLDBLog::Types))
       log->Printf("%s: Could not find out swift reflection section names for "
                   "object format type.",
                   __FUNCTION__);
@@ -783,15 +782,14 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
 
   if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS) {
     if (obj_file->GetType() != ObjectFile::eTypeJIT)
-      if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES))
+      if (Log *log = GetLog(LLDBLog::Types))
         log->Printf("%s: failed to get start address for %s.", __FUNCTION__,
                     obj_file->GetFileSpec().GetFilename().GetCString());
     return false;
   }
   bool found = HasReflectionInfo(obj_file);
-  LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "%s reflection metadata in \"%s\"", found ? "Adding" : "No",
-            obj_file->GetFileSpec().GetCString());
+  LLDB_LOGF(GetLog(LLDBLog::Types), "%s reflection metadata in \"%s\"",
+            found ? "Adding" : "No", obj_file->GetFileSpec().GetCString());
   if (!found)
     return true;
 
@@ -833,7 +831,7 @@ void SwiftLanguageRuntimeImpl::ModulesDidLoad(const ModuleList &module_list) {
 
 std::string 
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log(GetLog(LLDBLog::DataFormatters));
   std::string expr_string
       = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject({0})",
                       object.GetName().GetCString()).str();
@@ -845,7 +843,7 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
 
 std::string 
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Ref(ValueObject &object) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log(GetLog(LLDBLog::DataFormatters));
 
   StreamString expr_string;
   std::string expr_str 
@@ -869,7 +867,7 @@ std::string
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
     lldb::addr_t &copy_location)
 {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log(GetLog(LLDBLog::DataFormatters));
 
   ValueObjectSP static_sp(object.GetStaticValue());
 
@@ -937,7 +935,7 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
     std::string &expr_string, 
     Stream &result)
 {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log(GetLog(LLDBLog::DataFormatters));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
@@ -1709,7 +1707,7 @@ void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
     return;
 
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log(GetLog(LLDBLog::Expressions));
   LLDB_LOG(log,
            "SwiftLanguageRuntime: starting user expression. "
            "Number active: %u",
@@ -1777,7 +1775,7 @@ void SwiftLanguageRuntimeImpl::DidFinishExecutingUserExpression(
     return;
 
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log(GetLog(LLDBLog::Expressions));
 
   --m_active_user_expr_count;
   LLDB_LOG(log,

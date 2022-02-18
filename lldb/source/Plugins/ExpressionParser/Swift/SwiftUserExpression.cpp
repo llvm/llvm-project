@@ -168,7 +168,7 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
 }
 
 void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "SwiftUserExpression::ScanContext()");
   LLDB_SCOPED_TIMER();
 
@@ -279,7 +279,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
                                 bool generate_debug_info) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
   Status err;

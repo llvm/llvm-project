@@ -30,8 +30,7 @@
 using namespace lldb_private;
 
 SwiftSILManipulator::SwiftSILManipulator(swift::SILBuilder &builder)
-    : m_builder(builder),
-      m_log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {}
+    : m_builder(builder), m_log(GetLog(LLDBLog::Expressions)) {}
 
 swift::SILValue SwiftSILManipulator::emitLValueForVariable(
     swift::VarDecl *var, SwiftExpressionParser::SILVariableInfo &info) {

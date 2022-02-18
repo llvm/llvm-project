@@ -32,7 +32,7 @@ lldb::RecognizedStackFrameSP SwiftRuntimeFailureFrameRecognizer::RecognizeFrame(
   StackFrameSP most_relevant_frame_sp = thread_sp->GetStackFrameAtIndex(1);
 
   if (!most_relevant_frame_sp) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOG(
         log,
         "Swift Runtime Failure Recognizer: Hit unwinding bound (1 frame)!");

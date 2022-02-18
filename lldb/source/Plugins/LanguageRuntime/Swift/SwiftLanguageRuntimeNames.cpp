@@ -421,7 +421,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
 
   ThreadPlanSP new_thread_plan_sp;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log(GetLog(LLDBLog::Step));
   StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
   if (!stack_sp)
     return new_thread_plan_sp;
