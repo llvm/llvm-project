@@ -52055,22 +52055,22 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2), DAG)) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue BorrowIn = N->getOperand(2);
+
+  if (SDValue Flags = combineCarryThroughADD(BorrowIn, DAG)) {
     MVT VT = N->getSimpleValueType(0);
     SDVTList VTs = DAG.getVTList(VT, MVT::i32);
-    return DAG.getNode(X86ISD::SBB, SDLoc(N), VTs,
-                       N->getOperand(0), N->getOperand(1),
-                       Flags);
+    return DAG.getNode(X86ISD::SBB, SDLoc(N), VTs, LHS, RHS, Flags);
   }
 
   // Fold SBB(SUB(X,Y),0,Carry) -> SBB(X,Y,Carry)
   // iff the flag result is dead.
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  if (Op0.getOpcode() == ISD::SUB && isNullConstant(Op1) &&
+  if (LHS.getOpcode() == ISD::SUB && isNullConstant(RHS) &&
       !N->hasAnyUseOfValue(1))
-    return DAG.getNode(X86ISD::SBB, SDLoc(N), N->getVTList(), Op0.getOperand(0),
-                       Op0.getOperand(1), N->getOperand(2));
+    return DAG.getNode(X86ISD::SBB, SDLoc(N), N->getVTList(), LHS.getOperand(0),
+                       LHS.getOperand(1), BorrowIn);
 
   return SDValue();
 }
@@ -52078,32 +52078,32 @@ static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
 // Optimize RES, EFLAGS = X86ISD::ADC LHS, RHS, EFLAGS
 static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue CarryIn = N->getOperand(2);
+
   // If the LHS and RHS of the ADC node are zero, then it can't overflow and
   // the result is either zero or one (depending on the input carry bit).
   // Strength reduce this down to a "set on carry" aka SETCC_CARRY&1.
-  if (X86::isZeroNode(N->getOperand(0)) &&
-      X86::isZeroNode(N->getOperand(1)) &&
+  if (X86::isZeroNode(LHS) && X86::isZeroNode(RHS) &&
       // We don't have a good way to replace an EFLAGS use, so only do this when
       // dead right now.
       SDValue(N, 1).use_empty()) {
     SDLoc DL(N);
     EVT VT = N->getValueType(0);
     SDValue CarryOut = DAG.getConstant(0, DL, N->getValueType(1));
-    SDValue Res1 =
-        DAG.getNode(ISD::AND, DL, VT,
-                    DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                                DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                                N->getOperand(2)),
-                    DAG.getConstant(1, DL, VT));
+    SDValue Res1 = DAG.getNode(
+        ISD::AND, DL, VT,
+        DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                    DAG.getTargetConstant(X86::COND_B, DL, MVT::i8), CarryIn),
+        DAG.getConstant(1, DL, VT));
     return DCI.CombineTo(N, Res1, CarryOut);
   }
 
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2), DAG)) {
+  if (SDValue Flags = combineCarryThroughADD(CarryIn, DAG)) {
     MVT VT = N->getSimpleValueType(0);
     SDVTList VTs = DAG.getVTList(VT, MVT::i32);
-    return DAG.getNode(X86ISD::ADC, SDLoc(N), VTs,
-                       N->getOperand(0), N->getOperand(1),
-                       Flags);
+    return DAG.getNode(X86ISD::ADC, SDLoc(N), VTs, LHS, RHS, Flags);
   }
 
   return SDValue();
