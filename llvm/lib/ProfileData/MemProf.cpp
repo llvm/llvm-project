@@ -15,7 +15,7 @@ void serializeRecords(const ArrayRef<MemProfRecord> Records,
   for (const MemProfRecord &MR : Records) {
     LE.write<uint64_t>(MR.CallStack.size());
     for (const MemProfRecord::Frame &F : MR.CallStack) {
-      F.write(OS);
+      F.serialize(OS);
     }
     MR.Info.serialize(Schema, OS);
   }
@@ -33,8 +33,8 @@ SmallVector<MemProfRecord, 4> deserializeRecords(const MemProfSchema &Schema,
     const uint64_t NumFrames =
         endian::readNext<uint64_t, little, unaligned>(Ptr);
     for (uint64_t J = 0; J < NumFrames; J++) {
-      const auto F = *reinterpret_cast<const MemProfRecord::Frame *>(Ptr);
-      Ptr += sizeof(MemProfRecord::Frame);
+      const auto F = MemProfRecord::Frame::deserialize(Ptr);
+      Ptr += MemProfRecord::Frame::serializedSize();
       MR.CallStack.push_back(F);
     }
     MR.Info.deserialize(Schema, Ptr);
