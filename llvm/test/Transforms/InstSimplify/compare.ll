@@ -2737,5 +2737,76 @@ define i1 @scalar_vectors_are_non_empty() {
   ret i1 %res
 }
 
+; TODO: Never equal
+define i1 @byval_args_inequal(i32* byval(i32) %a, i32* byval(i32) %b) {
+; CHECK-LABEL: @byval_args_inequal(
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %res = icmp ne i32* %a, %b
+  ret i1 %res
+}
+
+; Arguments can be adjacent on the stack
+define i1 @neg_args_adjacent(i32* byval(i32) %a, i32* byval(i32) %b) {
+; CHECK-LABEL: @neg_args_adjacent(
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 1
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A_OFF]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %a.off = getelementptr i32, i32* %a, i32 1
+  %res = icmp ne i32* %a.off, %b
+  ret i1 %res
+}
+
+; TODO: Never equal
+define i1 @test_byval_alloca_inequal(i32* byval(i32) %a) {
+; CHECK-LABEL: @test_byval_alloca_inequal(
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %b = alloca i32
+  %res = icmp ne i32* %a, %b
+  ret i1 %res
+}
+
+; Byval argument can be immediately before alloca, and crossing
+; over is allowed.
+define i1 @neg_byval_alloca_adjacent(i32* byval(i32) %a) {
+; CHECK-LABEL: @neg_byval_alloca_adjacent(
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 1
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A_OFF]], [[B]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %b = alloca i32
+  %a.off = getelementptr i32, i32* %a, i32 1
+  %res = icmp ne i32* %a.off, %b
+  ret i1 %res
+}
+
+@A = global i32 0
+@B = global i32 0
+@A.alias = alias i32, i32* @A
+
+define i1 @globals_inequal() {
+; CHECK-LABEL: @globals_inequal(
+; CHECK-NEXT:    ret i1 true
+;
+  %res = icmp ne i32* @A, @B
+  ret i1 %res
+}
+
+define i1 @neg_global_alias() {
+; CHECK-LABEL: @neg_global_alias(
+; CHECK-NEXT:    ret i1 icmp ne (i32* @A, i32* @A.alias)
+;
+  %res = icmp ne i32* @A, @A.alias
+  ret i1 %res
+}
+
+; TODO: Add coverage for global aliases, link once, etc..
+
 
 attributes #0 = { null_pointer_is_valid }
