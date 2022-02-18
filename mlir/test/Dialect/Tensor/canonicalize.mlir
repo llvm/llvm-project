@@ -621,6 +621,17 @@ func @fold_extract_insert(%input : tensor<?x?x?xf32>, %slice: tensor<4x?x8xf32>,
 
 // -----
 
+// CHECK-LABEL: func @fold_extract_constant_splat
+//   CHECK-NOT: tensor.extract_slice
+//       CHECK: arith.constant dense<42> : tensor<4x4xi32>
+func @fold_extract_constant_splat() -> (tensor<4x4xi32>) {
+  %cst = arith.constant dense<42> : tensor<1024x1024xi32>
+  %1 = tensor.extract_slice %cst[0,0] [4,4] [1, 1] : tensor<1024x1024xi32> to tensor<4x4xi32>
+  return %1 : tensor<4x4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_overlapping_insert
 //  CHECK-SAME: %[[INPUT:.+]]: tensor<?x?x?xf32>, %{{.+}}: tensor<4x?x8xf32>, %[[SLICE2:.+]]: tensor<4x?x8xf32>
 func @fold_overlapping_insert(%input : tensor<?x?x?xf32>, %slice1: tensor<4x?x8xf32>, %slice2: tensor<4x?x8xf32>, %i: index, %size: index) -> (tensor<?x?x?xf32>) {

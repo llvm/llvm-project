@@ -1227,7 +1227,12 @@ static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
   return {};
 }
 
-OpFoldResult ExtractSliceOp::fold(ArrayRef<Attribute>) {
+OpFoldResult ExtractSliceOp::fold(ArrayRef<Attribute> operands) {
+  if (auto splat = operands[0].dyn_cast_or_null<SplatElementsAttr>()) {
+    auto resultType = result().getType().cast<ShapedType>();
+    if (resultType.hasStaticShape())
+      return splat.resizeSplat(resultType);
+  }
   if (getSourceType() == getType() &&
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
     return this->source();
