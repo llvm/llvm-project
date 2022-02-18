@@ -287,7 +287,8 @@ enum class InstrProfKind {
   CS = 0x8, // A context sensitive IR-level profile.
   SingleByteCoverage = 0x10, // Use single byte probes for coverage.
   FunctionEntryOnly = 0x20,  // Only instrument the function entry basic block.
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FunctionEntryOnly)
+  MemProf = 0x40, // A memory profile collected using -fprofile=memory.
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/MemProf)
 };
 
 const std::error_category &instrprof_category();
@@ -1011,7 +1012,9 @@ enum ProfVersion {
   Version6 = 6,
   // An additional counter is added around logical operators.
   Version7 = 7,
-  // The current version is 7.
+  // An additional (optional) memory profile type is added.
+  Version8 = 8,
+  // The current version is 8.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1028,6 +1031,7 @@ struct Header {
   uint64_t Unused; // Becomes unused since version 4
   uint64_t HashType;
   uint64_t HashOffset;
+  uint64_t MemProfOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
