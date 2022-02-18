@@ -28,9 +28,6 @@
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
-#ifdef EXPENSIVE_CHECKS
-#include "llvm/IR/StructuralHash.h"
-#endif
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -472,7 +469,7 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
     initializeAnalysisImpl(P);
 
 #ifdef EXPENSIVE_CHECKS
-    uint64_t RefHash = StructuralHash(CG.getModule());
+    uint64_t RefHash = P->structuralHash(CG.getModule());
 #endif
 
     // Actually run this pass on the current SCC.
@@ -482,7 +479,7 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
     Changed |= LocalChanged;
 
 #ifdef EXPENSIVE_CHECKS
-    if (!LocalChanged && (RefHash != StructuralHash(CG.getModule()))) {
+    if (!LocalChanged && (RefHash != P->structuralHash(CG.getModule()))) {
       llvm::errs() << "Pass modifies its input and doesn't report it: "
                    << P->getPassName() << "\n";
       llvm_unreachable("Pass modifies its input and doesn't report it");

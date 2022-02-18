@@ -19,9 +19,6 @@
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
-#ifdef EXPENSIVE_CHECKS
-#include "llvm/IR/StructuralHash.h"
-#endif
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -193,12 +190,12 @@ bool LPPassManager::runOnFunction(Function &F) {
         PassManagerPrettyStackEntry X(P, *CurrentLoop->getHeader());
         TimeRegion PassTimer(getPassTimer(P));
 #ifdef EXPENSIVE_CHECKS
-        uint64_t RefHash = StructuralHash(F);
+        uint64_t RefHash = P->structuralHash(F);
 #endif
         LocalChanged = P->runOnLoop(CurrentLoop, *this);
 
 #ifdef EXPENSIVE_CHECKS
-        if (!LocalChanged && (RefHash != StructuralHash(F))) {
+        if (!LocalChanged && (RefHash != P->structuralHash(F))) {
           llvm::errs() << "Pass modifies its input and doesn't report it: "
                        << P->getPassName() << "\n";
           llvm_unreachable("Pass modifies its input and doesn't report it");

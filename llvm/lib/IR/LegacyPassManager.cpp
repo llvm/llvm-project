@@ -29,10 +29,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
-#ifdef EXPENSIVE_CHECKS
-#include "llvm/IR/StructuralHash.h"
-#endif
-
 using namespace llvm;
 
 // See PassManagers.h for Pass Manager infrastructure overview.
@@ -1429,12 +1425,12 @@ bool FPPassManager::runOnFunction(Function &F) {
       PassManagerPrettyStackEntry X(FP, F);
       TimeRegion PassTimer(getPassTimer(FP));
 #ifdef EXPENSIVE_CHECKS
-      uint64_t RefHash = StructuralHash(F);
+      uint64_t RefHash = FP->structuralHash(F);
 #endif
       LocalChanged |= FP->runOnFunction(F);
 
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
-      if (!LocalChanged && (RefHash != StructuralHash(F))) {
+      if (!LocalChanged && (RefHash != FP->structuralHash(F))) {
         llvm::errs() << "Pass modifies its input and doesn't report it: "
                      << FP->getPassName() << "\n";
         llvm_unreachable("Pass modifies its input and doesn't report it");
@@ -1543,13 +1539,13 @@ MPPassManager::runOnModule(Module &M) {
       TimeRegion PassTimer(getPassTimer(MP));
 
 #ifdef EXPENSIVE_CHECKS
-      uint64_t RefHash = StructuralHash(M);
+      uint64_t RefHash = MP->structuralHash(M);
 #endif
 
       LocalChanged |= MP->runOnModule(M);
 
 #ifdef EXPENSIVE_CHECKS
-      assert((LocalChanged || (RefHash == StructuralHash(M))) &&
+      assert((LocalChanged || (RefHash == MP->structuralHash(M))) &&
              "Pass modifies its input and doesn't report it.");
 #endif
 
