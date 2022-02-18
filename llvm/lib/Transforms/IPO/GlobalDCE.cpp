@@ -281,7 +281,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
       VFESafeVTablesAndFns.erase(VTable);
-      return;
+      continue;
     }
 
     Ptr = Ptr->stripPointerCasts();
@@ -295,7 +295,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
       LLVM_DEBUG(dbgs() << "vtable entry is not function pointer or a .ptrauth "
                            "global variable!\n");
       VFESafeVTablesAndFns.erase(VTable);
-      return;
+      continue;
     }
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "
