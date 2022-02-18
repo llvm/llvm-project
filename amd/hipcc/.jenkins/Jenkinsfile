@@ -1,0 +1,110 @@
+def hipBuildTest(String backendLabel) {
+        node(backendLabel) {
+          stage("Source sync ${backendLabel}") {
+
+            // Checkout hip repository with the PR patch
+            dir("${WORKSPACE}/HIPCC") {
+                   checkout scm
+                   env.HIPCC_DIR = "${WORKSPACE}" + "/HIPCC"
+            }
+            
+            // Clone HIP repository
+            dir("${WORKSPACE}/hip") {
+               git branch: 'develop',
+               url: 'https://github.com/ROCm-Developer-Tools/HIP'
+               env.HIP_DIR = "${WORKSPACE}" + "/hip"
+            }
+
+            // Clone hipamd repository
+            dir("${WORKSPACE}/hipamd") {
+              git branch: 'develop',
+              url: 'https://github.com/ROCm-Developer-Tools/hipamd'
+            }
+
+            // Clone vdi and opencl for only amd backend server
+            if (backendLabel =~ /.*amd.*/) {  
+               dir("${WORKSPACE}/ROCm-OpenCL-Runtime") {
+                   git branch:'develop',
+                   url: 'https://github.com/RadeonOpenCompute/ROCm-OpenCL-Runtime'
+                   env.OPENCL_DIR = "${WORKSPACE}" + "/ROCm-OpenCL-Runtime"
+               }
+               dir("${WORKSPACE}/ROCclr") {
+                   git branch:'develop',
+                   url: 'https://github.com/ROCm-Developer-Tools/ROCclr'
+                   env.ROCclr_DIR = "${WORKSPACE}" + "/ROCclr"
+               }
+            }
+        }
+
+        stage("Build - HIPCC") {
+            // Running the build on HIPCC workspace
+            dir("${WORKSPACE}/HIPCC") {
+                sh  """#!/usr/bin/env bash
+                    set -x
+                    rm -rf build
+                    mkdir build
+                    cd build/
+                    cmake ..
+                    make
+                    """
+            }
+        }
+
+        stage("Build - Catch2 framework") {
+            // Running the build on hipamd workspace
+            dir("${WORKSPACE}/hipamd") {
+                sh  """#!/usr/bin/env bash
+                    set -x
+                    mkdir -p build
+                    cd build
+                    # Check if backend label contains string "amd" or backend host is a server with amd gpu
+                    if [[ $backendLabel =~ amd ]]; then
+                        cmake -DHIP_CATCH_TEST=1 -DHIP_PATH=\$PWD/install -DHIPCC_BIN_DIR=\$HIPCC_DIR/build -DHIP_COMMON_DIR=\$HIP_DIR -DAMD_OPENCL_PATH=\$OPENCL_DIR -DROCCLR_PATH=\$ROCclr_DIR -DCMAKE_PREFIX_PATH="/opt/rocm/" -DCMAKE_INSTALL_PREFIX=\$PWD/install ..
+                    else
+                        export HIP_PLATFORM=nvidia
+                        export HIP_COMPILER=nvcc
+                        export HIP_RUNTIME=cuda
+                        cmake -DHIP_CATCH_TEST=1 -DHIP_PATH=\$PWD/install -DHIPCC_BIN_DIR=\$HIPCC_DIR/build -DHIP_COMMON_DIR=$HIP_DIR -DCMAKE_INSTALL_PREFIX=\$PWD/install ..
+                    fi
+                    make install  -j\$(nproc)
+                    if [[ $backendLabel =~ amd ]]; then
+                        make build_tests  -j\$(nproc)
+                    else
+                        HIP_COMPILER=nvcc HIP_PLATFORM=nvidia make build_tests -j\$(nproc)
+                    fi
+                    """
+            }
+        }
+
+        stage('HIP Unit Tests - Catch2 framework') {
+            dir("${WORKSPACE}/hipamd/build") {
+                sh  """#!/usr/bin/env bash
+                    set -x
+                    # Check if backend label contains string "amd" or backend host is a server with amd gpu
+                    if [[ $backendLabel =~ amd ]]; then
+                        LLVM_PATH=/opt/rocm/llvm ctest -E 'Unit_hiprtc_saxpy'
+                    else
+                        make test
+                    fi
+                    """
+            }
+        }
+    }
+}
+
+timestamps {
+    node('external-bootstrap') {
+        skipDefaultCheckout()
+
+        // labels belonging to each backend - AMD, NVIDIA
+        String[] labels = ['hip-amd-vg20-ubu1804', 'hip-nvidia-rtx5000-ubu1804']
+        buildMap = [:]
+
+        labels.each { backendLabel ->
+            echo "backendLabel: ${backendLabel}"
+            buildMap[backendLabel] = { hipBuildTest(backendLabel) }
+        }
+        buildMap['failFast'] = false
+        parallel  buildMap
+    }
+}
