@@ -7930,7 +7930,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->verify();
 #endif
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
   // Check that all schedulable entities got scheduled
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
     BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
