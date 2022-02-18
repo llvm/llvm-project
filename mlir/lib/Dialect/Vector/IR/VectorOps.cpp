@@ -1900,11 +1900,6 @@ OpFoldResult vector::InsertOp::fold(ArrayRef<Attribute> operands) {
 // InsertMapOp
 //===----------------------------------------------------------------------===//
 
-void InsertMapOp::build(OpBuilder &builder, OperationState &result,
-                        Value vector, Value dest, ValueRange ids) {
-  InsertMapOp::build(builder, result, dest.getType(), vector, dest, ids);
-}
-
 LogicalResult InsertMapOp::verify() {
   if (getSourceVectorType().getRank() != getResultType().getRank())
     return emitOpError("expected source and destination vectors of same rank");

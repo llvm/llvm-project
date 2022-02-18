@@ -192,8 +192,7 @@ def Shape_DivOp : Shape_Op<"div", [NoSideEffect,
   }];
 }
 
-def Shape_ShapeEqOp : Shape_Op<"shape_eq",
-    [NoSideEffect, Commutative, InferTypeOpInterface]> {
+def Shape_ShapeEqOp : Shape_Op<"shape_eq", [NoSideEffect, Commutative]> {
   let summary = "Returns whether the input shapes or extent tensors are equal";
   let description = [{
     Takes one or more shape or extent tensor operands and determines whether
@@ -211,17 +210,6 @@ def Shape_ShapeEqOp : Shape_Op<"shape_eq",
   OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
     [{ build($_builder, $_state, ::llvm::makeArrayRef({lhs, rhs})); }]>,
   ];
-  let extraClassDeclaration = [{
-    // TODO: This should really be automatic. Figure out how to not need this defined.
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-    ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
-    ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
-    ::llvm::SmallVectorImpl<::mlir::Type>&inferredReturnTypes) {
-      inferredReturnTypes.push_back(::mlir::IntegerType::get(context,
-                                                             /*width=*/1));
-      return success();
-    };
-  }];
 
   let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
   let hasFolder = 1;
@@ -262,8 +250,7 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
-def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable",
-                                       [Commutative, InferTypeOpInterface]> {
+def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
   let summary = "Determines if 2+ shapes can be successfully broadcasted";
   let description = [{
     Given multiple input shapes or extent tensors, return a predicate specifying
@@ -289,17 +276,6 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable",
   OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs),
     [{ build($_builder, $_state, ::llvm::makeArrayRef({lhs, rhs})); }]>,
   ];
-  let extraClassDeclaration = [{
-    // TODO: This should really be automatic. Figure out how to not need this defined.
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-    ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
-    ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
-    ::llvm::SmallVectorImpl<::mlir::Type>&inferredReturnTypes) {
-      inferredReturnTypes.push_back(::mlir::IntegerType::get(context,
-                                                             /*width=*/1));
-      return success();
-    };
-  }];
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -850,12 +826,6 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
   let arguments = (ins Variadic<Shape_WitnessType>:$inputs);
   let results = (outs Shape_WitnessType:$result);
 
-  // Only needed while tablegen is unable to generate this for ops with variadic
-  // arguments.
-  let builders = [
-    OpBuilder<(ins "ValueRange":$inputs)>,
-  ];
-
   let assemblyFormat = "$inputs attr-dict";
 
   let hasFolder = 1;
@@ -917,8 +887,7 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable",
-                                         [Commutative, InferTypeOpInterface]> {
+def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
   let summary = "Determines if 2+ shapes can be successfully broadcasted";
   let description = [{
     Given input shapes or extent tensors, return a witness specifying if they
@@ -944,23 +913,12 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable",
     [{ build($_builder, $_state, ::llvm::makeArrayRef({lhs, rhs})); }]>,
   ];
 
-  let extraClassDeclaration = [{
-    // TODO: This should really be automatic. Figure out how to not need this defined.
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-    ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
-    ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
-    ::llvm::SmallVectorImpl<::mlir::Type>&inferredReturnTypes) {
-      inferredReturnTypes.push_back(::mlir::shape::WitnessType::get(context));
-      return success();
-    };
-  }];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
 
-def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative, InferTypeOpInterface]> {
+def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
   let summary = "Determines if all input shapes are equal";
   let description = [{
     Given 1 or more input shapes, determine if all shapes are the exact same.
@@ -977,17 +935,6 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative, InferTypeOpInterface]> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$shapes attr-dict `:` type($shapes)";
-
-  let extraClassDeclaration = [{
-    // TODO: This should really be automatic. Figure out how to not need this defined.
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-    ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
-    ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
-    ::llvm::SmallVectorImpl<::mlir::Type>&inferredReturnTypes) {
-      inferredReturnTypes.push_back(::mlir::shape::WitnessType::get(context));
-      return success();
-    };
-  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;

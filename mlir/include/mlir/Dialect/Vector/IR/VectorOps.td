@@ -803,8 +803,6 @@ def Vector_InsertMapOp :
       into vector<64x4x32xf32>
     ```
   }];
-  let builders = [OpBuilder<(ins "Value":$vector, "Value":$dest,
-                                "ValueRange":$ids)>];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
       return vector().getType().cast<VectorType>();
