@@ -38,7 +38,12 @@ uint32_t getDebugKind();
 /// Return the amount of dynamic shared memory that was allocated at launch.
 uint64_t getDynamicMemorySize();
 
+/// Return if debugging is enabled for the given debug kind.
 bool isDebugMode(DebugKind Level);
+
+/// Indicates if this kernel may require thread-specific states, or if it was
+/// explicitly disabled by the user.
+bool mayUseThreadStates();
 
 } // namespace config
 } // namespace _OMP
