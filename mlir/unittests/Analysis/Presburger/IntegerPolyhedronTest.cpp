@@ -158,7 +158,7 @@ TEST(IntegerPolyhedronTest, removeIdRange) {
   EXPECT_THAT(set.getInequality(0),
               testing::ElementsAre(10, 11, 12, 20, 30, 40));
 
-  set.removeIdRange(IntegerPolyhedron::IdKind::Dimension, 0, 2);
+  set.removeIdRange(IntegerPolyhedron::IdKind::SetDim, 0, 2);
   EXPECT_THAT(set.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
 
   set.removeIdRange(IntegerPolyhedron::IdKind::Local, 1, 1);
