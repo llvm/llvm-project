@@ -504,6 +504,22 @@ body: |
     $vgpr0 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
 ...
 
+# No VALU delay across an s_waitcnt_depctr that waits for all outstanding VALU
+# to complete.
+---
+name: waitcnt_depctr
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}waitcnt_depctr:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_mov_b32_e32 v0, 0
+    ; CHECK-NEXT: s_waitcnt_depctr 0xfff
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_WAITCNT_DEPCTR 4095
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
 # Check that no delays are emitted for writelane instructions.
 ---
 name: writelane1

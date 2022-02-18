@@ -330,7 +330,9 @@ public:
                      SIInstrFlags::MIMG | SIInstrFlags::MTBUF |
                      SIInstrFlags::MUBUF) ||
           MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
-          MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64) {
+          MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64 ||
+          (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+           (MI.getOperand(0).getImm() & 0xf000) == 0)) {
         // These instructions wait for all outstanding VALU instructions to
         // complete.
         State = DelayState();
