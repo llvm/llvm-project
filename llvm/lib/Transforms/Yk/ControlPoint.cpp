@@ -184,9 +184,10 @@ public:
         OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX)
             ->getType();
 
-    // Create the new control point.
+    // Create the new control point, which is of the form:
+    // bool new_control_point(YkMT*, YkLocation*, CtrlPointVars*)
     FunctionType *FType = FunctionType::get(
-        Type::getVoidTy(Context),
+        Type::getInt1Ty(Context),
         {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo()}, false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
@@ -219,11 +220,12 @@ public:
     // their corresponding live variables. In LLVM IR we can do this by simply
     // replacing all future references with the new values.
     LvIdx = 0;
+    Instruction *New;
     for (Value *LV : LiveVals) {
       Value *FieldPtr =
           Builder.CreateGEP(CtrlPointVarsTy, InputStruct,
                             {Builder.getInt32(0), Builder.getInt32(LvIdx)});
-      Value *New = Builder.CreateLoad(TypeParams[LvIdx], FieldPtr);
+      New = Builder.CreateLoad(TypeParams[LvIdx], FieldPtr);
       LV->replaceUsesWithIf(
           New, [&](Use &U) { return DT.dominates(NewCtrlPointCallInst, U); });
       assert(LvIdx != UINT_MAX);
@@ -232,6 +234,28 @@ public:
 
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();
+
+    // Get the result of the control point call. If it returns true, that means
+    // the stopgap interpreter has interpreted a return so we need to return as
+    // well.
+
+    // Create the new exit block.
+    BasicBlock *ExitBB = BasicBlock::Create(Context, "", Caller);
+    Builder.SetInsertPoint(ExitBB);
+    // YKFIXME: We need to return the value of interpreted return and the return
+    // type must be that of the control point's caller.
+    Builder.CreateRet(ConstantInt::get(Type::getInt32Ty(Context), 0));
+
+    // To do so we need to first split up the current block and then
+    // insert a conditional branch that either continues or returns.
+
+    BasicBlock *BB = NewCtrlPointCallInst->getParent();
+    BasicBlock *ContBB = BB->splitBasicBlock(New);
+
+    Instruction &OldBr = BB->back();
+    OldBr.eraseFromParent();
+    Builder.SetInsertPoint(BB);
+    Builder.CreateCondBr(NewCtrlPointCallInst, ExitBB, ContBB);
 
     // Generate new control point logic.
     return true;
