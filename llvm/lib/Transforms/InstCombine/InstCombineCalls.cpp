@@ -1295,9 +1295,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     KnownBits Known = computeKnownBits(IIOperand, 0, II);
     uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
     uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
+    unsigned BW = Known.getBitWidth();
 
     // bswap(x) -> shift(x) if x has exactly one "active byte"
-    if (Known.getBitWidth() - LZ - TZ == 8) {
+    if (BW - LZ - TZ == 8) {
       assert(LZ != TZ && "active byte cannot be in the middle");
       if (LZ > TZ)  // -> shl(x) if the "active byte" is in the low part of x
         return BinaryOperator::CreateNUWShl(
@@ -1309,8 +1310,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // bswap(trunc(bswap(x))) -> trunc(lshr(x, c))
     if (match(IIOperand, m_Trunc(m_BSwap(m_Value(X))))) {
-      unsigned C = X->getType()->getScalarSizeInBits() -
-                   IIOperand->getType()->getScalarSizeInBits();
+      unsigned C = X->getType()->getScalarSizeInBits() - BW;
       Value *CV = ConstantInt::get(X->getType(), C);
       Value *V = Builder.CreateLShr(X, CV);
       return new TruncInst(V, IIOperand->getType());
