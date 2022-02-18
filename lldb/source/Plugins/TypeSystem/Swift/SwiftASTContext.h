@@ -113,6 +113,11 @@ template <> struct hash<lldb_private::detail::SwiftLibraryLookupRequest> {
 } // end namespace std
 
 namespace lldb_private {
+
+swift::DWARFImporterDelegate *
+CreateSwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_context);
+SwiftASTContext *GetModuleSwiftASTContext(Module &module);
+
 /// This "middle" class between TypeSystemSwiftTypeRef and
 /// SwiftASTContextForExpressions will eventually go away, as more and
 /// more functionality becomes available in TypeSystemSwiftTypeRef.
