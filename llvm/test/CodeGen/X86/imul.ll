@@ -529,9 +529,8 @@ define i64 @testNegOverflow(i64 %a) {
 ; X64-LABEL: testNegOverflow:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    shlq $63, %rcx
-; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    shlq $63, %rax
+; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: testNegOverflow:
