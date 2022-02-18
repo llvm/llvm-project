@@ -324,6 +324,10 @@ D: Mips backend
 D: Random ARM integrated assembler and assembly parser improvements
 D: General X86 AVX1 support
 
+N: Weining Lu
+E: luweining@loongson.cn
+D: LoongArch backend
+
 N: Duraid Madina
 E: duraid@octopus.com.au
 W: http://kinoko.c.u-tokyo.ac.jp/~duraid/
