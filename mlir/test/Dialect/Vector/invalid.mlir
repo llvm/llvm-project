@@ -73,7 +73,7 @@ func @shuffle_index_out_of_range(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
 // -----
 
 func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
-  // expected-error@+1 {{'vector.shuffle' invalid mask length}}
+  // expected-error@+1 {{'vector.shuffle' op invalid mask length}}
   %1 = vector.shuffle %arg0, %arg1 [] : vector<2xf32>, vector<2xf32>
 }
 
