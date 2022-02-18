@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 #include <memory>
 #include <utility>
 
@@ -56,10 +57,55 @@ static bool equivalentValues(QualType Type, Value *Val1, Value *Val2,
   return Model.compareEquivalent(Type, *Val1, *Val2);
 }
 
+/// Initializes a global storage value.
+static void initGlobalVar(const VarDecl &D, Environment &Env) {
+  if (!D.hasGlobalStorage() ||
+      Env.getStorageLocation(D, SkipPast::None) != nullptr)
+    return;
+
+  auto &Loc = Env.createStorageLocation(D);
+  Env.setStorageLocation(D, Loc);
+  if (auto *Val = Env.createValue(D.getType()))
+    Env.setValue(Loc, *Val);
+}
+
+/// Initializes a global storage value.
+static void initGlobalVar(const Decl &D, Environment &Env) {
+  if (auto *V = dyn_cast<VarDecl>(&D))
+    initGlobalVar(*V, Env);
+}
+
+/// Initializes global storage values that are declared or referenced from
+/// sub-statements of `S`.
+// FIXME: Add support for resetting globals after function calls to enable
+// the implementation of sound analyses.
+static void initGlobalVars(const Stmt &S, Environment &Env) {
+  for (auto *Child : S.children()) {
+    if (Child != nullptr)
+      initGlobalVars(*Child, Env);
+  }
+
+  if (auto *DS = dyn_cast<DeclStmt>(&S)) {
+    if (DS->isSingleDecl()) {
+      const auto &D = *cast<VarDecl>(DS->getSingleDecl());
+      initGlobalVar(D, Env);
+    } else {
+      for (auto *D : DS->getDeclGroup())
+        initGlobalVar(*D, Env);
+    }
+  } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
+    initGlobalVar(*E->getDecl(), Env);
+  } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
+    initGlobalVar(*E->getMemberDecl(), Env);
+  }
+}
+
 Environment::Environment(DataflowAnalysisContext &DACtx,
                          const DeclContext &DeclCtx)
     : Environment(DACtx) {
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
+    assert(FuncDecl->getBody() != nullptr);
+    initGlobalVars(*FuncDecl->getBody(), *this);
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
       auto &ParamLoc = createStorageLocation(*ParamDecl);
