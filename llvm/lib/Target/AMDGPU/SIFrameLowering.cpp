@@ -1200,7 +1200,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
       }
     }
 
-    // Stack slot coloring may assign different objets to the same stack slot.
+    // Stack slot coloring may assign different objects to the same stack slot.
     // If not, then the VGPR to AGPR spill slot is dead.
     for (unsigned FI : SpillFIs.set_bits())
       if (!NonVGPRSpillFIs.test(FI))

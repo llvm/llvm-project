@@ -64,7 +64,7 @@ using namespace llvm;
 // First the instructions are put into blocks.
 //   We want the blocks help control register usage and hide high latencies
 //   later. To help control register usage, we typically want all local
-//   computations, when for example you create a result that can be comsummed
+//   computations, when for example you create a result that can be consumed
 //   right away, to be contained in a block. Block inputs and outputs would
 //   typically be important results that are needed in several locations of
 //   the shader. Since we do want blocks to help hide high latencies, we want
@@ -90,8 +90,8 @@ using namespace llvm;
 // Increasing the number of active wavefronts helps hide the former, but it
 // doesn't solve the latter, thus why even if wavefront count is high, we have
 // to try have as many instructions hiding high latencies as possible.
-// The OpenCL doc says for example latency of 400 cycles for a global mem access,
-// which is hidden by 10 instructions if the wavefront count is 10.
+// The OpenCL doc says for example latency of 400 cycles for a global mem
+// access, which is hidden by 10 instructions if the wavefront count is 10.
 
 // Some figures taken from AMD docs:
 // Both texture and constant L1 caches are 4-way associative with 64 bytes
@@ -353,7 +353,7 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
   // able to correctly handle 5 vs 6, 2 vs 3.
   // (Note: This is not sufficient for RPTracker to not do mistakes for case 4)
   // The RPTracker's LiveOutRegs has 1, 3, (some correct or incorrect)4, 5, 7
-  // Comparing to LiveInRegs is not sufficient to differenciate 4 vs 5, 7
+  // Comparing to LiveInRegs is not sufficient to differentiate 4 vs 5, 7
   // The use of findDefBetween removes the case 4.
   for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
     Register Reg = RegMaskPair.RegUnit;
@@ -402,7 +402,7 @@ void SIScheduleBlock::schedule(MachineBasicBlock::iterator BeginBlock,
     nodeScheduled(SU);
   }
 
-  // TODO: compute InternalAdditionnalPressure.
+  // TODO: compute InternalAdditionalPressure.
   InternalAdditionalPressure.resize(TopPressure.MaxSetPressure.size());
 
   // Check everything is right.
@@ -696,7 +696,7 @@ void SIScheduleBlockCreator::colorHighLatenciesGroups() {
         bool HasSubGraph;
         std::vector<int> SubGraph;
         // By construction (topological order), if SU and
-        // DAG->SUnits[j] are linked, DAG->SUnits[j] is neccessary
+        // DAG->SUnits[j] are linked, DAG->SUnits[j] is necessary
         // in the parent graph of SU.
 #ifndef NDEBUG
         SubGraph = DAG->GetTopo()->GetSubGraph(SU, DAG->SUnits[j],
@@ -1131,7 +1131,7 @@ void SIScheduleBlockCreator::colorExports() {
         bool HasSubGraph;
         std::vector<int> SubGraph;
         // By construction (topological order), if SU and
-        // DAG->SUnits[j] are linked, DAG->SUnits[j] is neccessary
+        // DAG->SUnits[j] are linked, DAG->SUnits[j] is necessary
         // in the parent graph of SU.
 #ifndef NDEBUG
         SubGraph = DAG->GetTopo()->GetSubGraph(SU, DAG->SUnits[j],
@@ -1148,7 +1148,7 @@ void SIScheduleBlockCreator::colorExports() {
         for (unsigned k : SubGraph) {
           if (!SIInstrInfo::isEXP(*DAG->SUnits[k].getInstr()))
             // Other instructions than EXP would be required in the group.
-            // Abort the groupping.
+            // Abort the grouping.
             return;
         }
       }

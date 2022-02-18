@@ -1487,8 +1487,7 @@ int AMDGPUCFGStructurizer::cloneOnSideEntryTo(MachineBasicBlock *PreMBB,
 MachineBasicBlock *
 AMDGPUCFGStructurizer::cloneBlockForPredecessor(MachineBasicBlock *MBB,
     MachineBasicBlock *PredMBB) {
-  assert(PredMBB->isSuccessor(MBB) &&
-         "succBlk is not a prececessor of curBlk");
+  assert(PredMBB->isSuccessor(MBB) && "succBlk is not a predecessor of curBlk");
 
   MachineBasicBlock *CloneMBB = clone(MBB);  //clone instructions
   replaceInstrUseOfBlockWith(PredMBB, MBB, CloneMBB);

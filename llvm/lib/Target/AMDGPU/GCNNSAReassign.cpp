@@ -1,4 +1,4 @@
-//===-- GCNNSAReassign.cpp - Reassign registers in NSA unstructions -------===//
+//===-- GCNNSAReassign.cpp - Reassign registers in NSA instructions -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 //
 /// \file
 /// \brief Try to reassign registers on GFX10+ from non-sequential to sequential
-/// in NSA image instructions. Later SIShrinkInstructions pass will relace NSA
+/// in NSA image instructions. Later SIShrinkInstructions pass will replace NSA
 /// with sequential versions where possible.
 ///
 //===----------------------------------------------------------------------===//

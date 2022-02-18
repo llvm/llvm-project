@@ -35,8 +35,8 @@ std::vector<GlobalVariable *> findVariablesToLower(Module &M,
 /// Replace all uses of constant \p C with instructions in \p F.
 void replaceConstantUsesInFunction(ConstantExpr *C, const Function *F);
 
-/// Given a \p Def clobbering a load from \p Ptr accroding to the MSSA check
-/// if this is actually a memory update or an artifical clobber to facilitate
+/// Given a \p Def clobbering a load from \p Ptr according to the MSSA check
+/// if this is actually a memory update or an artificial clobber to facilitate
 /// ordering constraints.
 bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA);
 

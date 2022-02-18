@@ -207,7 +207,7 @@ public:
     return !ARDef || !ARUse;
   }
 
-  // isLegalToPruneDependencies - Is it legal to prune dependece between SUI
+  // isLegalToPruneDependencies - Is it legal to prune dependency between SUI
   // and SUJ.
   bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) override {
     return false;

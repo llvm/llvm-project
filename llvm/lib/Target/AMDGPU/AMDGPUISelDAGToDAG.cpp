@@ -2840,7 +2840,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
           }
         }
       }
-      // If "AllUsesAcceptSReg == false" so far we haven't suceeded
+      // If "AllUsesAcceptSReg == false" so far we haven't succeeded
       // commuting current user. This means have at least one use
       // that strictly require VGPR. Thus, we will not attempt to commute
       // other user instructions.

@@ -123,7 +123,7 @@ def gi_smrd_buffer_imm32 :
 
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
-// directly before before selecting a glue-less load, so hide this
+// directly before selecting a glue-less load, so hide this
 // distinction.
 
 def : GINodeEquiv<G_LOAD, AMDGPUld_glue> {

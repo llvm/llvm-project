@@ -136,7 +136,7 @@ class MTBUF_Real <MTBUF_Pseudo ps> :
   bits<3> nfmt = format{6-4};
 
   // GFX90A+ only: instruction uses AccVGPR for data
-  // Bit superceedes tfe.
+  // Bit supersedes tfe.
   bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
 }
 
@@ -370,7 +370,7 @@ class MUBUF_Real <MUBUF_Pseudo ps> :
   bits<8>  soffset;
 
   // GFX90A+ only: instruction uses AccVGPR for data
-  // Bit superceedes tfe.
+  // Bit supersedes tfe.
   bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
 }
 

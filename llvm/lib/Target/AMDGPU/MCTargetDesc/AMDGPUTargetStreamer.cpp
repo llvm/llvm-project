@@ -695,7 +695,7 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISAV2(uint32_t Major,
              OS.emitBytes(VendorName);
              OS.emitInt8(0); // NULL terminate VendorName
              OS.emitBytes(ArchName);
-             OS.emitInt8(0); // NULL terminte ArchName
+             OS.emitInt8(0); // NULL terminate ArchName
            });
 }
 

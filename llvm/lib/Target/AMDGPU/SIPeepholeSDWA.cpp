@@ -316,7 +316,7 @@ uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
   }
   if (Abs || Neg) {
     assert(!Sext &&
-           "Float and integer src modifiers can't be set simulteniously");
+           "Float and integer src modifiers can't be set simultaneously");
     Mods |= Abs ? SISrcMods::ABS : 0u;
     Mods ^= Neg ? SISrcMods::NEG : 0u;
   } else if (Sext) {
@@ -1131,16 +1131,16 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   bool Converted = false;
   for (auto &Operand : SDWAOperands) {
     LLVM_DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
-    // There should be no intesection between SDWA operands and potential MIs
+    // There should be no intersection between SDWA operands and potential MIs
     // e.g.:
     // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
     // v_and_b32 v2, 0xff, v0 -> src:v0 sel:BYTE_0
     // v_add_u32 v3, v4, v2
     //
-    // In that example it is possible that we would fold 2nd instruction into 3rd
-    // (v_add_u32_sdwa) and then try to fold 1st instruction into 2nd (that was
-    // already destroyed). So if SDWAOperand is also a potential MI then do not
-    // apply it.
+    // In that example it is possible that we would fold 2nd instruction into
+    // 3rd (v_add_u32_sdwa) and then try to fold 1st instruction into 2nd (that
+    // was already destroyed). So if SDWAOperand is also a potential MI then do
+    // not apply it.
     if (PotentialMatches.count(Operand->getParentInst()) == 0)
       Converted |= Operand->convertToSDWA(*SDWAInst, TII);
   }

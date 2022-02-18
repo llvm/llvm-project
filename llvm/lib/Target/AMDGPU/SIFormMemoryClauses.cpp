@@ -241,7 +241,7 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
 }
 
 // Check register def/use conflicts, occupancy limits and collect def/use maps.
-// Return true if instruction can be bundled with previous. It it cannot
+// Return true if instruction can be bundled with previous. If it cannot
 // def/use maps are not updated.
 bool SIFormMemoryClauses::processRegUses(const MachineInstr &MI,
                                          RegUse &Defs, RegUse &Uses,

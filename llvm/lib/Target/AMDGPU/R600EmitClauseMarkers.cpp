@@ -327,9 +327,9 @@ char R600EmitClauseMarkers::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(R600EmitClauseMarkers, "emitclausemarkers",
-                      "R600 Emit Clause Markters", false, false)
+                      "R600 Emit Clause Markers", false, false)
 INITIALIZE_PASS_END(R600EmitClauseMarkers, "emitclausemarkers",
-                      "R600 Emit Clause Markters", false, false)
+                    "R600 Emit Clause Markers", false, false)
 
 FunctionPass *llvm::createR600EmitClauseMarkers() {
   return new R600EmitClauseMarkers();
