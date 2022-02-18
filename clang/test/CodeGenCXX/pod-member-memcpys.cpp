@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-apple-darwin10 -emit-llvm -std=c++03 -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis -triple i386-apple-darwin10 -emit-llvm -std=c++03 -o - %s | FileCheck --check-prefix=CHECK-2 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin10 -emit-llvm -std=c++03 -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-apple-darwin10 -emit-llvm -std=c++03 -o - %s | FileCheck --check-prefix=CHECK-2 %s
 
 struct POD {
   int w, x, y, z;
