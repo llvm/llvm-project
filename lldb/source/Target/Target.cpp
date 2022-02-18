@@ -1652,7 +1652,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
         return true;
       auto *swift_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              swift_scratch_ctx->GetSwiftASTContext());
+              swift_scratch_ctx->GetSwiftASTContextOrNull());
       if (!swift_ast_ctx)
         return true;
       swift_ast_ctx->ModulesDidLoad(module_list);
@@ -2350,7 +2350,9 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                 &*type_system_or_err)) {
       auto *swift_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              swift_scratch_ctx->GetSwiftASTContext());
+              swift_scratch_ctx->GetSwiftASTContextOrNull());
+      // Replace the scratch context if it contains fatal errors or
+      // needs to be replaced because new lldb::Modules were loaded.
       if (swift_ast_ctx && (swift_ast_ctx->CheckProcessChanged() ||
                             swift_ast_ctx->HasFatalErrors())) {
         // If it is safe to replace the scratch context, do so. If
@@ -2647,7 +2649,7 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
   StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
   if (frame_sp && frame_sp.get() && swift_scratch_ctx) {
     auto *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-        swift_scratch_ctx->GetSwiftASTContext());
+        swift_scratch_ctx->GetSwiftASTContextOrNull());
     if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors()) {
       StackFrameWP frame_wp(frame_sp);
       SymbolContext sc =
