@@ -45,9 +45,28 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
   addSourceMaterialization(materializeToTensor);
   addTargetMaterialization([](OpBuilder &builder, BaseMemRefType type,
                               ValueRange inputs, Location loc) -> Value {
-    assert(inputs.size() == 1);
-    assert(inputs[0].getType().isa<TensorType>());
-    return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
+    assert(inputs.size() == 1 && "expected exactly one input");
+
+    if (auto inputType = inputs[0].getType().dyn_cast<MemRefType>()) {
+      // MemRef to MemRef cast.
+      assert(inputType != type && "expected different types");
+      // Unranked to ranked and ranked to unranked casts must be explicit.
+      auto rankedDestType = type.dyn_cast<MemRefType>();
+      if (!rankedDestType)
+        return nullptr;
+      FailureOr<Value> replacement =
+          castOrReallocMemRefValue(builder, inputs[0], rankedDestType);
+      if (failed(replacement))
+        return nullptr;
+      return *replacement;
+    }
+
+    if (inputs[0].getType().isa<TensorType>()) {
+      // Tensor to MemRef cast.
+      return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
+    }
+
+    llvm_unreachable("only tensor/memref input types supported");
   });
 }
 
