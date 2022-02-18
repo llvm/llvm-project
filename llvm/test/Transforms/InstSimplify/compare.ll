@@ -2700,7 +2700,7 @@ define <2 x i1> @cttz_slt_bitwidth_splat(<2 x i13> %x) {
   ret <2 x i1> %cmp
 }
 
-; FIXME: A zero sized alloca *can* be equal to another alloca
+; A zero sized alloca *can* be equal to another alloca
 define i1 @zero_sized_alloca1() {
 ; CHECK-LABEL: @zero_sized_alloca1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i32 0, align 4
@@ -2797,6 +2797,32 @@ define i1 @globals_inequal() {
   %res = icmp ne i32* @A, @B
   ret i1 %res
 }
+
+; TODO: Never equal
+define i1 @globals_offset_inequal() {
+; CHECK-LABEL: @globals_offset_inequal(
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* bitcast (i32* @A to i8*), i32 1), i8* getelementptr (i8, i8* bitcast (i32* @B to i8*), i32 1))
+;
+  %a.cast = bitcast i32* @A to i8*
+  %a.off = getelementptr i8, i8* %a.cast, i32 1
+  %b.cast = bitcast i32* @B to i8*
+  %b.off = getelementptr i8, i8* %b.cast, i32 1
+  %res = icmp ne i8* %a.off, %b.off
+  ret i1 %res
+}
+
+
+; TODO: Never equal
+define i1 @test_byval_global_inequal(i32* byval(i32) %a) {
+; CHECK-LABEL: @test_byval_global_inequal(
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32* [[A:%.*]], @B
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %b = alloca i32
+  %res = icmp ne i32* %a, @B
+  ret i1 %res
+}
+
 
 define i1 @neg_global_alias() {
 ; CHECK-LABEL: @neg_global_alias(
