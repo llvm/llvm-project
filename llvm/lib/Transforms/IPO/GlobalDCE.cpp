@@ -214,14 +214,14 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
       VFESafeVTables.erase(VTable);
-      return;
+      continue;
     }
 
     auto Callee = dyn_cast<Function>(Ptr->stripPointerCasts());
     if (!Callee) {
       LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
       VFESafeVTables.erase(VTable);
-      return;
+      continue;
     }
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "

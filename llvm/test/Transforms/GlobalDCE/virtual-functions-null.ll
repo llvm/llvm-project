@@ -20,7 +20,7 @@ declare { i8*, i1 } @llvm.type.checked.load(i8*, i32, metadata)
 ]}, align 8, !type !{i64 0, !"vfunc1.type"}, !type !{i64 8, !"vfunc2.type"}, !vcall_visibility !{i64 2}
 
 ; CHECK:      @vtableB = internal unnamed_addr constant { [2 x i8*] } { [2 x i8*] [
-; CHECK-SAME:   i8* null,
+; CHECK-SAME:   i8* bitcast (void ()* @vfunc1 to i8*),
 ; CHECK-SAME:   i8* bitcast (void ()* @vfunc2 to i8*)
 ; CHECK-SAME: ] }, align 8
 
