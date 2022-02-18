@@ -30,54 +30,6 @@ func @num_threads_once(%n : si32) {
 
 // -----
 
-func @private_once(%n : memref<i32>) {
-  // expected-error@+1 {{at most one private clause can appear on the omp.parallel operation}}
-  omp.parallel private(%n : memref<i32>) private(%n : memref<i32>) {
-  }
-
-  return
-}
-
-// -----
-
-func @firstprivate_once(%n : memref<i32>) {
-  // expected-error@+1 {{at most one firstprivate clause can appear on the omp.parallel operation}}
-  omp.parallel firstprivate(%n : memref<i32>) firstprivate(%n : memref<i32>) {
-  }
-
-  return
-}
-
-// -----
-
-func @shared_once(%n : memref<i32>) {
-  // expected-error@+1 {{at most one shared clause can appear on the omp.parallel operation}}
-  omp.parallel shared(%n : memref<i32>) shared(%n : memref<i32>) {
-  }
-
-  return
-}
-
-// -----
-
-func @copyin_once(%n : memref<i32>) {
-  // expected-error@+1 {{at most one copyin clause can appear on the omp.parallel operation}}
-  omp.parallel copyin(%n : memref<i32>) copyin(%n : memref<i32>) {
-  }
-
-  return
-}
-
-// -----
-
-func @lastprivate_not_allowed(%n : memref<i32>) {
-  // expected-error@+1 {{lastprivate is not a valid clause for the omp.parallel operation}}
-  omp.parallel lastprivate(%n : memref<i32>) {}
-  return
-}
-
-// -----
-
 func @nowait_not_allowed(%n : memref<i32>) {
   // expected-error@+1 {{nowait is not a valid clause for the omp.parallel operation}}
   omp.parallel nowait {}
@@ -125,16 +77,6 @@ func @ordered_not_allowed() {
 
 // -----
 
-func @default_once() {
-  // expected-error@+1 {{at most one default clause can appear on the omp.parallel operation}}
-  omp.parallel default(private) default(firstprivate) {
-  }
-
-  return
-}
-
-// -----
-
 func @proc_bind_once() {
   // expected-error@+1 {{at most one proc_bind clause can appear on the omp.parallel operation}}
   omp.parallel proc_bind(close) proc_bind(spread) {
@@ -163,24 +105,6 @@ func @order_value(%lb : index, %ub : index, %step : index) {
 
 // -----
 
-func @shared_not_allowed(%lb : index, %ub : index, %step : index, %var : memref<i32>) {
-  // expected-error @below {{shared is not a valid clause for the omp.wsloop operation}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) shared(%var) {
-    omp.yield
-  }
-}
-
-// -----
-
-func @copyin(%lb : index, %ub : index, %step : index, %var : memref<i32>) {
-  // expected-error @below {{copyin is not a valid clause for the omp.wsloop operation}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) copyin(%var) {
-    omp.yield
-  }
-}
-
-// -----
-
 func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
   // expected-error @below {{if is not a valid clause for the omp.wsloop operation}}
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) if(%bool_var: i1) {
@@ -193,15 +117,6 @@ func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
 func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var : i32) {
   // expected-error @below {{num_threads is not a valid clause for the omp.wsloop operation}}
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) num_threads(%int_var: i32) {
-    omp.yield
-  }
-}
-
-// -----
-
-func @default_not_allowed(%lb : index, %ub : index, %step : index) {
-  // expected-error @below {{default is not a valid clause for the omp.wsloop operation}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) default(private) {
     omp.yield
   }
 }
@@ -847,41 +762,11 @@ func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %exp
 
 // -----
 
-func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
-  // expected-error @below {{operand used in both private and firstprivate clauses}}
-  omp.sections private(%data_var1 : memref<i32>) firstprivate(%data_var1 : memref<i32>) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
-  // expected-error @below {{operand used in both private and lastprivate clauses}}
-  omp.sections private(%data_var1 : memref<i32>) lastprivate(%data_var1 : memref<i32>) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
-  // expected-error @below {{operand used in both private and lastprivate clauses}}
-  omp.sections private(%data_var1 : memref<i32>, %data_var2 : memref<i32>) lastprivate(%data_var3 : memref<i32>, %data_var2 : memref<i32>) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
 func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = dense<[0,0,0,0,1,0]> : vector<6xi32>} : (memref<i32>) -> ()
+  }) {operand_segment_sizes = dense<[0,1,0]> : vector<3xi32>} : (memref<i32>) -> ()
   return
 }
 
@@ -891,7 +776,7 @@ func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = dense<[0,0,0,1,0,0]> : vector<6xi32>} : (memref<i32>) -> ()
+  }) {operand_segment_sizes = dense<[1,0,0]> : vector<3xi32>} : (memref<i32>) -> ()
   return
 }
 
@@ -920,36 +805,6 @@ func @omp_sections(%cond : i1) {
 func @omp_sections() {
   // expected-error @below {{num_threads is not a valid clause for the omp.sections operation}}
   omp.sections num_threads(10) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func @omp_sections(%datavar : memref<i32>) {
-  // expected-error @below {{shared is not a valid clause for the omp.sections operation}}
-  omp.sections shared(%datavar : memref<i32>) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func @omp_sections(%datavar : memref<i32>) {
-  // expected-error @below {{copyin is not a valid clause for the omp.sections operation}}
-  omp.sections copyin(%datavar : memref<i32>) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func @omp_sections() {
-  // expected-error @below {{default is not a valid clause for the omp.sections operation}}
-  omp.sections default(private) {
     omp.terminator
   }
   return
