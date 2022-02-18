@@ -954,6 +954,10 @@ int mixed() {
 // expected-note@+1 {{'read' clause used here}}
 #pragma omp atomic read compare
   a = b;
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'compare' clause}}
+// expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'capture' clause}}
+#pragma omp atomic compare compare capture capture
+  a = b;
 #endif
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();

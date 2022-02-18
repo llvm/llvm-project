@@ -24,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -6020,7 +6021,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                               llvm::AtomicOrdering AO, bool IsPostfixUpdate,
                               const Expr *X, const Expr *V, const Expr *E,
                               const Expr *UE, bool IsXLHSInRHSPart,
-                              SourceLocation Loc) {
+                              bool IsCompareCapture, SourceLocation Loc) {
   switch (Kind) {
   case OMPC_read:
     emitOMPAtomicReadExpr(CGF, AO, X, V, Loc);
@@ -6037,10 +6038,19 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                              IsXLHSInRHSPart, Loc);
     break;
   case OMPC_compare: {
-    // Emit an error here.
-    unsigned DiagID = CGF.CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Error, "'atomic compare' is not supported for now");
-    CGF.CGM.getDiags().Report(DiagID);
+    if (IsCompareCapture) {
+      // Emit an error here.
+      unsigned DiagID = CGF.CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "'atomic compare capture' is not supported for now");
+      CGF.CGM.getDiags().Report(DiagID);
+    } else {
+      // Emit an error here.
+      unsigned DiagID = CGF.CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "'atomic compare' is not supported for now");
+      CGF.CGM.getDiags().Report(DiagID);
+    }
     break;
   }
   case OMPC_if:
@@ -6153,18 +6163,23 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     AO = llvm::AtomicOrdering::Monotonic;
     MemOrderingSpecified = true;
   }
+  llvm::SmallSet<OpenMPClauseKind, 2> KindsEncountered;
   OpenMPClauseKind Kind = OMPC_unknown;
   for (const OMPClause *C : S.clauses()) {
     // Find first clause (skip seq_cst|acq_rel|aqcuire|release|relaxed clause,
     // if it is first).
-    if (C->getClauseKind() != OMPC_seq_cst &&
-        C->getClauseKind() != OMPC_acq_rel &&
-        C->getClauseKind() != OMPC_acquire &&
-        C->getClauseKind() != OMPC_release &&
-        C->getClauseKind() != OMPC_relaxed && C->getClauseKind() != OMPC_hint) {
-      Kind = C->getClauseKind();
-      break;
-    }
+    OpenMPClauseKind K = C->getClauseKind();
+    if (K == OMPC_seq_cst || K == OMPC_acq_rel || K == OMPC_acquire ||
+        K == OMPC_release || K == OMPC_relaxed || K == OMPC_hint)
+      continue;
+    Kind = K;
+    KindsEncountered.insert(K);
+  }
+  bool IsCompareCapture = false;
+  if (KindsEncountered.contains(OMPC_compare) &&
+      KindsEncountered.contains(OMPC_capture)) {
+    IsCompareCapture = true;
+    Kind = OMPC_compare;
   }
   if (!MemOrderingSpecified) {
     llvm::AtomicOrdering DefaultOrder =
@@ -6188,7 +6203,7 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   EmitStopPoint(S.getAssociatedStmt());
   emitOMPAtomicExpr(*this, Kind, AO, S.isPostfixUpdate(), S.getX(), S.getV(),
                     S.getExpr(), S.getUpdateExpr(), S.isXLHSInRHSPart(),
-                    S.getBeginLoc());
+                    IsCompareCapture, S.getBeginLoc());
 }
 
 static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
