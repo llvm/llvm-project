@@ -2512,8 +2512,12 @@ static Value *ExtractEquivalentCondition(Value *V, CmpInst::Predicate Pred,
 /// *are* possible, and that zero sized regions do not overlap with any other.
 static bool HaveNonOverlappingStorage(const Value *V1, const Value *V2) {
   // Global variables always exist, so they always exist during the lifetime
-  // of each other and all allocas. Two different allocas usually have
-  // different addresses...
+  // of each other and all allocas.  Global variables themselves usually have
+  // non-overlapping storage, but since their addresses are constants, the
+  // case involving two globals does not reach here and is instead handled in
+  // constant folding.
+  //
+  // Two different allocas usually have different addresses...
   //
   // However, if there's an @llvm.stackrestore dynamically in between two
   // allocas, they may have the same address. It's tempting to reduce the
@@ -2532,7 +2536,6 @@ static bool HaveNonOverlappingStorage(const Value *V1, const Value *V2) {
   //
   // So, we'll assume that two non-empty allocas have different addresses
   // for now.
-  //
   return isa<AllocaInst>(V1) &&
     (isa<AllocaInst>(V2) || isa<GlobalVariable>(V2));
 }
