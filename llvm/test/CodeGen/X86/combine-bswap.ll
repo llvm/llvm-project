@@ -6,6 +6,7 @@
 ; actual output is massive at the moment as llvm.bswap is not yet legal.
 
 declare i32 @llvm.bswap.i32(i32) readnone
+declare i64 @llvm.bswap.i64(i64) readnone
 declare i32 @llvm.bswap.v4i32(i32) readnone
 
 ; fold (bswap undef) -> undef
@@ -81,4 +82,25 @@ define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
   %r = or i32 %x_zzz4, %y_321z
   store i32 %r, i32* %yp, align 4
   ret void
+}
+
+define i64 @test_bswap_shift(i16 %0) {
+; X86-LABEL: test_bswap_shift:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bswap_shift:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shlq $48, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    retq
+  %2 = zext i16 %0 to i64
+  %3 = shl i64 %2, 48
+  %4 = call i64 @llvm.bswap.i64(i64 %3)
+  ret i64 %4
 }
