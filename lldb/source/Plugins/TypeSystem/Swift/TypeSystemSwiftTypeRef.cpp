@@ -1268,8 +1268,6 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     m_swift_ast_context =
         llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
   }
-  // FIXME: Remove this line to make initialization lazy.
-  GetSwiftASTContext();
 }
 
 void TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(

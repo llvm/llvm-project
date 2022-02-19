@@ -2648,14 +2648,9 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
 
   StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
   if (frame_sp && frame_sp.get() && swift_scratch_ctx) {
-    auto *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-        swift_scratch_ctx->GetSwiftASTContextOrNull());
-    if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors()) {
-      StackFrameWP frame_wp(frame_sp);
-      SymbolContext sc =
-          frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
-      swift_scratch_ctx->PerformCompileUnitImports(sc);
-    }
+    SymbolContext sc =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
+    swift_scratch_ctx->PerformCompileUnitImports(sc);
   }
 
   if (!swift_scratch_ctx)
