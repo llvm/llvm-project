@@ -35,7 +35,7 @@ class COFFWriter {
   Error finalizeRelocTargets();
   Error finalizeSymbolContents();
   void layoutSections();
-  size_t finalizeStringTable();
+  Expected<size_t> finalizeStringTable();
 
   Error finalize(bool IsBigObj);
 
