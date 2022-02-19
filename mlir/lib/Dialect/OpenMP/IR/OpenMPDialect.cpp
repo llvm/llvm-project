@@ -89,35 +89,53 @@ static ParseResult parseAllocateAndAllocator(
     SmallVectorImpl<OpAsmParser::OperandType> &operandsAllocator,
     SmallVectorImpl<Type> &typesAllocator) {
 
-  return parser.parseCommaSeparatedList(
-      OpAsmParser::Delimiter::Paren, [&]() -> ParseResult {
-        OpAsmParser::OperandType operand;
-        Type type;
-        if (parser.parseOperand(operand) || parser.parseColonType(type))
-          return failure();
-        operandsAllocator.push_back(operand);
-        typesAllocator.push_back(type);
-        if (parser.parseArrow())
-          return failure();
-        if (parser.parseOperand(operand) || parser.parseColonType(type))
-          return failure();
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    OpAsmParser::OperandType operand;
+    Type type;
+    if (parser.parseOperand(operand) || parser.parseColonType(type))
+      return failure();
+    operandsAllocator.push_back(operand);
+    typesAllocator.push_back(type);
+    if (parser.parseArrow())
+      return failure();
+    if (parser.parseOperand(operand) || parser.parseColonType(type))
+      return failure();
 
-        operandsAllocate.push_back(operand);
-        typesAllocate.push_back(type);
-        return success();
-      });
+    operandsAllocate.push_back(operand);
+    typesAllocate.push_back(type);
+    return success();
+  });
 }
 
 /// Print allocate clause
-static void printAllocateAndAllocator(OpAsmPrinter &p,
+static void printAllocateAndAllocator(OpAsmPrinter &p, Operation *op,
                                       OperandRange varsAllocate,
-                                      OperandRange varsAllocator) {
-  p << "allocate(";
+                                      TypeRange typesAllocate,
+                                      OperandRange varsAllocator,
+                                      TypeRange typesAllocator) {
   for (unsigned i = 0; i < varsAllocate.size(); ++i) {
-    std::string separator = i == varsAllocate.size() - 1 ? ") " : ", ";
-    p << varsAllocator[i] << " : " << varsAllocator[i].getType() << " -> ";
-    p << varsAllocate[i] << " : " << varsAllocate[i].getType() << separator;
+    std::string separator = i == varsAllocate.size() - 1 ? "" : ", ";
+    p << varsAllocator[i] << " : " << typesAllocator[i] << " -> ";
+    p << varsAllocate[i] << " : " << typesAllocate[i] << separator;
   }
+}
+
+ParseResult parseProcBindKind(OpAsmParser &parser,
+                              omp::ClauseProcBindKindAttr &procBindAttr) {
+  StringRef procBindStr;
+  if (parser.parseKeyword(&procBindStr))
+    return failure();
+  if (auto procBindVal = symbolizeClauseProcBindKind(procBindStr)) {
+    procBindAttr =
+        ClauseProcBindKindAttr::get(parser.getContext(), *procBindVal);
+    return success();
+  }
+  return failure();
+}
+
+void printProcBindKind(OpAsmPrinter &p, Operation *op,
+                       omp::ClauseProcBindKindAttr procBindAttr) {
+  p << stringifyClauseProcBindKind(procBindAttr.getValue());
 }
 
 LogicalResult ParallelOp::verify() {
@@ -125,24 +143,6 @@ LogicalResult ParallelOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
   return success();
-}
-
-void ParallelOp::print(OpAsmPrinter &p) {
-  p << " ";
-  if (auto ifCond = if_expr_var())
-    p << "if(" << ifCond << " : " << ifCond.getType() << ") ";
-
-  if (auto threads = num_threads_var())
-    p << "num_threads(" << threads << " : " << threads.getType() << ") ";
-
-  if (!allocate_vars().empty())
-    printAllocateAndAllocator(p, allocate_vars(), allocators_vars());
-
-  if (auto bind = proc_bind_val())
-    p << "proc_bind(" << stringifyClauseProcBindKind(*bind) << ") ";
-
-  p << ' ';
-  p.printRegion(getRegion());
 }
 
 //===----------------------------------------------------------------------===//
@@ -626,9 +626,10 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
         return failure();
       clauseSegments[pos[threadLimitClause]] = 1;
     } else if (clauseKeyword == "allocate") {
-      if (checkAllowed(allocateClause) ||
+      if (checkAllowed(allocateClause) || parser.parseLParen() ||
           parseAllocateAndAllocator(parser, allocates, allocateTypes,
-                                    allocators, allocatorTypes))
+                                    allocators, allocatorTypes) ||
+          parser.parseRParen())
         return failure();
       clauseSegments[pos[allocateClause]] = allocates.size();
       clauseSegments[pos[allocateClause] + 1] = allocators.size();
@@ -803,32 +804,6 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
   return success();
 }
 
-/// Parses a parallel operation.
-///
-/// operation ::= `omp.parallel` clause-list
-/// clause-list ::= clause | clause clause-list
-/// clause ::= if | num-threads | allocate | proc-bind
-///
-ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<ClauseType> clauses = {ifClause, numThreadsClause, allocateClause,
-                                     procBindClause};
-
-  SmallVector<int> segments;
-
-  if (failed(parseClauses(parser, result, clauses, segments)))
-    return failure();
-
-  result.addAttribute("operand_segment_sizes",
-                      parser.getBuilder().getI32VectorAttr(segments));
-
-  Region *body = result.addRegion();
-  SmallVector<OpAsmParser::OperandType> regionArgs;
-  SmallVector<Type> regionArgTypes;
-  if (parser.parseRegion(*body, regionArgs, regionArgTypes))
-    return failure();
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // Parser, printer and verifier for SectionsOp
 //===----------------------------------------------------------------------===//
@@ -863,8 +838,12 @@ void SectionsOp::print(OpAsmPrinter &p) {
   if (!reduction_vars().empty())
     printReductionVarList(p, reductions(), reduction_vars());
 
-  if (!allocate_vars().empty())
-    printAllocateAndAllocator(p, allocate_vars(), allocators_vars());
+  if (!allocate_vars().empty()) {
+    printAllocateAndAllocator(p << "allocate(", *this, allocate_vars(),
+                              allocate_vars().getTypes(), allocators_vars(),
+                              allocators_vars().getTypes());
+    p << ")";
+  }
 
   if (nowait())
     p << "nowait";

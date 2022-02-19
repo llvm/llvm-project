@@ -97,7 +97,17 @@ def ParallelOp : OpenMP_Op<"parallel", [
   let builders = [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `if` `(` $if_expr_var `:` type($if_expr_var) `)`
+          | `num_threads` `(` $num_threads_var `:` type($num_threads_var) `)`
+          | `allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+          | `proc_bind` `(` custom<ProcBindKind>($proc_bind_val) `)`
+    ) $region attr-dict
+  }];
   let hasVerifier = 1;
 }
 
