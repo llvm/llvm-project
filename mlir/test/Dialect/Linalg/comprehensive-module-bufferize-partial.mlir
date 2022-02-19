@@ -179,35 +179,6 @@ func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
 
 // -----
 
-// CHECK-SCF-LABEL: func @simple_scf_for(
-//  CHECK-SCF-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @simple_scf_for(
-    %t1: tensor<?xf32>, %sz: index, %step: index, %f: f32) -> tensor<?xf32> {
-  %c0 = arith.constant 0 : index
-
-  // CHECK-SCF: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
-  // CHECK-SCF: %[[alloc:.*]] = memref.alloc
-  // CHECK-SCF: %[[casted:.*]] = memref.cast %[[alloc]]
-  // CHECK-SCF: memref.copy %[[t1_memref]], %[[alloc]]
-  // CHECK-SCF: %[[scf_for:.*]] = scf.for %[[iv:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[arg0:.*]] = %[[casted]]) -> ({{.*}}) {
-  %0 = scf.for %iv = %c0 to %sz step %step iter_args(%arg0 = %t1) -> tensor<?xf32> {
-    // CHECK-SCF: %[[arg0_tensor:.*]] = bufferization.to_tensor %[[arg0]]
-    // CHECK-SCF: %[[insert:.*]] = tensor.insert %{{.*}} into %[[arg0_tensor]]
-    %1 = tensor.insert %f into %arg0[%iv] : tensor<?xf32>
-
-    // CHECK-SCF: %[[insert_memref:.*]] = bufferization.to_memref %[[insert]]
-    // CHECK-SCF: scf.yield %[[insert_memref]]
-    scf.yield %1 : tensor<?xf32>
-  }
-  // CHECK-SCF: }
-
-  // CHECK-SCF: %[[scf_for_tensor:.*]] = bufferization.to_tensor %[[scf_for]]
-  // CHECK-SCF: return %[[scf_for_tensor]]
-  return %0 : tensor<?xf32>
-}
-
-// -----
-
 // CHECK-SCF-LABEL: func @simple_scf_if(
 //  CHECK-SCF-SAME:     %[[t1:.*]]: tensor<?xf32> {linalg.inplaceable = true}, %[[c:.*]]: i1, %[[pos:.*]]: index
 func @simple_scf_if(%t1: tensor<?xf32> {linalg.inplaceable = true}, %c: i1, %pos: index, %f: f32)

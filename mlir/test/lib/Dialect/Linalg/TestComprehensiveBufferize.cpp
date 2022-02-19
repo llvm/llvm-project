@@ -102,10 +102,6 @@ struct TestComprehensiveFunctionBufferize
 
 void TestComprehensiveFunctionBufferize::runOnOperation() {
   auto options = std::make_unique<AnalysisBufferizationOptions>();
-
-  if (!allowReturnMemref)
-    options->addPostAnalysisStep(scf::assertScfForAliasingProperties);
-
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;
   options->testAnalysisOnly = testAnalysisOnly;

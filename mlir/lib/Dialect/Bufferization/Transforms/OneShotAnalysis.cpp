@@ -778,6 +778,19 @@ LogicalResult bufferization::analyzeOp(Operation *op,
       return failure();
   }
 
+  // Analysis verification: After setting up alias/equivalence sets, each op
+  // can check for expected invariants/limitations and fail the analysis if
+  // necessary.
+  bool passedAnalysis = true;
+  op->walk([&](Operation *op) {
+    if (BufferizableOpInterface bufferizableOp =
+            options.dynCastBufferizableOp(op))
+      if (failed(bufferizableOp.verifyAnalysis(state)))
+        passedAnalysis = false;
+  });
+  if (!passedAnalysis)
+    return failure();
+
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly)
     annotateOpsWithBufferizationMarkers(op, aliasInfo, state);
