@@ -9,16 +9,15 @@
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
-
-#include "llvm/Support/FormatVariadic.h"
 
 #include <cassert>
 

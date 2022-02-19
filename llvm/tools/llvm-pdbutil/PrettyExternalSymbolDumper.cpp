@@ -9,6 +9,7 @@
 #include "PrettyExternalSymbolDumper.h"
 #include "LinePrinter.h"
 
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolPublicSymbol.h"
 #include "llvm/Support/Format.h"

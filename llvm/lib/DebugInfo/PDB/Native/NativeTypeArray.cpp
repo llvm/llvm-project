@@ -8,9 +8,10 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeTypeArray.h"
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

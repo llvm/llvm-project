@@ -8,13 +8,15 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumGlobals.h"
 
-#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

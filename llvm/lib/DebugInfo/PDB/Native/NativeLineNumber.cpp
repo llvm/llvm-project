@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/NativeLineNumber.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

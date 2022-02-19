@@ -17,8 +17,10 @@
 #include "PrettyVariableDumper.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
 #include "llvm/Support/Format.h"
