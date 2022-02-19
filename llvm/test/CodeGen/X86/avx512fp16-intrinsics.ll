@@ -35,6 +35,32 @@ define <32 x half> @test_sqrt_ph_512_fast(<32 x half> %a0, <32 x half> %a1) {
   ret <32 x half> %2
 }
 
+define <32 x half> @test_sqrt_ph_512_fast_estimate_attribute(<32 x half> %a0, <32 x half> %a1) "reciprocal-estimates"="vec-sqrt" {
+; CHECK-LABEL: test_sqrt_ph_512_fast_estimate_attribute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %zmm0, %zmm0
+; CHECK-NEXT:    vmulph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call fast <32 x half> @llvm.sqrt.v32f16(<32 x half> %a0)
+  %2 = fdiv fast <32 x half> %a1, %1
+  ret <32 x half> %2
+}
+
+define <32 x half> @test_sqrt_ph_512_fast_estimate_attribute_2(<32 x half> %a0, <32 x half> %a1) "reciprocal-estimates"="vec-sqrth:1" {
+; CHECK-LABEL: test_sqrt_ph_512_fast_estimate_attribute_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %zmm0, %zmm2
+; CHECK-NEXT:    vmulph %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vfmadd213ph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to32}, %zmm2, %zmm0
+; CHECK-NEXT:    vmulph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to32}, %zmm2, %zmm2
+; CHECK-NEXT:    vmulph %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmulph %zmm0, %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call fast <32 x half> @llvm.sqrt.v32f16(<32 x half> %a0)
+  %2 = fdiv fast <32 x half> %a1, %1
+  ret <32 x half> %2
+}
+
 define <32 x half> @test_mask_sqrt_ph_512(<32 x half> %a0, <32 x half> %passthru, i32 %mask) {
 ; CHECK-LABEL: test_mask_sqrt_ph_512:
 ; CHECK:       # %bb.0:
