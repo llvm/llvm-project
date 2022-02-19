@@ -100,6 +100,15 @@ define signext i32 @shfli32(i32 signext %a) nounwind {
  ret i32 %tmp
 }
 
+define signext i32 @zip_w(i32 signext %a) nounwind {
+; RV64ZBP-LABEL: zip_w:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    zip.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 15)
+ ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.unshfl.i32(i32 %a, i32 %b)
 
 define signext i32 @unshfl32(i32 signext %a, i32 signext %b) nounwind {
@@ -129,6 +138,15 @@ define signext i32 @unshfli32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unshfli a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 13)
+ ret i32 %tmp
+}
+
+define signext i32 @unzip_w(i32 signext %a) nounwind {
+; RV64ZBP-LABEL: unzip_w:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    unzip.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 15)
  ret i32 %tmp
 }
 

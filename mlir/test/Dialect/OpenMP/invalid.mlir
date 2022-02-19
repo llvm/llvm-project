@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 func @unknown_clause() {
-  // expected-error@+1 {{invalid is not a valid clause}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel invalid {
   }
 
@@ -11,7 +11,7 @@ func @unknown_clause() {
 // -----
 
 func @if_once(%n : i1) {
-  // expected-error@+1 {{at most one if clause can appear on the omp.parallel operation}}
+  // expected-error@+1 {{`if` clause can appear at most once in the expansion of the oilist directive}}
   omp.parallel if(%n : i1) if(%n : i1) {
   }
 
@@ -21,7 +21,7 @@ func @if_once(%n : i1) {
 // -----
 
 func @num_threads_once(%n : si32) {
-  // expected-error@+1 {{at most one num_threads clause can appear on the omp.parallel operation}}
+  // expected-error@+1 {{`num_threads` clause can appear at most once in the expansion of the oilist directive}}
   omp.parallel num_threads(%n : si32) num_threads(%n : si32) {
   }
 
@@ -31,7 +31,7 @@ func @num_threads_once(%n : si32) {
 // -----
 
 func @nowait_not_allowed(%n : memref<i32>) {
-  // expected-error@+1 {{nowait is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel nowait {}
   return
 }
@@ -39,7 +39,7 @@ func @nowait_not_allowed(%n : memref<i32>) {
 // -----
 
 func @linear_not_allowed(%data_var : memref<i32>, %linear_var : i32) {
-  // expected-error@+1 {{linear is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel linear(%data_var = %linear_var : memref<i32>)  {}
   return
 }
@@ -47,7 +47,7 @@ func @linear_not_allowed(%data_var : memref<i32>, %linear_var : i32) {
 // -----
 
 func @schedule_not_allowed() {
-  // expected-error@+1 {{schedule is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel schedule(static) {}
   return
 }
@@ -55,7 +55,7 @@ func @schedule_not_allowed() {
 // -----
 
 func @collapse_not_allowed() {
-  // expected-error@+1 {{collapse is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel collapse(3) {}
   return
 }
@@ -63,7 +63,7 @@ func @collapse_not_allowed() {
 // -----
 
 func @order_not_allowed() {
-  // expected-error@+1 {{order is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel order(concurrent) {}
   return
 }
@@ -71,14 +71,14 @@ func @order_not_allowed() {
 // -----
 
 func @ordered_not_allowed() {
-  // expected-error@+1 {{ordered is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel ordered(2) {}
 }
 
 // -----
 
 func @proc_bind_once() {
-  // expected-error@+1 {{at most one proc_bind clause can appear on the omp.parallel operation}}
+  // expected-error@+1 {{`proc_bind` clause can appear at most once in the expansion of the oilist directive}}
   omp.parallel proc_bind(close) proc_bind(spread) {
   }
 
