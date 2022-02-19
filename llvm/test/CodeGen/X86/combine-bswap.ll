@@ -84,8 +84,8 @@ define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
   ret void
 }
 
-define i64 @test_bswap_shift(i16 %0) {
-; X86-LABEL: test_bswap_shift:
+define i64 @test_bswap64_shift48_zext(i16 %a0) {
+; X86-LABEL: test_bswap64_shift48_zext:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $16, %eax
@@ -93,14 +93,104 @@ define i64 @test_bswap_shift(i16 %0) {
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_bswap_shift:
+; X64-LABEL: test_bswap64_shift48_zext:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlq $48, %rax
 ; X64-NEXT:    bswapq %rax
 ; X64-NEXT:    retq
-  %2 = zext i16 %0 to i64
-  %3 = shl i64 %2, 48
-  %4 = call i64 @llvm.bswap.i64(i64 %3)
-  ret i64 %4
+  %z = zext i16 %a0 to i64
+  %s = shl i64 %z, 48
+  %b = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %b
+}
+
+define i64 @test_bswap64_shift48(i64 %a0) {
+; X86-LABEL: test_bswap64_shift48:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bswap64_shift48:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shlq $48, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    retq
+  %s = shl i64 %a0, 48
+  %b = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %b
+}
+
+define i32 @test_bswap32_shift17(i32 %a0) {
+; X86-LABEL: test_bswap32_shift17:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $17, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bswap32_shift17:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $17, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    retq
+  %s = shl i32 %a0, 17
+  %b = call i32 @llvm.bswap.i32(i32 %s)
+  ret i32 %b
+}
+
+; negative test
+define i64 @test_bswap64_shift17(i64 %a0) {
+; X86-LABEL: test_bswap64_shift17:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shldl $17, %edx, %eax
+; X86-NEXT:    shll $17, %edx
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    bswapl %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bswap64_shift17:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shlq $17, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    retq
+  %s = shl i64 %a0, 17
+  %b = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %b
+}
+
+; negative test
+define i64 @test_bswap64_shift48_multiuse(i64 %a0, i64* %a1) {
+; X86-LABEL: test_bswap64_shift48_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    movl %eax, 4(%ecx)
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bswap64_shift48_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    shlq $48, %rdi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    orq %rax, %rdi
+; X64-NEXT:    movq %rdi, (%rsi)
+; X64-NEXT:    retq
+  %s = shl i64 %a0, 48
+  %b = call i64 @llvm.bswap.i64(i64 %s)
+  %a = add i64 %s, %b
+  store i64 %a, i64* %a1
+  ret i64 %b
 }
