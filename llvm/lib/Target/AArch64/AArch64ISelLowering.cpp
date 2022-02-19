@@ -15447,7 +15447,11 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return DAG.getNode(ISD::FMINNUM, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_neon_smull:
+    return DAG.getNode(AArch64ISD::SMULL, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_neon_umull:
+    return DAG.getNode(AArch64ISD::UMULL, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_neon_pmull:
   case Intrinsic::aarch64_neon_sqdmull:
     return tryCombineLongOpWithDup(IID, N, DCI, DAG);
@@ -18131,6 +18135,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
   case AArch64ISD::UADDV:
     return performUADDVCombine(N, DAG);
+  case AArch64ISD::SMULL:
+  case AArch64ISD::UMULL:
+    return tryCombineLongOpWithDup(Intrinsic::not_intrinsic, N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
