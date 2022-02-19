@@ -502,29 +502,46 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   unsigned NumOperands = MI.getNumExplicitOperands();
   bool HasPolicy = RISCVII::hasVecPolicyOp(TSFlags);
 
-  // Default to tail agnostic unless the destination is tied to a source.
-  // Unless the source is undef. In that case the user would have some control
-  // over the tail values. Some pseudo instructions force a tail agnostic policy
-  // despite having a tied def.
+  // If the instruction has policy argument, use the argument.
+  // If there is no policy argument, default to tail agnostic unless the
+  // destination is tied to a source. Unless the source is undef. In that case
+  // the user would have some control over the policy values. Some pseudo
+  // instructions force a tail agnostic policy despite having a tied def.
   bool ForceTailAgnostic = RISCVII::doesForceTailAgnostic(TSFlags);
   bool TailAgnostic = true;
-  // If the instruction has policy argument, use the argument.
+  bool UsesMaskPolicy = RISCVII::UsesMaskPolicy(TSFlags);
+  // FIXME: Could we look at the above or below instructions to choose the
+  // matched mask policy to reduce vsetvli instructions? Default mask policy is
+  // agnostic if instructions use mask policy, otherwise is undisturbed. Because
+  // most mask operations are mask undisturbed, so we could possibly reduce the
+  // vsetvli between mask and nomasked instruction sequence.
+  bool MaskAgnostic = UsesMaskPolicy;
+  unsigned UseOpIdx;
   if (HasPolicy) {
     const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
-    TailAgnostic = Op.getImm() & 0x1;
-  }
-
-  unsigned UseOpIdx;
-  if (!(ForceTailAgnostic || (HasPolicy && TailAgnostic)) &&
-      MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+    uint64_t Policy = Op.getImm();
+    assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
+           "Invalid Policy Value");
+    // Although in some cases, mismatched passthru/maskedoff with policy value
+    // does not make sense (ex. tied operand is IMPLICIT_DEF with non-TAMA
+    // policy, or tied operand is not IMPLICIT_DEF with TAMA policy), but users
+    // have set the policy value explicitly, so compiler would not fix it.
+    TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
+    MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
+  } else if (!ForceTailAgnostic && MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
     TailAgnostic = false;
+    if (UsesMaskPolicy)
+      MaskAgnostic = false;
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI->getVRegDef(UseMO.getReg());
     if (UseMI) {
       UseMI = elideCopies(UseMI, MRI);
-      if (UseMI && UseMI->isImplicitDef())
+      if (UseMI && UseMI->isImplicitDef()) {
         TailAgnostic = true;
+        if (UsesMaskPolicy)
+          MaskAgnostic = true;
+      }
     }
   }
 
@@ -559,8 +576,8 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     }
   } else
     InstrInfo.setAVLReg(RISCV::NoRegister);
-  InstrInfo.setVTYPE(VLMul, SEW, /*TailAgnostic*/ TailAgnostic,
-                     /*MaskAgnostic*/ false, MaskRegOp, StoreOp, ScalarMovOp);
+  InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic, MaskRegOp, StoreOp,
+                     ScalarMovOp);
 
   return InstrInfo;
 }

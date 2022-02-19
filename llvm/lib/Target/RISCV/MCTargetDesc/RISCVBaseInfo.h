@@ -88,6 +88,13 @@ enum {
   // Pseudos.
   IsRVVWideningReductionShift = HasVecPolicyOpShift + 1,
   IsRVVWideningReductionMask = 1 << IsRVVWideningReductionShift,
+
+  // Does this instruction care about mask policy. If it is not, the mask policy
+  // could be either agnostic or undisturbed. For example, unmasked, store, and
+  // reduction operations result would not be affected by mask policy, so
+  // compiler has free to select either one.
+  UsesMaskPolicyShift = IsRVVWideningReductionShift + 1,
+  UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
 };
 
 // Match with the definitions in RISCVInstrFormatsV.td
@@ -110,8 +117,8 @@ enum VLMUL : uint8_t {
 };
 
 enum {
-  TAIL_UNDISTURBED = 0,
   TAIL_AGNOSTIC = 1,
+  MASK_AGNOSTIC = 2,
 };
 
 // Helper functions to read TSFlags.
@@ -155,6 +162,10 @@ static inline bool hasVecPolicyOp(uint64_t TSFlags) {
 /// \returns true if it is a vector widening reduction instruction.
 static inline bool isRVVWideningReduction(uint64_t TSFlags) {
   return TSFlags & IsRVVWideningReductionMask;
+}
+/// \returns true if mask policy is valid for the instruction.
+static inline bool UsesMaskPolicy(uint64_t TSFlags) {
+  return TSFlags & UsesMaskPolicyMask;
 }
 
 // RISC-V Specific Machine Operand Flags
