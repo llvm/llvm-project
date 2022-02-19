@@ -563,10 +563,10 @@ define amdgpu_kernel void @constant_sextload_v64i8_to_v64i32(<64 x i32> addrspac
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 
 ; GCN-NOHSA-DAG: buffer_load_ubyte v[[LO:[0-9]+]],
-; GCN-NOHSA: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]]
+; GCN-NOHSA: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 
 ; GCN-HSA-DAG: flat_load_ubyte v[[LO:[0-9]+]],
-; GCN-HSA: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]]
+; GCN-HSA: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[LO]]:[[HI]]]
 
 ; EG: VTX_READ_8 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
 ; EG: MOV {{.*}}, 0.0
@@ -582,8 +582,8 @@ define amdgpu_kernel void @constant_zextload_i8_to_i64(i64 addrspace(1)* %out, i
 ; GCN-HSA: flat_load_sbyte v[[LO:[0-9]+]],
 ; GCN: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
-; GCN-NOHSA: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GCN-HSA: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN-NOHSA: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
+; GCN-HSA: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[LO]]:[[HI]]]
 
 ; EG: VTX_READ_8 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
 ; EG: ASHR {{\**}} {{T[0-9]\.[XYZW]}}, {{.*}}, literal

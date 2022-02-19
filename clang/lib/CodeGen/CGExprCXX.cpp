@@ -2101,10 +2101,9 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
       GEP.push_back(Zero);
     }
 
-    Ptr = Address::deprecated(Builder.CreateInBoundsGEP(Ptr.getElementType(),
-                                                        Ptr.getPointer(), GEP,
-                                                        "del.first"),
-                              Ptr.getAlignment());
+    Ptr = Address(Builder.CreateInBoundsGEP(Ptr.getElementType(),
+                                            Ptr.getPointer(), GEP, "del.first"),
+                  ConvertTypeForMem(DeleteTy), Ptr.getAlignment());
   }
 
   assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());

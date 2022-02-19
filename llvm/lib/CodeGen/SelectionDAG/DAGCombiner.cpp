@@ -3656,6 +3656,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
+  // As with the previous fold, prefer add for more folding potential.
+  // Subtracting SMIN/0 is the same as adding SMIN/0:
+  // N0 - (X << BW-1) --> N0 + (X << BW-1)
+  if (N1.getOpcode() == ISD::SHL) {
+    ConstantSDNode *ShlC = isConstOrConstSplat(N1.getOperand(1));
+    if (ShlC && ShlC->getAPIntValue() == VT.getScalarSizeInBits() - 1)
+      return DAG.getNode(ISD::ADD, DL, VT, N1, N0);
+  }
+
   if (TLI.isOperationLegalOrCustom(ISD::ADDCARRY, VT)) {
     // (sub Carry, X)  ->  (addcarry (sub 0, X), 0, Carry)
     if (SDValue Carry = getAsCarry(TLI, N0)) {

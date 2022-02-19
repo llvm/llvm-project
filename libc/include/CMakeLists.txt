@@ -141,6 +141,7 @@ add_gen_header(
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.__atexithandler_t
 )
 
 add_gen_header(

@@ -79,9 +79,15 @@ struct SampleId {
                           Distribution.Name)
 };
 
+// The type of Samples as reported by the Google Benchmark's JSON result file.
+// We are only interested in the "iteration" samples, the "aggregate" ones
+// represent derived metrics such as 'mean' or 'median'.
+enum class SampleType { UNKNOWN, ITERATION, AGGREGATE };
+
 // A SampleId with an associated measured throughput.
 struct Sample {
   SampleId Id;
+  SampleType Type = SampleType::UNKNOWN;
   double BytesPerSecond = 0;
 };
 

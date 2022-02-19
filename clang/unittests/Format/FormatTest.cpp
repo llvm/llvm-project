@@ -1861,6 +1861,16 @@ TEST_F(FormatTest, UnderstandsMacros) {
                "#define BBB }\n",
                Style);
   // verifyFormat("#define AAA N { //\n", Style);
+
+  verifyFormat("MACRO(return)");
+  verifyFormat("MACRO(co_await)");
+  verifyFormat("MACRO(co_return)");
+  verifyFormat("MACRO(co_yield)");
+  verifyFormat("MACRO(return, something)");
+  verifyFormat("MACRO(co_return, something)");
+  verifyFormat("MACRO(something##something)");
+  verifyFormat("MACRO(return##something)");
+  verifyFormat("MACRO(co_return##something)");
 }
 
 TEST_F(FormatTest, ShortBlocksInMacrosDontMergeWithCodeAfterMacro) {

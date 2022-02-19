@@ -21,9 +21,9 @@ entry:
 ; CHECKV7-NEXT: movt [[SB:[rl0-9]+]], :upper16:s
 ; CHECK-NEXT: ldm{{(\.w)?}} [[LB]]!,
 ; CHECK-NEXT: stm{{(\.w)?}} [[SB]]!,
-; Think of the monstrosity '{{\[}}[[LB]]]' as '[ [[LB]] ]' without the spaces.
-; CHECK-NEXT: ldrb{{(\.w)?}} {{.*}}, {{\[}}[[LB]]]
-; CHECK-NEXT: strb{{(\.w)?}} {{.*}}, {{\[}}[[SB]]]
+; Think of the monstrosity '[[[LB]]]' as '[ [[LB]] ]' without the spaces.
+; CHECK-NEXT: ldrb{{(\.w)?}} {{.*}}, [[[LB]]]
+; CHECK-NEXT: strb{{(\.w)?}} {{.*}}, [[[SB]]]
     tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast ([64 x i32]* @s to i8*), i8* align 4 bitcast ([64 x i32]* @d to i8*), i32 17, i1 false)
     ret void
 }
@@ -36,14 +36,14 @@ entry:
 ; CHECKV6-NEXT: ldr [[SB:r[0-7]]],
 ; CHECKV6-NEXT: ldm{{(\.w)?}} [[LB]]!,
 ; CHECKV6-NEXT: stm{{(\.w)?}} [[SB]]!,
-; CHECKV6-DAG: ldrh{{(\.w)?}} {{.*}}, {{\[}}[[LB]]]
-; CHECKV6-DAG: ldrb{{(\.w)?}} {{.*}}, {{\[}}[[LB]], #2]
-; CHECKV6-DAG: strb{{(\.w)?}} {{.*}}, {{\[}}[[SB]], #2]
-; CHECKV6-DAG: strh{{(\.w)?}} {{.*}}, {{\[}}[[SB]]]
+; CHECKV6-DAG: ldrh{{(\.w)?}} {{.*}}, [[[LB]]]
+; CHECKV6-DAG: ldrb{{(\.w)?}} {{.*}}, [[[LB]], #2]
+; CHECKV6-DAG: strb{{(\.w)?}} {{.*}}, [[[SB]], #2]
+; CHECKV6-DAG: strh{{(\.w)?}} {{.*}}, [[[SB]]]
 ; CHECKV7: movt [[LB:[rl0-9]+]], :upper16:d
 ; CHECKV7-NEXT: movt [[SB:[rl0-9]+]], :upper16:s
-; CHECKV7: ldr{{(\.w)?}} {{.*}}, {{\[}}[[LB]], #11]
-; CHECKV7-NEXT: str{{(\.w)?}} {{.*}}, {{\[}}[[SB]], #11]
+; CHECKV7: ldr{{(\.w)?}} {{.*}}, [[[LB]], #11]
+; CHECKV7-NEXT: str{{(\.w)?}} {{.*}}, [[[SB]], #11]
     tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast ([64 x i32]* @s to i8*), i8* align 4 bitcast ([64 x i32]* @d to i8*), i32 15, i1 false)
     ret void
 }

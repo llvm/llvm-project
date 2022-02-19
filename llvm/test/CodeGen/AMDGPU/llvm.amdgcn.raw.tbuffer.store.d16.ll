@@ -22,7 +22,7 @@ main_body:
 ; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], [[S_DATA]], 0xffff{{$}}
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[MASKED]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], [[SHR]]
-; PREGFX10-UNPACKED: tbuffer_store_format_d16_xy v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
+; PREGFX10-UNPACKED: tbuffer_store_format_d16_xy v[[[V_LO]]:[[V_HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xy v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10-PACKED: tbuffer_store_format_d16_xy v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
@@ -33,7 +33,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyz:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}},
+; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}},
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
@@ -42,14 +42,14 @@ main_body:
 
 ; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED1]]
-; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
+; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyz v[[[LO]]:[[HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 
 
 ; PACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
 ; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
 ; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
-; PREGFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
-; GFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; PREGFX10-PACKED: tbuffer_store_format_d16_xyz v[[[LO]]:[[HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
+; GFX10-PACKED: tbuffer_store_format_d16_xyz v[[[LO]]:[[HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
 define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %data) {
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
@@ -58,7 +58,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyzw:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}},
+; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}},
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
@@ -68,13 +68,13 @@ main_body:
 
 ; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR1]]
-; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
+; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 
 
 ; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
 ; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
-; PREGFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
-; GFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; PREGFX10-PACKED: tbuffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
+; GFX10-PACKED: tbuffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
 define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %data) {
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)

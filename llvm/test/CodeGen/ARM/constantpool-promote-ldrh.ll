@@ -9,7 +9,7 @@ target triple = "thumbv6m-arm-linux-gnueabi"
 ; CHECK-LABEL: fn1:
 ; CHECK: adr [[base:r[0-9]+]], .LCPI0_0
 ; CHECK-NOT: ldrh {{r[0-9]+}}, .LCPI0_0
-; CHECK: ldrh r{{[0-9]+}}, {{\[}}[[base]]]
+; CHECK: ldrh r{{[0-9]+}}, [[[base]]]
 define hidden i32 @fn1() #0 {
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 undef, i8* align 2 bitcast ([4 x i16]* @fn1.a to i8*), i32 8, i1 false)

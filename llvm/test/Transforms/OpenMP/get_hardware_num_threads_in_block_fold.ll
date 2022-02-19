@@ -178,7 +178,16 @@ entry:
   ret void
 }
 
-declare i32 @__kmpc_get_hardware_num_threads_in_block()
+define internal i32 @__kmpc_get_hardware_num_threads_in_block() {
+; CHECK-LABEL: define {{[^@]+}}@__kmpc_get_hardware_num_threads_in_block
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = call i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
+  ret i32 %ret
+}
+declare i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
 declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1 zeroext, i1 zeroext) #1
 declare void @__kmpc_target_deinit(%struct.ident_t* nocapture readnone, i8, i1 zeroext) #1
 declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)

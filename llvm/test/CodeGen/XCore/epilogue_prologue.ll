@@ -190,7 +190,7 @@ entry:
 ; CHECKFP-NEXT: stw r10, sp[1]
 ; CHECKFP-NEXT: ldaw r10, sp[0]
 ; CHECKFP-NEXT: mkmsk [[REG:r[0-9]+]], 8
-; CHECKFP-NEXT: ldaw r0, r10{{\[}}[[REG]]{{\]}}
+; CHECKFP-NEXT: ldaw r0, r10[[[REG]]]
 ; CHECKFP-NEXT: extsp 1
 ; CHECKFP-NEXT: bl f5
 ; CHECKFP-NEXT: ldaw sp, sp[1]
@@ -218,7 +218,7 @@ entry:
 ; CHECKFP-NEXT: stw r10, sp[1]
 ; CHECKFP-NEXT: ldaw r10, sp[0]
 ; CHECKFP-NEXT: ldc [[REG:r[0-9]+]], 32767
-; CHECKFP-NEXT: ldaw r0, r10{{\[}}[[REG]]{{\]}}
+; CHECKFP-NEXT: ldaw r0, r10[[[REG]]]
 ; CHECKFP-NEXT: extsp 1
 ; CHECKFP-NEXT: bl f5
 ; CHECKFP-NEXT: ldaw sp, sp[1]

@@ -107,6 +107,8 @@ static void processPerDistributionData(PerDistributionData &Data) {
 std::vector<FunctionData> getThroughputs(ArrayRef<Sample> Samples) {
   std::unordered_map<FunctionId, FunctionData, FunctionId::Hasher> Functions;
   for (const auto &S : Samples) {
+    if (S.Type != SampleType::ITERATION)
+      break;
     auto &Function = Functions[S.Id.Function];
     auto &Data = Function.PerDistributionData[S.Id.Distribution.Name];
     Data.BytesPerSecondSamples.push_back(S.BytesPerSecond);

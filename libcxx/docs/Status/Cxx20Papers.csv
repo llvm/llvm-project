@@ -72,7 +72,7 @@
 "`P1085R2 <https://wg21.link/P1085R2>`__","LWG","Should Span be Regular?","San Diego","|Complete|","8.0"
 "`P1123R0 <https://wg21.link/P1123R0>`__","LWG","Editorial Guidance for merging P0019r8 and P0528r3","San Diego","* *",""
 "`P1148R0 <https://wg21.link/P1148R0>`__","LWG","Cleaning up Clause 20","San Diego","* *",""
-"`P1165R1 <https://wg21.link/P1165R1>`__","LWG","Make stateful allocator propagation more consistent for ``operator+(basic_string)``\ ","San Diego","* *",""
+"`P1165R1 <https://wg21.link/P1165R1>`__","LWG","Make stateful allocator propagation more consistent for ``operator+(basic_string)``\ ","San Diego","|Complete|","15.0"
 "`P1209R0 <https://wg21.link/P1209R0>`__","LWG","Adopt Consistent Container Erasure from Library Fundamentals 2 for C++20","San Diego","|Complete|","8.0"
 "`P1210R0 <https://wg21.link/P1210R0>`__","LWG","Completing the Rebase of Library Fundamentals, Version 3, Working Draft","San Diego","* *",""
 "`P1236R1 <https://wg21.link/P1236R1>`__","CWG","Alternative Wording for P0907R4 Signed Integers are Two's Complement","San Diego","* *",""

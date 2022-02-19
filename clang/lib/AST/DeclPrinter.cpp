@@ -680,6 +680,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       if (FT->isVariadic()) {
         if (D->getNumParams()) POut << ", ";
         POut << "...";
+      } else if (!D->getNumParams() && !Context.getLangOpts().CPlusPlus) {
+        // The function has a prototype, so it needs to retain the prototype
+        // in C.
+        POut << "void";
       }
     } else if (D->doesThisDeclarationHaveABody() && !D->hasPrototype()) {
       for (unsigned i = 0, e = D->getNumParams(); i != e; ++i) {

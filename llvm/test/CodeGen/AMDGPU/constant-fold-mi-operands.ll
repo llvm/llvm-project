@@ -90,7 +90,7 @@ define amdgpu_kernel void @fold_mi_s_not_0(i32 addrspace(1)* %out, i32 %x) #0 {
 ; GCN: v_bcnt_u32_b32{{(_e32)*(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, v[[RESULT_LO]]{{$}}
 ; GCN-NEXT: v_not_b32_e32 v[[RESULT_LO]]
 ; GCN-NEXT: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], -1{{$}}
-; GCN-NEXT: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
+; GCN-NEXT: buffer_store_dwordx2 v[[[RESULT_LO]]:[[RESULT_HI]]]
 define amdgpu_kernel void @fold_mi_v_not_0(i64 addrspace(1)* %out) {
   %vreg = load volatile i64, i64 addrspace(1)* undef
   %ctpop = call i64 @llvm.ctpop.i64(i64 %vreg)
@@ -102,14 +102,14 @@ define amdgpu_kernel void @fold_mi_v_not_0(i64 addrspace(1)* %out) {
 ; The neg1 appears after folding the not 0
 ; GCN-LABEL: {{^}}fold_mi_or_neg1:
 ; GCN: buffer_load_dwordx2
-; GCN: buffer_load_dwordx2 v{{\[}}[[VREG1_LO:[0-9]+]]:[[VREG1_HI:[0-9]+]]{{\]}}
+; GCN: buffer_load_dwordx2 v[[[VREG1_LO:[0-9]+]]:[[VREG1_HI:[0-9]+]]]
 
 ; GCN: v_bcnt_u32_b32{{(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, 0{{$}}
 ; GCN: v_bcnt_u32_b32{{(_e32)*(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, v[[RESULT_LO]]{{$}}
 ; GCN-DAG: v_not_b32_e32 v[[RESULT_LO]], v[[RESULT_LO]]
 ; GCN-DAG: v_or_b32_e32 v[[RESULT_LO]], v[[VREG1_LO]], v[[RESULT_LO]]
 ; GCN-DAG: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], v[[VREG1_HI]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[RESULT_LO]]:[[RESULT_HI]]]
 define amdgpu_kernel void @fold_mi_or_neg1(i64 addrspace(1)* %out) {
   %vreg0 = load volatile i64, i64 addrspace(1)* undef
   %vreg1 = load volatile i64, i64 addrspace(1)* undef

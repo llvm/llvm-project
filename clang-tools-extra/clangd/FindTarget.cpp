@@ -453,15 +453,6 @@ public:
       void VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
         Outer.add(OIT->getDecl(), Flags);
       }
-      void VisitObjCObjectType(const ObjCObjectType *OOT) {
-        // Make all of the protocols targets since there's no child nodes for
-        // protocols. This isn't needed for the base type, which *does* have a
-        // child `ObjCInterfaceTypeLoc`. This structure is a hack, but it works
-        // well for go-to-definition.
-        unsigned NumProtocols = OOT->getNumProtocols();
-        for (unsigned I = 0; I < NumProtocols; I++)
-          Outer.add(OOT->getProtocol(I), Flags);
-      }
     };
     Visitor(*this, Flags).Visit(T.getTypePtr());
   }
@@ -547,6 +538,8 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(TAL->getArgument(), Flags);
   else if (const CXXBaseSpecifier *CBS = N.get<CXXBaseSpecifier>())
     Finder.add(CBS->getTypeSourceInfo()->getType(), Flags);
+  else if (const ObjCProtocolLoc *PL = N.get<ObjCProtocolLoc>())
+    Finder.add(PL->getProtocol(), Flags);
   return Finder.takeDecls();
 }
 
@@ -669,25 +662,7 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   {OMD}});
     }
 
-    void visitProtocolList(
-        llvm::iterator_range<ObjCProtocolList::iterator> Protocols,
-        llvm::iterator_range<const SourceLocation *> Locations) {
-      for (const auto &P : llvm::zip(Protocols, Locations)) {
-        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                    std::get<1>(P),
-                                    /*IsDecl=*/false,
-                                    {std::get<0>(P)}});
-      }
-    }
-
-    void VisitObjCInterfaceDecl(const ObjCInterfaceDecl *OID) {
-      if (OID->isThisDeclarationADefinition())
-        visitProtocolList(OID->protocols(), OID->protocol_locs());
-      Base::VisitObjCInterfaceDecl(OID); // Visit the interface's name.
-    }
-
     void VisitObjCCategoryDecl(const ObjCCategoryDecl *OCD) {
-      visitProtocolList(OCD->protocols(), OCD->protocol_locs());
       // getLocation is the extended class's location, not the category's.
       Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                   OCD->getLocation(),
@@ -708,12 +683,6 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   OCID->getCategoryNameLoc(),
                                   /*IsDecl=*/true,
                                   {OCID->getCategoryDecl()}});
-    }
-
-    void VisitObjCProtocolDecl(const ObjCProtocolDecl *OPD) {
-      if (OPD->isThisDeclarationADefinition())
-        visitProtocolList(OPD->protocols(), OPD->protocol_locs());
-      Base::VisitObjCProtocolDecl(OPD); // Visit the protocol's name.
     }
   };
 
@@ -944,16 +913,6 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
                                   /*IsDecl=*/false,
                                   {L.getIFaceDecl()}});
     }
-
-    void VisitObjCObjectTypeLoc(ObjCObjectTypeLoc L) {
-      unsigned NumProtocols = L.getNumProtocols();
-      for (unsigned I = 0; I < NumProtocols; I++) {
-        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                    L.getProtocolLoc(I),
-                                    /*IsDecl=*/false,
-                                    {L.getProtocol(I)}});
-      }
-    }
   };
 
   Visitor V{Resolver};
@@ -1049,6 +1008,11 @@ public:
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(L);
   }
 
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+    visitNode(DynTypedNode::create(ProtocolLoc));
+    return true;
+  }
+
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
     visitNode(DynTypedNode::create(*Init));
     return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
@@ -1094,6 +1058,12 @@ private:
                              {CCI->getAnyMember()}}};
       }
     }
+    if (const ObjCProtocolLoc *PL = N.get<ObjCProtocolLoc>())
+      return {ReferenceLoc{NestedNameSpecifierLoc(),
+                           PL->getLocation(),
+                           /*IsDecl=*/false,
+                           {PL->getProtocol()}}};
+
     // We do not have location information for other nodes (QualType, etc)
     return {};
   }

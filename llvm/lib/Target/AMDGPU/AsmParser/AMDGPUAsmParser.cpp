@@ -1930,7 +1930,7 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
 
   // We allow fp literals with f16x2 operands assuming that the specified
   // literal goes into the lower half and the upper half is zero. We also
-  // require that the literal may be losslesly converted to f16.
+  // require that the literal may be losslessly converted to f16.
   MVT ExpectedType = (type == MVT::v2f16)? MVT::f16 :
                      (type == MVT::v2i16)? MVT::i16 :
                      (type == MVT::v2f32)? MVT::f32 : type;
@@ -2960,7 +2960,7 @@ AMDGPUAsmParser::isModifier() {
 //    v_exp_f32_e32 v5, -1 // VOP1: src0 = 0xFFFFFFFF
 //    v_exp_f32_e64 v5, -1 // VOP3: src0 = 0x80000001
 // Negative fp literals with preceding "-" are
-// handled likewise for unifomtity
+// handled likewise for uniformity
 //
 bool
 AMDGPUAsmParser::parseSP3NegModifier() {
@@ -6342,7 +6342,7 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
   using namespace llvm::AMDGPU::SendMsg;
 
   // Validation strictness depends on whether message is specified
-  // in a symbolc or in a numeric form. In the latter case
+  // in a symbolic or in a numeric form. In the latter case
   // only encoding possibility is checked.
   bool Strict = Msg.IsSymbolic;
 
@@ -8384,7 +8384,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
 #define GET_MNEMONIC_CHECKER
 #include "AMDGPUGenAsmMatcher.inc"
 
-// This fuction should be defined after auto-generated include so that we have
+// This function should be defined after auto-generated include so that we have
 // MatchClassKind enum defined
 unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
                                                      unsigned Kind) {

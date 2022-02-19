@@ -61,13 +61,17 @@ static StringRef getInternalizedString(StringRef VolatileStr) {
 // Helper function for the LLVM JSON API.
 bool fromJSON(const json::Value &V, Sample &Out, json::Path P) {
   std::string Label;
+  std::string RunType;
   json::ObjectMapper O(V, P);
   if (O && O.map("bytes_per_second", Out.BytesPerSecond) &&
-      O.map("label", Label)) {
+      O.map("run_type", RunType) && O.map("label", Label)) {
     const auto LabelPair = StringRef(Label).split(',');
     Out.Id.Function.Name = getInternalizedString(LabelPair.first);
     Out.Id.Function.Type = getFunctionDescriptor(LabelPair.first).Type;
     Out.Id.Distribution.Name = getInternalizedString(LabelPair.second);
+    Out.Type = StringSwitch<SampleType>(RunType)
+                   .Case("aggregate", SampleType::AGGREGATE)
+                   .Case("iteration", SampleType::ITERATION);
     return true;
   }
   return false;

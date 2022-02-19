@@ -379,7 +379,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
       // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @[[$wsloop_loc_struct]],
-    }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
+    }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>} : (i64, i64, i64) -> ()
     omp.terminator
   }
   llvm.return
@@ -399,7 +399,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
+  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -417,7 +417,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
+  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
 

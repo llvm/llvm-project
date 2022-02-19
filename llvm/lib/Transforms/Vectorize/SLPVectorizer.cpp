@@ -4544,10 +4544,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             Value *RHS = Cmp->getOperand(1);
             CmpInst::Predicate CurrentPred = Cmp->getPredicate();
             if (P0 == AltP0Swapped) {
-              if ((P0 == CurrentPred &&
-                   !areCompatibleCmpOps(BaseOp0, BaseOp1, LHS, RHS)) ||
-                  (AltP0 == CurrentPred &&
-                   areCompatibleCmpOps(BaseOp0, BaseOp1, LHS, RHS)))
+              if (CI != Cmp && S.AltOp != Cmp &&
+                  ((P0 == CurrentPred &&
+                    !areCompatibleCmpOps(BaseOp0, BaseOp1, LHS, RHS)) ||
+                   (AltP0 == CurrentPred &&
+                    areCompatibleCmpOps(BaseOp0, BaseOp1, LHS, RHS))))
                 std::swap(LHS, RHS);
             } else if (P0 != CurrentPred && AltP0 != CurrentPred) {
               std::swap(LHS, RHS);
@@ -4833,6 +4834,29 @@ buildShuffleEntryMask(ArrayRef<Value *> VL, ArrayRef<unsigned> ReorderIndices,
     });
     Mask.swap(NewMask);
   }
+}
+
+/// Checks if the specified instruction \p I is an alternate operation for the
+/// given \p MainOp and \p AltOp instructions.
+static bool isAlternateInstruction(const Instruction *I,
+                                   const Instruction *MainOp,
+                                   const Instruction *AltOp) {
+  if (auto *CI0 = dyn_cast<CmpInst>(MainOp)) {
+    auto *AltCI0 = cast<CmpInst>(AltOp);
+    auto *CI = cast<CmpInst>(I);
+    CmpInst::Predicate P0 = CI0->getPredicate();
+    CmpInst::Predicate AltP0 = AltCI0->getPredicate();
+    assert(P0 != AltP0 && "Expected different main/alternate predicates.");
+    CmpInst::Predicate AltP0Swapped = CmpInst::getSwappedPredicate(AltP0);
+    CmpInst::Predicate CurrentPred = CI->getPredicate();
+    if (P0 == AltP0Swapped)
+      return I == AltCI0 ||
+             (I != MainOp &&
+              !areCompatibleCmpOps(CI0->getOperand(0), CI0->getOperand(1),
+                                   CI->getOperand(0), CI->getOperand(1)));
+    return AltP0 == CurrentPred || AltP0Swapped == CurrentPred;
+  }
+  return I->getOpcode() == AltOp->getOpcode();
 }
 
 InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
@@ -5560,28 +5584,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           E->Scalars, E->ReorderIndices, E->ReuseShuffleIndices,
           [E](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-            if (auto *CI0 = dyn_cast<CmpInst>(E->getMainOp())) {
-              auto *AltCI0 = cast<CmpInst>(E->getAltOp());
-              auto *CI = cast<CmpInst>(I);
-              CmpInst::Predicate P0 = CI0->getPredicate();
-              CmpInst::Predicate AltP0 = AltCI0->getPredicate();
-              assert(P0 != AltP0 &&
-                     "Expected different main/alternate predicates.");
-              CmpInst::Predicate AltP0Swapped =
-                  CmpInst::getSwappedPredicate(AltP0);
-              CmpInst::Predicate CurrentPred = CI->getPredicate();
-              if (P0 == AltP0Swapped)
-                return (P0 == CurrentPred &&
-                        !areCompatibleCmpOps(
-                            CI0->getOperand(0), CI0->getOperand(1),
-                            CI->getOperand(0), CI->getOperand(1))) ||
-                       (AltP0 == CurrentPred &&
-                        !areCompatibleCmpOps(
-                            CI0->getOperand(0), CI0->getOperand(1),
-                            CI->getOperand(1), CI->getOperand(0)));
-              return AltP0 == CurrentPred || AltP0Swapped == CurrentPred;
-            }
-            return I->getOpcode() == E->getAltOpcode();
+            return isAlternateInstruction(I, E->getMainOp(), E->getAltOp());
           },
           Mask);
       CommonCost =
@@ -7081,10 +7084,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V0 = Builder.CreateCmp(CI0->getPredicate(), LHS, RHS);
         auto *AltCI = cast<CmpInst>(E->getAltOp());
         CmpInst::Predicate AltPred = AltCI->getPredicate();
-        unsigned AltIdx =
-            std::distance(E->Scalars.begin(), find(E->Scalars, AltCI));
-        if (AltCI->getOperand(0) != E->getOperand(0)[AltIdx])
-          AltPred = CmpInst::getSwappedPredicate(AltPred);
         V1 = Builder.CreateCmp(AltPred, LHS, RHS);
       } else {
         V0 = Builder.CreateCast(
@@ -7110,28 +7109,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           E->Scalars, E->ReorderIndices, E->ReuseShuffleIndices,
           [E](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-            if (auto *CI0 = dyn_cast<CmpInst>(E->getMainOp())) {
-              auto *AltCI0 = cast<CmpInst>(E->getAltOp());
-              auto *CI = cast<CmpInst>(I);
-              CmpInst::Predicate P0 = CI0->getPredicate();
-              CmpInst::Predicate AltP0 = AltCI0->getPredicate();
-              assert(P0 != AltP0 &&
-                     "Expected different main/alternate predicates.");
-              CmpInst::Predicate AltP0Swapped =
-                  CmpInst::getSwappedPredicate(AltP0);
-              CmpInst::Predicate CurrentPred = CI->getPredicate();
-              if (P0 == AltP0Swapped)
-                return (P0 == CurrentPred &&
-                        !areCompatibleCmpOps(
-                            CI0->getOperand(0), CI0->getOperand(1),
-                            CI->getOperand(0), CI->getOperand(1))) ||
-                       (AltP0 == CurrentPred &&
-                        !areCompatibleCmpOps(
-                            CI0->getOperand(0), CI0->getOperand(1),
-                            CI->getOperand(1), CI->getOperand(0)));
-              return AltP0 == CurrentPred || AltP0Swapped == CurrentPred;
-            }
-            return I->getOpcode() == E->getAltOpcode();
+            return isAlternateInstruction(I, E->getMainOp(), E->getAltOp());
           },
           Mask, &OpScalars, &AltScalars);
 
@@ -7952,7 +7930,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->verify();
 #endif
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
   // Check that all schedulable entities got scheduled
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
     BS->doForAllOpcodes(I, [&](ScheduleData *SD) {

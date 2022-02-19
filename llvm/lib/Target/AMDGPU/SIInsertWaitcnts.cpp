@@ -1040,7 +1040,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
-      // load). We also need to check WAW depenancy with saved PC.
+      // load). We also need to check WAW dependency with saved PC.
       Wait = AMDGPU::Waitcnt();
 
       int CallAddrOpIdx =

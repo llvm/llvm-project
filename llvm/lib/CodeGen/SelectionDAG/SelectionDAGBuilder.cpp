@@ -566,7 +566,7 @@ static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
     unsigned RoundBits = RoundParts * PartBits;
     unsigned OddParts = NumParts - RoundParts;
     SDValue OddVal = DAG.getNode(ISD::SRL, DL, ValueVT, Val,
-      DAG.getShiftAmountConstant(RoundBits, ValueVT, DL, /*LegalTypes*/false));
+      DAG.getShiftAmountConstant(RoundBits, ValueVT, DL));
 
     getCopyToParts(DAG, DL, OddVal, Parts + RoundParts, OddParts, PartVT, V,
                    CallConv);

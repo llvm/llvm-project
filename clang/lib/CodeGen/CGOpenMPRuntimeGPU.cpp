@@ -1317,6 +1317,8 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
                                 "__omp_rtl_assume_teams_oversubscription");
     OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPThreadSubscription,
                                 "__omp_rtl_assume_threads_oversubscription");
+    OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPNoThreadState,
+                                "__omp_rtl_assume_no_thread_state");
   }
 }
 

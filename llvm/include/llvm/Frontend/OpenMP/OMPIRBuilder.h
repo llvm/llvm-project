@@ -1366,7 +1366,7 @@ public:
   ///                     comparison. If forms that use 'ordop', it should be
   ///                     \p nullptr.
   /// \param AO           Atomic ordering of the generated atomic instructions.
-  /// \param OP           Atomic compare operation. It can only be ==, <, or >.
+  /// \param Op           Atomic compare operation. It can only be ==, <, or >.
   /// \param IsXBinopExpr True if the conditional statement is in the form where
   ///                     x is on LHS. It only matters for < or >.
   ///

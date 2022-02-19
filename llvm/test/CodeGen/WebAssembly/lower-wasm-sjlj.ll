@@ -1,16 +1,16 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes CHECK -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
-; NO-TLS-DAG: __THREW__ = external global [[PTR]]
-; NO-TLS-DAG: __threwValue = external global [[PTR]]
-; TLS-DAG: __THREW__ = external thread_local global [[PTR]]
-; TLS-DAG: __threwValue = external thread_local global [[PTR]]
+; These variables are only used in Emscripten EH/SjLj, so they shouldn't be
+; generated.
+; CHECK-NOT: @__THREW__ =
+; CHECK-NOT: @__threwValue =
 
 @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* @longjmp, align 4
 ; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i8*, i32)* @__wasm_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
@@ -157,7 +157,6 @@ declare void @free(i8*)
 
 ; JS glue function declarations
 ; CHECK-DAG: declare i32 @getTempRet0()
-; CHECK-DAG: declare void @setTempRet0(i32)
 ; CHECK-DAG: declare i32* @saveSetjmp(%struct.__jmp_buf_tag*, i32, i32*, i32)
 ; CHECK-DAG: declare i32 @testSetjmp([[PTR]], i32*, i32)
 ; CHECK-DAG: declare void @__wasm_longjmp(i8*, i32)

@@ -2461,10 +2461,10 @@ private:
   SourceLocation FriendLoc;
 
   FriendTemplateDecl(DeclContext *DC, SourceLocation Loc,
-                     MutableArrayRef<TemplateParameterList *> Params,
+                     TemplateParameterList **Params, unsigned NumParams,
                      FriendUnion Friend, SourceLocation FriendLoc)
-      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(Params.size()),
-        Params(Params.data()), Friend(Friend), FriendLoc(FriendLoc) {}
+      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(NumParams),
+        Params(Params), Friend(Friend), FriendLoc(FriendLoc) {}
 
   FriendTemplateDecl(EmptyShell Empty) : Decl(Decl::FriendTemplate, Empty) {}
 

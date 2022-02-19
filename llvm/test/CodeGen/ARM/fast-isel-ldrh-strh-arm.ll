@@ -98,7 +98,7 @@ entry:
 ; ARM: movw [[REG1:r[0-9]+]], #0
 ; ARM: mvn [[REG2:r[0-9]+]], #255
 ; ARM: add [[REG0:r[0-9]+]], r1, [[REG2]]
-; ARM: strh [[REG1]], {{\[}}[[REG0]]]
+; ARM: strh [[REG1]], [[[REG0]]]
   ret void
 }
 
@@ -122,7 +122,7 @@ entry:
 ; ARM: mov r1, r0
 ; ARM: movw [[REG1:r[0-9]+]], #0
 ; ARM: add [[REG0:r[0-9]+]], r1, #256
-; ARM: strh [[REG1]], {{\[}}[[REG0]]]
+; ARM: strh [[REG1]], [[[REG0]]]
   ret void
 }
 

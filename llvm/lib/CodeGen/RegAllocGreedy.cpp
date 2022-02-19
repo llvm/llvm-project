@@ -1961,8 +1961,14 @@ bool RAGreedy::mayRecolorAllInterferences(
       // it would not be recolorable as it is in the same state as VirtReg.
       // However, if VirtReg has tied defs and Intf doesn't, then
       // there is still a point in examining if it can be recolorable.
+      //
+      // Also, don't try to evict a register which is assigned to an overlapping
+      // super register.
+      //
+      // TODO: Can we evict an interfering subset of the subregisters?
       if (((ExtraInfo->getStage(*Intf) == RS_Done &&
-            MRI->getRegClass(Intf->reg()) == CurRC) &&
+            (MRI->getRegClass(Intf->reg()) == CurRC ||
+             TRI->regsOverlap(VRM->getPhys(Intf->reg()), PhysReg))) &&
            !(hasTiedDef(MRI, VirtReg.reg()) &&
              !hasTiedDef(MRI, Intf->reg()))) ||
           FixedRegisters.count(Intf->reg())) {

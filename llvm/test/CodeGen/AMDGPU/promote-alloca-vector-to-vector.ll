@@ -75,7 +75,7 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0x44004200
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x40003c00
-; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s{{\[}}[[SL]]:[[SH]]]
+; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s[[[SL]]:[[SH]]]
 
 ; OPT: %gep = getelementptr inbounds <4 x half>, <4 x half> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT: store <4 x half> <half 0xH3C00, half 0xH4000, half 0xH4200, half 0xH4400>, <4 x half> addrspace(5)* %alloca, align 2
@@ -134,7 +134,7 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0x40003
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x20001
-; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s{{\[}}[[SL]]:[[SH]]]
+; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s[[[SL]]:[[SH]]]
 
 ; OPT: %gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT: store <4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> addrspace(5)* %alloca, align 2

@@ -59,10 +59,10 @@ endif:
 
 ; CHECK-LABEL: {{^}}v_cmp_asm:
 ; CHECK: v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
-; CHECK: v_cmp_ne_u32_e64 s{{\[}}[[MASK_LO:[0-9]+]]:[[MASK_HI:[0-9]+]]{{\]}}, 0, [[SRC]]
+; CHECK: v_cmp_ne_u32_e64 s[[[MASK_LO:[0-9]+]]:[[MASK_HI:[0-9]+]]], 0, [[SRC]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[MASK_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[MASK_HI]]
-; CHECK: buffer_store_dwordx2 v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
+; CHECK: buffer_store_dwordx2 v[[[V_LO]]:[[V_HI]]]
 define amdgpu_kernel void @v_cmp_asm(i64 addrspace(1)* %out, i32 %in) {
   %sgpr = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 %in)
   store i64 %sgpr, i64 addrspace(1)* %out

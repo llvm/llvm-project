@@ -93,7 +93,7 @@ IntegerPolyhedron::getRationalLexMin() const {
 }
 
 unsigned IntegerPolyhedron::insertDimId(unsigned pos, unsigned num) {
-  return insertId(IdKind::Dimension, pos, num);
+  return insertId(IdKind::SetDim, pos, num);
 }
 
 unsigned IntegerPolyhedron::insertSymbolId(unsigned pos, unsigned num) {
@@ -107,16 +107,15 @@ unsigned IntegerPolyhedron::insertLocalId(unsigned pos, unsigned num) {
 unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
-  unsigned absolutePos = getIdKindOffset(kind) + pos;
-  inequalities.insertColumns(absolutePos, num);
-  equalities.insertColumns(absolutePos, num);
-
-  return PresburgerLocalSpace::insertId(kind, pos, num);
+  unsigned insertPos = PresburgerLocalSpace::insertId(kind, pos, num);
+  inequalities.insertColumns(insertPos, num);
+  equalities.insertColumns(insertPos, num);
+  return insertPos;
 }
 
 unsigned IntegerPolyhedron::appendDimId(unsigned num) {
   unsigned pos = getNumDimIds();
-  insertId(IdKind::Dimension, pos, num);
+  insertId(IdKind::SetDim, pos, num);
   return pos;
 }
 

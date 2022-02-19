@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -std=c++11 -triple i386-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -disable-noundef-analysis -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -disable-noundef-analysis -std=c++11 -triple arm64-ehabi -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -disable-noundef-analysis -std=c++11 -triple i386-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN32
-// RUN: %clang_cc1 -disable-noundef-analysis -std=c++11 -triple x86_64-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple i386-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple arm64-ehabi -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple i386-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple x86_64-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN64
 
 // PR12219
 struct A { A(int); virtual ~A(); };

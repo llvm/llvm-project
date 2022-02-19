@@ -2989,7 +2989,8 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
                                           const FormatToken &Right) {
-  if (Left.is(tok::kw_return) && Right.isNot(tok::semi))
+  if (Left.is(tok::kw_return) &&
+      !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash))
     return true;
   if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))
     return false;
@@ -3026,7 +3027,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   // co_await (x), co_yield (x), co_return (x)
   if (Left.isOneOf(tok::kw_co_await, tok::kw_co_yield, tok::kw_co_return) &&
-      Right.isNot(tok::semi))
+      !Right.isOneOf(tok::semi, tok::r_paren))
     return true;
 
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren))

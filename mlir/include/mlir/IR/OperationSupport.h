@@ -466,7 +466,10 @@ public:
   }
 
   /// Add a range of named attributes.
-  template <typename IteratorT>
+  template <typename IteratorT,
+            typename = std::enable_if_t<std::is_convertible<
+                typename std::iterator_traits<IteratorT>::iterator_category,
+                std::input_iterator_tag>::value>>
   void append(IteratorT in_start, IteratorT in_end) {
     // TODO: expand to handle case where values appended are in order & after
     // end of current list.

@@ -351,8 +351,8 @@ static bool tryReadFileAndProcessRemarks(
 /// remarks file.
 /// \param[in] FuncNameToSizeInfoB - Size info collected from
 /// the second remarks file.
-/// \param[out] D - Filled with the diff between \p FuncNameToSizeInfoA and
-/// \p FuncNameToSizeInfoB.
+/// \param[out] DiffsByFilesPresent - Filled with the diff between \p
+/// FuncNameToSizeInfoA and \p FuncNameToSizeInfoB.
 static void
 computeDiff(const StringMap<InstCountAndStackSize> &FuncNameToSizeInfoA,
             const StringMap<InstCountAndStackSize> &FuncNameToSizeInfoB,

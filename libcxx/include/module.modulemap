@@ -628,6 +628,7 @@ module std [system] {
       module iter_swap             { private header "__iterator/iter_swap.h" }
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
+      module mergeable             { private header "__iterator/mergeable.h" }
       module move_iterator         { private header "__iterator/move_iterator.h" }
       module next                  { private header "__iterator/next.h" }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
@@ -639,6 +640,7 @@ module std [system] {
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module size                  { private header "__iterator/size.h" }
+      module sortable              { private header "__iterator/sortable.h" }
       module unreachable_sentinel  { private header "__iterator/unreachable_sentinel.h" }
       module wrap_iter             { private header "__iterator/wrap_iter.h" }
     }

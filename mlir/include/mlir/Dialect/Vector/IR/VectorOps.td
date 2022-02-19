@@ -13,6 +13,7 @@
 #ifndef VECTOR_OPS
 #define VECTOR_OPS
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -312,7 +313,8 @@ def Vector_ReductionOp :
 def Vector_MultiDimReductionOp :
   Vector_Op<"multi_reduction", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVector:$source,
                    I64ArrayAttr:$reduction_dims)>,
@@ -366,31 +368,10 @@ def Vector_MultiDimReductionOp :
         res[idx] = true;
       return res;
     }
-
-    static SmallVector<int64_t> inferDestShape(
-      ArrayRef<int64_t> sourceShape, ArrayRef<bool> reducedDimsMask) {
-      assert(sourceShape.size() == reducedDimsMask.size() &&
-             "sourceShape and maks of different sizes");
-      SmallVector<int64_t> res;
-      for (auto it : llvm::zip(reducedDimsMask, sourceShape))
-        if (!std::get<0>(it))
-          res.push_back(std::get<1>(it));
-      return res;
-    }
-
-    static Type inferDestType(
-      ArrayRef<int64_t> sourceShape, ArrayRef<bool> reducedDimsMask, Type elementType) {
-      auto targetShape = inferDestShape(sourceShape, reducedDimsMask);
-      // TODO: update to also allow 0-d vectors when available.
-      if (targetShape.empty())
-        return elementType;
-      return VectorType::get(targetShape, elementType);
-    }
   }];
   let assemblyFormat =
     "$kind `,` $source attr-dict $reduction_dims `:` type($source) `to` type($dest)";
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 def Vector_BroadcastOp :
@@ -446,7 +427,8 @@ def Vector_ShuffleOp :
      PredOpTrait<"first operand v1 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      PredOpTrait<"second operand v2 and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 1>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 1>>,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
      Arguments<(ins AnyVector:$v1, AnyVector:$v2, I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
@@ -495,7 +477,7 @@ def Vector_ShuffleOp :
       return vector().getType().cast<VectorType>();
     }
   }];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
   let hasVerifier = 1;
 }
 
@@ -549,7 +531,8 @@ def Vector_ExtractElementOp :
 def Vector_ExtractOp :
   Vector_Op<"extract", [NoSideEffect,
      PredOpTrait<"operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
     Arguments<(ins AnyVector:$vector, I64ArrayAttr:$position)>,
     Results<(outs AnyType)> {
   let summary = "extract operation";
@@ -575,9 +558,10 @@ def Vector_ExtractOp :
     VectorType getVectorType() {
       return vector().getType().cast<VectorType>();
     }
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
   }];
+  let assemblyFormat = "$vector `` $position attr-dict `:` type($vector)";
   let hasCanonicalizer = 1;
-  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -675,10 +659,6 @@ def Vector_FMAOp :
     ```
   }];
   let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` type($lhs)";
-  let builders = [
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs, "Value":$acc),
-    [{build($_builder, $_state, lhs.getType(), lhs, rhs, acc);}]>
-  ];
   let extraClassDeclaration = [{
     VectorType getVectorType() { return lhs().getType().cast<VectorType>(); }
   }];
@@ -721,8 +701,6 @@ def Vector_InsertElementOp :
   let builders = [
     // 0-D builder.
     OpBuilder<(ins "Value":$source, "Value":$dest)>,
-    // 1-D + position builder.
-    OpBuilder<(ins "Value":$source, "Value":$dest, "Value":$position)>
   ];
   let extraClassDeclaration = [{
     Type getSourceType() { return source().getType(); }
@@ -825,8 +803,6 @@ def Vector_InsertMapOp :
       into vector<64x4x32xf32>
     ```
   }];
-  let builders = [OpBuilder<(ins "Value":$vector, "Value":$dest,
-                                "ValueRange":$ids)>];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
       return vector().getType().cast<VectorType>();

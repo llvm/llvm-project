@@ -39,6 +39,7 @@ New Features
 ------------
 
  - Implemented P0627R6 (Function to mark unreachable code)
+ - Implemented P1165R1 (Make stateful allocator propagation more consistent for operator+(basic_string))
 
 API Changes
 -----------

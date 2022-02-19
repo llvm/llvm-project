@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -disable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis %s -O0 -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -emit-llvm -o - | FileCheck --check-prefix=NOOPT %s
-// RUN: %clang_cc1 -disable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn---opencl -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -fcommon -emit-llvm -o - | FileCheck %s --check-prefix=COMMON
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -O0 -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -emit-llvm -o - | FileCheck --check-prefix=NOOPT %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn---opencl -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -fcommon -emit-llvm -o - | FileCheck %s --check-prefix=COMMON
 
 typedef struct {
   private char *p1;

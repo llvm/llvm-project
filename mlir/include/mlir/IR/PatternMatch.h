@@ -1061,7 +1061,7 @@ public:
     private:
       LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
     };
-    insert(std::make_unique<FnPattern>(std::move(implFn), getContext()));
+    add(std::make_unique<FnPattern>(std::move(implFn), getContext()));
     return *this;
   }
 

@@ -1822,7 +1822,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   // from which (&a + 4096) has 13 bit distance. Both &a + 6144 and &a + 8192
   // has 13bit distance from &a + 4096. The heuristic considers &a + 8192
   // as the new-base(anchor) because of the maximum distance which can
-  // accomodate more intermediate bases presumeably.
+  // accommodate more intermediate bases presumably.
   //
   // Step3: move (&a + 8192) above load1. Compute and promote offsets from
   // (&a + 8192) for load1, load2, load4.

@@ -884,13 +884,25 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       // shadow pointer entries for this struct.
       auto CB = [&](ShadowPtrListTy::iterator &Itr) {
         // If we copied the struct to the host, we need to restore the pointer.
-        // Save pointer to restore after data retrive's are completed to
-        // prevent rewriting of device pointer
-        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM)
-          PtrsToRestore.emplace_back(
-              std::make_pair<ShadowPtrListTy::iterator, bool>(
-                  std::move(Itr), DelEntry ? true : false));
-        ++Itr;
+        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
+          void **ShadowHstPtrAddr = (void **)Itr->first;
+          // Wait for device-to-host memcopies for whole struct to complete,
+          // before restoring the correct host pointer.
+          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+            return OFFLOAD_FAIL;
+          *ShadowHstPtrAddr = Itr->second.HstPtrVal;
+          DP("Restoring original host pointer value " DPxMOD " for host "
+             "pointer " DPxMOD "\n",
+             DPxPTR(Itr->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
+        }
+        // If the struct is to be deallocated, remove the shadow entry.
+        if (DelEntry) {
+          DP("Removing shadow pointer " DPxMOD "\n",
+             DPxPTR((void **)Itr->first));
+          Itr = Device.ShadowPtrMap.erase(Itr);
+        } else {
+          ++Itr;
+        }
         return OFFLOAD_SUCCESS;
       };
       applyToShadowMapEntries(Device, CB, HstPtrBegin, DataSize, TPR);
@@ -977,6 +989,10 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
 
     auto CB = [&](ShadowPtrListTy::iterator &Itr) {
       void **ShadowHstPtrAddr = (void **)Itr->first;
+      // Wait for device-to-host memcopies for whole struct to complete,
+      // before restoring the correct host pointer.
+      if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
       *ShadowHstPtrAddr = Itr->second.HstPtrVal;
       DP("Restoring original host pointer value " DPxMOD
          " for host pointer " DPxMOD "\n",
