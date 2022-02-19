@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 
 namespace mlir {
+using namespace presburger_utils;
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
 /// The set should not be empty after rolling back. We add additional
@@ -406,9 +407,9 @@ TEST(Simplextest, pivotRedundantRegressionTest) {
   // After the rollback, the only remaining constraint is x <= -1.
   // The maximum value of x should be -1.
   simplex.rollback(snapshot);
-  Optional<Fraction> maxX =
+  MaybeOptimum<Fraction> maxX =
       simplex.computeOptimum(Simplex::Direction::Up, {1, 0, 0});
-  EXPECT_TRUE(maxX.hasValue() && *maxX == Fraction(-1, 1));
+  EXPECT_TRUE(maxX.isBounded() && *maxX == Fraction(-1, 1));
 }
 
 TEST(SimplexTest, addInequality_already_redundant) {
@@ -440,8 +441,9 @@ TEST(SimplexTest, appendVariable) {
 
   EXPECT_EQ(simplex.getNumVariables(), 2u);
   EXPECT_EQ(simplex.getNumConstraints(), 2u);
-  EXPECT_EQ(simplex.computeIntegerBounds({0, 1, 0}),
-            std::make_pair(Optional<int64_t>(yMin), Optional<int64_t>(yMax)));
+  EXPECT_EQ(
+      simplex.computeIntegerBounds({0, 1, 0}),
+      std::make_pair(MaybeOptimum<int64_t>(yMin), MaybeOptimum<int64_t>(yMax)));
 
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
