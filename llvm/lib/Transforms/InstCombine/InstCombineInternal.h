@@ -650,8 +650,7 @@ public:
 
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
                            ICmpInst::Predicate Cond, Instruction &I);
-  Instruction *foldAllocaCmp(ICmpInst &ICI, const AllocaInst *Alloca,
-                             const Value *Other);
+  Instruction *foldAllocaCmp(ICmpInst &ICI, const AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
                                             GlobalVariable *GV, CmpInst &ICI,
