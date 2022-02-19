@@ -852,7 +852,9 @@ let Predicates = [HasStdExtZbpOrZbkb] in {
 // We treat brev8 as a separate instruction, so match it directly. We also
 // use this for brev8 when lowering bitreverse with Zbkb.
 def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
+}
 
+let Predicates = [HasStdExtZbpOrZbkb, IsRV32] in {
 // We treat zip and unzip as separate instructions, so match it directly.
 def : Pat<(i32 (riscv_shfl GPR:$rs1, 15)), (ZIP_RV32 GPR:$rs1)>;
 def : Pat<(i32 (riscv_unshfl GPR:$rs1, 15)), (UNZIP_RV32 GPR:$rs1)>;
