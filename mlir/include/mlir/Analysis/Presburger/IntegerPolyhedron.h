@@ -209,7 +209,8 @@ public:
   /// constraints. Returns an empty optional if the polyhedron is empty or if
   /// the lexmin is unbounded. Symbols are not supported and will result in
   /// assert-failure.
-  Optional<SmallVector<Fraction, 8>> getRationalLexMin() const;
+  presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>>
+  getRationalLexMin() const;
 
   /// Swap the posA^th identifier with the posB^th identifier.
   virtual void swapId(unsigned posA, unsigned posB);
