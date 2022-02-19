@@ -68,7 +68,7 @@ else:
 define void @caller_conditional(i1 %c, i32** %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_conditional
 ; CHECK-SAME: (i1 [[C:%.*]], i32** [[P:%.*]]) {
-; CHECK-NEXT:    [[P_VAL:%.*]] = load i32*, i32** [[P]], align 8{{$}}
+; CHECK-NEXT:    [[P_VAL:%.*]] = load i32*, i32** [[P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32* @callee_conditional(i1 [[C]], i32* [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;

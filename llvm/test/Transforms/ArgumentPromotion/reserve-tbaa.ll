@@ -15,11 +15,11 @@
 
 define internal fastcc void @fn(i32* nocapture readonly %p1, i64* nocapture readonly %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@fn
-; CHECK-SAME: (i32 [[P1_VAL:%.*]], i64 [[P2_VAL:%.*]])
+; CHECK-SAME: (i32 [[P1_0_VAL:%.*]], i64 [[P2_0_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[P2_VAL]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[P1_VAL]] to i8
-; CHECK-NEXT:    store i8 [[CONV1]], i8* @d, align 1, !tbaa !0
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[P2_0_VAL]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[P1_0_VAL]] to i8
+; CHECK-NEXT:    store i8 [[CONV1]], i8* @d, align 1, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -32,14 +32,14 @@ entry:
 }
 
 define i32 @main() {
-; CHECK-LABEL: define {{[^@]+}}@main()
+; CHECK-LABEL: define {{[^@]+}}@main() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa !3
-; CHECK-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa !3
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa !3
-; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa !5
-; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @g, align 4, !tbaa !5
-; CHECK-NEXT:    [[C_VAL:%.*]] = load i64, i64* @c, align 8, !tbaa !7
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @g, align 4, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[C_VAL:%.*]] = load i64, i64* @c, align 8, !tbaa [[TBAA7:![0-9]+]]
 ; CHECK-NEXT:    call fastcc void @fn(i32 [[G_VAL]], i64 [[C_VAL]])
 ; CHECK-NEXT:    ret i32 0
 ;

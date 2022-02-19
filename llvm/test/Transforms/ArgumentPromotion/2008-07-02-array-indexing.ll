@@ -6,15 +6,15 @@
 ; because there is a load of %A in the entry block
 define internal i32 @callee(i1 %C, i32* %A) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i1 [[C:%.*]], i32* [[A:%.*]])
+; CHECK-SAME: (i1 [[C:%.*]], i32* [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_0:%.*]] = load i32, i32* [[A]]
+; CHECK-NEXT:    [[A_0:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i32 [[A_0]]
 ; CHECK:       F:
 ; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i32, i32* [[A]], i32 2
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[A_2]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[A_2]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -33,7 +33,7 @@ F:
 }
 
 define i32 @foo() {
-; CHECK-LABEL: define {{[^@]+}}@foo()
+; CHECK-LABEL: define {{[^@]+}}@foo() {
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* null)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
