@@ -964,10 +964,6 @@ SwiftASTContextForModule::~SwiftASTContextForModule() {
     GetASTMap().Erase(ctx);
 }
 
-const std::string &SwiftASTContext::GetDescription() const {
-  return m_description;
-}
-
 /// Return the Xcode sdk type for the target triple, if that makes sense.
 /// Otherwise, return the unknown sdk type.
 static XcodeSDK::Type GetSDKType(const llvm::Triple &target,
@@ -1954,7 +1950,7 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
-SwiftASTContext *lldb_private::GetModuleSwiftASTContext(Module &module) {
+static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
   auto type_system_or_err =
       module.GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
   if (!type_system_or_err) {
@@ -3075,12 +3071,11 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
       // Create the DWARFImporterDelegate.
       const auto &props = ModuleList::GetGlobalModuleListProperties();
+      swift::DWARFImporterDelegate *delegate = nullptr;
       if (props.GetUseSwiftDWARFImporter())
-        m_dwarf_importer_delegate_up.reset(
-            CreateSwiftDWARFImporterDelegate(*this));
+        delegate = &m_typeref_typesystem->GetDWARFImporterDelegate();
       clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, "",
-          m_dependency_tracker.get(), m_dwarf_importer_delegate_up.get());
+          *m_ast_context_ap, "", m_dependency_tracker.get(), delegate);
 
       // Handle any errors.
       if (!clang_importer_ap || HasErrors()) {
@@ -3250,12 +3245,6 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
 
   GetASTContext();
   return m_clang_importer;
-}
-
-swift::DWARFImporterDelegate *SwiftASTContext::GetDWARFImporterDelegate() {
-  VALID_OR_RETURN(nullptr);
-
-  return m_dwarf_importer_delegate_up.get();
 }
 
 const swift::SearchPathOptions *SwiftASTContext::GetSearchPathOptions() const {

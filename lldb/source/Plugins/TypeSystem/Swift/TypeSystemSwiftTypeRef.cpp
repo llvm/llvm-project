@@ -29,6 +29,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "swift/ClangImporter/ClangImporter.h"
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
 #include "swift/AST/ClangModuleLoader.h"
 #include "swift/Basic/Version.h"
@@ -1346,6 +1347,13 @@ TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext() const {
 
 SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextOrNull() const {
   return m_swift_ast_context;
+}
+
+swift::DWARFImporterDelegate &TypeSystemSwiftTypeRef::GetDWARFImporterDelegate() {
+  if (!m_dwarf_importer_delegate_up)
+    m_dwarf_importer_delegate_up.reset(CreateSwiftDWARFImporterDelegate(*this));
+  assert(m_dwarf_importer_delegate_up);
+  return *m_dwarf_importer_delegate_up;
 }
 
 void TypeSystemSwiftTypeRef::SetTriple(const llvm::Triple triple) {

@@ -112,6 +112,7 @@ public:
     LanguageFlags() = delete;
   };
 
+  const std::string &GetDescription() const { return m_description; }
   static LanguageSet GetSupportedLanguagesForTypes();
   virtual SwiftASTContext *GetSwiftASTContext() const = 0;
   virtual TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() = 0;

@@ -28,7 +28,6 @@ namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
 class DependencyTracker;
-class DWARFImporterDelegate;
 struct ImplicitImportInfo;
 class IRGenOptions;
 class NominalTypeDecl;
@@ -114,10 +113,6 @@ template <> struct hash<lldb_private::detail::SwiftLibraryLookupRequest> {
 
 namespace lldb_private {
 
-swift::DWARFImporterDelegate *
-CreateSwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_context);
-SwiftASTContext *GetModuleSwiftASTContext(Module &module);
-
 /// This "middle" class between TypeSystemSwiftTypeRef and
 /// SwiftASTContextForExpressions will eventually go away, as more and
 /// more functionality becomes available in TypeSystemSwiftTypeRef.
@@ -182,8 +177,6 @@ public:
   /// Provided only for unit tests.
   SwiftASTContext();
 #endif
-
-  const std::string &GetDescription() const;
 
   /// Create a SwiftASTContext from a Module.  This context is used
   /// for frame variable and uses ClangImporter options specific to
@@ -403,7 +396,6 @@ public:
   CompilerType ImportType(CompilerType &type, Status &error);
 
   swift::ClangImporter *GetClangImporter();
-  swift::DWARFImporterDelegate *GetDWARFImporterDelegate();
 
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
@@ -843,10 +835,8 @@ protected:
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<swift::SourceManager> m_source_manager_up;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
-  std::unique_ptr<swift::DWARFImporterDelegate> m_dwarf_importer_delegate_up;
-  // CompilerInvocation, SourceMgr, DiagEngine and
-  // DWARFImporterDelegate must come before the ASTContext, so they
-  // get deallocated *after* the ASTContext.
+  // CompilerInvocation, SourceMgr, and DiagEngine must come before
+  // the ASTContext, so they get deallocated *after* the ASTContext.
   std::unique_ptr<swift::ASTContext> m_ast_context_ap;
   std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;

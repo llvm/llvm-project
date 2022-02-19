@@ -24,6 +24,7 @@
 #include "clang/Basic/Module.h"
 
 namespace swift {
+class DWARFImporterDelegate;
 namespace Demangle {
 class Node;
 using NodePointer = Node *;
@@ -64,6 +65,7 @@ public:
   const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
     return *this;
   }
+  swift::DWARFImporterDelegate &GetDWARFImporterDelegate();
   void SetTriple(const llvm::Triple triple) override;
   void ClearModuleDependentCaches() override;
   lldb::TargetWP GetTargetWP() const override { return {}; }
@@ -381,7 +383,8 @@ protected:
   mutable bool m_swift_ast_context_initialized = false;
   mutable lldb::TypeSystemSP m_swift_ast_context_sp;
   mutable SwiftASTContext *m_swift_ast_context = nullptr;
-
+  mutable std::unique_ptr<swift::DWARFImporterDelegate>
+      m_dwarf_importer_delegate_up;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_up;
 
   /// The APINotesManager responsible for each Clang module.
@@ -445,5 +448,8 @@ protected:
   mutable std::unique_ptr<SymbolContext> m_initial_symbol_context;
 };
 
+swift::DWARFImporterDelegate *
+CreateSwiftDWARFImporterDelegate(TypeSystemSwiftTypeRef &ts);
+  
 } // namespace lldb_private
 #endif
