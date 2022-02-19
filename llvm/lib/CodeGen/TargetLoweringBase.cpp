@@ -2072,9 +2072,11 @@ static std::string getReciprocalOpName(bool IsSqrt, EVT VT) {
 
   Name += IsSqrt ? "sqrt" : "div";
 
-  // TODO: Handle "half" or other float types?
+  // TODO: Handle other float types?
   if (VT.getScalarType() == MVT::f64) {
     Name += "d";
+  } else if (VT.getScalarType() == MVT::f16) {
+    Name += "h";
   } else {
     assert(VT.getScalarType() == MVT::f32 &&
            "Unexpected FP type for reciprocal estimate");
