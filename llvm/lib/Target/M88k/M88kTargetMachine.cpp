@@ -31,6 +31,10 @@ static cl::opt<bool>
     BranchRelaxation("m88k-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
+static cl::opt<bool>
+    DisableDelaySlotFiller("disable-m88k-delay-slot-filler", cl::init(true),
+                           cl::desc("Do not fill delay slots."), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
   // Register the target and target specific passes.
   RegisterTargetMachine<M88kTargetMachine> X(getTheM88kTarget());
@@ -162,7 +166,8 @@ void M88kPassConfig::addPreEmitPass() {
   if (BranchRelaxation)
     addPass(&BranchRelaxationPassID);
 
-  addPass(createM88kDelaySlotFiller());
+  if (!DisableDelaySlotFiller)
+    addPass(createM88kDelaySlotFiller());
 }
 
 // Global ISEL

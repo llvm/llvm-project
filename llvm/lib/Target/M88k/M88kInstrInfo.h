@@ -29,6 +29,13 @@ namespace llvm {
 
 class M88kSubtarget;
 
+namespace M88k {
+LLVM_READONLY
+int getOpcodeWithDelaySlot(uint16_t Opcode);
+LLVM_READONLY
+int getOpcodeWithoutDelaySlot(uint16_t Opcode);
+} // namespace M88k
+
 class M88kInstrInfo : public M88kGenInstrInfo {
   const M88kRegisterInfo RI;
   M88kSubtarget &STI;

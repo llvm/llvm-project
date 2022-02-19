@@ -73,19 +73,32 @@ bool M88kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void M88kAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  MCInst LoweredMI;
-  switch (MI->getOpcode()) {
-  case M88k::RET:
-    LoweredMI = MCInstBuilder(M88k::JMP).addReg(M88k::R1);
-    break;
+  MachineBasicBlock::const_instr_iterator I = MI->getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
-  default:
-    M88kMCInstLower Lower(MF->getContext(), *this);
-    Lower.lower(MI, LoweredMI);
-    // doLowerInstr(MI, LoweredMI);
-    break;
-  }
-  EmitToStreamer(*OutStreamer, LoweredMI);
+  do {
+    // Skip the BUNDLE pseudo instruction and lower the contents.
+    if (I->isBundle())
+      continue;
+
+    MCInst LoweredMI;
+    switch (I->getOpcode()) {
+    case M88k::RET:
+      LoweredMI = MCInstBuilder(M88k::JMP).addReg(M88k::R1);
+      break;
+
+    case M88k::RETn:
+      LoweredMI = MCInstBuilder(M88k::JMPn).addReg(M88k::R1);
+      break;
+
+    default:
+      M88kMCInstLower Lower(MF->getContext(), *this);
+      Lower.lower(&*I, LoweredMI);
+      // doLowerInstr(MI, LoweredMI);
+      break;
+    }
+    EmitToStreamer(*OutStreamer, LoweredMI);
+  } while ((++I != E) && I->isInsideBundle()); // Delay slot check.
 }
 
 // Force static initialization.
