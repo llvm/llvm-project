@@ -13405,7 +13405,6 @@ static bool IsSVECntIntrinsic(SDValue S) {
 /// operations need a bit more inspection to get this information.
 ///
 /// \param Extend The SDNode from the DAG that represents the extend operation
-/// \param DAG The SelectionDAG hosting the \p Extend node
 ///
 /// \returns The type representing the \p Extend source type, or \p MVT::Other
 /// if no valid type can be determined
