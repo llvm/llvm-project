@@ -138,8 +138,8 @@ class STORE_2RI14<bits<8> op, string opstr>
 
 let mayLoad = 1, mayStore = 1 in
 class AM_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk),
-            !strconcat(opstr, "\t$rd, $rj, $rk")>;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj),
+            !strconcat(opstr, "\t$rd, $rk, $rj")>;
 
 let mayLoad = 1 in
 class LLBase<bits<8> op, string opstr>

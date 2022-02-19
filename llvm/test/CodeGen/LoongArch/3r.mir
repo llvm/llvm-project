@@ -429,7 +429,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMSWAP_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amswap_db.w	$a0, $a1, $a2
 name: test_AMSWAP_DB_W
 body: |
@@ -438,7 +438,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMSWAP_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amswap_db.d	$a0, $a1, $a2
 name: test_AMSWAP_DB_D
 body: |
@@ -447,7 +447,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMADD_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amadd_db.w	$a0, $a1, $a2
 name: test_AMADD_DB_W
 body: |
@@ -456,7 +456,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMADD_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amadd_db.d	$a0, $a1, $a2
 name: test_AMADD_DB_D
 body: |
@@ -465,7 +465,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMAND_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amand_db.w	$a0, $a1, $a2
 name: test_AMAND_DB_W
 body: |
@@ -474,7 +474,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMAND_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 1 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amand_db.d	$a0, $a1, $a2
 name: test_AMAND_DB_D
 body: |
@@ -483,7 +483,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMOR_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amor_db.w	$a0, $a1, $a2
 name: test_AMOR_DB_W
 body: |
@@ -492,7 +492,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMOR_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amor_db.d	$a0, $a1, $a2
 name: test_AMOR_DB_D
 body: |
@@ -501,7 +501,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMXOR_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amxor_db.w	$a0, $a1, $a2
 name: test_AMXOR_DB_W
 body: |
@@ -510,7 +510,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMXOR_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 0 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amxor_db.d	$a0, $a1, $a2
 name: test_AMXOR_DB_D
 body: |
@@ -519,7 +519,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax_db.w	$a0, $a1, $a2
 name: test_AMMAX_DB_W
 body: |
@@ -528,7 +528,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax_db.d	$a0, $a1, $a2
 name: test_AMMAX_DB_D
 body: |
@@ -537,7 +537,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_DB_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin_db.w	$a0, $a1, $a2
 name: test_AMMIN_DB_W
 body: |
@@ -546,7 +546,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_DB_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 1 1 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin_db.d	$a0, $a1, $a2
 name: test_AMMIN_DB_D
 body: |
@@ -555,7 +555,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_DB_WU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax_db.wu	$a0, $a1, $a2
 name: test_AMMAX_DB_WU
 body: |
@@ -564,7 +564,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_DB_DU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax_db.du	$a0, $a1, $a2
 name: test_AMMAX_DB_DU
 body: |
@@ -573,7 +573,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_DB_WU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin_db.wu	$a0, $a1, $a2
 name: test_AMMIN_DB_WU
 body: |
@@ -582,7 +582,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_DB_DU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 1 0 0 0 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin_db.du	$a0, $a1, $a2
 name: test_AMMIN_DB_DU
 body: |
@@ -591,7 +591,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMSWAP_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amswap.w	$a0, $a1, $a2
 name: test_AMSWAP_W
 body: |
@@ -600,7 +600,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMSWAP_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amswap.d	$a0, $a1, $a2
 name: test_AMSWAP_D
 body: |
@@ -609,7 +609,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMADD_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amadd.w	$a0, $a1, $a2
 name: test_AMADD_W
 body: |
@@ -618,7 +618,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMADD_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 0 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amadd.d	$a0, $a1, $a2
 name: test_AMADD_D
 body: |
@@ -627,7 +627,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMAND_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amand.w	$a0, $a1, $a2
 name: test_AMAND_W
 body: |
@@ -636,7 +636,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMAND_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amand.d	$a0, $a1, $a2
 name: test_AMAND_D
 body: |
@@ -645,7 +645,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMOR_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amor.w	$a0, $a1, $a2
 name: test_AMOR_W
 body: |
@@ -654,7 +654,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMOR_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amor.d	$a0, $a1, $a2
 name: test_AMOR_D
 body: |
@@ -663,7 +663,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMXOR_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amxor.w	$a0, $a1, $a2
 name: test_AMXOR_W
 body: |
@@ -672,7 +672,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMXOR_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: amxor.d	$a0, $a1, $a2
 name: test_AMXOR_D
 body: |
@@ -681,7 +681,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax.w	$a0, $a1, $a2
 name: test_AMMAX_W
 body: |
@@ -690,7 +690,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax.d	$a0, $a1, $a2
 name: test_AMMAX_D
 body: |
@@ -699,7 +699,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_W:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin.w	$a0, $a1, $a2
 name: test_AMMIN_W
 body: |
@@ -708,7 +708,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_D:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin.d	$a0, $a1, $a2
 name: test_AMMIN_D
 body: |
@@ -717,7 +717,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_WU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 1 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 1 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax.wu	$a0, $a1, $a2
 name: test_AMMAX_WU
 body: |
@@ -726,7 +726,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMAX_DU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 0 1 1 1 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammax.du	$a0, $a1, $a2
 name: test_AMMAX_DU
 body: |
@@ -735,7 +735,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_WU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 0 0 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin.wu	$a0, $a1, $a2
 name: test_AMMIN_WU
 body: |
@@ -744,7 +744,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: test_AMMIN_DU:
-# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ENC: 0 0 1 1 1 0 0 0 0 1 1 0 1 0 0 0 1 0 0 1 0 1 0 0 1 1 0 0 0 1 0 0
 # CHECK-ASM: ammin.du	$a0, $a1, $a2
 name: test_AMMIN_DU
 body: |
