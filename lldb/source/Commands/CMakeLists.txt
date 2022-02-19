@@ -5,6 +5,7 @@ lldb_tablegen(CommandOptions.inc -gen-lldb-option-defs
 if (LLDB_ENABLE_SWIFT_SUPPORT)
   set(Healtcheck_SOURCES CommandObjectHealthcheck.cpp)
 endif()
+set(LLVM_OPTIONAL_SOURCES CommandObjectHealthcheck.cpp)
 
 add_lldb_library(lldbCommands
   CommandCompletions.cpp
