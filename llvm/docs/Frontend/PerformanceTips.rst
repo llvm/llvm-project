@@ -231,7 +231,7 @@ Undefined Values
 
 #. Use poison values instead of undef values whenever possible.
 
-#. Tag function attributes with the noundef attribute whenever possible.
+#. Tag function parameters with the noundef attribute whenever possible.
 
 Modeling Memory Effects
 ^^^^^^^^^^^^^^^^^^^^^^^^
