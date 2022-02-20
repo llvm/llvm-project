@@ -154,9 +154,8 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     llvm::TimeTraceScope TimeScope("Frontend");
     P.Initialize();
     Parser::DeclGroupPtrTy ADecl;
-    Sema::ModuleImportState ImportState;
-    for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
-         AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
+    for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl); !AtEOF;
+         AtEOF = P.ParseTopLevelDecl(ADecl)) {
       // If we got a null return and something *was* parsed, ignore it.  This
       // is due to a top-level semicolon, an action override, or a parse error
       // skipping something.
