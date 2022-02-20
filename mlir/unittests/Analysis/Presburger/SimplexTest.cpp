@@ -464,6 +464,28 @@ TEST(SimplexTest, isRedundantInequality) {
   EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -1}));  // y >= 1.
 }
 
+TEST(SimplexTest, ineqType) {
+  Simplex simplex(2);
+  simplex.addInequality({0, -1, 2}); // y <= 2.
+  simplex.addInequality({1, 0, 0});  // x >= 0.
+  simplex.addEquality({-1, 1, 0});   // y = x.
+
+  EXPECT_TRUE(simplex.findIneqType({-1, 0, 2}) ==
+              Simplex::IneqType::Redundant); // x <= 2.
+  EXPECT_TRUE(simplex.findIneqType({0, 1, 0}) ==
+              Simplex::IneqType::Redundant); // y >= 0.
+
+  EXPECT_TRUE(simplex.findIneqType({0, 1, -1}) ==
+              Simplex::IneqType::Cut); // y >= 1.
+  EXPECT_TRUE(simplex.findIneqType({-1, 0, 1}) ==
+              Simplex::IneqType::Cut); // x <= 1.
+  EXPECT_TRUE(simplex.findIneqType({0, 1, -2}) ==
+              Simplex::IneqType::Cut); // y >= 2.
+
+  EXPECT_TRUE(simplex.findIneqType({-1, 0, -1}) ==
+              Simplex::IneqType::Separate); // x <= -1.
+}
+
 TEST(SimplexTest, isRedundantEquality) {
   Simplex simplex(2);
   simplex.addInequality({0, -1, 2}); // y <= 2.
