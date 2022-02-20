@@ -9,15 +9,15 @@ define i32 @test_inf_promote_caller(i32 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inf_promote_caller
 ; CHECK-SAME: (i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [[S:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca [[S]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test_inf_promote_callee(%S* [[TMP]], %S* [[TMP1]])
+; CHECK-NEXT:    [[TEMP:%.*]] = alloca [[S:%.*]], align 8
+; CHECK-NEXT:    [[TEMP1:%.*]] = alloca [[S]], align 8
+; CHECK-NEXT:    [[TEMP2:%.*]] = call i32 @test_inf_promote_callee(%S* [[TEMP]], %S* [[TEMP1]])
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
-  %tmp = alloca %S
-  %tmp1 = alloca %S
-  %tmp2 = call i32 @test_inf_promote_callee(%S* %tmp, %S* %tmp1)
+  %temp = alloca %S
+  %temp1 = alloca %S
+  %temp2 = call i32 @test_inf_promote_callee(%S* %temp, %S* %temp1)
   ret i32 0
 }
 
@@ -25,19 +25,19 @@ define internal i32 @test_inf_promote_callee(%S* %arg, %S* %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inf_promote_callee
 ; CHECK-SAME: (%S* [[ARG:%.*]], %S* [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr [[S:%.*]], %S* [[ARG1]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load %S*, %S** [[TMP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [[S]], %S* [[ARG]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = load %S*, %S** [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @test_inf_promote_callee2(%S* [[TMP4]], %S* [[TMP2]])
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr [[S:%.*]], %S* [[ARG1]], i32 0, i32 0
+; CHECK-NEXT:    [[TEMP2:%.*]] = load %S*, %S** [[TEMP]], align 8
+; CHECK-NEXT:    [[TEMP3:%.*]] = getelementptr [[S]], %S* [[ARG]], i32 0, i32 0
+; CHECK-NEXT:    [[TEMP4:%.*]] = load %S*, %S** [[TEMP3]], align 8
+; CHECK-NEXT:    [[TEMP5:%.*]] = call i32 @test_inf_promote_callee2(%S* [[TEMP4]], %S* [[TEMP2]])
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
-  %tmp = getelementptr %S, %S* %arg1, i32 0, i32 0
-  %tmp2 = load %S*, %S** %tmp
-  %tmp3 = getelementptr %S, %S* %arg, i32 0, i32 0
-  %tmp4 = load %S*, %S** %tmp3
-  %tmp5 = call i32 @test_inf_promote_callee2(%S* %tmp4, %S* %tmp2)
+  %temp = getelementptr %S, %S* %arg1, i32 0, i32 0
+  %temp2 = load %S*, %S** %temp
+  %temp3 = getelementptr %S, %S* %arg, i32 0, i32 0
+  %temp4 = load %S*, %S** %temp3
+  %temp5 = call i32 @test_inf_promote_callee2(%S* %temp4, %S* %temp2)
   ret i32 0
 }
 
