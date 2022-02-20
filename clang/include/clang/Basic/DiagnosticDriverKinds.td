@@ -29,8 +29,6 @@ def err_drv_invalid_arch_name : Error<
   "invalid arch name '%0'">;
 def err_drv_invalid_riscv_arch_name : Error<
   "invalid arch name '%0', %1">;
-def err_drv_invalid_riscv_ext_arch_name : Error<
-  "invalid arch name '%0', %1 '%2'">;
 def warn_drv_invalid_arch_name_with_suggestion : Warning<
   "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
   InGroup<UnusedCommandLineArgument>;
@@ -302,7 +300,6 @@ def err_drv_optimization_remark_format : Error<
   "unknown remark serializer format: '%0'">;
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
-def err_drv_debug_no_new_runtime : Error<"OpenMP target device debugging enabled with incompatible runtime">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
 def err_drv_omp_host_ir_file_not_found : Error<
   "provided host compiler IR file '%0' is required to generate code for OpenMP "
@@ -326,10 +323,6 @@ def err_drv_unsupported_embed_bitcode
     : Error<"%0 is not supported with -fembed-bitcode">;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
-def err_drv_negative_columns : Error<
-    "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
-def err_drv_small_columns : Error<
-    "invalid value '%1' in '%0', value must be '%2' or greater">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -531,7 +524,6 @@ def warn_drv_ps4_sdk_dir : Warning<
   "environment variable SCE_ORBIS_SDK_DIR is set, but points to invalid or nonexistent directory '%0'">,
   InGroup<InvalidOrNonExistentDirectory>;
 
-def err_drv_unsupported_linker : Error<"unsupported value '%0' for -linker option">;
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
 def err_drv_defsym_invalid_symval : Error<"value is not an integer: %0">;
 def warn_drv_msvc_not_found : Warning<
