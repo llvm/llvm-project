@@ -815,10 +815,13 @@ BreakableLineCommentSection::BreakableLineCommentSection(
 
         assert(Lines[i].size() > IndentPrefix.size());
         const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
-        const auto AllowsSpaceChange =
-            SpacesInPrefix != 0 ||
-            (!NoSpaceBeforeFirstCommentChar() ||
-             (FirstNonSpace == '}' && FirstLineSpaceChange != 0));
+        const bool IsFormatComment = LineTok && switchesFormatting(*LineTok);
+        const bool LineRequiresLeadingSpace =
+            !NoSpaceBeforeFirstCommentChar() ||
+            (FirstNonSpace == '}' && FirstLineSpaceChange != 0);
+        const bool AllowsSpaceChange =
+            !IsFormatComment &&
+            (SpacesInPrefix != 0 || LineRequiresLeadingSpace);
 
         if (PrefixSpaceChange[i] > 0 && AllowsSpaceChange) {
           Prefix[i] = IndentPrefix.str();

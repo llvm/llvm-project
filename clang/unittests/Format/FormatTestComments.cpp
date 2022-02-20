@@ -91,6 +91,11 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
                "// line 2\n"
                "void f() {}\n");
 
+  EXPECT_EQ("// comment\n"
+            "// clang-format on\n",
+            format("//comment\n"
+                   "// clang-format on\n"));
+
   verifyFormat("void f() {\n"
                "  // Doesn't do anything\n"
                "}");
