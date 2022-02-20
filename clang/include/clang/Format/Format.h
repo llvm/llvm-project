@@ -1791,7 +1791,7 @@ struct FormatStyle {
   };
 
   /// The concept declaration style to use.
-  /// \version 13
+  /// \version 12
   BreakBeforeConceptDeclarationsStyle BreakBeforeConceptDeclarations;
 
   /// If ``true``, ternary operators will be placed after line breaks.
@@ -2185,7 +2185,7 @@ struct FormatStyle {
   };
 
   /// Defines in which cases to put empty line before access modifiers.
-  /// \version 13
+  /// \version 12
   EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
 
   /// If ``true``, clang-format detects whether function calls and
@@ -2523,6 +2523,8 @@ struct FormatStyle {
 
   /// Indent the requires clause in a template. This only applies when
   /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  ///
+  /// In clang-format 13 and 14 it was named ``IndentRequires``.
   /// \code
   ///    true:
   ///    template <typename It>
@@ -2538,7 +2540,7 @@ struct FormatStyle {
   ///      //....
   ///    }
   /// \endcode
-  /// \version 13
+  /// \version 15
   bool IndentRequiresClause;
 
   /// The number of columns to use for indentation.
