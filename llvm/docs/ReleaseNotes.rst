@@ -67,6 +67,11 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
+Changes to the AMDGPU Backend
+-----------------------------
+
+* ...
+
 Changes to the ARM Backend
 --------------------------
 
@@ -79,40 +84,40 @@ Changes to the ARM Backend
   Previously it was on by default for Armv8 and off for all other architecture
   versions.
 
-Changes to the MIPS Target
+Changes to the AVR Backend
 --------------------------
 
-During this release ...
+* ...
 
-Changes to the Hexagon Target
+Changes to the Hexagon Backend
+------------------------------
+
+* ...
+
+Changes to the MIPS Backend
+---------------------------
+
+* ...
+
+Changes to the PowerPC Backend
+------------------------------
+
+* ...
+
+Changes to the RISC-V Backend
 -----------------------------
 
 * ...
 
-Changes to the PowerPC Target
------------------------------
+Changes to the WebAssembly Backend
+----------------------------------
 
-During this release ...
+* ...
 
-Changes to the X86 Target
--------------------------
+Changes to the X86 Backend
+--------------------------
 
-During this release ...
-
-Changes to the AMDGPU Target
------------------------------
-
-During this release ...
-
-Changes to the AVR Target
------------------------------
-
-During this release ...
-
-Changes to the WebAssembly Target
----------------------------------
-
-During this release ...
+* ...
 
 Changes to the OCaml bindings
 -----------------------------
