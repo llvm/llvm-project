@@ -2205,6 +2205,39 @@ Query for this feature with ``__has_builtin(__builtin_alloca_with_align)``.
 
 .. _langext-__builtin_assume:
 
+``__builtin_assume``
+--------------------
+
+``__builtin_assume`` is used to provide the optimizer with a boolean
+invariant that is defined to be true.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume(bool)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int x) {
+      __builtin_assume(x != 0);
+      // The optimizer may short-circuit this check using the invariant.
+      if (x == 0)
+            return do_something();
+      return do_something_else();
+  }
+
+**Description**:
+
+The boolean argument to this function is defined to be true. The optimizer may
+analyze the form of the expression provided as the argument and deduce from
+that information used to optimize the program. If the condition is violated
+during execution, the behavior is undefined. The argument itself is 
+
+Query for this feature with ``__has_builtin(__builtin_assume)``.
+
 ``__builtin_call_with_static_chain``
 ------------------------------------
 
