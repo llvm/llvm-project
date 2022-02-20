@@ -3889,6 +3889,13 @@ indicates that the user of the value may receive an unspecified
 bit-pattern. Undefined values may be of any type (other than '``label``'
 or '``void``') and be used anywhere a constant is permitted.
 
+.. note::
+
+  A '``poison``' value (decribed in the next section) should be used instead of
+  '``undef``' whenever possible. Poison values are stronger than undef, and
+  enable more optimizations. Just the existence of '``undef``' blocks certain
+  optimizations (see the examples below).
+
 Undefined values are useful because they indicate to the compiler that
 the program is well defined no matter what value is used. This gives the
 compiler more freedom to optimize. Here are some examples of
@@ -3939,7 +3946,7 @@ allowing the '``or``' to be folded to -1.
     Safe:
       %A = %X     (or %Y)
       %B = 42     (or %Y)
-      %C = %Y
+      %C = %Y     (if %Y is probably not poison; unsafe otherwise)
     Unsafe:
       %A = undef
       %B = undef
@@ -3951,7 +3958,8 @@ of the two operands. In the ``%A`` example, if ``%X`` and ``%Y`` were
 both known to have a clear low bit, then ``%A`` would have to have a
 cleared low bit. However, in the ``%C`` example, the optimizer is
 allowed to assume that the '``undef``' operand could be the same as
-``%Y``, allowing the whole '``select``' to be eliminated.
+``%Y`` if ``%Y`` is provably not '``poison``', allowing the whole '``select``'
+to be eliminated. This is because '``poison``' is stronger than '``undef``'.
 
 .. code-block:: llvm
 
@@ -4013,12 +4021,13 @@ optimizer can assume that it occurs in dead code.
     a:  store undef -> %X
     b:  store %X -> undef
     Safe:
-    a: <deleted>
+    a: <deleted>     (if the stored value in %X is provably not poison)
     b: unreachable
 
 A store *of* an undefined value can be assumed to not have any effect;
 we can assume that the value is overwritten with bits that happen to
-match what was already there. However, a store *to* an undefined
+match what was already there. This argument is only valid if the stored value
+is provably not ``poison``. However, a store *to* an undefined
 location could clobber arbitrary memory, therefore, it has undefined
 behavior.
 
@@ -4048,17 +4057,6 @@ it is undefined behavior.
       br %X, BB1, BB2 ; Well-defined (non-deterministic jump)
 
 
-This is also consistent with the behavior of MemorySanitizer.
-MemorySanitizer, detector of uses of uninitialized memory,
-defines a branch with condition that depends on an undef value (or
-certain other values, like e.g. a result of a load from heap-allocated
-memory that has never been stored to) to have an externally visible
-side effect. For this reason functions with *sanitize_memory*
-attribute are not allowed to produce such branches "out of thin
-air". More strictly, an optimization that inserts a conditional branch
-is only valid if in all executions where the branch condition has at
-least one undefined bit, the same branch condition is evaluated in the
-input IR as well.
 
 .. _poisonvalues:
 
