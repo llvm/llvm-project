@@ -44,3 +44,36 @@ join:
   %phi = phi ptr [ %gep1, %if ], [ %gep2, %else]
   ret ptr %phi
 }
+
+define void @test_cond_store_merge(i1 %arg, i1 %arg2, ptr %p) {
+; CHECK-LABEL: @test_cond_store_merge(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 32
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB4:%.*]], label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[P]], align 32
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br i1 %arg, label %bb2, label %bb3
+
+bb2:                                              ; preds = %bb
+  store i64 0, ptr %p, align 32
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb
+  br i1 %arg2, label %bb4, label %bb5
+
+bb4:                                              ; preds = %bb3
+  store double 0.000000e+00, ptr %p, align 32
+  br label %bb5
+
+bb5:                                              ; preds = %bb4, %bb3
+  ret void
+}
