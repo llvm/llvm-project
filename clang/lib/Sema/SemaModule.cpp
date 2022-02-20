@@ -80,19 +80,11 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   return nullptr;
 }
 
-Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
-                                           SourceLocation ModuleLoc,
-                                           ModuleDeclKind MDK,
-                                           ModuleIdPath Path,
-                                           ModuleImportState &ImportState) {
+Sema::DeclGroupPtrTy
+Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
+                      ModuleDeclKind MDK, ModuleIdPath Path, bool IsFirstDecl) {
   assert((getLangOpts().ModulesTS || getLangOpts().CPlusPlusModules) &&
          "should only have module decl in Modules TS or C++20");
-
-  bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
-  bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
-  // If any of the steps here fail, we count that as invalidating C++20
-  // module state;
-  ImportState = ModuleImportState::NotACXX20Module;
 
   // A module implementation unit requires that we are not compiling a module
   // of any kind. A module interface unit requires that we are not compiling a
@@ -142,13 +134,9 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
       ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment)
     GlobalModuleFragment = ModuleScopes.back().Module;
 
-  assert((!getLangOpts().CPlusPlusModules ||
-          SeenGMF == (bool)GlobalModuleFragment) &&
-         "mismatched global module state");
-
   // In C++20, the module-declaration must be the first declaration if there
   // is no global module fragment.
-  if (getLangOpts().CPlusPlusModules && !IsFirstDecl && !SeenGMF) {
+  if (getLangOpts().CPlusPlusModules && !IsFirstDecl && !GlobalModuleFragment) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
     SourceLocation BeginLoc =
         ModuleScopes.empty()
@@ -243,10 +231,6 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
   TU->setLocalOwningModule(Mod);
 
-  // We are in the module purview, but before any other (non import)
-  // statements, so imports are allowed.
-  ImportState = ModuleImportState::ImportAllowed;
-
   // FIXME: Create a ModuleDecl.
   return nullptr;
 }
@@ -317,10 +301,10 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
                                    SourceLocation ImportLoc,
                                    ModuleIdPath Path) {
-  // Flatten the module path for a C++20 or Modules TS module name.
+  // Flatten the module path for a Modules TS module name.
   std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc;
-  std::string ModuleName;
-  if (getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS) {
+  if (getLangOpts().ModulesTS) {
+    std::string ModuleName;
     for (auto &Piece : Path) {
       if (!ModuleName.empty())
         ModuleName += ".";
@@ -328,14 +312,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     }
     ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Path[0].second};
     Path = ModuleIdPath(ModuleNameLoc);
-  }
-
-  // Diagnose self-import before attempting a load.
-  if (getLangOpts().CPlusPlusModules && isCurrentModulePurview() &&
-      getCurrentModule()->Name == ModuleName) {
-    Diag(ImportLoc, diag::err_module_self_import)
-        << ModuleName << getLangOpts().CurrentModule;
-    return true;
   }
 
   Module *Mod =
@@ -366,9 +342,11 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // FIXME: we should support importing a submodule within a different submodule
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
-  // FIXME: Should we warn on a redundant import of the current module?
-  if (!getLangOpts().CPlusPlusModules &&
-      Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+  // Import-from-implementation is valid in the Modules TS. FIXME: Should we
+  // warn on a redundant import of the current module?
+  // FIXME: Import of a module from an implementation partition of the same
+  // module is permitted.
+  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
       (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS)) {
     Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import

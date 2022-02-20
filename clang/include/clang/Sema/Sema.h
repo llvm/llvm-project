@@ -2949,24 +2949,11 @@ public:
     Implementation, ///< 'module X;'
   };
 
-  /// An enumeration to represent the transition of states in parsing module
-  /// fragments and imports.  If we are not parsing a C++20 TU, or we find
-  /// an error in state transition, the state is set to NotACXX20Module.
-  enum class ModuleImportState {
-    FirstDecl,       ///< Parsing the first decl in a TU.
-    GlobalFragment,  ///< after 'module;' but before 'module X;'
-    ImportAllowed,   ///< after 'module X;' but before any non-import decl.
-    ImportFinished,  ///< after any non-import decl.
-    PrivateFragment, ///< after 'module :private;'.
-    NotACXX20Module  ///< Not a C++20 TU, or an invalid state was found.
-  };
-
   /// The parser has processed a module-declaration that begins the definition
   /// of a module interface or implementation.
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
-                                 ModuleIdPath Path,
-                                 ModuleImportState &ImportState);
+                                 ModuleIdPath Path, bool IsFirstDecl);
 
   /// The parser has processed a global-module-fragment declaration that begins
   /// the definition of the global module fragment of the current module unit.
