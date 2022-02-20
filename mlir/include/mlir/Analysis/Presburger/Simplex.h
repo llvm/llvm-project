@@ -558,6 +558,16 @@ public:
   /// otherwise. This should only be called for bounded sets.
   Optional<SmallVector<int64_t, 8>> findIntegerSample();
 
+  enum class IneqType { Redundant, Cut, Separate };
+
+  /// Returns the type of the inequality with coefficients `coeffs`.
+  ///
+  /// Possible types are:
+  /// Redundant   The inequality is satisfied in the polytope
+  /// Cut         The inequality is satisfied by some points, but not by others
+  /// Separate    The inequality is not satisfied by any point
+  IneqType findIneqType(ArrayRef<int64_t> coeffs);
+
   /// Check if the specified inequality already holds in the polytope.
   bool isRedundantInequality(ArrayRef<int64_t> coeffs);
 

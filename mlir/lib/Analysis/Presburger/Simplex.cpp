@@ -1605,7 +1605,7 @@ bool Simplex::isRationalSubsetOf(const IntegerPolyhedron &poly) {
     return true;
 
   for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i)
-    if (!isRedundantInequality(poly.getInequality(i)))
+    if (findIneqType(poly.getInequality(i)) != IneqType::Redundant)
       return false;
 
   for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i)
@@ -1615,16 +1615,39 @@ bool Simplex::isRationalSubsetOf(const IntegerPolyhedron &poly) {
   return true;
 }
 
-/// Computes the minimum value `coeffs` can take. If the value is greater than
-/// or equal to zero, the polytope entirely lies in the half-space defined by
-/// `coeffs >= 0`.
+/// Returns the type of the inequality with coefficients `coeffs`.
+/// Possible types are:
+/// Redundant   The inequality is satisfied by all points in the polytope
+/// Cut         The inequality is satisfied by some points, but not by others
+/// Separate    The inequality is not satisfied by any point
+///
+/// Internally, this computes the minimum and the maximum the inequality with
+/// coefficients `coeffs` can take. If the minimum is >= 0, the inequality holds
+/// for all points in the polytope, so it is redundant.  If the minimum is <= 0
+/// and the maximum is >= 0, the points in between the minimum and the
+/// inequality do not satisfy it, the points in between the inequality and the
+/// maximum satisfy it. Hence, it is a cut inequality. If both are < 0, no
+/// points of the polytope satisfy the inequality, which means it is a separate
+/// inequality.
+Simplex::IneqType Simplex::findIneqType(ArrayRef<int64_t> coeffs) {
+  MaybeOptimum<Fraction> minimum = computeOptimum(Direction::Down, coeffs);
+  if (minimum.isBounded() && *minimum >= Fraction(0, 1)) {
+    return IneqType::Redundant;
+  }
+  MaybeOptimum<Fraction> maximum = computeOptimum(Direction::Up, coeffs);
+  if ((!minimum.isBounded() || *minimum <= Fraction(0, 1)) &&
+      (!maximum.isBounded() || *maximum >= Fraction(0, 1))) {
+    return IneqType::Cut;
+  }
+  return IneqType::Separate;
+}
+
+/// Checks whether the type of the inequality with coefficients `coeffs`
+/// is Redundant.
 bool Simplex::isRedundantInequality(ArrayRef<int64_t> coeffs) {
   assert(!empty &&
          "It is not meaningful to ask about redundancy in an empty set!");
-  MaybeOptimum<Fraction> minimum = computeOptimum(Direction::Down, coeffs);
-  assert(!minimum.isEmpty() &&
-         "Optima should be non-empty for a non-empty set");
-  return minimum.isBounded() && *minimum >= Fraction(0, 1);
+  return findIneqType(coeffs) == IneqType::Redundant;
 }
 
 /// Check whether the equality given by `coeffs == 0` is redundant given
