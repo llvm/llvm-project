@@ -290,6 +290,23 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return false;
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `failure` if this op does not pass the analysis. This method
+          is run during One-Shot Bufferize (after all post-analysis steps). If
+          the op does not pass the analysis, bufferization is aborted.
+
+          This method can be used to check expected invariants and limitations
+          of the current bufferization implementation.
+        }],
+        /*retType=*/"LogicalResult",
+        /*methodName=*/"verifyAnalysis",
+        /*args=*/(ins "const BufferizationState &":$state),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return success();
+        }]
       >
   ];
 

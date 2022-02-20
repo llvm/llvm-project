@@ -105,9 +105,6 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     opt = *options;
   }
 
-  // Only certain scf.for ops are supported by the analysis.
-  opt.addPostAnalysisStep(scf::assertScfForAliasingProperties);
-
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
 

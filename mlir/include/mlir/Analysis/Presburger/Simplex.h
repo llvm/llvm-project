@@ -18,6 +18,7 @@
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -201,14 +202,6 @@ public:
 
   /// Add all the constraints from the given IntegerPolyhedron.
   void intersectIntegerPolyhedron(const IntegerPolyhedron &poly);
-
-  /// Returns the current sample point, which may contain non-integer (rational)
-  /// coordinates. Returns an empty optional when the tableau is empty.
-  ///
-  /// Also returns empty when the big M parameter is used and a variable
-  /// has a non-zero big M coefficient, meaning its value is infinite or
-  /// unbounded.
-  Optional<SmallVector<Fraction, 8>> getRationalSample() const;
 
   /// Print the tableau's internal state.
   void print(raw_ostream &os) const;
@@ -441,9 +434,18 @@ public:
   unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
 
   /// Return the lexicographically minimum rational solution to the constraints.
-  Optional<SmallVector<Fraction, 8>> getRationalLexMin();
+  presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>> getRationalLexMin();
 
 protected:
+  /// Returns the current sample point, which may contain non-integer (rational)
+  /// coordinates. Returns an empty optimum when the tableau is empty.
+  ///
+  /// Returns an unbounded optimum when the big M parameter is used and a
+  /// variable has a non-zero big M coefficient, meaning its value is infinite
+  /// or unbounded.
+  presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>>
+  getRationalSample() const;
+
   /// Undo the addition of the last constraint. This is only called while
   /// rolling back.
   void undoLastConstraint() final;
@@ -510,15 +512,16 @@ public:
   ///
   /// Returns a Fraction denoting the optimum, or a null value if no optimum
   /// exists, i.e., if the expression is unbounded in this direction.
-  Optional<Fraction> computeRowOptimum(Direction direction, unsigned row);
+  presburger_utils::MaybeOptimum<Fraction>
+  computeRowOptimum(Direction direction, unsigned row);
 
   /// Compute the maximum or minimum value of the given expression, depending on
   /// direction. Should not be called when the Simplex is empty.
   ///
   /// Returns a Fraction denoting the optimum, or a null value if no optimum
   /// exists, i.e., if the expression is unbounded in this direction.
-  Optional<Fraction> computeOptimum(Direction direction,
-                                    ArrayRef<int64_t> coeffs);
+  presburger_utils::MaybeOptimum<Fraction>
+  computeOptimum(Direction direction, ArrayRef<int64_t> coeffs);
 
   /// Returns whether the perpendicular of the specified constraint is a
   /// is a direction along which the polytope is bounded.
@@ -537,10 +540,10 @@ public:
   void detectRedundant();
 
   /// Returns a (min, max) pair denoting the minimum and maximum integer values
-  /// of the given expression. If either of the values is unbounded, an empty
-  /// optional is returned in its place. If the result has min > max then no
-  /// integer value exists.
-  std::pair<Optional<int64_t>, Optional<int64_t>>
+  /// of the given expression. If no integer value exists, both results will be
+  /// of kind Empty.
+  std::pair<presburger_utils::MaybeOptimum<int64_t>,
+            presburger_utils::MaybeOptimum<int64_t>>
   computeIntegerBounds(ArrayRef<int64_t> coeffs);
 
   /// Returns true if the polytope is unbounded, i.e., extends to infinity in
@@ -568,6 +571,10 @@ public:
   /// Returns the current sample point if it is integral. Otherwise, returns
   /// None.
   Optional<SmallVector<int64_t, 8>> getSamplePointIfIntegral() const;
+
+  /// Returns the current sample point, which may contain non-integer (rational)
+  /// coordinates. Returns an empty optional when the tableau is empty.
+  Optional<SmallVector<Fraction, 8>> getRationalSample() const;
 
 private:
   friend class GBRSimplex;
@@ -610,7 +617,8 @@ private:
   ///
   /// Returns a Fraction denoting the optimum, or a null value if no optimum
   /// exists, i.e., if the expression is unbounded in this direction.
-  Optional<Fraction> computeOptimum(Direction direction, Unknown &u);
+  presburger_utils::MaybeOptimum<Fraction> computeOptimum(Direction direction,
+                                                          Unknown &u);
 
   /// Mark the specified unknown redundant. This operation is added to the undo
   /// log and will be undone by rollbacks. The specified unknown must be in row

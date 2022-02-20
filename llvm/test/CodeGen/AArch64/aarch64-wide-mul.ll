@@ -71,12 +71,10 @@ entry:
 define <16 x i16> @mla_i16(<16 x i8> %a, <16 x i8> %b, <16 x i16> %c) {
 ; CHECK-LABEL: mla_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    umlal2 v3.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    umlal v2.8h, v0.8b, v1.8b
-; CHECK-NEXT:    umlal v3.8h, v4.8b, v5.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    mov v1.16b, v3.16b
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %ea = zext <16 x i8> %a to <16 x i16>
@@ -91,18 +89,14 @@ define <16 x i32> @mla_i32(<16 x i8> %a, <16 x i8> %b, <16 x i32> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ushll v6.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll2 v0.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v7.8h, v1.8b, #0
-; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    ext v16.16b, v6.16b, v6.16b, #8
-; CHECK-NEXT:    ext v17.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v18.16b, v7.16b, v7.16b, #8
-; CHECK-NEXT:    ext v19.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    umlal v4.4s, v0.4h, v1.4h
-; CHECK-NEXT:    umlal v2.4s, v6.4h, v7.4h
-; CHECK-NEXT:    umlal v3.4s, v16.4h, v18.4h
-; CHECK-NEXT:    umlal v5.4s, v17.4h, v19.4h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ushll2 v7.8h, v1.16b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    umlal2 v5.4s, v0.8h, v7.8h
+; CHECK-NEXT:    umlal2 v3.4s, v6.8h, v1.8h
+; CHECK-NEXT:    umlal v2.4s, v6.4h, v1.4h
+; CHECK-NEXT:    umlal v4.4s, v0.4h, v7.4h
 ; CHECK-NEXT:    mov v1.16b, v3.16b
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    mov v2.16b, v4.16b
 ; CHECK-NEXT:    mov v3.16b, v5.16b
 ; CHECK-NEXT:    ret
@@ -117,43 +111,35 @@ entry:
 define <16 x i64> @mla_i64(<16 x i8> %a, <16 x i8> %b, <16 x i64> %c) {
 ; CHECK-LABEL: mla_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v17.16b, v7.16b
+; CHECK-NEXT:    mov v16.16b, v6.16b
+; CHECK-NEXT:    ldp q6, q7, [sp]
 ; CHECK-NEXT:    ushll v18.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll2 v0.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v25.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v21.8h, v1.8b, #0
 ; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
 ; CHECK-NEXT:    ushll v19.4s, v18.4h, #0
 ; CHECK-NEXT:    ushll v20.4s, v0.4h, #0
 ; CHECK-NEXT:    ushll2 v18.4s, v18.8h, #0
-; CHECK-NEXT:    ushll v26.4s, v25.4h, #0
-; CHECK-NEXT:    ushll v27.4s, v1.4h, #0
-; CHECK-NEXT:    ushll2 v25.4s, v25.8h, #0
-; CHECK-NEXT:    mov v16.16b, v7.16b
-; CHECK-NEXT:    mov v17.16b, v6.16b
-; CHECK-NEXT:    ldp q6, q7, [sp]
+; CHECK-NEXT:    ushll v22.4s, v21.4h, #0
+; CHECK-NEXT:    ushll v23.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v21.4s, v21.8h, #0
 ; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
 ; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ext v21.16b, v19.16b, v19.16b, #8
-; CHECK-NEXT:    ext v22.16b, v20.16b, v20.16b, #8
-; CHECK-NEXT:    ext v23.16b, v18.16b, v18.16b, #8
-; CHECK-NEXT:    ext v28.16b, v26.16b, v26.16b, #8
-; CHECK-NEXT:    ext v29.16b, v27.16b, v27.16b, #8
-; CHECK-NEXT:    ext v30.16b, v25.16b, v25.16b, #8
-; CHECK-NEXT:    ext v24.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v31.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    umlal v4.2d, v18.2s, v25.2s
-; CHECK-NEXT:    umlal v17.2d, v20.2s, v27.2s
-; CHECK-NEXT:    umlal v2.2d, v19.2s, v26.2s
-; CHECK-NEXT:    umlal v3.2d, v21.2s, v28.2s
-; CHECK-NEXT:    umlal v5.2d, v23.2s, v30.2s
-; CHECK-NEXT:    umlal v16.2d, v22.2s, v29.2s
+; CHECK-NEXT:    umlal2 v5.2d, v18.4s, v21.4s
+; CHECK-NEXT:    umlal2 v17.2d, v20.4s, v23.4s
+; CHECK-NEXT:    umlal2 v3.2d, v19.4s, v22.4s
+; CHECK-NEXT:    umlal v2.2d, v19.2s, v22.2s
+; CHECK-NEXT:    umlal v4.2d, v18.2s, v21.2s
+; CHECK-NEXT:    umlal v16.2d, v20.2s, v23.2s
+; CHECK-NEXT:    umlal2 v7.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    umlal v6.2d, v0.2s, v1.2s
-; CHECK-NEXT:    umlal v7.2d, v24.2s, v31.2s
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    mov v1.16b, v3.16b
 ; CHECK-NEXT:    mov v2.16b, v4.16b
 ; CHECK-NEXT:    mov v3.16b, v5.16b
-; CHECK-NEXT:    mov v4.16b, v17.16b
-; CHECK-NEXT:    mov v5.16b, v16.16b
+; CHECK-NEXT:    mov v4.16b, v16.16b
+; CHECK-NEXT:    mov v5.16b, v17.16b
 ; CHECK-NEXT:    ret
 entry:
   %ea = zext <16 x i8> %a to <16 x i64>
