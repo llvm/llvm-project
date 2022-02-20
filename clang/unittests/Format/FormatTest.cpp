@@ -10565,13 +10565,6 @@ TEST_F(FormatTest, FormatsBinaryOperatorsPrecedingEquals) {
 
 TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("Type *A = static_cast<Type *>(P);");
-  verifyFormat("static_cast<Type *>(P);");
-  verifyFormat("static_cast<Type &>(Fun)(Args);");
-  verifyFormat("static_cast<Type &>(*Fun)(Args);");
-  verifyFormat("a = static_cast<Type &>(*Fun)(Args);");
-  verifyFormat("const_cast<Type &>(*Fun)(Args);");
-  verifyFormat("dynamic_cast<Type &>(*Fun)(Args);");
-  verifyFormat("reinterpret_cast<Type &>(*Fun)(Args);");
   verifyFormat("Type *A = (Type *)P;");
   verifyFormat("Type *A = (vector<Type *, int *>)P;");
   verifyFormat("int a = (int)(2.0f);");

@@ -1734,11 +1734,8 @@ private:
       else
         Current.setType(TT_LineComment);
     } else if (Current.is(tok::r_paren)) {
-      if (rParenEndsCast(Current)) {
+      if (rParenEndsCast(Current))
         Current.setType(TT_CastRParen);
-        assert(Current.MatchingParen);
-        Current.MatchingParen->setType(TT_Unknown);
-      }
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
           !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
@@ -1941,20 +1938,8 @@ private:
 
       // Certain other tokens right before the parentheses are also signals that
       // this cannot be a cast.
-      if (LeftOfParens->is(TT_TemplateCloser)) {
-        if (LeftOfParens->MatchingParen) {
-          auto *Prev = LeftOfParens->MatchingParen->getPreviousNonComment();
-          if (Prev &&
-              Prev->isOneOf(tok::kw_const_cast, tok::kw_dynamic_cast,
-                            tok::kw_reinterpret_cast, tok::kw_static_cast))
-            // FIXME: Maybe we should handle identifiers ending with "_cast",
-            // e.g. any_cast?
-            return true;
-        }
-        return false;
-      }
       if (LeftOfParens->isOneOf(tok::at, tok::r_square, TT_OverloadedOperator,
-                                tok::ellipsis))
+                                TT_TemplateCloser, tok::ellipsis))
         return false;
     }
 
