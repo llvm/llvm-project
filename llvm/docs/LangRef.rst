@@ -4071,48 +4071,13 @@ The string '``poison``' can be used anywhere a constant is expected, and
 operations such as :ref:`add <i_add>` with the ``nsw`` flag can produce
 a poison value.
 
-Poison value behavior is defined in terms of value *dependence*:
-
--  Values other than :ref:`phi <i_phi>` nodes, :ref:`select <i_select>`, and
-   :ref:`freeze <i_freeze>` instructions depend on their operands.
--  :ref:`Phi <i_phi>` nodes depend on the operand corresponding to
-   their dynamic predecessor basic block.
--  :ref:`Select <i_select>` instructions depend on their condition operand and
-   their selected operand.
--  Function arguments depend on the corresponding actual argument values
-   in the dynamic callers of their functions.
--  :ref:`Call <i_call>` instructions depend on the :ref:`ret <i_ret>`
-   instructions that dynamically transfer control back to them.
--  :ref:`Invoke <i_invoke>` instructions depend on the
-   :ref:`ret <i_ret>`, :ref:`resume <i_resume>`, or exception-throwing
-   call instructions that dynamically transfer control back to them.
--  Non-volatile loads and stores depend on the most recent stores to all
-   of the referenced memory addresses, following the order in the IR
-   (including loads and stores implied by intrinsics such as
-   :ref:`@llvm.memcpy <int_memcpy>`.)
--  An instruction with externally visible side effects depends on the
-   most recent preceding instruction with externally visible side
-   effects, following the order in the IR. (This includes :ref:`volatile
-   operations <volatile>`.)
--  An instruction *control-depends* on a :ref:`terminator
-   instruction <terminators>` if the terminator instruction has
-   multiple successors and the instruction is always executed when
-   control transfers to one of the successors, and may not be executed
-   when control is transferred to another.
--  Additionally, an instruction also *control-depends* on a terminator
-   instruction if the set of instructions it otherwise depends on would
-   be different if the terminator had transferred control to a different
-   successor.
--  Dependence is transitive.
--  Vector elements may be independently poisoned. Therefore, transforms
-   on instructions such as shufflevector must be careful to propagate
-   poison across values or elements only as allowed by the original code.
-
-An instruction that *depends* on a poison value, produces a poison value
-itself. A poison value may be relaxed into an
-:ref:`undef value <undefvalues>`, which takes an arbitrary bit-pattern.
+Most instructions return '``poison``' when one of their arguments is
+'``poison``'. A notable expection is the :ref:`select instruction <i_select>`.
 Propagation of poison can be stopped with the
 :ref:`freeze instruction <i_freeze>`.
+
+It is correct to replace a poison value with an
+:ref:`undef value <undefvalues>` or any value of the type.
 
 This means that immediate undefined behavior occurs if a poison value is
 used as an instruction operand that has any values that trigger undefined
