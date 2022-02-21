@@ -2355,7 +2355,7 @@ There are built-in sources, propagations and sinks defined in code inside ``Gene
 These operations are handled even if no external taint configuration is provided.
 
 Default sources defined by ``GenericTaintChecker``:
-``fdopen``, ``fopen``, ``freopen``, ``getch``, ``getchar``, ``getchar_unlocked``, ``gets``, ``scanf``, ``socket``, ``wgetch``
+ ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``, ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``, ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``, ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``, ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
 
 Default propagations defined by ``GenericTaintChecker``:
 ``atoi``, ``atol``, ``atoll``, ``fgetc``, ``fgetln``, ``fgets``, ``fscanf``, ``sscanf``, ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``pread``, ``read``, ``strchr``, ``strrchr``, ``tolower``, ``toupper``
