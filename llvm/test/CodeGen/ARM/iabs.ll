@@ -32,3 +32,17 @@ entry:
   %cond = select i1 %cmp, i32 %sub, i32 %sub1
   ret i32 %cond
 }
+
+define i64 @test3(i64 %a) {
+; CHECK-LABEL: test3:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    adds r0, r0, r1, asr #31
+; CHECK-NEXT:    adc r2, r1, r1, asr #31
+; CHECK-NEXT:    eor r0, r0, r1, asr #31
+; CHECK-NEXT:    eor r1, r2, r1, asr #31
+; CHECK-NEXT:    bx lr
+  %tmp1neg = sub i64 0, %a
+  %b = icmp sgt i64 %a, -1
+  %abs = select i1 %b, i64 %a, i64 %tmp1neg
+  ret i64 %abs
+}
