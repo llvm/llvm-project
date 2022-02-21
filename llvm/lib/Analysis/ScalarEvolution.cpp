@@ -13527,10 +13527,8 @@ void ScalarEvolution::verify() const {
   SmallVector<Loop *, 32> Worklist(LI.begin(), LI.end());
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
-    if (ValidLoops.contains(L))
-      continue;
-    ValidLoops.insert(L);
-    Worklist.append(L->begin(), L->end());
+    if (ValidLoops.insert(L).second)
+      Worklist.append(L->begin(), L->end());
   }
   for (auto &KV : ValueExprMap) {
 #ifndef NDEBUG
