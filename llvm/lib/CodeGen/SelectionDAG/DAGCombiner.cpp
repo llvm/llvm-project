@@ -2144,6 +2144,12 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
         return C->isExactlyValue(1.0);
       }
     }
+    if (ConstantSDNode *C = isConstOrConstSplat(V)) {
+      switch (Opcode) {
+      case ISD::SUB: // X - 0 --> X
+        return C->isZero();
+      }
+    }
     return false;
   };
 
@@ -3326,9 +3332,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   EVT VT = N0.getValueType();
   SDLoc DL(N);
 
+  auto PeekThroughFreeze = [](SDValue N) {
+    if (N->getOpcode() == ISD::FREEZE && N.hasOneUse())
+      return N->getOperand(0);
+    return N;
+  };
+
   // fold (sub x, x) -> 0
   // FIXME: Refactor this and xor and other similar operations together.
-  if (N0 == N1)
+  if (PeekThroughFreeze(N0) == PeekThroughFreeze(N1))
     return tryFoldToZero(DL, TLI, VT, DAG, LegalOperations);
 
   // fold (sub c1, c2) -> c3

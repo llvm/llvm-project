@@ -915,8 +915,8 @@ define <4 x i32> @sub_v4i32(<4 x i1> %b, <4 x i32> noundef %x, <4 x i32> noundef
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpsubd %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x i32> %y, <4 x i32> zeroinitializer
   %r = sub <4 x i32> %x, %s
@@ -979,9 +979,9 @@ define <16 x i32> @sub_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i3
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm0 {%k1} {z}
-; AVX512-NEXT:    vpsubd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsubd %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = sub <16 x i32> %x, %s
@@ -1044,8 +1044,7 @@ define <8 x i32> @sub_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; AVX512VL-LABEL: sub_v8i32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> zeroinitializer
@@ -1110,8 +1109,7 @@ define <8 x i64> @sub_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX512-LABEL: sub_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
-; AVX512-NEXT:    vpsubq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsubq %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i64> %y, <8 x i64> zeroinitializer
