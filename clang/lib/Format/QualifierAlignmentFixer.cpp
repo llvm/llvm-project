@@ -328,14 +328,17 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       if (Next->is(tok::comment) && Next->getNextNonComment())
         Next = Next->getNextNonComment();
       assert(Next->MatchingParen && "Missing template closer");
-      Next = Next->MatchingParen->Next;
+      Next = Next->MatchingParen;
+      if (Next->ClosesRequiresClause)
+        return Next;
+      Next = Next->Next;
 
       // Move to the end of any template class members e.g.
       // `Foo<int>::iterator`.
       if (Next && Next->startsSequence(tok::coloncolon, tok::identifier))
         Next = Next->Next->Next;
       if (Next && Next->is(QualifierType)) {
-        // Remove the const.
+        // Move the qualifier.
         insertQualifierBefore(SourceMgr, Fixes, Tok, Qualifier);
         removeToken(SourceMgr, Fixes, Next);
         return Next;
@@ -344,7 +347,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
     if (Next && Next->Next &&
         Next->Next->isOneOf(tok::amp, tok::ampamp, tok::star)) {
       if (Next->is(QualifierType)) {
-        // Remove the qualifier.
+        // Move the qualifier.
         insertQualifierBefore(SourceMgr, Fixes, Tok, Qualifier);
         removeToken(SourceMgr, Fixes, Next);
         return Next;
