@@ -1001,6 +1001,13 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
 
   MD->setEntryPoint(CC, MF.getFunction().getName());
   MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU);
+
+  // Only set AGPRs for supported devices
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  if (STM.hasMAIInsts()) {
+    MD->setNumUsedAgprs(CC, CurrentProgramInfo.NumAccVGPR);
+  }
+
   MD->setNumUsedSgprs(CC, CurrentProgramInfo.NumSGPRsForWavesPerEU);
   MD->setRsrc1(CC, CurrentProgramInfo.getPGMRSrc1(CC));
   if (AMDGPU::isCompute(CC)) {
@@ -1017,7 +1024,6 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     MD->setSpiPsInputAddr(MFI->getPSInputAddr());
   }
 
-  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   if (STM.isWave32())
     MD->setWave32(MF.getFunction().getCallingConv());
 }

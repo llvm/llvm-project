@@ -196,7 +196,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+2);
         std::list<int> l2;
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 2);
         assert(std::distance(l1.begin(), l1.end()) == 2);
         assert(l2.size() == 0);
@@ -209,7 +209,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+2);
         std::list<int> l2;
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 2);
         assert(std::distance(l1.begin(), l1.end()) == 2);
         assert(l2.size() == 0);
@@ -237,7 +237,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+2);
         std::list<int> l2(a2, a2+1);
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 3);
         assert(std::distance(l1.begin(), l1.end()) == 3);
         assert(l2.size() == 0);
@@ -252,7 +252,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+2);
         std::list<int> l2(a2, a2+1);
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 3);
         assert(std::distance(l1.begin(), l1.end()) == 3);
         assert(l2.size() == 0);
@@ -284,7 +284,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+2);
         std::list<int> l2(a2, a2+2);
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 4);
         assert(std::distance(l1.begin(), l1.end()) == 4);
         assert(l2.size() == 0);
@@ -301,7 +301,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+2);
         std::list<int> l2(a2, a2+2);
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 4);
         assert(std::distance(l1.begin(), l1.end()) == 4);
         assert(l2.size() == 0);
@@ -339,7 +339,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+3);
         std::list<int> l2(a2, a2+3);
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 6);
         assert(std::distance(l1.begin(), l1.end()) == 6);
         assert(l2.size() == 0);
@@ -360,7 +360,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+3);
         std::list<int> l2(a2, a2+3);
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 6);
         assert(std::distance(l1.begin(), l1.end()) == 6);
         assert(l2.size() == 0);
@@ -381,7 +381,7 @@ int main(int, char**)
     {
         std::list<int> l1(a1, a1+3);
         std::list<int> l2(a2, a2+3);
-        l1.splice(next(l1.begin(), 3), l2);
+        l1.splice(std::next(l1.begin(), 3), l2);
         assert(l1.size() == 6);
         assert(std::distance(l1.begin(), l1.end()) == 6);
         assert(l2.size() == 0);
@@ -576,7 +576,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+2);
         std::list<int, min_allocator<int>> l2;
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 2);
         assert(std::distance(l1.begin(), l1.end()) == 2);
         assert(l2.size() == 0);
@@ -589,7 +589,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+2);
         std::list<int, min_allocator<int>> l2;
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 2);
         assert(std::distance(l1.begin(), l1.end()) == 2);
         assert(l2.size() == 0);
@@ -617,7 +617,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+2);
         std::list<int, min_allocator<int>> l2(a2, a2+1);
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 3);
         assert(std::distance(l1.begin(), l1.end()) == 3);
         assert(l2.size() == 0);
@@ -632,7 +632,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+2);
         std::list<int, min_allocator<int>> l2(a2, a2+1);
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 3);
         assert(std::distance(l1.begin(), l1.end()) == 3);
         assert(l2.size() == 0);
@@ -664,7 +664,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+2);
         std::list<int, min_allocator<int>> l2(a2, a2+2);
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 4);
         assert(std::distance(l1.begin(), l1.end()) == 4);
         assert(l2.size() == 0);
@@ -681,7 +681,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+2);
         std::list<int, min_allocator<int>> l2(a2, a2+2);
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 4);
         assert(std::distance(l1.begin(), l1.end()) == 4);
         assert(l2.size() == 0);
@@ -719,7 +719,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         std::list<int, min_allocator<int>> l2(a2, a2+3);
-        l1.splice(next(l1.begin()), l2);
+        l1.splice(std::next(l1.begin()), l2);
         assert(l1.size() == 6);
         assert(std::distance(l1.begin(), l1.end()) == 6);
         assert(l2.size() == 0);
@@ -740,7 +740,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         std::list<int, min_allocator<int>> l2(a2, a2+3);
-        l1.splice(next(l1.begin(), 2), l2);
+        l1.splice(std::next(l1.begin(), 2), l2);
         assert(l1.size() == 6);
         assert(std::distance(l1.begin(), l1.end()) == 6);
         assert(l2.size() == 0);
@@ -761,7 +761,7 @@ int main(int, char**)
     {
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         std::list<int, min_allocator<int>> l2(a2, a2+3);
-        l1.splice(next(l1.begin(), 3), l2);
+        l1.splice(std::next(l1.begin(), 3), l2);
         assert(l1.size() == 6);
         assert(std::distance(l1.begin(), l1.end()) == 6);
         assert(l2.size() == 0);

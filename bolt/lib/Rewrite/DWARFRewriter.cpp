@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -863,11 +864,11 @@ namespace {
 
 std::unique_ptr<BinaryContext>
 createDwarfOnlyBC(const object::ObjectFile &File) {
-  return BinaryContext::createBinaryContext(
+  return cantFail(BinaryContext::createBinaryContext(
       &File, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler));
+                           WithColor::defaultWarningHandler)));
 }
 
 StringMap<KnownSectionsEntry>

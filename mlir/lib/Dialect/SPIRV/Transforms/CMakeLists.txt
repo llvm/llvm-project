@@ -3,6 +3,7 @@ set(LLVM_OPTIONAL_SOURCES
   LowerABIAttributesPass.cpp
   RewriteInsertsPass.cpp
   SPIRVConversion.cpp
+  UnifyAliasedResourcePass.cpp
   UpdateVCEPass.cpp
 )
 
@@ -21,6 +22,7 @@ add_mlir_dialect_library(MLIRSPIRVTransforms
   DecorateCompositeTypeLayoutPass.cpp
   LowerABIAttributesPass.cpp
   RewriteInsertsPass.cpp
+  UnifyAliasedResourcePass.cpp
   UpdateVCEPass.cpp
 
   ADDITIONAL_HEADER_DIRS

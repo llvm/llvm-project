@@ -58,8 +58,8 @@ public:
 
 */
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <memory>
 #include <optional>
 

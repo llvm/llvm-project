@@ -414,20 +414,17 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       isInvariantLoad = true;
   }
 
-  // Return "true" if and only if the instruction I is either a non-simple
-  // load or a non-simple store.
-  auto isNonSimpleLoadOrStore = [](Instruction *I) -> bool {
+  // True for volatile instruction.
+  // For Load/Store return true if atomic ordering is stronger than AO,
+  // for other instruction just true if it can read or write to memory.
+  auto isComplexForReordering = [](Instruction * I, AtomicOrdering AO)->bool {
+    if (I->isVolatile())
+      return true;
     if (auto *LI = dyn_cast<LoadInst>(I))
-      return !LI->isSimple();
+      return isStrongerThan(LI->getOrdering(), AO);
     if (auto *SI = dyn_cast<StoreInst>(I))
-      return !SI->isSimple();
-    return false;
-  };
-
-  // Return "true" if I is not a load and not a store, but it does access
-  // memory.
-  auto isOtherMemAccess = [](Instruction *I) -> bool {
-    return !isa<LoadInst>(I) && !isa<StoreInst>(I) && I->mayReadOrWriteMemory();
+      return isStrongerThan(SI->getOrdering(), AO);
+    return I->mayReadOrWriteMemory();
   };
 
   // Walk backwards through the basic block, looking for dependencies.
@@ -500,8 +497,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // atomic.
       // FIXME: This is overly conservative.
       if (LI->isAtomic() && isStrongerThanUnordered(LI->getOrdering())) {
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
-            isOtherMemAccess(QueryInst))
+        if (!QueryInst ||
+            isComplexForReordering(QueryInst, AtomicOrdering::NotAtomic))
           return MemDepResult::getClobber(LI);
         if (LI->getOrdering() != AtomicOrdering::Monotonic)
           return MemDepResult::getClobber(LI);
@@ -549,11 +546,18 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // A Monotonic store is OK if the query inst is itself not atomic.
       // FIXME: This is overly conservative.
       if (!SI->isUnordered() && SI->isAtomic()) {
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
-            isOtherMemAccess(QueryInst))
+        if (!QueryInst ||
+            isComplexForReordering(QueryInst, AtomicOrdering::Unordered))
           return MemDepResult::getClobber(SI);
-        if (SI->getOrdering() != AtomicOrdering::Monotonic)
-          return MemDepResult::getClobber(SI);
+        // Ok, if we are here the guard above guarantee us that
+        // QueryInst is a non-atomic or unordered load/store.
+        // SI is atomic with monotonic or release semantic (seq_cst for store
+        // is actually a release semantic plus total order over other seq_cst
+        // instructions, as soon as QueryInst is not seq_cst we can consider it
+        // as simple release semantic).
+        // Monotonic and Release semantic allows re-ordering before store
+        // so we are safe to go further and check the aliasing. It will prohibit
+        // re-ordering in case locations are may or must alias.
       }
 
       // While volatile access cannot be eliminated, they do not have to clobber

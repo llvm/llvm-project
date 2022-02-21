@@ -48,7 +48,7 @@ int main(int, char**)
     {
         std::vector<int> l1(a1, a1+3);
         assert(is_contiguous_container_asan_correct(l1));
-        std::vector<int>::iterator i = l1.erase(l1.cbegin(), next(l1.cbegin()));
+        std::vector<int>::iterator i = l1.erase(l1.cbegin(), std::next(l1.cbegin()));
         assert(l1.size() == 2);
         assert(std::distance(l1.cbegin(), l1.cend()) == 2);
         assert(i == l1.begin());
@@ -58,7 +58,7 @@ int main(int, char**)
     {
         std::vector<int> l1(a1, a1+3);
         assert(is_contiguous_container_asan_correct(l1));
-        std::vector<int>::iterator i = l1.erase(l1.cbegin(), next(l1.cbegin(), 2));
+        std::vector<int>::iterator i = l1.erase(l1.cbegin(), std::next(l1.cbegin(), 2));
         assert(l1.size() == 1);
         assert(std::distance(l1.cbegin(), l1.cend()) == 1);
         assert(i == l1.begin());
@@ -68,7 +68,7 @@ int main(int, char**)
     {
         std::vector<int> l1(a1, a1+3);
         assert(is_contiguous_container_asan_correct(l1));
-        std::vector<int>::iterator i = l1.erase(l1.cbegin(), next(l1.cbegin(), 3));
+        std::vector<int>::iterator i = l1.erase(l1.cbegin(), std::next(l1.cbegin(), 3));
         assert(l1.size() == 0);
         assert(std::distance(l1.cbegin(), l1.cend()) == 0);
         assert(i == l1.begin());
@@ -100,7 +100,7 @@ int main(int, char**)
     {
         std::vector<int, min_allocator<int>> l1(a1, a1+3);
         assert(is_contiguous_container_asan_correct(l1));
-        std::vector<int, min_allocator<int>>::iterator i = l1.erase(l1.cbegin(), next(l1.cbegin()));
+        std::vector<int, min_allocator<int>>::iterator i = l1.erase(l1.cbegin(), std::next(l1.cbegin()));
         assert(l1.size() == 2);
         assert(std::distance(l1.cbegin(), l1.cend()) == 2);
         assert(i == l1.begin());
@@ -110,7 +110,7 @@ int main(int, char**)
     {
         std::vector<int, min_allocator<int>> l1(a1, a1+3);
         assert(is_contiguous_container_asan_correct(l1));
-        std::vector<int, min_allocator<int>>::iterator i = l1.erase(l1.cbegin(), next(l1.cbegin(), 2));
+        std::vector<int, min_allocator<int>>::iterator i = l1.erase(l1.cbegin(), std::next(l1.cbegin(), 2));
         assert(l1.size() == 1);
         assert(std::distance(l1.cbegin(), l1.cend()) == 1);
         assert(i == l1.begin());
@@ -120,7 +120,7 @@ int main(int, char**)
     {
         std::vector<int, min_allocator<int>> l1(a1, a1+3);
         assert(is_contiguous_container_asan_correct(l1));
-        std::vector<int, min_allocator<int>>::iterator i = l1.erase(l1.cbegin(), next(l1.cbegin(), 3));
+        std::vector<int, min_allocator<int>>::iterator i = l1.erase(l1.cbegin(), std::next(l1.cbegin(), 3));
         assert(l1.size() == 0);
         assert(std::distance(l1.cbegin(), l1.cend()) == 0);
         assert(i == l1.begin());

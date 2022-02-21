@@ -603,6 +603,14 @@ TEST_F(FormatTestSelective, KeepsIndentAfterCommentSectionImport) {
   EXPECT_EQ(Code, format(Code, 47, 1));
 }
 
+TEST_F(FormatTestSelective, DontAssert) {
+  // https://llvm.org/PR53880
+  std::string Code = "void f() {\n"
+                     "  return a == 8 ? 32 : 16;\n"
+                     "}\n";
+  EXPECT_EQ(Code, format(Code, 40, 0));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I %S/Inputs -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -disable-noundef-analysis -o - %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -no-enable-noundef-analysis -o - %s | FileCheck %s
 
 #include "literal-support.h"
 
@@ -13,7 +13,7 @@
 // CHECK: c"prop\00"
 
 // CHECK-LABEL: define{{.*}} void @test_numeric()
-void test_numeric() {
+void test_numeric(void) {
   // CHECK: {{call.*objc_msgSend.*i32 17.* [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]}}
   id ilit = @17;
   // CHECK: {{call.*objc_msgSend.*i32 25.* [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]}}

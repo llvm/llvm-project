@@ -326,9 +326,9 @@ static std::array<Address, N> getParamAddrs(std::index_sequence<Ints...> IntSeq,
                                             std::array<CharUnits, N> Alignments,
                                             FunctionArgList Args,
                                             CodeGenFunction *CGF) {
-  return std::array<Address, N>{{
-      Address(CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[Ints])),
-              Alignments[Ints])...}};
+  return std::array<Address, N>{{Address::deprecated(
+      CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[Ints])),
+      Alignments[Ints])...}};
 }
 
 // Template classes that are used as bases for classes that emit special
@@ -400,8 +400,9 @@ template <class Derived> struct GenFuncBase {
     std::array<Address, N> NewAddrs = Addrs;
 
     for (unsigned I = 0; I < N; ++I)
-      NewAddrs[I] = Address(
-          PHIs[I], StartAddrs[I].getAlignment().alignmentAtOffset(EltSize));
+      NewAddrs[I] =
+            Address(PHIs[I], CGF.Int8PtrTy,
+                    StartAddrs[I].getAlignment().alignmentAtOffset(EltSize));
 
     EltQT = IsVolatile ? EltQT.withVolatile() : EltQT;
     this->asDerived().visitWithKind(FK, EltQT, nullptr, CharUnits::Zero(),

@@ -288,9 +288,8 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    j .LBB12_3
 ; RV32I-NEXT:  .LBB12_2:
 ; RV32I-NEXT:    srl a0, a0, a2
-; RV32I-NEXT:    li a2, 31
-; RV32I-NEXT:    sub a2, a2, a3
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    xori a2, a3, 31
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:  .LBB12_3:
@@ -308,9 +307,8 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBS-NEXT:    j .LBB12_3
 ; RV32ZBS-NEXT:  .LBB12_2:
 ; RV32ZBS-NEXT:    srl a0, a0, a2
-; RV32ZBS-NEXT:    li a2, 31
-; RV32ZBS-NEXT:    sub a2, a2, a3
 ; RV32ZBS-NEXT:    slli a1, a1, 1
+; RV32ZBS-NEXT:    xori a2, a3, 31
 ; RV32ZBS-NEXT:    sll a1, a1, a2
 ; RV32ZBS-NEXT:    or a0, a0, a1
 ; RV32ZBS-NEXT:  .LBB12_3:

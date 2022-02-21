@@ -5,12 +5,12 @@
 ;PIC:        foo2
 ;PIC:        ldr [[SAVED_GUARD:r[0-9]+]], [[GUARD_STACK_OFFSET:LCPI[0-9_]+]]
 ;PIC-NEXT:   add [[SAVED_GUARD]], sp
-;PIC-NEXT:   ldr [[SAVED_GUARD]], {{\[}}[[SAVED_GUARD]]{{\]}}
+;PIC-NEXT:   ldr [[SAVED_GUARD]], [[[SAVED_GUARD]]]
 ;PIC-NEXT:   ldr [[ORIGINAL_GUARD:r[0-9]+]], [[ORIGINAL_GUARD_LABEL:LCPI[0-9_]+]]
 ;PIC-NEXT: [[LABEL1:LPC[0-9_]+]]:
 ;PIC-NEXT:   add [[ORIGINAL_GUARD]], pc
-;PIC-NEXT:   ldr [[ORIGINAL_GUARD]], {{\[}}[[ORIGINAL_GUARD]]{{\]}}
-;PIC-NEXT:   ldr [[ORIGINAL_GUARD]], {{\[}}[[ORIGINAL_GUARD]]{{\]}}
+;PIC-NEXT:   ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
+;PIC-NEXT:   ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;PIC-NEXT:   cmp [[ORIGINAL_GUARD]], [[SAVED_GUARD]]
 
 ;PIC:      [[GUARD_STACK_OFFSET]]:
@@ -21,11 +21,11 @@
 ;NO-PIC:   foo2
 ;NO-PIC:                ldr [[SAVED_GUARD:r[0-9]+]], [[GUARD_STACK_OFFSET:LCPI[0-9_]+]]
 ;NO-PIC-NEXT:           add [[SAVED_GUARD]], sp
-;NO-PIC-NEXT:           ldr [[SAVED_GUARD]], {{\[}}[[SAVED_GUARD]]{{\]}}
+;NO-PIC-NEXT:           ldr [[SAVED_GUARD]], [[[SAVED_GUARD]]]
 ;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD:r[0-9]+]], [[ORIGINAL_GUARD_LABEL:LCPI[0-9_]+]]
 ;NO-PIC-NOT: LPC
-;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD]], {{\[}}[[ORIGINAL_GUARD]]{{\]}}
-;DYNAMIC-NO-PIC-NEXT:   ldr [[ORIGINAL_GUARD]], {{\[}}[[ORIGINAL_GUARD]]{{\]}}
+;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
+;DYNAMIC-NO-PIC-NEXT:   ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;NO-PIC-NEXT:           cmp [[ORIGINAL_GUARD]], [[SAVED_GUARD]]
 
 ;STATIC:      [[GUARD_STACK_OFFSET]]:

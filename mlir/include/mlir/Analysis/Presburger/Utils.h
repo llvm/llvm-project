@@ -22,6 +22,67 @@ class IntegerPolyhedron;
 
 namespace presburger_utils {
 
+/// This class represents the result of operations optimizing something subject
+/// to some constraints. If the constraints were not satisfiable the, kind will
+/// be Empty. If the optimum is unbounded, the kind is Unbounded, and if the
+/// optimum is bounded, the kind will be Bounded and `optimum` holds the optimal
+/// value.
+enum class OptimumKind { Empty, Unbounded, Bounded };
+template <typename T>
+class MaybeOptimum {
+public:
+private:
+  OptimumKind kind = OptimumKind::Empty;
+  T optimum;
+
+public:
+  MaybeOptimum() = default;
+  MaybeOptimum(OptimumKind kind) : kind(kind) {
+    assert(kind != OptimumKind::Bounded &&
+           "Bounded optima should be constructed by specifying the optimum!");
+  }
+  MaybeOptimum(const T &optimum)
+      : kind(OptimumKind::Bounded), optimum(optimum) {}
+
+  OptimumKind getKind() const { return kind; }
+  bool isBounded() const { return kind == OptimumKind::Bounded; }
+  bool isUnbounded() const { return kind == OptimumKind::Unbounded; }
+  bool isEmpty() const { return kind == OptimumKind::Empty; }
+
+  Optional<T> getOptimumIfBounded() const { return optimum; }
+  const T &getBoundedOptimum() const {
+    assert(kind == OptimumKind::Bounded &&
+           "This should be called only for bounded optima");
+    return optimum;
+  }
+  T &getBoundedOptimum() {
+    assert(kind == OptimumKind::Bounded &&
+           "This should be called only for bounded optima");
+    return optimum;
+  }
+  const T &operator*() const { return getBoundedOptimum(); }
+  T &operator*() { return getBoundedOptimum(); }
+  const T *operator->() const { return &getBoundedOptimum(); }
+  T *operator->() { return &getBoundedOptimum(); }
+  bool operator==(const MaybeOptimum<T> &other) const {
+    if (kind != other.kind)
+      return false;
+    if (kind != OptimumKind::Bounded)
+      return true;
+    return optimum == other.optimum;
+  }
+
+  // Given f that takes a T and returns a U, convert this `MaybeOptimum<T>` to
+  // a `MaybeOptimum<U>` by applying `f` to the bounded optimum if it exists, or
+  // returning a MaybeOptimum of the same kind otherwise.
+  template <class Function>
+  auto map(const Function &f) const & -> MaybeOptimum<decltype(f(optimum))> {
+    if (kind == OptimumKind::Bounded)
+      return f(optimum);
+    return kind;
+  }
+};
+
 /// `ReprKind` enum is used to set the constraint type in `MaybeLocalRepr`.
 enum class ReprKind { Inequality, Equality, None };
 

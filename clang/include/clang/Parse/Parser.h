@@ -464,14 +464,17 @@ public:
   void Initialize();
 
   /// Parse the first top-level declaration in a translation unit.
-  bool ParseFirstTopLevelDecl(DeclGroupPtrTy &Result);
+  bool ParseFirstTopLevelDecl(DeclGroupPtrTy &Result,
+                              Sema::ModuleImportState &ImportState);
 
   /// ParseTopLevelDecl - Parse one top-level declaration. Returns true if
   /// the EOF was encountered.
-  bool ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl = false);
+  bool ParseTopLevelDecl(DeclGroupPtrTy &Result,
+                         Sema::ModuleImportState &ImportState);
   bool ParseTopLevelDecl() {
     DeclGroupPtrTy Result;
-    return ParseTopLevelDecl(Result);
+    Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
+    return ParseTopLevelDecl(Result, IS);
   }
 
   /// ConsumeToken - Consume the current 'peek token' and lex the next one.
@@ -3491,8 +3494,9 @@ private:
 
   //===--------------------------------------------------------------------===//
   // Modules
-  DeclGroupPtrTy ParseModuleDecl(bool IsFirstDecl);
-  Decl *ParseModuleImport(SourceLocation AtLoc);
+  DeclGroupPtrTy ParseModuleDecl(Sema::ModuleImportState &ImportState);
+  Decl *ParseModuleImport(SourceLocation AtLoc,
+                          Sema::ModuleImportState &ImportState);
   bool parseMisplacedModuleImport();
   bool tryParseMisplacedModuleImport() {
     tok::TokenKind Kind = Tok.getKind();

@@ -3748,7 +3748,7 @@ def       : Pat<(not i1:$in),
 
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
-include "PPCInstrPrefix.td"
+include "PPCInstrP10.td"
 
 // Patterns for arithmetic i1 operations.
 def : Pat<(add i1:$a, i1:$b),

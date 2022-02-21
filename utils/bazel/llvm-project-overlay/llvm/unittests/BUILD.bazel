@@ -412,6 +412,22 @@ cc_test(
 )
 
 cc_test(
+    name = "objcopy_tests",
+    srcs = glob(
+        ["ObjCopy/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:ObjCopy",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
     name = "object_tests",
     size = "small",
     srcs = glob(

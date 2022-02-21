@@ -62,14 +62,14 @@ int main(int, char**)
         assert(m.size() == 9);
         assert(std::distance(m.begin(), m.end()) == 9);
         assert(*m.begin() == V(1, 1));
-        assert(*next(m.begin()) == V(1, 1.5));
-        assert(*next(m.begin(), 2) == V(1, 2));
-        assert(*next(m.begin(), 3) == V(2, 1));
-        assert(*next(m.begin(), 4) == V(2, 1.5));
-        assert(*next(m.begin(), 5) == V(2, 2));
-        assert(*next(m.begin(), 6) == V(3, 1));
-        assert(*next(m.begin(), 7) == V(3, 1.5));
-        assert(*next(m.begin(), 8) == V(3, 2));
+        assert(*std::next(m.begin()) == V(1, 1.5));
+        assert(*std::next(m.begin(), 2) == V(1, 2));
+        assert(*std::next(m.begin(), 3) == V(2, 1));
+        assert(*std::next(m.begin(), 4) == V(2, 1.5));
+        assert(*std::next(m.begin(), 5) == V(2, 2));
+        assert(*std::next(m.begin(), 6) == V(3, 1));
+        assert(*std::next(m.begin(), 7) == V(3, 1.5));
+        assert(*std::next(m.begin(), 8) == V(3, 2));
 
         assert(mo.get_allocator() == A(test_alloc_base::moved_value));
         assert(mo.key_comp() == C(5));
@@ -113,14 +113,14 @@ int main(int, char**)
         assert(m.size() == 9);
         assert(std::distance(m.begin(), m.end()) == 9);
         assert(*m.begin() == V(1, 1));
-        assert(*next(m.begin()) == V(1, 1.5));
-        assert(*next(m.begin(), 2) == V(1, 2));
-        assert(*next(m.begin(), 3) == V(2, 1));
-        assert(*next(m.begin(), 4) == V(2, 1.5));
-        assert(*next(m.begin(), 5) == V(2, 2));
-        assert(*next(m.begin(), 6) == V(3, 1));
-        assert(*next(m.begin(), 7) == V(3, 1.5));
-        assert(*next(m.begin(), 8) == V(3, 2));
+        assert(*std::next(m.begin()) == V(1, 1.5));
+        assert(*std::next(m.begin(), 2) == V(1, 2));
+        assert(*std::next(m.begin(), 3) == V(2, 1));
+        assert(*std::next(m.begin(), 4) == V(2, 1.5));
+        assert(*std::next(m.begin(), 5) == V(2, 2));
+        assert(*std::next(m.begin(), 6) == V(3, 1));
+        assert(*std::next(m.begin(), 7) == V(3, 1.5));
+        assert(*std::next(m.begin(), 8) == V(3, 2));
 
         assert(mo.get_allocator() == A());
         assert(mo.key_comp() == C(5));

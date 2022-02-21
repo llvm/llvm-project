@@ -158,10 +158,10 @@ template<class T>
 
 */
 
+#include <__assert>
 #include <__availability>
 #include <__concepts/invocable.h>
 #include <__config>
-#include <__debug>
 #include <compare>
 #include <functional>
 #include <initializer_list>

@@ -61,6 +61,9 @@ struct Variable;
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using SymbolRef = common::Reference<const semantics::Symbol>;
 
+// Type for compile time constant length type parameters.
+using LenParameterTy = std::int64_t;
+
 /// Get a FIR type based on a category and kind.
 mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
                       int kind);
@@ -75,7 +78,7 @@ mlir::Type translateDataRefToFIRType(Fortran::lower::AbstractConverter &,
 
 /// Translate a SomeExpr to an mlir::Type.
 mlir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,
-                                      const SomeExpr *expr);
+                                      const SomeExpr &expr);
 
 /// Translate a Fortran::semantics::Symbol to an mlir::Type.
 mlir::Type translateSymbolToFIRType(Fortran::lower::AbstractConverter &,

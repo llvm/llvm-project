@@ -321,6 +321,8 @@ int main() {
   t12 v4;
   f1<_BitInt(3)>();
   f1<const unsigned _BitInt(5)>();
+  f1<void(t1<>, t1<>)>();
+  f1<int t1<>::*>();
 }
 void t8::mem() {
   struct t7 { };

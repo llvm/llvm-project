@@ -580,15 +580,12 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Support the following clauses: private, firstprivate, lastprivate,
   // reduction, allocate
-  if (!sectionsOp.private_vars().empty() ||
-      !sectionsOp.firstprivate_vars().empty() ||
-      !sectionsOp.lastprivate_vars().empty() ||
-      !sectionsOp.reduction_vars().empty() || sectionsOp.reductions() ||
+  if (!sectionsOp.reduction_vars().empty() || sectionsOp.reductions() ||
       !sectionsOp.allocate_vars().empty() ||
       !sectionsOp.allocators_vars().empty())
     return emitError(sectionsOp.getLoc())
-           << "private, firstprivate, lastprivate, reduction and allocate "
-              "clauses are not supported for sections construct";
+           << "reduction and allocate clauses are not supported for sections "
+              "construct";
 
   LogicalResult bodyGenStatus = success();
   SmallVector<StorableBodyGenCallbackTy> sectionCBs;

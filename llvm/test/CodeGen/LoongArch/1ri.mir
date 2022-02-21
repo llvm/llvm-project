@@ -16,7 +16,7 @@
 ---
 # CHECK-LABEL: test_LU12I_W:
 # CHECK-ENC: 0 0 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 0 1 0 0
-# CHECK-ASM: lu12i.w	a0, 49
+# CHECK-ASM: lu12i.w	$a0, 49
 name: test_LU12I_W
 body: |
   bb.0:
@@ -25,7 +25,7 @@ body: |
 ---
 # CHECK-LABEL: test_LU32I_D:
 # CHECK-ENC: 0 0 0 1 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 0 0 0 1 0 0
-# CHECK-ASM: lu32i.d	a0, 196
+# CHECK-ASM: lu32i.d	$a0, 196
 name: test_LU32I_D
 body: |
   bb.0:
@@ -34,7 +34,7 @@ body: |
 ---
 # CHECK-LABEL: test_PCADDI:
 # CHECK-ENC: 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 0 1 1 0 0 1 0 0
-# CHECK-ASM: pcaddi	a0, 187
+# CHECK-ASM: pcaddi	$a0, 187
 name: test_PCADDI
 body: |
   bb.0:
@@ -43,7 +43,7 @@ body: |
 ---
 # CHECK-LABEL: test_PCALAU12I:
 # CHECK-ENC: 0 0 0 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 1 0 0 1 0 0
-# CHECK-ASM: pcalau12i	a0, 89
+# CHECK-ASM: pcalau12i	$a0, 89
 name: test_PCALAU12I
 body: |
   bb.0:
@@ -52,7 +52,7 @@ body: |
 ---
 # CHECK-LABEL: test_PCADDU12I:
 # CHECK-ENC: 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: pcaddu12i	a0, 37
+# CHECK-ASM: pcaddu12i	$a0, 37
 name: test_PCADDU12I
 body: |
   bb.0:
@@ -61,7 +61,7 @@ body: |
 ---
 # CHECK-LABEL: test_PCADDU18I:
 # CHECK-ENC: 0 0 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 0 0 0 1 0 0
-# CHECK-ASM: pcaddu18i	a0, 26
+# CHECK-ASM: pcaddu18i	$a0, 26
 name: test_PCADDU18I
 body: |
   bb.0:
@@ -80,7 +80,7 @@ body: |
 ---
 # CHECK-LABEL: test_BEQZ:
 # CHECK-ENC: 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 0 0 1 0 0 0 0 0 0 0
-# CHECK-ASM: beqz	a0, 23
+# CHECK-ASM: beqz	$a0, 23
 name: test_BEQZ
 body: |
   bb.0:
@@ -89,7 +89,7 @@ body: |
 ---
 # CHECK-LABEL: test_BNEZ:
 # CHECK-ENC: 0 1 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 1 0 0 1 0 0 0 0 0 0 0
-# CHECK-ASM: bnez	a0, 21
+# CHECK-ASM: bnez	$a0, 21
 name: test_BNEZ
 body: |
   bb.0:

@@ -3889,6 +3889,13 @@ indicates that the user of the value may receive an unspecified
 bit-pattern. Undefined values may be of any type (other than '``label``'
 or '``void``') and be used anywhere a constant is permitted.
 
+.. note::
+
+  A '``poison``' value (decribed in the next section) should be used instead of
+  '``undef``' whenever possible. Poison values are stronger than undef, and
+  enable more optimizations. Just the existence of '``undef``' blocks certain
+  optimizations (see the examples below).
+
 Undefined values are useful because they indicate to the compiler that
 the program is well defined no matter what value is used. This gives the
 compiler more freedom to optimize. Here are some examples of
@@ -3939,7 +3946,7 @@ allowing the '``or``' to be folded to -1.
     Safe:
       %A = %X     (or %Y)
       %B = 42     (or %Y)
-      %C = %Y
+      %C = %Y     (if %Y is probably not poison; unsafe otherwise)
     Unsafe:
       %A = undef
       %B = undef
@@ -3951,7 +3958,8 @@ of the two operands. In the ``%A`` example, if ``%X`` and ``%Y`` were
 both known to have a clear low bit, then ``%A`` would have to have a
 cleared low bit. However, in the ``%C`` example, the optimizer is
 allowed to assume that the '``undef``' operand could be the same as
-``%Y``, allowing the whole '``select``' to be eliminated.
+``%Y`` if ``%Y`` is provably not '``poison``', allowing the whole '``select``'
+to be eliminated. This is because '``poison``' is stronger than '``undef``'.
 
 .. code-block:: llvm
 
@@ -4013,12 +4021,13 @@ optimizer can assume that it occurs in dead code.
     a:  store undef -> %X
     b:  store %X -> undef
     Safe:
-    a: <deleted>
+    a: <deleted>     (if the stored value in %X is provably not poison)
     b: unreachable
 
 A store *of* an undefined value can be assumed to not have any effect;
 we can assume that the value is overwritten with bits that happen to
-match what was already there. However, a store *to* an undefined
+match what was already there. This argument is only valid if the stored value
+is provably not ``poison``. However, a store *to* an undefined
 location could clobber arbitrary memory, therefore, it has undefined
 behavior.
 
@@ -4048,17 +4057,6 @@ it is undefined behavior.
       br %X, BB1, BB2 ; Well-defined (non-deterministic jump)
 
 
-This is also consistent with the behavior of MemorySanitizer.
-MemorySanitizer, detector of uses of uninitialized memory,
-defines a branch with condition that depends on an undef value (or
-certain other values, like e.g. a result of a load from heap-allocated
-memory that has never been stored to) to have an externally visible
-side effect. For this reason functions with *sanitize_memory*
-attribute are not allowed to produce such branches "out of thin
-air". More strictly, an optimization that inserts a conditional branch
-is only valid if in all executions where the branch condition has at
-least one undefined bit, the same branch condition is evaluated in the
-input IR as well.
 
 .. _poisonvalues:
 
@@ -4073,48 +4071,13 @@ The string '``poison``' can be used anywhere a constant is expected, and
 operations such as :ref:`add <i_add>` with the ``nsw`` flag can produce
 a poison value.
 
-Poison value behavior is defined in terms of value *dependence*:
-
--  Values other than :ref:`phi <i_phi>` nodes, :ref:`select <i_select>`, and
-   :ref:`freeze <i_freeze>` instructions depend on their operands.
--  :ref:`Phi <i_phi>` nodes depend on the operand corresponding to
-   their dynamic predecessor basic block.
--  :ref:`Select <i_select>` instructions depend on their condition operand and
-   their selected operand.
--  Function arguments depend on the corresponding actual argument values
-   in the dynamic callers of their functions.
--  :ref:`Call <i_call>` instructions depend on the :ref:`ret <i_ret>`
-   instructions that dynamically transfer control back to them.
--  :ref:`Invoke <i_invoke>` instructions depend on the
-   :ref:`ret <i_ret>`, :ref:`resume <i_resume>`, or exception-throwing
-   call instructions that dynamically transfer control back to them.
--  Non-volatile loads and stores depend on the most recent stores to all
-   of the referenced memory addresses, following the order in the IR
-   (including loads and stores implied by intrinsics such as
-   :ref:`@llvm.memcpy <int_memcpy>`.)
--  An instruction with externally visible side effects depends on the
-   most recent preceding instruction with externally visible side
-   effects, following the order in the IR. (This includes :ref:`volatile
-   operations <volatile>`.)
--  An instruction *control-depends* on a :ref:`terminator
-   instruction <terminators>` if the terminator instruction has
-   multiple successors and the instruction is always executed when
-   control transfers to one of the successors, and may not be executed
-   when control is transferred to another.
--  Additionally, an instruction also *control-depends* on a terminator
-   instruction if the set of instructions it otherwise depends on would
-   be different if the terminator had transferred control to a different
-   successor.
--  Dependence is transitive.
--  Vector elements may be independently poisoned. Therefore, transforms
-   on instructions such as shufflevector must be careful to propagate
-   poison across values or elements only as allowed by the original code.
-
-An instruction that *depends* on a poison value, produces a poison value
-itself. A poison value may be relaxed into an
-:ref:`undef value <undefvalues>`, which takes an arbitrary bit-pattern.
+Most instructions return '``poison``' when one of their arguments is
+'``poison``'. A notable expection is the :ref:`select instruction <i_select>`.
 Propagation of poison can be stopped with the
 :ref:`freeze instruction <i_freeze>`.
+
+It is correct to replace a poison value with an
+:ref:`undef value <undefvalues>` or any value of the type.
 
 This means that immediate undefined behavior occurs if a poison value is
 used as an instruction operand that has any values that trigger undefined

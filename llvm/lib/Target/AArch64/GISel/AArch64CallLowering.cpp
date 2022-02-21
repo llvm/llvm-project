@@ -18,6 +18,7 @@
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -1058,10 +1059,10 @@ bool AArch64CallLowering::lowerTailCall(
 
   // If Callee is a reg, since it is used by a target specific instruction,
   // it must have a register class matching the constraint of that instruction.
-  if (Info.Callee.isReg())
+  if (MIB->getOperand(0).isReg())
     constrainOperandRegClass(MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
                              *MF.getSubtarget().getRegBankInfo(), *MIB,
-                             MIB->getDesc(), Info.Callee, 0);
+                             MIB->getDesc(), MIB->getOperand(0), 0);
 
   MF.getFrameInfo().setHasTailCall();
   Info.LoweredTailCall = true;
@@ -1127,9 +1128,27 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
-  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
+
+  // Calls with operand bundle "clang.arc.attachedcall" are special. They should
+  // be expanded to the call, directly followed by a special marker sequence and
+  // a call to an ObjC library function.
+  unsigned Opc = 0;
+  if (Info.CB && objcarc::hasAttachedCallOpBundle(Info.CB))
+    Opc = AArch64::BLR_RVMARKER;
+  else
+    Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  unsigned CalleeOpNo = 0;
+
+  if (Opc == AArch64::BLR_RVMARKER) {
+    // Add a target global address for the retainRV/claimRV runtime function
+    // just before the call target.
+    Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
+    MIB.addGlobalAddress(ARCFn);
+    ++CalleeOpNo;
+  }
+
   MIB.add(Info.Callee);
 
   // Tell the call which registers are clobbered.
@@ -1160,10 +1179,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the
   // constraint of that instruction.
-  if (Info.Callee.isReg())
+  if (MIB->getOperand(CalleeOpNo).isReg())
     constrainOperandRegClass(MF, *TRI, MRI, *Subtarget.getInstrInfo(),
                              *Subtarget.getRegBankInfo(), *MIB, MIB->getDesc(),
-                             Info.Callee, 0);
+                             MIB->getOperand(CalleeOpNo), CalleeOpNo);
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an

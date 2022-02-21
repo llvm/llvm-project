@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__utility/unreachable.h>
-#include <__debug>
 #include <algorithm>
 #include <climits>
 #include <cstdlib>

@@ -10,7 +10,7 @@ filter_func_t mono_filter;
 
 void addfilter2(filter_func_t *func){}
 
-void setup_filters()
+void setup_filters(void)
 {
   addfilter2( mono_filter);
 }

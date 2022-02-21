@@ -171,7 +171,6 @@ class SparseCompiler:
   def __init__(self, sparsification_options: str, support_lib: str):
     self._support_lib = support_lib
     self._pipeline = (
-        f'builtin.func(linalg-generalize-named-ops,linalg-fuse-elementwise-ops),'
         f'sparse-compiler{{{sparsification_options} reassociate-fp-reductions=1 enable-index-optimizations=1}}')
     # Must be in the scope of a `with ir.Context():`
     self._passmanager = PassManager.parse(self._pipeline)

@@ -35,7 +35,7 @@ void LoongArchInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void LoongArchInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
-  O << getRegisterName(RegNo);
+  O << '$' << getRegisterName(RegNo);
 }
 
 void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

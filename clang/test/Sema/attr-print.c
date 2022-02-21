@@ -10,11 +10,10 @@ __declspec(align(4)) int y;
 // CHECK: short arr[3] __attribute__((aligned));
 short arr[3] __attribute__((aligned));
 
-// FIXME: -ast-print is printing this function signature with a K&R C style.
-// CHECK: void foo() __attribute__((const));
+// CHECK: void foo(void) __attribute__((const));
 void foo(void) __attribute__((const));
 
-// CHECK: void bar() __attribute__((__const));
+// CHECK: void bar(void) __attribute__((__const));
 void bar(void) __attribute__((__const));
 
 // CHECK: int * __ptr32 p32;

@@ -73,7 +73,6 @@ class SparseCompiler:
 
   def __init__(self):
     pipeline = (
-        f'builtin.func(linalg-generalize-named-ops,linalg-fuse-elementwise-ops),'
         f'sparse-compiler{{reassociate-fp-reductions=1 enable-index-optimizations=1}}')
     self.pipeline = pipeline
 

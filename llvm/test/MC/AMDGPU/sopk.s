@@ -230,7 +230,7 @@ s_setreg_b32 0xf803, s2
 s_setreg_b32 hwreg(HW_REG_HW_ID), s2
 // SICI: s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x82,0xb9]
 // VI9:  s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x02,0xb9]
-// NOGFX10: error: specified hardware register is not supported on this GPU
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2   ; encoding: [0x17,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(HW_REG_HW_ID1), s2
 // NOSICIVI: error: specified hardware register is not supported on this GPU

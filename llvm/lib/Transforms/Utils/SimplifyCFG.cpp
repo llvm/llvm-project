@@ -3732,7 +3732,9 @@ static bool mergeConditionalStoreToAddress(
     return false;
 
   // Now check the stores are compatible.
-  if (!QStore->isUnordered() || !PStore->isUnordered())
+  if (!QStore->isUnordered() || !PStore->isUnordered() ||
+      PStore->getValueOperand()->getType() !=
+          QStore->getValueOperand()->getType())
     return false;
 
   // Check that sinking the store won't cause program behavior changes. Sinking
@@ -6559,7 +6561,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   }
 
   // Try to transform the switch into an icmp and a branch.
-  if (TurnSwitchRangeIntoICmp(SI, Builder))
+  // The conversion from switch to comparison may lose information on
+  // impossible switch values, so disable it early in the pipeline.
+  if (Options.ConvertSwitchRangeToICmp && TurnSwitchRangeIntoICmp(SI, Builder))
     return requestResimplify();
 
   // Remove unreachable cases.

@@ -83,10 +83,10 @@ define void @Func1() nounwind ssp "frame-pointer"="all" {
 entry:
 ; A8: movw [[BASER:r[0-9]+]], :lower16:{{.*}}TestVar{{.*}}
 ; A8: movt [[BASER]], :upper16:{{.*}}TestVar{{.*}}
-; A8: ldr [[BASE:r[0-9]+]], {{\[}}[[BASER]]]
-; A8: ldrd [[FIELD1:r[0-9]+]], [[FIELD2:r[0-9]+]], {{\[}}[[BASE]], #4]
+; A8: ldr [[BASE:r[0-9]+]], [[[BASER]]]
+; A8: ldrd [[FIELD1:r[0-9]+]], [[FIELD2:r[0-9]+]], [[[BASE]], #4]
 ; A8-NEXT: add [[FIELD2]], [[FIELD1]]
-; A8-NEXT: str [[FIELD2]], {{\[}}[[BASE]]{{\]}}
+; A8-NEXT: str [[FIELD2]], [[[BASE]]]
 ; CONSERVATIVE-NOT: ldrd
   %orig_blocks = alloca [256 x i16], align 2
   %0 = bitcast [256 x i16]* %orig_blocks to i8*call void @llvm.lifetime.start.p0i8(i64 512, i8* %0) nounwind

@@ -211,7 +211,7 @@ class BinaryContext {
   std::map<unsigned, DwarfLineTable> DwarfLineTablesCUMap;
 
 public:
-  static std::unique_ptr<BinaryContext>
+  static Expected<std::unique_ptr<BinaryContext>>
   createBinaryContext(const ObjectFile *File, bool IsPIC,
                       std::unique_ptr<DWARFContext> DwCtx);
 

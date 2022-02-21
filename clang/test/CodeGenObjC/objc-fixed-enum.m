@@ -32,7 +32,7 @@ enum : NSInteger
 };
 typedef NSInteger Enum3;
 
-int main() {
+int main(void) {
   Enum0 e0 = Enum0One;
   // CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ENUM0:[0-9]+]], metadata !{{.*}})
   Enum1 e1 = Enum1One;

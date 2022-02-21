@@ -63,24 +63,8 @@ def OpenMP_PointerLikeType : Type<
 // 2.6 parallel Construct
 //===----------------------------------------------------------------------===//
 
-// Possible values for the default clause
-def ClauseDefaultPrivate      : I32EnumAttrCase<"defprivate",      0>;
-def ClauseDefaultFirstPrivate : I32EnumAttrCase<"deffirstprivate", 1>;
-def ClauseDefaultShared       : I32EnumAttrCase<"defshared",       2>;
-def ClauseDefaultNone         : I32EnumAttrCase<"defnone",         3>;
-
-def ClauseDefault : I32EnumAttr<
-    "ClauseDefault",
-    "default clause",
-    [ClauseDefaultPrivate, ClauseDefaultFirstPrivate, ClauseDefaultShared,
-     ClauseDefaultNone]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-def ClauseDefaultAttr : EnumAttr<OpenMP_Dialect, ClauseDefault,
-                                 "clause_default">;
-
-def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
+def ParallelOp : OpenMP_Op<"parallel", [
+                 AutomaticAllocationScope, AttrSizedOperandSegments,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>]> {
   let summary = "parallel construct";
   let description = [{
@@ -95,14 +79,6 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
     The optional $num_threads_var parameter specifies the number of threads which
     should be used to execute the parallel region.
 
-    The optional $default_val attribute specifies the default data sharing attribute
-    of values used in the parallel region that are not passed explicitly as parameters
-    to the operation.
-
-    The $private_vars, $firstprivate_vars, $shared_vars and $copyin_vars parameters
-    are a variadic list of values that specify the data sharing attribute of
-    those values.
-
     The $allocators_vars and $allocate_vars parameters are a variadic list of values
     that specify the memory allocator to be used to obtain storage for private values.
 
@@ -112,11 +88,6 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
 
   let arguments = (ins Optional<AnyType>:$if_expr_var,
              Optional<AnyType>:$num_threads_var,
-             OptionalAttr<ClauseDefaultAttr>:$default_val,
-             Variadic<AnyType>:$private_vars,
-             Variadic<AnyType>:$firstprivate_vars,
-             Variadic<AnyType>:$shared_vars,
-             Variadic<AnyType>:$copyin_vars,
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
              OptionalAttr<ProcBindKindAttr>:$proc_bind_val);
@@ -126,7 +97,17 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
   let builders = [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `if` `(` $if_expr_var `:` type($if_expr_var) `)`
+          | `num_threads` `(` $num_threads_var `:` type($num_threads_var) `)`
+          | `allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+          | `proc_bind` `(` custom<ProcBindKind>($proc_bind_val) `)`
+    ) $region attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -181,10 +162,6 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
     is executed once by one of the threads in the team in the context of its
     implicit task.
 
-    `private_vars`, `firstprivate_vars` and`lastprivate_vars` arguments are
-    variadic list of operands that specify the data sharing attributes of the
-    list of values. They are optional.
-
     Reductions can be performed in a sections construct by specifying reduction
     accumulator variables in `reduction_vars` and symbols referring to reduction
     declarations in the `reductions` attribute. Each reduction is identified
@@ -203,10 +180,7 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
     The `nowait` attribute, when present, signifies that there should be no
     implicit barrier at the end of the construct.
   }];
-  let arguments = (ins Variadic<AnyType>:$private_vars,
-                       Variadic<AnyType>:$firstprivate_vars,
-                       Variadic<AnyType>:$lastprivate_vars,
-                       Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$reduction_vars,
                        OptionalAttr<SymbolRefArrayAttr>:$reductions,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars,
@@ -214,7 +188,20 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 
   let regions = (region SizedRegion<1>:$region);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `reduction` `(`
+              custom<ReductionVarList>(
+                $reduction_vars, type($reduction_vars), $reductions
+              ) `)`
+          | `allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+          | `nowait`
+    ) $region attr-dict
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -246,12 +233,10 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     }
     ```
 
-    `private_vars`, `firstprivate_vars`, `lastprivate_vars` and `linear_vars`
-    arguments are variadic list of operands that specify the data sharing
-    attributes of the list of values. The `linear_step_vars` operand
-    additionally specifies the step for each associated linear operand. Note
-    that the `linear_vars` and `linear_step_vars` variadic lists should contain
-    the same number of elements.
+    The `linear_step_vars` operand additionally specifies the step for each
+    associated linear operand. Note that the `linear_vars` and
+    `linear_step_vars` variadic lists should contain the same number of
+    elements.
 
     Reductions can be performed in a workshare loop by specifying reduction
     accumulator variables in `reduction_vars` and symbols referring to reduction
@@ -287,9 +272,6 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
              Variadic<IntLikeType>:$upperBound,
              Variadic<IntLikeType>:$step,
-             Variadic<AnyType>:$private_vars,
-             Variadic<AnyType>:$firstprivate_vars,
-             Variadic<AnyType>:$lastprivate_vars,
              Variadic<AnyType>:$linear_vars,
              Variadic<AnyType>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
@@ -312,13 +294,12 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$lowerBound,
                "ValueRange":$upperBound, "ValueRange":$step,
-               "ValueRange":$privateVars, "ValueRange":$firstprivateVars,
-               "ValueRange":$lastprivate_vars, "ValueRange":$linear_vars,
-               "ValueRange":$linear_step_vars, "ValueRange":$reduction_vars,
-               "StringAttr":$schedule_val, "Value":$schedule_chunk_var,
-               "IntegerAttr":$collapse_val, "UnitAttr":$nowait,
-               "IntegerAttr":$ordered_val, "StringAttr":$order_val,
-               "UnitAttr":$inclusive, CArg<"bool", "true">:$buildBody)>,
+               "ValueRange":$linear_vars, "ValueRange":$linear_step_vars,
+               "ValueRange":$reduction_vars, "StringAttr":$schedule_val,
+               "Value":$schedule_chunk_var, "IntegerAttr":$collapse_val,
+               "UnitAttr":$nowait, "IntegerAttr":$ordered_val,
+               "StringAttr":$order_val, "UnitAttr":$inclusive,
+               CArg<"bool", "true">:$buildBody)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
@@ -403,7 +384,7 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
     The optional $nowait elliminates the implicit barrier so the parent task can make progress
     even if the target task is not yet completed.
 
-    TODO:  private, map, is_device_ptr, firstprivate, depend, defaultmap, in_reduction
+    TODO:  map, is_device_ptr, depend, defaultmap, in_reduction
 
   }];
 
@@ -414,7 +395,13 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
 
   let regions = (region AnyRegion:$region);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `if` `(` $if_expr `)`
+          | `device` `(` $device `:` type($device) `)`
+          | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+          | `nowait`
+    ) $region attr-dict
+  }];
 }
 
 

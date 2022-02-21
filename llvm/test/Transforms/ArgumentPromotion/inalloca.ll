@@ -8,9 +8,9 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 ; Argpromote + sroa should change this to passing the two integers by value.
 define internal i32 @f(%struct.ss* inalloca(%struct.ss)  %s) {
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (i32 [[S_0_0_VAL:%.*]], i32 [[S_0_1_VAL:%.*]]) unnamed_addr {
+; CHECK-SAME: (i32 [[S_0_VAL:%.*]], i32 [[S_4_VAL:%.*]]) unnamed_addr {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[S_0_0_VAL]], [[S_0_1_VAL]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[S_0_VAL]], [[S_4_VAL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:

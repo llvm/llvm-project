@@ -1099,6 +1099,27 @@ join:
   uselistorder label %join, { 1, 0 }
 }
 
+define i1 @test_liveness(i1 %c) {
+entry:
+    br i1 %c, label %t, label %f
+t:
+    br label %f
+f:
+    %p = phi i1 [true, %entry], [false, %t]
+    %rc1 = call i1 @ret(i1 %p)
+    ret i1 %rc1
+}
+
+define internal i1 @ret(i1 %c) {
+entry:
+    br i1 %c, label %t, label %f
+t:
+    br label %f
+f:
+    %p = phi i1 [%c, %entry], [false, %t]
+    ret i1 %p
+}
+
 ;.
 ; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }

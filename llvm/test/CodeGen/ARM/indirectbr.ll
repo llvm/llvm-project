@@ -60,7 +60,7 @@ L1:                                               ; preds = %L2, %bb2
 ; ARM: ldr [[R1:r[0-9]+]], LCPI
 ; ARM: add [[R_NEXTADDR_b:r[0-9]+]], pc, [[R_NEXTADDR]]
 ; ARM: add [[R1b:r[0-9]+]], pc, [[R1]]
-; ARM: str [[R1b]], {{\[}}[[R_NEXTADDR_b]]]
+; ARM: str [[R1b]], [[[R_NEXTADDR_b]]]
 
 ; THUMB-LABEL: %L1
 ; THUMB: ldr [[R2:r[0-9]+]], LCPI

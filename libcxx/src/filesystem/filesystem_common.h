@@ -9,6 +9,7 @@
 #ifndef FILESYSTEM_COMMON_H
 #define FILESYSTEM_COMMON_H
 
+#include <__assert>
 #include <__config>
 #include <array>
 #include <chrono>

@@ -73,6 +73,18 @@ DEFAULT_FEATURES = [
             void f() { new int(3); }
           """, ['-shared'])),
 
+  # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
+  # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
+  Feature(name='broken-utf8-wchar-ctype',
+          when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
+          #include <locale.h>
+          #include <wctype.h>
+          int main(int, char**) {
+            setlocale(LC_ALL, "en_US.UTF-8");
+            return towlower(L'\\xDA') != L'\\xFA';
+          }
+          """)),
+
   # Whether Bash can run on the executor.
   # This is not always the case, for example when running on embedded systems.
   #

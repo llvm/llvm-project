@@ -86,13 +86,6 @@ class ALU_1RI20<bits<7> op, string opstr, Operand ImmOpnd>
     : Fmt1RI20<op, (outs GPR:$rd), (ins ImmOpnd:$imm20),
                !strconcat(opstr, "\t$rd, $imm20")>;
 
-class ALU_BSTRW<bits<12> op, string opstr, Operand ImmOpnd>
-    : FmtBSTR_W<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$msb, ImmOpnd:$lsb),
-                !strconcat(opstr, "\t$rd, $rj, $msb, $lsb")>;
-class ALU_BSTRD<bits<10> op, string opstr, Operand ImmOpnd>
-    : FmtBSTR_D<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$msb, ImmOpnd:$lsb),
-                !strconcat(opstr, "\t$rd, $rj, $msb, $lsb")>;
-
 class MISC_I15<bits<17> op, string opstr>
     : FmtI15<op, (outs), (ins uimm15:$imm15), !strconcat(opstr, "\t$imm15")>;
 
@@ -145,17 +138,17 @@ class STORE_2RI14<bits<8> op, string opstr>
 
 let mayLoad = 1, mayStore = 1 in
 class AM_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk),
-            !strconcat(opstr, "\t$rd, $rj, $rk")>;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj),
+            !strconcat(opstr, "\t$rd, $rk, $rj")>;
 
 let mayLoad = 1 in
 class LLBase<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14:$imm14),
+    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
                !strconcat(opstr, "\t$rd, $rj, $imm14")>;
 
 let mayStore = 1, Constraints = "$rd = $dst" in
 class SCBase<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14:$imm14),
+    : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
                !strconcat(opstr, "\t$rd, $rj, $imm14")>;
 
 //===----------------------------------------------------------------------===//
@@ -214,8 +207,14 @@ def BYTEPICK_W : ALU_3RI2<0b000000000000100, "bytepick.w", uimm2>;
 def REVB_2H   : ALU_2R<0b0000000000000000001100, "revb.2h">;
 def BITREV_4B : ALU_2R<0b0000000000000000010010, "bitrev.4b">;
 def BITREV_W  : ALU_2R<0b0000000000000000010100, "bitrev.w">;
-def BSTRINS_W  : ALU_BSTRW<0b000000000110, "bstrins.w", uimm5>;
-def BSTRPICK_W : ALU_BSTRW<0b000000000111, "bstrpick.w", uimm5>;
+let Constraints = "$rd = $dst" in {
+def BSTRINS_W  : FmtBSTR_W<0b000000000110, (outs GPR:$dst),
+                           (ins GPR:$rd, GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
+                           "bstrins.w\t$rd, $rj, $msbw, $lsbw">;
+}
+def BSTRPICK_W : FmtBSTR_W<0b000000000111, (outs GPR:$rd),
+                           (ins GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
+                           "bstrpick.w\t$rd, $rj, $msbw, $lsbw">;
 def MASKEQZ : ALU_3R<0b00000000000100110, "maskeqz">;
 def MASKNEZ : ALU_3R<0b00000000000100111, "masknez">;
 
@@ -309,8 +308,14 @@ def REVH_2W   : ALU_2R<0b0000000000000000010000, "revh.2w">;
 def REVH_D    : ALU_2R<0b0000000000000000010001, "revh.d">;
 def BITREV_8B : ALU_2R<0b0000000000000000010011, "bitrev.8b">;
 def BITREV_D  : ALU_2R<0b0000000000000000010101, "bitrev.d">;
-def BSTRINS_D  : ALU_BSTRD<0b0000000010, "bstrins.d", uimm6>;
-def BSTRPICK_D : ALU_BSTRD<0b0000000011, "bstrpick.d", uimm6>;
+let Constraints = "$rd = $dst" in {
+def BSTRINS_D  : FmtBSTR_D<0b0000000010, (outs GPR:$dst),
+                           (ins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
+                           "bstrins.d\t$rd, $rj, $msbd, $lsbd">;
+}
+def BSTRPICK_D : FmtBSTR_D<0b0000000011, (outs GPR:$rd),
+                           (ins GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
+                           "bstrpick.d\t$rd, $rj, $msbd, $lsbd">;
 
 // Common Memory Access Instructions for 64-bits
 def LD_WU : LOAD_2RI12<0b0010101010, "ld.wu">;

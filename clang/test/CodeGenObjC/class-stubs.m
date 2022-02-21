@@ -36,7 +36,7 @@ __attribute__((objc_subclassing_restricted))
 @interface Derived : Base
 @end
 
-int main() {
+int main(void) {
   [Base classMethod];
 }
 // CHECK-LABEL: define{{.*}} i32 @main()

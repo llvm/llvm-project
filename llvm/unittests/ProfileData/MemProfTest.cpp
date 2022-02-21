@@ -89,8 +89,8 @@ const DILineInfoSpecifier specifier() {
       DILineInfoSpecifier::FunctionNameKind::LinkageName);
 }
 
-MATCHER_P4(FrameContains, Function, LineOffset, Column, Inline, "") {
-  const std::string ExpectedHash = std::to_string(llvm::MD5Hash(Function));
+MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
+  const uint64_t ExpectedHash = llvm::Function::getGUID(FunctionName);
   if (arg.Function != ExpectedHash) {
     *result_listener << "Hash mismatch";
     return false;
@@ -100,6 +100,22 @@ MATCHER_P4(FrameContains, Function, LineOffset, Column, Inline, "") {
     return true;
   }
   *result_listener << "LineOffset, Column or Inline mismatch";
+  return false;
+}
+
+MATCHER_P(EqualsRecord, Want, "") {
+  if (arg == Want)
+    return true;
+
+  std::string Explanation;
+  llvm::raw_string_ostream OS(Explanation);
+  OS << "\n Want: \n";
+  Want.print(OS);
+  OS << "\n Got: \n";
+  arg.print(OS);
+  OS.flush();
+
+  *result_listener << Explanation;
   return false;
 }
 
@@ -184,4 +200,38 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
 }
 
+TEST(MemProf, RecordSerializationRoundTrip) {
+  const MemProfSchema Schema = getFullSchema();
+
+  llvm::SmallVector<MemProfRecord, 3> Records;
+  MemProfRecord MR;
+
+  MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
+                    /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
+                    /*dealloc_cpu=*/4);
+
+  MR.Info = PortableMemInfoBlock(Info);
+  MR.CallStack.push_back({0x123, 1, 2, false});
+  MR.CallStack.push_back({0x345, 3, 4, false});
+  Records.push_back(MR);
+
+  MR.clear();
+  MR.Info = PortableMemInfoBlock(Info);
+  MR.CallStack.push_back({0x567, 5, 6, false});
+  MR.CallStack.push_back({0x789, 7, 8, false});
+  Records.push_back(MR);
+
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  serializeRecords(Records, Schema, OS);
+  OS.flush();
+
+  const llvm::SmallVector<MemProfRecord, 4> GotRecords = deserializeRecords(
+      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()));
+
+  ASSERT_TRUE(!GotRecords.empty());
+  EXPECT_EQ(GotRecords.size(), Records.size());
+  EXPECT_THAT(GotRecords[0], EqualsRecord(Records[0]));
+  EXPECT_THAT(GotRecords[1], EqualsRecord(Records[1]));
+}
 } // namespace

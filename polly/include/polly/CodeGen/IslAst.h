@@ -40,9 +40,6 @@ public:
 
   static IslAst create(Scop &Scop, const Dependences &D);
 
-  /// Print a source code representation of the program.
-  void pprint(raw_ostream &OS);
-
   isl::ast_node getAst();
 
   const std::shared_ptr<isl_ctx> getSharedIslCtx() const { return Ctx; }

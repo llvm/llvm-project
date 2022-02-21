@@ -2174,7 +2174,7 @@ cc_library(
         ":StandardOps",
         ":Support",
         ":TransformUtils",
-       ":Transforms",
+        ":Transforms",
         ":TransformsPassIncGen",
         "//llvm:Core",
         "//llvm:Support",
@@ -3616,8 +3616,8 @@ cc_library(
         ":ArithmeticToLLVM",
         ":Async",
         ":AsyncToLLVM",
-        ":ConversionPassIncGen",
         ":ControlFlowToLLVM",
+        ":ConversionPassIncGen",
         ":GPUDialect",
         ":GPUTransforms",
         ":IR",
@@ -4645,6 +4645,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/Transforms/Passes.h",
+        "include/mlir/Dialect/Tensor/Transforms/Transforms.h",
     ],
     includes = ["include"],
     deps = [
@@ -4652,6 +4653,7 @@ cc_library(
         ":Async",
         ":BufferizationDialect",
         ":BufferizationTransforms",
+        ":DialectUtils",
         ":IR",
         ":MemRefDialect",
         ":ParallelLoopMapperAttrGen",
@@ -5985,6 +5987,7 @@ cc_binary(
         "//mlir/test:TestShapeDialect",
         "//mlir/test:TestStandardOps",
         "//mlir/test:TestStandardToLLVM",
+        "//mlir/test:TestTensor",
         "//mlir/test:TestTosaDialect",
         "//mlir/test:TestTransforms",
         "//mlir/test:TestTypeDialect",
@@ -6838,25 +6841,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "LinalgBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":BufferizationTransforms",
-        ":IR",
-        ":LinalgOps",
-        ":LinalgStructuredOpsIncGen",
-        ":TensorDialect",
-    ],
-)
-
 td_library(
     name = "LinalgDocTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/LinalgDoc.td"],
@@ -6994,6 +6978,7 @@ cc_library(
         ":Parser",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":SparseTensor",
         ":StandardOps",
         ":Support",
         ":TensorDialect",
@@ -7046,6 +7031,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h",
         "include/mlir/Dialect/Linalg/Passes.h",
+        "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Linalg/Transforms/CodegenStrategy.h",
         "include/mlir/Dialect/Linalg/Transforms/HoistPadding.h",
         "include/mlir/Dialect/Linalg/Transforms/Hoisting.h",
@@ -7069,7 +7055,6 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":LinalgBufferizableOpInterfaceImpl",
         ":LinalgOps",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
@@ -7080,10 +7065,12 @@ cc_library(
         ":SCFDialect",
         ":SCFTransforms",
         ":SCFUtils",
+        ":SparseTensor",
         ":StandardOps",
         ":StandardOpsTransforms",
         ":Support",
         ":TensorDialect",
+        ":TensorTilingInterfaceImpl",
         ":TensorTransforms",
         ":TensorUtils",
         ":TransformUtils",
@@ -7137,6 +7124,7 @@ td_library(
     srcs = ["include/mlir/Dialect/Vector/IR/VectorOps.td"],
     includes = ["include"],
     deps = [
+        ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",

@@ -20,7 +20,6 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRBufferizationTransforms
   MLIRGPUTransforms
   MLIRLinalg
-  MLIRLinalgBufferizableOpInterfaceImpl
   MLIRLinalgTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRMemRef

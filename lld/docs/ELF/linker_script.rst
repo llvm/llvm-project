@@ -102,6 +102,12 @@ When an *OutputSection* *S* has ``(type)``, LLD will set ``sh_type`` or
 
 - ``NOLOAD``: set ``sh_type`` to ``SHT_NOBITS``.
 - ``COPY``, ``INFO``, ``OVERLAY``: clear the ``SHF_ALLOC`` bit in ``sh_flags``.
+- ``TYPE=<value>``: set ``sh_type`` to the specified value. ``<value>`` must be
+  an integer or one of ``SHT_PROGBITS, SHT_NOTE, SHT_NOBITS, SHT_INIT_ARRAY,
+  SHT_FINI_ARRAY, SHT_PREINIT_ARRAY``.
+
+When ``sh_type`` is specified, it is an error if an input section in *S* has a
+different type.
 
 Output section alignment
 ------------------------

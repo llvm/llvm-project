@@ -142,6 +142,9 @@ static SmallVector<std::string, 16> TempFiles;
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
 
+/// Static buffer to hold StringRef values.
+static BumpPtrAllocator Alloc;
+
 /// Magic section string that marks the existence of offloading data. The
 /// section string will be formatted as `.llvm.offloading.<triple>.<arch>`.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading."
@@ -861,8 +864,9 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> SavedBuffers;
   SmallVector<std::unique_ptr<lto::InputFile>, 4> BitcodeFiles;
   SmallVector<std::string, 4> NewInputFiles;
-  StringMap<bool> UsedInRegularObj;
-  StringMap<bool> UsedInSharedLib;
+  DenseSet<StringRef> UsedInRegularObj;
+  DenseSet<StringRef> UsedInSharedLib;
+  StringSaver Saver(Alloc);
 
   // Search for bitcode files in the input and create an LTO input file. If it
   // is not a bitcode file, scan its symbol table for symbols we need to
@@ -888,9 +892,9 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
 
         // Record if we've seen these symbols in any object or shared libraries.
         if ((*ObjFile)->isRelocatableObject())
-          UsedInRegularObj[*Name] = true;
+          UsedInRegularObj.insert(Saver.save(*Name));
         else
-          UsedInSharedLib[*Name] = true;
+          UsedInSharedLib.insert(Saver.save(*Name));
       }
     } else {
       Expected<std::unique_ptr<lto::InputFile>> InputFileOrErr =
@@ -950,14 +954,15 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
       // We will use this as the prevailing symbol definition in LTO unless
       // it is undefined or another definition has already been used.
       Res.Prevailing =
-          !Sym.isUndefined() && PrevailingSymbols.insert(Sym.getName()).second;
+          !Sym.isUndefined() &&
+          PrevailingSymbols.insert(Saver.save(Sym.getName())).second;
 
       // We need LTO to preseve the following global symbols:
       // 1) Symbols used in regular objects.
       // 2) Sections that will be given a __start/__stop symbol.
-      // 3) Prevailing symbols that are needed visibile to external libraries.
+      // 3) Prevailing symbols that are needed visible to external libraries.
       Res.VisibleToRegularObj =
-          UsedInRegularObj[Sym.getName()] ||
+          UsedInRegularObj.contains(Sym.getName()) ||
           isValidCIdentifier(Sym.getSectionName()) ||
           (Res.Prevailing &&
            (Sym.getVisibility() != GlobalValue::HiddenVisibility &&
@@ -967,7 +972,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
       // referenced by other files.
       Res.ExportDynamic =
           Sym.getVisibility() != GlobalValue::HiddenVisibility &&
-          (UsedInSharedLib[Sym.getName()] ||
+          (UsedInSharedLib.contains(Sym.getName()) ||
            !Sym.canBeOmittedFromSymbolTable());
 
       // The final definition will reside in this linkage unit if the symbol is

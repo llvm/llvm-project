@@ -279,6 +279,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__algorithm/remove_if.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__assert>
 #include <__bit_reference>
 #include <__config>
 #include <__debug>

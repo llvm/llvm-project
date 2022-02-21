@@ -13,10 +13,10 @@ entry:
 ; where the high half of the address comes from s_getpc.
 
 ; PAL-LABEL: {{^}}scratch:
-; PAL: s_getpc_b64 s{{\[}}[[GITPTR:[0-9]+]]:
+; PAL: s_getpc_b64 s[[[GITPTR:[0-9]+]]:
 ; PAL: s_mov_b32 s[[GITPTR]], s0
-; PAL: s_load_dwordx4 s{{\[}}[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s{{\[}}[[GITPTR]]:
-; PAL: buffer_store{{.*}}, s{{\[}}[[SCRATCHDESC]]:
+; PAL: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:
+; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
 
 define amdgpu_kernel void @scratch(<2 x i32> %in, i32 %idx, i32 addrspace(5)* %out) {
 entry:
@@ -39,8 +39,8 @@ entry:
 ; PAL-LABEL: {{^}}scratch2:
 ; PAL: s_movk_i32 s{{[0-9]+}}, 0x1234
 ; PAL: s_mov_b32 s[[GITPTR:[0-9]+]], s0
-; PAL: s_load_dwordx4 s{{\[}}[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s{{\[}}[[GITPTR]]:
-; PAL: buffer_store{{.*}}, s{{\[}}[[SCRATCHDESC]]:
+; PAL: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:
+; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
 
 define amdgpu_kernel void @scratch2(<2 x i32> %in, i32 %idx, i32 addrspace(5)* %out) #0 {
 entry:
@@ -61,9 +61,9 @@ entry:
 ; PAL-LABEL: {{^}}scratch2_cs:
 ; PAL: s_movk_i32 s{{[0-9]+}}, 0x1234
 ; PAL: s_mov_b32 s[[GITPTR:[0-9]+]], s0
-; CI: s_load_dwordx4 s{{\[}}[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s{{\[}}[[GITPTR]]:{{[0-9]+\]}}, 0x4
-; VI: s_load_dwordx4 s{{\[}}[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s{{\[}}[[GITPTR]]:{{[0-9]+\]}}, 0x10
-; PAL: buffer_store{{.*}}, s{{\[}}[[SCRATCHDESC]]:
+; CI: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:{{[0-9]+\]}}, 0x4
+; VI: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:{{[0-9]+\]}}, 0x10
+; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
 
 define amdgpu_cs void @scratch2_cs(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32> %coord, <2 x i32> %in, i32 %extra, i32 %idx) #0 {
 entry:

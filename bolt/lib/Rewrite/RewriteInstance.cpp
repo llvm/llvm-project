@@ -47,6 +47,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -55,6 +56,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <system_error>
 
 #undef  DEBUG_TYPE
@@ -136,7 +138,7 @@ KeepTmp("keep-tmp",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-static cl::opt<bool>
+cl::opt<bool>
 Lite("lite",
   cl::desc("skip processing of cold functions"),
   cl::init(false),
@@ -353,14 +355,28 @@ bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
 
 } // anonymous namespace
 
+Expected<std::unique_ptr<RewriteInstance>>
+RewriteInstance::createRewriteInstance(ELFObjectFileBase *File, const int Argc,
+                                       const char *const *Argv,
+                                       StringRef ToolPath) {
+  Error Err = Error::success();
+  auto RI = std::make_unique<RewriteInstance>(File, Argc, Argv, ToolPath, Err);
+  if (Err)
+    return std::move(Err);
+  return RI;
+}
+
 RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
-                                 const char *const *Argv, StringRef ToolPath)
+                                 const char *const *Argv, StringRef ToolPath,
+                                 Error &Err)
     : InputFile(File), Argc(Argc), Argv(Argv), ToolPath(ToolPath),
       SHStrTab(StringTableBuilder::ELF) {
+  ErrorAsOutParameter EAO(&Err);
   auto ELF64LEFile = dyn_cast<ELF64LEObjectFile>(InputFile);
   if (!ELF64LEFile) {
-    errs() << "BOLT-ERROR: only 64-bit LE ELF binaries are supported\n";
-    exit(1);
+    Err = createStringError(errc::not_supported,
+                            "Only 64-bit LE ELF binaries are supported");
+    return;
   }
 
   bool IsPIC = false;
@@ -371,13 +387,17 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     IsPIC = true;
   }
 
-  BC = BinaryContext::createBinaryContext(
+  auto BCOrErr = BinaryContext::createBinaryContext(
       File, IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
                            WithColor::defaultWarningHandler));
-
+  if (Error E = BCOrErr.takeError()) {
+    Err = std::move(E);
+    return;
+  }
+  BC = std::move(BCOrErr.get());
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
       BC->TheTriple->getArch(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));
 

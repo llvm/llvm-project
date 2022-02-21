@@ -127,6 +127,11 @@ protected:
 };
 
 template <>
+StructuredData::ArraySP
+ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(
+    python::PythonObject &p, Status &error);
+
+template <>
 StructuredData::DictionarySP
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     StructuredData::DictionarySP>(python::PythonObject &p, Status &error);

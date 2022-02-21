@@ -41,6 +41,17 @@ bool isMaskType(EVT SomeVT) {
   return SomeVT.getVectorElementType() == MVT::i1;
 }
 
+bool isMaskArithmetic(SDValue Op) {
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return isMaskType(Op.getValueType());
+  }
+}
+
 /// \returns the VVP_* SDNode opcode corresponsing to \p OC.
 Optional<unsigned> getVVPOpcode(unsigned Opcode) {
   switch (Opcode) {
@@ -204,6 +215,20 @@ SDValue VECustomDAG::annotateLegalAVL(SDValue AVL) const {
   if (isLegalAVL(AVL))
     return AVL;
   return getNode(VEISD::LEGALAVL, AVL.getValueType(), AVL);
+}
+
+SDValue VECustomDAG::getUnpack(EVT DestVT, SDValue Vec, PackElem Part,
+                               SDValue AVL) {
+  // TODO: Peek through VEC_PACK and VEC_BROADCAST(REPL_<sth> ..) operands.
+  unsigned OC =
+      (Part == PackElem::Lo) ? VEISD::VEC_UNPACK_LO : VEISD::VEC_UNPACK_HI;
+  return DAG.getNode(OC, DL, DestVT, Vec, AVL);
+}
+
+SDValue VECustomDAG::getPack(EVT DestVT, SDValue LoVec, SDValue HiVec,
+                             SDValue AVL) {
+  // TODO: Peek through VEC_UNPACK_LO|HI operands.
+  return DAG.getNode(VEISD::VEC_PACK, DL, DestVT, LoVec, HiVec, AVL);
 }
 
 } // namespace llvm

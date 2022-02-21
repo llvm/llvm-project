@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.11 -emit-llvm -o - %s | FileCheck %s
 
-void use_at_available() {
+void use_at_available(void) {
   // CHECK: call i32 @__isPlatformVersionAtLeast(i32 1, i32 10, i32 12, i32 0)
   // CHECK-NEXT: icmp ne
   if (__builtin_available(macos 10.12, *))

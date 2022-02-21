@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
-// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
-// RUN: %clang_cc1 -disable-noundef-analysis -x c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - | FileCheck %s -check-prefixes=SHARED,C
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - | FileCheck %s -check-prefixes=SHARED,C
 
 typedef signed char BOOL;
 
 // SHARED-LABEL: f1
-BOOL f1() {
+BOOL f1(void) {
   // OBJC: call void @__ubsan_handle_load_invalid_value
   // C-NOT: call void @__ubsan_handle_load_invalid_value
   BOOL a = 2;

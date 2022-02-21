@@ -18,6 +18,32 @@
 namespace mlir {
 namespace tensor {
 
+class PadOp;
+
+/// Bubbles up a slice of this pad by taking the slice first and then performing
+/// the padding. `offsets` and `strides` specifies each dimension's start offset
+/// and size for the slice. The slice has unit strides along all dimensions.
+///
+/// Specifically, this function converts:
+/// ```
+/// %0 = tensor.pad %source low[...] high[...] { linalg.yield %cst }
+/// %1 = <extract-slice> %0 offsets=[...], sizes[...]
+/// ```
+/// into
+/// ```
+/// %0 = tensor.extract_slice %source ...
+/// %0 = tensor.pad %0 low[...] high[...] { linalg.yield %cst }
+/// ```
+///
+/// If `generateZeroSliceGuard` is true, the generated IR will contain logic
+/// to guard against the case that we might take a zero-sized slice from the
+/// original source. For such cases, we `tensor.generate` to generate the
+/// full tensor.
+Operation *bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
+                            ArrayRef<OpFoldResult> offsets,
+                            ArrayRef<OpFoldResult> sizes,
+                            bool generateZeroSliceGuard = true);
+
 /// Registers external models for Tiling interface for tensor ops.
 /// Currently, it registers:
 ///

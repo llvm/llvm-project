@@ -232,7 +232,7 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   NamedAttrList attrs;
   Builder b(&ctx);
 
-  attrs.append("foo", b.getStringAttr("bar"));
+  attrs.append(b.getStringAttr("foo"), b.getStringAttr("bar"));
   attrs.append("baz", b.getStringAttr("boo"));
 
   {

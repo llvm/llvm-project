@@ -1,4 +1,5 @@
 # REQUIRES: x86
+# UNSUPPORTED: system-windows
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o

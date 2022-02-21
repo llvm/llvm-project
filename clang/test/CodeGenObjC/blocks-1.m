@@ -36,7 +36,7 @@ void test1(NSDictionary * dict) {
 @interface D
 @end
 
-void foo() {
+void foo(void) {
   __block __weak D *weakSelf;
   ^{ (void)weakSelf; };
   D *l;
@@ -46,7 +46,7 @@ void foo() {
 
 void (^__weak b)(void);
 
-void test2() {
+void test2(void) {
   __block int i = 0;
   b = ^ {  ++i; };
 }

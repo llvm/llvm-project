@@ -39,3 +39,13 @@ void c2() {
   const auto lambda = [&](auto arg1) {};
   [&](auto arg2) { lambda.operator()(arg2); }(0);
 }
+
+auto d = [](auto) {};
+
+template <typename T>
+void d1(T x) { d.operator()(x); }
+
+void d2() { d1(0); }
+
+template <typename T> int e1 = [](auto){ return T(); }.operator()(T());
+int e2 = e1<int>;

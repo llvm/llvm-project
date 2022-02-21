@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__config>
 #include <errno.h>
 #include <filesystem>

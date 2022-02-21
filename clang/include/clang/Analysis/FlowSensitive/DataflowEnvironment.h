@@ -226,7 +226,7 @@ public:
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
-  BoolValue &getBoolLiteralValue(bool Value) const {
+  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
     return DACtx->getBoolLiteralValue(Value);
   }
 

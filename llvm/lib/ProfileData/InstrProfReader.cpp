@@ -19,7 +19,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -56,6 +58,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   }
   if (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) {
     ProfileKind |= InstrProfKind::FunctionEntryOnly;
+  }
+  if (Version & VARIANT_MASK_MEMPROF) {
+    ProfileKind |= InstrProfKind::MemProf;
   }
   return ProfileKind;
 }
@@ -934,24 +939,17 @@ Error IndexedInstrProfReader::readHeader() {
   if ((const unsigned char *)DataBuffer->getBufferEnd() - Cur < 24)
     return error(instrprof_error::truncated);
 
-  auto *Header = reinterpret_cast<const IndexedInstrProf::Header *>(Cur);
-  Cur += sizeof(IndexedInstrProf::Header);
+  auto HeaderOr = IndexedInstrProf::Header::readFromBuffer(Start);
+  if (!HeaderOr)
+    return HeaderOr.takeError();
 
-  // Check the magic number.
-  uint64_t Magic = endian::byte_swap<uint64_t, little>(Header->Magic);
-  if (Magic != IndexedInstrProf::Magic)
-    return error(instrprof_error::bad_magic);
+  const IndexedInstrProf::Header *Header = &HeaderOr.get();
+  Cur += Header->size();
 
-  // Read the version.
-  uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
-  if (GET_VERSION(FormatVersion) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
-    return error(instrprof_error::unsupported_version);
-
-  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
                     /* UseCS */ false);
-  if (FormatVersion & VARIANT_MASK_CSIR_PROF)
-    Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+  if (Header->formatVersion() & VARIANT_MASK_CSIR_PROF)
+    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
                       /* UseCS */ true);
 
   // Read the hash type and start offset.
@@ -962,10 +960,34 @@ Error IndexedInstrProfReader::readHeader() {
 
   uint64_t HashOffset = endian::byte_swap<uint64_t, little>(Header->HashOffset);
 
-  // The rest of the file is an on disk hash table.
-  auto IndexPtr =
-      std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
-          Start + HashOffset, Cur, Start, HashType, FormatVersion);
+  // The hash table with profile counts comes next.
+  auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
+      Start + HashOffset, Cur, Start, HashType, Header->formatVersion());
+
+  // The MemProfOffset field in the header is only valid when the format version
+  // is higher than 8 (when it was introduced).
+  if (GET_VERSION(Header->formatVersion()) >= 8 &&
+      Header->formatVersion() & VARIANT_MASK_MEMPROF) {
+    uint64_t MemProfOffset =
+        endian::byte_swap<uint64_t, little>(Header->MemProfOffset);
+
+    const unsigned char *Ptr = Start + MemProfOffset;
+    // The value returned from Generator.Emit.
+    const uint64_t TableOffset =
+        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+
+    // Read the schema.
+    auto SchemaOr = memprof::readMemProfSchema(Ptr);
+    if (!SchemaOr)
+      return SchemaOr.takeError();
+    Schema = SchemaOr.get();
+
+    // Now initialize the table reader with a pointer into data buffer.
+    MemProfTable.reset(MemProfHashTable::Create(
+        /*Buckets=*/Start + TableOffset,
+        /*Payload=*/Ptr,
+        /*Base=*/Start, memprof::MemProfRecordLookupTrait(Schema)));
+  }
 
   // Load the remapping table now if requested.
   if (RemappingBuffer) {
@@ -1009,6 +1031,20 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
       return std::move(I);
   }
   return error(instrprof_error::hash_mismatch);
+}
+
+Expected<ArrayRef<memprof::MemProfRecord>>
+IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
+  // TODO: Add memprof specific errors.
+  if (MemProfTable == nullptr)
+    return make_error<InstrProfError>(instrprof_error::invalid_prof,
+                                      "no memprof data available in profile");
+  auto Iter = MemProfTable->find(FuncNameHash);
+  if (Iter == MemProfTable->end())
+    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
+                                      "memprof record not found for hash " +
+                                          Twine(FuncNameHash));
+  return *Iter;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,

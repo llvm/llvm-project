@@ -213,9 +213,9 @@ define <4 x i32> @vec_add_const_const_sub_extrause(<4 x i32> %arg) {
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    bl vec_use
-; CHECK-NEXT:    mvni v0.4s, #5
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    mvni v0.4s, #5
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
@@ -290,9 +290,9 @@ define <4 x i32> @vec_sub_const_add_const_extrause(<4 x i32> %arg) {
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    bl vec_use
-; CHECK-NEXT:    mvni v0.4s, #5
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    mvni v0.4s, #5
 ; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret

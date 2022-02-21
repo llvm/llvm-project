@@ -18,3 +18,41 @@ entry:
 	tail call void asm "mov $1,%gs:$0", "=*m,ri,~{dirflag},~{fpsr},~{flags}"(i8** elementtype(i8*) inttoptr (i32 152 to i8**), i8* bitcast (i8** @main_q to i8*)) nounwind
 	ret void
 }
+
+; The intent of this test is to ensure that we handle blockaddress' correctly
+; with "i" constraints for -m32 -fPIC.
+
+define void @x() {
+; CHECK-LABEL: x:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ## InlineAsm Start
+; CHECK-NEXT:    ## Ltmp0
+; CHECK-EMPTY:
+; CHECK-NEXT:    ## InlineAsm End
+; CHECK-NEXT:  ## %bb.2: ## %return
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  Ltmp0: ## Block address taken
+; CHECK-NEXT:  LBB1_1: ## %overflow
+; CHECK-NEXT:    retl
+  callbr void asm "#  ${0:l}\0A", "i"(i8* blockaddress(@x, %overflow))
+          to label %return [label %overflow]
+
+overflow:
+  br label %return
+
+return:
+  ret void
+}
+
+; Test unusual case of blockaddress from @x in @y's asm.
+define void @y() {
+; CHECK-LABEL: y:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ## InlineAsm Start
+; CHECK-NEXT:    ## Ltmp0
+; CHECK-EMPTY:
+; CHECK-NEXT:    ## InlineAsm End
+; CHECK-NEXT:    retl
+  call void asm "# ${0:l}\0A", "i"(i8* blockaddress(@x, %overflow))
+  ret void
+}

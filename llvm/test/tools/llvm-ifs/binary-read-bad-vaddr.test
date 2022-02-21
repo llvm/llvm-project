@@ -1,5 +1,13 @@
-# RUN: yaml2obj %s -o %t
-# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe %t 2>&1 | FileCheck %s
+## Check bad DT_STRTAB address.
+
+# RUN: yaml2obj %s -DSTRSZ_VALUE=0x0000000000000001 -DSTRTAB_ADDR=0x0000000000000260 -o %t
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe %t 2>&1 | FileCheck %s -DERR_ADDR=0x260
+
+
+## Check bad DT_STRSZ size.
+
+# RUN: yaml2obj %s -DSTRSZ_VALUE=0x0000000000001000 -DSTRTAB_ADDR=0x0000000000001000 -o %t
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe %t 2>&1 | FileCheck %s -DERR_ADDR=0x2000
 
 !ELF
 FileHeader:
@@ -24,9 +32,9 @@ Sections:
       - Tag:             DT_SONAME
         Value:           0x0000000000000000
       - Tag:             DT_STRSZ
-        Value:           0x0000000000000001
+        Value:           [[STRSZ_VALUE]]
       - Tag:             DT_STRTAB
-        Value:           0x0000000000000260 # Bad vaddr (no PT_LOAD for 0x0000 to 0x0FFF)
+        Value:           [[STRTAB_ADDR]]
       - Tag:             DT_SYMTAB
         Value:           0x0000000000001000
       - Tag:             DT_NULL
@@ -44,4 +52,4 @@ ProgramHeaders:
     FirstSec: .dynamic
     LastSec:  .dynamic
 
-# CHECK: virtual address is not in any segment: 0x260 when locating dynamic string table section contents
+# CHECK: virtual address is not in any segment: [[ERR_ADDR]] when locating dynamic string table section contents

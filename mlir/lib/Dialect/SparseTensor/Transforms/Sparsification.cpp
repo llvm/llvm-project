@@ -464,15 +464,15 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // impact the running complexity of the sparse kernel. If the tensor
   // materializes into the computation, we need to preserve the zero
   // initialization assumption of all sparse output buffers.
+  Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
   if (isMaterializing(tensor)) {
-    Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
     Value zero = constantZero(rewriter, loc, denseTp.getElementType());
     rewriter.create<linalg::FillOp>(loc, zero, alloc);
-    return alloc;
+  } else {
+    Value init =
+        rewriter.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+    rewriter.create<memref::CopyOp>(loc, init, alloc);
   }
-  Value init = rewriter.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
-  Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
-  rewriter.create<memref::CopyOp>(loc, init, alloc);
   return alloc;
 }
 

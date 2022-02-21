@@ -103,6 +103,14 @@ cl::opt<bool>
     StripUndefined("strip-undefined",
                    cl::desc("Strip undefined symbols from IFS output"),
                    cl::cat(IfsCategory));
+cl::opt<bool> StripNeededLibs("strip-needed",
+                              cl::desc("Strip needed libs from output"),
+                              cl::cat(IfsCategory));
+cl::list<std::string>
+    ExcludeSyms("exclude",
+                cl::desc("Remove symbols which match the pattern. Can be "
+                         "specified multiple times"),
+                cl::cat(IfsCategory));
 
 cl::opt<std::string>
     SoName("soname",
@@ -417,6 +425,9 @@ int main(int argc, char *argv[]) {
   if (OverrideError)
     fatalError(std::move(OverrideError));
 
+  if (StripNeededLibs)
+    Stub.NeededLibs.clear();
+
   if (OutputELFFilePath.getNumOccurrences() == 0 &&
       OutputIFSFilePath.getNumOccurrences() == 0 &&
       OutputTBDFilePath.getNumOccurrences() == 0) {
@@ -473,8 +484,8 @@ int main(int argc, char *argv[]) {
         stripIFSTarget(Stub, StripIFSTarget, StripIFSArch,
                        StripIFSEndiannessWidth, StripIFSBitWidth);
       }
-      if (StripUndefined)
-        stripIFSUndefinedSymbols(Stub);
+      if (Error E = filterIFSSyms(Stub, StripUndefined, ExcludeSyms))
+        fatalError(std::move(E));
       Error IFSWriteError = writeIFS(OutputFilePath.getValue(), Stub);
       if (IFSWriteError)
         fatalError(std::move(IFSWriteError));
@@ -525,8 +536,8 @@ int main(int argc, char *argv[]) {
         stripIFSTarget(Stub, StripIFSTarget, StripIFSArch,
                        StripIFSEndiannessWidth, StripIFSBitWidth);
       }
-      if (StripUndefined)
-        stripIFSUndefinedSymbols(Stub);
+      if (Error E = filterIFSSyms(Stub, StripUndefined, ExcludeSyms))
+        fatalError(std::move(E));
       Error IFSWriteError = writeIFS(OutputIFSFilePath.getValue(), Stub);
       if (IFSWriteError)
         fatalError(std::move(IFSWriteError));

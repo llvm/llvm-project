@@ -77,7 +77,7 @@ namespace llvm {
     FCTIDUZ,
     FCTIWUZ,
 
-    /// Floating-point-to-interger conversion instructions
+    /// Floating-point-to-integer conversion instructions
     FP_TO_UINT_IN_VSR,
     FP_TO_SINT_IN_VSR,
 

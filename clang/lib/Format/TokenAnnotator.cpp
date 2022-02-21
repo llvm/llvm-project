@@ -982,10 +982,11 @@ private:
         Tok->setType(TT_JsTypeOperator);
       break;
     case tok::kw_if:
-    case tok::kw_while:
-      if (Tok->is(tok::kw_if) && CurrentToken &&
+      if (CurrentToken &&
           CurrentToken->isOneOf(tok::kw_constexpr, tok::identifier))
         next();
+      LLVM_FALLTHROUGH;
+    case tok::kw_while:
       if (CurrentToken && CurrentToken->is(tok::l_paren)) {
         next();
         if (!parseParens(/*LookForDecls=*/true))
@@ -1424,11 +1425,12 @@ private:
             TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
             TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
             TT_UntouchableMacroFunc, TT_StatementAttributeLikeMacro,
-            TT_FunctionLikeOrFreestandingMacro, TT_RecordLBrace,
-            TT_RequiresClause, TT_RequiresClauseInARequiresExpression,
-            TT_RequiresExpression, TT_RequiresExpressionLParen,
-            TT_RequiresExpressionLBrace, TT_BinaryOperator,
-            TT_CompoundRequirementLBrace, TT_BracedListLBrace))
+            TT_FunctionLikeOrFreestandingMacro, TT_ClassLBrace, TT_EnumLBrace,
+            TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
+            TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
+            TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
+            TT_BinaryOperator, TT_CompoundRequirementLBrace,
+            TT_BracedListLBrace))
       CurrentToken->setType(TT_Unknown);
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -2987,7 +2989,8 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
                                           const FormatToken &Right) {
-  if (Left.is(tok::kw_return) && Right.isNot(tok::semi))
+  if (Left.is(tok::kw_return) &&
+      !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash))
     return true;
   if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))
     return false;
@@ -3024,7 +3027,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   // co_await (x), co_yield (x), co_return (x)
   if (Left.isOneOf(tok::kw_co_await, tok::kw_co_yield, tok::kw_co_return) &&
-      Right.isNot(tok::semi))
+      !Right.isOneOf(tok::semi, tok::r_paren))
     return true;
 
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren))

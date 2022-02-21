@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <utility>
 
 #define DEBUG_TYPE "format-parser"
 
@@ -3007,7 +3008,16 @@ void UnwrappedLineParser::parseRequiresExpression(FormatToken *RequiresToken) {
 /// clause. It returns, when the parsing is complete, or the expression is
 /// incorrect.
 void UnwrappedLineParser::parseConstraintExpression() {
+  // The special handling for lambdas is needed since tryToParseLambda() eats a
+  // token and if a requires expression is the last part of a requires clause
+  // and followed by an attribute like [[nodiscard]] the ClosesRequiresClause is
+  // not set on the correct token. Thus we need to be aware if we even expect a
+  // lambda to be possible.
+  // template <typename T> requires requires { ... } [[nodiscard]] ...;
+  bool LambdaNextTimeAllowed = true;
   do {
+    bool LambdaThisTimeAllowed = std::exchange(LambdaNextTimeAllowed, false);
+
     switch (FormatTok->Tok.getKind()) {
     case tok::kw_requires: {
       auto RequiresToken = FormatTok;
@@ -3021,7 +3031,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       break;
 
     case tok::l_square:
-      if (!tryToParseLambda())
+      if (!LambdaThisTimeAllowed || !tryToParseLambda())
         return;
       break;
 
@@ -3064,10 +3074,15 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::pipepipe:
       FormatTok->setType(TT_BinaryOperator);
       nextToken();
+      LambdaNextTimeAllowed = true;
       break;
 
-    case tok::kw_true:
-    case tok::kw_false:
+    case tok::comma:
+    case tok::comment:
+      LambdaNextTimeAllowed = LambdaThisTimeAllowed;
+      nextToken();
+      break;
+
     case tok::kw_sizeof:
     case tok::greater:
     case tok::greaterequal:
@@ -3082,11 +3097,16 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::minus:
     case tok::star:
     case tok::slash:
-    case tok::numeric_constant:
     case tok::kw_decltype:
-    case tok::comment:
-    case tok::comma:
+      LambdaNextTimeAllowed = true;
+      // Just eat them.
+      nextToken();
+      break;
+
+    case tok::numeric_constant:
     case tok::coloncolon:
+    case tok::kw_true:
+    case tok::kw_false:
       // Just eat them.
       nextToken();
       break;
@@ -3160,7 +3180,7 @@ bool UnwrappedLineParser::parseEnum() {
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
     return true;
-  FormatTok->setType(TT_RecordLBrace);
+  FormatTok->setType(TT_EnumLBrace);
   FormatTok->setBlockKind(BK_Block);
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -3397,8 +3417,22 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       nextToken();
     }
   }
+
+  auto GetBraceType = [](const FormatToken &RecordTok) {
+    switch (RecordTok.Tok.getKind()) {
+    case tok::kw_class:
+      return TT_ClassLBrace;
+    case tok::kw_struct:
+      return TT_StructLBrace;
+    case tok::kw_union:
+      return TT_UnionLBrace;
+    default:
+      // Useful for e.g. interface.
+      return TT_RecordLBrace;
+    }
+  };
   if (FormatTok->Tok.is(tok::l_brace)) {
-    FormatTok->setType(TT_RecordLBrace);
+    FormatTok->setType(GetBraceType(InitialToken));
     if (ParseAsExpr) {
       parseChildBlock();
     } else {

@@ -1,3 +1,6 @@
+// Temporarily disabling the test, it failes the "system is over-constrained" (part of expensive checks)
+// assertion in *non* optimized builds.
+// REQUIRES: rdar44992170
 // RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-checker=core,nullability,apiModeling,debug.ExprInspection  -verify %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"

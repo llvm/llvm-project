@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANGES_IOTA_VIEW_H
 #define _LIBCPP___RANGES_IOTA_VIEW_H
 
+#include <__assert>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/constructible.h>
@@ -20,7 +21,6 @@
 #include <__concepts/semiregular.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
-#include <__debug>
 #include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>

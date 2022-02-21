@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/ProfileCommon.h"
@@ -134,23 +135,82 @@ private:
 };
 
 struct MemProfRecord {
+  // Describes a call frame for a dynamic allocation context. The contents of
+  // the frame are populated by symbolizing the stack depot call frame from the
+  // compiler runtime.
   struct Frame {
-    std::string Function;
+    // A uuid (uint64_t) identifying the function. It is obtained by
+    // llvm::md5(FunctionName) which returns the lower 64 bits.
+    GlobalValue::GUID Function;
+    // The source line offset of the call from the beginning of parent function.
     uint32_t LineOffset;
+    // The source column number of the call to help distinguish multiple calls
+    // on the same line.
     uint32_t Column;
+    // Whether the current frame is inlined.
     bool IsInlineFrame;
 
-    Frame(std::string Str, uint32_t Off, uint32_t Col, bool Inline)
-        : Function(std::move(Str)), LineOffset(Off), Column(Col),
-          IsInlineFrame(Inline) {}
+    Frame(uint64_t Hash, uint32_t Off, uint32_t Col, bool Inline)
+        : Function(Hash), LineOffset(Off), Column(Col), IsInlineFrame(Inline) {}
+
+    bool operator==(const Frame &Other) const {
+      return Other.Function == Function && Other.LineOffset == LineOffset &&
+             Other.Column == Column && Other.IsInlineFrame == IsInlineFrame;
+    }
+
+    bool operator!=(const Frame &Other) const { return !operator==(Other); }
+
+    // Write the contents of the frame to the ostream \p OS.
+    void serialize(raw_ostream & OS) const {
+      using namespace support;
+
+      endian::Writer LE(OS, little);
+
+      // If the type of the GlobalValue::GUID changes, then we need to update
+      // the reader and the writer.
+      static_assert(std::is_same<GlobalValue::GUID, uint64_t>::value,
+                    "Expect GUID to be uint64_t.");
+      LE.write<uint64_t>(Function);
+
+      LE.write<uint32_t>(LineOffset);
+      LE.write<uint32_t>(Column);
+      LE.write<bool>(IsInlineFrame);
+    }
+
+    // Read a frame from char data which has been serialized as little endian.
+    static Frame deserialize(const unsigned char *Ptr) {
+      using namespace support;
+
+      const uint64_t F = endian::readNext<uint64_t, little, unaligned>(Ptr);
+      const uint32_t L = endian::readNext<uint32_t, little, unaligned>(Ptr);
+      const uint32_t C = endian::readNext<uint32_t, little, unaligned>(Ptr);
+      const bool I = endian::readNext<bool, little, unaligned>(Ptr);
+      return Frame(/*Function=*/F, /*LineOffset=*/L, /*Column=*/C,
+                   /*IsInlineFrame=*/I);
+    }
+
+    // Returns the size of the frame information.
+    static constexpr size_t serializedSize() {
+      return sizeof(Frame::Function) + sizeof(Frame::LineOffset) +
+             sizeof(Frame::Column) + sizeof(Frame::IsInlineFrame);
+    }
   };
 
+  // The dynamic calling context for the allocation.
   std::vector<Frame> CallStack;
+  // The statistics obtained from the runtime for the allocation.
   PortableMemInfoBlock Info;
 
   void clear() {
     CallStack.clear();
     Info.clear();
+  }
+
+  size_t serializedSize() const {
+    return sizeof(uint64_t) + // The number of frames to serialize.
+           Frame::serializedSize() *
+               CallStack.size() + // The contents of the frames.
+           PortableMemInfoBlock::serializedSize(); // The size of the payload.
   }
 
   // Prints out the contents of the memprof record in YAML.
@@ -167,6 +227,138 @@ struct MemProfRecord {
     }
 
     Info.printYAML(OS);
+  }
+
+  bool operator==(const MemProfRecord &Other) const {
+    if (Other.Info != Info)
+      return false;
+
+    if (Other.CallStack.size() != CallStack.size())
+      return false;
+
+    for (size_t I = 0; I < Other.CallStack.size(); I++) {
+      if (Other.CallStack[I] != CallStack[I])
+        return false;
+    }
+    return true;
+  }
+};
+
+// Serializes the memprof records in \p Records to the ostream \p OS based on
+// the schema provided in \p Schema.
+void serializeRecords(const ArrayRef<MemProfRecord> Records,
+                      const MemProfSchema &Schema, raw_ostream &OS);
+
+// Deserializes memprof records from the Buffer
+SmallVector<MemProfRecord, 4> deserializeRecords(const MemProfSchema &Schema,
+                                                 const unsigned char *Buffer);
+
+// Reads a memprof schema from a buffer. All entries in the buffer are
+// interpreted as uint64_t. The first entry in the buffer denotes the number of
+// ids in the schema. Subsequent entries are integers which map to memprof::Meta
+// enum class entries. After successfully reading the schema, the pointer is one
+// byte past the schema contents.
+Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
+
+using FunctionMemProfMap =
+    DenseMap<uint64_t, SmallVector<memprof::MemProfRecord, 4>>;
+
+/// Trait for lookups into the on-disk hash table for memprof format in the
+/// indexed profile.
+class MemProfRecordLookupTrait {
+public:
+  using data_type = ArrayRef<MemProfRecord>;
+  using internal_key_type = uint64_t;
+  using external_key_type = uint64_t;
+  using hash_value_type = uint64_t;
+  using offset_type = uint64_t;
+
+  MemProfRecordLookupTrait() = delete;
+  MemProfRecordLookupTrait(const MemProfSchema &S) : Schema(S) {}
+
+  static bool EqualKey(uint64_t A, uint64_t B) { return A == B; }
+  static uint64_t GetInternalKey(uint64_t K) { return K; }
+  static uint64_t GetExternalKey(uint64_t K) { return K; }
+
+  hash_value_type ComputeHash(uint64_t K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    using namespace support;
+
+    offset_type KeyLen = endian::readNext<offset_type, little, unaligned>(D);
+    offset_type DataLen = endian::readNext<offset_type, little, unaligned>(D);
+    return std::make_pair(KeyLen, DataLen);
+  }
+
+  uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
+    using namespace support;
+    return endian::readNext<external_key_type, little, unaligned>(D);
+  }
+
+  data_type ReadData(uint64_t K, const unsigned char *D,
+                     offset_type /*Unused*/) {
+    Records = deserializeRecords(Schema, D);
+    return Records;
+  }
+
+private:
+  // Holds the memprof schema used to deserialize records.
+  MemProfSchema Schema;
+  // Holds the records from one function deserialized from the indexed format.
+  llvm::SmallVector<MemProfRecord, 4> Records;
+};
+
+class MemProfRecordWriterTrait {
+public:
+  using key_type = uint64_t;
+  using key_type_ref = uint64_t;
+
+  using data_type = ArrayRef<MemProfRecord>;
+  using data_type_ref = ArrayRef<MemProfRecord>;
+
+  using hash_value_type = uint64_t;
+  using offset_type = uint64_t;
+
+  // Pointer to the memprof schema to use for the generator. Unlike the reader
+  // we must use a default constructor with no params for the writer trait so we
+  // have a public member which must be initialized by the user.
+  MemProfSchema *Schema = nullptr;
+
+  MemProfRecordWriterTrait() = default;
+
+  static hash_value_type ComputeHash(key_type_ref K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
+    using namespace support;
+
+    endian::Writer LE(Out, little);
+
+    offset_type N = sizeof(K);
+    LE.write<offset_type>(N);
+
+    offset_type M = 0;
+
+    M += sizeof(uint64_t);
+    for (const auto &Record : V) {
+      M += Record.serializedSize();
+    }
+
+    LE.write<offset_type>(M);
+    return std::make_pair(N, M);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, little);
+    LE.write<uint64_t>(K);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
+                offset_type /*Unused*/) {
+    assert(Schema != nullptr && "MemProf schema is not initialized!");
+    serializeRecords(V, *Schema, Out);
   }
 };
 

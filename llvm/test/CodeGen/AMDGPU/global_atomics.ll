@@ -37,13 +37,13 @@ entry:
 ; GCN-LABEL: {{^}}atomic_add_i32_huge_offset:
 ; SI-DAG: v_mov_b32_e32 v[[PTRLO:[0-9]+]], 0xdeac
 ; SI-DAG: v_mov_b32_e32 v[[PTRHI:[0-9]+]], 0xabcd
-; SI: buffer_atomic_add v{{[0-9]+}}, v{{\[}}[[PTRLO]]:[[PTRHI]]{{\]}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64{{$}}
+; SI: buffer_atomic_add v{{[0-9]+}}, v[[[PTRLO]]:[[PTRHI]]], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64{{$}}
 
 ; VI: flat_atomic_add
 
 ; GFX9: s_add_u32 s[[LOW_K:[0-9]+]], s{{[0-9]+}}, 0xdeac
 ; GFX9: s_addc_u32 s[[HIGH_K:[0-9]+]], s{{[0-9]+}}, 0xabcd
-; GFX9: global_atomic_add v{{[0-9]+}}, v{{[0-9]+}}, s{{\[}}[[LOW_K]]:[[HIGH_K]]]{{$}}
+; GFX9: global_atomic_add v{{[0-9]+}}, v{{[0-9]+}}, s[[[LOW_K]]:[[HIGH_K]]]{{$}}
 define amdgpu_kernel void @atomic_add_i32_huge_offset(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 47224239175595
@@ -951,7 +951,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i32_ret_offset:
-; SIVI: buffer_atomic_cmpswap v{{\[}}[[RET:[0-9]+]]{{:[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
+; SIVI: buffer_atomic_cmpswap v[[[RET:[0-9]+]]{{:[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
 ; SIVI: buffer_store_dword v[[RET]]
 
 ; GFX9: global_atomic_cmpswap [[RET:v[0-9]+]], v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}] offset:16 glc{{$}}
@@ -978,7 +978,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i32_ret_addr64_offset:
-; SI: buffer_atomic_cmpswap v{{\[}}[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16 glc{{$}}
+; SI: buffer_atomic_cmpswap v[[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16 glc{{$}}
 ; VI: flat_atomic_cmpswap v[[RET:[0-9]+]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] glc{{$}}
 ; SIVI: buffer_store_dword v[[RET]]
 
@@ -1004,7 +1004,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i32_ret:
-; SIVI: buffer_atomic_cmpswap v{{\[}}[[RET:[0-9]+]]:{{[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
+; SIVI: buffer_atomic_cmpswap v[[[RET:[0-9]+]]:{{[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
 ; SIVI: buffer_store_dword v[[RET]]
 
 ; GFX9: global_atomic_cmpswap [[RET:v[0-9]+]], v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
@@ -1028,7 +1028,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i32_ret_addr64:
-; SI: buffer_atomic_cmpswap v{{\[}}[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
+; SI: buffer_atomic_cmpswap v[[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
 ; VI: flat_atomic_cmpswap v[[RET:[0-9]+]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] glc{{$}}
 ; SIVI: buffer_store_dword v[[RET]]
 

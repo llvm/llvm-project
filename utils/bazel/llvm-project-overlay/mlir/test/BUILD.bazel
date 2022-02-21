@@ -396,7 +396,6 @@ cc_library(
         "//mlir:BufferizationTransforms",
         "//mlir:GPUDialect",
         "//mlir:IR",
-        "//mlir:LinalgBufferizableOpInterfaceImpl",
         "//mlir:LinalgOps",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
@@ -507,6 +506,21 @@ cc_library(
         "//mlir:StandardOps",
         "//mlir:StandardOpsTransforms",
         "//mlir:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "TestTensor",
+    srcs = glob(["lib/Dialect/Tensor/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithmeticDialect",
+        "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:TensorDialect",
+        "//mlir:TensorTransforms",
+        "//mlir:Transforms",
     ],
 )
 

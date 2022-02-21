@@ -13,6 +13,7 @@ static_library("ProfileData") {
     "InstrProfCorrelator.cpp",
     "InstrProfReader.cpp",
     "InstrProfWriter.cpp",
+    "MemProf.cpp",
     "ProfileSummaryBuilder.cpp",
     "RawMemProfReader.cpp",
     "SampleProf.cpp",

@@ -1782,7 +1782,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     Cur->addIncoming(Begin.getPointer(), OriginBB);
     CharUnits CurAlign = Loc.getAlignment().alignmentOfArrayElement(EltSize);
     auto *I =
-        Builder.CreateMemCpy(Address(Cur, CurAlign),
+        Builder.CreateMemCpy(Address(Cur, Int8Ty, CurAlign),
                              createUnnamedGlobalForMemcpyFrom(
                                  CGM, D, Builder, Constant, ConstantAlign),
                              BaseSizeInChars, isVolatile);
@@ -2474,9 +2474,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
              CGM.getDataLayout().getAllocaAddrSpace());
       auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
       auto *T = V->getType()->getPointerElementType()->getPointerTo(DestAS);
-      DeclPtr = Address(getTargetHooks().performAddrSpaceCast(
-                            *this, V, SrcLangAS, DestLangAS, T, true),
-                        DeclPtr.getAlignment());
+      DeclPtr =
+          Address::deprecated(getTargetHooks().performAddrSpaceCast(
+                                  *this, V, SrcLangAS, DestLangAS, T, true),
+                              DeclPtr.getAlignment());
     }
 
     // Push a destructor cleanup for this parameter if the ABI requires it.

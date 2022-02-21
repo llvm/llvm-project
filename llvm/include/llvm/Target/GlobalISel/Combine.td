@@ -284,6 +284,13 @@ def select_constant_cmp: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
 >;
 
+def select_to_logical : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SELECT):$root,
+    [{ return Helper.matchSelectToLogical(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 // Fold x op 0 -> x
 def right_identity_zero: GICombineRule<
   (defs root:$root),
@@ -907,7 +914,8 @@ def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
 
 def phi_combines : GICombineGroup<[extend_through_phis]>;
 
-def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
+def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp,
+                                      select_to_logical]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one]>;

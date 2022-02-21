@@ -29,7 +29,7 @@ int main(int, char**)
     assert(std::distance(l1.begin(), l1.end()) == 2);
     assert(*j == true);
     assert(*l1.begin() == 1);
-    assert(*next(l1.begin()) == true);
+    assert(*std::next(l1.begin()) == true);
     j = l1.erase(j);
     assert(j == l1.end());
     assert(l1.size() == 1);
@@ -50,7 +50,7 @@ int main(int, char**)
     assert(std::distance(l1.begin(), l1.end()) == 2);
     assert(*j == true);
     assert(*l1.begin() == 1);
-    assert(*next(l1.begin()) == true);
+    assert(*std::next(l1.begin()) == true);
     j = l1.erase(j);
     assert(j == l1.end());
     assert(l1.size() == 1);

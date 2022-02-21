@@ -601,7 +601,7 @@ void test_copy_constructor_StrongVolatile1(Strong *s) {
 
 void test_block_capture_Strong(void) {
   Strong t;
-  BlockTy b = ^(){ (void)t; };
+  BlockTy b = ^(void){ (void)t; };
 }
 
 // CHECK: define{{.*}} void @test_variable_length_array(i32 noundef %[[N:.*]])
@@ -920,7 +920,7 @@ struct ZeroBitfield {
 
 // CHECK: define linkonce_odr hidden void @__default_constructor_8_sv0
 // CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_sv0
-void test_zero_bitfield() {
+void test_zero_bitfield(void) {
   struct ZeroBitfield volatile a, b;
   a = b;
 }

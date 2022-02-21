@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -507,8 +508,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DT = &P->getDomTree();
 
-  if (DT == nullptr && (SInfo.AllocasToInstrument.size() > 1 ||
-                        !F->hasFnAttribute(Attribute::OptimizeNone))) {
+  if (DT == nullptr) {
     DeleteDT = std::make_unique<DominatorTree>(*F);
     DT = DeleteDT.get();
   }
@@ -518,7 +518,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (auto *P = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>())
     PDT = &P->getPostDomTree();
 
-  if (PDT == nullptr && !F->hasFnAttribute(Attribute::OptimizeNone)) {
+  if (PDT == nullptr) {
     DeletePDT = std::make_unique<PostDominatorTree>(*F);
     PDT = DeletePDT.get();
   }
@@ -532,9 +532,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && isInterestingAlloca(*Info.AI));
-    auto *PrevAI = Info.AI;
-    if (memtag::alignAndPadAlloca(Info, kTagGranuleSize))
-      PrevAI->eraseFromParent();
+    TrackingVH<Instruction> OldAI = Info.AI;
+    memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
     int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
@@ -590,7 +589,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
     // Fixup debug intrinsics to point to the new alloca.
     for (auto DVI : Info.DbgVariableIntrinsics)
-      DVI->replaceVariableLocationOp(Info.OldAI, Info.AI);
+      DVI->replaceVariableLocationOp(OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

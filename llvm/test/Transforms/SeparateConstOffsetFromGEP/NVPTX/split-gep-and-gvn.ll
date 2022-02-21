@@ -45,10 +45,10 @@ define void @sum_of_array(i32 %x, i32 %y, float* nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array(
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG:%(rd|r)[0-9]+]]{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+4{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+128{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
 
 ; IR-LABEL: @sum_of_array(
 ; TODO: GVN is unable to preserve the "inbounds" keyword on the first GEP. Need
@@ -90,10 +90,10 @@ define void @sum_of_array2(i32 %x, i32 %y, float* nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array2(
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG:%(rd|r)[0-9]+]]{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+4{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+128{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
 
 ; IR-LABEL: @sum_of_array2(
 ; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
@@ -140,10 +140,10 @@ define void @sum_of_array3(i32 %x, i32 %y, float* nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array3(
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG:%(rd|r)[0-9]+]]{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+4{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+128{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
 
 ; IR-LABEL: @sum_of_array3(
 ; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
@@ -186,10 +186,10 @@ define void @sum_of_array4(i32 %x, i32 %y, float* nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array4(
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG:%(rd|r)[0-9]+]]{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+4{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+128{{\]}}
-; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.f32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
 
 ; IR-LABEL: @sum_of_array4(
 ; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
@@ -218,7 +218,7 @@ entry:
   %0 = sext i32 %xy to i64
   %p0 = getelementptr inbounds float, float* %input, i64 %0
   %v0 = load float, float* %p0, align 4
-; PTX: ld.f32 %f{{[0-9]+}}, {{\[}}[[p0:%rd[0-9]+]]{{\]}}
+; PTX: ld.f32 %f{{[0-9]+}}, [[[p0:%rd[0-9]+]]]
   call void @use(float %v0)
 
   %y5 = add nsw i32 %y, 5
@@ -227,7 +227,7 @@ entry:
   %p1 = getelementptr inbounds float, float* %input, i64 %1
 ; IR: getelementptr inbounds float, float* %p0, i64 5
   %v1 = load float, float* %p1, align 4
-; PTX: ld.f32 %f{{[0-9]+}}, {{\[}}[[p0]]+20{{\]}}
+; PTX: ld.f32 %f{{[0-9]+}}, [[[p0]]+20]
   call void @use(float %v1)
 
   ret void

@@ -26,7 +26,7 @@ void NSLog(id, ...);
 @implementation MyClass
 @end
 
-int main()
+int main(void)
 {
     @autoreleasepool
     {

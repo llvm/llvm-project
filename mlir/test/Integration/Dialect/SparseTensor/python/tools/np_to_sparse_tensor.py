@@ -28,9 +28,9 @@ def _get_c_shared_lib(lib_name: str):
   c_lib = ctypes.CDLL(lib_name)
 
   try:
-    c_lib.convertFromMLIRSparseTensor.restype = ctypes.c_void_p
+    c_lib.convertFromMLIRSparseTensorF64.restype = ctypes.c_void_p
   except Exception as e:
-    raise ValueError('Missing function convertFromMLIRSparseTensor from '
+    raise ValueError('Missing function convertFromMLIRSparseTensorF64 from '
                      f'the C shared library: {e} ') from e
 
   return c_lib
@@ -47,7 +47,7 @@ def sparse_tensor_to_coo_tensor(support_lib, sparse, dtype):
   Returns:
     A tuple that contains the following values:
     rank: An integer for the rank of the tensor.
-    nse: An interger for the number of non-zero values in the tensor.
+    nse: An integer for the number of non-zero values in the tensor.
     shape: A 1D numpy array of integers, for the shape of the tensor.
     values: A 1D numpy array, for the non-zero values in the tensor.
     indices: A 2D numpy array of integers, representing the indices for the
@@ -64,9 +64,10 @@ def sparse_tensor_to_coo_tensor(support_lib, sparse, dtype):
   shape = ctypes.POINTER(ctypes.c_ulonglong)()
   values = ctypes.POINTER(np.ctypeslib.as_ctypes_type(dtype))()
   indices = ctypes.POINTER(ctypes.c_ulonglong)()
-  c_lib.convertFromMLIRSparseTensor(sparse, ctypes.byref(rank),
-                                    ctypes.byref(nse), ctypes.byref(shape),
-                                    ctypes.byref(values), ctypes.byref(indices))
+  c_lib.convertFromMLIRSparseTensorF64(sparse, ctypes.byref(rank),
+                                       ctypes.byref(nse), ctypes.byref(shape),
+                                       ctypes.byref(values),
+                                       ctypes.byref(indices))
   # Convert the returned values to the corresponding numpy types.
   shape = np.ctypeslib.as_array(shape, shape=[rank.value])
   values = np.ctypeslib.as_array(values, shape=[nse.value])

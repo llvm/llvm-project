@@ -109,3 +109,25 @@ define <vscale x 8 x i16> @combine_vec_lshr_lshr(<vscale x 8 x i16> %x) {
   %v2 = lshr <vscale x 8 x i16> %v1, %splat2
   ret <vscale x 8 x i16> %v2
 }
+
+; fold (fmul x, 1.0) -> x
+define <vscale x 2 x float> @combine_fmul_one(<vscale x 2 x float> %x) {
+; CHECK-LABEL: combine_fmul_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 2 x float> poison, float 1.0, i32 0
+  %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+  %v = fmul <vscale x 2 x float> %x, %splat
+  ret <vscale x 2 x float> %v
+}
+
+; fold (fmul 1.0, x) -> x
+define <vscale x 2 x float> @combine_fmul_one_commuted(<vscale x 2 x float> %x) {
+; CHECK-LABEL: combine_fmul_one_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 2 x float> poison, float 1.0, i32 0
+  %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+  %v = fmul <vscale x 2 x float> %splat, %x
+  ret <vscale x 2 x float> %v
+}
