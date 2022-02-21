@@ -352,9 +352,25 @@ static bool accessedBetween(AliasAnalysis &AA, MemoryLocation Loc,
 
 // Check for mod of Loc between Start and End, excluding both boundaries.
 // Start and End can be in different blocks.
-static bool writtenBetween(MemorySSA *MSSA, MemoryLocation Loc,
-                           const MemoryUseOrDef *Start,
+static bool writtenBetween(MemorySSA *MSSA, AliasAnalysis &AA,
+                           MemoryLocation Loc, const MemoryUseOrDef *Start,
                            const MemoryUseOrDef *End) {
+  if (isa<MemoryUse>(End)) {
+    // For MemoryUses, getClobberingMemoryAccess may skip non-clobbering writes.
+    // Manually check read accesses between Start and End, if they are in the
+    // same block, for clobbers. Otherwise assume Loc is clobbered.
+    return Start->getBlock() != End->getBlock() ||
+           any_of(
+               make_range(std::next(Start->getIterator()), End->getIterator()),
+               [&AA, Loc](const MemoryAccess &Acc) {
+                 if (isa<MemoryUse>(&Acc))
+                   return false;
+                 Instruction *AccInst =
+                     cast<MemoryUseOrDef>(&Acc)->getMemoryInst();
+                 return isModSet(AA.getModRefInfo(AccInst, Loc));
+               });
+  }
+
   // TODO: Only walk until we hit Start.
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       End->getDefiningAccess(), Loc);
@@ -1118,7 +1134,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // then we could still perform the xform by moving M up to the first memcpy.
   // TODO: It would be sufficient to check the MDep source up to the memcpy
   // size of M, rather than MDep.
-  if (writtenBetween(MSSA, MemoryLocation::getForSource(MDep),
+  if (writtenBetween(MSSA, *AA, MemoryLocation::getForSource(MDep),
                      MSSA->getMemoryAccess(MDep), MSSA->getMemoryAccess(M)))
     return false;
 
@@ -1557,7 +1573,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   //    *b = 42;
   //    foo(*a)
   // It would be invalid to transform the second memcpy into foo(*b).
-  if (writtenBetween(MSSA, MemoryLocation::getForSource(MDep),
+  if (writtenBetween(MSSA, *AA, MemoryLocation::getForSource(MDep),
                      MSSA->getMemoryAccess(MDep), MSSA->getMemoryAccess(&CB)))
     return false;
 

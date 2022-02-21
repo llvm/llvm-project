@@ -13,7 +13,6 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noa
 
 ; %a.2's lifetime ends before the call to @check. Cannot replace
 ; %a.1 with %a.2 in the call to @check.
-; FIXME: Find lifetime.end, prevent optimization.
 define i1 @alloca_forwarding_lifetime_end_clobber() {
 ; CHECK-LABEL: @alloca_forwarding_lifetime_end_clobber(
 ; CHECK-NEXT:  entry:
@@ -26,7 +25,7 @@ define i1 @alloca_forwarding_lifetime_end_clobber() {
 ; CHECK-NEXT:    store i8 0, i8* [[BC_A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[BC_A_1]], i8* [[BC_A_2]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[BC_A_2]])
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(i64* byval(i64) align 8 [[A_2]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(i64* byval(i64) align 8 [[A_1]])
 ; CHECK-NEXT:    ret i1 [[CALL]]
 ;
 entry:
@@ -46,7 +45,6 @@ entry:
 
 ; There is a call clobbering %a.2 before the call to @check. Cannot replace
 ; %a.1 with %a.2 in the call to @check.
-; FIXME: Find clobber, prevent optimization.
 define i1 @alloca_forwarding_call_clobber() {
 ; CHECK-LABEL: @alloca_forwarding_call_clobber(
 ; CHECK-NEXT:  entry:
@@ -59,7 +57,7 @@ define i1 @alloca_forwarding_call_clobber() {
 ; CHECK-NEXT:    store i8 0, i8* [[BC_A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[BC_A_1]], i8* [[BC_A_2]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @clobber(i8* [[BC_A_2]])
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(i64* byval(i64) align 8 [[A_2]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(i64* byval(i64) align 8 [[A_1]])
 ; CHECK-NEXT:    ret i1 [[CALL]]
 ;
 entry:
