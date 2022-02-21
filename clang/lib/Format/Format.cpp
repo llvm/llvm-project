@@ -990,11 +990,11 @@ std::string ParseErrorCategory::message(int EV) const {
   case ParseError::InvalidQualifierSpecified:
     return "Invalid qualifier specified in QualifierOrder";
   case ParseError::DuplicateQualifierSpecified:
-    return "Duplicate qualifier specified in QualfierOrder";
+    return "Duplicate qualifier specified in QualifierOrder";
   case ParseError::MissingQualifierType:
-    return "Missing type in QualfierOrder";
+    return "Missing type in QualifierOrder";
   case ParseError::MissingQualifierOrder:
-    return "Missing QualfierOrder";
+    return "Missing QualifierOrder";
   }
   llvm_unreachable("unexpected parse error");
 }
@@ -1650,7 +1650,8 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
     if (token == tok::identifier)
       return ParseError::InvalidQualifierSpecified;
   }
-  // Ensure the list is unqiue (no duplicates).
+
+  // Ensure the list is unique (no duplicates).
   std::set<std::string> UniqueQualifiers(Style->QualifierOrder.begin(),
                                          Style->QualifierOrder.end());
   if (Style->QualifierOrder.size() != UniqueQualifiers.size()) {
@@ -1660,10 +1661,12 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
     return ParseError::DuplicateQualifierSpecified;
   }
 
+  // Ensure the list has 'type' in it
   auto type = std::find(Style->QualifierOrder.begin(),
                         Style->QualifierOrder.end(), "type");
   if (type == Style->QualifierOrder.end())
     return ParseError::MissingQualifierType;
+
   return ParseError::Success;
 }
 
