@@ -112,3 +112,16 @@ class Mask_Binary<ValueType MaskVT, SDPatternOperator MaskOp, string InstName> :
 def: Mask_Binary<v256i1, and, "ANDM">;
 def: Mask_Binary<v256i1, or,  "ORM">;
 def: Mask_Binary<v256i1, xor, "XORM">;
+
+///// Packing support /////
+
+// v256i1 <> v512i1
+def : Pat<(v256i1 (vec_unpack_lo v512i1:$vm, (i32 srcvalue))),
+          (EXTRACT_SUBREG $vm, sub_vm_odd)>;
+def : Pat<(v256i1 (vec_unpack_hi v512i1:$vm, (i32 srcvalue))),
+          (EXTRACT_SUBREG $vm, sub_vm_even)>;
+def : Pat<(v512i1 (vec_pack v256i1:$vlo, v256i1:$vhi, (i32 srcvalue))),
+          (INSERT_SUBREG (INSERT_SUBREG
+                         (v512i1 (IMPLICIT_DEF)),
+                         $vlo, sub_vm_odd),
+                         $vhi, sub_vm_even)>;

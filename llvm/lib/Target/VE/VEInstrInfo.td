@@ -2293,6 +2293,18 @@ class IsVLVT<int OpIdx> : SDTCisVT<OpIdx,i32>;
 def vec_broadcast       : SDNode<"VEISD::VEC_BROADCAST", SDTypeProfile<1, 2,
                                  [SDTCisVec<0>, IsVLVT<2>]>>;
 
+///// Packed mode Support /////
+// unpack the lo part of this vector
+def vec_unpack_lo   : SDNode<"VEISD::VEC_UNPACK_LO", SDTypeProfile<1, 2,
+                             [SDTCisVec<0>, SDTCisVec<1>, IsVLVT<2>]>>;
+// unpack the hipart of this vector
+def vec_unpack_hi   : SDNode<"VEISD::VEC_UNPACK_HI", SDTypeProfile<1, 2,
+                             [SDTCisVec<0>, SDTCisVec<1>, IsVLVT<2>]>>;
+// re-pack v256i32, v256f32 back into tone v512.32
+def vec_pack        : SDNode<"VEISD::VEC_PACK", SDTypeProfile<1, 3,
+                             [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,
+                              SDTCisSameNumEltsAs<1,2>, IsVLVT<3>]>>;
+
 // replicate lower 32bit to upper 32bit (f32 scalar replication).
 def repl_f32            : SDNode<"VEISD::REPL_F32",
                             SDTypeProfile<1, 1,
