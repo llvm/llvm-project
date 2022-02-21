@@ -380,6 +380,8 @@ void DwarfUnit::addDIEEntry(DIE &Die, dwarf::Attribute Attribute,
     CU = getUnitDie().getUnit();
   if (!EntryCU)
     EntryCU = getUnitDie().getUnit();
+  assert(EntryCU == CU || !DD->useSplitDwarf() || DD->shareAcrossDWOCUs() ||
+         !static_cast<const DwarfUnit*>(CU)->isDwoUnit());
   addAttribute(Die, Attribute,
                EntryCU == CU ? dwarf::DW_FORM_ref4 : dwarf::DW_FORM_ref_addr,
                Entry);
