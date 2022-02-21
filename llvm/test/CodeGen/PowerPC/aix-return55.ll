@@ -21,7 +21,7 @@ entry:
 ; CHECK: blr
 }
 
-;CHECKOBJ:      00000000 <.text>:
+;CHECKOBJ:      00000000 <.foo>:
 ;CHECKOBJ-NEXT:       0: 38 60 00 37                    li 3, 55
 ;CHECKOBJ-NEXT:       4: 4e 80 00 20                    blr{{[[:space:]] *}}
 ;CHECKOBJ-NEXT: 00000008 <.rodata.str1.1>:

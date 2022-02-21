@@ -2,9 +2,8 @@
 
 # GCN-LABEL: name: out_of_order_merge
 # GCN: DS_READ2_B64_gfx9
-# GCN: DS_WRITE_B64_gfx9
 # GCN: DS_READ2_B64_gfx9
-# GCN: DS_WRITE_B64_gfx9
+# GCN: DS_WRITE2_B64_gfx9
 # GCN: DS_WRITE_B64_gfx9
 ---
 name:            out_of_order_merge

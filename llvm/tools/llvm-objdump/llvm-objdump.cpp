@@ -957,6 +957,9 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile *Obj,
         getXCOFFSymbolCsectSMC(XCOFFObj, Symbol);
     return SymbolInfoTy(Addr, Name, Smc, SymbolIndex,
                         isLabel(XCOFFObj, Symbol));
+  } else if (Obj->isXCOFF()) {
+    const SymbolRef::Type SymType = unwrapOrError(Symbol.getType(), FileName);
+    return SymbolInfoTy(Addr, Name, SymType, true);
   } else
     return SymbolInfoTy(Addr, Name,
                         Obj->isELF() ? getElfSymbolType(Obj, Symbol)

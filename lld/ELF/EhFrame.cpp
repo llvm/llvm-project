@@ -42,7 +42,7 @@ public:
 private:
   template <class P> void failOn(const P *loc, const Twine &msg) {
     fatal("corrupted .eh_frame: " + msg + "\n>>> defined in " +
-          isec->getObjMsg((const uint8_t *)loc - isec->data().data()));
+          isec->getObjMsg((const uint8_t *)loc - isec->rawData.data()));
   }
 
   uint8_t readByte();

@@ -13,9 +13,9 @@ define void @mod() {
 ; CHECK-NEXT: i32.const       31
 ; CHECK-NEXT: i32.shr_s
 ; CHECK-NEXT: local.tee       0
-; CHECK-NEXT: i32.add
-; CHECK-NEXT: local.get       0
 ; CHECK-NEXT: i32.xor
+; CHECK-NEXT: local.get       0
+; CHECK-NEXT: i32.sub
 ; CHECK-NEXT: i32.store8      0
   %tmp = load <4 x i8>, <4 x i8>* undef
   %tmp2 = icmp slt <4 x i8> %tmp, zeroinitializer

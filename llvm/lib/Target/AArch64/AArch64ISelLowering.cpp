@@ -2353,9 +2353,14 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while bl call instruction (where statepoint will be lowered at the end)
-    // has implicit def. Add this implicit dead def here as a workaround.
-    MI.addOperand(*MI.getMF(), MachineOperand::CreateReg(AArch64::LR, true,
-                                                         true, false, true));
+    // has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      AArch64::LR, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
     LLVM_FALLTHROUGH;
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
