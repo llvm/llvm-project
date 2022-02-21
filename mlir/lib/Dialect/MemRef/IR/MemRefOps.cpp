@@ -1508,6 +1508,36 @@ LogicalResult ReinterpretCastOp::verify() {
   return success();
 }
 
+OpFoldResult ReinterpretCastOp::fold(ArrayRef<Attribute> /*operands*/) {
+  Value src = source();
+  auto getPrevSrc = [&]() -> Value {
+    // reinterpret_cast(reinterpret_cast(x)) -> reinterpret_cast(x).
+    if (auto prev = src.getDefiningOp<ReinterpretCastOp>())
+      return prev.source();
+
+    // reinterpret_cast(cast(x)) -> reinterpret_cast(x).
+    if (auto prev = src.getDefiningOp<CastOp>())
+      return prev.source();
+
+    // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
+    // are 0.
+    if (auto prev = src.getDefiningOp<SubViewOp>())
+      if (llvm::all_of(prev.getMixedOffsets(), [](OpFoldResult val) {
+            return isConstantIntValue(val, 0);
+          }))
+        return prev.source();
+
+    return nullptr;
+  };
+
+  if (auto prevSrc = getPrevSrc()) {
+    sourceMutable().assign(prevSrc);
+    return getResult();
+  }
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Reassociative reshape ops
 //===----------------------------------------------------------------------===//
