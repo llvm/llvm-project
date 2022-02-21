@@ -215,17 +215,17 @@ public:
 
 
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
-    size_t s = data().size();
+    size_t s = rawData.size();
     assert(s % sizeof(T) == 0);
-    return llvm::makeArrayRef<T>((const T *)data().data(), s / sizeof(T));
+    return llvm::makeArrayRef<T>((const T *)rawData.data(), s / sizeof(T));
   }
+
+  mutable ArrayRef<uint8_t> rawData;
 
 protected:
   template <typename ELFT>
   void parseCompressedHeader();
   void uncompress() const;
-
-  mutable ArrayRef<uint8_t> rawData;
 
   // This field stores the uncompressed size of the compressed data in rawData,
   // or -1 if rawData is not compressed (either because the section wasn't
@@ -277,8 +277,8 @@ public:
   llvm::CachedHashStringRef getData(size_t i) const {
     size_t begin = pieces[i].inputOff;
     size_t end =
-        (pieces.size() - 1 == i) ? data().size() : pieces[i + 1].inputOff;
-    return {toStringRef(data().slice(begin, end - begin)), pieces[i].hash};
+        (pieces.size() - 1 == i) ? rawData.size() : pieces[i + 1].inputOff;
+    return {toStringRef(rawData.slice(begin, end - begin)), pieces[i].hash};
   }
 
   // Returns the SectionPiece at a given input section offset.
@@ -300,7 +300,7 @@ struct EhSectionPiece {
       : inputOff(off), sec(sec), size(size), firstRelocation(firstRelocation) {}
 
   ArrayRef<uint8_t> data() const {
-    return {sec->data().data() + this->inputOff, size};
+    return {sec->rawData.data() + this->inputOff, size};
   }
 
   size_t inputOff;

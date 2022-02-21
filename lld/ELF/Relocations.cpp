@@ -497,7 +497,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
   if (pairTy == R_MIPS_NONE)
     return 0;
 
-  const uint8_t *buf = sec.data().data();
+  const uint8_t *buf = sec.rawData.data();
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
 
   // To make things worse, paired relocations might not be contiguous in
@@ -524,7 +524,7 @@ int64_t RelocationScanner::computeAddend(const RelTy &rel, RelExpr expr,
   if (RelTy::IsRela) {
     addend = getAddend<ELFT>(rel);
   } else {
-    const uint8_t *buf = sec.data().data();
+    const uint8_t *buf = sec.rawData.data();
     addend = target.getImplicitAddend(buf + rel.r_offset, type);
   }
 
@@ -1326,7 +1326,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
       maybeReportUndefined(cast<Undefined>(sym), sec, offset))
     return;
 
-  const uint8_t *relocatedAddr = sec.data().begin() + offset;
+  const uint8_t *relocatedAddr = sec.rawData.begin() + offset;
   RelExpr expr = target.getRelExpr(type, sym, relocatedAddr);
 
   // Ignore R_*_NONE and other marker relocations.
