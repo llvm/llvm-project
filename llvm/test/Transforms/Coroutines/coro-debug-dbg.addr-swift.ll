@@ -9,7 +9,7 @@
 
 ; CHECK-LABEL: define swifttailcc void @"$s10async_args14withGenericArgyyxnYalF"(%swift.context* swiftasync %0, %swift.opaque* noalias %1, %swift.type* %T){{.*}} {
 ; CHECK: call void @llvm.dbg.declare(
-; CHECK: llvm.dbg.addr
+; CHECK: call void @llvm.dbg.addr(
 ; CHECK-NOT: llvm.dbg.value
 ; CHECK-NOT: llvm.dbg.addr
 ; CHECK-NOT: llvm.dbg.declare
@@ -19,17 +19,16 @@
 
 ; CHECK-LABEL: define internal swifttailcc void @"$s10async_args14withGenericArgyyxnYalFTY0_"(i8* swiftasync %0)
 ; CHECK: entryresume.0
-; CHECK-NEXT: %.debug
-; CHECK-NEXT: call void @llvm.dbg.declare(
-; CHECK: llvm.dbg.addr
+; CHECK: call void @llvm.dbg.declare(
+; CHECK: call void @llvm.dbg.addr(
 ; CHECK: musttail call swifttailcc void @"$s10async_args10forceSplityyYaF"(%swift.context* swiftasync
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
 
 ; CHECK: define internal swifttailcc void @"$s10async_args14withGenericArgyyxnYalFTQ1_"(i8* swiftasync %0)
-; CHECK: llvm.dbg.declare
-; CHECK: llvm.dbg.addr
-; CHECK: llvm.dbg.value(metadata %swift.opaque** undef,
+; CHECK: call void @llvm.dbg.declare
+; CHECK: call void @llvm.dbg.addr
+; CHECK: call void @llvm.dbg.value(metadata %swift.opaque** undef,
 ; CHECK: ret void
 ; CHECK-NEXT: }
 
