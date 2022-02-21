@@ -87,14 +87,7 @@ entry:
 
 ; GCN-LABEL: flat_ptr_arg:
 ; GCN-COUNT-2: global_load_dwordx2
-
-; FIXME: First load is in the constant address space and second is in global
-;        because it is clobbered by store. GPU load store vectorizer cannot
-;        combine them. Note, this does not happen with -O3 because loads are
-;        vectorized in pairs earlier and stay in the global address space.
-
-; GCN:         global_load_dword v{{[0-9]+}}, [[PTR:v\[[0-9:]+\]]], off{{$}}
-; GCN:         global_load_dwordx3 v[{{[0-9:]+}}], [[PTR]], off offset:4
+; GCN:         global_load_dwordx4
 ; GCN:         global_store_dword
 define amdgpu_kernel void @flat_ptr_arg(float** nocapture readonly noalias %Arg, float** nocapture noalias %Out, i32 %X) {
 ; CHECK-LABEL: @flat_ptr_arg(
@@ -177,8 +170,7 @@ entry:
 
 ; GCN-LABEL: global_ptr_arg:
 ; GCN: global_load_dwordx2
-; GCN: global_load_dword v{{[0-9]+}}, [[PTR:v\[[0-9:]+\]]], off{{$}}
-; GCN: global_load_dwordx3 v[{{[0-9:]+}}], [[PTR]], off offset:4
+; GCN: global_load_dwordx4
 ; GCN: global_store_dword
 define amdgpu_kernel void @global_ptr_arg(float* addrspace(1)* nocapture readonly %Arg, i32 %X) {
 ; CHECK-LABEL: @global_ptr_arg(

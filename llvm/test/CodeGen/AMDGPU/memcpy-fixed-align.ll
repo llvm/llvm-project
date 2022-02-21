@@ -7,13 +7,11 @@ define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
 ; MUBUF-LABEL: memcpy_fixed_align:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    global_load_dword v0, v[1:2], off offset:36
-; MUBUF-NEXT:    global_load_dword v11, v[1:2], off offset:32
+; MUBUF-NEXT:    global_load_dwordx2 v[11:12], v[1:2], off offset:32
 ; MUBUF-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off offset:16
 ; MUBUF-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off
-; MUBUF-NEXT:    s_waitcnt vmcnt(3)
-; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:36
-; MUBUF-NEXT:    s_waitcnt vmcnt(3)
+; MUBUF-NEXT:    s_waitcnt vmcnt(2)
+; MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:36
 ; MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:32
 ; MUBUF-NEXT:    s_waitcnt vmcnt(3)
 ; MUBUF-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:28
