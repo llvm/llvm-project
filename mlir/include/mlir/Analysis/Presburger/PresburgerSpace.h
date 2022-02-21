@@ -21,8 +21,8 @@ namespace mlir {
 
 class PresburgerLocalSpace;
 
-/// PresburgerSpace is a tuple of identifiers with information about what kind
-/// they correspond to. The identifiers can be split into three types:
+/// PresburgerSpace is the space of all possible values of a tuple of integer
+/// valued variables/identifiers. Each identifier has one of the three types:
 ///
 /// Dimension: Ordinary variables over which the space is represented.
 ///
@@ -31,18 +31,35 @@ class PresburgerLocalSpace;
 /// family of spaces indexed by the symbolic identifiers.
 ///
 /// Local: Local identifiers correspond to existentially quantified variables.
+/// For example, consider the space: `(x, exists q)` where x is a dimension
+/// identifier and q is a local identifier. Let us put the constraints:
+///       `1 <= x <= 7, x = 2q`
+/// on this space to get the set:
+///       `(x) : (exists q : q <= x <= 7, x = 2q)`.
+/// An assignment to symbolic and dimension variables is valid if there
+/// exists some assignment to the local variable `q` satisfying these
+/// constraints. For this example, the set is equivalent to {2, 4, 6}.
+/// Mathematically, existential quantification can be thought of as the result
+/// of projection. In this example, `q` is existentially quantified. This can be
+/// thought of as the result of projecting out `q` from the previous example,
+/// i.e. we obtained {2, 4, 6} by projecting out the second dimension from
+/// {(2, 1), (4, 2), (6, 2)}.
 ///
 /// Dimension identifiers are further divided into Domain and Range identifiers
 /// to support building relations.
 ///
 /// Spaces with distinction between domain and range identifiers should use
 /// IdKind::Domain and IdKind::Range to refer to domain and range identifiers.
+/// Identifiers for such spaces are stored in the following order:
+///       [Domain, Range, Symbols, Locals]
 ///
 /// Spaces with no distinction between domain and range identifiers should use
-/// IdKind::SetDim to refer to dimension identifiers.
+/// IdKind::SetDim to refer to dimension identifiers. Identifiers for such
+/// spaces are stored in the following order:
+///       [SetDim, Symbol, Locals]
 ///
-/// PresburgerSpace does not support identifiers of kind Local. See
-/// PresburgerLocalSpace for an extension that supports Local ids.
+/// PresburgerSpace does not allow identifiers of kind Local. See
+/// PresburgerLocalSpace for an extension that does allow local identifiers.
 class PresburgerSpace {
   friend PresburgerLocalSpace;
 
