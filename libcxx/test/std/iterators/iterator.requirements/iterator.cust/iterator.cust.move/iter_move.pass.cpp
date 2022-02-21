@@ -51,8 +51,8 @@ private:
   I base_ = I{};
 };
 
-template <typename I>
-constexpr void unqualified_lookup_move(I first_, I last_, I result_first_, I result_last_) {
+template <typename It, typename Out>
+constexpr void unqualified_lookup_move(It first_, It last_, Out result_first_, Out result_last_) {
   auto first = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(first_)};
   auto last = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(last_)};
   auto result_first = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(result_first_)};
@@ -65,8 +65,8 @@ constexpr void unqualified_lookup_move(I first_, I last_, I result_first_, I res
   }
 }
 
-template <typename I>
-constexpr void lvalue_move(I first_, I last_, I result_first_, I result_last_) {
+template <typename It, typename Out>
+constexpr void lvalue_move(It first_, It last_, Out result_first_, Out result_last_) {
   auto first = iterator_wrapper{std::move(first_)};
   auto last = ::iterator_wrapper{std::move(last_)};
   auto result_first = iterator_wrapper{std::move(result_first_)};
@@ -80,8 +80,8 @@ constexpr void lvalue_move(I first_, I last_, I result_first_, I result_last_) {
   }
 }
 
-template <typename I>
-constexpr void rvalue_move(I first_, I last_, I result_first_, I result_last_) {
+template <typename It, typename Out>
+constexpr void rvalue_move(It first_, It last_, Out result_first_, Out result_last_) {
   auto first = iterator_wrapper{std::move(first_)};
   auto last = iterator_wrapper{std::move(last_)};
   auto result_first = iterator_wrapper{std::move(result_first_)};
