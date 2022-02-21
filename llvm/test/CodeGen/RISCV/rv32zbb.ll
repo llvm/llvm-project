@@ -734,8 +734,8 @@ define i32 @abs_i32(i32 %x) {
 ; RV32I-LABEL: abs_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a1, a0, 31
-; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: abs_i32:

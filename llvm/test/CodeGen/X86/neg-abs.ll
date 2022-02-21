@@ -154,24 +154,21 @@ define i128 @neg_abs_i128(i128 %x) nounwind {
 define i8 @sub_abs_i8(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: sub_abs_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarb $7, %dl
-; X86-NEXT:    addb %dl, %cl
-; X86-NEXT:    xorb %dl, %cl
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarb $7, %al
+; X86-NEXT:    xorb %al, %cl
 ; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sub_abs_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    sarb $7, %cl
-; X64-NEXT:    addb %cl, %dil
-; X64-NEXT:    xorb %cl, %dil
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarb $7, %al
+; X64-NEXT:    xorb %al, %dil
 ; X64-NEXT:    subb %dil, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    addb %sil, %al
 ; X64-NEXT:    retq
   %abs = tail call i8 @llvm.abs.i8(i8 %x, i1 false)
   %neg = sub nsw i8 %y, %abs
@@ -181,13 +178,12 @@ define i8 @sub_abs_i8(i8 %x, i8 %y) nounwind {
 define i16 @sub_abs_i16(i16 %x, i16 %y) nounwind {
 ; X86-LABEL: sub_abs_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $15, %edx
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    xorl %edx, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -207,13 +203,12 @@ define i16 @sub_abs_i16(i16 %x, i16 %y) nounwind {
 define i32 @sub_abs_i32(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: sub_abs_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    xorl %edx, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sub_abs_i32:

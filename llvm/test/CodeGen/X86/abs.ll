@@ -25,11 +25,11 @@ declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 define i8 @test_i8(i8 %a) nounwind {
 ; X64-LABEL: test_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    sarb $7, %cl
-; X64-NEXT:    leal (%rdi,%rcx), %eax
 ; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -38,8 +38,8 @@ define i8 @test_i8(i8 %a) nounwind {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    sarb $7, %cl
-; X86-NEXT:    addb %cl, %al
 ; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
 ; X86-NEXT:    retl
   %r = call i8 @llvm.abs.i8(i8 %a, i1 false)
   ret i8 %r
@@ -197,8 +197,8 @@ define <2 x i32> @test_v2i32(<2 x i32> %a) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i32:
@@ -226,8 +226,8 @@ define <3 x i32> @test_v3i32(<3 x i32> %a) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v3i32:
@@ -261,8 +261,8 @@ define <4 x i32> @test_v4i32(<4 x i32> %a) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4i32:
@@ -309,12 +309,12 @@ define <8 x i32> @test_v8i32(<8 x i32> %a) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psrad $31, %xmm2
-; SSE-NEXT:    paddd %xmm2, %xmm0
 ; SSE-NEXT:    pxor %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    psrad $31, %xmm2
-; SSE-NEXT:    paddd %xmm2, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm1
+; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v8i32:
@@ -496,86 +496,86 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movb %cl, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %cl
 ; X86-NEXT:    xorb %al, %cl
+; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb %dl, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %dl
 ; X86-NEXT:    xorb %al, %dl
+; X86-NEXT:    subb %al, %dl
 ; X86-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb %ah, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %ah
 ; X86-NEXT:    xorb %al, %ah
+; X86-NEXT:    subb %al, %ah
 ; X86-NEXT:    movb %ah, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb %ch, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %ch
 ; X86-NEXT:    xorb %al, %ch
+; X86-NEXT:    subb %al, %ch
 ; X86-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb %dh, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %dh
 ; X86-NEXT:    xorb %al, %dh
+; X86-NEXT:    subb %al, %dh
 ; X86-NEXT:    movb %dh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %bl
 ; X86-NEXT:    xorb %al, %bl
+; X86-NEXT:    subb %al, %bl
 ; X86-NEXT:    movb %bl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb %bh, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %bh
 ; X86-NEXT:    xorb %al, %bh
+; X86-NEXT:    subb %al, %bh
 ; X86-NEXT:    movb %bh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %cl
 ; X86-NEXT:    xorb %al, %cl
+; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %cl
 ; X86-NEXT:    xorb %al, %cl
+; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %bh
 ; X86-NEXT:    movb %bh, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %bh
 ; X86-NEXT:    xorb %al, %bh
+; X86-NEXT:    subb %al, %bh
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %bl
 ; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %bl
 ; X86-NEXT:    xorb %al, %bl
+; X86-NEXT:    subb %al, %bl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-NEXT:    movb %dh, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %dh
 ; X86-NEXT:    xorb %al, %dh
+; X86-NEXT:    subb %al, %dh
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-NEXT:    movb %ch, %al
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %ch
 ; X86-NEXT:    xorb %al, %ch
+; X86-NEXT:    subb %al, %ch
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %dl
 ; X86-NEXT:    xorb %al, %dl
+; X86-NEXT:    subb %al, %dl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    addb %al, %cl
 ; X86-NEXT:    xorb %al, %cl
+; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movb %al, %ah
 ; X86-NEXT:    sarb $7, %ah
-; X86-NEXT:    addb %ah, %al
 ; X86-NEXT:    xorb %ah, %al
+; X86-NEXT:    subb %ah, %al
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movb %al, 15(%esi)
 ; X86-NEXT:    movb %cl, 14(%esi)

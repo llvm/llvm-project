@@ -120,18 +120,18 @@ define i64 @abs64(i64 %x) {
 ; CHECKT1-LABEL: abs64:
 ; CHECKT1:       @ %bb.0:
 ; CHECKT1-NEXT:    asrs r2, r1, #31
-; CHECKT1-NEXT:    adds r0, r0, r2
-; CHECKT1-NEXT:    adcs r1, r2
-; CHECKT1-NEXT:    eors r0, r2
 ; CHECKT1-NEXT:    eors r1, r2
+; CHECKT1-NEXT:    eors r0, r2
+; CHECKT1-NEXT:    subs r0, r0, r2
+; CHECKT1-NEXT:    sbcs r1, r2
 ; CHECKT1-NEXT:    bx lr
 ;
 ; CHECKT2-LABEL: abs64:
 ; CHECKT2:       @ %bb.0:
-; CHECKT2-NEXT:    adds.w r0, r0, r1, asr #31
-; CHECKT2-NEXT:    adc.w r2, r1, r1, asr #31
 ; CHECKT2-NEXT:    eor.w r0, r0, r1, asr #31
-; CHECKT2-NEXT:    eor.w r1, r2, r1, asr #31
+; CHECKT2-NEXT:    eor.w r2, r1, r1, asr #31
+; CHECKT2-NEXT:    subs.w r0, r0, r1, asr #31
+; CHECKT2-NEXT:    sbc.w r1, r2, r1, asr #31
 ; CHECKT2-NEXT:    bx lr
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   ret i64 %abs
@@ -141,8 +141,8 @@ define i32 @abs32(i32 %x) {
 ; CHECKT1-LABEL: abs32:
 ; CHECKT1:       @ %bb.0:
 ; CHECKT1-NEXT:    asrs r1, r0, #31
-; CHECKT1-NEXT:    adds r0, r0, r1
 ; CHECKT1-NEXT:    eors r0, r1
+; CHECKT1-NEXT:    subs r0, r0, r1
 ; CHECKT1-NEXT:    bx lr
 ;
 ; CHECKT2-LABEL: abs32:
@@ -160,15 +160,15 @@ define i16 @abs16(i16 %x) {
 ; CHECKT1:       @ %bb.0:
 ; CHECKT1-NEXT:    sxth r1, r0
 ; CHECKT1-NEXT:    asrs r1, r1, #15
-; CHECKT1-NEXT:    adds r0, r0, r1
 ; CHECKT1-NEXT:    eors r0, r1
+; CHECKT1-NEXT:    subs r0, r0, r1
 ; CHECKT1-NEXT:    bx lr
 ;
 ; CHECKT2-LABEL: abs16:
 ; CHECKT2:       @ %bb.0:
 ; CHECKT2-NEXT:    sxth r1, r0
-; CHECKT2-NEXT:    add.w r0, r0, r1, asr #15
 ; CHECKT2-NEXT:    eor.w r0, r0, r1, asr #15
+; CHECKT2-NEXT:    sub.w r0, r0, r1, asr #15
 ; CHECKT2-NEXT:    bx lr
   %abs = tail call i16 @llvm.abs.i16(i16 %x, i1 true)
   ret i16 %abs
@@ -180,26 +180,26 @@ define i128 @abs128(i128 %x) {
 ; CHECKT1-NEXT:    .save {r4, lr}
 ; CHECKT1-NEXT:    push {r4, lr}
 ; CHECKT1-NEXT:    asrs r4, r3, #31
-; CHECKT1-NEXT:    adds r0, r0, r4
-; CHECKT1-NEXT:    adcs r1, r4
-; CHECKT1-NEXT:    adcs r2, r4
-; CHECKT1-NEXT:    adcs r3, r4
-; CHECKT1-NEXT:    eors r0, r4
-; CHECKT1-NEXT:    eors r1, r4
-; CHECKT1-NEXT:    eors r2, r4
 ; CHECKT1-NEXT:    eors r3, r4
+; CHECKT1-NEXT:    eors r2, r4
+; CHECKT1-NEXT:    eors r1, r4
+; CHECKT1-NEXT:    eors r0, r4
+; CHECKT1-NEXT:    subs r0, r0, r4
+; CHECKT1-NEXT:    sbcs r1, r4
+; CHECKT1-NEXT:    sbcs r2, r4
+; CHECKT1-NEXT:    sbcs r3, r4
 ; CHECKT1-NEXT:    pop {r4, pc}
 ;
 ; CHECKT2-LABEL: abs128:
 ; CHECKT2:       @ %bb.0:
-; CHECKT2-NEXT:    adds.w r0, r0, r3, asr #31
-; CHECKT2-NEXT:    adcs.w r1, r1, r3, asr #31
 ; CHECKT2-NEXT:    eor.w r0, r0, r3, asr #31
-; CHECKT2-NEXT:    adcs.w r2, r2, r3, asr #31
 ; CHECKT2-NEXT:    eor.w r1, r1, r3, asr #31
-; CHECKT2-NEXT:    adc.w r12, r3, r3, asr #31
+; CHECKT2-NEXT:    subs.w r0, r0, r3, asr #31
 ; CHECKT2-NEXT:    eor.w r2, r2, r3, asr #31
-; CHECKT2-NEXT:    eor.w r3, r12, r3, asr #31
+; CHECKT2-NEXT:    sbcs.w r1, r1, r3, asr #31
+; CHECKT2-NEXT:    eor.w r12, r3, r3, asr #31
+; CHECKT2-NEXT:    sbcs.w r2, r2, r3, asr #31
+; CHECKT2-NEXT:    sbc.w r3, r12, r3, asr #31
 ; CHECKT2-NEXT:    bx lr
   %abs = tail call i128 @llvm.abs.i128(i128 %x, i1 true)
   ret i128 %abs
