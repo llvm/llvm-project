@@ -598,11 +598,14 @@ def ORC_B : RVBUnary<0b0010100, 0b00111, 0b101, OPC_OP_IMM, "orc.b">,
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbpOrZbkb] in 
-def BREV8 : RVBUnary<0b0110100, 0b00111, 0b101, OPC_OP_IMM, "brev8">;
+def BREV8 : RVBUnary<0b0110100, 0b00111, 0b101, OPC_OP_IMM, "brev8">,
+            Sched<[]>;
 
 let Predicates = [HasStdExtZbpOrZbkb, IsRV32] in {
-def ZIP_RV32   : RVBUnary<0b0000100, 0b01111, 0b001, OPC_OP_IMM, "zip">;
-def UNZIP_RV32 : RVBUnary<0b0000100, 0b01111, 0b101, OPC_OP_IMM, "unzip">;
+def ZIP_RV32   : RVBUnary<0b0000100, 0b01111, 0b001, OPC_OP_IMM, "zip">,
+                 Sched<[]>;
+def UNZIP_RV32 : RVBUnary<0b0000100, 0b01111, 0b101, OPC_OP_IMM, "unzip">,
+                 Sched<[]>;
 } // Predicates = [HasStdExtZbpOrZbkb, IsRV32]
 
 
