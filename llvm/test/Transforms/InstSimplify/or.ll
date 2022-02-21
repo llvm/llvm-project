@@ -1039,3 +1039,84 @@ define <2 x i4> @or_nand_xor_undef_elt(<2 x i4> %x, <2 x i4> %y) {
   %or = or <2 x i4> %xor, %nand
   ret <2 x i4> %or
 }
+
+declare i32 @llvm.fshl.i32 (i32, i32, i32)
+declare i32 @llvm.fshr.i32 (i32, i32, i32)
+
+define i32 @or_shl_fshl(i32 %x, i32 %y, i32 %s) {
+; CHECK-LABEL: @or_shl_fshl(
+; CHECK-NEXT:    [[SHY:%.*]] = shl i32 [[Y:%.*]], [[S:%.*]]
+; CHECK-NEXT:    [[FUN:%.*]] = call i32 @llvm.fshl.i32(i32 [[Y]], i32 [[X:%.*]], i32 [[S]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FUN]], [[SHY]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shy = shl i32 %y, %s
+  %fun = call i32 @llvm.fshl.i32(i32 %y, i32 %x, i32 %s)
+  %or = or i32 %fun, %shy
+  ret i32 %or
+}
+
+define i32 @or_shl_fshl_commute(i32 %x, i32 %y, i32 %s) {
+; CHECK-LABEL: @or_shl_fshl_commute(
+; CHECK-NEXT:    [[SHY:%.*]] = shl i32 [[Y:%.*]], [[S:%.*]]
+; CHECK-NEXT:    [[FUN:%.*]] = call i32 @llvm.fshl.i32(i32 [[Y]], i32 [[X:%.*]], i32 [[S]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHY]], [[FUN]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shy = shl i32 %y, %s
+  %fun = call i32 @llvm.fshl.i32(i32 %y, i32 %x, i32 %s)
+  %or = or i32 %shy, %fun
+  ret i32 %or
+}
+
+define i32 @or_shl_fshl_wrong_order(i32 %x, i32 %y, i32 %s) {
+; CHECK-LABEL: @or_shl_fshl_wrong_order(
+; CHECK-NEXT:    [[SHY:%.*]] = shl i32 [[Y:%.*]], [[S:%.*]]
+; CHECK-NEXT:    [[FUN:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y]], i32 [[S]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FUN]], [[SHY]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shy = shl i32 %y, %s
+  %fun = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %s)
+  %or = or i32 %fun, %shy
+  ret i32 %or
+}
+
+define i32 @or_lshr_fshr(i32 %x, i32 %y, i32 %s) {
+; CHECK-LABEL: @or_lshr_fshr(
+; CHECK-NEXT:    [[SHY:%.*]] = lshr i32 [[Y:%.*]], [[S:%.*]]
+; CHECK-NEXT:    [[FUN:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[Y]], i32 [[S]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FUN]], [[SHY]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shy = lshr i32 %y, %s
+  %fun = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %s)
+  %or = or i32 %fun, %shy
+  ret i32 %or
+}
+
+define i32 @or_lshr_fshr_commute(i32 %x, i32 %y, i32 %s) {
+; CHECK-LABEL: @or_lshr_fshr_commute(
+; CHECK-NEXT:    [[SHY:%.*]] = lshr i32 [[Y:%.*]], [[S:%.*]]
+; CHECK-NEXT:    [[FUN:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[Y]], i32 [[S]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHY]], [[FUN]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shy = lshr i32 %y, %s
+  %fun = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %s)
+  %or = or i32 %shy, %fun
+  ret i32 %or
+}
+
+define i32 @or_lshr_fshr_wrong_order(i32 %x, i32 %y, i32 %s) {
+; CHECK-LABEL: @or_lshr_fshr_wrong_order(
+; CHECK-NEXT:    [[SHY:%.*]] = lshr i32 [[Y:%.*]], [[S:%.*]]
+; CHECK-NEXT:    [[FUN:%.*]] = call i32 @llvm.fshr.i32(i32 [[Y]], i32 [[X:%.*]], i32 [[S]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FUN]], [[SHY]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shy = lshr i32 %y, %s
+  %fun = call i32 @llvm.fshr.i32(i32 %y, i32 %x, i32 %s)
+  %or = or i32 %fun, %shy
+  ret i32 %or
+}
