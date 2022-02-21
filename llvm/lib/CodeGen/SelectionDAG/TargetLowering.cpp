@@ -7443,13 +7443,13 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   SDValue Shift =
       DAG.getNode(ISD::SRA, dl, VT, Op,
                   DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, ShVT));
-  if (!IsNegative) {
-    SDValue Add = DAG.getNode(ISD::ADD, dl, VT, Op, Shift);
-    return DAG.getNode(ISD::XOR, dl, VT, Add, Shift);
-  }
+  SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Op, Shift);
+
+  // abs(x) -> Y = sra (X, size(X)-1); sub (xor (X, Y), Y)
+  if (!IsNegative)
+    return DAG.getNode(ISD::SUB, dl, VT, Xor, Shift);
 
   // 0 - abs(x) -> Y = sra (X, size(X)-1); sub (Y, xor (X, Y))
-  SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Op, Shift);
   return DAG.getNode(ISD::SUB, dl, VT, Shift, Xor);
 }
 
