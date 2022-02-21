@@ -16310,7 +16310,12 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
     Module *GlobalModule =
         PushGlobalModuleFragment(ExternLoc, /*IsImplicit=*/true);
-    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
+    /// According to [module.reach]p3.2,
+    /// The declaration in global module fragment is reachable if it is not
+    /// discarded. And the discarded declaration should be deleted. So it
+    /// doesn't matter mark the declaration in global module fragment as
+    /// reachable here.
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
     D->setLocalOwningModule(GlobalModule);
   }
 
