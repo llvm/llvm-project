@@ -79,7 +79,8 @@ Parser::ParseObjCAtDirectives(ParsedAttributesWithRange &Attrs) {
     break;
   case tok::objc_import:
     if (getLangOpts().Modules || getLangOpts().DebuggerSupport) {
-      SingleDecl = ParseModuleImport(AtLoc);
+      Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
+      SingleDecl = ParseModuleImport(AtLoc, IS);
       break;
     }
     Diag(AtLoc, diag::err_atimport);
