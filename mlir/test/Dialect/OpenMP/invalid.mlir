@@ -793,7 +793,7 @@ func @omp_sections(%data_var : memref<i32>) -> () {
 // -----
 
 func @omp_sections(%cond : i1) {
-  // expected-error @below {{if is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections if(%cond) {
     omp.terminator
   }
@@ -803,7 +803,7 @@ func @omp_sections(%cond : i1) {
 // -----
 
 func @omp_sections() {
-  // expected-error @below {{num_threads is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections num_threads(10) {
     omp.terminator
   }
@@ -813,7 +813,7 @@ func @omp_sections() {
 // -----
 
 func @omp_sections() {
-  // expected-error @below {{proc_bind is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections proc_bind(close) {
     omp.terminator
   }
@@ -823,7 +823,7 @@ func @omp_sections() {
 // -----
 
 func @omp_sections(%data_var : memref<i32>, %linear_var : i32) {
-  // expected-error @below {{linear is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections linear(%data_var = %linear_var : memref<i32>) {
     omp.terminator
   }
@@ -833,7 +833,7 @@ func @omp_sections(%data_var : memref<i32>, %linear_var : i32) {
 // -----
 
 func @omp_sections() {
-  // expected-error @below {{schedule is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections schedule(static, none) {
     omp.terminator
   }
@@ -843,7 +843,7 @@ func @omp_sections() {
 // -----
 
 func @omp_sections() {
-  // expected-error @below {{collapse is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections collapse(3) {
     omp.terminator
   }
@@ -853,7 +853,7 @@ func @omp_sections() {
 // -----
 
 func @omp_sections() {
-  // expected-error @below {{ordered is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections ordered(2) {
     omp.terminator
   }
@@ -863,7 +863,7 @@ func @omp_sections() {
 // -----
 
 func @omp_sections() {
-  // expected-error @below {{order is not a valid clause for the omp.sections operation}}
+  // expected-error @below {{expected '{' to begin a region}}
   omp.sections order(concurrent) {
     omp.terminator
   }

@@ -188,7 +188,20 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 
   let regions = (region SizedRegion<1>:$region);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `reduction` `(`
+              custom<ReductionVarList>(
+                $reduction_vars, type($reduction_vars), $reductions
+              ) `)`
+          | `allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+          | `nowait`
+    ) $region attr-dict
+  }];
+
   let hasVerifier = 1;
 }
 

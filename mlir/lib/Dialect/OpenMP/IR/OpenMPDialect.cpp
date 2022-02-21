@@ -77,7 +77,6 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
 
 /// Parse an allocate clause with allocators and a list of operands with types.
 ///
-/// allocate ::= `allocate` `(` allocate-operand-list `)`
 /// allocate-operand-list :: = allocate-operand |
 ///                            allocator-operand `,` allocate-operand-list
 /// allocate-operand :: = ssa-id-and-type -> ssa-id-and-type
@@ -300,39 +299,35 @@ static void printScheduleClause(OpAsmPrinter &p, ClauseScheduleKind sched,
 // Parser, printer and verifier for ReductionVarList
 //===----------------------------------------------------------------------===//
 
-/// reduction ::= `reduction` `(` reduction-entry-list `)`
 /// reduction-entry-list ::= reduction-entry
 ///                        | reduction-entry-list `,` reduction-entry
 /// reduction-entry ::= symbol-ref `->` ssa-id `:` type
-static ParseResult
-parseReductionVarList(OpAsmParser &parser,
-                      SmallVectorImpl<SymbolRefAttr> &symbols,
-                      SmallVectorImpl<OpAsmParser::OperandType> &operands,
-                      SmallVectorImpl<Type> &types) {
-  if (failed(parser.parseLParen()))
-    return failure();
-
+static ParseResult parseReductionVarList(
+    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &operands,
+    SmallVectorImpl<Type> &types, ArrayAttr &redcuctionSymbols) {
+  SmallVector<SymbolRefAttr> reductionVec;
   do {
-    if (parser.parseAttribute(symbols.emplace_back()) || parser.parseArrow() ||
-        parser.parseOperand(operands.emplace_back()) ||
+    if (parser.parseAttribute(reductionVec.emplace_back()) ||
+        parser.parseArrow() || parser.parseOperand(operands.emplace_back()) ||
         parser.parseColonType(types.emplace_back()))
       return failure();
   } while (succeeded(parser.parseOptionalComma()));
-  return parser.parseRParen();
+  SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
+  redcuctionSymbols = ArrayAttr::get(parser.getContext(), reductions);
+  return success();
 }
 
 /// Print Reduction clause
-static void printReductionVarList(OpAsmPrinter &p,
-                                  Optional<ArrayAttr> reductions,
-                                  OperandRange reductionVars) {
-  p << "reduction(";
+static void printReductionVarList(OpAsmPrinter &p, Operation *op,
+                                  OperandRange reductionVars,
+                                  TypeRange reductionTypes,
+                                  Optional<ArrayAttr> reductions) {
   for (unsigned i = 0, e = reductions->size(); i < e; ++i) {
     if (i != 0)
       p << ", ";
     p << (*reductions)[i] << " -> " << reductionVars[i] << " : "
       << reductionVars[i].getType();
   }
-  p << ") ";
 }
 
 /// Verifies Reduction Clause
@@ -552,7 +547,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
   SmallVector<OpAsmParser::OperandType> allocates, allocators;
   SmallVector<Type> allocateTypes, allocatorTypes;
 
-  SmallVector<SymbolRefAttr> reductionSymbols;
+  ArrayAttr reductions;
   SmallVector<OpAsmParser::OperandType> reductionVars;
   SmallVector<Type> reductionVarTypes;
 
@@ -639,9 +634,10 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
                                                   "proc_bind_val", "proc bind"))
         return failure();
     } else if (clauseKeyword == "reduction") {
-      if (checkAllowed(reductionClause) ||
-          parseReductionVarList(parser, reductionSymbols, reductionVars,
-                                reductionVarTypes))
+      if (checkAllowed(reductionClause) || parser.parseLParen() ||
+          parseReductionVarList(parser, reductionVars, reductionVarTypes,
+                                reductions) ||
+          parser.parseRParen())
         return failure();
       clauseSegments[pos[reductionClause]] = reductionVars.size();
     } else if (clauseKeyword == "nowait") {
@@ -746,11 +742,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
     if (failed(parser.resolveOperands(reductionVars, reductionVarTypes,
                                       parser.getNameLoc(), result.operands)))
       return failure();
-
-    SmallVector<Attribute> reductions(reductionSymbols.begin(),
-                                      reductionSymbols.end());
-    result.addAttribute("reductions",
-                        parser.getBuilder().getArrayAttr(reductions));
+    result.addAttribute("reductions", reductions);
   }
 
   // Add linear parameters
@@ -805,52 +797,8 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
 }
 
 //===----------------------------------------------------------------------===//
-// Parser, printer and verifier for SectionsOp
+// Verifier for SectionsOp
 //===----------------------------------------------------------------------===//
-
-/// Parses an OpenMP Sections operation
-///
-/// sections ::= `omp.sections` clause-list
-/// clause-list ::= clause clause-list | empty
-/// clause ::= reduction | allocate | nowait
-ParseResult SectionsOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<ClauseType> clauses = {reductionClause, allocateClause,
-                                     nowaitClause};
-
-  SmallVector<int> segments;
-
-  if (failed(parseClauses(parser, result, clauses, segments)))
-    return failure();
-
-  result.addAttribute("operand_segment_sizes",
-                      parser.getBuilder().getI32VectorAttr(segments));
-
-  // Now parse the body.
-  Region *body = result.addRegion();
-  if (parser.parseRegion(*body))
-    return failure();
-  return success();
-}
-
-void SectionsOp::print(OpAsmPrinter &p) {
-  p << " ";
-
-  if (!reduction_vars().empty())
-    printReductionVarList(p, reductions(), reduction_vars());
-
-  if (!allocate_vars().empty()) {
-    printAllocateAndAllocator(p << "allocate(", *this, allocate_vars(),
-                              allocate_vars().getTypes(), allocators_vars(),
-                              allocators_vars().getTypes());
-    p << ")";
-  }
-
-  if (nowait())
-    p << "nowait";
-
-  p << ' ';
-  p.printRegion(region());
-}
 
 LogicalResult SectionsOp::verify() {
   if (allocate_vars().size() != allocators_vars().size())
@@ -960,8 +908,11 @@ void WsLoopOp::print(OpAsmPrinter &p) {
   if (auto order = order_val())
     p << "order(" << stringifyClauseOrderKind(*order) << ") ";
 
-  if (!reduction_vars().empty())
-    printReductionVarList(p, reductions(), reduction_vars());
+  if (!reduction_vars().empty()) {
+    printReductionVarList(p << "reduction(", *this, reduction_vars(),
+                          reduction_vars().getTypes(), reductions());
+    p << ")";
+  }
 
   p << ' ';
   p.printRegion(region(), /*printEntryBlockArgs=*/false);
