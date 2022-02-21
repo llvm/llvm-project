@@ -299,6 +299,9 @@ void VETargetLowering::initVPUActions() {
   for (MVT LegalMaskVT : AllMaskVTs)
     setOperationAction(ISD::BUILD_VECTOR, LegalMaskVT, Custom);
 
+  for (unsigned Opc : {ISD::AND, ISD::OR, ISD::XOR})
+    setOperationAction(Opc, MVT::v512i1, Custom);
+
   for (MVT LegalVecVT : AllVectorVTs) {
     setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, LegalVecVT, Legal);
@@ -903,6 +906,9 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(MEMBARRIER)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(TS1AM)
+    TARGET_NODE_CASE(VEC_UNPACK_LO)
+    TARGET_NODE_CASE(VEC_UNPACK_HI)
+    TARGET_NODE_CASE(VEC_PACK)
     TARGET_NODE_CASE(VEC_BROADCAST)
     TARGET_NODE_CASE(REPL_I32)
     TARGET_NODE_CASE(REPL_F32)
@@ -1746,6 +1752,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     // Translate into a VEC_*/VVP_* layer operation.
 #define ADD_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
 #include "VVPNodes.def"
+    if (isMaskArithmetic(Op) && isPackedVectorType(Op.getValueType()))
+      return splitMaskArithmetic(Op, DAG);
     return lowerToVVP(Op, DAG);
   }
 }
@@ -2688,6 +2696,23 @@ bool VETargetLowering::hasAndNot(SDValue Y) const {
 
   // It's ok for generic registers.
   return true;
+}
+
+SDValue VETargetLowering::splitMaskArithmetic(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  VECustomDAG CDAG(DAG, Op);
+  SDValue AVL =
+      CDAG.getConstant(Op.getValueType().getVectorNumElements(), MVT::i32);
+  SDValue A = Op->getOperand(0);
+  SDValue B = Op->getOperand(1);
+  SDValue LoA = CDAG.getUnpack(MVT::v256i1, A, PackElem::Lo, AVL);
+  SDValue HiA = CDAG.getUnpack(MVT::v256i1, A, PackElem::Hi, AVL);
+  SDValue LoB = CDAG.getUnpack(MVT::v256i1, B, PackElem::Lo, AVL);
+  SDValue HiB = CDAG.getUnpack(MVT::v256i1, B, PackElem::Hi, AVL);
+  unsigned Opc = Op.getOpcode();
+  auto LoRes = CDAG.getNode(Opc, MVT::v256i1, {LoA, LoB});
+  auto HiRes = CDAG.getNode(Opc, MVT::v256i1, {HiA, HiB});
+  return CDAG.getPack(MVT::v512i1, LoRes, HiRes, AVL);
 }
 
 SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
