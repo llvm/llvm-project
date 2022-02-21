@@ -223,6 +223,37 @@ writing, the following sync-ups are organized:
        `gcal <https://calendar.google.com/calendar/u/0?cid=ZDQyc3ZlajJmbjIzNG1jaTUybjFsdjA2dWNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1GahxppHJ7o1O_fn1Mbidu1DHEg7V2aOr92LXCtNV1_o/edit?usp=sharing>`__
 
+
+Office hours
+------------
+
+A number of experienced LLVM contributors make themselves available for a chat
+on a regular schedule, to anyone who is looking for some guidance. Please find
+the list of who is available when, through which medium, and what their area of
+expertise is. Don't by shy to dial in!
+
+Of course, people take time off from time to time, so if you dial in and you
+don't find anyone present, chances are they happen to be off that day.
+
+.. list-table:: LLVM office hours
+  :widths: 15 40 15 15 15
+  :header-rows: 1
+
+  * - Name
+    - In-scope topics
+    - When?
+    - Where?
+    - Languages
+  * - Kristof Beyls
+    - General questions on how to contribute to LLVM; organizing meetups;
+      submitting talks; and other general LLVM-related topics. Arm/AArch64
+      codegen.
+    - Every 2nd and 4th Wednesday of the month at 9.30am CET, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
+    - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
+    - English, Flemish, Dutch
+
+
 IRC
 ---
 
