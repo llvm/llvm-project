@@ -335,12 +335,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
-  # Install License file
-  install(FILES
-    "${CPACK_RESOURCE_FILE_LICENSE}"
-    COMPONENT amd-comgr
-    DESTINATION ${CMAKE_INSTALL_DOCDIR}/${CPACK_PACKAGE_NAME})
-
   # Make proper version for appending
   set(ROCM_VERSION_FOR_PACKAGE "")
   if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
