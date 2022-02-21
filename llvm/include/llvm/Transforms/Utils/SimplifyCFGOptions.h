@@ -23,7 +23,6 @@ class AssumptionCache;
 struct SimplifyCFGOptions {
   int BonusInstThreshold = 1;
   bool ForwardSwitchCondToPhi = false;
-  bool ConvertSwitchRangeToICmp = false;
   bool ConvertSwitchToLookupTable = false;
   bool NeedCanonicalLoop = true;
   bool HoistCommonInsts = false;
@@ -40,10 +39,6 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &forwardSwitchCondToPhi(bool B) {
     ForwardSwitchCondToPhi = B;
-    return *this;
-  }
-  SimplifyCFGOptions &convertSwitchRangeToICmp(bool B) {
-    ConvertSwitchRangeToICmp = B;
     return *this;
   }
   SimplifyCFGOptions &convertSwitchToLookupTable(bool B) {
