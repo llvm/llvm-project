@@ -36,25 +36,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-struct DebugLaunchContext {
-  DebugLaunchContext(DebuggerThread *thread,
-                     const ProcessLaunchInfo &launch_info)
-      : m_thread(thread), m_launch_info(launch_info) {}
-  DebuggerThread *m_thread;
-  ProcessLaunchInfo m_launch_info;
-};
-
-struct DebugAttachContext {
-  DebugAttachContext(DebuggerThread *thread, lldb::pid_t pid,
-                     const ProcessAttachInfo &attach_info)
-      : m_thread(thread), m_pid(pid), m_attach_info(attach_info) {}
-  DebuggerThread *m_thread;
-  lldb::pid_t m_pid;
-  ProcessAttachInfo m_attach_info;
-};
-} // namespace
-
 DebuggerThread::DebuggerThread(DebugDelegateSP debug_delegate)
     : m_debug_delegate(debug_delegate), m_pid_to_detach(0),
       m_is_shutting_down(false) {
@@ -68,11 +49,9 @@ Status DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
   LLDB_LOG(log, "launching '{0}'", launch_info.GetExecutableFile().GetPath());
 
   Status result;
-  DebugLaunchContext *context = new DebugLaunchContext(this, launch_info);
-
-  llvm::Expected<HostThread> secondary_thread =
-      ThreadLauncher::LaunchThread("lldb.plugin.process-windows.secondary[?]",
-                                   DebuggerThreadLaunchRoutine, context);
+  llvm::Expected<HostThread> secondary_thread = ThreadLauncher::LaunchThread(
+      "lldb.plugin.process-windows.secondary[?]",
+      [this, launch_info] { return DebuggerThreadLaunchRoutine(launch_info); });
   if (!secondary_thread) {
     result = Status(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't launch debugger thread. {0}", result);
@@ -87,32 +66,15 @@ Status DebuggerThread::DebugAttach(lldb::pid_t pid,
   LLDB_LOG(log, "attaching to '{0}'", pid);
 
   Status result;
-  DebugAttachContext *context = new DebugAttachContext(this, pid, attach_info);
-
-  llvm::Expected<HostThread> secondary_thread =
-      ThreadLauncher::LaunchThread("lldb.plugin.process-windows.secondary[?]",
-                                   DebuggerThreadAttachRoutine, context);
+  llvm::Expected<HostThread> secondary_thread = ThreadLauncher::LaunchThread(
+      "lldb.plugin.process-windows.secondary[?]", [this, pid, attach_info] {
+        return DebuggerThreadAttachRoutine(pid, attach_info);
+      });
   if (!secondary_thread) {
     result = Status(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't attach to process '{0}'. {1}", pid, result);
   }
 
-  return result;
-}
-
-lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(void *data) {
-  DebugLaunchContext *context = static_cast<DebugLaunchContext *>(data);
-  lldb::thread_result_t result =
-      context->m_thread->DebuggerThreadLaunchRoutine(context->m_launch_info);
-  delete context;
-  return result;
-}
-
-lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(void *data) {
-  DebugAttachContext *context = static_cast<DebugAttachContext *>(data);
-  lldb::thread_result_t result = context->m_thread->DebuggerThreadAttachRoutine(
-      context->m_pid, context->m_attach_info);
-  delete context;
   return result;
 }
 

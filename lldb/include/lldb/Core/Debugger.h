@@ -439,8 +439,6 @@ protected:
 
   void StopEventHandlerThread();
 
-  static lldb::thread_result_t EventHandlerThread(lldb::thread_arg_t arg);
-
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
 
@@ -454,9 +452,9 @@ protected:
 
   void JoinIOHandlerThread();
 
-  static lldb::thread_result_t IOHandlerThread(lldb::thread_arg_t arg);
+  lldb::thread_result_t IOHandlerThread();
 
-  void DefaultEventHandler();
+  lldb::thread_result_t DefaultEventHandler();
 
   void HandleBreakpointEvent(const lldb::EventSP &event_sp);
 

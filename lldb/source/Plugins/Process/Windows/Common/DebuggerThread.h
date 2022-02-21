@@ -91,10 +91,8 @@ private:
   // exit.
   bool m_detached = false;
 
-  static lldb::thread_result_t DebuggerThreadLaunchRoutine(void *data);
   lldb::thread_result_t
   DebuggerThreadLaunchRoutine(const ProcessLaunchInfo &launch_info);
-  static lldb::thread_result_t DebuggerThreadAttachRoutine(void *data);
   lldb::thread_result_t
   DebuggerThreadAttachRoutine(lldb::pid_t pid,
                               const ProcessAttachInfo &launch_info);

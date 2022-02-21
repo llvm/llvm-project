@@ -12,6 +12,7 @@ set (FILES
   SocketAddressTest.cpp
   SocketTest.cpp
   SocketTestUtilities.cpp
+  ThreadLauncherTest.cpp
   XMLTest.cpp
 )
 
