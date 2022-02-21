@@ -28,8 +28,12 @@ mkdir myswift
 cd myswift
 git clone https://github.com/apple/swift.git swift
 ./swift/utils/update-checkout
+./llvm-project/lldb/scripts/macos-setup-codesign.sh
 ./swift/utils/build-script -r --lldb
 ```
+
+Note: The codesigning setup script needs to be run only once. It's not required
+if `build-script` is run with the `--lldb-use-system-debugserver` flag.
 
 # Contribution Subtleties
 
