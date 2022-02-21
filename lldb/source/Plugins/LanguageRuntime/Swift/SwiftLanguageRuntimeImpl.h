@@ -393,7 +393,7 @@ private:
   /// the directly from the object file.
   /// \return true on success.
   bool AddObjectFileToReflectionContext(
-      lldb::ModuleSP module, ObjectFile &obj_file);
+      lldb::ModuleSP module);
 
   /// Cache for the debug-info-originating type infos.
   /// \{
