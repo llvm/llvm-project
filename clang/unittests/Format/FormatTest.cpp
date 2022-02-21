@@ -23861,6 +23861,11 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "}",
                Style);
 
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "  requires F<T>;",
+               Style);
+
   Style.IndentRequiresClause = false;
   verifyFormat("template <typename T>\n"
                "requires F<T>\n"
@@ -23881,6 +23886,7 @@ TEST_F(FormatTest, RequiresClausesPositions) {
   verifyFormat("template <typename T> requires Foo<T> struct Bar {};\n"
                "template <typename T> requires Foo<T> void bar() {}\n"
                "template <typename T> void bar() requires Foo<T> {}\n"
+               "template <typename T> void bar() requires Foo<T>;\n"
                "template <typename T> requires Foo<T> Bar(T) -> Bar<T>;",
                Style);
 
@@ -23932,6 +23938,9 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "template <typename T>\n"
                "void bar()\n"
                "requires Foo<T> {}\n"
+               "template <typename T>\n"
+               "void bar()\n"
+               "requires Foo<T>;\n"
                "template <typename T>\n"
                "requires Foo<T> Bar(T) -> Bar<T>;",
                Style);
@@ -23992,6 +24001,7 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "template <typename T>\n"
                "void bar() requires Foo<T>\n"
                "{}\n"
+               "template <typename T> void bar() requires Foo<T>;\n"
                "template <typename T> requires Foo<T>\n"
                "Bar(T) -> Bar<T>;",
                Style);
