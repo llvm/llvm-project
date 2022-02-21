@@ -253,7 +253,6 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
   State.Stack.push_back(ParenState(/*Tok=*/nullptr, FirstIndent, FirstIndent,
                                    /*AvoidBinPacking=*/false,
                                    /*NoLineBreak=*/false));
-  State.LineContainsContinuedForLoopSection = false;
   State.NoContinuation = false;
   State.StartOfStringLiteral = 0;
   State.StartOfLineLevel = 0;
@@ -342,8 +341,6 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       Current.closesBlockOrBlockTypeList(Style))
     return true;
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
-    return true;
-  if (Previous.is(tok::semi) && State.LineContainsContinuedForLoopSection)
     return true;
   if (Style.Language == FormatStyle::LK_ObjC &&
       Style.ObjCBreakBeforeNestedBlockParam &&
