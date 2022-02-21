@@ -29,8 +29,8 @@ namespace ranges {
 
 template <class _T1>
 struct min_max_result {
-  [[no_unique_address]] _T1 min;
-  [[no_unique_address]] _T1 max;
+  _LIBCPP_NO_UNIQUE_ADDRESS _T1 min;
+  _LIBCPP_NO_UNIQUE_ADDRESS _T1 max;
 
   template <class _T2>
     requires convertible_to<const _T1&, _T2>
