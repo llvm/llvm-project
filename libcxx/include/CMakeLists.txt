@@ -26,6 +26,7 @@ set(files
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h
+  __algorithm/in_found_result.h
   __algorithm/in_fun_result.h
   __algorithm/in_in_out_result.h
   __algorithm/in_in_result.h

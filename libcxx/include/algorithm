@@ -34,6 +34,9 @@ namespace ranges {
   template <class I1, class I2>
     struct min_max_result;    // since C++20
 
+  template <class I>
+    struct in_found_result;   // since C++20
+
   template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
     indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>             // since C++20
   constexpr I min_element(I first, S last, Comp comp = {}, Proj proj = {});
@@ -719,6 +722,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/generate.h>
 #include <__algorithm/generate_n.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/in_found_result.h>
 #include <__algorithm/in_fun_result.h>
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/in_in_result.h>
