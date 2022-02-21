@@ -1,0 +1,18 @@
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+
+// RUN: %clang -### -target x86_64-linux-gnu -nocudalib -ccc-print-bindings -fgpu-rdc \
+// RUN:        --offload-new-driver --offload-arch=sm_35 --offload-arch=sm_70 %s 2>&1 \
+// RUN: | FileCheck -check-prefix BINDINGS %s
+
+// BINDINGS: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[PTX_SM_35:.+]]"
+// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX_SM_35]]"], output: "[[CUBIN_SM_35:.+]]"
+// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN_SM_35]]", "[[PTX_SM_35]]"], output: "[[FATBIN_SM_35:.+]]"
+// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]"], output: "[[PTX_SM_70:.+]]"
+// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX_SM_70:.+]]"], output: "[[CUBIN_SM_70:.+]]"
+// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN_SM_70]]", "[[PTX_SM_70:.+]]"], output: "[[FATBIN_SM_70:.+]]"
+// BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[FATBIN_SM_35]]", "[[FATBIN_SM_70]]"], output: "[[HOST_OBJ:.+]]"
+// BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
+
+// RUN: %clang -### -nocudalib --offload-new-driver %s 2>&1 | FileCheck -check-prefix RDC %s
+// RDC: error: Using '--offload-new-driver' requires '-fgpu-rdc'
