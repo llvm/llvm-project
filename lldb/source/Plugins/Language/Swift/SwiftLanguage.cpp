@@ -28,6 +28,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 
+#include "LogChannelSwift.h"
 #include "ObjCRuntimeSyntheticProvider.h"
 #include "SwiftFormatters.h"
 
@@ -59,6 +60,7 @@ using lldb_private::formatters::swift::SetConfig;
 LLDB_PLUGIN_DEFINE(SwiftLanguage)
 
 void SwiftLanguage::Initialize() {
+  LogChannelSwift::Initialize();
   static ConstString g_SwiftSharedStringClass("_TtCs21__SharedStringStorage");
   static ConstString g_SwiftStringStorageClass("_TtCs15__StringStorage");
   static ConstString g_NSArrayClass1("_TtCs22__SwiftDeferredNSArray");

@@ -37,6 +37,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
@@ -146,8 +147,8 @@ public:
                  SwiftExpressionParser::SILVariableMap &variable_map,
                  SymbolContext &sc, ExecutionContextScope &exe_scope)
       : SILDebuggerClient(source_file.getASTContext()),
-        m_log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)),
-        m_source_file(source_file), m_variable_map(variable_map), m_sc(sc) {
+        m_log(GetLog(LLDBLog::Expressions)), m_source_file(source_file),
+        m_variable_map(variable_map), m_sc(sc) {
     source_file.getParentModule()->setDebugClient(this);
 
     if (!m_sc.target_sp)
@@ -581,8 +582,7 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   auto swift_self_type = GetSwiftType(imported_self_type);
   if (!swift_self_type) {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
-                                                    LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
     if (log)
       log->Printf("Couldn't get SwiftASTContext type for self type %s.",
                   imported_self_type.GetDisplayTypeName().AsCString("<unknown>"));
@@ -627,13 +627,13 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         imported_self_type);
 
     if (!type_alias_decl) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+      Log *log = GetLog(LLDBLog::Expressions);
       if (log)
         log->Printf("SEP:AddRequiredAliases: Failed to make the "
                     "$__lldb_context typealias.");
     }
   } else {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Expressions);
     if (log)
       log->Printf("SEP:AddRequiredAliases: Failed to resolve the self "
                   "archetype - could not make the $__lldb_context "
@@ -684,8 +684,7 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
 
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
-                                                  LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
   if (!SwiftASTContext::IsFullyRealized(target_type)) {
     if (log)
       log->Printf("Discarding local %s because we couldn't fully realize it, "
@@ -813,7 +812,7 @@ static void ResolveSpecialNames(
     SwiftASTContextForExpressions &ast_context,
     llvm::SmallVectorImpl<swift::Identifier> &special_names,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
   
   if (!sc.target_sp)
@@ -1248,7 +1247,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     lldb::StackFrameWP &stack_frame_wp, SymbolContext &sc,
     ExecutionContextScope &exe_scope, const EvaluateExpressionOptions &options,
     bool repl, bool playground) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
   auto should_disable_objc_runtime = [&]() {
@@ -1485,7 +1484,7 @@ bool SwiftExpressionParser::Complete(CompletionRequest &request, unsigned line,
 
 unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                                       uint32_t first_line, uint32_t last_line) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
   SwiftExpressionParser::SILVariableMap variable_map;
@@ -1908,7 +1907,7 @@ Status SwiftExpressionParser::PrepareForExecution(
     bool &can_interpret, ExecutionPolicy execution_policy) {
   LLDB_SCOPED_TIMER();
   Status err;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (!m_module) {
     err.SetErrorString("Can't prepare a NULL module for execution");
@@ -1969,7 +1968,7 @@ bool SwiftExpressionParser::RewriteExpression(
   LLDB_SCOPED_TIMER();
   // There isn't a Swift equivalent to clang::Rewriter, so we'll just
   // use that.
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   swift::SourceManager &source_manager =
       m_swift_ast_ctx.GetSourceManager();
 

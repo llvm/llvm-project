@@ -18,6 +18,7 @@
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "swift/AST/ASTContext.h"
@@ -1013,7 +1014,7 @@ bool SwiftASTManipulator::AddExternalVariables(
   if (!IsValid())
     return false;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
@@ -1333,7 +1334,7 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   type_alias_decl->markAsDebuggerAlias(true);
   type_alias_decl->setImplicit(true);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   if (log) {
 
     std::string s;

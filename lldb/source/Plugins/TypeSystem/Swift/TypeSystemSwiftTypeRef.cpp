@@ -19,6 +19,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
@@ -417,7 +418,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   // name as name and the aliased type as a type.
   auto mangling = GetTypeAlias(dem, node);
   if (!mangling.isSuccess()) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+    LLDB_LOGF(GetLog(LLDBLog::Types),
               "Failed while mangling type alias (%d:%u)", mangling.error().code,
               mangling.error().line);
     return {{}, {}};
@@ -437,7 +438,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
       target_sp->GetImages().FindTypes(nullptr, {mangled}, false, 1,
                                        searched_symbol_files, types);
     else {
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "No module. Couldn't resolve type alias %s",
                 mangled.AsCString());
       return {{}, {}};
@@ -450,7 +451,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     // end up pointing to a *Swift* type!
     auto clang_type = resolve_clang_type();
     if (!clang_type)
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't resolve type alias %s as a Swift or clang type.",
                 mangled.AsCString());
     return {{}, clang_type};
@@ -458,8 +459,8 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
 
   auto type = types.GetTypeAtIndex(0);
   if (!type) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "Found empty type alias %s", mangled.AsCString());
+    LLDB_LOGF(GetLog(LLDBLog::Types), "Found empty type alias %s",
+              mangled.AsCString());
     return {{}, {}};
   }
 
@@ -469,19 +470,19 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   if (!isMangledName(desugared_name.GetStringRef())) {
     // The name is not mangled, this might be a Clang typedef, try
     // to look it up as a clang type.
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+    LLDB_LOGF(GetLog(LLDBLog::Types),
               "Found non-Swift type alias %s, looking it up as clang type.",
               mangled.AsCString());
     auto clang_type = resolve_clang_type();
     if (!clang_type)
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                "Could not find a clang type for %s.", mangled.AsCString());
+      LLDB_LOGF(GetLog(LLDBLog::Types), "Could not find a clang type for %s.",
+                mangled.AsCString());
     return {{}, clang_type};
   }
   NodePointer n = GetDemangledType(dem, desugared_name.GetStringRef());
   if (!n) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-             "Unrecognized demangling %s", desugared_name.AsCString());
+    LLDB_LOG(GetLog(LLDBLog::Types), "Unrecognized demangling %s",
+             desugared_name.AsCString());
     return {{}, {}};
   }
   return {n, {}};
@@ -1230,15 +1231,15 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
     module.GetDescription(ss, eDescriptionLevelBrief);
     ss << "\")";
   }
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "%s::TypeSystemSwiftTypeRef()", m_description.c_str());
+  LLDB_LOGF(GetLog(LLDBLog::Types), "%s::TypeSystemSwiftTypeRef()",
+            m_description.c_str());
 }
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, Module &module)
     : m_target_wp(target.shared_from_this()) {
   m_description = "TypeSystemSwiftTypeRefForExpressions(PerModuleFallback)";
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+  LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",
             m_description.c_str());
   m_swift_ast_context_initialized = true;
@@ -1253,7 +1254,7 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, const char *extra_options)
     : m_target_wp(target.shared_from_this()) {
   m_description = "TypeSystemSwiftTypeRefForExpressions";
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+  LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",
             m_description.c_str());
   // Is this a REPL?
@@ -2417,7 +2418,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       return clang_type.GetBitSize(exe_scope);
     }
     if (!exe_scope) {
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't compute size of type %s without an execution "
                 "context.",
                 AsMangledName(type));
@@ -2434,7 +2435,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       if (llvm::isa_and_nonnull<SwiftASTContextForExpressions>(
               GetSwiftASTContext()))
         return ReconstructType({this, type}).GetBitSize(exe_scope);
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't compute size of type %s using SwiftLanguageRuntime.",
                 AsMangledName(type));
       return {};
@@ -2455,7 +2456,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
     // static type in the debug info.
     if (auto static_size = get_static_size(false))
       return static_size;
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+    LLDB_LOGF(GetLog(LLDBLog::Types),
               "Couldn't compute size of type %s using static debug info.",
               AsMangledName(type));
     return {};
@@ -2544,8 +2545,8 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
       return referent_type.GetEncoding(count);
     }
     default:
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                "No encoding for type %s", AsMangledName(type));
+      LLDB_LOGF(GetLog(LLDBLog::Types), "No encoding for type %s",
+                AsMangledName(type));
       break;
     }
 
@@ -2600,7 +2601,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
     }()
                         .getValueOr(0);
 
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+  LLDB_LOGF(GetLog(LLDBLog::Types),
             "Using SwiftASTContext::GetNumChildren fallback for type %s",
             AsMangledName(type));
 
@@ -2636,7 +2637,7 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
         }()
                             .getValueOr(0);
 
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+  LLDB_LOGF(GetLog(LLDBLog::Types),
             "Using SwiftASTContext::GetNumFields fallback for type %s",
             AsMangledName(type));
 
@@ -2690,7 +2691,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   child_is_deref_of_parent = false;
   language_flags = 0;
   auto fallback = [&]() -> CompilerType {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+    LLDB_LOGF(GetLog(LLDBLog::Types),
               "Had to engage SwiftASTContext fallback for type %s.",
               AsMangledName(type));
     if (auto *swift_ast_context = GetSwiftASTContext())
@@ -2816,12 +2817,12 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     return fallback();
 
     if (!exe_scope)
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Cannot compute the children of type %s without an execution "
                 "context.",
                 AsMangledName(type));
     else
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't compute size of type %s without a process.",
                 AsMangledName(type));
     return {};
@@ -2962,7 +2963,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
       assert(!found_numidx.first);
     }
 
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+  LLDB_LOGF(GetLog(LLDBLog::Types),
             "Using SwiftASTContext::GetIndexOfChildMemberWithName fallback for "
             "type %s",
             AsMangledName(type));
@@ -3477,7 +3478,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     }
     default:
       assert(false && "Unhandled node kind");
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+      LLDB_LOGF(GetLog(LLDBLog::Types),
                 "DumpTypeValue: Unhandled node kind for type %s",
                 AsMangledName(type));
       return false;
@@ -3538,7 +3539,7 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
     return clang_type.GetTypeBitAlign(exe_scope);
   }
   if (!exe_scope) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+    LLDB_LOGF(GetLog(LLDBLog::Types),
               "Couldn't compute alignment of type %s without an execution "
               "context.",
               AsMangledName(type));
@@ -3562,7 +3563,7 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
   if (TypeSP type_sp = FindTypeInModule(type))
     if (type_sp->GetLayoutCompilerType().GetOpaqueQualType() != type)
       return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+  LLDB_LOGF(GetLog(LLDBLog::Types),
             "Couldn't compute alignment of type %s using static debug info.",
             AsMangledName(type));
   return {};

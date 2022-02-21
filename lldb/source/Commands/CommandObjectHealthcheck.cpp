@@ -14,6 +14,8 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/lldb-private.h"
 
+#include "Plugins/Language/Swift/LogChannelSwift.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -25,7 +27,6 @@ CommandObjectHealthcheck::CommandObjectHealthcheck(
 
 bool CommandObjectHealthcheck::DoExecute(Args &args,
                                          CommandReturnObject &result) {
-#ifdef LLDB_ENABLE_SWIFT
   std::error_code err;
   llvm::SmallString<128> temp_path;
   int temp_fd = -1;
@@ -50,6 +51,5 @@ bool CommandObjectHealthcheck::DoExecute(Args &args,
 
   result.AppendMessageWithFormat("Health check written to %s\n",
                                  temp_path.c_str());
-#endif
   return true;
 }

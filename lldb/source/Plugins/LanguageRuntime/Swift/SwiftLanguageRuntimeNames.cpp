@@ -21,6 +21,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "swift/ABI/Task.h"
 #include "swift/Demangling/Demangle.h"
@@ -421,7 +422,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
 
   ThreadPlanSP new_thread_plan_sp;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log(GetLog(LLDBLog::Step));
   StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
   if (!stack_sp)
     return new_thread_plan_sp;

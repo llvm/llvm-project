@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include <string>
@@ -21,7 +22,7 @@ using namespace lldb_private;
 static bool VerifySwiftPath(const llvm::Twine &swift_path) {
   if (FileSystem::Instance().IsDirectory(swift_path))
     return true;
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   if (log)
     log->Printf("VerifySwiftPath(): "
                 "failed to stat swift resource directory at \"%s\"",
@@ -34,7 +35,7 @@ static bool DefaultComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
                                                  bool verify) {
   if (!lldb_shlib_spec)
     return false;
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   std::string raw_path = lldb_shlib_spec.GetPath();
   // Drop bin (windows) or lib
   llvm::StringRef parent_path = llvm::sys::path::parent_path(raw_path);
@@ -94,7 +95,7 @@ FileSpec lldb_private::GetSwiftResourceDir() {
   std::call_once(g_once_flag, []() {
     FileSpec lldb_file_spec = HostInfo::GetShlibDir();
     ComputeSwiftResourceDirectory(lldb_file_spec, g_swift_resource_dir, true);
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+    Log *log = GetLog(LLDBLog::Host);
     LLDB_LOG(log, "swift dir -> '{0}'", g_swift_resource_dir);
   });
   return g_swift_resource_dir;

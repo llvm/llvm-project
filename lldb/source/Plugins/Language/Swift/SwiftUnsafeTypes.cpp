@@ -4,8 +4,8 @@
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 
 #include <utility>
 
@@ -53,7 +53,7 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
   ConstString name(child_name);
   ValueObjectSP optional_value_sp(m_valobj.GetChildMemberWithName(name, true));
   if (!optional_value_sp || !optional_value_sp->GetNumChildren()) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.Optional' ValueObject child "
              "named {1}.",
              __FUNCTION__, name);
@@ -63,7 +63,7 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
   ValueObjectSP unsafe_ptr_value_sp =
       optional_value_sp->GetChildAtIndex(0, true);
   if (!unsafe_ptr_value_sp || !unsafe_ptr_value_sp->GetNumChildren()) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.UnsafePointer' ValueObject child "
              "named 'some'.",
              __FUNCTION__);
@@ -72,7 +72,7 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
 
   CompilerType type = unsafe_ptr_value_sp->GetCompilerType();
   if (!type.IsValid()) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get the compiler type for the "
              "'Swift.UnsafePointer' ValueObject.",
              __FUNCTION__, type.GetTypeName());
@@ -82,7 +82,7 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
   auto *type_system =
       llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
   if (!type_system) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get {1} type system.", __FUNCTION__,
              type.GetTypeName());
     return false;
@@ -97,7 +97,7 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
   ValueObjectSP pointer_value_sp =
       unsafe_ptr_value_sp->GetChildAtIndex(0, true);
   if (!pointer_value_sp) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.Int' ValueObject named "
              "'pointerValue'.",
              __FUNCTION__);
@@ -139,7 +139,7 @@ bool SwiftUnsafeBufferPointer::Update() {
   static ConstString g_count("count");
   ValueObjectSP count_value_sp(m_valobj.GetChildMemberWithName(g_count, true));
   if (!count_value_sp) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't find ValueObject child member named '{1}'.",
              __FUNCTION__, g_count);
     return false;
@@ -158,7 +158,7 @@ bool SwiftUnsafeBufferPointer::Update() {
     value_provided_child_sp = count_value_sp->GetChildAtIndex(0, true);
   // If neither child exists, fail.
   if (!value_provided_child_sp) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't extract 'value-providing synthetic children' from "
              "ValueObject 'count'.",
              __FUNCTION__);
@@ -168,7 +168,7 @@ bool SwiftUnsafeBufferPointer::Update() {
   size_t count = value_provided_child_sp->GetValueAsUnsigned(UINT64_MAX);
 
   if (count == UINT64_MAX) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid value for ValueObject 'count'.",
              __FUNCTION__);
     return false;
@@ -179,7 +179,7 @@ bool SwiftUnsafeBufferPointer::Update() {
   addr_t start_addr = GetAddress("_position");
 
   if (!start_addr || start_addr == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid address for ValueObject '_position'.",
              __FUNCTION__);
     return false;
@@ -225,7 +225,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
 
   addr_t addr = GetAddress("_position");
   if (!addr || addr == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid address for ValueObject '_position'.",
              __FUNCTION__);
     return false;
@@ -234,7 +234,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
 
   addr = GetAddress("_end");
   if (!addr || addr == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid address for ValueObject '_end'.",
              __FUNCTION__);
     return false;
@@ -244,7 +244,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
   if (!m_elem_type.IsValid()) {
     CompilerType type = m_valobj.GetCompilerType();
     if (!type.IsValid()) {
-      LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get a valid base compiler type.", __FUNCTION__);
       return false;
     }
@@ -252,7 +252,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
     auto *type_system =
         llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
     if (!type_system) {
-      LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get {1} type system.", __FUNCTION__,
                type.GetTypeName());
       return false;
@@ -261,7 +261,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
     CompilerType compiler_type =
         type_system->GetTypeFromMangledTypename(ConstString("$ss5UInt8VD"));
     if (!compiler_type.IsValid()) {
-      LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get a valid compiler type for 'Swift.UInt8'.",
                __FUNCTION__);
       return false;
@@ -273,7 +273,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
   auto opt_type_size = m_elem_type.GetByteSize(m_valobj.GetTargetSP().get());
 
   if (!opt_type_size) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get element byte size.", __FUNCTION__);
     return false;
   }
@@ -305,7 +305,7 @@ bool SwiftUnsafePointer::Update() {
 
   CompilerType type = m_valobj.GetCompilerType();
   if (!type.IsValid()) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get the compiler type for the "
              "'Swift.UnsafePointer' ValueObject.",
              __FUNCTION__, type.GetTypeName());
@@ -315,7 +315,7 @@ bool SwiftUnsafePointer::Update() {
   auto *type_system =
       llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
   if (!type_system) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get {1} type system.", __FUNCTION__,
              type.GetTypeName());
     return false;
@@ -329,7 +329,7 @@ bool SwiftUnsafePointer::Update() {
 
   ValueObjectSP pointer_value_sp(m_valobj.GetChildAtIndex(0, true));
   if (!pointer_value_sp) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.Int' ValueObject named "
              "'pointerValue'.",
              __FUNCTION__);
@@ -350,7 +350,7 @@ bool SwiftUnsafePointer::Update() {
 std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
   CompilerType type = valobj.GetCompilerType();
   if (!type.IsValid()) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid base compiler type.", __FUNCTION__);
     return nullptr;
   }
@@ -359,7 +359,7 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
   while (true) {
     opaque_compiler_type_t qual_type = type.GetOpaqueQualType();
     if (!qual_type) {
-      LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get {1} opaque compiler type.", __FUNCTION__,
                type.GetTypeName());
       return nullptr;
@@ -368,7 +368,7 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
     auto *type_system =
         llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
     if (!type_system) {
-      LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get {1} type system.", __FUNCTION__,
                type.GetTypeName());
       return nullptr;
@@ -381,7 +381,7 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
   }
 
   if (!type.IsValid()) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't resolve a valid base compiler type.", __FUNCTION__);
     return nullptr;
   }

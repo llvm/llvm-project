@@ -1,7 +1,7 @@
 #include "LLDBMemoryReader.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 
 #include "llvm/Support/MathExtras.h"
 
@@ -56,7 +56,7 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
   if (name.empty())
     return swift::remote::RemoteAddress(nullptr);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
 
   LLDB_LOGV(log, "[MemoryReader] asked to retrieve the address of symbol {0}",
             name);
@@ -161,7 +161,7 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
 swift::remote::RemoteAbsolutePointer
 LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
                                  uint64_t readValue) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
 
   // We may have gotten a pointer to a process address, try to map it back
   // to a tagged address so further memory reads originating from it benefit
@@ -239,7 +239,7 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
     }
   }
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
 
   LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
             size, address.getAddressData());
@@ -292,7 +292,7 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
 
 bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
                                   std::string &dest) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
 
   LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0x}",
             address.getAddressData());
