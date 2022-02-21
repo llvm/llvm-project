@@ -1218,9 +1218,7 @@ CompilerType TypeSystemSwift::GetInstanceType(CompilerType compiler_type) {
   return {};
 }
 
-#ifndef NDEBUG
 TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef() {}
-#endif
 
 TypeSystemSwiftTypeRef::~TypeSystemSwiftTypeRef() {}
 
@@ -1238,7 +1236,8 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, Module &module)
-    : m_target_wp(target.shared_from_this()) {
+  : TypeSystemSwiftTypeRef(module),
+    m_target_wp(target.shared_from_this()) {
   m_description = "TypeSystemSwiftTypeRefForExpressions(PerModuleFallback)";
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",
@@ -1253,7 +1252,7 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, const char *extra_options)
-    : m_target_wp(target.shared_from_this()) {
+  : m_target_wp(target.shared_from_this()) {
   m_description = "TypeSystemSwiftTypeRefForExpressions";
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",

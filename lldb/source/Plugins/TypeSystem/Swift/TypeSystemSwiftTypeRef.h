@@ -51,10 +51,12 @@ public:
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
   /// \}
 
-#ifndef NDEBUG
+#ifdef NDEBUG
+protected:
+#endif
   /// Provided only for unit tests.
   TypeSystemSwiftTypeRef();
-#endif
+public:  
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   /// Get the corresponding SwiftASTContext, and create one if necessary.
