@@ -9047,9 +9047,10 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return SplitVectorStore(Op, DAG);
 
     return expandUnalignedStore(Store, DAG);
-  } else {
-    llvm_unreachable("unhandled address space");
   }
+
+  // Probably an invalid store. If so we'll end up emitting a selection error.
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
