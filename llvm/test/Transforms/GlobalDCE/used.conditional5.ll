@@ -14,4 +14,4 @@
 ; CHECK-NOT: @dep1
 ; CHECK: !llvm.used.conditional = !{!0}
 ; CHECK: !0 = distinct !{null, i32 0, !1}
-; CHECK: !1 = !{i8* undef}
+; CHECK: !1 = distinct !{null}
