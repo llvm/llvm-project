@@ -907,7 +907,7 @@ class VPseudoNullaryNoMaskTU<VReg RegClass>:
 class VPseudoNullaryMask<VReg RegClass>:
       Pseudo<(outs GetVRegNoV0<RegClass>.R:$rd),
              (ins GetVRegNoV0<RegClass>.R:$merge, VMaskOp:$vm, AVL:$vl,
-              ixlenimm:$sew), []>, RISCVVPseudo {
+              ixlenimm:$sew, ixlenimm:$policy), []>, RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -916,6 +916,7 @@ class VPseudoNullaryMask<VReg RegClass>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let UsesMaskPolicy = 1;
+  let HasVecPolicyOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1730,7 +1731,7 @@ multiclass VPseudoVIOT_M {
                        Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
       def "_" # m.MX # "_TU" : VPseudoUnaryNoMaskTU<m.vrclass, VR, constraint>,
                                Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
-      def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
+      def "_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, VR, constraint>,
                                  Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
     }
   }
@@ -3307,8 +3308,8 @@ multiclass VPatUnaryV_M<string intrinsic, string instruction>
                           vti.Log2SEW, vti.LMul, VR>;
     def : VPatUnaryNoMaskTU<intrinsic, instruction, "M", vti.Vector, vti.Mask,
                             vti.Log2SEW, vti.LMul, vti.RegClass,VR>;
-    def : VPatUnaryMask<intrinsic, instruction, "M", vti.Vector, vti.Mask,
-                        vti.Mask, vti.Log2SEW, vti.LMul, vti.RegClass, VR>;
+    def : VPatUnaryMaskTA<intrinsic, instruction, "M", vti.Vector, vti.Mask,
+                          vti.Mask, vti.Log2SEW, vti.LMul, vti.RegClass, VR>;
   }
 }
 
@@ -3361,10 +3362,10 @@ multiclass VPatNullaryV<string intrinsic, string instruction>
                           vti.RegClass:$merge, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (!cast<Intrinsic>(intrinsic # "_mask")
                           (vti.Vector vti.RegClass:$merge),
-                          (vti.Mask V0), VLOpFrag)),
+                          (vti.Mask V0), VLOpFrag, (XLenVT timm:$policy))),
                           (!cast<Instruction>(instruction#"_V_" # vti.LMul.MX # "_MASK")
                           vti.RegClass:$merge, (vti.Mask V0),
-                          GPR:$vl, vti.Log2SEW)>;
+                          GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
   }
 }
 

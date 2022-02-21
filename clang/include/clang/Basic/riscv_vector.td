@@ -2007,6 +2007,7 @@ def vmsif : RVVMaskUnaryBuiltin;
 
 // 16.6. vmsof.m set-only-first mask bit
 def vmsof : RVVMaskUnaryBuiltin;
+}
 
 let NoMaskPolicy = HasPassthruOperand, HasNoMaskedOverloaded = false in {
   // 16.8. Vector Iota Instruction
@@ -2015,7 +2016,6 @@ let NoMaskPolicy = HasPassthruOperand, HasNoMaskedOverloaded = false in {
   // 16.9. Vector Element Index Instruction
   defm vid : RVVOutBuiltinSet<"vid", "csil", [["v", "v", "v"],
                                               ["v", "Uv", "Uv"]]>;
-}
 }
 
 // 17. Vector Permutation Instructions
