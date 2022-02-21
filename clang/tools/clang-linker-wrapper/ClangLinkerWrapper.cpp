@@ -151,9 +151,11 @@ static codegen::RegisterCodeGenFlags CodeGenFlags;
 
 /// Information for a device offloading file extracted from the host.
 struct DeviceFile {
-  DeviceFile(StringRef TheTriple, StringRef Arch, StringRef Filename)
-      : TheTriple(TheTriple), Arch(Arch), Filename(Filename) {}
+  DeviceFile(StringRef Kind, StringRef TheTriple, StringRef Arch,
+             StringRef Filename)
+      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename) {}
 
+  std::string Kind;
   std::string TheTriple;
   std::string Arch;
   std::string Filename;
@@ -165,10 +167,12 @@ template <> struct DenseMapInfo<DeviceFile> {
   static DeviceFile getEmptyKey() {
     return {DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<StringRef>::getEmptyKey(),
+            DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<StringRef>::getEmptyKey()};
   }
   static DeviceFile getTombstoneKey() {
     return {DenseMapInfo<StringRef>::getTombstoneKey(),
+            DenseMapInfo<StringRef>::getTombstoneKey(),
             DenseMapInfo<StringRef>::getTombstoneKey(),
             DenseMapInfo<StringRef>::getTombstoneKey()};
   }
@@ -213,12 +217,13 @@ std::string getMainExecutable(const char *Name) {
   return sys::path::parent_path(COWPath).str();
 }
 
-/// Extract the device file from the string '<triple>-<arch>=<library>.bc'.
+/// Extract the device file from the string '<kind>-<triple>-<arch>=<library>'.
 DeviceFile getBitcodeLibrary(StringRef LibraryStr) {
   auto DeviceAndPath = StringRef(LibraryStr).split('=');
-  auto TripleAndArch = DeviceAndPath.first.rsplit('-');
-  return DeviceFile(TripleAndArch.first, TripleAndArch.second,
-                    DeviceAndPath.second);
+  auto StringAndArch = DeviceAndPath.first.rsplit('-');
+  auto KindAndTriple = StringAndArch.first.split('-');
+  return DeviceFile(KindAndTriple.first, KindAndTriple.second,
+                    StringAndArch.second, DeviceAndPath.second);
 }
 
 /// Get a temporary filename suitable for output.
@@ -299,16 +304,17 @@ extractFromBinary(const ObjectFile &Obj,
 
     SmallVector<StringRef, 4> SectionFields;
     Name->split(SectionFields, '.');
-    StringRef DeviceTriple = SectionFields[3];
-    StringRef Arch = SectionFields[4];
+    StringRef Kind = SectionFields[3];
+    StringRef DeviceTriple = SectionFields[4];
+    StringRef Arch = SectionFields[5];
 
     if (Expected<StringRef> Contents = Sec.getContents()) {
       SmallString<128> TempFile;
       StringRef DeviceExtension = getDeviceFileExtension(
           DeviceTriple, identify_magic(*Contents) == file_magic::bitcode);
-      if (Error Err =
-              createOutputFile(Prefix + "-device-" + DeviceTriple + "-" + Arch,
-                               DeviceExtension, TempFile))
+      if (Error Err = createOutputFile(Prefix + "-" + Kind + "-" +
+                                           DeviceTriple + "-" + Arch,
+                                       DeviceExtension, TempFile))
         return std::move(Err);
 
       Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -320,7 +326,7 @@ extractFromBinary(const ObjectFile &Obj,
       if (Error E = Output->commit())
         return std::move(E);
 
-      DeviceFiles.emplace_back(DeviceTriple, Arch, TempFile);
+      DeviceFiles.emplace_back(Kind, DeviceTriple, Arch, TempFile);
       ToBeStripped.push_back(*Name);
     }
   }
@@ -412,16 +418,17 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
     SmallVector<StringRef, 4> SectionFields;
     GV.getSection().split(SectionFields, '.');
-    StringRef DeviceTriple = SectionFields[3];
-    StringRef Arch = SectionFields[4];
+    StringRef Kind = SectionFields[3];
+    StringRef DeviceTriple = SectionFields[4];
+    StringRef Arch = SectionFields[5];
 
     StringRef Contents = CDS->getAsString();
     SmallString<128> TempFile;
     StringRef DeviceExtension = getDeviceFileExtension(
         DeviceTriple, identify_magic(Contents) == file_magic::bitcode);
-    if (Error Err =
-            createOutputFile(Prefix + "-device-" + DeviceTriple + "-" + Arch,
-                             DeviceExtension, TempFile))
+    if (Error Err = createOutputFile(Prefix + "-" + Kind + "-" + DeviceTriple +
+                                         "-" + Arch,
+                                     DeviceExtension, TempFile))
       return std::move(Err);
 
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -433,7 +440,7 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     if (Error E = Output->commit())
       return std::move(E);
 
-    DeviceFiles.emplace_back(DeviceTriple, Arch, TempFile);
+    DeviceFiles.emplace_back(Kind, DeviceTriple, Arch, TempFile);
     ToBeDeleted.push_back(&GV);
   }
 

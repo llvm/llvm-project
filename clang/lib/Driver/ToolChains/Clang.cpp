@@ -6977,7 +6977,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       StringRef InputName = Clang::getBaseInputStem(Args, Inputs);
 
       CmdArgs.push_back(Args.MakeArgString(
-          "-fembed-offload-object=" + File + "," + TC->getTripleString() + "." +
+          "-fembed-offload-object=" + File + "," +
+          Action::GetOffloadKindName(Action::OFK_OpenMP) + "." +
+          TC->getTripleString() + "." +
           TCArgs.getLastArgValue(options::OPT_march_EQ) + "." + InputName));
     }
   }
@@ -8297,9 +8299,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                          TC->getTriple());
 
       if (!BitcodeLibrary.empty())
-        CmdArgs.push_back(
-            Args.MakeArgString("-target-library=" + TC->getTripleString() +
-                               "-" + Arch + "=" + BitcodeLibrary.back()));
+        CmdArgs.push_back(Args.MakeArgString(
+            "-target-library=" +
+            Action::GetOffloadKindName(Action::OFK_OpenMP) + "-" +
+            TC->getTripleString() + "-" + Arch + "=" + BitcodeLibrary.back()));
     }
 
     // Pass in the optimization level to use for LTO.
