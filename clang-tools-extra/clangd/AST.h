@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -126,6 +127,17 @@ QualType declaredType(const TypeDecl *D);
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
 llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+
+// Find the abbreviated-function-template `auto` within a type, or returns null.
+// Similar to getContainedAutoTypeLoc, but these `auto`s are
+// TemplateTypeParmTypes for implicit TTPs, instead of AutoTypes.
+// Also we don't look very hard, just stripping const, references, pointers.
+// FIXME: handle more type patterns.
+TemplateTypeParmTypeLoc getContainedAutoParamType(TypeLoc TL);
+
+// If TemplatedDecl is the generic body of a template, and the template has
+// exactly one visible instantiation, return the instantiated body.
+NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl);
 
 /// Return attributes attached directly to a node.
 std::vector<const Attr *> getAttributes(const DynTypedNode &);

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "InlayHints.h"
+#include "AST.h"
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
@@ -299,7 +300,44 @@ public:
         addTypeHint(D->getLocation(), D->getType(), /*Prefix=*/": ");
       }
     }
+
+    // Handle templates like `int foo(auto x)` with exactly one instantiation.
+    if (auto *PVD = llvm::dyn_cast<ParmVarDecl>(D)) {
+      if (D->getIdentifier() && PVD->getType()->isDependentType() &&
+          !getContainedAutoParamType(D->getTypeSourceInfo()->getTypeLoc())
+               .isNull()) {
+        if (auto *IPVD = getOnlyParamInstantiation(PVD))
+          addTypeHint(D->getLocation(), IPVD->getType(), /*Prefix=*/": ");
+      }
+    }
+
     return true;
+  }
+
+  ParmVarDecl *getOnlyParamInstantiation(ParmVarDecl *D) {
+    auto *TemplateFunction = llvm::dyn_cast<FunctionDecl>(D->getDeclContext());
+    if (!TemplateFunction)
+      return nullptr;
+    auto *InstantiatedFunction = llvm::dyn_cast_or_null<FunctionDecl>(
+        getOnlyInstantiation(TemplateFunction));
+    if (!InstantiatedFunction)
+      return nullptr;
+
+    unsigned ParamIdx = 0;
+    for (auto *Param : TemplateFunction->parameters()) {
+      // Can't reason about param indexes in the presence of preceding packs.
+      // And if this param is a pack, it may expand to multiple params.
+      if (Param->isParameterPack())
+        return nullptr;
+      if (Param == D)
+        break;
+      ++ParamIdx;
+    }
+    assert(ParamIdx < TemplateFunction->getNumParams() &&
+           "Couldn't find param in list?");
+    assert(ParamIdx < InstantiatedFunction->getNumParams() &&
+           "Instantiated function has fewer (non-pack) parameters?");
+    return InstantiatedFunction->getParamDecl(ParamIdx);
   }
 
   bool VisitInitListExpr(InitListExpr *Syn) {

@@ -58,7 +58,7 @@ MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
     return false;
   }
   if (arg.range != Code.range(Expected.RangeName)) {
-    *result_listener << "range is " << arg.label << " but $"
+    *result_listener << "range is " << llvm::to_string(arg.range) << " but $"
                      << Expected.RangeName << " is "
                      << llvm::to_string(Code.range(Expected.RangeName));
     return false;
@@ -81,7 +81,7 @@ void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
                  ExpectedHints... Expected) {
   Annotations Source(AnnotatedSource);
   TestTU TU = TestTU::withCode(Source.code());
-  TU.ExtraArgs.push_back("-std=c++14");
+  TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();
 
   EXPECT_THAT(hintsOfKind(AST, Kind),
@@ -686,6 +686,22 @@ TEST(TypeHints, Deduplication) {
     template void foo<float>();
   )cpp",
                   ExpectedHint{": int", "var"});
+}
+
+TEST(TypeHints, SinglyInstantiatedTemplate) {
+  assertTypeHints(R"cpp(
+    auto $lambda[[x]] = [](auto *$param[[y]], auto) { return 42; };
+    int m = x("foo", 3);
+  )cpp",
+                  ExpectedHint{": (lambda)", "lambda"},
+                  ExpectedHint{": const char *", "param"});
+
+  // No hint for packs, or auto params following packs
+  assertTypeHints(R"cpp(
+    int x(auto $a[[a]], auto... b, auto c) { return 42; }
+    int m = x<void*, char, float>(nullptr, 'c', 2.0, 2);
+  )cpp",
+                  ExpectedHint{": void *", "a"});
 }
 
 TEST(DesignatorHints, Basic) {
