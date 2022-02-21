@@ -596,3 +596,18 @@ define void @store_extractelt_v4i64(<2 x i64>* %x, i64* %p) nounwind {
   store i64 %b, i64* %p
   ret void
 }
+
+define void @store_extractelt_v4f64(<2 x double>* %x, double* %p) nounwind {
+; CHECK-LABEL: store_extractelt_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = extractelement <2 x double> %a, i64 1
+  store double %b, double* %p
+  ret void
+}

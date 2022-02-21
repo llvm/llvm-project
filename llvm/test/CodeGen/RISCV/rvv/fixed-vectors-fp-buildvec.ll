@@ -58,18 +58,17 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    addi sp, sp, -32
 ; LMULMAX2-NEXT:    .cfi_def_cfa_offset 32
-; LMULMAX2-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
-; LMULMAX2-NEXT:    vfmv.f.s ft0, v10
-; LMULMAX2-NEXT:    fsw ft0, 24(sp)
-; LMULMAX2-NEXT:    vfmv.f.s ft0, v8
-; LMULMAX2-NEXT:    fsw ft0, 16(sp)
+; LMULMAX2-NEXT:    addi a0, sp, 24
 ; LMULMAX2-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vse32.v v10, (a0)
 ; LMULMAX2-NEXT:    vslidedown.vi v10, v10, 7
-; LMULMAX2-NEXT:    vfmv.f.s ft0, v10
-; LMULMAX2-NEXT:    fsw ft0, 28(sp)
-; LMULMAX2-NEXT:    vslidedown.vi v8, v8, 7
-; LMULMAX2-NEXT:    vfmv.f.s ft0, v8
-; LMULMAX2-NEXT:    fsw ft0, 20(sp)
+; LMULMAX2-NEXT:    addi a0, sp, 28
+; LMULMAX2-NEXT:    vse32.v v10, (a0)
+; LMULMAX2-NEXT:    vslidedown.vi v10, v8, 7
+; LMULMAX2-NEXT:    addi a0, sp, 20
+; LMULMAX2-NEXT:    vse32.v v10, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 16
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX2-NEXT:    addi a0, sp, 16
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
