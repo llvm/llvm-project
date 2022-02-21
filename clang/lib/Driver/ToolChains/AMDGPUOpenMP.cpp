@@ -17,6 +17,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -185,6 +186,19 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     libpath = lib_debug_path;
 
   llvm::SmallVector<std::string, 12> BCLibs;
+
+  if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                   true) &&
+      AMDGPUOpenMPTC.getSanitizerArgs(Args).needsAsanRt()) {
+    std::string AsanRTL(
+        AMDGPUOpenMPTC.getRocmInstallationLoc().getAsanRTLPath());
+    if (AsanRTL.empty()) {
+      AMDGPUOpenMPTC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+    } else {
+      BCLibs.push_back(AsanRTL);
+    }
+  }
+
   if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
                    options::OPT_fno_openmp_target_new_runtime, false))
     BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
@@ -557,9 +571,11 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
   const OptTable &Opts = getDriver().getOpts();
 
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args)
-      if (!llvm::is_contained(*DAL, A))
+    for (Arg *A : Args) {
+      if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+          !llvm::is_contained(*DAL, A))
         DAL->append(A);
+    }
 
     std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
     if (Arch.empty()) {

@@ -131,6 +131,10 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
+  RocmInstallationDetector getRocmInstallationLoc() const {
+    return RocmInstallation;
+  }
+
   VersionTuple
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
