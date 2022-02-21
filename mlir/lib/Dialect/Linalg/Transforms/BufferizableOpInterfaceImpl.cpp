@@ -1,4 +1,4 @@
-//===- LinalgInterfaceImpl.cpp - Linalg Impl. of BufferizableOpInterface --===//
+//===- BufferizableOpInterfaceImpl.cpp - Impl. of BufferizableOpInterface -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -17,7 +17,6 @@
 
 using namespace mlir;
 using namespace linalg;
-using namespace comprehensive_bufferize;
 using namespace mlir::bufferization;
 
 namespace {
@@ -529,8 +528,7 @@ findValidInsertionPoint(Operation *initTensorOp,
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
-LogicalResult
-mlir::linalg::comprehensive_bufferize::linalg_ext::eliminateInitTensors(
+LogicalResult mlir::linalg::eliminateInitTensors(
     Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
     AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
     SmallVector<Operation *> &newOps) {
@@ -632,10 +630,9 @@ mlir::linalg::comprehensive_bufferize::linalg_ext::eliminateInitTensors(
 ///
 /// Note that the newly inserted ExtractSliceOp may have to bufferize
 /// out-of-place due to RaW conflicts.
-LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
-    insertSliceAnchoredInitTensorEliminationStep(
-        Operation *op, BufferizationState &state,
-        BufferizationAliasInfo &aliasInfo, SmallVector<Operation *> &newOps) {
+LogicalResult mlir::linalg::insertSliceAnchoredInitTensorEliminationStep(
+    Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
+    SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(
       op, state, aliasInfo,
       /*anchorMatchFunc=*/
@@ -688,8 +685,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
       newOps);
 }
 
-void mlir::linalg::comprehensive_bufferize::linalg_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
+void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
+    DialectRegistry &registry) {
   registry.addOpInterface<linalg::InitTensorOp, InitTensorOpInterface>();
   registry.addOpInterface<linalg::TiledLoopOp, TiledLoopOpInterface>();
   registry.addOpInterface<linalg::YieldOp, YieldOpInterface>();
