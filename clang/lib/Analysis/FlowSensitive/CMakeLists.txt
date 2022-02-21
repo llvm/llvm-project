@@ -3,6 +3,7 @@ add_clang_library(clangAnalysisFlowSensitive
   DataflowEnvironment.cpp
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
+  WatchedLiteralsSolver.cpp
 
   LINK_LIBS
   clangAnalysis
