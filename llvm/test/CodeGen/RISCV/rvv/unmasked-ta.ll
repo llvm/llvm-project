@@ -1124,9 +1124,6 @@ define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64(i64 %0, iXLen %1) nounwin
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vmseq.vi v0, v9, 0
-; RV32-NEXT:    vmerge.vvm v8, v8, v8, v0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
