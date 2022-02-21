@@ -6,6 +6,7 @@ set(amd_comgr_NAME "${PROJECT_NAME}")
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+option(FILE_REORG_BACKWARD_COMPATIBILITY "Enable File Reorg with backward compatibility" ON)
 # Optionally, build Compiler Support with ccache.
 set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if (ROCM_CCACHE_BUILD)
@@ -247,7 +248,12 @@ install(TARGETS amd_comgr
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
   COMPONENT amd-comgr
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${amd_comgr_NAME})
+
+#File reorg Backward compatibility function
+if(FILE_REORG_BACKWARD_COMPATIBILITY)
+  include(comgr-backward-compat.cmake)
+endif()
 
 install(FILES
   "README.md"
