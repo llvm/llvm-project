@@ -10974,6 +10974,8 @@ public:
     NotScalar,
     /// Not an integer.
     NotInteger,
+    /// 'else' statement is not expected.
+    UnexpectedElse,
     /// No error.
     NoError,
   };
@@ -11108,6 +11110,13 @@ bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
     ErrorInfo.Error = ErrorTy::InvalidBinaryOp;
     ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
     ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+    return false;
+  }
+
+  if (S->getElse()) {
+    ErrorInfo.Error = ErrorTy::UnexpectedElse;
+    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getElse()->getBeginLoc();
+    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = S->getElse()->getSourceRange();
     return false;
   }
 

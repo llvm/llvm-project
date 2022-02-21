@@ -473,6 +473,15 @@ void compare(void) {
       x = e;
     d = e;
   }
+// omp51-error@+7 {{the statement for 'atomic compare' must be a compound statement of form '{x = expr ordop x ? expr : x;}', '{x = x ordop expr? expr : x;}', '{x = x == e ? d : x;}', '{x = e == x ? d : x;}', or 'if(expr ordop x) {x = expr;}', 'if(x ordop expr) {x = expr;}', 'if(x == e) {x = d;}', 'if(e == x) {x = d;}' where 'x' is an lvalue expression with scalar type, 'expr', 'e', and 'd' are expressions with scalar type, and 'ordop' is one of '<' or '>'.}}
+// omp51-note@+6 {{unexpected 'else' statement}}
+#pragma omp atomic compare
+  {
+    if (x > e)
+      x = e;
+    else
+      d = e;
+  }
   float fx = 0.0f;
   float fd = 0.0f;
   float fe = 0.0f;
