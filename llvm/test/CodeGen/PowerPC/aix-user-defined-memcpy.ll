@@ -102,7 +102,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-REL-NOT:  Type: R_RBR (0x1A)
 
 ; 32-DIS:      Disassembly of section .text:
-; 32-DIS:      00000000 <.text>:
+; 32-DIS:      00000000 <.memcpy>:
 ; 32-DIS-NEXT:        0: 38 60 00 03                   li 3, 3
 ; 32-DIS-NEXT:        4: 4e 80 00 20                   blr
 ; 32-DIS-NEXT:        8: 60 00 00 00                   nop
