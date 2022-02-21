@@ -48,6 +48,7 @@ set(files
   __algorithm/merge.h
   __algorithm/min.h
   __algorithm/min_element.h
+  __algorithm/min_max_result.h
   __algorithm/minmax.h
   __algorithm/minmax_element.h
   __algorithm/mismatch.h
