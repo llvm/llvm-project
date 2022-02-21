@@ -212,6 +212,13 @@ public:
   presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>>
   getRationalLexMin() const;
 
+  /// Same as above, but returns lexicographically minimal integer point.
+  /// Note: this should be used only when the lexmin is really required.
+  /// For a generic integer sampling operation, findIntegerSample is more
+  /// robust and should be preferred.
+  presburger_utils::MaybeOptimum<SmallVector<int64_t, 8>>
+  getIntegerLexMin() const;
+
   /// Swap the posA^th identifier with the posB^th identifier.
   virtual void swapId(unsigned posA, unsigned posB);
 
