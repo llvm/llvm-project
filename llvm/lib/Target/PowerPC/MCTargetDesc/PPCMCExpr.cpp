@@ -110,9 +110,18 @@ PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
 
   if (Value.isAbsolute()) {
     int64_t Result = evaluateAsInt64(Value.getConstant());
-    if ((Fixup == nullptr || (unsigned)Fixup->getKind() != PPC::fixup_ppc_half16) &&
-        (Result >= 0x8000))
+    bool IsHalf16 = Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16;
+    bool IsHalf16DS =
+        Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16ds;
+    bool IsHalf16DQ =
+        Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16dq;
+    bool IsHalf = IsHalf16 || IsHalf16DS || IsHalf16DQ;
+
+    if (!IsHalf && Result >= 0x8000)
       return false;
+    if ((IsHalf16DS && (Result & 0x3)) || (IsHalf16DQ && (Result & 0xf)))
+      return false;
+
     Res = MCValue::get(Result);
   } else {
     if (!Layout)
