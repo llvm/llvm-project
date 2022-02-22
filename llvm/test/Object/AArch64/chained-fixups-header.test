@@ -1,3 +1,4 @@
+REQUIRES: host-byteorder-little-endian
 RUN: cat %p/../Inputs/MachO/chained-fixups.yaml \
 RUN:   | sed 's/__LINKEDIT:      00000000/__LINKEDIT:      AB000000/' \
 RUN:   | yaml2obj | not llvm-objdump --macho --dyld_info - 2>&1 \
