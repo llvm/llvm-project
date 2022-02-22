@@ -907,6 +907,10 @@ def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_ex2_approx_f>;
 def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_ex2_approx_d>;
+def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16 \t$dst, $src0;",
+  Float16Regs, Float16Regs, int_nvvm_ex2_approx_f16, [hasPTX70, hasSM75]>;
+def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2 \t$dst, $src0;",
+  Float16x2Regs, Float16x2Regs, int_nvvm_ex2_approx_f16x2, [hasPTX70, hasSM75]>;
 
 def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_ftz_f>;
