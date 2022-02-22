@@ -477,12 +477,11 @@ define void @complex_lea_alt8(i1 %b, i16* readnone %ptr, i64 %idx) {
 define i32 @loadfold_select_const_arms(i32* %x, i1 %y) {
 ; CHECK-LABEL: loadfold_select_const_arms:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    leal -10(%rax), %ecx
-; CHECK-NEXT:    addl $10, %eax
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    cmovel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl $10, %ecx
+; CHECK-NEXT:    movl $-10, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    addl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %cond = select i1 %y, i32 10, i32 -10
   %t0 = load i32, i32* %x, align 4
@@ -522,12 +521,11 @@ define void @rmw_add_select_const_arm(i32* %x, i1 %y, i32 %z) {
 define void @rmw_select_const_arms(i32* %x, i1 %y) {
 ; CHECK-LABEL: rmw_select_const_arms:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    leal -10(%rax), %ecx
-; CHECK-NEXT:    addl $10, %eax
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    cmovel %ecx, %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    movl $10, %eax
+; CHECK-NEXT:    movl $-10, %ecx
+; CHECK-NEXT:    cmovnel %eax, %ecx
+; CHECK-NEXT:    addl %ecx, (%rdi)
 ; CHECK-NEXT:    retq
   %cond = select i1 %y, i32 10, i32 -10
   %t0 = load i32, i32* %x, align 4
@@ -557,13 +555,12 @@ define i32 @rmw_select_const_arms_extra_load_use(i32* %x, i1 %y) {
 define i32 @rmw_select_const_arms_extra_add_use(i32* %x, i1 %y) {
 ; CHECK-LABEL: rmw_select_const_arms_extra_add_use:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    leal -10(%rax), %ecx
-; CHECK-NEXT:    addl $10, %eax
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    movl $10, %ecx
+; CHECK-NEXT:    movl $-10, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    addl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %cond = select i1 %y, i32 10, i32 -10
   %t0 = load i32, i32* %x, align 4

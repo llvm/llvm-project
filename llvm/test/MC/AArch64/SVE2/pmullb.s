@@ -13,11 +13,11 @@
 pmullb z0.h, z1.b, z2.b
 // CHECK-INST: pmullb z0.h, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x68,0x42,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 68 42 45 <unknown>
 
 pmullb z31.d, z31.s, z31.s
 // CHECK-INST: pmullb z31.d, z31.s, z31.s
 // CHECK-ENCODING: [0xff,0x6b,0xdf,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: ff 6b df 45 <unknown>

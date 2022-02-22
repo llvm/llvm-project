@@ -5,6 +5,7 @@
 
 namespace mlir {
 namespace bufferization {
+struct AnalysisBufferizationOptions;
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -28,6 +29,15 @@ std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// bufferization.to_tensor and bufferization.to_memref operations.
 std::unique_ptr<OperationPass<FuncOp>> createFinalizingBufferizePass();
+
+/// Create a pass that bufferizes all ops that implement BufferizableOpInterface
+/// with One-Shot Bufferize.
+std::unique_ptr<Pass> createOneShotBufferizePass();
+
+/// Create a pass that bufferizes all ops that implement BufferizableOpInterface
+/// with One-Shot Bufferize and the specified bufferization options.
+std::unique_ptr<Pass>
+createOneShotBufferizePass(const AnalysisBufferizationOptions &options);
 
 /// Creates a pass that promotes heap-based allocations to stack-based ones.
 /// Only buffers smaller than the provided size are promoted.

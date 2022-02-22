@@ -59,7 +59,7 @@ def get_spirv_doc_from_html_spec(url, settings):
         # Ignore the first line, which is just the opname.
         doc[opname] = inst_html.text.split('\n', 1)[1].strip()
   else:
-    section_anchor = spirv.find('h3', {'id': '_a_id_instructions_a_instructions'})
+    section_anchor = spirv.find('h3', {'id': '_instructions_3'})
     for section in section_anchor.parent.find_all('div', {'class': 'sect3'}):
       for table in section.find_all('table'):
         inst_html = table.tbody.tr.td.p

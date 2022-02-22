@@ -1434,6 +1434,23 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.getEnvironment() == Triple::MacABI);
   EXPECT_TRUE(T.isMacCatalystEnvironment());
   EXPECT_FALSE(T.isSimulatorEnvironment());
+
+  T = Triple("x86_64-apple-driverkit20.1.0");
+  EXPECT_TRUE(T.isDriverKit());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(20, 1), Version);
+
+  T = Triple("x86_64-apple-driverkit20");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(20, 0), Version);
+
+  // DriverKit version should default to 19.0.
+  T = Triple("x86_64-apple-driverkit");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(19, 0), Version);
 }
 
 TEST(TripleTest, getEnvironmentVersion) {

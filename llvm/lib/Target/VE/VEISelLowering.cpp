@@ -1681,6 +1681,15 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 TargetLowering::LegalizeAction
 VETargetLowering::getCustomOperationAction(SDNode &Op) const {
+  // Custom legalization on VVP_* and VEC_* opcodes is required to pack-legalize
+  // these operations (transform nodes such that their AVL parameter refers to
+  // packs of 64bit, instead of number of elements.
+
+  // Packing opcodes are created with a pack-legal AVL (LEGALAVL). No need to
+  // re-visit them.
+  if (isPackingSupportOpcode(Op.getOpcode()))
+    return Legal;
+
   // Custom lower to legalize AVL for packed mode.
   if (isVVPOrVEC(Op.getOpcode()))
     return Custom;

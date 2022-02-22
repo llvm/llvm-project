@@ -61,7 +61,7 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
   switch (fn) {
   case TestFunction::Sample:
     maybeSample = poly.findIntegerSample();
-    maybeLexMin = poly.getIntegerLexMin();
+    maybeLexMin = poly.findIntegerLexMin();
 
     if (!hasSample) {
       EXPECT_FALSE(maybeSample.hasValue());
@@ -1081,7 +1081,7 @@ TEST(IntegerPolyhedronTest, negativeDividends) {
 
 void expectRationalLexMin(const IntegerPolyhedron &poly,
                           ArrayRef<Fraction> min) {
-  auto lexMin = poly.getRationalLexMin();
+  auto lexMin = poly.findRationalLexMin();
   ASSERT_TRUE(lexMin.isBounded());
   EXPECT_EQ(ArrayRef<Fraction>(*lexMin), min);
 }
@@ -1089,7 +1089,7 @@ void expectRationalLexMin(const IntegerPolyhedron &poly,
 void expectNoRationalLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
   ASSERT_NE(kind, OptimumKind::Bounded)
       << "Use expectRationalLexMin for bounded min";
-  EXPECT_EQ(poly.getRationalLexMin().getKind(), kind);
+  EXPECT_EQ(poly.findRationalLexMin().getKind(), kind);
 }
 
 TEST(IntegerPolyhedronTest, getRationalLexMin) {
@@ -1164,7 +1164,7 @@ TEST(IntegerPolyhedronTest, getRationalLexMin) {
 }
 
 void expectIntegerLexMin(const IntegerPolyhedron &poly, ArrayRef<int64_t> min) {
-  auto lexMin = poly.getIntegerLexMin();
+  auto lexMin = poly.findIntegerLexMin();
   ASSERT_TRUE(lexMin.isBounded());
   EXPECT_EQ(ArrayRef<int64_t>(*lexMin), min);
 }
@@ -1172,7 +1172,7 @@ void expectIntegerLexMin(const IntegerPolyhedron &poly, ArrayRef<int64_t> min) {
 void expectNoIntegerLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
   ASSERT_NE(kind, OptimumKind::Bounded)
       << "Use expectRationalLexMin for bounded min";
-  EXPECT_EQ(poly.getRationalLexMin().getKind(), kind);
+  EXPECT_EQ(poly.findRationalLexMin().getKind(), kind);
 }
 
 TEST(IntegerPolyhedronTest, getIntegerLexMin) {
