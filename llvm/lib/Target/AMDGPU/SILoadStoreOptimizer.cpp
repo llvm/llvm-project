@@ -79,7 +79,8 @@ enum InstClassEnum {
   MIMG,
   TBUFFER_LOAD,
   TBUFFER_STORE,
-  GLOBAL_LOAD
+  GLOBAL_LOAD,
+  GLOBAL_LOAD_SADDR
 };
 
 struct AddressRegs {
@@ -87,6 +88,7 @@ struct AddressRegs {
   bool SBase = false;
   bool SRsrc = false;
   bool SOffset = false;
+  bool SAddr = false;
   bool VAddr = false;
   bool Addr = false;
   bool SSamp = false;
@@ -305,14 +307,18 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   switch (Opc) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORD:
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
     return 2;
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return 8;
@@ -402,6 +408,11 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
     return GLOBAL_LOAD;
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+    return GLOBAL_LOAD_SADDR;
   }
 }
 
@@ -440,6 +451,11 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
     return AMDGPU::GLOBAL_LOAD_DWORD;
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+    return AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
   }
 }
 
@@ -502,6 +518,12 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::DS_WRITE_B64_gfx9:
     Result.Addr = true;
     return Result;
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+    Result.SAddr = true;
+    LLVM_FALLTHROUGH;
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
@@ -579,6 +601,9 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   if (Regs.SOffset)
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::soffset);
+  if (Regs.SAddr)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
   if (Regs.VAddr)
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
@@ -1402,6 +1427,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalLoadPair(
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg);
 
+  if (auto *SAddr = TII->getNamedOperand(*CI.I, AMDGPU::OpName::saddr))
+    MIB.add(*SAddr);
+
   const MachineMemOperand *MMOa = *CI.I->memoperands_begin();
   const MachineMemOperand *MMOb = *Paired.I->memoperands_begin();
 
@@ -1470,6 +1498,17 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::GLOBAL_LOAD_DWORDX3;
     case 4:
       return AMDGPU::GLOBAL_LOAD_DWORDX4;
+    }
+  case GLOBAL_LOAD_SADDR:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR;
+    case 3:
+      return AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR;
+    case 4:
+      return AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
     }
   case MIMG:
     assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
@@ -2115,6 +2154,7 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case GLOBAL_LOAD:
+    case GLOBAL_LOAD_SADDR:
       NewMI = mergeGlobalLoadPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
