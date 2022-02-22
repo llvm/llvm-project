@@ -54,6 +54,14 @@ Major New Features
   There is an analogous ``zero_call_used_regs`` attribute to allow for finer
   control of this feature.
 
+Bug Fixes
+------------------
+- ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
+  wrapping a ``nullptr`` when the ``CXXNewExpr`` did not have an array
+  size expression. This was fixed and ``::getArraySize()`` will now always
+  either return ``None`` or a ``llvm::Optional`` wrapping a valid ``Expr*``.
+  This fixes `Issue #53742<https://github.com/llvm/llvm-project/issues/53742>`_.
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -83,7 +91,8 @@ Attribute Changes in Clang
 - Added support for parameter pack expansion in `clang::annotate`.
 
 - The ``overloadable`` attribute can now be written in all of the syntactic
-  locations a declaration attribute may appear. Fixes PR53805.
+  locations a declaration attribute may appear.
+  This fixes `Issue #53805<https://github.com/llvm/llvm-project/issues/53805>`_.
 
 Windows Support
 ---------------
