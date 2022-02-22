@@ -103,6 +103,19 @@ Value createCanonicalRankReducingExtractSliceOp(OpBuilder &b, Location loc,
 Value createCanonicalRankReducingInsertSliceOp(OpBuilder &b, Location loc,
                                                Value tensor, Value dest);
 
+/// Function to control the folding of constant and extract slice
+using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
+
+/// Patterns to fold the extract slice op with its constant operand
+void populateFoldConstantExtractSlicePatterns(
+    RewritePatternSet &patterns,
+    const ControlConstantExtractSliceFusionFn &controlFn =
+        [](ExtractSliceOp op) {
+          // Disable by default because the folding can generate a large
+          // constant tensor, which would affect the compile time and storage.
+          return false;
+        });
+
 } // namespace tensor
 } // namespace mlir
 
