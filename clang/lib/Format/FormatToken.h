@@ -43,6 +43,7 @@ namespace format {
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
+  TYPE(CppCastLParen)                                                          \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
   TYPE(DesignatedInitializerLSquare)                                           \
