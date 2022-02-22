@@ -2118,6 +2118,8 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
       map.try_emplace(sym, sym2);
       // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
       // definition error.
+      if (sym->isDefined())
+        sym2->checkDuplicate(cast<Defined>(*sym));
       sym2->resolve(*sym);
       // Eliminate foo@v1 from the symbol table.
       sym->symbolKind = Symbol::PlaceholderKind;
@@ -2221,6 +2223,25 @@ static uint32_t getAndFeatures() {
     ret |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 
   return ret;
+}
+
+static void postParseObjectFile(ELFFileBase *file) {
+  switch (config->ekind) {
+  case ELF32LEKind:
+    cast<ObjFile<ELF32LE>>(file)->postParse();
+    break;
+  case ELF32BEKind:
+    cast<ObjFile<ELF32BE>>(file)->postParse();
+    break;
+  case ELF64LEKind:
+    cast<ObjFile<ELF64LE>>(file)->postParse();
+    break;
+  case ELF64BEKind:
+    cast<ObjFile<ELF64BE>>(file)->postParse();
+    break;
+  default:
+    llvm_unreachable("");
+  }
 }
 
 // Do actual linking. Note that when this function is called,
@@ -2340,6 +2361,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
     for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
 
+  // No more lazy bitcode can be extracted at this point. Do post parse work
+  // like checking duplicate symbols.
+  parallelForEach(objectFiles, postParseObjectFile);
+  parallelForEach(bitcodeFiles, [](BitcodeFile *file) { file->postParse(); });
+
   // Return if there were name resolution errors.
   if (errorCount())
     return;
@@ -2393,6 +2419,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   //
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
+  const size_t numObjsBeforeLTO = objectFiles.size();
   invokeELFT(compileBitcodeFiles, skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems.
@@ -2403,6 +2430,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Bail out if normal linked output is skipped due to LTO.
   if (skipLinkedOutput)
     return;
+
+  // compileBitcodeFiles may have produced lto.tmp object files. After this, no
+  // more file will be added.
+  auto newObjectFiles = makeArrayRef(objectFiles).slice(numObjsBeforeLTO);
+  parallelForEach(newObjectFiles, postParseObjectFile);
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override

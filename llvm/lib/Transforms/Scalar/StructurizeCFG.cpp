@@ -1089,8 +1089,8 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   createFlow();
   insertConditions(false);
   insertConditions(true);
-  simplifyConditions();
   setPhiValues();
+  simplifyConditions();
   simplifyAffectedPhis();
   rebuildSSA();
 

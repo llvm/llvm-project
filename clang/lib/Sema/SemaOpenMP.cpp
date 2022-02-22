@@ -11133,11 +11133,11 @@ bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
   switch (Cond->getOpcode()) {
   case BO_EQ: {
     C = Cond;
-    D = BO->getRHS();
+    D = BO->getRHS()->IgnoreImpCasts();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-      E = Cond->getRHS();
+      E = Cond->getRHS()->IgnoreImpCasts();
     } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      E = Cond->getLHS();
+      E = Cond->getLHS()->IgnoreImpCasts();
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
       ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
@@ -11148,7 +11148,7 @@ bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
   }
   case BO_LT:
   case BO_GT: {
-    E = BO->getRHS();
+    E = BO->getRHS()->IgnoreImpCasts();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS()) &&
         checkIfTwoExprsAreSame(ContextRef, E, Cond->getRHS())) {
       C = Cond;
@@ -11228,11 +11228,11 @@ bool OpenMPAtomicCompareChecker::checkCondExprStmt(Stmt *S,
   switch (Cond->getOpcode()) {
   case BO_EQ: {
     C = Cond;
-    D = CO->getTrueExpr();
+    D = CO->getTrueExpr()->IgnoreImpCasts();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-      E = Cond->getRHS();
+      E = Cond->getRHS()->IgnoreImpCasts();
     } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      E = Cond->getLHS();
+      E = Cond->getLHS()->IgnoreImpCasts();
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
       ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
@@ -11243,7 +11243,7 @@ bool OpenMPAtomicCompareChecker::checkCondExprStmt(Stmt *S,
   }
   case BO_LT:
   case BO_GT: {
-    E = CO->getTrueExpr();
+    E = CO->getTrueExpr()->IgnoreImpCasts();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS()) &&
         checkIfTwoExprsAreSame(ContextRef, E, Cond->getRHS())) {
       C = Cond;
@@ -11843,6 +11843,8 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
   Expr *V = nullptr;
   Expr *E = nullptr;
   Expr *UE = nullptr;
+  Expr *D = nullptr;
+  Expr *CE = nullptr;
   bool IsXLHSInRHSPart = false;
   bool IsPostfixUpdate = false;
   // OpenMP [2.12.6, atomic Construct]
@@ -12252,15 +12254,19 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
             << ErrorInfo.Error << ErrorInfo.NoteRange;
         return StmtError();
       }
-      // TODO: We don't set X, D, E, etc. here because in code gen we will emit
-      // error directly.
+      X = Checker.getX();
+      E = Checker.getE();
+      D = Checker.getD();
+      CE = Checker.getCond();
+      // We reuse IsXLHSInRHSPart to tell if it is in the form 'x ordop expr'.
+      IsXLHSInRHSPart = Checker.isXBinopExpr();
     }
   }
 
   setFunctionHasBranchProtectedScope();
 
   return OMPAtomicDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
-                                    X, V, E, UE, IsXLHSInRHSPart,
+                                    X, V, E, UE, D, CE, IsXLHSInRHSPart,
                                     IsPostfixUpdate);
 }
 
