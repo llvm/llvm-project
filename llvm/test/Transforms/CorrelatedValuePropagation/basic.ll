@@ -179,9 +179,8 @@ define void @loop2(i32* %x, i32* %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-;; CorrelatedValuePropagation should handle inverted select condition, but it does not yet.
-;; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[F:%.*]] = tail call i32* @f(i32* [[PHI]])
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[F]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32* null, i32* [[F]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[SEL]], null
