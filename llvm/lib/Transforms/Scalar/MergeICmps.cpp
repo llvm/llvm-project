@@ -244,7 +244,7 @@ bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
     auto MayClobber = [&](LoadInst *LI) {
       // If a potentially clobbering instruction comes before the load,
       // we can still safely sink the load.
-      return !Inst->comesBefore(LI) &&
+      return (Inst->getParent() != LI->getParent() || !Inst->comesBefore(LI)) &&
              isModSet(AA.getModRefInfo(Inst, MemoryLocation::get(LI)));
     };
     if (MayClobber(Cmp.Lhs.LoadI) || MayClobber(Cmp.Rhs.LoadI))
