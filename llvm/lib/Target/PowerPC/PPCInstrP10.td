@@ -655,6 +655,22 @@ class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
   let Inst{31} = 0;
 }
 
+// X-Form: [ PO T EO UIM XO TX ]
+class XForm_XT6_IMM5<bits<6> opcode, bits<5> eo, bits<10> xo, dag OOL, dag IOL,
+                     string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<5> UIM;
+
+  let Pattern = pattern;
+
+  let Inst{6-10} = XT{4-0};
+  let Inst{11-15} = eo;
+  let Inst{16-20} = UIM;
+  let Inst{21-30} = xo;
+  let Inst{31} = XT{5};
+}
+
 class XX3Form_AT3_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin,
                            list<dag> pattern>
@@ -2393,6 +2409,8 @@ let Predicates = [IsISA3_1] in {
   def XSCVQPSQZ : X_VT5_XO5_VB5<63, 8, 836, "xscvqpsqz", []>;
   def XSCVUQQP : X_VT5_XO5_VB5<63, 3, 836, "xscvuqqp", []>;
   def XSCVSQQP : X_VT5_XO5_VB5<63, 11, 836, "xscvsqqp", []>;
+  def LXVKQ : XForm_XT6_IMM5<60, 31, 360, (outs vsrc:$XT), (ins u5imm:$UIM),
+                             "lxvkq $XT, $UIM", IIC_VecGeneral, []>;
 }
 
 let Predicates = [IsISA3_1, HasVSX] in {
