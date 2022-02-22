@@ -12,11 +12,11 @@
 ptest p15, p0.b
 // CHECK-INST: ptest	p15, p0.b
 // CHECK-ENCODING: [0x00,0xfc,0x50,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 fc 50 25 <unknown>
 
 ptest p15, p15.b
 // CHECK-INST: ptest	p15, p15.b
 // CHECK-ENCODING: [0xe0,0xfd,0x50,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 fd 50 25 <unknown>

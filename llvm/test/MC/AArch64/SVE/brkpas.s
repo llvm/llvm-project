@@ -12,11 +12,11 @@
 brkpas  p0.b,  p15/z, p1.b,  p2.b
 // CHECK-INST: brkpas	p0.b, p15/z, p1.b, p2.b
 // CHECK-ENCODING: [0x20,0xfc,0x42,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 fc 42 25 <unknown>
 
 brkpas  p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: brkpas	p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xef,0xfd,0x4f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ef fd 4f 25 <unknown>

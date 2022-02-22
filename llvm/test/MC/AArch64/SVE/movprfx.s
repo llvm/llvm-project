@@ -40,7 +40,7 @@
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 bc 20 04 <unknown>
 
 hlt #1
@@ -50,7 +50,7 @@ hlt #1
 movprfx z0.d, p0/z, z1.d
 // CHECK-INST: movprfx  z0.d, p0/z, z1.d
 // CHECK-ENCODING: [0x20,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 20 d0 04 <unknown>
 
 hlt #1
@@ -60,7 +60,7 @@ hlt #1
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 bc 20 04 <unknown>
 
 brk #1
@@ -70,7 +70,7 @@ brk #1
 movprfx z0.d, p0/z, z1.d
 // CHECK-INST: movprfx  z0.d, p0/z, z1.d
 // CHECK-ENCODING: [0x20,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 20 d0 04 <unknown>
 
 brk #1
@@ -83,17 +83,17 @@ brk #1
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 bc 20 04 <unknown>
 
 add z0.d, p0/m, z0.d, z1.d
 // CHECK-INST: add      z0.d, p0/m, z0.d, z1.d
 // CHECK-ENCODING: [0x20,0x00,0xc0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 00 c0 04 <unknown>
 
 add z0.d, p0/m, z0.d, z1.d
 // CHECK-INST: add      z0.d, p0/m, z0.d, z1.d
 // CHECK-ENCODING: [0x20,0x00,0xc0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 20 00 c0 04 <unknown>

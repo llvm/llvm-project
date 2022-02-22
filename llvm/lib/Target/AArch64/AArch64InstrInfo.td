@@ -143,23 +143,23 @@ def HasSMEF64        : Predicate<"Subtarget->hasSMEF64()">,
 def HasSMEI64        : Predicate<"Subtarget->hasSMEI64()">,
                                  AssemblerPredicate<(all_of FeatureSMEI64), "sme-i64">;
 def HasStreamingSVE  : Predicate<"Subtarget->hasStreamingSVE()">,
-                                 AssemblerPredicate<(all_of FeatureStreamingSVE), "streaming-sve">;
+                                 AssemblerPredicate<(all_of FeatureStreamingSVE), "sme">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorStreamingSVE
     : Predicate<"Subtarget->hasSVE() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureSVE, FeatureStreamingSVE),
-                "streaming-sve or sve">;
+                "sve or sme">;
 def HasSVE2orStreamingSVE
     : Predicate<"Subtarget->hasSVE2() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureSVE2, FeatureStreamingSVE),
-                "streaming-sve or sve2">;
+                "sve2 or sme">;
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorStreamingSVE
     : Predicate<"Subtarget->hasNEON() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureNEON, FeatureStreamingSVE),
-                "streaming-sve or neon">;
+                "neon or sme">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicate<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,

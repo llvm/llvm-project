@@ -12,23 +12,23 @@
 ld1rsh  { z0.s }, p0/z, [x0]
 // CHECK-INST: ld1rsh  { z0.s }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xa0,0x40,0x85]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 a0 40 85 <unknown>
 
 ld1rsh  { z0.d }, p0/z, [x0]
 // CHECK-INST: ld1rsh  { z0.d }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0x80,0x40,0x85]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 80 40 85 <unknown>
 
 ld1rsh  { z31.s }, p7/z, [sp, #126]
 // CHECK-INST: ld1rsh  { z31.s }, p7/z, [sp, #126]
 // CHECK-ENCODING: [0xff,0xbf,0x7f,0x85]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff bf 7f 85 <unknown>
 
 ld1rsh  { z31.d }, p7/z, [sp, #126]
 // CHECK-INST: ld1rsh  { z31.d }, p7/z, [sp, #126]
 // CHECK-ENCODING: [0xff,0x9f,0x7f,0x85]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff 9f 7f 85 <unknown>

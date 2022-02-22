@@ -12,59 +12,59 @@
 sel     p0.b, p0, p0.b, p0.b
 // CHECK-INST: mov     p0.b, p0/m, p0.b
 // CHECK-ENCODING: [0x10,0x42,0x00,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 10 42 00 25 <unknown>
 
 sel     p15.b, p15, p15.b, p15.b
 // CHECK-INST: mov     p15.b, p15/m, p15.b
 // CHECK-ENCODING: [0xff,0x7f,0x0f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff 7f 0f 25 <unknown>
 
 sel     z31.b, p15, z31.b, z31.b
 // CHECK-INST: mov     z31.b, p15/m, z31.b
 // CHECK-ENCODING: [0xff,0xff,0x3f,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff ff 3f 05 <unknown>
 
 sel     z31.h, p15, z31.h, z31.h
 // CHECK-INST: mov     z31.h, p15/m, z31.h
 // CHECK-ENCODING: [0xff,0xff,0x7f,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff ff 7f 05 <unknown>
 
 sel     z31.s, p15, z31.s, z31.s
 // CHECK-INST: mov     z31.s, p15/m, z31.s
 // CHECK-ENCODING: [0xff,0xff,0xbf,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff ff bf 05 <unknown>
 
 sel     z31.d, p15, z31.d, z31.d
 // CHECK-INST: mov     z31.d, p15/m, z31.d
 // CHECK-ENCODING: [0xff,0xff,0xff,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff ff ff 05 <unknown>
 
 sel     z23.s, p11, z13.s, z8.s
 // CHECK-INST: sel     z23.s, p11, z13.s, z8.s
 // CHECK-ENCODING: [0xb7,0xed,0xa8,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: b7 ed a8 05 <unknown>
 
 sel     z23.d, p11, z13.d, z8.d
 // CHECK-INST: sel     z23.d, p11, z13.d, z8.d
 // CHECK-ENCODING: [0xb7,0xed,0xe8,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: b7 ed e8 05 <unknown>
 
 sel     z23.h, p11, z13.h, z8.h
 // CHECK-INST: sel     z23.h, p11, z13.h, z8.h
 // CHECK-ENCODING: [0xb7,0xed,0x68,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: b7 ed 68 05 <unknown>
 
 sel     z23.b, p11, z13.b, z8.b
 // CHECK-INST: sel     z23.b, p11, z13.b, z8.b
 // CHECK-ENCODING: [0xb7,0xed,0x28,0x05]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: b7 ed 28 05 <unknown>

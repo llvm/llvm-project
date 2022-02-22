@@ -3,7 +3,7 @@
 .cpu generic+sve2
 .cpu generic+nosve2
 tbx z0.b, z1.b, z2.b
-// CHECK: error: instruction requires: streaming-sve or sve2
+// CHECK: error: instruction requires: sve2 or sme
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
 
 .cpu generic+sve2-aes
