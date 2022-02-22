@@ -4,18 +4,19 @@
 import ctypes
 import numpy as np
 import os
-
-import mlir.all_passes_registration
+import sys
 
 from mlir import ir
 from mlir import runtime as rt
 from mlir import execution_engine
-from mlir import passmanager
 
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
 from mlir.dialects.linalg.opdsl import lang as dsl
 
+_SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(_SCRIPT_PATH)
+from tools import sparse_compiler
 
 @dsl.linalg_structured_op
 def matmul_dsl(
@@ -108,18 +109,6 @@ def build_compile_and_run_SpMM(attr: st.EncodingAttr, support_lib: str,
     quit(f'FAILURE')
 
 
-class SparseCompiler:
-  """Sparse compiler passes."""
-
-  def __init__(self, options: str):
-    pipeline = (
-        f'sparse-compiler{{{options} reassociate-fp-reductions=1 enable-index-optimizations=1}}')
-    self.pipeline = pipeline
-
-  def __call__(self, module: ir.Module):
-    passmanager.PassManager.parse(self.pipeline).run(module)
-
-
 def main():
   support_lib = os.getenv('SUPPORT_LIB')
   assert support_lib is not None, 'SUPPORT_LIB is undefined'
@@ -155,7 +144,7 @@ def main():
         for pwidth in bitwidths:
           for iwidth in bitwidths:
             attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
-            compiler = SparseCompiler(options=opt)
+            compiler = sparse_compiler.SparseCompiler(options=opt)
             build_compile_and_run_SpMM(attr, support_lib, compiler)
             count = count + 1
     # CHECK: Passed 8 tests
