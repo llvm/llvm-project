@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TENSOR_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_TENSOR_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -19,6 +20,19 @@ namespace tensor {
 /// actually zeros) and where we indeed need padding.
 void populateSplitPaddingPatterns(RewritePatternSet &patterns,
                                   PatternBenefit baseBenefit = 1);
+
+/// Function to control the folding of constant and extract slice
+using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
+
+/// Patterns to fold the extract slice op with its constant operand
+void populateFoldConstantExtractSlicePatterns(
+    RewritePatternSet &patterns,
+    const ControlConstantExtractSliceFusionFn &controlFn =
+        [](ExtractSliceOp op) {
+          // Disable by default because the folding can generate a large
+          // constant tensor, which would affect the compile time and storage.
+          return false;
+        });
 
 } // namespace tensor
 } // namespace mlir
