@@ -15,7 +15,6 @@
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationServer.h"
-#include "GDBRemoteCommunicationServerCommon.h"
 
 class StringExtractorGDBRemote;
 
