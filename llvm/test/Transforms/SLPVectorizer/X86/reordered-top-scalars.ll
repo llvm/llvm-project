@@ -7,10 +7,9 @@ define i32 @test(i32* %isec) {
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, i32* [[ISEC:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARRAYIDX10]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 8
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i32 1
 ; CHECK-NEXT:    br i1 false, label [[BLOCK1:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block1:
@@ -18,10 +17,10 @@ define i32 @test(i32* %isec) {
 ; CHECK:       block2:
 ; CHECK-NEXT:    br label [[BLOCK3]]
 ; CHECK:       block3:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[SHUFFLE]], [[BLOCK1]] ], [ [[SHUFFLE]], [[BLOCK2]] ], [ [[TMP5]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP1]], [[BLOCK1]] ], [ [[TMP1]], [[BLOCK2]] ], [ [[TMP5]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
 entry:
