@@ -156,8 +156,10 @@ entry:
 define <8 x i16> @nonsplat_shuffleinsert(i8 %src, <8 x i8> %b) {
 ; CHECK-LABEL: nonsplat_shuffleinsert:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.8b, w0
-; CHECK-NEXT:    smull v0.8h, v1.8b, v0.8b
+; CHECK-NEXT:    sxtb w8, w0
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
 entry:
     %in = sext i8 %src to i16
