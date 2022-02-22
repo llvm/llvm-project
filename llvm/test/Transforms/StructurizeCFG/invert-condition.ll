@@ -28,3 +28,39 @@ bb2:                                              ; preds = %bb2, %bb
 bb5:                                              ; preds = %bb2
   ret void
 }
+
+; FIXME: StructurizeCFG modifies I5 in-place without updating the use of I5 in
+; the phi instruction.
+define void @invert_condition_phi(i32 %arg) {
+; CHECK-LABEL: @invert_condition_phi(
+; CHECK-NEXT:  main_body:
+; CHECK-NEXT:    [[I5:%.*]] = icmp ne i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    br i1 [[I5]], label [[IF1:%.*]], label [[ENDIF1:%.*]]
+; CHECK:       if1:
+; CHECK-NEXT:    br label [[ENDIF1]]
+; CHECK:       endif1:
+; CHECK-NEXT:    [[I7:%.*]] = phi i1 [ [[I5]], [[MAIN_BODY:%.*]] ], [ false, [[IF1]] ]
+; CHECK-NEXT:    [[I7_INV:%.*]] = xor i1 [[I7]], true
+; CHECK-NEXT:    br i1 [[I7_INV]], label [[IF4:%.*]], label [[ENDIF4:%.*]]
+; CHECK:       if4:
+; CHECK-NEXT:    br label [[ENDIF4]]
+; CHECK:       endif4:
+; CHECK-NEXT:    ret void
+;
+main_body:
+  %i5 = icmp eq i32 %arg, 0
+  br i1 %i5, label %endif1, label %if1
+
+if1:
+  br label %endif1
+
+endif1:
+  %i7 = phi i1 [ false, %if1 ], [ %i5, %main_body ]
+  br i1 %i7, label %endif4, label %if4
+
+if4:
+  br label %endif4
+
+endif4:
+  ret void
+}
