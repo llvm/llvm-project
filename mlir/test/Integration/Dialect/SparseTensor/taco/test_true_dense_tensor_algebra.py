@@ -14,7 +14,7 @@ A = pt.from_array(np.full([2,3], 1, dtype=np.float64))
 B = pt.from_array(np.full([2,3], 2, dtype=np.float64))
 # Define the result tensor as a true dense tensor. The parameter is_dense=True
 # is an MLIR-PyTACO extension.
-C = pt.tensor([2, 3], is_dense=True)
+C = pt.tensor([2, 3], dtype=pt.float64, is_dense=True)
 
 C[i, j] = A[i, j] + B[i, j]
 

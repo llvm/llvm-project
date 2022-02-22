@@ -31,8 +31,8 @@ A = pt.read(os.path.join(_SCRIPT_PATH, "data/pwtk.mtx"), csr)
 
 # These two lines have been modified from the original program to use static
 # data to support result comparison.
-x = pt.from_array(np.full((A.shape[1],), 1, dtype=np.float64))
-z = pt.from_array(np.full((A.shape[0],), 2, dtype=np.float64))
+x = pt.from_array(np.full((A.shape[1],), 1, dtype=np.float32))
+z = pt.from_array(np.full((A.shape[0],), 2, dtype=np.float32))
 
 # Declare the result to be a dense vector
 y = pt.tensor([A.shape[0]], dv)

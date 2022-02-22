@@ -75,7 +75,7 @@ def _implement_read_tns_test(
 
     # Read the data from the file and construct an MLIR sparse tensor.
     sparse_tensor, o_shape = pytaco_utils.create_sparse_tensor(
-        file_name, sparsity_codes)
+        file_name, sparsity_codes, "f64")
 
   passed = 0
 

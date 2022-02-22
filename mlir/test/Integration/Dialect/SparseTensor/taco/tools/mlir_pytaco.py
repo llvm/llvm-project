@@ -96,7 +96,7 @@ class DType:
     kind: A Type enum representing the data type.
     value: The numpy data type for the TACO data type.
   """
-  kind: Type = Type.FLOAT64
+  kind: Type = Type.FLOAT32
 
   def is_float(self) -> bool:
     """Returns whether the data type represents a floating point value."""
@@ -112,6 +112,30 @@ class DType:
     return self.kind.value
 
 
+def _dtype_to_mlir_str(dtype: DType) -> str:
+  """Returns the MLIR string for the given dtype."""
+  dtype_to_str = {
+      Type.INT16: "i16",
+      Type.INT32: "i32",
+      Type.INT64: "i64",
+      Type.FLOAT32: "f32",
+      Type.FLOAT64: "f64"
+  }
+  return dtype_to_str[dtype.kind]
+
+
+def _nptype_to_taco_type(ty: np.dtype) -> DType:
+  """Returns the TACO type for the given numpy type."""
+  nptype_to_dtype = {
+      np.int16: Type.INT16,
+      np.int32: Type.INT32,
+      np.int64: Type.INT64,
+      np.float32: Type.FLOAT32,
+      np.float64: Type.FLOAT64
+  }
+  return DType(nptype_to_dtype[ty])
+
+
 def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
   """Returns the MLIR type corresponding to the given TACO type."""
   dtype_to_irtype = {
@@ -122,7 +146,6 @@ def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
       Type.FLOAT64: ir.F64Type.get()
   }
   return dtype_to_irtype[dtype.kind]
-
 
 def _ctype_pointer_from_array(array: np.ndarray) -> ctypes.pointer:
   """Returns the ctype pointer for the given numpy array."""
@@ -632,7 +655,7 @@ class Tensor:
     """
     # Take care of the argument default values common to both sparse tensors
     # and dense tensors.
-    dtype = dtype or DType(Type.FLOAT64)
+    dtype = dtype or DType(Type.FLOAT32)
     self._name = name or self._get_unique_name()
     self._assignment = None
     self._sparse_value_location = _SparseValueInfo._UNPACKED
@@ -688,7 +711,7 @@ class Tensor:
     # Use the output MLIR sparse tensor pointer to retrieve the COO-flavored
     # values and verify the values.
     rank, nse, shape, values, indices = utils.sparse_tensor_to_coo_tensor(
-        self._packed_sparse_value, np.float64)
+        self._packed_sparse_value, self._dtype.value)
     assert rank == self.order
     assert np.allclose(self.shape, shape)
     assert nse == len(values)
@@ -757,7 +780,8 @@ class Tensor:
   def from_array(array: np.ndarray) -> "Tensor":
     """Returns a dense tensor with the value copied from the input array.
 
-    We currently only support the conversion of float64 numpy arrays to Tensor.
+    We currently only support the conversion of float32 and float64 numpy arrays
+    to Tensor.
 
     Args:
       array: The numpy array that provides the data type, shape and value for
@@ -767,11 +791,14 @@ class Tensor:
       A Tensor object.
 
     Raises:
-      ValueError if the data type of the numpy array is not float64.
+      ValueError if the data type of the numpy array is not supported.
     """
-    if array.dtype != np.float64:
-      raise ValueError(f"Expected float64 value type: {array.dtype}.")
-    tensor = Tensor(array.shape, is_dense=True)
+    if array.dtype != np.float32 and array.dtype != np.float64:
+      raise ValueError(f"Expected floating point value type: {array.dtype}.")
+    tensor = Tensor(
+        array.shape,
+        dtype=_nptype_to_taco_type(array.dtype.type),
+        is_dense=True)
     tensor._dense_storage = np.copy(array)
     return tensor
 
@@ -808,7 +835,7 @@ class Tensor:
     # The size of each dimension is one more that such a maximum coordinate
     # value.
     shape = [c + 1 for c in max_coordinate]
-    tensor = Tensor(shape, fmt)
+    tensor = Tensor(shape, fmt, dtype=dtype)
     tensor._coords = coordinates
     tensor._values = values
 
@@ -833,8 +860,9 @@ class Tensor:
       value is stored as an MLIR sparse tensor.
     """
     sparse_tensor, shape = utils.create_sparse_tensor(filename,
-                                                      fmt.format_pack.formats)
-    tensor = Tensor(shape.tolist(), fmt)
+                                                      fmt.format_pack.formats,
+                                                      _dtype_to_mlir_str(dtype))
+    tensor = Tensor(shape.tolist(), fmt, dtype=dtype)
     tensor._set_packed_sparse_tensor(sparse_tensor)
 
     return tensor
@@ -862,7 +890,8 @@ class Tensor:
                        "supported.")
 
     utils.output_sparse_tensor(self._packed_sparse_value, filename,
-                               self._format.format_pack.formats)
+                               self._format.format_pack.formats,
+                               _dtype_to_mlir_str(self._dtype))
 
   @property
   def dtype(self) -> DType:
