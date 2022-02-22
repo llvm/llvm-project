@@ -3963,7 +3963,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
     return Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes;
   }
-  if (Left.ClosesRequiresClause) {
+  if (Left.ClosesRequiresClause && Right.isNot(tok::semi)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithPreceding:
