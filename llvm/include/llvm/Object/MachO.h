@@ -376,6 +376,7 @@ public:
 private:
   std::vector<ChainedFixupTarget> FixupTargets;
   uint32_t FixupIndex = 0;
+  FixupKind Kind;
 };
 using fixup_iterator = content_iterator<MachOChainedFixupEntry>;
 
