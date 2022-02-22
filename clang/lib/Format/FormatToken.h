@@ -949,6 +949,10 @@ struct AdditionalKeywords {
     kw_slots = &IdentTable.get("slots");
     kw_qslots = &IdentTable.get("Q_SLOTS");
 
+    // For internal clang-format use.
+    kw_internal_ident_after_define =
+        &IdentTable.get("__CLANG_FORMAT_INTERNAL_IDENT_AFTER_DEFINE__");
+
     // C# keywords
     kw_dollar = &IdentTable.get("dollar");
     kw_base = &IdentTable.get("base");
@@ -1068,6 +1072,9 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_qsignals;
   IdentifierInfo *kw_slots;
   IdentifierInfo *kw_qslots;
+
+  // For internal use by clang-format.
+  IdentifierInfo *kw_internal_ident_after_define;
 
   // C# keywords
   IdentifierInfo *kw_dollar;
