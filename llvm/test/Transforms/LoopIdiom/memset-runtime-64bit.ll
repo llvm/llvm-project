@@ -235,7 +235,7 @@ define void @Negative32(i32* %ar, i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[M:%.*]] to i64
 ; CHECK-NEXT:    [[CONV2:%.*]] = sext i32 [[M]] to i64
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul i64 [[CONV2]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[CONV]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[CONV1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[AR1]], i8 0, i64 [[TMP2]], i1 false)

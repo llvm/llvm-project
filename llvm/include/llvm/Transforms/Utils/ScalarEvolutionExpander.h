@@ -385,8 +385,8 @@ public:
   /// Note that this function does not perform an exhaustive search. I.e if it
   /// didn't find any value it does not mean that there is no such value.
   ///
-  Optional<ScalarEvolution::ValueOffsetPair>
-  getRelatedExistingExpansion(const SCEV *S, const Instruction *At, Loop *L);
+  Value *getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
+                                     Loop *L);
 
   /// Returns a suitable insert point after \p I, that dominates \p
   /// MustDominate. Skips instructions inserted by the expander.
@@ -444,8 +444,7 @@ private:
   Value *expandAddToGEP(const SCEV *Op, PointerType *PTy, Type *Ty, Value *V);
 
   /// Find a previous Value in ExprValueMap for expand.
-  ScalarEvolution::ValueOffsetPair
-  FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
+  Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
 
   Value *expand(const SCEV *S);
 

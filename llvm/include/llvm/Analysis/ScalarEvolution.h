@@ -1246,30 +1246,11 @@ private:
   HasRecMapType HasRecMap;
 
   /// The type for ExprValueMap.
-  using ValueOffsetPair = std::pair<Value *, ConstantInt *>;
-  using ValueOffsetPairSetVector = SmallSetVector<ValueOffsetPair, 4>;
-  using ExprValueMapType = DenseMap<const SCEV *, ValueOffsetPairSetVector>;
+  using ValueSetVector = SmallSetVector<Value *, 4>;
+  using ExprValueMapType = DenseMap<const SCEV *, ValueSetVector>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
-  ///
-  /// We want to represent the mapping as SCEV -> ValueOffsetPair instead
-  /// of SCEV -> Value:
-  /// Suppose we know S1 expands to V1, and
-  ///  S1 = S2 + C_a
-  ///  S3 = S2 + C_b
-  /// where C_a and C_b are different SCEVConstants. Then we'd like to
-  /// expand S3 as V1 - C_a + C_b instead of expanding S2 literally.
-  /// It is helpful when S2 is a complex SCEV expr.
-  ///
-  /// In order to do that, we represent ExprValueMap as a mapping from
-  /// SCEV to ValueOffsetPair. We will save both S1->{V1, 0} and
-  /// S2->{V1, C_a} into the map when we create SCEV for V1. When S3
-  /// is expanded, it will first expand S2 to V1 - C_a because of
-  /// S2->{V1, C_a} in the map, then expand S3 to V1 - C_a + C_b.
-  ///
-  /// Note: S->{V, Offset} in the ExprValueMap means S can be expanded
-  /// to V - Offset.
   ExprValueMapType ExprValueMap;
 
   /// The type for ValueExprMap.
@@ -1300,7 +1281,7 @@ private:
   DenseMap<const SCEV *, uint32_t> MinTrailingZerosCache;
 
   /// Return the Value set from which the SCEV expr is generated.
-  ValueOffsetPairSetVector *getSCEVValues(const SCEV *S);
+  ValueSetVector *getSCEVValues(const SCEV *S);
 
   /// Private helper method for the GetMinTrailingZeros method
   uint32_t GetMinTrailingZerosImpl(const SCEV *S);
