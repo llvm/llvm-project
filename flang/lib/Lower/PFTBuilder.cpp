@@ -1,4 +1,4 @@
-//===-- PFTBuilder.cc -----------------------------------------------------===//
+//===-- PFTBuilder.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
-#include "IntervalSet.h"
+#include "flang/Lower/IntervalSet.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
@@ -160,6 +160,8 @@ public:
       exitFunction();
     } else if constexpr (lower::pft::isConstruct<A> ||
                          lower::pft::isDirective<A>) {
+      if constexpr (lower::pft::isDeclConstruct<A>)
+        return;
       exitConstructOrDirective();
     }
   }
@@ -221,14 +223,17 @@ private:
   /// Initialize a new module-like unit and make it the builder's focus.
   template <typename A>
   bool enterModule(const A &func) {
-    auto &unit =
+    Fortran::lower::pft::ModuleLikeUnit &unit =
         addUnit(lower::pft::ModuleLikeUnit{func, pftParentStack.back()});
     functionList = &unit.nestedFunctions;
+    pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
     return true;
   }
 
   void exitModule() {
+    if (!evaluationListStack.empty())
+      popEvaluationList();
     pftParentStack.pop_back();
     resetFunctionState();
   }
@@ -240,6 +245,11 @@ private:
     if (evaluationListStack.empty())
       return;
     auto evaluationList = evaluationListStack.back();
+    if (evaluationList->empty() &&
+        pftParentStack.back().getIf<lower::pft::ModuleLikeUnit>()) {
+      popEvaluationList();
+      return;
+    }
     if (evaluationList->empty() || !evaluationList->back().isEndStmt()) {
       const auto &endStmt =
           pftParentStack.back().get<lower::pft::FunctionLikeUnit>().endStmt;
@@ -274,8 +284,9 @@ private:
   bool enterFunction(const A &func,
                      const semantics::SemanticsContext &semanticsContext) {
     endFunctionBody(); // enclosing host subprogram body, if any
-    auto &unit = addFunction(lower::pft::FunctionLikeUnit{
-        func, pftParentStack.back(), semanticsContext});
+    Fortran::lower::pft::FunctionLikeUnit &unit =
+        addFunction(lower::pft::FunctionLikeUnit{func, pftParentStack.back(),
+                                                 semanticsContext});
     labelEvaluationMap = &unit.labelEvaluationMap;
     assignSymbolLabelMap = &unit.assignSymbolLabelMap;
     functionList = &unit.nestedFunctions;
@@ -296,20 +307,38 @@ private:
     resetFunctionState();
   }
 
-  /// Initialize a new construct and make it the builder's focus.
+  /// Initialize a new construct or directive and make it the builder's focus.
   template <typename A>
-  bool enterConstructOrDirective(const A &construct) {
-    auto &eval =
-        addEvaluation(lower::pft::Evaluation{construct, pftParentStack.back()});
+  bool enterConstructOrDirective(const A &constructOrDirective) {
+    Fortran::lower::pft::Evaluation &eval = addEvaluation(
+        lower::pft::Evaluation{constructOrDirective, pftParentStack.back()});
     eval.evaluationList.reset(new lower::pft::EvaluationList);
     pushEvaluationList(eval.evaluationList.get());
     pftParentStack.emplace_back(eval);
     constructAndDirectiveStack.emplace_back(&eval);
+    if constexpr (lower::pft::isDeclConstruct<A>) {
+      popEvaluationList();
+      pftParentStack.pop_back();
+      constructAndDirectiveStack.pop_back();
+      popEvaluationList();
+    }
     return true;
   }
 
   void exitConstructOrDirective() {
     rewriteIfGotos();
+    auto *eval = constructAndDirectiveStack.back();
+    if (eval->isExecutableDirective()) {
+      // A construct at the end of an (unstructured) OpenACC or OpenMP
+      // construct region must have an exit target inside the region.
+      Fortran::lower::pft::EvaluationList &evaluationList =
+          *eval->evaluationList;
+      if (!evaluationList.empty() && evaluationList.back().isConstruct()) {
+        static const parser::ContinueStmt exitTarget{};
+        addEvaluation(
+            lower::pft::Evaluation{exitTarget, pftParentStack.back(), {}, {}});
+      }
+    }
     popEvaluationList();
     pftParentStack.pop_back();
     constructAndDirectiveStack.pop_back();
@@ -372,7 +401,8 @@ private:
     auto &entryPointList = eval.getOwningProcedure()->entryPointList;
     evaluationListStack.back()->emplace_back(std::move(eval));
     lower::pft::Evaluation *p = &evaluationListStack.back()->back();
-    if (p->isActionStmt() || p->isConstructStmt() || p->isEndStmt()) {
+    if (p->isActionStmt() || p->isConstructStmt() || p->isEndStmt() ||
+        p->isExecutableDirective()) {
       if (lastLexicalEvaluation) {
         lastLexicalEvaluation->lexicalSuccessor = p;
         p->printIndex = lastLexicalEvaluation->printIndex + 1;
@@ -380,13 +410,14 @@ private:
         p->printIndex = 1;
       }
       lastLexicalEvaluation = p;
-      for (auto entryIndex = entryPointList.size() - 1;
+      for (std::size_t entryIndex = entryPointList.size() - 1;
            entryIndex && !entryPointList[entryIndex].second->lexicalSuccessor;
            --entryIndex)
         // Link to the entry's first executable statement.
         entryPointList[entryIndex].second->lexicalSuccessor = p;
     } else if (const auto *entryStmt = p->getIf<parser::EntryStmt>()) {
-      const auto *sym = std::get<parser::Name>(entryStmt->t).symbol;
+      const semantics::Symbol *sym =
+          std::get<parser::Name>(entryStmt->t).symbol;
       assert(sym->has<semantics::SubprogramDetails>() &&
              "entry must be a subprogram");
       entryPointList.push_back(std::pair{sym, p});
@@ -410,8 +441,9 @@ private:
     evaluationListStack.pop_back();
   }
 
-  /// Rewrite IfConstructs containing a GotoStmt to eliminate an unstructured
-  /// branch and a trivial basic block.  The pre-branch-analysis code:
+  /// Rewrite IfConstructs containing a GotoStmt or CycleStmt to eliminate an
+  /// unstructured branch and a trivial basic block.  The pre-branch-analysis
+  /// code:
   ///
   ///       <<IfConstruct>>
   ///         1 If[Then]Stmt: if(cond) goto L
@@ -433,8 +465,8 @@ private:
   ///       6 Statement: L ...
   ///
   /// The If[Then]Stmt condition is implicitly negated.  It is not modified
-  /// in the PFT.  It must be negated when generating FIR.  The GotoStmt is
-  /// deleted.
+  /// in the PFT.  It must be negated when generating FIR.  The GotoStmt or
+  /// CycleStmt is deleted.
   ///
   /// The transformation is only valid for forward branch targets at the same
   /// construct nesting level as the IfConstruct.  The result must not violate
@@ -449,56 +481,86 @@ private:
   /// not significant, but could be changed.
   ///
   void rewriteIfGotos() {
-    using T = struct {
+    auto &evaluationList = *evaluationListStack.back();
+    if (!evaluationList.size())
+      return;
+    struct T {
       lower::pft::EvaluationList::iterator ifConstructIt;
       parser::Label ifTargetLabel;
+      bool isCycleStmt = false;
     };
-    llvm::SmallVector<T, 8> ifExpansionStack;
-    auto &evaluationList = *evaluationListStack.back();
+    llvm::SmallVector<T> ifCandidateStack;
+    const auto *doStmt =
+        evaluationList.begin()->getIf<parser::NonLabelDoStmt>();
+    std::string doName = doStmt ? getConstructName(*doStmt) : std::string{};
     for (auto it = evaluationList.begin(), end = evaluationList.end();
          it != end; ++it) {
       auto &eval = *it;
       if (eval.isA<parser::EntryStmt>()) {
-        ifExpansionStack.clear();
+        ifCandidateStack.clear();
         continue;
       }
       auto firstStmt = [](lower::pft::Evaluation *e) {
         return e->isConstruct() ? &*e->evaluationList->begin() : e;
       };
-      auto &targetEval = *firstStmt(&eval);
-      if (targetEval.label) {
-        while (!ifExpansionStack.empty() &&
-               ifExpansionStack.back().ifTargetLabel == *targetEval.label) {
-          auto ifConstructIt = ifExpansionStack.back().ifConstructIt;
-          auto successorIt = std::next(ifConstructIt);
+      const Fortran::lower::pft::Evaluation &targetEval = *firstStmt(&eval);
+      bool targetEvalIsEndDoStmt = targetEval.isA<parser::EndDoStmt>();
+      auto branchTargetMatch = [&]() {
+        if (const parser::Label targetLabel =
+                ifCandidateStack.back().ifTargetLabel)
+          if (targetLabel == *targetEval.label)
+            return true; // goto target match
+        if (targetEvalIsEndDoStmt && ifCandidateStack.back().isCycleStmt)
+          return true; // cycle target match
+        return false;
+      };
+      if (targetEval.label || targetEvalIsEndDoStmt) {
+        while (!ifCandidateStack.empty() && branchTargetMatch()) {
+          lower::pft::EvaluationList::iterator ifConstructIt =
+              ifCandidateStack.back().ifConstructIt;
+          lower::pft::EvaluationList::iterator successorIt =
+              std::next(ifConstructIt);
           if (successorIt != it) {
-            auto &ifBodyList = *ifConstructIt->evaluationList;
-            auto gotoStmtIt = std::next(ifBodyList.begin());
-            assert(gotoStmtIt->isA<parser::GotoStmt>() && "expected GotoStmt");
-            ifBodyList.erase(gotoStmtIt);
-            auto &ifStmt = *ifBodyList.begin();
+            Fortran::lower::pft::EvaluationList &ifBodyList =
+                *ifConstructIt->evaluationList;
+            lower::pft::EvaluationList::iterator branchStmtIt =
+                std::next(ifBodyList.begin());
+            assert((branchStmtIt->isA<parser::GotoStmt>() ||
+                    branchStmtIt->isA<parser::CycleStmt>()) &&
+                   "expected goto or cycle statement");
+            ifBodyList.erase(branchStmtIt);
+            lower::pft::Evaluation &ifStmt = *ifBodyList.begin();
             ifStmt.negateCondition = true;
             ifStmt.lexicalSuccessor = firstStmt(&*successorIt);
-            auto endIfStmtIt = std::prev(ifBodyList.end());
+            lower::pft::EvaluationList::iterator endIfStmtIt =
+                std::prev(ifBodyList.end());
             std::prev(it)->lexicalSuccessor = &*endIfStmtIt;
             endIfStmtIt->lexicalSuccessor = firstStmt(&*it);
             ifBodyList.splice(endIfStmtIt, evaluationList, successorIt, it);
             for (; successorIt != endIfStmtIt; ++successorIt)
               successorIt->parentConstruct = &*ifConstructIt;
           }
-          ifExpansionStack.pop_back();
+          ifCandidateStack.pop_back();
         }
       }
       if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
-        if (auto *gotoStmt = std::next(eval.evaluationList->begin())
-                                 ->getIf<parser::GotoStmt>())
-          ifExpansionStack.push_back({it, gotoStmt->v});
+        const auto bodyEval = std::next(eval.evaluationList->begin());
+        if (const auto *gotoStmt = bodyEval->getIf<parser::GotoStmt>()) {
+          ifCandidateStack.push_back({it, gotoStmt->v});
+        } else if (doStmt) {
+          if (const auto *cycleStmt = bodyEval->getIf<parser::CycleStmt>()) {
+            std::string cycleName = getConstructName(*cycleStmt);
+            if (cycleName.empty() || cycleName == doName)
+              // This candidate will match doStmt's EndDoStmt.
+              ifCandidateStack.push_back({it, {}, true});
+          }
+        }
       }
     }
   }
 
-  /// Mark I/O statement ERR, EOR, and END specifier branch targets.
-  /// Mark an I/O statement with an assigned format as unstructured.
+  /// Mark IO statement ERR, EOR, and END specifier branch targets.
+  /// Mark an IO statement with an assigned format as unstructured.
   template <typename A>
   void analyzeIoBranches(lower::pft::Evaluation &eval, const A &stmt) {
     auto analyzeFormatSpec = [&](const parser::Format &format) {
@@ -566,8 +628,8 @@ private:
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
     // ancestors must be marked as unstructured.
-    auto *sourceConstruct = sourceEvaluation.parentConstruct;
-    auto *targetConstruct = targetEvaluation.parentConstruct;
+    lower::pft::Evaluation *sourceConstruct = sourceEvaluation.parentConstruct;
+    lower::pft::Evaluation *targetConstruct = targetEvaluation.parentConstruct;
     if (targetConstruct &&
         &targetConstruct->getFirstNestedEvaluation() == &targetEvaluation)
       // A branch to an initial constructStmt is a branch to the construct.
@@ -575,9 +637,18 @@ private:
     if (targetConstruct) {
       while (sourceConstruct && sourceConstruct != targetConstruct)
         sourceConstruct = sourceConstruct->parentConstruct;
-      if (sourceConstruct != targetConstruct)
-        for (auto *eval = &targetEvaluation; eval; eval = eval->parentConstruct)
+      if (sourceConstruct != targetConstruct) // branch into a construct body
+        for (lower::pft::Evaluation *eval = &targetEvaluation; eval;
+             eval = eval->parentConstruct) {
           eval->isUnstructured = true;
+          // If the branch is a backward branch into an already analyzed
+          // DO or IF construct, mark the construct exit as a new block.
+          // For a forward branch, the isUnstructured flag will cause this
+          // to be done when the construct is analyzed.
+          if (eval->constructExit && (eval->isA<parser::DoConstruct>() ||
+                                      eval->isA<parser::IfConstruct>()))
+            eval->constructExit->isNewBlock = true;
+        }
     }
   }
   void markBranchTarget(lower::pft::Evaluation &sourceEvaluation,
@@ -615,18 +686,18 @@ private:
         parser::MaskedElsewhereStmt, parser::NonLabelDoStmt,
         parser::SelectCaseStmt, parser::SelectRankCaseStmt,
         parser::TypeGuardStmt, parser::WhereConstructStmt>;
-
     if constexpr (common::HasMember<A, MaybeConstructNameInTuple>) {
       if (auto name = std::get<std::optional<parser::Name>>(stmt.t))
         return name->ToString();
     }
 
-    // These statements have several std::optional<parser::Name>
+    // These statements have multiple std::optional<parser::Name> elements.
     if constexpr (std::is_same_v<A, parser::SelectRankStmt> ||
                   std::is_same_v<A, parser::SelectTypeStmt>) {
       if (auto name = std::get<0>(stmt.t))
         return name->ToString();
     }
+
     return {};
   }
 
@@ -648,7 +719,7 @@ private:
     lower::pft::Evaluation *lastConstructStmtEvaluation{};
     for (auto &eval : evaluationList) {
       eval.visit(common::visitors{
-          // Action statements (except I/O statements)
+          // Action statements (except IO statements)
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
             const auto &args =
@@ -724,6 +795,11 @@ private:
             // loop won't mark the successor.  Do that here.
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
+          },
+
+          // The first executable statement after an EntryStmt is a new block.
+          [&](const parser::EntryStmt &) {
+            eval.lexicalSuccessor->isNewBlock = true;
           },
 
           // Construct statements
@@ -861,7 +937,7 @@ private:
             eval.isUnstructured = true;
           },
 
-          // Default - Common analysis for I/O statements; otherwise nop.
+          // Default - Common analysis for IO statements; otherwise nop.
           [&](const auto &stmt) {
             using A = std::decay_t<decltype(stmt)>;
             using IoStmts = std::tuple<
@@ -901,7 +977,8 @@ private:
   /// also find one of the largest function results, since a single result
   /// container holds the result for all entries.
   void processEntryPoints() {
-    auto *unit = evaluationListStack.back()->front().getOwningProcedure();
+    lower::pft::Evaluation *initialEval = &evaluationListStack.back()->front();
+    lower::pft::FunctionLikeUnit *unit = initialEval->getOwningProcedure();
     int entryCount = unit->entryPointList.size();
     if (entryCount == 1)
       return;
@@ -910,7 +987,7 @@ private:
       unit->setActiveEntry(entryIndex);
       const auto &details =
           unit->getSubprogramSymbol().get<semantics::SubprogramDetails>();
-      for (auto *arg : details.dummyArgs()) {
+      for (semantics::Symbol *arg : details.dummyArgs()) {
         if (!arg)
           continue; // alternate return specifier (no actual argument)
         const auto iter = dummyCountMap.find(arg);
@@ -920,7 +997,7 @@ private:
           ++iter->second;
       }
       if (details.isFunction()) {
-        const auto *resultSym = &details.result();
+        const semantics::Symbol *resultSym = &details.result();
         assert(resultSym && "missing result symbol");
         if (!unit->primaryResult ||
             unit->primaryResult->size() < resultSym->size())
@@ -931,6 +1008,13 @@ private:
     for (auto arg : dummyCountMap)
       if (arg.second < entryCount)
         unit->nonUniversalDummyArguments.push_back(arg.first);
+    // The first executable statement in the subprogram is preceded by a
+    // branch to the entry point, so it starts a new block.
+    if (initialEval->hasNestedEvaluations())
+      initialEval = &initialEval->getFirstNestedEvaluation();
+    else if (initialEval->isA<Fortran::parser::EntryStmt>())
+      initialEval = initialEval->lexicalSuccessor;
+    initialEval->isNewBlock = true;
   }
 
   std::unique_ptr<lower::pft::Program> pgm;
@@ -985,33 +1069,32 @@ public:
                       const lower::pft::Evaluation &eval,
                       const std::string &indentString, int indent = 1) {
     llvm::StringRef name = evaluationName(eval);
-    std::string bang = eval.isUnstructured ? "!" : "";
-    if (eval.isConstruct() || eval.isDirective()) {
-      outputStream << indentString << "<<" << name << bang << ">>";
-      if (eval.constructExit)
-        outputStream << " -> " << eval.constructExit->printIndex;
-      outputStream << '\n';
-      dumpEvaluationList(outputStream, *eval.evaluationList, indent + 1);
-      outputStream << indentString << "<<End " << name << bang << ">>\n";
-      return;
-    }
+    llvm::StringRef newBlock = eval.isNewBlock ? "^" : "";
+    llvm::StringRef bang = eval.isUnstructured ? "!" : "";
     outputStream << indentString;
     if (eval.printIndex)
       outputStream << eval.printIndex << ' ';
-    if (eval.isNewBlock)
-      outputStream << '^';
-    outputStream << name << bang;
-    if (eval.isActionStmt() || eval.isConstructStmt()) {
-      if (eval.negateCondition)
-        outputStream << " [negate]";
-      if (eval.controlSuccessor)
-        outputStream << " -> " << eval.controlSuccessor->printIndex;
-    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
+    if (eval.hasNestedEvaluations())
+      outputStream << "<<" << newBlock << name << bang << ">>";
+    else
+      outputStream << newBlock << name << bang;
+    if (eval.negateCondition)
+      outputStream << " [negate]";
+    if (eval.constructExit)
+      outputStream << " -> " << eval.constructExit->printIndex;
+    else if (eval.controlSuccessor)
+      outputStream << " -> " << eval.controlSuccessor->printIndex;
+    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
-    }
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();
+    else if (auto *dir = eval.getIf<Fortran::parser::CompilerDirective>())
+      outputStream << ": !" << dir->source.ToString();
     outputStream << '\n';
+    if (eval.hasNestedEvaluations()) {
+      dumpEvaluationList(outputStream, *eval.evaluationList, indent + 1);
+      outputStream << indentString << "<<End " << name << bang << ">>\n";
+    }
   }
 
   void dumpEvaluation(llvm::raw_ostream &ostream,
@@ -1024,7 +1107,7 @@ public:
                           int indent = 1) {
     static const auto white = "                                      ++"s;
     auto indentString = white.substr(0, indent * 2);
-    for (const auto &eval : evaluationList)
+    for (const lower::pft::Evaluation &eval : evaluationList)
       dumpEvaluation(outputStream, eval, indentString, indent);
   }
 
@@ -1069,7 +1152,8 @@ public:
     dumpEvaluationList(outputStream, functionLikeUnit.evaluationList);
     if (!functionLikeUnit.nestedFunctions.empty()) {
       outputStream << "\nContains\n";
-      for (auto &func : functionLikeUnit.nestedFunctions)
+      for (const lower::pft::FunctionLikeUnit &func :
+           functionLikeUnit.nestedFunctions)
         dumpFunctionLikeUnit(outputStream, func);
       outputStream << "End Contains\n";
     }
@@ -1081,7 +1165,8 @@ public:
     outputStream << getNodeIndex(moduleLikeUnit) << " ";
     outputStream << "ModuleLike: ";
     outputStream << "\nContains\n";
-    for (auto &func : moduleLikeUnit.nestedFunctions)
+    for (const lower::pft::FunctionLikeUnit &func :
+         moduleLikeUnit.nestedFunctions)
       dumpFunctionLikeUnit(outputStream, func);
     outputStream << "End Contains\nEnd ModuleLike\n\n";
   }
@@ -1122,6 +1207,7 @@ getFunctionStmt(const T &func) {
       std::get<parser::Statement<A>>(func.t)};
   return result;
 }
+
 template <typename A, typename T>
 static lower::pft::ModuleLikeUnit::ModuleStatement getModuleStmt(const T &mod) {
   lower::pft::ModuleLikeUnit::ModuleStatement result{
@@ -1179,12 +1265,39 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
   return semantics::FindCommonBlockContaining(sym);
 }
 
+static bool isReEntrant(const Fortran::semantics::Scope &scope) {
+  if (scope.kind() == Fortran::semantics::Scope::Kind::MainProgram)
+    return false;
+  if (scope.kind() == Fortran::semantics::Scope::Kind::Subprogram) {
+    const Fortran::semantics::Symbol *sym = scope.symbol();
+    assert(sym && "Subprogram scope must have a symbol");
+    return sym->attrs().test(semantics::Attr::RECURSIVE) ||
+           (!sym->attrs().test(semantics::Attr::NON_RECURSIVE) &&
+            Fortran::lower::defaultRecursiveFunctionSetting());
+  }
+  if (scope.kind() == Fortran::semantics::Scope::Kind::Module)
+    return false;
+  return true;
+}
+
 /// Is the symbol `sym` a global?
-static bool symbolIsGlobal(const semantics::Symbol &sym) {
-  if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>())
+bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
+  if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>()) {
     if (details->init())
       return true;
-  return semantics::IsSaved(sym) || lower::definedInCommonBlock(sym);
+    if (!isReEntrant(sym.owner())) {
+      // Turn array and character of non re-entrant programs (like the main
+      // program) into global memory.
+      if (const Fortran::semantics::DeclTypeSpec *symTy = sym.GetType())
+        if (symTy->category() == semantics::DeclTypeSpec::Character)
+          if (auto e = symTy->characterTypeSpec().length().GetExplicit())
+            return true;
+      if (!details->shape().empty() || !details->coshape().empty())
+        return true;
+    }
+  }
+  return semantics::IsSaved(sym) || lower::definedInCommonBlock(sym) ||
+         semantics::IsNamedConstant(sym);
 }
 
 namespace {
@@ -1194,90 +1307,85 @@ namespace {
 /// symbol table, which is sorted by name.
 struct SymbolDependenceDepth {
   explicit SymbolDependenceDepth(
-      std::vector<std::vector<lower::pft::Variable>> &vars, bool reentrant)
-      : vars{vars}, reentrant{reentrant} {}
+      std::vector<std::vector<lower::pft::Variable>> &vars)
+      : vars{vars} {}
 
   void analyzeAliasesInCurrentScope(const semantics::Scope &scope) {
+    // FIXME: When this function is called on the scope of an internal
+    // procedure whose parent contains an EQUIVALENCE set and the internal
+    // procedure uses variables from that EQUIVALENCE set, we end up creating
+    // an AggregateStore for those variables unnecessarily.
+    //
+    /// If this is a function nested in a module no host associated
+    /// symbol are added to the function scope for module symbols used in this
+    /// scope. As a result, alias analysis in parent module scopes must be
+    /// preformed here.
+    const semantics::Scope *parentScope = &scope;
+    while (!parentScope->IsGlobal()) {
+      parentScope = &parentScope->parent();
+      if (parentScope->IsModule())
+        analyzeAliases(*parentScope);
+    }
     for (const auto &iter : scope) {
-      const auto &ultimate = iter.second.get().GetUltimate();
+      const semantics::Symbol &ultimate = iter.second.get().GetUltimate();
       if (skipSymbol(ultimate))
         continue;
-      bool isDeclaration = scope != ultimate.owner();
-      analyzeAliases(ultimate.owner(), isDeclaration);
+      analyzeAliases(ultimate.owner());
     }
     // add all aggregate stores to the front of the work list
     adjustSize(1);
     // The copy in the loop matters, 'stores' will still be used.
-    for (auto st : stores) {
+    for (auto st : stores)
       vars[0].emplace_back(std::move(st));
-    }
   }
+
+  // Compute the offset of the last byte that resides in the symbol.
+  inline static std::size_t offsetWidth(const Fortran::semantics::Symbol &sym) {
+    std::size_t width = sym.offset();
+    if (std::size_t size = sym.size())
+      width += size - 1;
+    return width;
+  }
+
   // Analyze the equivalence sets. This analysis need not be performed when the
   // scope has no equivalence sets.
-  void analyzeAliases(const semantics::Scope &scope, bool isDeclaration) {
+  void analyzeAliases(const semantics::Scope &scope) {
     if (scope.equivalenceSets().empty())
       return;
-    if (scopeAnlyzedForAliases.find(&scope) != scopeAnlyzedForAliases.end())
+    // Don't analyze a scope if it has already been analyzed.
+    if (analyzedScopes.find(&scope) != analyzedScopes.end())
       return;
-    scopeAnlyzedForAliases.insert(&scope);
-    Fortran::lower::IntervalSet intervals;
-    llvm::DenseMap<std::size_t, llvm::SmallVector<const semantics::Symbol *, 8>>
-        aliasSets;
-    llvm::DenseMap<std::size_t, const semantics::Symbol *> setIsGlobal;
 
-    // 1. Construct the intervals. Determine each entity's interval, merging
-    // overlapping intervals into aggregates.
-    for (const auto &pair : scope) {
-      const auto &sym = pair.second.get();
-      if (skipSymbol(sym))
-        continue;
-      LLVM_DEBUG(llvm::dbgs() << "symbol: " << sym << '\n');
-      intervals.merge(sym.offset(), sym.offset() + sym.size() - 1);
-    }
-
-    // 2. Compute alias sets. Adds each entity to a set for the interval it
-    // appears to be mapped into.
-    for (const auto &pair : scope) {
-      const auto &sym = pair.second.get();
-      if (skipSymbol(sym))
-        continue;
-      auto iter = intervals.find(sym.offset());
-      if (iter != intervals.end()) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "symbol: " << toStringRef(sym.name()) << " on ["
-                   << iter->first << ".." << iter->second << "]\n");
-        aliasSets[iter->first].push_back(&sym);
-        if (symbolIsGlobal(sym))
-          setIsGlobal.insert({iter->first, &sym});
-      }
-    }
-
-    // 3. For each alias set with more than 1 member, add an Interval to the
-    // stores. The Interval will be lowered into a single memory allocation,
-    // with the co-located, overlapping variables mapped into that memory range.
-    for (const auto &pair : aliasSets) {
-      if (pair.second.size() > 1) {
-        // Set contains more than 1 aliasing variable.
-        // 1. Mark the symbols as aliasing for lowering.
-        for (auto *sym : pair.second)
-          aliasSyms.insert(sym);
-        auto gvarIter = setIsGlobal.find(pair.first);
-        auto iter = intervals.find(pair.first);
-        auto ibgn = iter->first;
-        auto ilen = iter->second - ibgn + 1;
-        // 2. Add an Interval to the list of stores allocated for this unit.
-        lower::pft::Variable::Interval interval(ibgn, ilen);
-        if (gvarIter != setIsGlobal.end()) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "interval [" << ibgn << ".." << ibgn + ilen
-                     << ") added as global " << *gvarIter->second << '\n');
-          stores.emplace_back(std::move(interval), scope, pair.second,
-                              isDeclaration);
+    analyzedScopes.insert(&scope);
+    std::list<std::list<semantics::SymbolRef>> aggregates =
+        Fortran::semantics::GetStorageAssociations(scope);
+    for (std::list<semantics::SymbolRef> aggregate : aggregates) {
+      const Fortran::semantics::Symbol *aggregateSym = nullptr;
+      bool isGlobal = false;
+      const semantics::Symbol &first = *aggregate.front();
+      std::size_t start = first.offset();
+      std::size_t end = first.offset() + first.size();
+      const Fortran::semantics::Symbol *namingSym = nullptr;
+      for (semantics::SymbolRef symRef : aggregate) {
+        const semantics::Symbol &sym = *symRef;
+        aliasSyms.insert(&sym);
+        if (sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated)) {
+          aggregateSym = &sym;
         } else {
-          LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
-                                  << ") added\n");
-          stores.emplace_back(std::move(interval), scope, isDeclaration);
+          isGlobal |= lower::symbolIsGlobal(sym);
+          start = std::min(sym.offset(), start);
+          end = std::max(sym.offset() + sym.size(), end);
+          if (!namingSym || (sym.name() < namingSym->name()))
+            namingSym = &sym;
         }
+      }
+      assert(namingSym && "must contain at least one user symbol");
+      if (!aggregateSym) {
+        stores.emplace_back(
+            Fortran::lower::pft::Variable::Interval{start, end - start},
+            *namingSym, isGlobal);
+      } else {
+        stores.emplace_back(*aggregateSym, *namingSym, isGlobal);
       }
     }
   }
@@ -1293,7 +1401,14 @@ struct SymbolDependenceDepth {
       // TODO: add declaration?
       return 0;
     }
-    auto ultimate = sym.GetUltimate();
+    semantics::Symbol ultimate = sym.GetUltimate();
+    if (const auto *details =
+            ultimate.detailsIf<semantics::NamelistDetails>()) {
+      // handle namelist group symbols
+      for (const semantics::SymbolRef &s : details->objects())
+        analyze(s);
+      return 0;
+    }
     if (!ultimate.has<semantics::ObjectEntityDetails>() &&
         !ultimate.has<semantics::ProcEntityDetails>())
       return 0;
@@ -1302,21 +1417,22 @@ struct SymbolDependenceDepth {
       llvm_unreachable("not yet implemented - derived type analysis");
 
     // Symbol must be something lowering will have to allocate.
-    bool global = semantics::IsSaved(sym);
     int depth = 0;
-    const auto *symTy = sym.GetType();
+    const semantics::DeclTypeSpec *symTy = sym.GetType();
     assert(symTy && "symbol must have a type");
 
-    // check CHARACTER's length
-    if (symTy->category() == semantics::DeclTypeSpec::Character)
-      if (auto e = symTy->characterTypeSpec().length().GetExplicit()) {
-        // turn variable into a global if this unit is not reentrant
-        global = global || !reentrant;
-        for (const auto &s : evaluate::CollectSymbols(*e))
-          depth = std::max(analyze(s) + 1, depth);
-      }
-
+    // Analyze symbols appearing in object entity specification expression. This
+    // ensures these symbols will be instantiated before the current one.
+    // This is not done for object entities that are host associated because
+    // they must be instantiated from the value of the host symbols (the
+    // specification expressions should not be re-evaluated).
     if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>()) {
+      // check CHARACTER's length
+      if (symTy->category() == semantics::DeclTypeSpec::Character)
+        if (auto e = symTy->characterTypeSpec().length().GetExplicit())
+          for (const auto &s : evaluate::CollectSymbols(*e))
+            depth = std::max(analyze(s) + 1, depth);
+
       auto doExplicit = [&](const auto &bound) {
         if (bound.isExplicit()) {
           semantics::SomeExpr e{*bound.GetExplicit()};
@@ -1325,28 +1441,22 @@ struct SymbolDependenceDepth {
         }
       };
       // handle any symbols in array bound declarations
-      if (!details->shape().empty())
-        global = global || !reentrant;
-      for (const auto &subs : details->shape()) {
+      for (const semantics::ShapeSpec &subs : details->shape()) {
         doExplicit(subs.lbound());
         doExplicit(subs.ubound());
       }
       // handle any symbols in coarray bound declarations
-      if (!details->coshape().empty())
-        global = global || !reentrant;
-      for (const auto &subs : details->coshape()) {
+      for (const semantics::ShapeSpec &subs : details->coshape()) {
         doExplicit(subs.lbound());
         doExplicit(subs.ubound());
       }
       // handle any symbols in initialization expressions
-      if (auto e = details->init()) {
-        // A PARAMETER may not be marked as implicitly SAVE, so set the flag.
-        global = true;
+      if (auto e = details->init())
         for (const auto &s : evaluate::CollectSymbols(*e))
           depth = std::max(analyze(s) + 1, depth);
-      }
     }
     adjustSize(depth + 1);
+    bool global = lower::symbolIsGlobal(sym);
     vars[depth].emplace_back(sym, global, depth);
     if (semantics::IsAllocatable(sym))
       vars[depth].back().setHeapAlloc();
@@ -1357,7 +1467,7 @@ struct SymbolDependenceDepth {
 
     // If there are alias sets, then link the participating variables to their
     // aggregate stores when constructing the new variable on the list.
-    if (auto *store = findStoreIfAlias(sym)) {
+    if (lower::pft::Variable::AggregateStore *store = findStoreIfAlias(sym)) {
       vars[depth].back().setAlias(store->getOffset());
     }
     return depth;
@@ -1373,26 +1483,31 @@ struct SymbolDependenceDepth {
 
   Fortran::lower::pft::Variable::AggregateStore *
   findStoreIfAlias(const Fortran::evaluate::Symbol &sym) {
-    const auto &ultimate = sym.GetUltimate();
-    const auto &scope = ultimate.owner();
+    const semantics::Symbol &ultimate = sym.GetUltimate();
+    const semantics::Scope &scope = ultimate.owner();
     // Expect the total number of EQUIVALENCE sets to be small for a typical
     // Fortran program.
     if (aliasSyms.find(&ultimate) != aliasSyms.end()) {
       LLVM_DEBUG(llvm::dbgs() << "symbol: " << ultimate << '\n');
       LLVM_DEBUG(llvm::dbgs() << "scope: " << scope << '\n');
-      auto off = ultimate.offset();
-      for (auto &v : stores) {
-        if (v.scope == &scope) {
-          auto bot = std::get<0>(v.interval);
-          if (off >= bot && off < bot + std::get<1>(v.interval))
+      std::size_t off = ultimate.offset();
+      std::size_t symSize = ultimate.size();
+      for (lower::pft::Variable::AggregateStore &v : stores) {
+        if (&v.getOwningScope() == &scope) {
+          auto intervalOff = std::get<0>(v.interval);
+          auto intervalSize = std::get<1>(v.interval);
+          if (off >= intervalOff && off < intervalOff + intervalSize)
+            return &v;
+          // Zero sized symbol in zero sized equivalence.
+          if (off == intervalOff && symSize == 0)
             return &v;
         }
       }
       // clang-format off
       LLVM_DEBUG(
           llvm::dbgs() << "looking for " << off << "\n{\n";
-          for (auto v : stores) {
-            llvm::dbgs() << " in scope: " << v.scope << "\n";
+          for (lower::pft::Variable::AggregateStore &v : stores) {
+            llvm::dbgs() << " in scope: " << &v.getOwningScope() << "\n";
             llvm::dbgs() << "  i = [" << std::get<0>(v.interval) << ".."
                 << std::get<0>(v.interval) + std::get<1>(v.interval)
                 << "]\n";
@@ -1407,8 +1522,11 @@ struct SymbolDependenceDepth {
 private:
   /// Skip symbol in alias analysis.
   bool skipSymbol(const semantics::Symbol &sym) {
+    // Common block equivalences are largely managed by the front end.
+    // Compiler generated symbols ('.' names) cannot be equivalenced.
+    // FIXME: Equivalence code generation may need to be revisited.
     return !sym.has<semantics::ObjectEntityDetails>() ||
-           lower::definedInCommonBlock(sym);
+           lower::definedInCommonBlock(sym) || sym.name()[0] == '.';
   }
 
   // Make sure the table is of appropriate size.
@@ -1420,22 +1538,25 @@ private:
   llvm::SmallSet<const semantics::Symbol *, 32> seen;
   std::vector<std::vector<lower::pft::Variable>> &vars;
   llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
-  llvm::SmallSet<const semantics::Scope *, 4> scopeAnlyzedForAliases;
+  /// Set of Scope that have been analyzed for aliases.
+  llvm::SmallSet<const semantics::Scope *, 4> analyzedScopes;
   std::vector<Fortran::lower::pft::Variable::AggregateStore> stores;
-  bool reentrant;
 };
 } // namespace
 
 static void processSymbolTable(
     const semantics::Scope &scope,
-    std::vector<std::vector<Fortran::lower::pft::Variable>> &varList,
-    bool reentrant) {
-  SymbolDependenceDepth sdd{varList, reentrant};
+    std::vector<std::vector<Fortran::lower::pft::Variable>> &varList) {
+  SymbolDependenceDepth sdd{varList};
   sdd.analyzeAliasesInCurrentScope(scope);
   for (const auto &iter : scope)
     sdd.analyze(iter.second.get());
   sdd.finalize();
 }
+
+//===----------------------------------------------------------------------===//
+// FunctionLikeUnit implementation
+//===----------------------------------------------------------------------===//
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const parser::MainProgram &func, const lower::pft::PftNode &parent,
@@ -1447,14 +1568,14 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t);
   if (programStmt.has_value()) {
     beginStmt = FunctionStatement(programStmt.value());
-    const auto *symbol = getSymbol(*beginStmt);
+    const semantics::Symbol *symbol = getSymbol(*beginStmt);
     entryPointList[0].first = symbol;
-    processSymbolTable(*symbol->scope(), varList, isRecursive());
+    processSymbolTable(*symbol->scope(), varList);
   } else {
     processSymbolTable(
         semanticsContext.FindScope(
             std::get<parser::Statement<parser::EndProgramStmt>>(func.t).source),
-        varList, isRecursive());
+        varList);
   }
 }
 
@@ -1464,9 +1585,9 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::FunctionStmt>(func)},
       endStmt{getFunctionStmt<parser::EndFunctionStmt>(func)} {
-  const auto *symbol = getSymbol(*beginStmt);
+  const semantics::Symbol *symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
-  processSymbolTable(*symbol->scope(), varList, isRecursive());
+  processSymbolTable(*symbol->scope(), varList);
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
@@ -1475,9 +1596,9 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::SubroutineStmt>(func)},
       endStmt{getFunctionStmt<parser::EndSubroutineStmt>(func)} {
-  const auto *symbol = getSymbol(*beginStmt);
+  const semantics::Symbol *symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
-  processSymbolTable(*symbol->scope(), varList, isRecursive());
+  processSymbolTable(*symbol->scope(), varList);
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
@@ -1486,17 +1607,43 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::MpSubprogramStmt>(func)},
       endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)} {
-  const auto *symbol = getSymbol(*beginStmt);
+  const semantics::Symbol *symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
-  processSymbolTable(*symbol->scope(), varList, isRecursive());
+  processSymbolTable(*symbol->scope(), varList);
 }
+
+Fortran::lower::HostAssociations &
+Fortran::lower::pft::FunctionLikeUnit::parentHostAssoc() {
+  if (auto *par = parent.getIf<FunctionLikeUnit>())
+    return par->hostAssociations;
+  llvm::report_fatal_error("parent is not a function");
+}
+
+bool Fortran::lower::pft::FunctionLikeUnit::parentHasHostAssoc() {
+  if (auto *par = parent.getIf<FunctionLikeUnit>())
+    return !par->hostAssociations.empty();
+  return false;
+}
+
+parser::CharBlock
+Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
+  if (beginStmt)
+    return stmtSourceLoc(*beginStmt);
+  if (!evaluationList.empty())
+    return evaluationList.front().position;
+  return stmtSourceLoc(endStmt);
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleLikeUnit implementation
+//===----------------------------------------------------------------------===//
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     const parser::Module &m, const lower::pft::PftNode &parent)
     : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::ModuleStmt>(m)},
       endStmt{getModuleStmt<parser::EndModuleStmt>(m)} {
-  const auto *symbol = getSymbol(beginStmt);
-  processSymbolTable(*symbol->scope(), varList, /*reentrant=*/false);
+  const semantics::Symbol *symbol = getSymbol(beginStmt);
+  processSymbolTable(*symbol->scope(), varList);
 }
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
@@ -1504,9 +1651,25 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::SubmoduleStmt>(
                                   m)},
       endStmt{getModuleStmt<parser::EndSubmoduleStmt>(m)} {
-  const auto *symbol = getSymbol(beginStmt);
-  processSymbolTable(*symbol->scope(), varList, /*reentrant=*/false);
+  const semantics::Symbol *symbol = getSymbol(beginStmt);
+  processSymbolTable(*symbol->scope(), varList);
 }
+
+parser::CharBlock
+Fortran::lower::pft::ModuleLikeUnit::getStartingSourceLoc() const {
+  return stmtSourceLoc(beginStmt);
+}
+const Fortran::semantics::Scope &
+Fortran::lower::pft::ModuleLikeUnit::getScope() const {
+  const Fortran::semantics::Symbol *symbol = getSymbol(beginStmt);
+  assert(symbol && symbol->scope() &&
+         "Module statement must have a symbol with a scope");
+  return *symbol->scope();
+}
+
+//===----------------------------------------------------------------------===//
+// BlockDataUnit implementation
+//===----------------------------------------------------------------------===//
 
 Fortran::lower::pft::BlockDataUnit::BlockDataUnit(
     const parser::BlockData &bd, const lower::pft::PftNode &parent,
@@ -1562,14 +1725,11 @@ void Fortran::lower::pft::Variable::dump() const {
   } else if (auto *s = std::get_if<AggregateStore>(&var)) {
     llvm::errs() << "interval[" << std::get<0>(s->interval) << ", "
                  << std::get<1>(s->interval) << "]:";
+    llvm::errs() << " name: " << toStringRef(s->getNamingSymbol().name());
     if (s->isGlobal())
       llvm::errs() << ", global";
-    if (s->vars.size()) {
-      llvm::errs() << ", vars: {";
-      llvm::interleaveComma(s->vars, llvm::errs(),
-                            [](auto *y) { llvm::errs() << *y; });
-      llvm::errs() << '}';
-    }
+    if (s->initialValueSymbol)
+      llvm::errs() << ", initial value: {" << *s->initialValueSymbol << "}";
   } else {
     llvm_unreachable("not a Variable");
   }
@@ -1587,4 +1747,71 @@ void Fortran::lower::pft::ModuleLikeUnit::dump() const {
 /// The BlockDataUnit dump is just the associated symbol table.
 void Fortran::lower::pft::BlockDataUnit::dump() const {
   llvm::errs() << "block data {\n" << symTab << "\n}\n";
+}
+
+std::vector<Fortran::lower::pft::Variable>
+Fortran::lower::pft::buildFuncResultDependencyList(
+    const Fortran::semantics::Symbol &symbol) {
+  std::vector<std::vector<pft::Variable>> variableList;
+  SymbolDependenceDepth sdd(variableList);
+  sdd.analyzeAliasesInCurrentScope(symbol.owner());
+  sdd.analyze(symbol);
+  sdd.finalize();
+  // Remove the pft::variable for the result itself, only its dependencies
+  // should be returned in the list.
+  assert(!variableList[0].empty() && "must at least contain the result");
+  assert(&variableList[0].back().getSymbol() == &symbol &&
+         "result sym should be last");
+  variableList[0].pop_back();
+  return variableList[0];
+}
+
+namespace {
+/// Helper class to find all the symbols referenced in a FunctionLikeUnit.
+/// It defines a parse tree visitor doing a deep visit in all nodes with
+/// symbols (including evaluate::Expr).
+struct SymbolVisitor {
+  template <typename A>
+  bool Pre(const A &x) {
+    if constexpr (Fortran::parser::HasTypedExpr<A>::value)
+      if (const auto *expr = Fortran::semantics::GetExpr(x))
+        visitExpr(*expr);
+    return true;
+  }
+
+  bool Pre(const Fortran::parser::Name &name) {
+    if (const semantics::Symbol *symbol = name.symbol)
+      visitSymbol(*symbol);
+    return false;
+  }
+
+  void visitExpr(const Fortran::lower::SomeExpr &expr) {
+    for (const semantics::Symbol &symbol :
+         Fortran::evaluate::CollectSymbols(expr))
+      visitSymbol(symbol);
+  }
+
+  void visitSymbol(const Fortran::semantics::Symbol &symbol) {
+    callBack(symbol);
+    // Visit statement function body since it will be inlined in lowering.
+    if (const auto *subprogramDetails =
+            symbol.detailsIf<Fortran::semantics::SubprogramDetails>())
+      if (const auto &maybeExpr = subprogramDetails->stmtFunction())
+        visitExpr(*maybeExpr);
+  }
+
+  template <typename A>
+  constexpr void Post(const A &) {}
+
+  const std::function<void(const Fortran::semantics::Symbol &)> &callBack;
+};
+} // namespace
+
+void Fortran::lower::pft::visitAllSymbols(
+    const Fortran::lower::pft::FunctionLikeUnit &funit,
+    const std::function<void(const Fortran::semantics::Symbol &)> callBack) {
+  SymbolVisitor visitor{callBack};
+  funit.visit([&](const auto &functionParserNode) {
+    parser::Walk(functionParserNode, visitor);
+  });
 }
