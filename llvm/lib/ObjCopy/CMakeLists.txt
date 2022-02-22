@@ -34,19 +34,19 @@ add_llvm_component_library(LLVMObjCopy
   ObjCopy.cpp
   ConfigManager.cpp
   COFF/COFFObjcopy.cpp
-  COFF/Object.cpp
-  COFF/Reader.cpp
-  COFF/Writer.cpp
+  COFF/COFFObject.cpp
+  COFF/COFFReader.cpp
+  COFF/COFFWriter.cpp
   ELF/ELFObjcopy.cpp
-  ELF/Object.cpp
+  ELF/ELFObject.cpp
   MachO/MachOObjcopy.cpp
   MachO/MachOReader.cpp
   MachO/MachOWriter.cpp
   MachO/MachOLayoutBuilder.cpp
-  MachO/Object.cpp
-  wasm/Object.cpp
-  wasm/Reader.cpp
-  wasm/Writer.cpp
+  MachO/MachOObject.cpp
+  wasm/WasmObject.cpp
+  wasm/WasmReader.cpp
+  wasm/WasmWriter.cpp
   wasm/WasmObjcopy.cpp
 
   ADDITIONAL_HEADER_DIRS

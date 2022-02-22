@@ -1,4 +1,4 @@
-//===- Reader.h -------------------------------------------------*- C++ -*-===//
+//===- WasmReader.h ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_WASM_READER_H
-#define LLVM_LIB_OBJCOPY_WASM_READER_H
+#ifndef LLVM_LIB_OBJCOPY_WASM_WASMREADER_H
+#define LLVM_LIB_OBJCOPY_WASM_WASMREADER_H
 
-#include "Object.h"
+#include "WasmObject.h"
 
 namespace llvm {
 namespace objcopy {
@@ -28,4 +28,4 @@ private:
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_WASM_READER_H
+#endif // LLVM_LIB_OBJCOPY_WASM_WASMREADER_H

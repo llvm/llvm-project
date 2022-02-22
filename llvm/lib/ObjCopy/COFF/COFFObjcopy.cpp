@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjCopy/COFF/COFFObjcopy.h"
-#include "Object.h"
-#include "Reader.h"
-#include "Writer.h"
+#include "COFFObject.h"
+#include "COFFReader.h"
+#include "COFFWriter.h"
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 

@@ -1,4 +1,4 @@
-//===- Object.cpp ---------------------------------------------------------===//
+//===- COFFObject.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Object.h"
+#include "COFFObject.h"
 #include "llvm/ADT/DenseSet.h"
 #include <algorithm>
 

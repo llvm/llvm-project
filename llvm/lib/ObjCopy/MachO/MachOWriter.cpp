@@ -8,7 +8,7 @@
 
 #include "MachOWriter.h"
 #include "MachOLayoutBuilder.h"
-#include "Object.h"
+#include "MachOObject.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/MachO.h"

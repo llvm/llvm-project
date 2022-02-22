@@ -1,4 +1,4 @@
-//===- Writer.h -------------------------------------------------*- C++ -*-===//
+//===- COFFWriter.h ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_COFF_WRITER_H
-#define LLVM_LIB_OBJCOPY_COFF_WRITER_H
+#ifndef LLVM_LIB_OBJCOPY_COFF_COFFWRITER_H
+#define LLVM_LIB_OBJCOPY_COFF_COFFWRITER_H
 
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
@@ -60,4 +60,4 @@ public:
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_COFF_WRITER_H
+#endif // LLVM_LIB_OBJCOPY_COFF_COFFWRITER_H
