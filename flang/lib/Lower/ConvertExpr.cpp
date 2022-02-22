@@ -15,6 +15,7 @@
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Semantics/expression.h"
@@ -90,6 +91,16 @@ static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
       });
 }
 
+/// Is this a call to an elemental procedure with at least one array argument?
+static bool
+isElementalProcWithArrayArgs(const Fortran::evaluate::ProcedureRef &procRef) {
+  if (procRef.IsElemental())
+    for (const std::optional<Fortran::evaluate::ActualArgument> &arg :
+         procRef.arguments())
+      if (arg && arg->Rank() != 0)
+        return true;
+  return false;
+}
 namespace {
 
 /// Lowering of Fortran::evaluate::Expr<T> expressions
@@ -444,6 +455,23 @@ public:
     return std::visit([&](const auto &x) { return genval(x); }, des.u);
   }
 
+  mlir::Type genType(const Fortran::evaluate::DynamicType &dt) {
+    if (dt.category() != Fortran::common::TypeCategory::Derived)
+      return converter.genType(dt.category(), dt.kind());
+    TODO(getLoc(), "genType Derived Type");
+  }
+
+  /// Lower a function reference
+  template <typename A>
+  ExtValue genFunctionRef(const Fortran::evaluate::FunctionRef<A> &funcRef) {
+    if (!funcRef.GetType().has_value())
+      fir::emitFatalError(getLoc(), "internal: a function must have a type");
+    mlir::Type resTy = genType(*funcRef.GetType());
+    return genProcedureRef(funcRef, {resTy});
+  }
+
+  /// Lower function call `funcRef` and return a reference to the resultant
+  /// value. This is required for lowering expressions such as `f1(f2(v))`.
   template <typename A>
   ExtValue gen(const Fortran::evaluate::FunctionRef<A> &funcRef) {
     TODO(getLoc(), "gen FunctionRef<A>");
@@ -451,11 +479,65 @@ public:
 
   template <typename A>
   ExtValue genval(const Fortran::evaluate::FunctionRef<A> &funcRef) {
-    TODO(getLoc(), "genval FunctionRef<A>");
+    ExtValue result = genFunctionRef(funcRef);
+    if (result.rank() == 0 && fir::isa_ref_type(fir::getBase(result).getType()))
+      return genLoad(result);
+    return result;
   }
 
   ExtValue genval(const Fortran::evaluate::ProcedureRef &procRef) {
     TODO(getLoc(), "genval ProcedureRef");
+  }
+
+  /// Generate a call to an intrinsic function.
+  ExtValue
+  genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
+                  const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+                  llvm::Optional<mlir::Type> resultType) {
+    llvm::SmallVector<ExtValue> operands;
+
+    llvm::StringRef name = intrinsic.name;
+    mlir::Location loc = getLoc();
+
+    const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
+        Fortran::lower::getIntrinsicArgumentLowering(name);
+    for (const auto &[arg, dummy] :
+         llvm::zip(procRef.arguments(),
+                   intrinsic.characteristics.value().dummyArguments)) {
+      auto *expr = Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg);
+      if (!expr) {
+        // Absent optional.
+        operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
+        continue;
+      }
+      if (!argLowering) {
+        // No argument lowering instruction, lower by value.
+        operands.emplace_back(genval(*expr));
+        continue;
+      }
+      // Ad-hoc argument lowering handling.
+      Fortran::lower::ArgLoweringRule argRules =
+          Fortran::lower::lowerIntrinsicArgumentAs(loc, *argLowering,
+                                                   dummy.name);
+      switch (argRules.lowerAs) {
+      case Fortran::lower::LowerIntrinsicArgAs::Value:
+        operands.emplace_back(genval(*expr));
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Addr:
+        TODO(getLoc(), "argument lowering for Addr");
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Box:
+        TODO(getLoc(), "argument lowering for Box");
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+        TODO(getLoc(), "argument lowering for Inquired");
+        continue;
+      }
+      llvm_unreachable("bad switch");
+    }
+    // Let the intrinsic library lower the intrinsic procedure call
+    return Fortran::lower::genIntrinsicCall(builder, getLoc(), name, resultType,
+                                            operands);
   }
 
   template <typename A>
@@ -463,6 +545,28 @@ public:
     if (isScalar(x))
       return std::visit([&](const auto &e) { return genval(e); }, x.u);
     TODO(getLoc(), "genval Expr<A> arrays");
+  }
+
+  /// Lower a non-elemental procedure reference.
+  // TODO: Handle read allocatable and pointer results.
+  ExtValue genProcedureRef(const Fortran::evaluate::ProcedureRef &procRef,
+                           llvm::Optional<mlir::Type> resultType) {
+    ExtValue res = genRawProcedureRef(procRef, resultType);
+    return res;
+  }
+
+  /// Lower a non-elemental procedure reference.
+  ExtValue genRawProcedureRef(const Fortran::evaluate::ProcedureRef &procRef,
+                              llvm::Optional<mlir::Type> resultType) {
+    mlir::Location loc = getLoc();
+    if (isElementalProcWithArrayArgs(procRef))
+      fir::emitFatalError(loc, "trying to lower elemental procedure with array "
+                               "arguments as normal procedure");
+    if (const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+            procRef.proc().GetSpecificIntrinsic())
+      return genIntrinsicRef(procRef, *intrinsic, resultType);
+
+    return {};
   }
 
   /// Helper to detect Transformational function reference.

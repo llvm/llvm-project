@@ -187,6 +187,7 @@ public:
   /// VVP Lowering {
   SDValue lowerToVVP(SDValue Op, SelectionDAG &DAG) const;
   SDValue legalizeInternalVectorOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue splitVectorOp(SDValue Op, VECustomDAG &CDAG) const;
   SDValue legalizePackedAVL(SDValue Op, VECustomDAG &CDAG) const;
   SDValue splitMaskArithmetic(SDValue Op, SelectionDAG &DAG) const;
   /// } VVPLowering
