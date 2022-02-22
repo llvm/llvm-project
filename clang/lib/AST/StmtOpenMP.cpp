@@ -863,16 +863,20 @@ OMPOrderedDirective *OMPOrderedDirective::CreateEmpty(const ASTContext &C,
                                                    !IsStandalone);
 }
 
-OMPAtomicDirective *OMPAtomicDirective::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Expr *X, Expr *V,
-    Expr *E, Expr *UE, bool IsXLHSInRHSPart, bool IsPostfixUpdate) {
+OMPAtomicDirective *
+OMPAtomicDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                           Stmt *AssociatedStmt, Expr *X, Expr *V, Expr *E,
+                           Expr *UE, Expr *D, Expr *Cond, bool IsXLHSInRHSPart,
+                           bool IsPostfixUpdate) {
   auto *Dir = createDirective<OMPAtomicDirective>(
-      C, Clauses, AssociatedStmt, /*NumChildren=*/4, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, /*NumChildren=*/6, StartLoc, EndLoc);
   Dir->setX(X);
   Dir->setV(V);
   Dir->setExpr(E);
   Dir->setUpdateExpr(UE);
+  Dir->setD(D);
+  Dir->setCond(Cond);
   Dir->IsXLHSInRHSPart = IsXLHSInRHSPart;
   Dir->IsPostfixUpdate = IsPostfixUpdate;
   return Dir;
@@ -882,7 +886,7 @@ OMPAtomicDirective *OMPAtomicDirective::CreateEmpty(const ASTContext &C,
                                                     unsigned NumClauses,
                                                     EmptyShell) {
   return createEmptyDirective<OMPAtomicDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, /*NumChildren=*/4);
+      C, NumClauses, /*HasAssociatedStmt=*/true, /*NumChildren=*/6);
 }
 
 OMPTargetDirective *OMPTargetDirective::Create(const ASTContext &C,
