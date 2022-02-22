@@ -43,6 +43,21 @@ fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
                                                 const SomeExpr &expr,
                                                 SymMap &symMap);
 
+/// Create an extended expression address.
+fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
+                                             AbstractConverter &converter,
+                                             const SomeExpr &expr,
+                                             SymMap &symMap);
+
+// Attribute for an alloca that is a trivial adaptor for converting a value to
+// pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
+// eliminate these.
+inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
+  return {mlir::StringAttr::get(builder.getContext(),
+                                fir::getAdaptToByRefAttrName()),
+          builder.getUnitAttr()};
+}
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H

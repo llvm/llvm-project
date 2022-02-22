@@ -902,6 +902,36 @@ static Instruction *reassociateMinMaxWithConstants(IntrinsicInst *II) {
   return CallInst::Create(MinMax, {LHS->getArgOperand(0), NewC});
 }
 
+/// If this min/max has a matching min/max operand with a constant, try to push
+/// the constant operand into this instruction. This can enable more folds.
+static Instruction *
+reassociateMinMaxWithConstantInOperand(IntrinsicInst *II,
+                                       InstCombiner::BuilderTy &Builder) {
+  // Match and capture a min/max operand candidate.
+  Value *X, *Y;
+  Constant *C;
+  Instruction *Inner;
+  if (!match(II, m_c_MaxOrMin(m_OneUse(m_CombineAnd(
+                                  m_Instruction(Inner),
+                                  m_MaxOrMin(m_Value(X), m_ImmConstant(C)))),
+                              m_Value(Y))))
+    return nullptr;
+
+  // The inner op must match. Check for constants to avoid infinite loops.
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  auto *InnerMM = dyn_cast<IntrinsicInst>(Inner);
+  if (!InnerMM || InnerMM->getIntrinsicID() != MinMaxID ||
+      match(X, m_ImmConstant()) || match(Y, m_ImmConstant()))
+    return nullptr;
+
+  // max (max X, C), Y --> max (max X, Y), C
+  Function *MinMax =
+      Intrinsic::getDeclaration(II->getModule(), MinMaxID, II->getType());
+  Value *NewInner = Builder.CreateBinaryIntrinsic(MinMaxID, X, Y);
+  NewInner->takeName(Inner);
+  return CallInst::Create(MinMax, {NewInner, C});
+}
+
 /// Reduce a sequence of min/max intrinsics with a common operand.
 static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   // Match 3 of the same min/max ops. Example: umin(umin(), umin()).
@@ -1249,6 +1279,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *NewMinMax = reassociateMinMaxWithConstants(II))
       return NewMinMax;
+
+    if (Instruction *R = reassociateMinMaxWithConstantInOperand(II, Builder))
+      return R;
 
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;

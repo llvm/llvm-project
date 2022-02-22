@@ -226,6 +226,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     # libc.src.stdlib.abort
+    libc.src.stdlib.atexit
+    libc.src.stdlib.exit
 
     # signal.h entrypoints
     # TODO: Enable signal.h entrypoints after fixing signal.h

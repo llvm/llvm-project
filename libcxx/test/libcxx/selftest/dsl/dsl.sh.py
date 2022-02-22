@@ -216,6 +216,28 @@ class TestProgramOutput(SetupConfigs):
         self.assertEqual(dsl.programOutput(self.config, source), "STDOUT-OUTPUT")
 
 
+class TestProgramSucceeds(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.programSucceeds
+    """
+    def test_success(self):
+        source = """
+        int main(int, char**) { return 0; }
+        """
+        self.assertTrue(dsl.programSucceeds(self.config, source))
+
+    def test_failure(self):
+        source = """
+        int main(int, char**) { return 1; }
+        """
+        self.assertFalse(dsl.programSucceeds(self.config, source))
+
+    def test_compile_failure(self):
+        source = """
+        this does not compile
+        """
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.programSucceeds(self.config, source))
+
 class TestHasLocale(SetupConfigs):
     """
     Tests for libcxx.test.dsl.hasLocale

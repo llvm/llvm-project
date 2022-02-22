@@ -1,6 +1,7 @@
 # REQUIRES: x86
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/asm -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/mismatch.s -o %t/mismatch.o
 # RUN: ld.lld --script %t/lds %t.o -o %t/out
 # RUN: llvm-readelf -S -l %t/out | FileCheck %s
 
@@ -16,15 +17,23 @@
 # CHECK:      00 .data_noload_a .data_noload_b .no_input_sec_noload {{$}}
 # CHECK:      01 .text {{$}}
 
+# RUN: not ld.lld --script %t/lds %t.o %t/mismatch.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: section type mismatch for .data_noload_a
+
 #--- asm
 .section .text,"ax",@progbits
   nop
 
-.section .data_noload_a,"aw",@progbits
+.section .data_noload_a,"aw",@nobits
 .zero 4096
 
-.section .data_noload_b,"aw",@progbits
+.section .data_noload_b,"aw",@nobits
 .zero 4096
+
+#--- mismatch.s
+.section .data_noload_a,"aw",@progbits
+.byte 1
 
 #--- lds
 SECTIONS {

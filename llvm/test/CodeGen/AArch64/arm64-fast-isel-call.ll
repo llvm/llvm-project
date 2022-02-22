@@ -13,7 +13,7 @@ entry:
 ; CHECK:       bl _call0
 ; LARGE-LABEL: foo0
 ; LARGE:       adrp [[REG0:x[0-9]+]], _call0@GOTPAGE
-; LARGE:       ldr  [[REG1:x[0-9]+]], {{\[}}[[REG0]], _call0@GOTPAGEOFF{{\]}}
+; LARGE:       ldr  [[REG1:x[0-9]+]], [[[REG0]], _call0@GOTPAGEOFF]
 ; LARGE-NEXT:  blr  [[REG1]]
   call void @call0()
   ret void

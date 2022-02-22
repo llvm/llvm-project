@@ -54,7 +54,7 @@ define amdgpu_kernel void @shl_2_add_999_i32(i32 addrspace(1)* %out, i32 addrspa
 }
 
 ; SI-LABEL: {{^}}test_add_shl_add_constant:
-; SI-DAG: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Y:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI-DAG: s_lshl_b32 [[SHL3:s[0-9]+]], s[[X]], 3
 ; SI: s_add_i32 [[RESULT:s[0-9]+]], [[SHL3]], s[[Y]]
 ; SI: s_addk_i32 [[RESULT]], 0x3d8
@@ -69,7 +69,7 @@ define amdgpu_kernel void @test_add_shl_add_constant(i32 addrspace(1)* %out, [8 
 }
 
 ; SI-LABEL: {{^}}test_add_shl_add_constant_inv:
-; SI-DAG: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Y:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI: s_lshl_b32 [[SHL3:s[0-9]+]], s[[X]], 3
 ; SI: s_add_i32 [[TMP:s[0-9]+]], [[SHL3]], s[[Y]]
 ; SI: s_addk_i32 [[TMP]], 0x3d8

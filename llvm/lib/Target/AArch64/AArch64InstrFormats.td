@@ -4963,15 +4963,15 @@ multiclass FPConversion<string asm> {
 
   // Half-precision to Double-precision
   def DHr : BaseFPConversion<0b11, 0b01, FPR64, FPR16, asm,
-                             [(set FPR64:$Rd, (fpextend (f16 FPR16:$Rn)))]>;
+                             [(set FPR64:$Rd, (any_fpextend (f16 FPR16:$Rn)))]>;
 
   // Half-precision to Single-precision
   def SHr : BaseFPConversion<0b11, 0b00, FPR32, FPR16, asm,
-                             [(set FPR32:$Rd, (fpextend (f16 FPR16:$Rn)))]>;
+                             [(set FPR32:$Rd, (any_fpextend (f16 FPR16:$Rn)))]>;
 
   // Single-precision to Double-precision
   def DSr : BaseFPConversion<0b00, 0b01, FPR64, FPR32, asm,
-                             [(set FPR64:$Rd, (fpextend FPR32:$Rn))]>;
+                             [(set FPR64:$Rd, (any_fpextend FPR32:$Rn))]>;
 
   // Single-precision to Half-precision
   def HSr : BaseFPConversion<0b00, 0b11, FPR16, FPR32, asm,
@@ -5075,7 +5075,8 @@ multiclass TwoOperandFPData<bits<4> opcode, string asm,
   }
 }
 
-multiclass TwoOperandFPDataNeg<bits<4> opcode, string asm, SDNode node> {
+multiclass TwoOperandFPDataNeg<bits<4> opcode, string asm,
+                               SDPatternOperator node> {
   def Hrr : BaseTwoOperandFPData<opcode, FPR16, asm,
                   [(set (f16 FPR16:$Rd), (fneg (node (f16 FPR16:$Rn), (f16 FPR16:$Rm))))]> {
     let Inst{23-22} = 0b11; // 16-bit size flag

@@ -248,7 +248,7 @@ ENDIF:                                            ; preds = %IF, %main_body
 }
 
 ; GCN-LABEL: {{^}}icmp_users_different_blocks:
-; GCN: s_load_dwordx2 s{{\[}}[[COND0:[0-9]+]]:[[COND1:[0-9]+]]{{\]}}
+; GCN: s_load_dwordx2 s[[[COND0:[0-9]+]]:[[COND1:[0-9]+]]]
 ; GCN: s_cmp_lt_i32 s[[COND0]], 1
 ; GCN: s_cbranch_scc1 [[EXIT:.L[0-9_A-Za-z]+]]
 ; GCN: s_cmp_gt_i32 s[[COND1]], 0{{$}}

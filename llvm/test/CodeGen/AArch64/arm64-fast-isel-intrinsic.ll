@@ -51,12 +51,12 @@ define void @t4() {
 ; ARM64: ldr [[REG0:x[0-9]+]], [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp [[REG1:x[0-9]+]], _message@PAGE
 ; ARM64: add [[REG2:x[0-9]+]], [[REG1]], _message@PAGEOFF
-; ARM64: ldr x10, {{\[}}[[REG2]]{{\]}}
-; ARM64: str x10, {{\[}}[[REG0]]{{\]}}
-; ARM64: ldr x10, {{\[}}[[REG2]], #8]
-; ARM64: str x10, {{\[}}[[REG0]], #8]
-; ARM64: ldrb [[REG3:w[0-9]+]], {{\[}}[[REG2]], #16]
-; ARM64: strb [[REG3]], {{\[}}[[REG0]], #16]
+; ARM64: ldr x10, [[[REG2]]]
+; ARM64: str x10, [[[REG0]]]
+; ARM64: ldr x10, [[[REG2]], #8]
+; ARM64: str x10, [[[REG0]], #8]
+; ARM64: ldrb [[REG3:w[0-9]+]], [[[REG2]], #16]
+; ARM64: strb [[REG3]], [[[REG0]], #16]
 ; ARM64: ret
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* align 16 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 17, i1 false)
   ret void
@@ -68,12 +68,12 @@ define void @t5() {
 ; ARM64: ldr [[REG0:x[0-9]+]], [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp [[REG3:x[0-9]+]], _message@PAGE
 ; ARM64: add [[REG1:x[0-9]+]], [[REG3]], _message@PAGEOFF
-; ARM64: ldr x10, {{\[}}[[REG1]]]
-; ARM64: str x10, {{\[}}[[REG0]]]
-; ARM64: ldr x10, {{\[}}[[REG1]], #8]
-; ARM64: str x10, {{\[}}[[REG0]], #8]
-; ARM64: ldrb [[REG4:w[0-9]+]], {{\[}}[[REG1]], #16]
-; ARM64: strb [[REG4]], {{\[}}[[REG0]], #16]
+; ARM64: ldr x10, [[[REG1]]]
+; ARM64: str x10, [[[REG0]]]
+; ARM64: ldr x10, [[[REG1]], #8]
+; ARM64: str x10, [[[REG0]], #8]
+; ARM64: ldrb [[REG4:w[0-9]+]], [[[REG1]], #16]
+; ARM64: strb [[REG4]], [[[REG0]], #16]
 ; ARM64: ret
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* align 8 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 17, i1 false)
   ret void
@@ -85,12 +85,12 @@ define void @t6() {
 ; ARM64: ldr [[REG0:x[0-9]+]], [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp [[REG1:x[0-9]+]], _message@PAGE
 ; ARM64: add [[REG2:x[0-9]+]], [[REG1]], _message@PAGEOFF
-; ARM64: ldr w10, {{\[}}[[REG2]]]
-; ARM64: str w10, {{\[}}[[REG0]]]
-; ARM64: ldr w10, {{\[}}[[REG2]], #4]
-; ARM64: str w10, {{\[}}[[REG0]], #4]
-; ARM64: ldrb [[REG3:w[0-9]+]], {{\[}}[[REG2]], #8]
-; ARM64: strb [[REG3]], {{\[}}[[REG0]], #8]
+; ARM64: ldr w10, [[[REG2]]]
+; ARM64: str w10, [[[REG0]]]
+; ARM64: ldr w10, [[[REG2]], #4]
+; ARM64: str w10, [[[REG0]], #4]
+; ARM64: ldrb [[REG3:w[0-9]+]], [[[REG2]], #8]
+; ARM64: strb [[REG3]], [[[REG0]], #8]
 ; ARM64: ret
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* align 4 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 9, i1 false)
   ret void
@@ -102,14 +102,14 @@ define void @t7() {
 ; ARM64: ldr [[REG0:x[0-9]+]], [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp [[REG1:x[0-9]+]], _message@PAGE
 ; ARM64: add [[REG2:x[0-9]+]], [[REG1]], _message@PAGEOFF
-; ARM64: ldrh w10, {{\[}}[[REG2]]]
-; ARM64: strh w10, {{\[}}[[REG0]]]
-; ARM64: ldrh w10, {{\[}}[[REG2]], #2]
-; ARM64: strh w10, {{\[}}[[REG0]], #2]
-; ARM64: ldrh w10, {{\[}}[[REG2]], #4]
-; ARM64: strh w10, {{\[}}[[REG0]], #4]
-; ARM64: ldrb [[REG3:w[0-9]+]], {{\[}}[[REG2]], #6]
-; ARM64: strb [[REG3]], {{\[}}[[REG0]], #6]
+; ARM64: ldrh w10, [[[REG2]]]
+; ARM64: strh w10, [[[REG0]]]
+; ARM64: ldrh w10, [[[REG2]], #2]
+; ARM64: strh w10, [[[REG0]], #2]
+; ARM64: ldrh w10, [[[REG2]], #4]
+; ARM64: strh w10, [[[REG0]], #4]
+; ARM64: ldrb [[REG3:w[0-9]+]], [[[REG2]], #6]
+; ARM64: strb [[REG3]], [[[REG0]], #6]
 ; ARM64: ret
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* align 2 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 7, i1 false)
   ret void
@@ -121,14 +121,14 @@ define void @t8() {
 ; ARM64: ldr [[REG0:x[0-9]+]], [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp [[REG1:x[0-9]+]], _message@PAGE
 ; ARM64: add [[REG2:x[0-9]+]], [[REG1:x[0-9]+]], _message@PAGEOFF
-; ARM64: ldrb w10, {{\[}}[[REG2]]]
-; ARM64: strb w10, {{\[}}[[REG0]]]
-; ARM64: ldrb w10, {{\[}}[[REG2]], #1]
-; ARM64: strb w10, {{\[}}[[REG0]], #1]
-; ARM64: ldrb w10, {{\[}}[[REG2]], #2]
-; ARM64: strb w10, {{\[}}[[REG0]], #2]
-; ARM64: ldrb [[REG3:w[0-9]+]], {{\[}}[[REG2]], #3]
-; ARM64: strb [[REG3]], {{\[}}[[REG0]], #3]
+; ARM64: ldrb w10, [[[REG2]]]
+; ARM64: strb w10, [[[REG0]]]
+; ARM64: ldrb w10, [[[REG2]], #1]
+; ARM64: strb w10, [[[REG0]], #1]
+; ARM64: ldrb w10, [[[REG2]], #2]
+; ARM64: strb w10, [[[REG0]], #2]
+; ARM64: ldrb [[REG3:w[0-9]+]], [[[REG2]], #3]
+; ARM64: strb [[REG3]], [[[REG0]], #3]
 ; ARM64: ret
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* align 1 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 4, i1 false)
   ret void

@@ -203,7 +203,7 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     if (Offset0Idx == -1 || Offset1Idx == -1)
       return false;
 
-    // XXX - be careful of datalesss loads
+    // XXX - be careful of dataless loads
     // getNamedOperandIdx returns the index for MachineInstrs.  Since they
     // include the output in the operand list, but SDNodes don't, we need to
     // subtract the index by one.
@@ -486,7 +486,7 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
     return false;
   }
 
-  // In order to avoid regester pressure, on an average, the number of DWORDS
+  // In order to avoid register pressure, on an average, the number of DWORDS
   // loaded together by all clustered mem ops should not exceed 8. This is an
   // empirical value based on certain observations and performance related
   // experiments.
@@ -931,7 +931,9 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
-    expandSGPRCopy(*this, MBB, MI, DL, DestReg, SrcReg, KillSrc, RC, Forward);
+    const bool CanKillSuperReg = KillSrc && !RI.regsOverlap(SrcReg, DestReg);
+    expandSGPRCopy(*this, MBB, MI, DL, DestReg, SrcReg, CanKillSuperReg, RC,
+                   Forward);
     return;
   }
 
@@ -2874,7 +2876,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   default:
     return false;
   case AMDGPU::S_MOV_B64:
-    // TODO: We could fold 64-bit immediates, but this get compilicated
+    // TODO: We could fold 64-bit immediates, but this get complicated
     // when there are sub-registers.
     return false;
 
@@ -2954,7 +2956,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
     // Multiplied part is the constant: Use v_madmk_{f16, f32}.
-    // We should only expect these to be on src0 due to canonicalizations.
+    // We should only expect these to be on src0 due to canonicalization.
     if (Src0->isReg() && Src0->getReg() == Reg) {
       if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
         return false;
@@ -4082,9 +4084,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
 
-    const int OpIndicies[] = { DstIdx, Src0Idx, Src1Idx, Src2Idx };
+    const int OpIndices[] = {DstIdx, Src0Idx, Src1Idx, Src2Idx};
 
-    for (int OpIdx: OpIndicies) {
+    for (int OpIdx : OpIndices) {
       if (OpIdx == -1)
         continue;
       const MachineOperand &MO = MI.getOperand(OpIdx);
@@ -4247,7 +4249,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     SGPRUsed = findImplicitSGPRRead(MI);
     if (SGPRUsed != AMDGPU::NoRegister) {
-      // Implicit uses may safely overlap true overands
+      // Implicit uses may safely overlap true operands
       if (llvm::all_of(SGPRsUsed, [this, SGPRUsed](unsigned SGPR) {
             return !RI.regsOverlap(SGPRUsed, SGPR);
           })) {
@@ -4730,7 +4732,7 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   bool IsAllocatable = false;
   if (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::FLAT)) {
     // vdst and vdata should be both VGPR or AGPR, same for the DS instructions
-    // with two data operands. Request register class constainted to VGPR only
+    // with two data operands. Request register class constrained to VGPR only
     // of both operands present as Machine Copy Propagation can not check this
     // constraint and possibly other passes too.
     //
@@ -5289,7 +5291,7 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
   const MCInstrDesc &NewDesc = get(NewOpc);
   Inst.setDesc(NewDesc);
 
-  // Callers expect interator to be valid after this call, so modify the
+  // Callers expect iterator to be valid after this call, so modify the
   // instruction in place.
   if (OldVAddrIdx == NewVAddrIdx) {
     MachineOperand &NewVAddr = Inst.getOperand(NewVAddrIdx);
@@ -5298,7 +5300,7 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
     MRI.moveOperands(&NewVAddr, &SAddr, 1);
     Inst.RemoveOperand(OldSAddrIdx);
     // Update the use list with the pointer we have just moved from vaddr to
-    // saddr poisition. Otherwise new vaddr will be missing from the use list.
+    // saddr position. Otherwise new vaddr will be missing from the use list.
     MRI.removeRegOperandFromUseList(&NewVAddr);
     MRI.addRegOperandToUseList(&NewVAddr);
   } else {
@@ -5455,7 +5457,7 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
     else
       Cmp.addReg(VRsrc, VRsrcUndef, TRI->getSubRegFromChannel(Idx, 2));
 
-    // Combine the comparision results with AND.
+    // Combine the comparison results with AND.
     if (CondReg == AMDGPU::NoRegister) // First.
       CondReg = NewCondReg;
     else { // If not the first, we create an AND.
@@ -5819,7 +5821,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     if (RI.getCommonSubClass(MRI.getRegClass(Rsrc->getReg()),
                              RI.getRegClass(RsrcRC))) {
       // The operands are legal.
-      // FIXME: We may need to legalize operands besided srsrc.
+      // FIXME: We may need to legalize operands besides srsrc.
       return CreatedBB;
     }
 
@@ -5893,7 +5895,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       MachineOperand *SOffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
       unsigned Addr64Opcode = AMDGPU::getAddr64Inst(MI.getOpcode());
 
-      // Atomics rith return have have an additional tied operand and are
+      // Atomics with return have an additional tied operand and are
       // missing some of the special bits.
       MachineOperand *VDataIn = getNamedOperand(MI, AMDGPU::OpName::vdata_in);
       MachineInstr *Addr64;
@@ -6525,7 +6527,7 @@ void SIInstrInfo::lowerScalarXnor(SetVectorType &Worklist,
     // Using the identity !(x ^ y) == (!x ^ y) == (x ^ !y), we can
     // invert either source and then perform the XOR. If either source is a
     // scalar register, then we can leave the inversion on the scalar unit to
-    // acheive a better distrubution of scalar and vector instructions.
+    // achieve a better distribution of scalar and vector instructions.
     bool Src0IsSGPR = Src0.isReg() &&
                       RI.isSGPRClass(MRI.getRegClass(Src0.getReg()));
     bool Src1IsSGPR = Src1.isReg() &&
@@ -6747,7 +6749,7 @@ void SIInstrInfo::splitScalar64BitAddSub(SetVectorType &Worklist,
   legalizeOperands(*LoHalf, MDT);
   legalizeOperands(*HiHalf, MDT);
 
-  // Move all users of this moved vlaue.
+  // Move all users of this moved value.
   addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
 }
 
@@ -6811,7 +6813,7 @@ void SIInstrInfo::splitScalar64BitBinaryOp(SetVectorType &Worklist,
   Worklist.insert(&LoHalf);
   Worklist.insert(&HiHalf);
 
-  // Move all users of this moved vlaue.
+  // Move all users of this moved value.
   addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
 }
 
@@ -6889,7 +6891,7 @@ void SIInstrInfo::splitScalar64BitBCNT(
 
   MRI.replaceRegWith(Dest.getReg(), ResultReg);
 
-  // We don't need to legalize operands here. src0 for etiher instruction can be
+  // We don't need to legalize operands here. src0 for either instruction can be
   // an SGPR, and the second input is unused or determined here.
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
@@ -7114,7 +7116,7 @@ void SIInstrInfo::addSCCDefsToVALUWorklist(MachineOperand &Op,
   assert(Op.isReg() && Op.getReg() == AMDGPU::SCC && Op.isUse());
 
   MachineInstr *SCCUseInst = Op.getParent();
-  // Look for a preceeding instruction that either defines VCC or SCC. If VCC
+  // Look for a preceding instruction that either defines VCC or SCC. If VCC
   // then there is nothing to do because the defining instruction has been
   // converted to a VALU already. If SCC then that instruction needs to be
   // converted to a VALU.
@@ -8237,7 +8239,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
-                                     bool IsReversable, bool IsSigned) -> bool {
+                                     bool IsReversible, bool IsSigned) -> bool {
     // s_cmp_eq_u32 (s_and_b32 $src, 1 << n), 1 << n => s_and_b32 $src, 1 << n
     // s_cmp_eq_i32 (s_and_b32 $src, 1 << n), 1 << n => s_and_b32 $src, 1 << n
     // s_cmp_ge_u32 (s_and_b32 $src, 1 << n), 1 << n => s_and_b32 $src, 1 << n
@@ -8295,7 +8297,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     bool IsReversedCC = false;
     if (CmpValue != ExpectedValue) {
-      if (!IsReversable)
+      if (!IsReversible)
         return false;
       IsReversedCC = CmpValue == (ExpectedValue ^ Mask);
       if (!IsReversedCC)

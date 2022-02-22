@@ -1,0 +1,70 @@
+//===- ConfigManager.cpp --------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ObjCopy/ConfigManager.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+
+namespace llvm {
+namespace objcopy {
+
+Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
+  if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.AllocSectionsPrefix.empty() || !Common.DumpSection.empty() ||
+      !Common.KeepSection.empty() || !Common.SymbolsToGlobalize.empty() ||
+      !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
+      !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
+      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
+      Common.ExtractDWO || Common.PreserveDates || Common.StripDWO ||
+      Common.StripNonAlloc || Common.StripSections || Common.Weaken ||
+      Common.DecompressDebugSections ||
+      Common.DiscardMode == DiscardType::Locals || !Common.SymbolsToAdd.empty())
+    return createStringError(llvm::errc::invalid_argument,
+                             "option is not supported for COFF");
+
+  return COFF;
+}
+
+Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
+  if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
+      !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
+      !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
+      !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
+      !Common.UnneededSymbolsToRemove.empty() ||
+      !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
+      Common.ExtractDWO || Common.PreserveDates || Common.StripAllGNU ||
+      Common.StripDWO || Common.StripNonAlloc || Common.StripSections ||
+      Common.Weaken || Common.DecompressDebugSections || Common.StripUnneeded ||
+      Common.DiscardMode == DiscardType::Locals || !Common.SymbolsToAdd.empty())
+    return createStringError(llvm::errc::invalid_argument,
+                             "option is not supported for MachO");
+
+  return MachO;
+}
+
+Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
+  if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
+      !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.AllocSectionsPrefix.empty() ||
+      Common.DiscardMode != DiscardType::None || !Common.SymbolsToAdd.empty() ||
+      !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToLocalize.empty() ||
+      !Common.SymbolsToKeep.empty() || !Common.SymbolsToRemove.empty() ||
+      !Common.UnneededSymbolsToRemove.empty() ||
+      !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
+      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
+      !Common.SetSectionFlags.empty() || !Common.SymbolsToRename.empty())
+    return createStringError(llvm::errc::invalid_argument,
+                             "only flags for section dumping, removal, and "
+                             "addition are supported");
+
+  return Wasm;
+}
+
+} // end namespace objcopy
+} // end namespace llvm

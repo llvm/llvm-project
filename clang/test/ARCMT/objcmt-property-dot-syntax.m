@@ -23,7 +23,7 @@
 - (P*) MethodReturnsPObj;
 @end
 
-P* fun();
+P* fun(void);
 
 @implementation P
 - (int) Meth : (P*)array {

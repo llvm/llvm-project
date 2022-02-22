@@ -2150,7 +2150,7 @@ class getAsmVOP3DPP8<string base> {
 class getAsmSDWA <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
   string dst = !if(HasDst,
                    !if(!eq(DstVT.Size, 1),
-                       " vcc", // use vcc token as dst for VOPC instructioins
+                       " vcc", // use vcc token as dst for VOPC instructions
                        "$vdst"),
                     "");
   string src0 = "$src0_modifiers";

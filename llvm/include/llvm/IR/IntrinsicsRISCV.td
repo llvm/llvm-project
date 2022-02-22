@@ -527,15 +527,15 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For binary operations with V0 as input.
-  // Input: (vector_in, vector_in/scalar_in, V0, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, V0, vl)
   class RISCVBinaryWithV0
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty,
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 1;
-    let VLOperand = 3;
+    let SplatOperand = 2;
+    let VLOperand = 4;
   }
   // For binary operations with mask type output and V0 as input.
   // Output: (mask type output)
@@ -686,11 +686,12 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
+  // Input: (vector_in, vector_in/scalar, vector_in, vl, policy)
   class RISCVTernaryAAXANoMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
-                     llvm_anyint_ty],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
     let SplatOperand = 1;
     let VLOperand = 3;
   }
@@ -704,11 +705,12 @@ let TargetPrefix = "riscv" in {
     let SplatOperand = 1;
     let VLOperand = 4;
   }
+  // Input: (vector_in, vector_in/scalar, vector_in, vl, policy)
   class RISCVTernaryWideNoMask
         : Intrinsic< [llvm_anyvector_ty],
                      [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
-                      llvm_anyint_ty],
-                     [IntrNoMem] >, RISCVVIntrinsic {
+                      llvm_anyint_ty, LLVMMatchType<3>],
+                     [ImmArg<ArgIndex<4>>, IntrNoMem] >, RISCVVIntrinsic {
     let SplatOperand = 1;
     let VLOperand = 3;
   }
@@ -1266,20 +1268,29 @@ let TargetPrefix = "riscv" in {
 
   defm vmerge : RISCVBinaryWithV0;
 
+  // Output: (vector)
+  // Input: (passthru, vector_in, vl)
   def int_riscv_vmv_v_v : Intrinsic<[llvm_anyvector_ty],
-                                    [LLVMMatchType<0>, llvm_anyint_ty],
+                                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                                     llvm_anyint_ty],
                                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
+  // Output: (vector)
+  // Input: (passthru, scalar, vl)
   def int_riscv_vmv_v_x : Intrinsic<[llvm_anyint_ty],
-                                    [LLVMVectorElementType<0>, llvm_anyint_ty],
+                                    [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                     llvm_anyint_ty],
                                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
+  // Output: (vector)
+  // Input: (passthru, scalar, vl)
   def int_riscv_vfmv_v_f : Intrinsic<[llvm_anyfloat_ty],
-                                     [LLVMVectorElementType<0>,llvm_anyint_ty],
+                                     [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                      llvm_anyint_ty],
                                      [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
 
   def int_riscv_vmv_x_s : Intrinsic<[LLVMVectorElementType<0>],

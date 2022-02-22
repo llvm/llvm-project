@@ -285,7 +285,8 @@ ThreadStateTy *ThreadStates[mapping::MaxThreadsPerTeam];
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var, IdentTy *Ident) {
-  if (OMP_LIKELY(TeamState.ICVState.LevelVar == 0))
+  if (OMP_LIKELY(!config::mayUseThreadStates() ||
+                 TeamState.ICVState.LevelVar == 0))
     return TeamState.ICVState.*Var;
   uint32_t TId = mapping::getThreadIdInBlock();
   if (!ThreadStates[TId]) {
@@ -299,13 +300,13 @@ uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var, IdentTy *Ident) {
 
 uint32_t &lookup32Impl(uint32_t ICVStateTy::*Var) {
   uint32_t TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(ThreadStates[TId]))
+  if (OMP_UNLIKELY(config::mayUseThreadStates() && ThreadStates[TId]))
     return ThreadStates[TId]->ICVState.*Var;
   return TeamState.ICVState.*Var;
 }
 uint64_t &lookup64Impl(uint64_t ICVStateTy::*Var) {
   uint64_t TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(ThreadStates[TId]))
+  if (OMP_UNLIKELY(config::mayUseThreadStates() && ThreadStates[TId]))
     return ThreadStates[TId]->ICVState.*Var;
   return TeamState.ICVState.*Var;
 }
@@ -380,6 +381,9 @@ void state::init(bool IsSPMD) {
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {
+  ASSERT(config::mayUseThreadStates() &&
+         "Thread state modified while explicitly disabled!");
+
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
@@ -388,6 +392,9 @@ void state::enterDataEnvironment(IdentTy *Ident) {
 }
 
 void state::exitDataEnvironment() {
+  ASSERT(config::mayUseThreadStates() &&
+         "Thread state modified while explicitly disabled!");
+
   unsigned TId = mapping::getThreadIdInBlock();
   resetStateForThread(TId);
 }

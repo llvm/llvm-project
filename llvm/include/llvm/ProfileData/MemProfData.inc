@@ -1,5 +1,5 @@
-#ifndef LLVM_PROFILEDATA_MEMPROFDATA_INC
-#define LLVM_PROFILEDATA_MEMPROFDATA_INC
+#ifndef MEMPROF_DATA_INC
+#define MEMPROF_DATA_INC
 /*===-- MemProfData.inc - MemProf profiling runtime structures -*- C++ -*-=== *\
 |*
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

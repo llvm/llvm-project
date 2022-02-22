@@ -15,7 +15,7 @@
 ; GCN-DAG: s_cmp_lg_u32 [[IDX]], 0
 ; GCN-DAG: s_cselect_b64 [[CC4:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC4]]
-; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST]]:[[ELT_LAST]]]
+; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v[[[ELT_FIRST]]:[[ELT_LAST]]]
 define amdgpu_kernel void @float4_inselt(<4 x float> addrspace(1)* %out, <4 x float> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x float> %vec, float 1.000000e+00, i32 %sel
@@ -54,7 +54,7 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 v[[VELT_1:[0-9]+]], s[[ELT_1]]
 ; GCN-DAG: v_mov_b32_e32 v[[VELT_2:[0-9]+]], s[[ELT_2]]
 ; GCN-DAG: v_mov_b32_e32 v[[VELT_3:[0-9]+]], s[[ELT_3]]
-; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[VELT_0]]:[[VELT_3]]]
+; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v[[[VELT_0]]:[[VELT_3]]]
 define amdgpu_kernel void @int4_inselt(<4 x i32> addrspace(1)* %out, <4 x i32> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x i32> %vec, i32 1, i32 %sel
@@ -71,7 +71,7 @@ entry:
 ; GCN-DAG: s_cmp_lg_u32 [[IDX]], 0
 ; GCN-DAG: s_cselect_b64 [[CC2:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC2]]
-; GCN:     flat_store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST]]:[[ELT_LAST]]]
+; GCN:     flat_store_dwordx2 v[{{[0-9:]+}}], v[[[ELT_FIRST]]:[[ELT_LAST]]]
 define amdgpu_kernel void @float2_inselt(<2 x float> addrspace(1)* %out, <2 x float> %vec, i32 %sel) {
 entry:
   %v = insertelement <2 x float> %vec, float 1.000000e+00, i32 %sel
@@ -106,8 +106,8 @@ entry:
 ; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
 ; GCN-DAG: s_cselect_b64 [[CC8:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST1:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC8]]
-; GCN-DAG: flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST0]]:[[ELT_LAST0]]]
-; GCN-DAG: flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST1]]:[[ELT_LAST1]]]
+; GCN-DAG: flat_store_dwordx4 v[{{[0-9:]+}}], v[[[ELT_FIRST0]]:[[ELT_LAST0]]]
+; GCN-DAG: flat_store_dwordx4 v[{{[0-9:]+}}], v[[[ELT_FIRST1]]:[[ELT_LAST1]]]
 define amdgpu_kernel void @float8_inselt(<8 x float> addrspace(1)* %out, <8 x float> %vec, i32 %sel) {
 entry:
   %v = insertelement <8 x float> %vec, float 1.000000e+00, i32 %sel
@@ -142,7 +142,7 @@ entry:
 ; GCN:     s_mov_b32 s[[KLO:[0-9]+]], 0x3c003c00
 ; GCN:     s_mov_b32 s[[KHI:[0-9]+]], s[[KLO]]
 ; GCN:     s_andn2_b64
-; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{\[}}[[KLO]]:[[KHI]]]
+; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[[[KLO]]:[[KHI]]]
 ; GCN:     s_or_b64
 define amdgpu_kernel void @half4_inselt(<4 x half> addrspace(1)* %out, <4 x half> %vec, i32 %sel) {
 entry:
@@ -222,7 +222,7 @@ entry:
 ; GCN:     s_mov_b32 s[[KLO:[0-9]+]], 0x10001
 ; GCN:     s_mov_b32 s[[KHI:[0-9]+]], s[[KLO]]
 ; GCN:     s_andn2_b64
-; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{\[}}[[KLO]]:[[KHI]]]
+; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[[[KLO]]:[[KHI]]]
 ; GCN:     s_or_b64
 define amdgpu_kernel void @short4_inselt(<4 x i16> addrspace(1)* %out, <4 x i16> %vec, i32 %sel) {
 entry:

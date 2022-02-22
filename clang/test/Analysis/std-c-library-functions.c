@@ -52,7 +52,7 @@
 // CHECK-NEXT: Loaded summary for: int isxdigit(int)
 // CHECK-NEXT: Loaded summary for: int getc(FILE *)
 // CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
-// CHECK-NEXT: Loaded summary for: int getchar()
+// CHECK-NEXT: Loaded summary for: int getchar(void)
 // CHECK-NEXT: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t read(int, void *, size_t)

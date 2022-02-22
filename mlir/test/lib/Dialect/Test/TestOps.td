@@ -1603,6 +1603,8 @@ def TestAnotherTypeProducerOp : TEST_Op<"another_type_producer">,
   Results<(outs AnyType)>;
 def TestTypeConsumerOp : TEST_Op<"type_consumer">,
   Arguments<(ins AnyType)>;
+def TestTypeChangerOp : TEST_Op<"type_changer">,
+  Arguments<(ins AnyType)>, Results<(outs AnyType)>;
 def TestValidOp : TEST_Op<"valid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 

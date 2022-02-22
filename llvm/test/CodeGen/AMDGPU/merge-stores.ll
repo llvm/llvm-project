@@ -67,7 +67,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(i16 
 ; GCN-LABEL: {{^}}merge_global_store_2_constants_i32:
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0x1c8
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7b
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @merge_global_store_2_constants_i32(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
 
@@ -89,7 +89,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i32_f32(i32 addrspace(
 ; GCN-LABEL: {{^}}merge_global_store_2_constants_f32_i32:
 ; GCN-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], 4.0
 ; GCN-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], 0x7b
-; GCN: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[VLO]]:[[VHI]]]
 define amdgpu_kernel void @merge_global_store_2_constants_f32_i32(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.1.bc = bitcast float addrspace(1)* %out.gep.1 to i32 addrspace(1)*
@@ -103,7 +103,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_f32_i32(float addrspac
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x1c8{{$}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x7b{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0x4d2{{$}}
-; GCN: buffer_store_dwordx4 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: buffer_store_dwordx4 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @merge_global_store_4_constants_i32(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
@@ -530,7 +530,7 @@ define amdgpu_kernel void @merge_local_store_4_constants_i32(i32 addrspace(3)* %
 ; GCN-LABEL: {{^}}merge_global_store_5_constants_i32:
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 9{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HI4:[0-9]+]], -12{{$}}
-; GCN: buffer_store_dwordx4 v{{\[}}[[LO]]:[[HI4]]{{\]}}
+; GCN: buffer_store_dwordx4 v[[[LO]]:[[HI4]]]
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 11{{$}}
 ; GCN: buffer_store_dword v[[HI]]
 define amdgpu_kernel void @merge_global_store_5_constants_i32(i32 addrspace(1)* %out) {

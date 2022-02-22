@@ -2270,6 +2270,19 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LD1SW_D_IMM:
   case AArch64::LD1D_IMM:
 
+  case AArch64::LD2B_IMM:
+  case AArch64::LD2H_IMM:
+  case AArch64::LD2W_IMM:
+  case AArch64::LD2D_IMM:
+  case AArch64::LD3B_IMM:
+  case AArch64::LD3H_IMM:
+  case AArch64::LD3W_IMM:
+  case AArch64::LD3D_IMM:
+  case AArch64::LD4B_IMM:
+  case AArch64::LD4H_IMM:
+  case AArch64::LD4W_IMM:
+  case AArch64::LD4D_IMM:
+
   case AArch64::ST1B_IMM:
   case AArch64::ST1B_H_IMM:
   case AArch64::ST1B_S_IMM:
@@ -2280,6 +2293,19 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::ST1W_IMM:
   case AArch64::ST1W_D_IMM:
   case AArch64::ST1D_IMM:
+
+  case AArch64::ST2B_IMM:
+  case AArch64::ST2H_IMM:
+  case AArch64::ST2W_IMM:
+  case AArch64::ST2D_IMM:
+  case AArch64::ST3B_IMM:
+  case AArch64::ST3H_IMM:
+  case AArch64::ST3W_IMM:
+  case AArch64::ST3D_IMM:
+  case AArch64::ST4B_IMM:
+  case AArch64::ST4H_IMM:
+  case AArch64::ST4W_IMM:
+  case AArch64::ST4D_IMM:
 
   case AArch64::LD1RB_IMM:
   case AArch64::LD1RB_H_IMM:
@@ -2897,6 +2923,45 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -8;
     MaxOffset = 7;
     break;
+  case AArch64::LD2B_IMM:
+  case AArch64::LD2H_IMM:
+  case AArch64::LD2W_IMM:
+  case AArch64::LD2D_IMM:
+  case AArch64::ST2B_IMM:
+  case AArch64::ST2H_IMM:
+  case AArch64::ST2W_IMM:
+  case AArch64::ST2D_IMM:
+    Scale = TypeSize::Scalable(32);
+    Width = SVEMaxBytesPerVector * 2;
+    MinOffset = -8;
+    MaxOffset = 7;
+    break;
+  case AArch64::LD3B_IMM:
+  case AArch64::LD3H_IMM:
+  case AArch64::LD3W_IMM:
+  case AArch64::LD3D_IMM:
+  case AArch64::ST3B_IMM:
+  case AArch64::ST3H_IMM:
+  case AArch64::ST3W_IMM:
+  case AArch64::ST3D_IMM:
+    Scale = TypeSize::Scalable(48);
+    Width = SVEMaxBytesPerVector * 3;
+    MinOffset = -8;
+    MaxOffset = 7;
+    break;
+  case AArch64::LD4B_IMM:
+  case AArch64::LD4H_IMM:
+  case AArch64::LD4W_IMM:
+  case AArch64::LD4D_IMM:
+  case AArch64::ST4B_IMM:
+  case AArch64::ST4H_IMM:
+  case AArch64::ST4W_IMM:
+  case AArch64::ST4D_IMM:
+    Scale = TypeSize::Scalable(64);
+    Width = SVEMaxBytesPerVector * 4;
+    MinOffset = -8;
+    MaxOffset = 7;
+    break;
   case AArch64::LD1B_H_IMM:
   case AArch64::LD1SB_H_IMM:
   case AArch64::LD1H_S_IMM:
@@ -3103,6 +3168,51 @@ bool AArch64InstrInfo::isPreSt(const MachineInstr &MI) {
 
 bool AArch64InstrInfo::isPreLdSt(const MachineInstr &MI) {
   return isPreLd(MI) || isPreSt(MI);
+}
+
+static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
+                                              Register Reg) {
+  if (MI.getParent() == nullptr)
+    return nullptr;
+  const MachineFunction *MF = MI.getParent()->getParent();
+  return MF ? MF->getRegInfo().getRegClassOrNull(Reg) : nullptr;
+}
+
+bool AArch64InstrInfo::isQForm(const MachineInstr &MI) {
+  auto IsQFPR = [&](const MachineOperand &Op) {
+    if (!Op.isReg())
+      return false;
+    auto Reg = Op.getReg();
+    if (Reg.isPhysical())
+      return AArch64::FPR128RegClass.contains(Reg);
+    const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
+    return TRC == &AArch64::FPR128RegClass ||
+           TRC == &AArch64::FPR128_loRegClass;
+  };
+  return llvm::any_of(MI.operands(), IsQFPR);
+}
+
+bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
+  auto IsFPR = [&](const MachineOperand &Op) {
+    if (!Op.isReg())
+      return false;
+    auto Reg = Op.getReg();
+    if (Reg.isPhysical())
+      return AArch64::FPR128RegClass.contains(Reg) ||
+             AArch64::FPR64RegClass.contains(Reg) ||
+             AArch64::FPR32RegClass.contains(Reg) ||
+             AArch64::FPR16RegClass.contains(Reg) ||
+             AArch64::FPR8RegClass.contains(Reg);
+
+    const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
+    return TRC == &AArch64::FPR128RegClass ||
+           TRC == &AArch64::FPR128_loRegClass ||
+           TRC == &AArch64::FPR64RegClass ||
+           TRC == &AArch64::FPR64_loRegClass ||
+           TRC == &AArch64::FPR32RegClass || TRC == &AArch64::FPR16RegClass ||
+           TRC == &AArch64::FPR8RegClass;
+  };
+  return llvm::any_of(MI.operands(), IsFPR);
 }
 
 // Scale the unscaled offsets.  Returns false if the unscaled offset can't be

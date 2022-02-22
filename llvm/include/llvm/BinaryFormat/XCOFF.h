@@ -54,6 +54,34 @@ enum AuxHeaderFlags64 : uint16_t {
                         ///< future use and should be set to 0.
 };
 
+enum XCOFFInterpret : uint16_t {
+  OLD_XCOFF_INTERPRET = 1,
+  NEW_XCOFF_INTERPRET = 2
+};
+
+enum FileFlag : uint16_t {
+  F_RELFLG = 0x0001,    ///< relocation info stripped from file
+  F_EXEC = 0x0002,      ///< file is executable (i.e., it
+                        ///< has a loader section)
+  F_LNNO = 0x0004,      ///< line numbers stripped from file
+  F_LSYMS = 0x0008,     ///< local symbols stripped from file
+  F_FDPR_PROF = 0x0010, ///< file was profiled with FDPR
+  F_FDPR_OPTI = 0x0020, ///< file was reordered with FDPR
+  F_DSA = 0x0040,       ///< file uses Dynamic Segment Allocation (32-bit
+                        ///< only)
+  F_DEP_1 = 0x0080,     ///< Data Execution Protection bit 1
+  F_VARPG = 0x0100,     ///< executable requests using variable size pages
+  F_LPTEXT = 0x0400,    ///< executable requires large pages for text
+  F_LPDATA = 0x0800,    ///< executable requires large pages for data
+  F_DYNLOAD = 0x1000,   ///< file is dynamically loadable and
+                        ///< executable (equivalent to F_EXEC on AIX)
+  F_SHROBJ = 0x2000,    ///< file is a shared object
+  F_LOADONLY =
+      0x4000,      ///< file can be loaded by the system loader, but it is
+                   ///< ignored by the linker if it is a member of an archive.
+  F_DEP_2 = 0x8000 ///< Data Execution Protection bit 2
+};
+
 // x_smclas field of x_csect from system header: /usr/include/syms.h
 /// Storage Mapping Class definitions.
 enum StorageMappingClass : uint8_t {
@@ -211,6 +239,8 @@ enum VisibilityType : uint16_t {
   SYM_V_PROTECTED = 0x3000,
   SYM_V_EXPORTED = 0x4000
 };
+
+constexpr uint16_t VISIBILITY_MASK = 0x7000;
 
 // Relocation types, defined in `/usr/include/reloc.h`.
 enum RelocationType : uint8_t {

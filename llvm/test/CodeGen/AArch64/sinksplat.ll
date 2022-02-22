@@ -305,10 +305,10 @@ define <4 x float> @fma(<4 x float> %x, <4 x float> *%y) {
 ; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB9_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov v2.16b, v0.16b
 ; CHECK-NEXT:    ldr q3, [x0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    subs w8, w8, #1
+; CHECK-NEXT:    mov v2.16b, v0.16b
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    fmla v0.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    b.eq .LBB9_1
 ; CHECK-NEXT:  // %bb.2: // %l2

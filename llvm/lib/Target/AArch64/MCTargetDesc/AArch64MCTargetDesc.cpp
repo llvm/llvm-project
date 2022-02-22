@@ -243,6 +243,31 @@ void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
     MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
 }
 
+bool AArch64_MC::isQForm(const MCInst &MI, const MCInstrInfo *MCII) {
+  const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
+  return llvm::any_of(MI, [&](const MCOperand &Op) {
+    return Op.isReg() && FPR128.contains(Op.getReg());
+  });
+}
+
+bool AArch64_MC::isFpOrNEON(const MCInst &MI, const MCInstrInfo *MCII) {
+  const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
+  const auto &FPR64 = AArch64MCRegisterClasses[AArch64::FPR64RegClassID];
+  const auto &FPR32 = AArch64MCRegisterClasses[AArch64::FPR32RegClassID];
+  const auto &FPR16 = AArch64MCRegisterClasses[AArch64::FPR16RegClassID];
+  const auto &FPR8 = AArch64MCRegisterClasses[AArch64::FPR8RegClassID];
+
+  auto IsFPR = [&](const MCOperand &Op) {
+    if (!Op.isReg())
+      return false;
+    auto Reg = Op.getReg();
+    return FPR128.contains(Reg) || FPR64.contains(Reg) || FPR32.contains(Reg) ||
+           FPR16.contains(Reg) || FPR8.contains(Reg);
+  };
+
+  return llvm::any_of(MI, IsFPR);
+}
+
 static MCRegisterInfo *createAArch64MCRegisterInfo(const Triple &Triple) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitAArch64MCRegisterInfo(X, AArch64::LR);

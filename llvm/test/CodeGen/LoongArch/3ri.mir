@@ -16,7 +16,7 @@
 ---
 # CHECK-LABEL: test_ALSL_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: alsl.w	a0, a1, a2, 3
+# CHECK-ASM: alsl.w	$a0, $a1, $a2, 3
 name: test_ALSL_W
 body: |
   bb.0:
@@ -25,7 +25,7 @@ body: |
 ---
 # CHECK-LABEL: test_ALSL_WU:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: alsl.wu	a0, a1, a2, 1
+# CHECK-ASM: alsl.wu	$a0, $a1, $a2, 1
 name: test_ALSL_WU
 body: |
   bb.0:
@@ -34,7 +34,7 @@ body: |
 ---
 # CHECK-LABEL: test_ALSL_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 1 1 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: alsl.d	a0, a1, a2, 3
+# CHECK-ASM: alsl.d	$a0, $a1, $a2, 3
 name: test_ALSL_D
 body: |
   bb.0:
@@ -43,7 +43,7 @@ body: |
 ---
 # CHECK-LABEL: test_BYTEPICK_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bytepick.w	a0, a1, a2, 0
+# CHECK-ASM: bytepick.w	$a0, $a1, $a2, 0
 name: test_BYTEPICK_W
 body: |
   bb.0:
@@ -62,7 +62,7 @@ body: |
 ---
 # CHECK-LABEL: test_BYTEPICK_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bytepick.d	a0, a1, a2, 4
+# CHECK-ASM: bytepick.d	$a0, $a1, $a2, 4
 name: test_BYTEPICK_D
 body: |
   bb.0:

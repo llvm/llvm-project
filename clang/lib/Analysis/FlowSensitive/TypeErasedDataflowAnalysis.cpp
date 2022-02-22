@@ -24,6 +24,7 @@
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -31,6 +32,27 @@
 
 namespace clang {
 namespace dataflow {
+
+class StmtToEnvMapImpl : public StmtToEnvMap {
+public:
+  StmtToEnvMapImpl(
+      const ControlFlowContext &CFCtx,
+      llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>>
+          BlockToState)
+      : CFCtx(CFCtx), BlockToState(BlockToState) {}
+
+  const Environment *getEnvironment(const Stmt &S) const override {
+    auto BlockIT = CFCtx.getStmtToBlock().find(&S);
+    assert(BlockIT != CFCtx.getStmtToBlock().end());
+    const auto &State = BlockToState[BlockIT->getSecond()->getBlockID()];
+    assert(State.hasValue());
+    return &State.getValue().Env;
+  }
+
+private:
+  const ControlFlowContext &CFCtx;
+  llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockToState;
+};
 
 /// Computes the input state for a given basic block by joining the output
 /// states of its predecessors.
@@ -42,7 +64,7 @@ namespace dataflow {
 ///   `llvm::None` represent basic blocks that are not evaluated yet.
 static TypeErasedDataflowAnalysisState computeBlockInputState(
     const ControlFlowContext &CFCtx,
-    std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
+    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis) {
   llvm::DenseSet<const CFGBlock *> Preds;
@@ -111,17 +133,19 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
 /// Transfers `State` by evaluating `CfgStmt` in the context of `Analysis`.
 /// `HandleTransferredStmt` (if provided) will be applied to `CfgStmt`, after it
 /// is evaluated.
-static void
-transferCFGStmt(const CFGStmt &CfgStmt, TypeErasedDataflowAnalysis &Analysis,
-                TypeErasedDataflowAnalysisState &State,
-                std::function<void(const CFGStmt &,
-                                   const TypeErasedDataflowAnalysisState &)>
-                    HandleTransferredStmt) {
+static void transferCFGStmt(
+    const ControlFlowContext &CFCtx,
+    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
+    const CFGStmt &CfgStmt, TypeErasedDataflowAnalysis &Analysis,
+    TypeErasedDataflowAnalysisState &State,
+    std::function<void(const CFGStmt &,
+                       const TypeErasedDataflowAnalysisState &)>
+        HandleTransferredStmt) {
   const Stmt *S = CfgStmt.getStmt();
   assert(S != nullptr);
 
   if (Analysis.applyBuiltinTransfer())
-    transfer(*S, State.Env);
+    transfer(StmtToEnvMapImpl(CFCtx, BlockStates), *S, State.Env);
   Analysis.transferTypeErased(S, State.Lattice, State.Env);
 
   if (HandleTransferredStmt != nullptr)
@@ -176,8 +200,8 @@ TypeErasedDataflowAnalysisState transferBlock(
   for (const CFGElement &Element : Block) {
     switch (Element.getKind()) {
     case CFGElement::Statement:
-      transferCFGStmt(*Element.getAs<CFGStmt>(), Analysis, State,
-                      HandleTransferredStmt);
+      transferCFGStmt(CFCtx, BlockStates, *Element.getAs<CFGStmt>(), Analysis,
+                      State, HandleTransferredStmt);
       break;
     case CFGElement::Initializer:
       if (Analysis.applyBuiltinTransfer())

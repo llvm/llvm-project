@@ -173,7 +173,7 @@ endif:
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_literal_i64:
-; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; SI: s_load_dwordx2 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
 ; SI-DAG: s_xor_b32 s[[RES_HI:[0-9]+]], s{{[0-9]+}}, 0xf237b
 ; SI-DAG: s_xor_b32 s[[RES_LO:[0-9]+]], s{{[0-9]+}}, 0x3039
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_LO]]
@@ -185,10 +185,10 @@ define amdgpu_kernel void @scalar_xor_literal_i64(i64 addrspace(1)* %out, [8 x i
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_literal_multi_use_i64:
-; SI: s_load_dwordx4 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
+; SI: s_load_dwordx4 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0xf237b
 ; SI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x3039
-; SI: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+; SI: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s[[[K_LO]]:[[K_HI]]]
 
 ; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_LO]]
 ; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_HI]]
@@ -202,7 +202,7 @@ define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %o
 }
 
 ; FUNC-LABEL: {{^}}scalar_xor_inline_imm_i64:
-; SI: s_load_dwordx2 s{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
+; SI: s_load_dwordx2 s[[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-NOT: xor_b32
 ; SI: s_xor_b32 s[[VAL_LO]], s{{[0-9]+}}, 63
 ; SI-NOT: xor_b32
@@ -210,7 +210,7 @@ define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %o
 ; SI-NOT: xor_b32
 ; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s{{[0-9]+}}
 ; SI-NOT: xor_b32
-; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
+; SI: buffer_store_dwordx2 v[[[VLO]]:[[VHI]]]
 define amdgpu_kernel void @scalar_xor_inline_imm_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
   %or = xor i64 %a, 63
   store i64 %or, i64 addrspace(1)* %out
@@ -227,7 +227,7 @@ define amdgpu_kernel void @scalar_xor_neg_inline_imm_i64(i64 addrspace(1)* %out,
 }
 
 ; FUNC-LABEL: {{^}}vector_xor_i64_neg_inline_imm:
-; SI: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
+; SI: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
 ; SI: v_xor_b32_e32 {{v[0-9]+}}, -8, v[[LO_VREG]]
 ; SI: v_xor_b32_e32 {{v[0-9]+}}, -1, {{.*}}
 ; SI: s_endpgm
@@ -239,7 +239,7 @@ define amdgpu_kernel void @vector_xor_i64_neg_inline_imm(i64 addrspace(1)* %out,
 }
 
 ; FUNC-LABEL: {{^}}vector_xor_literal_i64:
-; SI-DAG: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
+; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
 ; SI-DAG: v_xor_b32_e32 {{v[0-9]+}}, 0xdf77987f, v[[LO_VREG]]
 ; SI-DAG: v_xor_b32_e32 {{v[0-9]+}}, 0x146f, v[[HI_VREG]]
 ; SI: s_endpgm

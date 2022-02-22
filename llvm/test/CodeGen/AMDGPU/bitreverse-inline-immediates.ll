@@ -15,7 +15,7 @@ define amdgpu_kernel void @materialize_0_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_0_i64:
 ; GCN: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], v[[LOK]]{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_0_i64(i64 addrspace(1)* %out) {
   store i64 0, i64 addrspace(1)* %out
   ret void
@@ -32,7 +32,7 @@ define amdgpu_kernel void @materialize_neg1_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_neg1_i64:
 ; GCN: v_mov_b32_e32 v[[LOK:[0-9]+]], -1{{$}}
 ; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], v[[LOK]]{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_neg1_i64(i64 addrspace(1)* %out) {
   store i64 -1, i64 addrspace(1)* %out
   ret void
@@ -49,7 +49,7 @@ define amdgpu_kernel void @materialize_signbit_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_signbit_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_bfrev_b32_e32 v[[HIK:[0-9]+]], 1{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_signbit_i64(i64 addrspace(1)* %out) {
   store i64  -9223372036854775808, i64 addrspace(1)* %out
   ret void
@@ -66,7 +66,7 @@ define amdgpu_kernel void @materialize_rev_neg16_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_rev_neg16_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], -1{{$}}
 ; GCN-DAG: v_bfrev_b32_e32 v[[HIK:[0-9]+]], -16{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_rev_neg16_i64(i64 addrspace(1)* %out) {
   store i64  1152921504606846975, i64 addrspace(1)* %out
   ret void
@@ -83,7 +83,7 @@ define amdgpu_kernel void @materialize_rev_neg17_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_rev_neg17_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], -1{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIK:[0-9]+]], 0xf7ffffff{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_rev_neg17_i64(i64 addrspace(1)* %out) {
   store i64 -576460752303423489, i64 addrspace(1)* %out
   ret void
@@ -100,7 +100,7 @@ define amdgpu_kernel void @materialize_rev_64_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_rev_64_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_bfrev_b32_e32 v[[HIK:[0-9]+]], 64{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_rev_64_i64(i64 addrspace(1)* %out) {
   store i64 144115188075855872, i64 addrspace(1)* %out
   ret void
@@ -117,7 +117,7 @@ define amdgpu_kernel void @materialize_rev_65_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_rev_65_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIK:[0-9]+]], 0x82000000{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_rev_65_i64(i64 addrspace(1)* %out) {
   store i64 -9079256848778919936, i64 addrspace(1)* %out
   ret void
@@ -134,7 +134,7 @@ define amdgpu_kernel void @materialize_rev_3_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_rev_3_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIK:[0-9]+]], -2.0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_rev_3_i64(i64 addrspace(1)* %out) {
   store i64 -4611686018427387904, i64 addrspace(1)* %out
   ret void
@@ -151,7 +151,7 @@ define amdgpu_kernel void @materialize_rev_1.0_i32(i32 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}materialize_rev_1.0_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[LOK:[0-9]+]], 0x1fc{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIK:[0-9]+]], 0{{$}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_rev_1.0_i64(i64 addrspace(1)* %out) {
   store i64 508, i64 addrspace(1)* %out
   ret void

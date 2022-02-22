@@ -14,8 +14,6 @@
 
 #include "../assembly.h"
 
-#ifdef COMPILER_RT_HAS_SMP_SUPPORT
-
 #define SYNC_OP_4(op)                                                          \
   .p2align 2;                                                                  \
   .thumb;                                                                      \
@@ -36,7 +34,7 @@
   .thumb;                                                                      \
   .syntax unified;                                                             \
   DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  push{r4, r5, r6, lr};                                                        \
+  push {r4, r5, r6, lr};                                                       \
   dmb;                                                                         \
   mov r12, r0;                                                                 \
   LOCAL_LABEL(tryatomic_##op) : ldrexd r0, r1, [r12];                          \
@@ -46,35 +44,6 @@
   bne LOCAL_LABEL(tryatomic_##op);                                             \
   dmb;                                                                         \
   pop { r4, r5, r6, pc }
-
-#else
-
-#define SYNC_OP_4(op)                                                          \
-  .p2align 2;                                                                  \
-  DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  LOCAL_LABEL(tryatomic_##op) : mov r12, r0;                                   \
-  op(r2, r0, r1);                                                              \
-  str r2, [r12];                                                               \
-  ldr r12, [r12];                                                              \
-  cmp r12, r2;                                                                 \
-  bne LOCAL_LABEL(tryatomic_##op);                                             \
-  bx lr
-
-#define SYNC_OP_8(op)                                                          \
-  .p2align 2;                                                                  \
-  DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  push{r4, r5, r6, lr};                                                        \
-  LOCAL_LABEL(tryatomic_##op) : mov r12, r0;                                   \
-  op(r4, r5, r0, r1, r2, r3);                                                  \
-  stm r12, {r4, r5};                                                           \
-  ldm r12, {r6, r12};                                                          \
-  cmp r6, r4;                                                                  \
-  bne LOCAL_LABEL(tryatomic_##op);                                             \
-  cmp r12, r5;                                                                 \
-  bne LOCAL_LABEL(tryatomic_##op);                                             \
-  pop { r4, r5, r6, pc }
-
-#endif
 
 #define MINMAX_4(rD, rN, rM, cmp_kind)                                         \
   cmp rN, rM;                                                                  \

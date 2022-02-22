@@ -5,7 +5,7 @@
 ; CHECK: Perl_ck_sort
 ; CHECK: ldr
 ; CHECK: mov [[REGISTER:(r[0-9]+)|(lr)]]
-; CHECK: str {{(r[0-9])|(lr)}}, {{\[}}[[REGISTER]]{{\]}}, #24
+; CHECK: str {{(r[0-9])|(lr)}}, [[[REGISTER]]], #24
 
 define void @Perl_ck_sort() nounwind optsize {
 entry:

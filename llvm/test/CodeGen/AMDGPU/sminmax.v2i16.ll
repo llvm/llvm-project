@@ -106,7 +106,7 @@ define amdgpu_kernel void @v_abs_v2i16_2(<2 x i16> addrspace(1)* %out, <2 x i16>
 }
 
 ; GCN-LABEL: {{^}}s_abs_v4i16:
-; GFX9: s_load_dwordx2 s{{\[}}[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]{{\]}}, s[0:1], 0x2c
+; GFX9: s_load_dwordx2 s[[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]], s[0:1], 0x2c
 ; GFX9-DAG: v_pk_sub_i16 [[SUB0:v[0-9]+]], 0, s[[VAL0]]
 ; GFX9-DAG: v_pk_sub_i16 [[SUB1:v[0-9]+]], 0, s[[VAL1]]
 ; GFX9-DAG: v_pk_max_i16 [[MAX0:v[0-9]+]], s[[VAL0]], [[SUB0]]
@@ -131,7 +131,7 @@ define amdgpu_kernel void @s_abs_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %
 }
 
 ; GCN-LABEL: {{^}}v_abs_v4i16:
-; GFX9: global_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]{{\]}}
+; GFX9: global_load_dwordx2 v[[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]]
 
 ; GFX9-DAG: v_pk_sub_i16 [[SUB0:v[0-9]+]], 0, v[[VAL0]]
 ; GFX9-DAG: v_pk_max_i16 [[MAX0:v[0-9]+]], v[[VAL0]], [[SUB0]]

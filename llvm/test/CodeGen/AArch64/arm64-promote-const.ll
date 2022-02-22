@@ -14,8 +14,8 @@ define %struct.uint8x16x4_t @test1() {
 ; PROMOTED: adrp [[PAGEADDR:x[0-9]+]], __PromotedConst@PAGE
 ; PROMOTED: add [[BASEADDR:x[0-9]+]], [[PAGEADDR]], __PromotedConst@PAGEOFF
 ; Destination registers are defined by the ABI
-; PROMOTED-NEXT: ldp q0, q1, {{\[}}[[BASEADDR]]]
-; PROMOTED-NEXT: ldp q2, q3, {{\[}}[[BASEADDR]], #32]
+; PROMOTED-NEXT: ldp q0, q1, [[[BASEADDR]]]
+; PROMOTED-NEXT: ldp q2, q3, [[[BASEADDR]], #32]
 ; PROMOTED-NEXT: ret
 
 ; REGULAR-LABEL: test1:
@@ -23,13 +23,13 @@ define %struct.uint8x16x4_t @test1() {
 ; the structure
 ; REGULAR: adrp [[PAGEADDR:x[0-9]+]], [[CSTLABEL:lCP.*]]@PAGE
 ; Destination registers are defined by the ABI
-; REGULAR: ldr q0, {{\[}}[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
+; REGULAR: ldr q0, [[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
 ; REGULAR: adrp [[PAGEADDR:x[0-9]+]], [[CSTLABEL:lCP.*]]@PAGE
-; REGULAR: ldr q1, {{\[}}[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
+; REGULAR: ldr q1, [[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
 ; REGULAR: adrp [[PAGEADDR2:x[0-9]+]], [[CSTLABEL2:lCP.*]]@PAGE
-; REGULAR: ldr q2, {{\[}}[[PAGEADDR2]], [[CSTLABEL2]]@PAGEOFF]
+; REGULAR: ldr q2, [[[PAGEADDR2]], [[CSTLABEL2]]@PAGEOFF]
 ; REGULAR: adrp [[PAGEADDR3:x[0-9]+]], [[CSTLABEL3:lCP.*]]@PAGE
-; REGULAR: ldr q3, {{\[}}[[PAGEADDR3]], [[CSTLABEL3]]@PAGEOFF]
+; REGULAR: ldr q3, [[[PAGEADDR3]], [[CSTLABEL3]]@PAGEOFF]
 ; REGULAR-NEXT: ret
 entry:
   ret %struct.uint8x16x4_t { [4 x <16 x i8>] [<16 x i8> <i8 -40, i8 -93, i8 -118, i8 -99, i8 -75, i8 -105, i8 74, i8 -110, i8 62, i8 -115, i8 -119, i8 -120, i8 34, i8 -124, i8 0, i8 -128>, <16 x i8> <i8 32, i8 124, i8 121, i8 120, i8 8, i8 117, i8 -56, i8 113, i8 -76, i8 110, i8 -53, i8 107, i8 7, i8 105, i8 103, i8 102>, <16 x i8> <i8 -24, i8 99, i8 -121, i8 97, i8 66, i8 95, i8 24, i8 93, i8 6, i8 91, i8 12, i8 89, i8 39, i8 87, i8 86, i8 85>, <16 x i8> <i8 -104, i8 83, i8 -20, i8 81, i8 81, i8 80, i8 -59, i8 78, i8 73, i8 77, i8 -37, i8 75, i8 122, i8 74, i8 37, i8 73>] }
@@ -41,7 +41,7 @@ entry:
 ; PROMOTED-LABEL: test2:
 ; In stress mode, constant vector are promoted
 ; PROMOTED: adrp [[PAGEADDR:x[0-9]+]], [[CSTV1:__PromotedConst.[0-9]+]]@PAGE
-; PROMOTED: ldr q[[REGNUM:[0-9]+]], {{\[}}[[PAGEADDR]], [[CSTV1]]@PAGEOFF]
+; PROMOTED: ldr q[[REGNUM:[0-9]+]], [[[PAGEADDR]], [[CSTV1]]@PAGEOFF]
 ; Destination register is defined by ABI
 ; PROMOTED-NEXT: add.16b v0, v0, v[[REGNUM]]
 ; PROMOTED-NEXT: mla.16b v0, v0, v[[REGNUM]]
@@ -52,7 +52,7 @@ entry:
 ; The difference is that the address (and thus the space in memory) is not
 ; shared between constants
 ; REGULAR: adrp [[PAGEADDR:x[0-9]+]], [[CSTLABEL:lCP.*]]@PAGE
-; REGULAR: ldr q[[REGNUM:[0-9]+]], {{\[}}[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
+; REGULAR: ldr q[[REGNUM:[0-9]+]], [[[PAGEADDR]], [[CSTLABEL]]@PAGEOFF]
 ; Destination register is defined by ABI
 ; REGULAR-NEXT: add.16b v0, v0, v[[REGNUM]]
 ; REGULAR-NEXT: mla.16b v0, v0, v[[REGNUM]]

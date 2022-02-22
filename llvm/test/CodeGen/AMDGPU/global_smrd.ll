@@ -71,8 +71,8 @@ bb:
 
 ; uniform load dominated by no-alias store - scalarize
 ; CHECK-LABEL: @no_memdep_alias_arg
-; CHECK: s_load_dwordx2 s{{\[}}[[IN_LO:[0-9]+]]:[[IN_HI:[0-9]+]]], s[4:5], 0x0
-; CHECK: s_load_dword [[SVAL:s[0-9]+]], s{{\[}}[[IN_LO]]:[[IN_HI]]], 0x0
+; CHECK: s_load_dwordx2 s[[[IN_LO:[0-9]+]]:[[IN_HI:[0-9]+]]], s[4:5], 0x0
+; CHECK: s_load_dword [[SVAL:s[0-9]+]], s[[[IN_LO]]:[[IN_HI]]], 0x0
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
 
@@ -120,7 +120,7 @@ entry:
 ; CHECK: flat_store_dword
 ; CHECK: v_mov_b32_e32 v[[ADDR_LO:[0-9]+]], s{{[0-9]+}}
 ; CHECK: v_mov_b32_e32 v[[ADDR_HI:[0-9]+]], s{{[0-9]+}}
-; CHECK: flat_load_dwordx2 [[A_ADDR:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[ADDR_LO]]:[[ADDR_HI]]{{\]}}
+; CHECK: flat_load_dwordx2 [[A_ADDR:v\[[0-9]+:[0-9]+\]]], v[[[ADDR_LO]]:[[ADDR_HI]]]
 ; CHECK: flat_load_dword [[VVAL:v[0-9]+]], [[A_ADDR]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
 define amdgpu_kernel void @global_array_alias_store(i32 addrspace(1)* nocapture %out, [8 x i32], i32 %n) {

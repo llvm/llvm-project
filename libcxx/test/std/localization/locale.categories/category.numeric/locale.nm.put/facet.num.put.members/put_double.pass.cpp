@@ -13,7 +13,19 @@
 // iter_type put(iter_type s, ios_base& iob, char_type fill, double v) const;
 
 // FIXME: The printf functions in Microsoft's CRT have a couple quirks in
-// corner cases, failing this test.
+// corner cases, failing this test:
+// - With the Microsoft UCRT, printf("%#.*g", 0, 0.0) produces "0.0" while
+//   other C runtimes produce "0.". For other precisions than 0, Microsoft's
+//   consistently produce one digit more than others. In the MinGW test setups,
+//   the code is built with __USE_MINGW_ANSI_STDIO=1, which uses MinGW's own
+//   reimplementation of stdio functions, which doesn't have this issue.
+//   This bug requires excluding everything that runs with showpoint() enabled.
+//   https://developercommunity.visualstudio.com/t/printf-formatting-with-g-outputs-too/1660837
+//   This issue is fixed in newer UCRT versions, since 10.0.19041.0.
+// - With the Microsoft UCRT, printf("%a", 0.0) produces "0x0.0000000000000p+0"
+//   while other C runtimes produce just "0x0p+0". This requires omitting all
+//   tests of hex float formatting.
+//   https://developercommunity.visualstudio.com/t/Printf-formatting-of-float-as-hex-prints/1660844
 // XFAIL: msvc
 
 // XFAIL: LIBCXX-AIX-FIXME

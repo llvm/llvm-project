@@ -149,7 +149,7 @@ bool LiveIntervals::runOnMachineFunction(MachineFunction &fn) {
       getRegUnit(i);
   }
   LLVM_DEBUG(dump());
-  return true;
+  return false;
 }
 
 void LiveIntervals::print(raw_ostream &OS, const Module* ) const {

@@ -2259,8 +2259,8 @@ define i8 @umin_umin_reassoc_constant_use(i8 %x, i8 %y) {
 
 define i8 @smax_smax_reassoc_constant_sink(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_smax_reassoc_constant_sink(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 42)
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 42)
 ; CHECK-NEXT:    ret i8 [[M2]]
 ;
   %m1 = call i8 @llvm.smax.i8(i8 %x, i8 42)
@@ -2270,8 +2270,8 @@ define i8 @smax_smax_reassoc_constant_sink(i8 %x, i8 %y) {
 
 define <3 x i8> @smin_smin_reassoc_constant_sink(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @smin_smin_reassoc_constant_sink(
-; CHECK-NEXT:    [[M1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 43, i8 -43, i8 0>)
-; CHECK-NEXT:    [[M2:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[M1]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[M1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[M1]], <3 x i8> <i8 43, i8 -43, i8 0>)
 ; CHECK-NEXT:    ret <3 x i8> [[M2]]
 ;
   %m1 = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %x, <3 x i8> <i8 43, i8 -43, i8 0>)
@@ -2281,8 +2281,8 @@ define <3 x i8> @smin_smin_reassoc_constant_sink(<3 x i8> %x, <3 x i8> %y) {
 
 define i8 @umax_umax_reassoc_constant_sink(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_umax_reassoc_constant_sink(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 42)
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 42)
 ; CHECK-NEXT:    ret i8 [[M2]]
 ;
   %m1 = call i8 @llvm.umax.i8(i8 %x, i8 42)
@@ -2292,8 +2292,8 @@ define i8 @umax_umax_reassoc_constant_sink(i8 %x, i8 %y) {
 
 define <3 x i8> @umin_umin_reassoc_constant_sink(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @umin_umin_reassoc_constant_sink(
-; CHECK-NEXT:    [[M1:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 43, i8 -43, i8 0>)
-; CHECK-NEXT:    [[M2:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[M1]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[M1:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[M1]], <3 x i8> <i8 43, i8 -43, i8 0>)
 ; CHECK-NEXT:    ret <3 x i8> [[M2]]
 ;
   %m1 = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %x, <3 x i8> <i8 43, i8 -43, i8 0>)
@@ -2316,9 +2316,8 @@ define i8 @umin_umin_reassoc_constant_sink_use(i8 %x, i8 %y) {
 
 define i8 @smax_smax_smax_reassoc_constants(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_smax_smax_reassoc_constants(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 42)
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[Y:%.*]], i8 [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M2]], i8 126)
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 126)
 ; CHECK-NEXT:    ret i8 [[M3]]
 ;
   %m1 = call i8 @llvm.smax.i8(i8 %x, i8 42)
@@ -2329,9 +2328,8 @@ define i8 @smax_smax_smax_reassoc_constants(i8 %x, i8 %y) {
 
 define i8 @smax_smax_smax_reassoc_constants_swap(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_smax_smax_reassoc_constants_swap(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 42)
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M2]], i8 126)
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 126)
 ; CHECK-NEXT:    ret i8 [[M3]]
 ;
   %m1 = call i8 @llvm.smax.i8(i8 %x, i8 42)
@@ -2342,13 +2340,23 @@ define i8 @smax_smax_smax_reassoc_constants_swap(i8 %x, i8 %y) {
 
 define i8 @smin_smin_smin_reassoc_constants(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smin_smin_smin_reassoc_constants(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 42)
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smin.i8(i8 [[Y:%.*]], i8 [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smin.i8(i8 [[M2]], i8 126)
-; CHECK-NEXT:    ret i8 [[M3]]
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smin.i8(i8 [[M1]], i8 42)
+; CHECK-NEXT:    ret i8 [[M2]]
 ;
   %m1 = call i8 @llvm.smin.i8(i8 %x, i8 42)
   %m2 = call i8 @llvm.smin.i8(i8 %y, i8 %m1)
   %m3 = call i8 @llvm.smin.i8(i8 %m2, i8 126)
   ret i8 %m3
+}
+
+define i8 @umax_umax_reassoc_constantexpr_sink(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_umax_reassoc_constantexpr_sink(
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 42)
+; CHECK-NEXT:    ret i8 [[M2]]
+;
+  %m1 = call i8 @llvm.umax.i8(i8 %x, i8 42)
+  %m2 = call i8 @llvm.umax.i8(i8 %m1, i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
+  ret i8 %m2
 }

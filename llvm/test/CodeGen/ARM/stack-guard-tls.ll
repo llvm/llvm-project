@@ -28,11 +28,11 @@ define void @foo(i64 %t) sspstrong {
 !2 = !{i32 2, !"stack-protector-guard-offset", i32 4296}
 
 ; CHECK: mrc p15, #0, [[REG1:r[0-9]+]], c13, c0, #3
-; CHECK-SMALL-NEXT: ldr{{(\.w)?}} [[REG1]], {{\[}}[[REG1]], #1296]
+; CHECK-SMALL-NEXT: ldr{{(\.w)?}} [[REG1]], [[[REG1]], #1296]
 ; CHECK-LARGE-NEXT: add{{(\.w)?}} [[REG1]], [[REG1]], #4096
-; CHECK-LARGE-NEXT: ldr{{(\.w)?}} [[REG1]], {{\[}}[[REG1]], #200]
+; CHECK-LARGE-NEXT: ldr{{(\.w)?}} [[REG1]], [[[REG1]], #200]
 ; CHECK: bl baz
 ; CHECK: mrc p15, #0, [[REG2:r[0-9]+]], c13, c0, #3
-; CHECK-SMALL-NEXT: ldr{{(\.w)?}} [[REG2]], {{\[}}[[REG2]], #1296]
+; CHECK-SMALL-NEXT: ldr{{(\.w)?}} [[REG2]], [[[REG2]], #1296]
 ; CHECK-LARGE-NEXT: add{{(\.w)?}} [[REG2]], [[REG2]], #4096
-; CHECK-LARGE-NEXT: ldr{{(\.w)?}} [[REG2]], {{\[}}[[REG2]], #200]
+; CHECK-LARGE-NEXT: ldr{{(\.w)?}} [[REG2]], [[[REG2]], #200]

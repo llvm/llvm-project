@@ -11,7 +11,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_load_format_d16_xy:
-; UNPACKED: buffer_load_format_d16_xy v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; UNPACKED: buffer_load_format_d16_xy v[{{[0-9]+}}:[[HI:[0-9]+]]], {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 ; UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
 
 ; PACKED: buffer_load_format_d16_xy v[[FULL:[0-9]+]], {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
@@ -24,10 +24,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_load_format_d16_xyz:
-; UNPACKED: buffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; UNPACKED: buffer_load_format_d16_xyz v[{{[0-9]+}}:[[HI:[0-9]+]]], {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 ; UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
 
-; PACKED: buffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; PACKED: buffer_load_format_d16_xyz v[{{[0-9]+}}:[[HI:[0-9]+]]], {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 ; PACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
 define amdgpu_ps half @buffer_load_format_d16_xyz(<4 x i32> inreg %rsrc) {
 main_body:
@@ -37,10 +37,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_load_format_d16_xyzw:
-; UNPACKED: buffer_load_format_d16_xyzw v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; UNPACKED: buffer_load_format_d16_xyzw v[{{[0-9]+}}:[[HI:[0-9]+]]], {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 ; UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
 
-; PACKED: buffer_load_format_d16_xyzw v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; PACKED: buffer_load_format_d16_xyzw v[{{[0-9]+}}:[[HI:[0-9]+]]], {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 ; PACKED: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v[[HI]]
 define amdgpu_ps half @buffer_load_format_d16_xyzw(<4 x i32> inreg %rsrc) {
 main_body:

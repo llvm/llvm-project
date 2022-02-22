@@ -423,6 +423,22 @@ void SBCommandInterpreter::reset(
   m_opaque_ptr = interpreter;
 }
 
+void SBCommandInterpreter::SourceInitFileInGlobalDirectory(
+    SBCommandReturnObject &result) {
+  LLDB_INSTRUMENT_VA(this, result);
+
+  result.Clear();
+  if (IsValid()) {
+    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
+    std::unique_lock<std::recursive_mutex> lock;
+    if (target_sp)
+      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    m_opaque_ptr->SourceInitFileGlobal(result.ref());
+  } else {
+    result->AppendError("SBCommandInterpreter is not valid");
+  }
+}
+
 void SBCommandInterpreter::SourceInitFileInHomeDirectory(
     SBCommandReturnObject &result) {
   LLDB_INSTRUMENT_VA(this, result);
