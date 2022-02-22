@@ -152,12 +152,14 @@ def hasPTX64 : Predicate<"Subtarget->getPTXVersion() >= 64">;
 def hasPTX65 : Predicate<"Subtarget->getPTXVersion() >= 65">;
 def hasPTX70 : Predicate<"Subtarget->getPTXVersion() >= 70">;
 def hasPTX71 : Predicate<"Subtarget->getPTXVersion() >= 71">;
+def hasPTX72 : Predicate<"Subtarget->getPTXVersion() >= 72">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
 def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
 def hasSM75 : Predicate<"Subtarget->getSmVersion() >= 75">;
 def hasSM80 : Predicate<"Subtarget->getSmVersion() >= 80">;
+def hasSM86 : Predicate<"Subtarget->getSmVersion() >= 86">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70" 
