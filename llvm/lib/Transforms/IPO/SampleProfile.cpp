@@ -841,6 +841,13 @@ static void
 updateIDTMetaData(Instruction &Inst,
                   const SmallVectorImpl<InstrProfValueData> &CallTargets,
                   uint64_t Sum) {
+  // Bail out early if MaxNumPromotions is zero.
+  // This prevents allocating an array of zero length below.
+  //
+  // Note `updateIDTMetaData` is called in two places so check
+  // `MaxNumPromotions` inside it.
+  if (MaxNumPromotions == 0)
+    return;
   uint32_t NumVals = 0;
   // OldSum is the existing total count in the value profile data.
   uint64_t OldSum = 0;
@@ -924,6 +931,10 @@ updateIDTMetaData(Instruction &Inst,
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
+  // Bail out early if MaxNumPromotions is zero.
+  // This prevents allocating an array of zero length in callees below.
+  if (MaxNumPromotions == 0)
+    return false;
   auto CalleeFunctionName = Candidate.CalleeSamples->getFuncName();
   auto R = SymbolMap.find(CalleeFunctionName);
   if (R == SymbolMap.end() || !R->getValue())
