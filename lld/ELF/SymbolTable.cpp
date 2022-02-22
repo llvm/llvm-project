@@ -102,6 +102,16 @@ Symbol *SymbolTable::addSymbol(const Symbol &newSym) {
   return sym;
 }
 
+// This variant of addSymbol is used by BinaryFile::parse to check duplicate
+// symbol errors.
+Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
+  Symbol *sym = insert(newSym.getName());
+  if (sym->isDefined())
+    sym->checkDuplicate(newSym);
+  sym->resolve(newSym);
+  return sym;
+}
+
 Symbol *SymbolTable::find(StringRef name) {
   auto it = symMap.find(CachedHashStringRef(name));
   if (it == symMap.end())

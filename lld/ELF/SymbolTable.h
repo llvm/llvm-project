@@ -39,6 +39,7 @@ public:
   Symbol *insert(StringRef name);
 
   Symbol *addSymbol(const Symbol &newSym);
+  Symbol *addAndCheckDuplicate(const Defined &newSym);
 
   void scanVersionScript();
 
