@@ -54,6 +54,12 @@
 // CHECK-MIPS64EL-LD: clang{{.*}}" "-cc1" "-triple" "mips64el-unknown-openbsd"
 // CHECK-MIPS64EL-LD: ld{{.*}}" "-EL" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 
+// Check that --sysroot is passed to the linker
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
+// RUN:   --sysroot=%S/Inputs/basic_netbsd_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-SYSROOT %s
+// CHECK-LD-SYSROOT: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
+
 // Check passing options to the assembler for various OpenBSD targets
 // RUN: %clang -target amd64-pc-openbsd -m32 -### -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AMD64-M32 %s
