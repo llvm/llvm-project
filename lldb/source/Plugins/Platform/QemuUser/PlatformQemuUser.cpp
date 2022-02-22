@@ -217,11 +217,12 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
       launch_info.GetListener(),
       process_gdb_remote::ProcessGDBRemote::GetPluginNameStatic(), nullptr,
       true);
+  if (!process_sp) {
+    error.SetErrorString("Failed to create GDB process");
+    return nullptr;
+  }
 
-  ListenerSP listener_sp =
-      Listener::MakeListener("lldb.platform_qemu_user.debugprocess");
-  launch_info.SetHijackListener(listener_sp);
-  Process::ProcessEventHijacker hijacker(*process_sp, listener_sp);
+  process_sp->HijackProcessEvents(launch_info.GetHijackListener());
 
   error = process_sp->ConnectRemote(("unix-connect://" + socket_path).str());
   if (error.Fail())
@@ -232,7 +233,6 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
     process_sp->SetSTDIOFileDescriptor(
         launch_info.GetPTY().ReleasePrimaryFileDescriptor());
 
-  process_sp->WaitForProcessToStop(llvm::None, nullptr, false, listener_sp);
   return process_sp;
 }
 

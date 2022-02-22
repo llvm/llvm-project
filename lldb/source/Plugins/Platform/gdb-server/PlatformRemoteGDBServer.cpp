@@ -428,6 +428,8 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
                                           "gdb-remote", nullptr, true);
 
         if (process_sp) {
+          process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+
           error = process_sp->ConnectRemote(connect_url.c_str());
           // Retry the connect remote one time...
           if (error.Fail())

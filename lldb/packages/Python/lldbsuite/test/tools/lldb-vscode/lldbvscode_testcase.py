@@ -11,8 +11,8 @@ class VSCodeTestCaseBase(TestBase):
 
     def create_debug_adaptor(self, lldbVSCodeEnv=None):
         '''Create the Visual Studio Code debug adaptor'''
-        self.assertTrue(os.path.exists(self.lldbVSCodeExec),
-                        'lldb-vscode must exist')
+        self.assertTrue(is_exe(self.lldbVSCodeExec),
+                        'lldb-vscode must exist and be executable')
         log_file_path = self.getBuildArtifact('vscode.txt')
         self.vscode = vscode.DebugAdaptor(
             executable=self.lldbVSCodeExec, init_commands=self.setUpCommands(),

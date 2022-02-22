@@ -3026,6 +3026,14 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   if (!launch_info.GetArchitecture().IsValid())
     launch_info.GetArchitecture() = GetArchitecture();
 
+  // Hijacking events of the process to be created to be sure that all events
+  // until the first stop are intercepted (in case if platform doesn't define
+  // its own hijacking listener or if the process is created by the target
+  // manually, without the platform).
+  if (!launch_info.GetHijackListener())
+    launch_info.SetHijackListener(
+        Listener::MakeListener("lldb.Target.Launch.hijack"));
+
   // If we're not already connected to the process, and if we have a platform
   // that can launch a process for debugging, go ahead and do that here.
   if (state != eStateConnected && platform_sp &&
@@ -3057,8 +3065,10 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     }
 
     // Since we didn't have a platform launch the process, launch it here.
-    if (m_process_sp)
+    if (m_process_sp) {
+      m_process_sp->HijackProcessEvents(launch_info.GetHijackListener());
       error = m_process_sp->Launch(launch_info);
+    }
   }
 
   if (!m_process_sp && error.Success())
@@ -3067,35 +3077,35 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   if (!error.Success())
     return error;
 
-  auto at_exit =
-      llvm::make_scope_exit([&]() { m_process_sp->RestoreProcessEvents(); });
+  bool rebroadcast_first_stop =
+      !synchronous_execution &&
+      launch_info.GetFlags().Test(eLaunchFlagStopAtEntry);
 
-  if (!synchronous_execution &&
-      launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+  assert(launch_info.GetHijackListener());
+
+  EventSP first_stop_event_sp;
+  state = m_process_sp->WaitForProcessToStop(llvm::None, &first_stop_event_sp,
+                                             rebroadcast_first_stop,
+                                             launch_info.GetHijackListener());
+  m_process_sp->RestoreProcessEvents();
+
+  if (rebroadcast_first_stop) {
+    assert(first_stop_event_sp);
+    m_process_sp->BroadcastEvent(first_stop_event_sp);
     return error;
-
-  ListenerSP hijack_listener_sp(launch_info.GetHijackListener());
-  if (!hijack_listener_sp) {
-    hijack_listener_sp = Listener::MakeListener("lldb.Target.Launch.hijack");
-    launch_info.SetHijackListener(hijack_listener_sp);
-    m_process_sp->HijackProcessEvents(hijack_listener_sp);
   }
 
-  switch (m_process_sp->WaitForProcessToStop(llvm::None, nullptr, false,
-                                             hijack_listener_sp, nullptr)) {
+  switch (state) {
   case eStateStopped: {
     if (launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
       break;
-    if (synchronous_execution) {
+    if (synchronous_execution)
       // Now we have handled the stop-from-attach, and we are just
       // switching to a synchronous resume.  So we should switch to the
       // SyncResume hijacker.
-      m_process_sp->RestoreProcessEvents();
       m_process_sp->ResumeSynchronous(stream);
-    } else {
-      m_process_sp->RestoreProcessEvents();
+    else
       error = m_process_sp->PrivateResume();
-    }
     if (!error.Success()) {
       Status error2;
       error2.SetErrorStringWithFormat(
