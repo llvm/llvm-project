@@ -42,7 +42,7 @@ protected:
   do {                                                                         \
     EXPECT_TOKEN_KIND(FormatTok, Kind);                                        \
     EXPECT_TOKEN_TYPE(FormatTok, Type);                                        \
-  } while (false);
+  } while (false)
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmpInMacroDefinition) {
   // This is a regression test for mis-parsing the & after decltype as a binary
