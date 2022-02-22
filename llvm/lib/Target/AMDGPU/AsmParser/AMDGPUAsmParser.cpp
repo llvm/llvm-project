@@ -8100,41 +8100,58 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
     }
     llvm_unreachable("Unhandled operand type in cvtVOPD");
   };
+  const auto FmamkOpXImmMCIndex = 3;
+  const auto FmaakOpXImmMCIndex = 4;
   unsigned Opc = Inst.getOpcode();
   bool HasVsrc1X =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vsrc1X) != -1;
   bool HasImmX =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::immDeferred) != -1 ||
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) == 3 || // FMAMK
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) == 4;   // FMAAK
+      (HasVsrc1X && (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) ==
+                         FmamkOpXImmMCIndex ||
+                     AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) ==
+                         FmaakOpXImmMCIndex));
 
-  addOp(1);                       // vdstX
-  addOp(5 + HasImmX + HasVsrc1X); // vdstY
-  addOp(2);                       // src0X
+  const auto VdstXAsmIndex = 1;
+  const auto MinVdstYAsmIndex = 5;
+  const auto Src0XAsmIndex = 2;
+  const auto Vsrc1XAsmIndex = 3;
+  const auto FirstImmXOrVsrc1XAsmIndex = Vsrc1XAsmIndex;
+  const auto SecondImmXOrVsrc1XAsmIndex = FirstImmXOrVsrc1XAsmIndex + 1;
+
+  // Order of addOp calls determines MC operand order
+  addOp(VdstXAsmIndex); // vdstX
+  addOp(MinVdstYAsmIndex + HasImmX + HasVsrc1X); // vdstY
+  addOp(Src0XAsmIndex); // src0X
   // immX then vsrc1X for fmamk, vsrc1X then immX for fmaak
   if (HasImmX) {
-    addOp(3);
-    addOp(4);
+    addOp(FirstImmXOrVsrc1XAsmIndex);
+    addOp(SecondImmXOrVsrc1XAsmIndex);
   } else {
     if (HasVsrc1X) // all except v_mov
-      addOp(3);    // vsrc1X
+      addOp(Vsrc1XAsmIndex);    // vsrc1X
   }
 
-  addOp(6 + HasImmX + HasVsrc1X); // src0Y
+  const auto MinSrc0YAsmIndex = 6;
+  const auto MinImmYMCIndex = 4;
+  const auto MinVsrc1YAsmIndex = 7;
+  const auto MinFirstImmYOrVsrc1YAsmIndex = MinVsrc1YAsmIndex;
+  const auto MinSecondImmYOrVsrc1YAsmIndex = MinFirstImmYOrVsrc1YAsmIndex + 1;
+
+  addOp(MinSrc0YAsmIndex + HasImmX + HasVsrc1X); // src0Y
   bool HasVsrc1Y =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vsrc1Y) != -1;
   bool HasImmY =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::immDeferred) != -1 ||
-      (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) != -1 &&
-       (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) != 3 && // FMAMK
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) != 4)); // FMAAK
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) >=
+          MinImmYMCIndex + HasVsrc1X;
   // immY then vsrc1Y for fmamk, vsrc1Y then immY for fmaak
   if (HasImmY) {
-    addOp(7 + HasImmX + HasVsrc1X);
-    addOp(8 + HasImmX + HasVsrc1X);
+    addOp(MinFirstImmYOrVsrc1YAsmIndex + HasImmX + HasVsrc1X);
+    addOp(MinSecondImmYOrVsrc1YAsmIndex + HasImmX + HasVsrc1X);
   } else {
     if (HasVsrc1Y)                    // all except v_mov
-      addOp(7 + HasImmX + HasVsrc1X); // vsrc1Y
+      addOp(MinVsrc1YAsmIndex + HasImmX + HasVsrc1X); // vsrc1Y
   }
 }
 
