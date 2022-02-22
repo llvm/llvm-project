@@ -743,9 +743,8 @@ lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
     // charge of setting the exit status.  However, we still need to reap it
     // from lldb. So, make sure we use a exit callback which does not set exit
     // status.
-    const bool monitor_signals = false;
     launch_info.SetMonitorProcessCallback(
-        &ProcessLaunchInfo::NoOpMonitorCallback, monitor_signals);
+        &ProcessLaunchInfo::NoOpMonitorCallback);
     process_sp = Platform::DebugProcess(launch_info, debugger, target, error);
   } else {
     if (m_remote_platform_sp)

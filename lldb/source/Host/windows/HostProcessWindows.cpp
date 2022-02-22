@@ -76,7 +76,7 @@ MonitorThread(const Host::MonitorChildProcessCallback &callback,
 }
 
 llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
-    const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
+    const Host::MonitorChildProcessCallback &callback) {
   HANDLE process_handle;
 
   // Since the life of this HostProcessWindows instance and the life of the

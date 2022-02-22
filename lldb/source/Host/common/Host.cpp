@@ -94,19 +94,16 @@ using namespace lldb_private;
 #if !defined(__APPLE__) && !defined(_WIN32)
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
-                                  Host::MonitorChildProcessCallback callback,
-                                  bool monitor_signals);
+                                  Host::MonitorChildProcessCallback callback);
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
-    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
-    bool monitor_signals) {
+    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid) {
   char thread_name[256];
   ::snprintf(thread_name, sizeof(thread_name),
              "<lldb.host.wait4(pid=%" PRIu64 ")>", pid);
   assert(pid <= UINT32_MAX);
-  return ThreadLauncher::LaunchThread(thread_name, [pid, callback,
-                                                    monitor_signals] {
-    return MonitorChildProcessThreadFunction(pid, callback, monitor_signals);
+  return ThreadLauncher::LaunchThread(thread_name, [pid, callback] {
+    return MonitorChildProcessThreadFunction(pid, callback);
   });
 }
 
@@ -158,18 +155,11 @@ static bool CheckForMonitorCancellation() {
 
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
-                                  Host::MonitorChildProcessCallback callback,
-                                  bool monitor_signals) {
+                                  Host::MonitorChildProcessCallback callback) {
   Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOG(log, "pid = {0}, monitor_signals = {1}", pid, monitor_signals);
-
-  pid = monitor_signals ? -1 * getpgid(pid) : pid;
+  LLDB_LOG(log, "pid = {0}", pid);
 
   int status = -1;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__)
-#define __WALL 0
-#endif
-  const int options = __WALL;
 
 #ifdef __linux__
   // This signal is only used to interrupt the thread from waitpid
@@ -179,88 +169,49 @@ MonitorChildProcessThreadFunction(::pid_t pid,
   ::sigaction(SIGUSR1, &sigUsr1Action, nullptr);
 #endif // __linux__
 
-  while (true) {
+  while(1) {
     log = GetLog(LLDBLog::Process);
-    LLDB_LOG(log, "::waitpid({0}, &status, {1})...", pid, options);
+    LLDB_LOG(log, "::waitpid({0}, &status, 0)...", pid);
 
     if (CheckForMonitorCancellation())
-      break;
+      return nullptr;
 
-    // Get signals from all children with same process group of pid
-    const ::pid_t wait_pid = ::waitpid(pid, &status, options);
+    const ::pid_t wait_pid = ::waitpid(pid, &status, 0);
+
+    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}", pid,
+             wait_pid, status);
 
     if (CheckForMonitorCancellation())
+      return nullptr;
+
+    if (wait_pid != -1)
       break;
+    if (errno != EINTR) {
+      LLDB_LOG(log, "pid = {0}, thread exiting because waitpid failed ({1})...",
+               pid, llvm::sys::StrError());
+      return nullptr;
+    }
+  }
 
-    if (wait_pid == -1) {
-      if (errno == EINTR)
-        continue;
-      else {
-        LLDB_LOG(log,
-                 "pid = {0}, thread exiting because waitpid failed ({1})...",
-                 pid, llvm::sys::StrError());
-        break;
-      }
-    } else if (wait_pid > 0) {
-      bool exited = false;
-      int signal = 0;
-      int exit_status = 0;
-      const char *status_cstr = nullptr;
-      if (WIFSTOPPED(status)) {
-        signal = WSTOPSIG(status);
-        status_cstr = "STOPPED";
-      } else if (WIFEXITED(status)) {
-        exit_status = WEXITSTATUS(status);
-        status_cstr = "EXITED";
-        exited = true;
-      } else if (WIFSIGNALED(status)) {
-        signal = WTERMSIG(status);
-        status_cstr = "SIGNALED";
-        if (wait_pid == abs(pid)) {
-          exited = true;
-          exit_status = -1;
-        }
-      } else {
-        status_cstr = "(\?\?\?)";
-      }
+  int signal = 0;
+  int exit_status = 0;
+  if (WIFEXITED(status)) {
+    exit_status = WEXITSTATUS(status);
+  } else if (WIFSIGNALED(status)) {
+    signal = WTERMSIG(status);
+    exit_status = -1;
+  } else {
+    llvm_unreachable("Unknown status");
+  }
 
-      // Scope for pthread_cancel_disabler
-      {
+  // Scope for pthread_cancel_disabler
+  {
 #ifndef __linux__
-        ScopedPThreadCancelDisabler pthread_cancel_disabler;
+    ScopedPThreadCancelDisabler pthread_cancel_disabler;
 #endif
 
-        log = GetLog(LLDBLog::Process);
-        LLDB_LOG(log,
-                 "::waitpid({0}, &status, {1}) => pid = {2}, status = {3:x} "
-                 "({4}), signal = {5}, exit_state = {6}",
-                 pid, options, wait_pid, status, status_cstr, signal,
-                 exit_status);
-
-        if (exited || (signal != 0 && monitor_signals)) {
-          bool callback_return = false;
-          if (callback)
-            callback_return = callback(wait_pid, exited, signal, exit_status);
-
-          // If our process exited, then this thread should exit
-          if (exited && wait_pid == abs(pid)) {
-            LLDB_LOG(
-                log,
-                "pid = {0} thread exiting because pid received exit signal...",
-                pid);
-            break;
-          }
-          // If the callback returns true, it means this process should exit
-          if (callback_return) {
-            LLDB_LOG(
-                log,
-                "pid = {0} thread exiting because callback returned true...",
-                pid);
-            break;
-          }
-        }
-      }
-    }
+    if (callback)
+      callback(pid, signal, exit_status);
   }
 
   LLDB_LOG(GetLog(LLDBLog::Process), "pid = {0} thread exiting...", pid);
@@ -434,11 +385,10 @@ struct ShellInfo {
   int status = -1;
 };
 
-static bool
+static void
 MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
-                    bool exited, // True if the process did exit
-                    int signo,   // Zero for no signal
-                    int status)  // Exit value of process if signal is zero
+                    int signo,  // Zero for no signal
+                    int status) // Exit value of process if signal is zero
 {
   shell_info->pid = pid;
   shell_info->signo = signo;
@@ -446,7 +396,6 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
   // Let the thread running Host::RunShellCommand() know that the process
   // exited and that ShellInfo has been filled in by broadcasting to it
   shell_info->process_reaped.SetValue(true, eBroadcastAlways);
-  return true;
 }
 
 Status Host::RunShellCommand(llvm::StringRef command,
@@ -541,12 +490,9 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
     launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
 
   std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
-  const bool monitor_signals = false;
   launch_info.SetMonitorProcessCallback(
       std::bind(MonitorShellCommand, shell_info_sp, std::placeholders::_1,
-                std::placeholders::_2, std::placeholders::_3,
-                std::placeholders::_4),
-      monitor_signals);
+                std::placeholders::_2, std::placeholders::_3));
 
   error = LaunchProcess(launch_info);
   const lldb::pid_t pid = launch_info.GetProcessID();

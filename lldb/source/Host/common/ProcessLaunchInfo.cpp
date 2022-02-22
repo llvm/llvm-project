@@ -42,8 +42,6 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
       m_file_actions(), m_pty(new PseudoTerminal), m_resume_count(0),
-      m_monitor_callback(nullptr), m_monitor_callback_baton(nullptr),
-      m_monitor_signals(false), m_listener_sp(), m_hijack_listener_sp(),
       m_scripted_process_class_name(), m_scripted_process_dictionary_sp() {
   if (stdin_file_spec) {
     FileAction file_action;
@@ -177,24 +175,16 @@ void ProcessLaunchInfo::Clear() {
   m_scripted_process_dictionary_sp.reset();
 }
 
-void ProcessLaunchInfo::SetMonitorProcessCallback(
-    const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
-  m_monitor_callback = callback;
-  m_monitor_signals = monitor_signals;
-}
-
-bool ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, bool exited, int signal, int status) {
+void ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, int signal,
+                                            int status) {
   Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOG(log, "pid = {0}, exited = {1}, signal = {2}, status = {3}", pid,
-           exited, signal, status);
-  return true;
+  LLDB_LOG(log, "pid = {0}, signal = {1}, status = {2}", pid, signal, status);
 }
 
 bool ProcessLaunchInfo::MonitorProcess() const {
   if (m_monitor_callback && ProcessIDIsValid()) {
     llvm::Expected<HostThread> maybe_thread =
-    Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID(),
-                                      m_monitor_signals);
+        Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID());
     if (!maybe_thread)
       LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
                llvm::toString(maybe_thread.takeError()));

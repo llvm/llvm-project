@@ -188,8 +188,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
   debugserver_launch_info.SetMonitorProcessCallback(
       std::bind(&GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped,
-                this, std::placeholders::_1),
-      false);
+                this, std::placeholders::_1));
 
   std::ostringstream url;
 // debugserver does not accept the URL scheme prefix.
@@ -517,12 +516,11 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
   return SendPacketNoLock(response.GetString());
 }
 
-bool GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
+void GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
     lldb::pid_t pid) {
   std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
   m_port_map.FreePortForProcess(pid);
   m_spawned_pids.erase(pid);
-  return true;
 }
 
 Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
@@ -533,11 +531,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
   // specify the process monitor if not already set.  This should generally be
   // what happens since we need to reap started processes.
   if (!m_process_launch_info.GetMonitorProcessCallback())
-    m_process_launch_info.SetMonitorProcessCallback(
-        std::bind(
-            &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped,
-            this, std::placeholders::_1),
-        false);
+    m_process_launch_info.SetMonitorProcessCallback(std::bind(
+        &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped, this,
+        std::placeholders::_1));
 
   Status error = Host::LaunchProcess(m_process_launch_info);
   if (!error.Success()) {

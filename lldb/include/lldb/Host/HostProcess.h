@@ -42,8 +42,7 @@ public:
   bool IsRunning() const;
 
   llvm::Expected<HostThread>
-  StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                  bool monitor_signals);
+  StartMonitoring(const Host::MonitorChildProcessCallback &callback);
 
   HostNativeProcessBase &GetNativeProcess();
   const HostNativeProcessBase &GetNativeProcess() const;

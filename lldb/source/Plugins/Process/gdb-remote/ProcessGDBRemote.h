@@ -344,10 +344,9 @@ protected:
 
   lldb::thread_result_t AsyncThread();
 
-  static bool
+  static void
   MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> process_wp,
-                            lldb::pid_t pid, bool exited, int signo,
-                            int exit_status);
+                            lldb::pid_t pid, int signo, int exit_status);
 
   lldb::StateType SetThreadStopInfo(StringExtractor &stop_packet);
 

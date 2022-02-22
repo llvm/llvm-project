@@ -3366,7 +3366,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     const std::weak_ptr<ProcessGDBRemote> this_wp =
         std::static_pointer_cast<ProcessGDBRemote>(shared_from_this());
     debugserver_launch_info.SetMonitorProcessCallback(
-        std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3, _4), false);
+        std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3));
     debugserver_launch_info.SetUserID(process_info.GetUserID());
 
 #if defined(__APPLE__)
@@ -3445,16 +3445,14 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
   return error;
 }
 
-bool ProcessGDBRemote::MonitorDebugserverProcess(
+void ProcessGDBRemote::MonitorDebugserverProcess(
     std::weak_ptr<ProcessGDBRemote> process_wp, lldb::pid_t debugserver_pid,
-    bool exited,    // True if the process did exit
     int signo,      // Zero for no signal
     int exit_status // Exit value of process if signal is zero
 ) {
   // "debugserver_pid" argument passed in is the process ID for debugserver
   // that we are tracking...
   Log *log = GetLog(GDBRLog::Process);
-  const bool handled = true;
 
   LLDB_LOGF(log,
             "ProcessGDBRemote::%s(process_wp, pid=%" PRIu64
@@ -3465,7 +3463,7 @@ bool ProcessGDBRemote::MonitorDebugserverProcess(
   LLDB_LOGF(log, "ProcessGDBRemote::%s(process = %p)", __FUNCTION__,
             static_cast<void *>(process_sp.get()));
   if (!process_sp || process_sp->m_debugserver_pid != debugserver_pid)
-    return handled;
+    return;
 
   // Sleep for a half a second to make sure our inferior process has time to
   // set its exit status before we set it incorrectly when both the debugserver
@@ -3499,7 +3497,6 @@ bool ProcessGDBRemote::MonitorDebugserverProcess(
   // Debugserver has exited we need to let our ProcessGDBRemote know that it no
   // longer has a debugserver instance
   process_sp->m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
-  return handled;
 }
 
 void ProcessGDBRemote::KillDebugserverProcess() {
