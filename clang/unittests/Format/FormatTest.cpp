@@ -22724,6 +22724,13 @@ TEST_F(FormatTest, FileAndCode) {
   EXPECT_EQ(
       FormatStyle::LK_Cpp,
       guessLanguage("foo.h", "#define FOO(...) auto bar = [] __VA_ARGS__;"));
+  // Only one of the two preprocessor regions has ObjC-like code.
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "#if A\n"
+                                   "#define B() C\n"
+                                   "#else\n"
+                                   "#define B() [NSString a:@\"\"]\n"
+                                   "#endif\n"));
 }
 
 TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {
