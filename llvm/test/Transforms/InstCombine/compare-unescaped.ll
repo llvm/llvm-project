@@ -203,4 +203,120 @@ define i1 @compare_distinct_pointer_escape() {
   ret i1 %cmp
 }
 
+; The next block of tests demonstrate a very subtle correctness requirement.
+; We can generally assume any *single* heap layout we chose for the result of
+; a malloc call, but we can't simultanious assume two different ones.  As a
+; result, we must make sure that we only fold conditions if we can ensure that
+; we fold *all* potentially address capturing compares the same.  This is
+; the same point that applies to allocas, applied to noaiias/malloc.
+
+; These two functions represents either a) forging a pointer via inttoptr or
+; b) indexing off an adjacent allocation.  In either case, the operation is
+; obscured by an uninlined helper and not visible to instcombine.
+declare i8* @hidden_inttoptr()
+declare i8* @hidden_offset(i8* %other)
+
+; FIXME: Missed oppurtunity
+define i1 @ptrtoint_single_cmp() {
+; CHECK-LABEL: @ptrtoint_single_cmp(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[M]], inttoptr (i64 2048 to i8*)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %m = call i8* @malloc(i64 4)
+  %rhs = inttoptr i64 2048 to i8*
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @offset_single_cmp() {
+; CHECK-LABEL: @offset_single_cmp(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call i8* @malloc(i64 4)
+  %n = call i8* @malloc(i64 4)
+  %rhs = getelementptr i8, i8* %n, i32 4
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @neg_consistent_fold1() {
+; CHECK-LABEL: @neg_consistent_fold1(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_inttoptr()
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[M]], inttoptr (i64 2048 to i8*)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8* [[RHS2]], inttoptr (i64 2048 to i8*)
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMP1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %m = call i8* @malloc(i64 4)
+  %rhs = inttoptr i64 2048 to i8*
+  %rhs2 = call i8* @hidden_inttoptr()
+  %cmp1 = icmp eq i8* %m, %rhs
+  %cmp2 = icmp eq i8* %m, %rhs2
+  %res = and i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @neg_consistent_fold2() {
+; CHECK-LABEL: @neg_consistent_fold2(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[N:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[RHS:%.*]] = getelementptr i8, i8* [[N]], i64 4
+; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_offset(i8* [[N]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[M]], [[RHS]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[M]], [[RHS2]]
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %m = call i8* @malloc(i64 4)
+  %n = call i8* @malloc(i64 4)
+  %rhs = getelementptr i8, i8* %n, i32 4
+  %rhs2 = call i8* @hidden_offset(i8* %n)
+  %cmp1 = icmp eq i8* %m, %rhs
+  %cmp2 = icmp eq i8* %m, %rhs2
+  %res = and i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @neg_consistent_fold3() {
+; CHECK-LABEL: @neg_consistent_fold3(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[M]] to i32*
+; CHECK-NEXT:    [[LGP:%.*]] = load i32*, i32** @gp, align 8
+; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_inttoptr()
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[LGP]], [[BC]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[M]], [[RHS2]]
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %m = call i8* @malloc(i64 4)
+  %bc = bitcast i8* %m to i32*
+  %lgp = load i32*, i32** @gp, align 8
+  %rhs2 = call i8* @hidden_inttoptr()
+  %cmp1 = icmp eq i32* %bc, %lgp
+  %cmp2 = icmp eq i8* %m, %rhs2
+  %res = and i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; FIXME: This appears correct, but the current implementation relies
+; on visiting both cmps in the same pass.  We may have an simplification order
+; under which one is missed, and that would be a bug.
+define i1 @neg_consistent_fold4() {
+; CHECK-LABEL: @neg_consistent_fold4(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call i8* @malloc(i64 4)
+  %bc = bitcast i8* %m to i32*
+  %lgp = load i32*, i32** @gp, align 8
+  %cmp1 = icmp eq i32* %bc, %lgp
+  %cmp2 = icmp eq i32* %bc, %lgp
+  %res = and i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+
 !0 = !{}
+
+
