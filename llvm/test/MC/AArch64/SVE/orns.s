@@ -12,11 +12,11 @@
 orns    p0.b, p0/z, p0.b, p0.b
 // CHECK-INST: orns    p0.b, p0/z, p0.b, p0.b
 // CHECK-ENCODING: [0x10,0x40,0xc0,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 10 40 c0 25 <unknown>
 
 orns    p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: orns    p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xff,0x7d,0xcf,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff 7d cf 25 <unknown>
