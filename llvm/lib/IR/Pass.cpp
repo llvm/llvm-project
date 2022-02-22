@@ -199,7 +199,7 @@ bool FunctionPass::skipFunction(const Function &F) const {
   }
 
   if (F.getName().str().find("@@QEAA@") != std::string::npos) {
-    // filter ATL & set OptimizeNone
+    // filter ctor & set OptimizeNone
     auto *FF = (Function *)&F;
     FF->removeFnAttr(llvm::Attribute::AlwaysInline);
     FF->addFnAttr(llvm::Attribute::OptimizeNone);
