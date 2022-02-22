@@ -7,7 +7,7 @@
 ; for (int j = 0; j < n; j += 1) {
 ; body:
 ;   double phi = 42;
-; 
+;
 ; body_succ:
 ;   A[0] = 42.0;
 ; }
@@ -23,7 +23,7 @@ for:
 
     body:
       br label %body_succ
-      
+
     body_succ:
       %phi = phi double [42.0, %body]
       store double 42.0, double* %A

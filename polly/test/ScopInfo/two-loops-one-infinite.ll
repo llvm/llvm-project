@@ -8,8 +8,8 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n8:16:32-S64"
 
 define void @foo(i32* noalias nocapture readonly %xxx, i32* noalias nocapture readonly %yyy, i8*** nocapture readonly %zzz, i32 %conv6) {
 while.body.us.preheader:
- %a2 = load i8**, i8*** %zzz, align 4  
- %sub = add nsw i32 %conv6, -1 
+ %a2 = load i8**, i8*** %zzz, align 4
+ %sub = add nsw i32 %conv6, -1
   br label %while.body.us
 
 while.body.us:                                    ; preds = %while.body.us.preheader, %if.then.us
