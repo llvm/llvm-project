@@ -164,7 +164,7 @@ Direction flippedDirection(Direction direction) {
 }
 } // namespace
 
-MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalLexMin() {
+MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
   restoreRationalConsistency();
   return getRationalSample();
 }
@@ -194,7 +194,7 @@ Optional<unsigned> LexSimplex::maybeGetNonIntegeralVarRow() const {
   return {};
 }
 
-MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::getIntegerLexMin() {
+MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::findIntegerLexMin() {
   while (!empty) {
     restoreRationalConsistency();
     if (empty)

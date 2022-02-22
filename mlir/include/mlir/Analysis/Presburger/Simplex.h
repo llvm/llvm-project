@@ -438,13 +438,13 @@ public:
   unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
 
   /// Return the lexicographically minimum rational solution to the constraints.
-  presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>> getRationalLexMin();
+  presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin();
 
   /// Return the lexicographically minimum integer solution to the constraints.
   ///
   /// Note: this should be used only when the lexmin is really needed. To obtain
   /// any integer sample, use Simplex::findIntegerSample as that is more robust.
-  presburger_utils::MaybeOptimum<SmallVector<int64_t, 8>> getIntegerLexMin();
+  presburger_utils::MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin();
 
 protected:
   /// Returns the current sample point, which may contain non-integer (rational)
