@@ -3,5 +3,4 @@ RUN:   | FileCheck %s --match-full-lines --strict-whitespace \
 RUN:     --implicit-check-not={{.}}
 
 CHECK:{{.*}}bind.macho-x86_64:
-CHECK-NEXT:dyld information:
-CHECK-NEXT:[not yet implemented].
+CHECK:dyld information:

@@ -1184,9 +1184,20 @@ static void PrintLinkOptHints(MachOObjectFile *O) {
   }
 }
 
+static void printMachOChainedFixups(object::MachOObjectFile *Obj,
+                                    MachOChainedFixupEntry::FixupKind Type) {
+  Error Err = Error::success();
+  for (const object::MachOChainedFixupEntry &Entry :
+       Obj->fixupTable(Err, Type)) {
+    (void)Entry;
+  }
+  if (Err)
+    reportError(std::move(Err), Obj->getFileName());
+}
+
 static void PrintDyldInfo(MachOObjectFile *O) {
-  outs() << "dyld information:\n";
-  outs() << "[not yet implemented].\n";
+  outs() << "dyld information:" << '\n';
+  printMachOChainedFixups(O, MachOChainedFixupEntry::FixupKind::Bind);
 }
 
 static void PrintDylibs(MachOObjectFile *O, bool JustId) {
