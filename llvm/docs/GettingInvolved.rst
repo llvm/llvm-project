@@ -96,21 +96,18 @@ Information about LLVM's development process.
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
 
-.. _mailing-lists:
+.. _lists-forums:
 
-Mailing Lists
--------------
+Forums & Mailing Lists
+----------------------
 
-If you can't find what you need in these docs, try consulting the mailing
-lists. In addition to the traditional mailing lists there is also a
-`Discourse server <https://llvm.discourse.group>`_ available.
+If you can't find what you need in these docs, try consulting the
+Discourse forums. There are also commit mailing lists for all commits to the LLVM Project.
 
-`Developer's List (llvm-dev)`__
-  This list is for people who want to be included in technical discussions of
-  LLVM. People post to this list when they have questions about writing code
-  for or using the LLVM tools. It is relatively low volume.
+`LLVM Discourse`__
+  The forums for all things LLVM and related sub-projects. There are categories and subcategories for a wide variety of areas within LLVM. You can also view tags or search for a specific topic. 
 
-  .. __: http://lists.llvm.org/mailman/listinfo/llvm-dev
+  .. __: https://discourse.llvm.org/
 
 `Commits Archive (llvm-commits)`__
   This list contains all commit messages that are made when LLVM developers
@@ -127,18 +124,10 @@ lists. In addition to the traditional mailing lists there is also a
 
   .. __: http://lists.llvm.org/pipermail/llvm-bugs/
 
-`Test Results Archive (llvm-testresults)`__
-  A message is automatically sent to this list by every active nightly tester
-  when it completes.  As such, this list gets email several times each day,
-  making it a high volume list.
+`LLVM Announcements`__
+  If you just want project wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse. 
 
-  .. __: http://lists.llvm.org/pipermail/llvm-testresults/
-
-`LLVM Announcements List (llvm-announce)`__
-  This is a low volume list that provides important announcements regarding
-  LLVM.  It gets email about once a month.
-
-  .. __: http://lists.llvm.org/mailman/listinfo/llvm-announce
+  .. __: https://discourse.llvm.org/c/announce/46 
 
 .. _online-sync-ups:
 
