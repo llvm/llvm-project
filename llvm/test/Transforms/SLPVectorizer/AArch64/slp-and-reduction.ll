@@ -21,9 +21,9 @@ define i8 @reduce_and(%struct.buf* %a, %struct.buf* %b) {
 ; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 6
 ; CHECK-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 6
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 7
+; CHECK-NEXT:    [[ARRAYIDX3_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARRAYIDX]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 1
-; CHECK-NEXT:    [[ARRAYIDX3_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARRAYIDX3]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <8 x i8> [[TMP3]], [[TMP1]]
