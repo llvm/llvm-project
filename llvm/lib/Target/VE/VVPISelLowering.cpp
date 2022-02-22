@@ -21,8 +21,66 @@ using namespace llvm;
 SDValue VETargetLowering::legalizeInternalVectorOp(SDValue Op,
                                                    SelectionDAG &DAG) const {
   VECustomDAG CDAG(DAG, Op);
+
+  EVT IdiomVT = Op.getValueType();
+  if (isPackedVectorType(IdiomVT) &&
+      !supportsPackedMode(Op.getOpcode(), IdiomVT))
+    return splitVectorOp(Op, CDAG);
+
   // TODO: Implement odd/even splitting.
   return legalizePackedAVL(Op, CDAG);
+}
+
+SDValue VETargetLowering::splitVectorOp(SDValue Op, VECustomDAG &CDAG) const {
+  MVT ResVT = splitVectorType(Op.getValue(0).getSimpleValueType());
+
+  auto AVLPos = getAVLPos(Op->getOpcode());
+  auto MaskPos = getMaskPos(Op->getOpcode());
+
+  SDValue PackedMask = getNodeMask(Op);
+  auto AVLPair = getAnnotatedNodeAVL(Op);
+  SDValue PackedAVL = AVLPair.first;
+  assert(!AVLPair.second && "Expecting non pack-legalized oepration");
+
+  // request the parts
+  SDValue PartOps[2];
+
+  SDValue UpperPartAVL; // we will use this for packing things back together
+  for (PackElem Part : {PackElem::Hi, PackElem::Lo}) {
+    // VP ops already have an explicit mask and AVL. When expanding from non-VP
+    // attach those additional inputs here.
+    auto SplitTM = CDAG.getTargetSplitMask(PackedMask, PackedAVL, Part);
+
+    if (Part == PackElem::Hi)
+      UpperPartAVL = SplitTM.AVL;
+
+    // Attach non-predicating value operands
+    SmallVector<SDValue, 4> OpVec;
+    for (unsigned i = 0; i < Op.getNumOperands(); ++i) {
+      if (AVLPos && ((int)i) == *AVLPos)
+        continue;
+      if (MaskPos && ((int)i) == *MaskPos)
+        continue;
+
+      // Value operand
+      auto PackedOperand = Op.getOperand(i);
+      auto UnpackedOpVT = splitVectorType(PackedOperand.getSimpleValueType());
+      SDValue PartV =
+          CDAG.getUnpack(UnpackedOpVT, PackedOperand, Part, SplitTM.AVL);
+      OpVec.push_back(PartV);
+    }
+
+    // Add predicating args and generate part node.
+    OpVec.push_back(SplitTM.Mask);
+    OpVec.push_back(SplitTM.AVL);
+    // Emit legal VVP nodes.
+    PartOps[(int)Part] =
+        CDAG.getNode(Op.getOpcode(), ResVT, OpVec, Op->getFlags());
+  }
+
+  // Re-package vectors.
+  return CDAG.getPack(Op.getValueType(), PartOps[(int)PackElem::Lo],
+                      PartOps[(int)PackElem::Hi], UpperPartAVL);
 }
 
 SDValue VETargetLowering::legalizePackedAVL(SDValue Op,
