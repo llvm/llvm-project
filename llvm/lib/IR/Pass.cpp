@@ -161,52 +161,6 @@ static std::string getDescription(const Function &F) {
 }
 
 bool FunctionPass::skipFunction(const Function &F) const {
-  
-  if (F.getName().str().find("AtlWinModule") != std::string::npos) {
-    // filter ATL & set OptimizeNone
-    auto *FF = (Function *)&F;
-    FF->removeFnAttr(llvm::Attribute::AlwaysInline);
-    FF->addFnAttr(llvm::Attribute::OptimizeNone);
-    FF->addFnAttr(llvm::Attribute::NoInline);
-    return true;
-  }
-
-  if (F.getName().str().find("ATL_WIN_MODULE") != std::string::npos) {
-    // filter ATL & set OptimizeNone
-    auto *FF = (Function *)&F;
-    FF->removeFnAttr(llvm::Attribute::AlwaysInline);
-    FF->addFnAttr(llvm::Attribute::OptimizeNone);
-    FF->addFnAttr(llvm::Attribute::NoInline);
-    return true;
-  }
-
-  if (F.getName().str().find("AtlStringMgr") != std::string::npos) {
-    // filter ATL & set OptimizeNone
-    auto *FF = (Function *)&F;
-    FF->removeFnAttr(llvm::Attribute::AlwaysInline);
-    FF->addFnAttr(llvm::Attribute::OptimizeNone);
-    FF->addFnAttr(llvm::Attribute::NoInline);
-    return true;
-  }
-
-  if (F.getName().str().find("@ATL@") != std::string::npos) {
-    // filter ATL & set OptimizeNone
-    auto *FF = (Function *)&F;
-    FF->removeFnAttr(llvm::Attribute::AlwaysInline);
-    FF->addFnAttr(llvm::Attribute::OptimizeNone);
-    FF->addFnAttr(llvm::Attribute::NoInline);
-    return true;
-  }
-
-  if (F.getName().str().find("@@QEAA@") != std::string::npos) {
-    // filter ctor & set OptimizeNone
-    auto *FF = (Function *)&F;
-    FF->removeFnAttr(llvm::Attribute::AlwaysInline);
-    FF->addFnAttr(llvm::Attribute::OptimizeNone);
-    FF->addFnAttr(llvm::Attribute::NoInline);
-    return true;
-  }
-
   OptPassGate &Gate = F.getContext().getOptPassGate();
   if (Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(F)))
     return true;
