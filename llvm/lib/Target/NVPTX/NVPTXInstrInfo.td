@@ -145,6 +145,7 @@ def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def True : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
+def hasPTX42 : Predicate<"Subtarget->getPTXVersion() >= 42">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
 def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
 def hasPTX63 : Predicate<"Subtarget->getPTXVersion() >= 63">;
@@ -155,6 +156,7 @@ def hasPTX71 : Predicate<"Subtarget->getPTXVersion() >= 71">;
 def hasPTX72 : Predicate<"Subtarget->getPTXVersion() >= 72">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
+def hasSM53 : Predicate<"Subtarget->getSmVersion() >= 53">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
 def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
 def hasSM75 : Predicate<"Subtarget->getSmVersion() >= 75">;
