@@ -151,7 +151,7 @@ struct FinalizingBufferizePass
 
 struct OneShotBufferizePass
     : public OneShotBufferizeBase<OneShotBufferizePass> {
-  using OneShotBufferizeBase<OneShotBufferizePass>::OneShotBufferizeBase;
+  OneShotBufferizePass() : OneShotBufferizeBase<OneShotBufferizePass>() {}
 
   explicit OneShotBufferizePass(const AnalysisBufferizationOptions &options)
       : options(options) {}
