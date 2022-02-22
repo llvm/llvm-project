@@ -799,11 +799,11 @@ LogicalResult bufferization::analyzeOp(Operation *op,
 }
 
 LogicalResult bufferization::runOneShotBufferize(
-    Operation *op, std::unique_ptr<AnalysisBufferizationOptions> options) {
-  AnalysisBufferizationState state(op, *options);
+    Operation *op, const AnalysisBufferizationOptions &options) {
+  AnalysisBufferizationState state(op, options);
   if (failed(analyzeOp(op, state)))
     return failure();
-  if (options->testAnalysisOnly)
+  if (options.testAnalysisOnly)
     return success();
   return bufferizeOp(op, state);
 }

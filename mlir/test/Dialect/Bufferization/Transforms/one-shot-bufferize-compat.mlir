@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s \
-// RUN:     -test-comprehensive-function-bufferize="allow-return-memref allow-unknown-ops create-deallocs=0" \
+// RUN:     -one-shot-bufferize="allow-return-memref allow-unknown-ops create-deallocs=0" \
 // RUN:     -split-input-file | \
 // RUN: FileCheck %s --check-prefix=CHECK-NODEALLOC
 
 // RUN: mlir-opt %s \
-// RUN:     -test-comprehensive-function-bufferize="allow-return-memref allow-unknown-ops create-deallocs=0" \
+// RUN:     -one-shot-bufferize="allow-return-memref allow-unknown-ops create-deallocs=0" \
 // RUN:     -buffer-deallocation | \
 // RUN: FileCheck %s --check-prefix=CHECK-BUFFERDEALLOC
 
