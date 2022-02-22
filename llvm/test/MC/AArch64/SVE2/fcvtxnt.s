@@ -13,11 +13,11 @@
 fcvtxnt z0.s, p0/m, z1.d
 // CHECK-INST: fcvtxnt z0.s, p0/m, z1.d
 // CHECK-ENCODING: [0x20,0xa0,0x0a,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 a0 0a 64 <unknown>
 
 fcvtxnt z30.s, p7/m, z31.d
 // CHECK-INST: fcvtxnt z30.s, p7/m, z31.d
 // CHECK-ENCODING: [0xfe,0xbf,0x0a,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: fe bf 0a 64 <unknown>
