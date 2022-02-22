@@ -7,6 +7,7 @@ add_flang_library(FortranLower
   ConvertExpr.cpp
   ConvertType.cpp
   ConvertVariable.cpp
+  IntrinsicCall.cpp
   Mangler.cpp
   OpenACC.cpp
   OpenMP.cpp
