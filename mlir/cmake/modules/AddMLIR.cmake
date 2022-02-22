@@ -588,6 +588,12 @@ function(add_mlir_conversion_library name)
   add_mlir_library(${ARGV} DEPENDS mlir-headers)
 endfunction(add_mlir_conversion_library)
 
+# Declare the library associated with an extension.
+function(add_mlir_extension_library name)
+  set_property(GLOBAL APPEND PROPERTY MLIR_EXTENSION_LIBS ${name})
+  add_mlir_library(${ARGV} DEPENDS mlir-headers)
+endfunction(add_mlir_extension_library)
+
 # Declare the library associated with a translation.
 function(add_mlir_translation_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_TRANSLATION_LIBS ${name})
