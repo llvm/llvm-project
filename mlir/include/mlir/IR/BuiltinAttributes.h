@@ -656,6 +656,11 @@ public:
   DenseElementsAttr reshape(ShapedType newType);
 
   /// Return a new DenseElementsAttr that has the same data as the current
+  /// attribute, but with a different shape for a splat type. The new type must
+  /// have the same element type.
+  DenseElementsAttr resizeSplat(ShapedType newType);
+
+  /// Return a new DenseElementsAttr that has the same data as the current
   /// attribute, but has bitcast elements to 'newElType'. The new type must have
   /// the same bitwidth as the current element type.
   DenseElementsAttr bitcast(Type newElType);
