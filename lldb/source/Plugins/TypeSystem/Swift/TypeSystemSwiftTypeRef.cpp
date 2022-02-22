@@ -2842,6 +2842,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess());
   if (!runtime)
     return impl();
+#ifndef NDEBUG
   // FIXME:
   // No point comparing the results if the reflection data has more
   // information.  There's a nasty chicken & egg problem buried here:
@@ -2851,7 +2852,6 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (get_ast_num_children() <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
     return impl();
-#ifndef NDEBUG
   if (ShouldSkipValidation(type))
     return impl();
   std::string ast_child_name;
