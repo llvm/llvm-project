@@ -323,6 +323,7 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("var struct = 2;");
   verifyFormat("var union = 2;");
   verifyFormat("var interface = 2;");
+  verifyFormat("var requires = {};");
   verifyFormat("interface = 2;");
   verifyFormat("x = interface instanceof y;");
   verifyFormat("interface Test {\n"

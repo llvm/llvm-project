@@ -1563,9 +1563,13 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
       parseConcept();
       return;
     case tok::kw_requires: {
-      bool ParsedClause = parseRequires();
-      if (ParsedClause)
-        return;
+      if (Style.isCpp()) {
+        bool ParsedClause = parseRequires();
+        if (ParsedClause)
+          return;
+      } else {
+        nextToken();
+      }
       break;
     }
     case tok::kw_enum:
