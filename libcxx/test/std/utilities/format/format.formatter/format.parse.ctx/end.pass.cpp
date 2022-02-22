@@ -24,7 +24,7 @@ template <class CharT>
 constexpr void test(const CharT* fmt) {
   {
     std::basic_format_parse_context<CharT> context(fmt);
-    assert(context.end() == &fmt[3]);
+    assert(std::to_address(context.end()) == &fmt[3]);
     ASSERT_NOEXCEPT(context.end());
   }
   {

@@ -928,7 +928,7 @@ T mixed() {
 }
 
 int mixed() {
-  int a, b = 0;
+  int a, v, b = 0;
 // expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 {{'read' clause used here}}
 #pragma omp atomic read write
@@ -957,7 +957,7 @@ int mixed() {
 // expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'compare' clause}}
 // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'capture' clause}}
 #pragma omp atomic compare compare capture capture
-  a = b;
+  { v = a; if (a > b) a = b; }
 #endif
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();

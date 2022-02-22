@@ -64,6 +64,7 @@ add_llvm_component_library(LLVMObjCopy
   intrinsics_gen
 
   LINK_COMPONENTS
+  BinaryFormat
   Object
   Support
   MC

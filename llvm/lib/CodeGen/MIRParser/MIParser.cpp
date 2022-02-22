@@ -1094,11 +1094,23 @@ bool MIParser::parse(MachineInstr *&MI) {
       return true;
   }
 
-  // TODO: Check for extraneous machine operands.
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
-  for (const auto &Operand : Operands)
+
+  unsigned NumExplicitOps = 0;
+  for (const auto &Operand : Operands) {
+    bool IsImplicitOp = Operand.Operand.isReg() && Operand.Operand.isImplicit();
+    if (!IsImplicitOp) {
+      if (!MCID.isVariadic() && NumExplicitOps >= MCID.getNumOperands() &&
+          !Operand.Operand.isValidExcessOperand())
+        return error("too many operands for instruction");
+
+      ++NumExplicitOps;
+    }
+
     MI->addOperand(MF, Operand.Operand);
+  }
+
   if (assignRegisterTies(*MI, Operands))
     return true;
   if (PreInstrSymbol)

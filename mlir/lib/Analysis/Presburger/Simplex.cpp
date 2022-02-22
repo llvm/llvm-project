@@ -59,13 +59,7 @@ Simplex::Unknown &SimplexBase::unknownFromRow(unsigned row) {
   return unknownFromIndex(rowUnknown[row]);
 }
 
-/// Add a new row to the tableau corresponding to the given constant term and
-/// list of coefficients. The coefficients are specified as a vector of
-/// (variable index, coefficient) pairs.
-unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
-  assert(coeffs.size() == var.size() + 1 &&
-         "Incorrect number of coefficients!");
-
+unsigned SimplexBase::addZeroRow(bool makeRestricted) {
   ++nRow;
   // If the tableau is not big enough to accomodate the extra row, we extend it.
   if (nRow >= tableau.getNumRows())
@@ -77,6 +71,17 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
   tableau.fillRow(nRow - 1, 0);
 
   tableau(nRow - 1, 0) = 1;
+  return con.size() - 1;
+}
+
+/// Add a new row to the tableau corresponding to the given constant term and
+/// list of coefficients. The coefficients are specified as a vector of
+/// (variable index, coefficient) pairs.
+unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
+  assert(coeffs.size() == var.size() + 1 &&
+         "Incorrect number of coefficients!");
+
+  addZeroRow(makeRestricted);
   tableau(nRow - 1, 1) = coeffs.back();
   if (usingBigM) {
     // When the lexicographic pivot rule is used, instead of the variables
@@ -162,6 +167,56 @@ Direction flippedDirection(Direction direction) {
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalLexMin() {
   restoreRationalConsistency();
   return getRationalSample();
+}
+
+LogicalResult LexSimplex::addCut(unsigned row) {
+  int64_t denom = tableau(row, 0);
+  addZeroRow(/*makeRestricted=*/true);
+  tableau(nRow - 1, 0) = denom;
+  tableau(nRow - 1, 1) = -mod(-tableau(row, 1), denom);
+  tableau(nRow - 1, 2) = 0; // M has all factors in it.
+  for (unsigned col = 3; col < nCol; ++col)
+    tableau(nRow - 1, col) = mod(tableau(row, col), denom);
+  return moveRowUnknownToColumn(nRow - 1);
+}
+
+Optional<unsigned> LexSimplex::maybeGetNonIntegeralVarRow() const {
+  for (const Unknown &u : var) {
+    if (u.orientation == Orientation::Column)
+      continue;
+    // If the sample value is of the form (a/d)M + b/d, we need b to be
+    // divisible by d. We assume M is very large and contains all possible
+    // factors and is divisible by everything.
+    unsigned row = u.pos;
+    if (tableau(row, 1) % tableau(row, 0) != 0)
+      return row;
+  }
+  return {};
+}
+
+MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::getIntegerLexMin() {
+  while (!empty) {
+    restoreRationalConsistency();
+    if (empty)
+      return OptimumKind::Empty;
+
+    if (Optional<unsigned> maybeRow = maybeGetNonIntegeralVarRow()) {
+      // Failure occurs when the polytope is integer empty.
+      if (failed(addCut(*maybeRow)))
+        return OptimumKind::Empty;
+      continue;
+    }
+
+    MaybeOptimum<SmallVector<Fraction, 8>> sample = getRationalSample();
+    assert(!sample.isEmpty() && "If we reached here the sample should exist!");
+    if (sample.isUnbounded())
+      return OptimumKind::Unbounded;
+    return llvm::to_vector<8>(llvm::map_range(
+        *sample, [](const Fraction &f) { return f.getAsInteger(); }));
+  }
+
+  // Polytope is integer empty.
+  return OptimumKind::Empty;
 }
 
 bool LexSimplex::rowIsViolated(unsigned row) const {

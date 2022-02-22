@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
   int &b = a;
   S sa;
   S &sb = sa;
-  int r;
+  int r; // expected-note {{declared here}}
 #pragma omp task { // expected-warning {{extra tokens at the end of '#pragma omp task' are ignored}}
   foo();
 #pragma omp task( // expected-warning {{extra tokens at the end of '#pragma omp task' are ignored}}
@@ -330,6 +330,12 @@ L2:
 // expected-error@+1 {{directive '#pragma omp task' cannot contain more than one 'mergeable' clause}}
 #pragma omp task mergeable mergeable
   ++r;
+// expected-error@+4 {{variable length arrays are not supported in OpenMP tasking regions with 'untied' clause}}
+// expected-note@+3 {{read of non-const variable 'r' is not allowed in a constant expression}}
+#pragma omp task untied
+  {
+    int array[r];
+  }
   volatile omp_event_handle_t evt;
   omp_event_handle_t sevt;
   const omp_event_handle_t cevt = evt;

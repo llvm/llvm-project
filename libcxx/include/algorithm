@@ -20,16 +20,22 @@ namespace std
 
 namespace ranges {
   template <class I, class F>
-    struct in_fun_result; // since C++20
+    struct in_fun_result;     // since C++20
 
   template <class I1, class I2>
-    struct in_in_result;     // since C++20
+    struct in_in_result;      // since C++20
 
   template <class I1, class I2, class O>
-    struct in_in_out_result; // since C++20
+    struct in_in_out_result;  // since C++20
 
   template <class I, class O1, class O2>
     struct in_out_out_result; // since C++20
+
+  template <class I1, class I2>
+    struct min_max_result;    // since C++20
+
+  template <class I>
+    struct in_found_result;   // since C++20
 
   template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
     indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>             // since C++20
@@ -716,6 +722,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/generate.h>
 #include <__algorithm/generate_n.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/in_found_result.h>
 #include <__algorithm/in_fun_result.h>
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/in_in_result.h>
@@ -738,6 +745,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/merge.h>
 #include <__algorithm/min.h>
 #include <__algorithm/min_element.h>
+#include <__algorithm/min_max_result.h>
 #include <__algorithm/minmax.h>
 #include <__algorithm/minmax_element.h>
 #include <__algorithm/mismatch.h>

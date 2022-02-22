@@ -3146,12 +3146,12 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
   if (Opcode != ISD::UADDO && Opcode != ISD::USUBO)
     return SDValue();
 
-  // Canonicalize the add/sub of A and B as Carry0 and the add/sub of the
-  // carry/borrow in as Carry1. (The top and middle uaddo nodes respectively in
-  // the above ASCII art.)
-  if (Carry1.getOperand(0) != Carry0.getValue(0) &&
-      Carry1.getOperand(1) != Carry0.getValue(0))
+  // Canonicalize the add/sub of A and B (the top node in the above ASCII art)
+  // as Carry0 and the add/sub of the carry in as Carry1 (the middle node).
+  if (Carry1.getNode()->isOperandOf(Carry0.getNode()))
     std::swap(Carry0, Carry1);
+
+  // Check if nodes are connected in expected way.
   if (Carry1.getOperand(0) != Carry0.getValue(0) &&
       Carry1.getOperand(1) != Carry0.getValue(0))
     return SDValue();
@@ -9570,20 +9570,20 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
 SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (bswap c1) -> c2
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, N0);
+    return DAG.getNode(ISD::BSWAP, DL, VT, N0);
   // fold (bswap (bswap x)) -> x
   if (N0.getOpcode() == ISD::BSWAP)
-    return N0->getOperand(0);
+    return N0.getOperand(0);
 
   // Canonicalize bswap(bitreverse(x)) -> bitreverse(bswap(x)). If bitreverse
   // isn't supported, it will be expanded to bswap followed by a manual reversal
   // of bits in each byte. By placing bswaps before bitreverse, we can remove
   // the two bswaps if the bitreverse gets expanded.
   if (N0.getOpcode() == ISD::BITREVERSE && N0.hasOneUse()) {
-    SDLoc DL(N);
     SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, N0.getOperand(0));
     return DAG.getNode(ISD::BITREVERSE, DL, VT, BSwap);
   }
