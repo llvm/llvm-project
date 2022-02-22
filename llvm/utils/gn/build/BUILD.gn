@@ -283,7 +283,7 @@ config("compiler_defaults") {
       "-Werror=date-time",
     ]
     if (current_os == "win") {
-      cflags += [ "-fmsc-version=1920" ]
+      cflags += [ "-fmsc-version=1926" ]
       if (use_lld) {
         cflags += [ "/Brepro" ]
         ldflags += [ "/Brepro" ]
