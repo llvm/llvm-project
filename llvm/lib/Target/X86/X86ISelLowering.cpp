@@ -52606,7 +52606,8 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
 /// Try to fold those constants into an 'add' instruction to reduce instruction
 /// count. We do this with CMOV rather the generic 'select' because there are
 /// earlier folds that may be used to turn select-of-constants into logic hacks.
-static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG) {
+static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget) {
   // If an operand is zero, add-of-0 gets simplified away, so that's clearly
   // better because we eliminate 1-2 instructions. This transform is still
   // an improvement without zero operands because we trade 2 move constants and
@@ -52629,6 +52630,11 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG) {
   if (!isSuitableCmov(Cmov))
     std::swap(Cmov, OtherOp);
   if (!isSuitableCmov(Cmov))
+    return SDValue();
+
+  // Don't remove a load folding opportunity for the add. That would neutralize
+  // any improvements from removing constant materializations.
+  if (X86::mayFoldLoad(OtherOp, Subtarget))
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -52673,7 +52679,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
 
-  if (SDValue Select = pushAddIntoCmovOfConsts(N, DAG))
+  if (SDValue Select = pushAddIntoCmovOfConsts(N, DAG, Subtarget))
     return Select;
 
   if (SDValue MAdd = matchPMADDWD(DAG, Op0, Op1, DL, VT, Subtarget))
