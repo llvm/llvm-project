@@ -147,11 +147,6 @@ class DWARFRewriter {
                                      SimpleBinaryPatcher &DebugInfoPatcher,
                                      Optional<uint64_t> RangesBase = None);
 
-  /// Patch DW_AT_(low|high)_pc values for the \p DIE based on \p Range.
-  void patchLowHigh(DWARFDie DIE, DebugAddressRange Range,
-                    SimpleBinaryPatcher &DebugInfoPatcher,
-                    Optional<uint64_t> DWOId);
-
   /// Helper function for creating and returning per-DWO patchers/writers.
   template <class T, class Patcher>
   Patcher *getBinaryDWOPatcherHelper(T &BinaryPatchers, uint64_t DwoId) {

@@ -1364,47 +1364,6 @@ void getRangeAttrData(DWARFDie DIE, Optional<AttrInfo> &LowPCVal,
 
 } // namespace
 
-void DWARFRewriter::patchLowHigh(DWARFDie DIE, DebugAddressRange Range,
-                                 SimpleBinaryPatcher &DebugInfoPatcher,
-                                 Optional<uint64_t> DWOId) {
-  Optional<AttrInfo> LowPCVal = None;
-  Optional<AttrInfo> HighPCVal = None;
-  getRangeAttrData(DIE, LowPCVal, HighPCVal);
-  uint64_t LowPCOffset = LowPCVal->Offset;
-  uint64_t HighPCOffset = HighPCVal->Offset;
-  auto *TempDebugPatcher = &DebugInfoPatcher;
-  if (LowPCVal->V.getForm() == dwarf::DW_FORM_GNU_addr_index) {
-    uint32_t AddressIndex =
-        AddrWriter->getIndexFromAddress(Range.LowPC, *DWOId);
-    TempDebugPatcher = getBinaryDWODebugInfoPatcher(*DWOId);
-    TempDebugPatcher->addUDataPatch(LowPCOffset, AddressIndex, LowPCVal->Size);
-    // 2.17.2
-    // If the value of the DW_AT_high_pc is of class address, it is the
-    // relocated address of the first location past the last instruction
-    // associated with the entity; if it is of class constant, the value is
-    // an unsigned integer offset which when added to the low PC gives the
-    // address of the first location past the last instruction associated
-    // with the entity.
-    if (!HighPCVal->V.isFormClass(DWARFFormValue::FC_Constant)) {
-      AddressIndex = AddrWriter->getIndexFromAddress(Range.HighPC, *DWOId);
-      TempDebugPatcher->addUDataPatch(HighPCOffset, AddressIndex,
-                                      HighPCVal->Size);
-    }
-  } else {
-    TempDebugPatcher->addLE64Patch(LowPCOffset, Range.LowPC);
-  }
-
-  uint64_t HighPC = Range.HighPC;
-  // The DW_FORM_data* is delta between high and low pc
-  if (HighPCVal->V.getForm() != dwarf::Form::DW_FORM_addr)
-    HighPC -= Range.LowPC;
-
-  if (isHighPcFormEightBytes(HighPCVal->V.getForm()))
-    TempDebugPatcher->addLE64Patch(HighPCOffset, HighPC);
-  else
-    TempDebugPatcher->addLE32Patch(HighPCOffset, HighPC);
-}
-
 void DWARFRewriter::convertToRangesPatchAbbrev(
     const DWARFUnit &Unit, const DWARFAbbreviationDeclaration *Abbrev,
     DebugAbbrevWriter &AbbrevWriter, Optional<uint64_t> RangesBase) {
