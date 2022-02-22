@@ -1,0 +1,14 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.name_suffix = "@BITINT_TEST_CONFIG_SUFFIX@"
+
+config.target_cflags = "@BITINT_TEST_TARGET_CFLAGS@"
+
+config.target_arch = "@BITINT_TEST_TARGET_ARCH@"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@BITINT_LIT_SOURCE_DIR@/Unit/lit.cfg.py")
+
