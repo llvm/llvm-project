@@ -50,6 +50,11 @@ class LLVM_LIBRARY_VISIBILITY NanoMips : public Generic_ELF {
     return true;
   }
 
+  bool useIntegratedAs() const override {
+    // No integrated assembler for NanoMips
+    return false;
+  }
+
 };
 
 } // toolchains
