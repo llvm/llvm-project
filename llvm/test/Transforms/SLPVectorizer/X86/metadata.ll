@@ -34,12 +34,12 @@ entry:
 define void @test2(double* %a, double* %b, i8* %e) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[E:%.*]] to double*
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]], !fpmath !5
-; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[E:%.*]] to double*
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[C]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void

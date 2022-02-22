@@ -110,20 +110,20 @@ define i32 @maxi8_store_in(i32) {
 ; SSE-NEXT:    ret i32 [[TMP23]]
 ;
 ; AVX-LABEL: @maxi8_store_in(
-; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX-NEXT:    store i32 0, i32* @var, align 8
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; AVX-NEXT:    ret i32 [[TMP3]]
 ;
 ; AVX2-LABEL: @maxi8_store_in(
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX2-NEXT:    store i32 0, i32* @var, align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; AVX2-NEXT:    ret i32 [[TMP3]]
 ;
 ; THRESH-LABEL: @maxi8_store_in(
-; THRESH-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; THRESH-NEXT:    store i32 0, i32* @var, align 8
+; THRESH-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; THRESH-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; THRESH-NEXT:    ret i32 [[TMP3]]
 ;
