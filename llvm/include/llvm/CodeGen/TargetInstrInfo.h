@@ -1940,6 +1940,25 @@ public:
   virtual bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                                       unsigned &Flags) const;
 
+  /// Optional target hook which partitions \p MBB into outlinable ranges for
+  /// instruction mapping purposes. Each range is defined by two iterators:
+  /// [start, end).
+  ///
+  /// Ranges are expected to be ordered top-down. That is, ranges closer to the
+  /// top of the block should come before ranges closer to the end of the block.
+  ///
+  /// Ranges cannot overlap.
+  ///
+  /// If an entire block is mappable, then its range is [MBB.begin(), MBB.end())
+  ///
+  /// All instructions not present in an outlinable range are considered
+  /// illegal.
+  virtual SmallVector<
+      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+  getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const {
+    return {std::make_pair(MBB.begin(), MBB.end())};
+  }
+
   /// Insert a custom frame for outlined functions.
   virtual void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                                   const outliner::OutlinedFunction &OF) const {

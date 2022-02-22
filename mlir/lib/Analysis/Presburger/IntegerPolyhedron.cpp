@@ -73,13 +73,33 @@ bool IntegerPolyhedron::isSubsetOf(const IntegerPolyhedron &other) const {
 }
 
 MaybeOptimum<SmallVector<Fraction, 8>>
-IntegerPolyhedron::getRationalLexMin() const {
+IntegerPolyhedron::findRationalLexMin() const {
   assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
   MaybeOptimum<SmallVector<Fraction, 8>> maybeLexMin =
-      LexSimplex(*this).getRationalLexMin();
+      LexSimplex(*this).findRationalLexMin();
 
   if (!maybeLexMin.isBounded())
     return maybeLexMin;
+
+  // The Simplex returns the lexmin over all the variables including locals. But
+  // locals are not actually part of the space and should not be returned in the
+  // result. Since the locals are placed last in the list of identifiers, they
+  // will be minimized last in the lexmin. So simply truncating out the locals
+  // from the end of the answer gives the desired lexmin over the dimensions.
+  assert(maybeLexMin->size() == getNumIds() &&
+         "Incorrect number of vars in lexMin!");
+  maybeLexMin->resize(getNumDimAndSymbolIds());
+  return maybeLexMin;
+}
+
+MaybeOptimum<SmallVector<int64_t, 8>>
+IntegerPolyhedron::findIntegerLexMin() const {
+  assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
+  MaybeOptimum<SmallVector<int64_t, 8>> maybeLexMin =
+      LexSimplex(*this).findIntegerLexMin();
+
+  if (!maybeLexMin.isBounded())
+    return maybeLexMin.getKind();
 
   // The Simplex returns the lexmin over all the variables including locals. But
   // locals are not actually part of the space and should not be returned in the

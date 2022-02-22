@@ -164,9 +164,8 @@ private:
 LogicalResult analyzeOp(Operation *op, AnalysisBufferizationState &state);
 
 /// Run One-Shot Bufferize on the given op: Analysis + Bufferization
-LogicalResult
-runOneShotBufferize(Operation *op,
-                    std::unique_ptr<AnalysisBufferizationOptions> options);
+LogicalResult runOneShotBufferize(Operation *op,
+                                  const AnalysisBufferizationOptions &options);
 
 } // namespace bufferization
 } // namespace mlir

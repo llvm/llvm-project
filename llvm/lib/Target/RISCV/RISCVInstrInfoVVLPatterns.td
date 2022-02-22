@@ -685,6 +685,46 @@ multiclass VPatBinarySDNode_V_WX<SDNode op, string instruction_name> {
   defm : VPatBinarySDNodeExt_V_WX<op, zext_oneuse, instruction_name>;
 }
 
+multiclass VPatWidenReductionVL<SDNode vop, PatFrags extop, string instruction_name> {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defvar wti_m1 = !cast<VTypeInfo>("VI"#wti.SEW#"M1");
+    def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$merge),
+                                 (wti.Vector (extop (vti.Vector vti.RegClass:$rs1))),
+                                 VR:$rs2, (vti.Mask true_mask), VLOpFrag)),
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+                (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
+                (wti_m1.Vector VR:$rs2), GPR:$vl, vti.Log2SEW)>;
+    def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$merge),
+                                 (wti.Vector (extop (vti.Vector vti.RegClass:$rs1))),
+                                 VR:$rs2, (vti.Mask V0), VLOpFrag)),
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_MASK")
+                (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
+                (wti_m1.Vector VR:$rs2), (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+  }
+}
+
+multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, SDNode extop, string instruction_name> {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defvar wti_m1 = !cast<VTypeInfo>("VI"#wti.SEW#"M1");
+    def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$merge),
+                                 (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
+                                 VR:$rs2, (vti.Mask true_mask), VLOpFrag)),
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+                (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
+                (wti_m1.Vector VR:$rs2), GPR:$vl, vti.Log2SEW)>;
+    def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$merge),
+                                 (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
+                                 VR:$rs2, (vti.Mask V0), VLOpFrag)),
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_MASK")
+                (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
+                (wti_m1.Vector VR:$rs2), (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -1082,6 +1122,13 @@ defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
+
+// 15.2. Vector Widening Integer Reduction Instructions
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, anyext_oneuse, "PseudoVWREDSUMU">;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, zext_oneuse, "PseudoVWREDSUMU">;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_zext_vl, "PseudoVWREDSUMU">;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, sext_oneuse, "PseudoVWREDSUM">;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_sext_vl, "PseudoVWREDSUM">;
 } // Predicates = [HasVInstructions]
 
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions

@@ -2571,6 +2571,38 @@ struct FormatStyle {
   /// \version 3.7
   bool IndentWrappedFunctionNames;
 
+  /// Insert braces after control statements (``if``, ``else``, ``for``, ``do``,
+  /// and ``while``) in C++ unless the control statements are inside macro
+  /// definitions or the braces would enclose preprocessor directives.
+  /// \warning
+  ///  Setting this option to `true` could lead to incorrect code formatting due
+  ///  to clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code
+  ///   false:                                    true:
+  ///
+  ///   if (isa<FunctionDecl>(D))        vs.      if (isa<FunctionDecl>(D)) {
+  ///     handleFunctionDecl(D);                    handleFunctionDecl(D);
+  ///   else if (isa<VarDecl>(D))                 } else if (isa<VarDecl>(D)) {
+  ///     handleVarDecl(D);                         handleVarDecl(D);
+  ///   else                                      } else {
+  ///     return;                                   return;
+  ///                                             }
+  ///
+  ///   while (i--)                      vs.      while (i--) {
+  ///     for (auto *A : D.attrs())                 for (auto *A : D.attrs()) {
+  ///       handleAttr(A);                            handleAttr(A);
+  ///                                               }
+  ///                                             }
+  ///
+  ///   do                               vs.      do {
+  ///     --i;                                      --i;
+  ///   while (i);                                } while (i);
+  /// \endcode
+  /// \version 15
+  bool InsertBraces;
+
   /// A vector of prefixes ordered by the desired groups for Java imports.
   ///
   /// One group's prefix can be a subset of another - the longest prefix is

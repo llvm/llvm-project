@@ -382,6 +382,36 @@ define signext i16 @vreduce_add_nxv1i16(<vscale x 1 x i16> %v) {
   ret i16 %red
 }
 
+define signext i16 @vwreduce_add_nxv1i8(<vscale x 1 x i8> %v) {
+; CHECK-LABEL: vwreduce_add_nxv1i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 1 x i8> %v to <vscale x 1 x i16>
+  %red = call i16 @llvm.vector.reduce.add.nxv1i16(<vscale x 1 x i16> %e)
+  ret i16 %red
+}
+
+define signext i16 @vwreduce_uadd_nxv1i8(<vscale x 1 x i8> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv1i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 1 x i8> %v to <vscale x 1 x i16>
+  %red = call i16 @llvm.vector.reduce.add.nxv1i16(<vscale x 1 x i16> %e)
+  ret i16 %red
+}
+
 declare i16 @llvm.vector.reduce.umax.nxv1i16(<vscale x 1 x i16>)
 
 define signext i16 @vreduce_umax_nxv1i16(<vscale x 1 x i16> %v) {
@@ -502,6 +532,36 @@ define signext i16 @vreduce_add_nxv2i16(<vscale x 2 x i16> %v) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %red = call i16 @llvm.vector.reduce.add.nxv2i16(<vscale x 2 x i16> %v)
+  ret i16 %red
+}
+
+define signext i16 @vwreduce_add_nxv2i8(<vscale x 2 x i8> %v) {
+; CHECK-LABEL: vwreduce_add_nxv2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 2 x i8> %v to <vscale x 2 x i16>
+  %red = call i16 @llvm.vector.reduce.add.nxv2i16(<vscale x 2 x i16> %e)
+  ret i16 %red
+}
+
+define signext i16 @vwreduce_uadd_nxv2i8(<vscale x 2 x i8> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 2 x i8> %v to <vscale x 2 x i16>
+  %red = call i16 @llvm.vector.reduce.add.nxv2i16(<vscale x 2 x i16> %e)
   ret i16 %red
 }
 
@@ -628,6 +688,36 @@ define signext i16 @vreduce_add_nxv4i16(<vscale x 4 x i16> %v) {
   ret i16 %red
 }
 
+define signext i16 @vwreduce_add_nxv4i8(<vscale x 4 x i8> %v) {
+; CHECK-LABEL: vwreduce_add_nxv4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 4 x i8> %v to <vscale x 4 x i16>
+  %red = call i16 @llvm.vector.reduce.add.nxv4i16(<vscale x 4 x i16> %e)
+  ret i16 %red
+}
+
+define signext i16 @vwreduce_uadd_nxv4i8(<vscale x 4 x i8> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 4 x i8> %v to <vscale x 4 x i16>
+  %red = call i16 @llvm.vector.reduce.add.nxv4i16(<vscale x 4 x i16> %e)
+  ret i16 %red
+}
+
 declare i16 @llvm.vector.reduce.umax.nxv4i16(<vscale x 4 x i16>)
 
 define signext i16 @vreduce_umax_nxv4i16(<vscale x 4 x i16> %v) {
@@ -748,6 +838,36 @@ define signext i32 @vreduce_add_nxv1i32(<vscale x 1 x i32> %v) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %red = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> %v)
+  ret i32 %red
+}
+
+define signext i32 @vwreduce_add_nxv1i16(<vscale x 1 x i16> %v) {
+; CHECK-LABEL: vwreduce_add_nxv1i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 1 x i16> %v to <vscale x 1 x i32>
+  %red = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> %e)
+  ret i32 %red
+}
+
+define signext i32 @vwreduce_uadd_nxv1i16(<vscale x 1 x i16> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv1i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = zext <vscale x 1 x i16> %v to <vscale x 1 x i32>
+  %red = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> %e)
   ret i32 %red
 }
 
@@ -874,6 +994,36 @@ define signext i32 @vreduce_add_nxv2i32(<vscale x 2 x i32> %v) {
   ret i32 %red
 }
 
+define signext i32 @vwreduce_add_nxv2i16(<vscale x 2 x i16> %v) {
+; CHECK-LABEL: vwreduce_add_nxv2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 2 x i16> %v to <vscale x 2 x i32>
+  %red = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> %e)
+  ret i32 %red
+}
+
+define signext i32 @vwreduce_uadd_nxv2i16(<vscale x 2 x i16> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = zext <vscale x 2 x i16> %v to <vscale x 2 x i32>
+  %red = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> %e)
+  ret i32 %red
+}
+
 declare i32 @llvm.vector.reduce.umax.nxv2i32(<vscale x 2 x i32>)
 
 define signext i32 @vreduce_umax_nxv2i32(<vscale x 2 x i32> %v) {
@@ -997,6 +1147,36 @@ define signext i32 @vreduce_add_nxv4i32(<vscale x 4 x i32> %v) {
   ret i32 %red
 }
 
+define signext i32 @vwreduce_add_nxv4i16(<vscale x 4 x i16> %v) {
+; CHECK-LABEL: vwreduce_add_nxv4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 4 x i16> %v to <vscale x 4 x i32>
+  %red = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %e)
+  ret i32 %red
+}
+
+define signext i32 @vwreduce_uadd_nxv4i16(<vscale x 4 x i16> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = zext <vscale x 4 x i16> %v to <vscale x 4 x i32>
+  %red = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %e)
+  ret i32 %red
+}
+
 declare i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32>)
 
 define signext i32 @vreduce_umax_nxv4i32(<vscale x 4 x i32> %v) {
@@ -1117,6 +1297,36 @@ define i64 @vreduce_add_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.add.nxv1i64(<vscale x 1 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vwreduce_add_nxv1i32(<vscale x 1 x i32> %v) {
+; CHECK-LABEL: vwreduce_add_nxv1i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 1 x i32> %v to <vscale x 1 x i64>
+  %red = call i64 @llvm.vector.reduce.add.nxv1i64(<vscale x 1 x i64> %e)
+  ret i64 %red
+}
+
+define i64 @vwreduce_uadd_nxv1i32(<vscale x 1 x i32> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv1i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = zext <vscale x 1 x i32> %v to <vscale x 1 x i64>
+  %red = call i64 @llvm.vector.reduce.add.nxv1i64(<vscale x 1 x i64> %e)
   ret i64 %red
 }
 
@@ -1244,6 +1454,36 @@ define i64 @vreduce_add_nxv2i64(<vscale x 2 x i64> %v) {
   ret i64 %red
 }
 
+define i64 @vwreduce_add_nxv2i32(<vscale x 2 x i32> %v) {
+; CHECK-LABEL: vwreduce_add_nxv2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 2 x i32> %v to <vscale x 2 x i64>
+  %red = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> %e)
+  ret i64 %red
+}
+
+define i64 @vwreduce_uadd_nxv2i32(<vscale x 2 x i32> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = zext <vscale x 2 x i32> %v to <vscale x 2 x i64>
+  %red = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> %e)
+  ret i64 %red
+}
+
 declare i64 @llvm.vector.reduce.umax.nxv2i64(<vscale x 2 x i64>)
 
 define i64 @vreduce_umax_nxv2i64(<vscale x 2 x i64> %v) {
@@ -1365,6 +1605,36 @@ define i64 @vreduce_add_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vwreduce_add_nxv4i32(<vscale x 4 x i32> %v) {
+; CHECK-LABEL: vwreduce_add_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vwredsum.vs v8, v8, v10
+; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = sext <vscale x 4 x i32> %v to <vscale x 4 x i64>
+  %red = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %e)
+  ret i64 %red
+}
+
+define i64 @vwreduce_uadd_nxv4i32(<vscale x 4 x i32> %v) {
+; CHECK-LABEL: vwreduce_uadd_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v10
+; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %e = zext <vscale x 4 x i32> %v to <vscale x 4 x i64>
+  %red = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %e)
   ret i64 %red
 }
 
