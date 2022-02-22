@@ -12919,28 +12919,28 @@ void __ovld prefetch(const __global half16 *p, size_t num_elements);
  * pointed by p. The function returns old.
  */
 int __ovld atomic_add(volatile __global int *p, int val);
-unsigned int __ovld atomic_add(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_add(volatile __global uint *p, uint val);
 int __ovld atomic_add(volatile __local int *p, int val);
-unsigned int __ovld atomic_add(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_add(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_add(volatile int *p, int val);
-unsigned int __ovld atomic_add(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_add(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_add(volatile __global int *p, int val);
-unsigned int __ovld atom_add(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_add(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
 int __ovld atom_add(volatile __local int *p, int val);
-unsigned int __ovld atom_add(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_add(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_base_atomics)
 long __ovld atom_add(volatile __global long *p, long val);
-unsigned long __ovld atom_add(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_add(volatile __global ulong *p, ulong val);
 long __ovld atom_add(volatile __local long *p, long val);
-unsigned long __ovld atom_add(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_add(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -12949,28 +12949,28 @@ unsigned long __ovld atom_add(volatile __local unsigned long *p, unsigned long v
  * returns old.
  */
 int __ovld atomic_sub(volatile __global int *p, int val);
-unsigned int __ovld atomic_sub(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_sub(volatile __global uint *p, uint val);
 int __ovld atomic_sub(volatile __local int *p, int val);
-unsigned int __ovld atomic_sub(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_sub(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_sub(volatile int *p, int val);
-unsigned int __ovld atomic_sub(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_sub(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_sub(volatile __global int *p, int val);
-unsigned int __ovld atom_sub(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_sub(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
 int __ovld atom_sub(volatile __local int *p, int val);
-unsigned int __ovld atom_sub(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_sub(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_base_atomics)
 long __ovld atom_sub(volatile __global long *p, long val);
-unsigned long __ovld atom_sub(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_sub(volatile __global ulong *p, ulong val);
 long __ovld atom_sub(volatile __local long *p, long val);
-unsigned long __ovld atom_sub(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_sub(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -12979,31 +12979,31 @@ unsigned long __ovld atom_sub(volatile __local unsigned long *p, unsigned long v
  * value.
  */
 int __ovld atomic_xchg(volatile __global int *p, int val);
-unsigned int __ovld atomic_xchg(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_xchg(volatile __global uint *p, uint val);
 int __ovld atomic_xchg(volatile __local int *p, int val);
-unsigned int __ovld atomic_xchg(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_xchg(volatile __local uint *p, uint val);
 float __ovld atomic_xchg(volatile __global float *p, float val);
 float __ovld atomic_xchg(volatile __local float *p, float val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_xchg(volatile int *p, int val);
-unsigned int __ovld atomic_xchg(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_xchg(volatile uint *p, uint val);
 float __ovld atomic_xchg(volatile float *p, float val);
 #endif
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_xchg(volatile __global int *p, int val);
-unsigned int __ovld atom_xchg(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_xchg(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
 int __ovld atom_xchg(volatile __local int *p, int val);
-unsigned int __ovld atom_xchg(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_xchg(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_base_atomics)
 long __ovld atom_xchg(volatile __global long *p, long val);
 long __ovld atom_xchg(volatile __local long *p, long val);
-unsigned long __ovld atom_xchg(volatile __global unsigned long *p, unsigned long val);
-unsigned long __ovld atom_xchg(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_xchg(volatile __global ulong *p, ulong val);
+ulong __ovld atom_xchg(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -13013,28 +13013,28 @@ unsigned long __ovld atom_xchg(volatile __local unsigned long *p, unsigned long 
  * pointed by p. The function returns old.
  */
 int __ovld atomic_inc(volatile __global int *p);
-unsigned int __ovld atomic_inc(volatile __global unsigned int *p);
+uint __ovld atomic_inc(volatile __global uint *p);
 int __ovld atomic_inc(volatile __local int *p);
-unsigned int __ovld atomic_inc(volatile __local unsigned int *p);
+uint __ovld atomic_inc(volatile __local uint *p);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_inc(volatile int *p);
-unsigned int __ovld atomic_inc(volatile unsigned int *p);
+uint __ovld atomic_inc(volatile uint *p);
 #endif
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_inc(volatile __global int *p);
-unsigned int __ovld atom_inc(volatile __global unsigned int *p);
+uint __ovld atom_inc(volatile __global uint *p);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
 int __ovld atom_inc(volatile __local int *p);
-unsigned int __ovld atom_inc(volatile __local unsigned int *p);
+uint __ovld atom_inc(volatile __local uint *p);
 #endif
 
 #if defined(cl_khr_int64_base_atomics)
 long __ovld atom_inc(volatile __global long *p);
-unsigned long __ovld atom_inc(volatile __global unsigned long *p);
+ulong __ovld atom_inc(volatile __global ulong *p);
 long __ovld atom_inc(volatile __local long *p);
-unsigned long __ovld atom_inc(volatile __local unsigned long *p);
+ulong __ovld atom_inc(volatile __local ulong *p);
 #endif
 
 /**
@@ -13044,28 +13044,28 @@ unsigned long __ovld atom_inc(volatile __local unsigned long *p);
  * pointed by p. The function returns old.
  */
 int __ovld atomic_dec(volatile __global int *p);
-unsigned int __ovld atomic_dec(volatile __global unsigned int *p);
+uint __ovld atomic_dec(volatile __global uint *p);
 int __ovld atomic_dec(volatile __local int *p);
-unsigned int __ovld atomic_dec(volatile __local unsigned int *p);
+uint __ovld atomic_dec(volatile __local uint *p);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_dec(volatile int *p);
-unsigned int __ovld atomic_dec(volatile unsigned int *p);
+uint __ovld atomic_dec(volatile uint *p);
 #endif
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_dec(volatile __global int *p);
-unsigned int __ovld atom_dec(volatile __global unsigned int *p);
+uint __ovld atom_dec(volatile __global uint *p);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
 int __ovld atom_dec(volatile __local int *p);
-unsigned int __ovld atom_dec(volatile __local unsigned int *p);
+uint __ovld atom_dec(volatile __local uint *p);
 #endif
 
 #if defined(cl_khr_int64_base_atomics)
 long __ovld atom_dec(volatile __global long *p);
-unsigned long __ovld atom_dec(volatile __global unsigned long *p);
+ulong __ovld atom_dec(volatile __global ulong *p);
 long __ovld atom_dec(volatile __local long *p);
-unsigned long __ovld atom_dec(volatile __local unsigned long *p);
+ulong __ovld atom_dec(volatile __local ulong *p);
 #endif
 
 /**
@@ -13076,28 +13076,28 @@ unsigned long __ovld atom_dec(volatile __local unsigned long *p);
  * returns old.
  */
 int __ovld atomic_cmpxchg(volatile __global int *p, int cmp, int val);
-unsigned int __ovld atomic_cmpxchg(volatile __global unsigned int *p, unsigned int cmp, unsigned int val);
+uint __ovld atomic_cmpxchg(volatile __global uint *p, uint cmp, uint val);
 int __ovld atomic_cmpxchg(volatile __local int *p, int cmp, int val);
-unsigned int __ovld atomic_cmpxchg(volatile __local unsigned int *p, unsigned int cmp, unsigned int val);
+uint __ovld atomic_cmpxchg(volatile __local uint *p, uint cmp, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_cmpxchg(volatile int *p, int cmp, int val);
-unsigned int __ovld atomic_cmpxchg(volatile unsigned int *p, unsigned int cmp, unsigned int val);
+uint __ovld atomic_cmpxchg(volatile uint *p, uint cmp, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_cmpxchg(volatile __global int *p, int cmp, int val);
-unsigned int __ovld atom_cmpxchg(volatile __global unsigned int *p, unsigned int cmp, unsigned int val);
+uint __ovld atom_cmpxchg(volatile __global uint *p, uint cmp, uint val);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
 int __ovld atom_cmpxchg(volatile __local int *p, int cmp, int val);
-unsigned int __ovld atom_cmpxchg(volatile __local unsigned int *p, unsigned int cmp, unsigned int val);
+uint __ovld atom_cmpxchg(volatile __local uint *p, uint cmp, uint val);
 #endif
 
 #if defined(cl_khr_int64_base_atomics)
 long __ovld atom_cmpxchg(volatile __global long *p, long cmp, long val);
-unsigned long __ovld atom_cmpxchg(volatile __global unsigned long *p, unsigned long cmp, unsigned long val);
+ulong __ovld atom_cmpxchg(volatile __global ulong *p, ulong cmp, ulong val);
 long __ovld atom_cmpxchg(volatile __local long *p, long cmp, long val);
-unsigned long __ovld atom_cmpxchg(volatile __local unsigned long *p, unsigned long cmp, unsigned long val);
+ulong __ovld atom_cmpxchg(volatile __local ulong *p, ulong cmp, ulong val);
 #endif
 
 /**
@@ -13108,28 +13108,28 @@ unsigned long __ovld atom_cmpxchg(volatile __local unsigned long *p, unsigned lo
  * returns old.
  */
 int __ovld atomic_min(volatile __global int *p, int val);
-unsigned int __ovld atomic_min(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_min(volatile __global uint *p, uint val);
 int __ovld atomic_min(volatile __local int *p, int val);
-unsigned int __ovld atomic_min(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_min(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_min(volatile int *p, int val);
-unsigned int __ovld atomic_min(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_min(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_extended_atomics)
 int __ovld atom_min(volatile __global int *p, int val);
-unsigned int __ovld atom_min(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_min(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_extended_atomics)
 int __ovld atom_min(volatile __local int *p, int val);
-unsigned int __ovld atom_min(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_min(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_extended_atomics)
 long __ovld atom_min(volatile __global long *p, long val);
-unsigned long __ovld atom_min(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_min(volatile __global ulong *p, ulong val);
 long __ovld atom_min(volatile __local long *p, long val);
-unsigned long __ovld atom_min(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_min(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -13140,28 +13140,28 @@ unsigned long __ovld atom_min(volatile __local unsigned long *p, unsigned long v
  * returns old.
  */
 int __ovld atomic_max(volatile __global int *p, int val);
-unsigned int __ovld atomic_max(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_max(volatile __global uint *p, uint val);
 int __ovld atomic_max(volatile __local int *p, int val);
-unsigned int __ovld atomic_max(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_max(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_max(volatile int *p, int val);
-unsigned int __ovld atomic_max(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_max(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_extended_atomics)
 int __ovld atom_max(volatile __global int *p, int val);
-unsigned int __ovld atom_max(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_max(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_extended_atomics)
 int __ovld atom_max(volatile __local int *p, int val);
-unsigned int __ovld atom_max(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_max(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_extended_atomics)
 long __ovld atom_max(volatile __global long *p, long val);
-unsigned long __ovld atom_max(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_max(volatile __global ulong *p, ulong val);
 long __ovld atom_max(volatile __local long *p, long val);
-unsigned long __ovld atom_max(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_max(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -13171,28 +13171,28 @@ unsigned long __ovld atom_max(volatile __local unsigned long *p, unsigned long v
  * pointed by p. The function returns old.
  */
 int __ovld atomic_and(volatile __global int *p, int val);
-unsigned int __ovld atomic_and(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_and(volatile __global uint *p, uint val);
 int __ovld atomic_and(volatile __local int *p, int val);
-unsigned int __ovld atomic_and(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_and(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_and(volatile int *p, int val);
-unsigned int __ovld atomic_and(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_and(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_extended_atomics)
 int __ovld atom_and(volatile __global int *p, int val);
-unsigned int __ovld atom_and(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_and(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_extended_atomics)
 int __ovld atom_and(volatile __local int *p, int val);
-unsigned int __ovld atom_and(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_and(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_extended_atomics)
 long __ovld atom_and(volatile __global long *p, long val);
-unsigned long __ovld atom_and(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_and(volatile __global ulong *p, ulong val);
 long __ovld atom_and(volatile __local long *p, long val);
-unsigned long __ovld atom_and(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_and(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -13202,28 +13202,28 @@ unsigned long __ovld atom_and(volatile __local unsigned long *p, unsigned long v
  * pointed by p. The function returns old.
  */
 int __ovld atomic_or(volatile __global int *p, int val);
-unsigned int __ovld atomic_or(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_or(volatile __global uint *p, uint val);
 int __ovld atomic_or(volatile __local int *p, int val);
-unsigned int __ovld atomic_or(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_or(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_or(volatile int *p, int val);
-unsigned int __ovld atomic_or(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_or(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_extended_atomics)
 int __ovld atom_or(volatile __global int *p, int val);
-unsigned int __ovld atom_or(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_or(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_extended_atomics)
 int __ovld atom_or(volatile __local int *p, int val);
-unsigned int __ovld atom_or(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_or(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_extended_atomics)
 long __ovld atom_or(volatile __global long *p, long val);
-unsigned long __ovld atom_or(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_or(volatile __global ulong *p, ulong val);
 long __ovld atom_or(volatile __local long *p, long val);
-unsigned long __ovld atom_or(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_or(volatile __local ulong *p, ulong val);
 #endif
 
 /**
@@ -13233,28 +13233,28 @@ unsigned long __ovld atom_or(volatile __local unsigned long *p, unsigned long va
  * pointed by p. The function returns old.
  */
 int __ovld atomic_xor(volatile __global int *p, int val);
-unsigned int __ovld atomic_xor(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atomic_xor(volatile __global uint *p, uint val);
 int __ovld atomic_xor(volatile __local int *p, int val);
-unsigned int __ovld atomic_xor(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atomic_xor(volatile __local uint *p, uint val);
 #ifdef __OPENCL_CPP_VERSION__
 int __ovld atomic_xor(volatile int *p, int val);
-unsigned int __ovld atomic_xor(volatile unsigned int *p, unsigned int val);
+uint __ovld atomic_xor(volatile uint *p, uint val);
 #endif
 
 #if defined(cl_khr_global_int32_extended_atomics)
 int __ovld atom_xor(volatile __global int *p, int val);
-unsigned int __ovld atom_xor(volatile __global unsigned int *p, unsigned int val);
+uint __ovld atom_xor(volatile __global uint *p, uint val);
 #endif
 #if defined(cl_khr_local_int32_extended_atomics)
 int __ovld atom_xor(volatile __local int *p, int val);
-unsigned int __ovld atom_xor(volatile __local unsigned int *p, unsigned int val);
+uint __ovld atom_xor(volatile __local uint *p, uint val);
 #endif
 
 #if defined(cl_khr_int64_extended_atomics)
 long __ovld atom_xor(volatile __global long *p, long val);
-unsigned long __ovld atom_xor(volatile __global unsigned long *p, unsigned long val);
+ulong __ovld atom_xor(volatile __global ulong *p, ulong val);
 long __ovld atom_xor(volatile __local long *p, long val);
-unsigned long __ovld atom_xor(volatile __local unsigned long *p, unsigned long val);
+ulong __ovld atom_xor(volatile __local ulong *p, ulong val);
 #endif
 
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
