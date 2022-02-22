@@ -8,7 +8,7 @@ define void @f(i32* nocapture %a, i32* nocapture %b) nounwind {
 bb.nph:
   %0 = tail call i32 (...) @rnd() nounwind       ; <i32> [#uses=1]
   %1 = icmp eq i32 %0, 0                          ; <i1> [#uses=1]
-  %sel.b = getelementptr inbounds i32, i32* %b, i64 4 
+  %sel.b = getelementptr inbounds i32, i32* %b, i64 4
   %iftmp.0.0 = select i1 %1, i32* %sel.b, i32* %a     ; <i32*> [#uses=2]
   br label %bb3
 

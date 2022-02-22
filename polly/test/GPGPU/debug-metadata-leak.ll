@@ -16,7 +16,7 @@
 ;
 ; https://reviews.llvm.org/D35630 removes this debug metadata before the
 ; instruction is copied to the GPUModule.
-; 
+;
 ; vec_add_1.c:
 ;      void vec_add_1(int N, int arr[N]) {
 ;        int i=0;

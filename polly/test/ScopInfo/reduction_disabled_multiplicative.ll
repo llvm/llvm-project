@@ -10,7 +10,7 @@
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_prod[0] };
 ;
 ; int sum, prod;
-; 
+;
 ; void f() {
 ;   int i;
 ;   for (int i = 0; i < 100; i++) {

@@ -51,7 +51,7 @@
 ; CHECK-NOT: new: { Stmt_for_inc4[i0] -> MemRef_tmp_05__phi_Stmt_for_body_expanded[1 + i0] : i0 <= 9998 };
 ; CHECK: new: { Stmt_for_inc4[i0] -> MemRef_conv_lcssa__phi_Stmt_for_inc4_expanded[i0] };
 ; CHECK: new: { Stmt_for_inc4[i0] -> MemRef_add_lcssa__phi_Stmt_for_inc4_expanded[i0] };
-; 
+;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

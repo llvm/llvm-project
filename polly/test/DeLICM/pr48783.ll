@@ -61,7 +61,7 @@ for.cond2.for.end_crit_edge.us.i:                 ; preds = %for.body5.us.for.bo
 fill_samples.exit:                                ; preds = %for.cond2.for.end_crit_edge.us.i, %for.body.us.i.us
   ret void
 }
- 
+
 declare dso_local i32 @av_get_channel_layout_nb_channels() local_unnamed_addr #0
 
 ; Function Attrs: nounwind readnone speculatable
