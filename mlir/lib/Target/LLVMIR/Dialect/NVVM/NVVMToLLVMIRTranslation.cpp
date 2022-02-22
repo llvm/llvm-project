@@ -141,8 +141,9 @@ public:
 
 void mlir::registerNVVMDialectTranslation(DialectRegistry &registry) {
   registry.insert<NVVM::NVVMDialect>();
-  registry.addDialectInterface<NVVM::NVVMDialect,
-                               NVVMDialectLLVMIRTranslationInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
+    dialect->addInterfaces<NVVMDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerNVVMDialectTranslation(MLIRContext &context) {

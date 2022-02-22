@@ -246,22 +246,13 @@ struct InitTensorOpInterface
 
 /// Helper structure that iterates over all LinalgOps in `OpTys` and registers
 /// the `BufferizableOpInterface` with each of them.
-template <typename... OpTys>
-struct LinalgOpInterfaceHelper;
-
-template <typename First, typename... Others>
-struct LinalgOpInterfaceHelper<First, Others...> {
-  static void registerOpInterface(DialectRegistry &registry) {
-    registry.addOpInterface<First, LinalgOpInterface<First>>();
-    LinalgOpInterfaceHelper<Others...>::registerOpInterface(registry);
+template <typename... Ops>
+struct LinalgOpInterfaceHelper {
+  static void registerOpInterface(MLIRContext *ctx) {
+    (void)std::initializer_list<int>{
+        0, (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), 0)...};
   }
 };
-
-template <>
-struct LinalgOpInterfaceHelper<> {
-  static void registerOpInterface(DialectRegistry &registry) {}
-};
-
 } // namespace
 
 /// Return true if all `neededValues` are in scope at the given
@@ -501,13 +492,15 @@ LogicalResult mlir::linalg::insertSliceAnchoredInitTensorEliminationStep(
 
 void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<linalg::InitTensorOp, InitTensorOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
+    linalg::InitTensorOp::attachInterface<InitTensorOpInterface>(*ctx);
 
-  // Register all Linalg structured ops. `LinalgOp` is an interface and it is
-  // not possible to attach an external interface to an existing interface.
-  // Therefore, attach the `BufferizableOpInterface` to all ops one-by-one.
-  LinalgOpInterfaceHelper<
+    // Register all Linalg structured ops. `LinalgOp` is an interface and it is
+    // not possible to attach an external interface to an existing interface.
+    // Therefore, attach the `BufferizableOpInterface` to all ops one-by-one.
+    LinalgOpInterfaceHelper<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-      >::registerOpInterface(registry);
+        >::registerOpInterface(ctx);
+  });
 }

@@ -1270,8 +1270,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
 
 void mlir::registerOpenMPDialectTranslation(DialectRegistry &registry) {
   registry.insert<omp::OpenMPDialect>();
-  registry.addDialectInterface<omp::OpenMPDialect,
-                               OpenMPDialectLLVMIRTranslationInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, omp::OpenMPDialect *dialect) {
+    dialect->addInterfaces<OpenMPDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerOpenMPDialectTranslation(MLIRContext &context) {

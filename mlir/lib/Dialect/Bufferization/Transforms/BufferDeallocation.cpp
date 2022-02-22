@@ -695,7 +695,9 @@ LogicalResult bufferization::deallocateBuffers(Operation *op) {
 
 void bufferization::registerAllocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<memref::AllocOp, DefaultAllocationInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+  });
 }
 
 //===----------------------------------------------------------------------===//

@@ -962,9 +962,11 @@ struct FuncOpInterface
 
 void mlir::linalg::comprehensive_bufferize::std_ext::
     registerModuleBufferizationExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<func::CallOp, std_ext::CallOpInterface>();
-  registry.addOpInterface<func::ReturnOp, std_ext::ReturnOpInterface>();
-  registry.addOpInterface<FuncOp, std_ext::FuncOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    func::CallOp::attachInterface<std_ext::CallOpInterface>(*ctx);
+    func::ReturnOp::attachInterface<std_ext::ReturnOpInterface>(*ctx);
+    func::FuncOp::attachInterface<std_ext::FuncOpInterface>(*ctx);
+  });
 }
 
 /// Set the attribute that triggers inplace bufferization on a FuncOp argument

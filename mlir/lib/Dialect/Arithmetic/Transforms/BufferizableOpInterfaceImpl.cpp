@@ -154,7 +154,9 @@ struct SelectOpInterface
 
 void mlir::arith::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<ConstantOp, ConstantOpInterface>();
-  registry.addOpInterface<IndexCastOp, IndexCastOpInterface>();
-  registry.addOpInterface<SelectOp, SelectOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, ArithmeticDialect *dialect) {
+    ConstantOp::attachInterface<ConstantOpInterface>(*ctx);
+    IndexCastOp::attachInterface<IndexCastOpInterface>(*ctx);
+    SelectOp::attachInterface<SelectOpInterface>(*ctx);
+  });
 }

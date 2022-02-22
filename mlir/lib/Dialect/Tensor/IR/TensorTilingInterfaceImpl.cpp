@@ -283,5 +283,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
 
 void mlir::tensor::registerTilingOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<tensor::PadOp, PadOpTiling>();
+  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
+    tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+  });
 }
