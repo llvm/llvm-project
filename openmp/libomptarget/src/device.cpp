@@ -586,7 +586,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   int32_t status;
-  if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
+  if (ompt_enabled || !AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
     status = RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   else
     status = RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -625,7 +625,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   int32_t status;
-  if (!RTL->data_retrieve_async || !RTL->synchronize)
+  if (ompt_enabled || !RTL->data_retrieve_async || !RTL->synchronize)
     status = RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   else
     status = RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin,
@@ -643,7 +643,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 // Copy data from current device to destination device directly
 int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
-  if (!AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
+  if (ompt_enabled || !AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
@@ -656,7 +656,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 int32_t DeviceTy::runRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                             ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
                             AsyncInfoTy &AsyncInfo) {
-  if (!RTL->run_region || !RTL->synchronize)
+  if (ompt_enabled || !RTL->run_region || !RTL->synchronize)
     return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                            TgtVarsSize);
   else
@@ -678,7 +678,7 @@ int32_t DeviceTy::runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                                 int32_t NumTeams, int32_t ThreadLimit,
                                 uint64_t LoopTripCount,
                                 AsyncInfoTy &AsyncInfo) {
-  if (!RTL->run_team_region_async || !RTL->synchronize)
+  if (ompt_enabled || !RTL->run_team_region_async || !RTL->synchronize)
     return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                 TgtOffsets, TgtVarsSize, NumTeams, ThreadLimit,
                                 LoopTripCount);
