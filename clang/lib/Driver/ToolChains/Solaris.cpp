@@ -14,6 +14,8 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
+#include "clang/Driver/ToolChain.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -145,8 +147,18 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lgcc");
       CmdArgs.push_back("-lm");
     }
-    if (NeedsSanitizerDeps)
+    if (NeedsSanitizerDeps) {
       linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
+
+      // Work around Solaris/amd64 ld bug when calling __tls_get_addr directly.
+      // However, ld -z relax=transtls is available since Solaris 11.2, but not
+      // in Illumos.
+      const SanitizerArgs &SA = getToolChain().getSanitizerArgs(Args);
+      if (getToolChain().getTriple().getArch() == llvm::Triple::x86_64 &&
+          (SA.needsAsanRt() || SA.needsStatsRt() ||
+           (SA.needsUbsanRt() && !SA.requiresMinimalRuntime())))
+        CmdArgs.push_back("-zrelax=transtls");
+    }
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
