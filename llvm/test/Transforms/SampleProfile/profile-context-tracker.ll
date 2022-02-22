@@ -17,12 +17,20 @@
 ;   _Z5funcAi:1 @ _Z8funcLeafi
 ;   _Z5funcBi:1 @ _Z8funcLeafi
 
+; Test the functions won't be inlined as a result of sampled profile if `disable-sample-loader-inlining` is true.
+;
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -disable-sample-loader-inlining -S | FileCheck %s --check-prefix=INLINE-NONE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -disable-sample-loader-inlining -S | FileCheck %s --check-prefix=INLINE-NONE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -disable-sample-loader-inlining -S | FileCheck %s --check-prefix=INLINE-NONE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -disable-sample-loader-inlining -S | FileCheck %s --check-prefix=INLINE-NONE
+
 
 @factor = dso_local global i32 3, align 4, !dbg !0
 
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !18 {
 ; INLINE-ALL: @main{{.*}}!prof ![[MAIN_PROF:[0-9]+]]
 ; INLINE-HOT: @main{{.*}}!prof ![[MAIN_PROF:[0-9]+]]
+; INLINE-NONE: @main{{.*}}!prof ![[MAIN_PROF:[0-9]+]]
 entry:
   br label %for.body, !dbg !25
 
@@ -36,10 +44,16 @@ for.body:                                         ; preds = %for.body, %entry
 ; _Z5funcBi is marked noinline
 ; INLINE-ALL: call i32 @_Z5funcBi
 ; INLINE-HOT: call i32 @_Z5funcBi
+;
+; _Z5funcBi isn't inlined since disable-sample-loader-inlining is true.
+; INLINE-NONE:  call i32 @_Z5funcBi
   %add = add nuw nsw i32 %x.011, 1, !dbg !31
   %call1 = tail call i32 @_Z5funcAi(i32 %add), !dbg !28
 ; INLINE-ALL-NOT: call i32 @_Z5funcAi
 ; INLINE-HOT: call i32 @_Z5funcAi
+;
+; _Z5funcAi is not inlined since `disable-sample-loader-inlining` is true.
+; INLINE-NONE: call i32 @_Z5funcAi
   %add2 = add i32 %call, %r.010, !dbg !34
   %add3 = add i32 %add2, %call1, !dbg !35
   %dec = add nsw i32 %x.011, -1, !dbg !36
@@ -51,6 +65,7 @@ define dso_local i32 @_Z5funcAi(i32 %x) local_unnamed_addr #1 !dbg !40 {
 ; _Z5funcAi is inlined, so outline remainder should have zero counts
 ; INLINE-ALL: @_Z5funcAi{{.*}}!prof ![[FUNCA_PROF:[0-9]+]]
 ; INLINE-HOT: @_Z5funcAi{{.*}}!prof ![[FUNCA_PROF:[0-9]+]]
+; INLINE-NONE: @_Z5funcAi{{.*}}!prof ![[FUNCA_PROF:[0-9]+]]
 entry:
   %add = add nsw i32 %x, 100000, !dbg !44
 ; _Z8funcLeafi is already inlined on main->_Z5funcAi->_Z8funcLeafi,
@@ -58,6 +73,9 @@ entry:
 ; (merged and promoted) context profile
 ; INLINE-ALL: call i32 @_Z8funcLeafi
 ; INLINE-HOT-NOT: call i32 @_Z8funcLeafi
+;
+; `_Z8funcLeafi` isn't inlined if `disable-sample-loader-inlining` is true.
+; INLINE-NONE: call i32 @_Z8funcLeafi
   %call = tail call i32 @_Z8funcLeafi(i32 %add), !dbg !45
   ret i32 %call, !dbg !46
 }
@@ -67,6 +85,9 @@ define dso_local i32 @_Z8funcLeafi(i32 %x) local_unnamed_addr #1 !dbg !54 {
 ; inlined, so outline remainder should have empty profile
 ; INLINE-ALL: @_Z8funcLeafi{{.*}}!prof ![[LEAF_PROF:[0-9]+]]
 ; INLINE-HOT: @_Z8funcLeafi{{.*}}!prof ![[LEAF_PROF:[0-9]+]]
+;
+; _Z8funcLeafi won't be inlined if `disable-sample-loader-inlining` is true.
+; INLINE-NONE: @_Z8funcLeafi{{.*}}!prof ![[LEAF_PROF:[0-9]+]]
 entry:
   %cmp = icmp sgt i32 %x, 0, !dbg !57
   br i1 %cmp, label %while.body, label %while.cond2.preheader, !dbg !59
@@ -100,6 +121,8 @@ define dso_local i32 @_Z5funcBi(i32 %x) local_unnamed_addr #0 !dbg !47 {
 ; _Z5funcBi is marked noinline, so outline remainder has promoted context profile
 ; INLINE-ALL: @_Z5funcBi{{.*}}!prof ![[FUNCB_PROF:[0-9]+]]
 ; INLINE-HOT: @_Z5funcBi{{.*}}!prof ![[FUNCB_PROF:[0-9]+]]
+; _Z5funcBi won't be inlined since `disable-sample-loader-inlining` is true.
+; INLINE-NONE: @_Z5funcBi{{.*}}!prof ![[FUNCB_PROF:[0-9]+]]
 entry:
   %sub = add nsw i32 %x, -100000, !dbg !51
   %call = tail call i32 @_Z8funcLeafi(i32 %sub), !dbg !52
@@ -107,6 +130,8 @@ entry:
 ; should be inlined based on promoted context profile
 ; INLINE-ALL-NOT: call i32 @_Z8funcLeafi
 ; INLINE-HOT-NOT: call i32 @_Z8funcLeafi
+;
+; INLINE-NONE: call i32 @_Z8funcLeafi
   ret i32 %call, !dbg !53
 }
 
@@ -119,6 +144,11 @@ entry:
 ; INLINE-HOT-DAG: [[FUNCA_PROF]] = !{!"function_entry_count", i64 12}
 ; INLINE-HOT-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 0}
 ; INLINE-HOT-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 13}
+
+; INLINE-NONE: [[MAIN_PROF]] = !{!"function_entry_count", i64 1}
+; INLINE-NONE: [[FUNCA_PROF]] = !{!"function_entry_count", i64 24}
+; INLINE-NONE-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 22}
+; INLINE-NONE-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 32}
 
 declare i32 @_Z3fibi(i32)
 

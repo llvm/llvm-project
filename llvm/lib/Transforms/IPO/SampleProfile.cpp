@@ -183,6 +183,11 @@ static cl::opt<bool> ProfileSizeInline(
     cl::desc("Inline cold call sites in profile loader if it's beneficial "
              "for code size."));
 
+static cl::opt<bool> DisableSampleLoaderInlining(
+    "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
+    cl::desc("If true, turn off inliner in sample profile loader. Used for "
+             "evaluation or debugging."));
+
 cl::opt<int> ProfileInlineGrowthLimit(
     "sample-profile-inline-growth-limit", cl::Hidden, cl::init(12),
     cl::desc("The size growth ratio limit for proirity-based sample profile "
@@ -1124,6 +1129,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
 /// \returns True if there is any inline happened.
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+  if (DisableSampleLoaderInlining)
+    return false;
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
@@ -1400,7 +1407,8 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
 
 bool SampleProfileLoader::inlineHotFunctionsWithPriority(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-
+  if (DisableSampleLoaderInlining)
+    return false;
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
