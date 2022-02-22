@@ -38,22 +38,26 @@ static AtomicOrdering strongerOrdering(AtomicOrdering X, AtomicOrdering Y) {
 }
 
 /// It is safe to destroy a constant iff it is only used by constants itself.
-/// Note that constants cannot be cyclic, so this test is pretty easy to
-/// implement recursively.
-///
+/// Note that while constants cannot be cyclic, they can be tree-like, so we
+/// should keep a visited set to avoid exponential runtime.
 bool llvm::isSafeToDestroyConstant(const Constant *C) {
-  if (isa<GlobalValue>(C))
-    return false;
-
-  if (isa<ConstantData>(C))
-    return false;
-
-  for (const User *U : C->users())
-    if (const Constant *CU = dyn_cast<Constant>(U)) {
-      if (!isSafeToDestroyConstant(CU))
-        return false;
-    } else
+  SmallVector<const Constant *, 8> Worklist;
+  SmallPtrSet<const Constant *, 8> Visited;
+  Worklist.push_back(C);
+  while (!Worklist.empty()) {
+    const Constant *C = Worklist.pop_back_val();
+    if (!Visited.insert(C).second)
+      continue;
+    if (isa<GlobalValue>(C) || isa<ConstantData>(C))
       return false;
+
+    for (const User *U : C->users()) {
+      if (const Constant *CU = dyn_cast<Constant>(U))
+        Worklist.push_back(CU);
+      else
+        return false;
+    }
+  }
   return true;
 }
 
