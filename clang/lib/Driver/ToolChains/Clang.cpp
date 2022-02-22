@@ -6915,8 +6915,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(Twine("-cuid=") + Twine(CUID)));
   }
 
-  if (IsHIP)
+  if (IsHIP) {
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
+    Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
+  }
 
   if (IsCudaDevice || IsHIPDevice) {
     StringRef InlineThresh =

@@ -538,6 +538,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
     if (LangOpts.CUDAIsDevice)
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
+    if (LangOpts.GPUDefaultStream ==
+        LangOptions::GPUDefaultStreamKind::PerThread)
+      Builder.defineMacro("HIP_API_PER_THREAD_DEFAULT_STREAM");
   }
 }
 

@@ -959,6 +959,13 @@ defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
   TargetOpts<"NVPTXUseShortPointers">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use 32-bit pointers for accessing const/local/shared address spaces">,
   NegFlag<SetFalse>>;
+def fgpu_default_stream_EQ : Joined<["-"], "fgpu-default-stream=">,
+  HelpText<"Specify default stream. Valid values are 'legacy' and 'per-thread'. The default value is 'legacy'. (HIP only)">,
+  Flags<[CC1Option]>,
+  Values<"legacy,per-thread">,
+  NormalizedValuesScope<"LangOptions::GPUDefaultStreamKind">,
+  NormalizedValues<["Legacy", "PerThread"]>,
+  MarshallingInfoEnum<LangOpts<"GPUDefaultStream">, "Legacy">;
 def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_path_EQ : Joined<["--"], "hip-path=">, Group<i_Group>,
