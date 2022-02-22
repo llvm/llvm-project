@@ -8,6 +8,7 @@
 # jitlink-check: *{4}(named_data+8) = 0x8
 # jitlink-check: *{2}(named_data+12) = 0x8
 # jitlink-check: *{1}(named_data+14) = 0x8
+# jitlink-check: *{1}(named_data+15) = 0x8
 
 .global main
 main:
@@ -20,8 +21,10 @@ main:
 .section ".rodata","",@progbits
 .type named_data,@object
 named_data:
+.reloc named_data+15, R_RISCV_SUB6, .L0
 .dword .L1 - .L0
 .word .L1 - .L0
 .half .L1 - .L0
 .byte .L1 - .L0
-.size named_data, 15
+.byte 0x8
+.size named_data, 16

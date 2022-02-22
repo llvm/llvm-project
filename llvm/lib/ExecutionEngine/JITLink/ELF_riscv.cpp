@@ -372,6 +372,13 @@ private:
       *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
+    case R_RISCV_SUB6: {
+      int64_t Value =
+          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) &
+          0x3f - E.getTarget().getAddress().getValue() - E.getAddend();
+      *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<uint8_t>(Value) & 0x3f);
+      break;
+    }
     case R_RISCV_SET6: {
       int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       uint32_t RawData = *(little32_t *)FixupPtr;
@@ -457,6 +464,8 @@ private:
       return EdgeKind_riscv::R_RISCV_SUB16;
     case ELF::R_RISCV_SUB8:
       return EdgeKind_riscv::R_RISCV_SUB8;
+    case ELF::R_RISCV_SUB6:
+      return EdgeKind_riscv::R_RISCV_SUB6;
     case ELF::R_RISCV_SET6:
       return EdgeKind_riscv::R_RISCV_SET6;
     case ELF::R_RISCV_SET8:
