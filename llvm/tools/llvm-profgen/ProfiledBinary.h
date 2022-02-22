@@ -290,6 +290,9 @@ class ProfiledBinary {
   // Load debug info of subprograms from DWARF section.
   void loadSymbolsFromDWARF(ObjectFile &Obj);
 
+  // Load debug info from DWARF unit.
+  void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
+
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start offset of a function is the real entry of the
   // function and also set false to the non-function label.
