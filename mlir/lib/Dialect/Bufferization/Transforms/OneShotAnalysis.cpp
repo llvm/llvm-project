@@ -707,7 +707,8 @@ assertDestinationPassingStyle(Operation *op, BufferizationState &state,
   LogicalResult status = success();
   DominanceInfo domInfo(op);
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp))
+    if (!isRegionReturnLike(returnOp) ||
+        !state.getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
