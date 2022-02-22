@@ -599,7 +599,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     return nullptr;
 
   // If we're not accessing anything in this constant, the result is undefined.
-  if (Offset >= InitializerSize.getFixedValue())
+  if (Offset >= (int64_t)InitializerSize.getFixedValue())
     return UndefValue::get(IntType);
 
   unsigned char RawBytes[32] = {0};
