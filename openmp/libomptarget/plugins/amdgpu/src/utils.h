@@ -9,7 +9,6 @@ hsa_status_t impl_memcpy_no_signal(void *dest, void *src, size_t size,
 hsa_status_t host_malloc(void **mem, size_t size);
 
 hsa_status_t device_malloc(void **mem, size_t size, int device_id);
-bool already_locked(void *mem, hsa_status_t *err);
 hsa_status_t lock_memory(void **mem, size_t size);
 hsa_status_t unlock_memory(void *mem);
 hsa_status_t impl_free(void *mem);

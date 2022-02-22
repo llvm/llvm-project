@@ -1773,9 +1773,6 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   if (ptr == NULL)
     return NULL;
 
-  if (is_pinned && kmp_target_lock_mem)
-    kmp_target_lock_mem(ptr, desc.size_a, default_device);
-
   addr = (kmp_uintptr_t)ptr;
   addr_align = (addr + sz_desc + align - 1) & ~(align - 1);
   addr_descr = addr_align - sz_desc;
@@ -1783,6 +1780,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   desc.ptr_alloc = ptr;
   desc.ptr_align = (void *)addr_align;
   desc.allocator = al;
+
+  if (is_pinned && kmp_target_lock_mem)
+    kmp_target_lock_mem(desc.ptr_align, desc.size_a, default_device);
 
   *((kmp_mem_desc_t *)addr_descr) = desc; // save descriptor contents
   KMP_MB();
@@ -1896,6 +1896,13 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   al = desc.allocator;
   oal = (omp_allocator_handle_t)al; // cast to void* for comparisons
   KMP_DEBUG_ASSERT(al);
+
+  // if locked, we locked descriptor and user memory: unlock both
+  if (allocator && al->pinned && kmp_target_unlock_mem) {
+    kmp_int32 default_device =
+        __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
+    kmp_target_unlock_mem(desc.ptr_align, default_device);
+  }
 
   if (__kmp_memkind_available) {
     if (oal < kmp_max_mem_alloc) {
@@ -2082,11 +2089,6 @@ void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
   memset(descr.ptr_allocated, 0xEF, descr.size_allocated);
 // Fill memory block with 0xEF, it helps catch using freed memory.
 #endif
-
-  if (kmp_target_unlock_mem) {
-    kmp_int32 default_device = 0;
-    kmp_target_unlock_mem(descr.ptr_allocated, default_device);
-  }
 
 #ifndef LEAK_MEMORY
   KE_TRACE(10, ("   free( %p )\n", descr.ptr_allocated));

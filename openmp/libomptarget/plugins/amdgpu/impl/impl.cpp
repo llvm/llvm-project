@@ -12,6 +12,26 @@
  * Data
  */
 
+bool already_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
+  bool already_locked = false;
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  err = hsa_amd_pointer_info(ptr, &info, nullptr, nullptr, nullptr);
+
+  if (err != HSA_STATUS_SUCCESS)
+    DP("Error when getting pointer info\n");
+  else
+    already_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
+
+  if (already_locked && agentBaseAddress != nullptr)
+    *agentBaseAddress = info.agentBaseAddress;
+
+  if (err_p)
+    *err_p = err;
+  return already_locked;
+}
+
 hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
                              hsa_signal_value_t success) {
   hsa_signal_value_t got = init;
@@ -49,13 +69,21 @@ enum CopyDirection { H2D, D2H };
 static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
                                          hsa_signal_t signal, void *dest,
                                          hsa_agent_t agent, void *src,
-                                         void *lockingPtr, size_t size) {
+                                         void *lockingPtr, size_t size,
+                                         bool *user_locked) {
   hsa_status_t err;
 
   void *lockedPtr = nullptr;
-  err = hsa_amd_memory_lock(lockingPtr, size, nullptr, 0, (void **)&lockedPtr);
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
+  if (!already_locked(lockingPtr, &err, &lockedPtr)) {
+    if (err != HSA_STATUS_SUCCESS)
+      return err;
+    *user_locked = false;
+    err =
+        hsa_amd_memory_lock(lockingPtr, size, nullptr, 0, (void **)&lockedPtr);
+    if (err != HSA_STATUS_SUCCESS)
+      return err;
+  } else
+    *user_locked = true;
 
   switch (direction) {
   case H2D:
@@ -80,11 +108,12 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
 hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              void *hostSrc, size_t size,
                              hsa_agent_t device_agent,
-                             hsa_amd_memory_pool_t MemoryPool) {
+                             hsa_amd_memory_pool_t MemoryPool,
+                             bool *user_locked) {
   hsa_status_t err;
 
   err = locking_async_memcpy(CopyDirection::H2D, signal, deviceDest,
-                             device_agent, hostSrc, hostSrc, size);
+                             device_agent, hostSrc, hostSrc, size, user_locked);
 
   if (err == HSA_STATUS_SUCCESS)
     return err;
@@ -101,8 +130,9 @@ hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   std::unique_ptr<void, implUnlockAndFreePtrDeletor> del(tempHostPtr);
   memcpy(tempHostPtr, hostSrc, size);
 
-  err = locking_async_memcpy(CopyDirection::H2D, signal, deviceDest,
-                             device_agent, tempHostPtr, tempHostPtr, size);
+  err =
+      locking_async_memcpy(CopyDirection::H2D, signal, deviceDest, device_agent,
+                           tempHostPtr, tempHostPtr, size, user_locked);
   if (err != HSA_STATUS_SUCCESS)
     return err;
 
@@ -116,12 +146,13 @@ hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
 hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *hostDest,
                              void *deviceSrc, size_t size,
                              hsa_agent_t deviceAgent,
-                             hsa_amd_memory_pool_t MemoryPool) {
+                             hsa_amd_memory_pool_t MemoryPool,
+                             bool *user_locked) {
   hsa_status_t err;
 
   // device has always visibility over both pointers, so use that
   err = locking_async_memcpy(CopyDirection::D2H, signal, hostDest, deviceAgent,
-                             deviceSrc, hostDest, size);
+                             deviceSrc, hostDest, size, user_locked);
 
   if (err == HSA_STATUS_SUCCESS)
     return err;
@@ -137,8 +168,9 @@ hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *hostDest,
   }
   std::unique_ptr<void, implUnlockAndFreePtrDeletor> del(tempHostPtr);
 
-  err = locking_async_memcpy(CopyDirection::D2H, signal, tempHostPtr,
-                             deviceAgent, deviceSrc, tempHostPtr, size);
+  err =
+      locking_async_memcpy(CopyDirection::D2H, signal, tempHostPtr, deviceAgent,
+                           deviceSrc, tempHostPtr, size, user_locked);
   if (err != HSA_STATUS_SUCCESS)
     return HSA_STATUS_ERROR;
 
