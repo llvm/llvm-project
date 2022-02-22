@@ -36,3 +36,10 @@ def file_as_string(file: str) -> str:
   """Returns contents of file as string."""
   with open(file, "r") as f:
     return f.read()
+
+
+def run_test(f):
+  """Prints the test name and runs the test."""
+  print(f.__name__)
+  f()
+  return f

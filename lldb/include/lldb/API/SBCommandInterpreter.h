@@ -59,6 +59,8 @@ public:
 
   bool HasAliasOptions();
 
+  bool IsInteractive();
+
   lldb::SBProcess GetProcess();
 
   lldb::SBDebugger GetDebugger();
@@ -144,6 +146,8 @@ public:
                              lldb::SBCommandPluginInterface *impl,
                              const char *help, const char *syntax,
                              const char *auto_repeat_command);
+
+  void SourceInitFileInGlobalDirectory(lldb::SBCommandReturnObject &result);
 
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result);
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result,

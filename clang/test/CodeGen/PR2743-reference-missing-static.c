@@ -6,11 +6,11 @@
    sema. Unfortunately this test will become useless once sema starts
    rejecting this. */
 
-static void e0();
-void f0() { e0(); }
+static void e0(void);
+void f0(void) { e0(); }
 
-inline void e1();
-void f1() { e1(); }
+inline void e1(void);
+void f1(void) { e1(); }
 
-void e2() __attribute__((weak));
-void f2() { e2(); }
+void e2(void) __attribute__((weak));
+void f2(void) { e2(); }

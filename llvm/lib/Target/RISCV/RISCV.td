@@ -70,6 +70,43 @@ def HasStdExtZfhOrZfhmin
                                    "'Zfh' (Half-Precision Floating-Point) or "
                                    "'Zfhmin' (Half-Precision Floating-Point Minimal)">;
 
+def FeatureStdExtZfinx
+    : SubtargetFeature<"zfinx", "HasStdExtZfinx", "true",
+                       "'Zfinx' (Float in Integer)">;
+def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZfinx),
+                               "'Zfinx' (Float in Integer)">;
+
+def FeatureStdExtZdinx
+    : SubtargetFeature<"zdinx", "HasStdExtZdinx", "true",
+                       "'Zdinx' (Double in Integer)",
+                       [FeatureStdExtZfinx]>;
+def HasStdExtZdinx : Predicate<"Subtarget->hasStdExtZdinx()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZdinx),
+                               "'Zdinx' (Double in Integer)">;
+
+def FeatureStdExtZhinxmin
+    : SubtargetFeature<"zhinxmin", "HasStdExtZhinxmin", "true",
+                       "'Zhinxmin' (Half Float in Integer Minimal)",
+                       [FeatureStdExtZfinx]>;
+def HasStdExtZhinxmin : Predicate<"Subtarget->hasStdExtZhinxmin()">,
+                                  AssemblerPredicate<(all_of FeatureStdExtZhinxmin),
+                                  "'Zhinxmin' (Half Float in Integer Minimal)">;
+
+def FeatureStdExtZhinx
+    : SubtargetFeature<"zhinx", "HasStdExtZhinx", "true",
+                       "'Zhinx' (Half Float in Integer)",
+                       [FeatureStdExtZfinx]>;
+def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZhinx),
+                               "'Zhinx' (Half Float in Integer)">;
+
+def HasStdExtZhinxOrZhinxmin
+    : Predicate<"Subtarget->hasStdExtZhinx() || Subtarget->hasStdExtZhinxmin()">,
+                AssemblerPredicate<(any_of FeatureStdExtZhinx, FeatureStdExtZhinxmin),
+                                   "'Zhinx' (Half Float in Integer) or "
+                                   "'Zhinxmin' (Half Float in Integer Minimal)">;
+
 def FeatureStdExtC
     : SubtargetFeature<"c", "HasStdExtC", "true",
                        "'C' (Compressed Instructions)">;
@@ -340,21 +377,21 @@ def FeatureStdExtZve64d
 def FeatureStdExtV
     : SubtargetFeature<"v", "HasStdExtV", "true",
                        "'V' (Vector Extension for Application Processors)",
-                       [FeatureStdExtZvl128b, FeatureStdExtF, FeatureStdExtD]>;
+                       [FeatureStdExtZvl128b, FeatureStdExtZve64d, FeatureStdExtF, FeatureStdExtD]>;
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
       AssemblerPredicate<
-          (any_of FeatureStdExtZve32x, FeatureStdExtV),
+          (any_of FeatureStdExtZve32x),
           "'V' (Vector Extension for Application Processors), 'Zve32x' or "
           "'Zve64x' (Vector Extensions for Embedded Processors)">;
 def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
       AssemblerPredicate<
-          (any_of FeatureStdExtZve64x, FeatureStdExtV),
+          (any_of FeatureStdExtZve64x),
           "'V' (Vector Extension for Application Processors) or 'Zve64x' "
           "(Vector Extensions for Embedded Processors)">;
 def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
       AssemblerPredicate<
-          (any_of FeatureStdExtZve32f, FeatureStdExtV),
+          (any_of FeatureStdExtZve32f),
           "'V' (Vector Extension for Application Processors), 'Zve32f', "
           "'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors)">;
 

@@ -31,7 +31,7 @@ union M512 m2;
 // AVX:           call void @foo2(%union.M512* noundef byval(%union.M512) align 64
 // AVX512:        call void @foo2(<8 x double>
 // AVX512-LEGACY: call void @foo2(%union.M512* noundef byval(%union.M512) align 64
-void test() {
+void test(void) {
   foo1(m1);
   foo2(m2);
 }

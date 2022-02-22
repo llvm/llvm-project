@@ -7054,6 +7054,18 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
       symbol.set(child.GetSubpFlag());
     }
   }
+  for (const auto &generic : node.genericSpecs()) {
+    if (const auto *name{std::get_if<parser::Name>(&generic->u)}) {
+      if (currScope().find(name->source) != currScope().end()) {
+        // If this scope has both a generic interface and a contained
+        // subprogram with the same name, create the generic's symbol
+        // now so that any other generics of the same name that are pulled
+        // into scope later via USE association will properly merge instead
+        // of raising a bogus error due a conflict with the subprogram.
+        CreateGeneric(*generic);
+      }
+    }
+  }
 }
 
 // Push a new scope for this node or return false on error.

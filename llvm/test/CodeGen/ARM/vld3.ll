@@ -148,8 +148,8 @@ define <4 x i32> @vld3Qi32(i32* %A) nounwind {
 ;Check for a post-increment updating load. 
 define <4 x i32> @vld3Qi32_update(i32** %ptr) nounwind {
 ;CHECK-LABEL: vld3Qi32_update:
-;CHECK: vld3.32 {d16, d18, d20}, {{\[}}[[R:r[0-9]+|lr]]]!
-;CHECK: vld3.32 {d17, d19, d21}, {{\[}}[[R]]]!
+;CHECK: vld3.32 {d16, d18, d20}, [[[R:r[0-9]+|lr]]]!
+;CHECK: vld3.32 {d17, d19, d21}, [[[R]]]!
 	%A = load i32*, i32** %ptr
 	%tmp0 = bitcast i32* %A to i8*
 	%tmp1 = call %struct.__neon_int32x4x3_t @llvm.arm.neon.vld3.v4i32.p0i8(i8* %tmp0, i32 1)

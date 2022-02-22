@@ -187,6 +187,10 @@ auto AttrOrTypeParameter::getDefValue(StringRef name) const {
   return result;
 }
 
+bool AttrOrTypeParameter::isAnonymous() const {
+  return !def->getArgName(index);
+}
+
 StringRef AttrOrTypeParameter::getName() const {
   return def->getArgName(index)->getValue();
 }
@@ -195,8 +199,9 @@ Optional<StringRef> AttrOrTypeParameter::getAllocator() const {
   return getDefValue<llvm::StringInit>("allocator");
 }
 
-Optional<StringRef> AttrOrTypeParameter::getComparator() const {
-  return getDefValue<llvm::StringInit>("comparator");
+StringRef AttrOrTypeParameter::getComparator() const {
+  return getDefValue<llvm::StringInit>("comparator")
+      .getValueOr("$_lhs == $_rhs");
 }
 
 StringRef AttrOrTypeParameter::getCppType() const {
@@ -239,7 +244,13 @@ StringRef AttrOrTypeParameter::getSyntax() const {
 }
 
 bool AttrOrTypeParameter::isOptional() const {
-  return getDefValue<llvm::BitInit>("isOptional").getValueOr(false);
+  // Parameters with default values are automatically optional.
+  return getDefValue<llvm::BitInit>("isOptional").getValueOr(false) ||
+         getDefaultValue().hasValue();
+}
+
+Optional<StringRef> AttrOrTypeParameter::getDefaultValue() const {
+  return getDefValue<llvm::StringInit>("defaultValue");
 }
 
 llvm::Init *AttrOrTypeParameter::getDef() const { return def->getArg(index); }

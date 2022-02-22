@@ -38,6 +38,7 @@ class ScriptedProcess:
             triple = self.target.triple
             if triple:
                 self.arch = triple.split('-')[0]
+            self.dbg = target.GetDebugger()
         if isinstance(args, lldb.SBStructuredData) and args.IsValid():
             self.args = args
 
@@ -217,10 +218,6 @@ class ScriptedThread:
         self.scripted_process = None
         self.process = None
         self.args = None
-        if isinstance(scripted_process, ScriptedProcess):
-            self.target = scripted_process.target
-            self.scripted_process = scripted_process
-            self.process = self.target.GetProcess()
 
         self.id = None
         self.idx = None
@@ -231,6 +228,13 @@ class ScriptedThread:
         self.register_info = None
         self.register_ctx = {}
         self.frames = []
+
+        if isinstance(scripted_process, ScriptedProcess):
+            self.target = scripted_process.target
+            self.scripted_process = scripted_process
+            self.process = self.target.GetProcess()
+            self.get_register_info()
+
 
     @abstractmethod
     def get_thread_id(self):
@@ -257,6 +261,7 @@ class ScriptedThread:
             eStateRunning,   ///< Process or thread is running and can't be examined.
             eStateStepping,  ///< Process or thread is in the process of stepping and can
                              /// not be examined.
+            eStateCrashed,   ///< Process or thread has crashed and can be examined.
 
         Returns:
             int: The state type of the scripted thread.
@@ -301,9 +306,9 @@ class ScriptedThread:
                 containing for each entry, the frame index, the canonical
                 frame address, the program counter value for that frame
                 and a symbol context.
-                None if the list is empty.
+                The list can be empty.
         """
-        return 0
+        return self.frames
 
     def get_register_info(self):
         if self.register_info is None:

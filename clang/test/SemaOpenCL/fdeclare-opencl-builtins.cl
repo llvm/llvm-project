@@ -163,6 +163,25 @@ void test_atomic_fetch_with_address_space(volatile __generic atomic_float *a_flo
 }
 #endif // !defined(NO_HEADER) && __OPENCL_C_VERSION__ >= 200
 
+#if !defined(NO_HEADER) && __OPENCL_C_VERSION__ == 200 && defined(__opencl_c_generic_address_space)
+
+// Test that overloads that use atomic_double are not available when the fp64
+// extension is disabled.  Test this by counting the number of notes about
+// candidate functions.
+void test_atomic_double_reporting(volatile __generic atomic_int *a) {
+  atomic_init(a);
+  // expected-error@-1{{no matching function for call to 'atomic_init'}}
+#if defined(NO_FP64)
+  // Expecting 5 candidates: int, uint, long, ulong, float
+  // expected-note@-4 5 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+#else
+  // Expecting 6 candidates: int, uint, long, ulong, float, double
+  // expected-note@-7 6 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+#endif
+}
+
+#endif
+
 #if defined(NO_ATOMSCOPE) && __OPENCL_C_VERSION__ >= 300
 // Disable the feature by undefining the feature macro.
 #undef __opencl_c_atomic_scope_device

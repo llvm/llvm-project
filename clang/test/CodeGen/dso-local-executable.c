@@ -122,14 +122,14 @@ __attribute__((weak)) extern int weak_bar;
 extern int bar;
 __attribute__((dllimport)) void import_func(void);
 
-int *use_import() {
+int *use_import(void) {
   import_func();
   return &import_var;
 }
 
 void foo(void);
 
-int *zed() {
+int *zed(void) {
   foo();
   return baz ? &weak_bar : &bar;
 }

@@ -154,10 +154,10 @@ attributes #0 = { noinline nounwind sspstrong uwtable}
 ; IS__TUNIT_____: !0 = !{i32 0, i32 101}
 ; IS__TUNIT_____: !1 = !{i32 100, i32 201}
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong willreturn uwtable }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong uwtable willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong willreturn uwtable }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 101}

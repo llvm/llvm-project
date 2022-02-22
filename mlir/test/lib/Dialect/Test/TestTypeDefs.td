@@ -311,7 +311,7 @@ def TestTypeOptionalGroup : Test_Type<"TestTypeOptionalGroup"> {
 }
 
 def TestTypeOptionalGroupParams : Test_Type<"TestTypeOptionalGroupParams"> {
-  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+  let parameters = (ins DefaultValuedParameter<"mlir::Optional<int>", "10">:$a,
                         OptionalParameter<"mlir::Optional<int>">:$b);
   let mnemonic = "optional_group_params";
   let assemblyFormat = "`<` (`(` params^ `)`) : (`x`)? `>`";
@@ -328,6 +328,39 @@ def TestTypeSpaces : Test_Type<"TestTypeSpaceS"> {
   let parameters = (ins "int":$a, "int":$b);
   let mnemonic = "spaces";
   let assemblyFormat = "`<` ` ` $a `\\n` `(` `)` `` `(` `)` $b `>`";
+}
+
+class DefaultValuedAPFloat<string value>
+    : DefaultValuedParameter<"llvm::Optional<llvm::APFloat>",
+                             "llvm::Optional<llvm::APFloat>(" # value # ")"> {
+  let comparator = "$_lhs->bitwiseIsEqual(*$_rhs)";
+  let parser = [{ [&]() -> mlir::FailureOr<llvm::Optional<llvm::APFloat>> {
+    mlir::FloatAttr attr;
+    auto result = $_parser.parseOptionalAttribute(attr);
+    if (result.hasValue() && mlir::succeeded(*result))
+      return {attr.getValue()};
+    if (!result.hasValue())
+      return llvm::Optional<llvm::APFloat>();
+    return mlir::failure();
+  }() }];
+  let printer = "$_printer << *$_self";
+}
+
+def TestTypeAPFloat : Test_Type<"TestTypeAPFloat"> {
+  let parameters = (ins
+    DefaultValuedAPFloat<"APFloat::getZero(APFloat::IEEEdouble())">:$a
+  );
+  let mnemonic = "ap_float";
+  let assemblyFormat = "`<` $a `>`";
+}
+
+def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
+  let parameters = (ins
+    DefaultValuedParameter<"mlir::IntegerType",
+                           "mlir::IntegerType::get($_ctx, 32)">:$type
+  );
+  let mnemonic = "default_valued_type";
+  let assemblyFormat = "`<` (`(` $type^ `)`)? `>`";
 }
 
 #endif // TEST_TYPEDEFS

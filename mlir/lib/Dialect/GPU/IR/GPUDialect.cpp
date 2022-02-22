@@ -1173,6 +1173,25 @@ LogicalResult MemsetOp::fold(ArrayRef<Attribute> operands,
 //===----------------------------------------------------------------------===//
 // GPU_AllocOp
 //===----------------------------------------------------------------------===//
+
+static LogicalResult verify(AllocOp op) {
+  auto memRefType = op.memref().getType().cast<MemRefType>();
+
+  if (static_cast<int64_t>(op.dynamicSizes().size()) !=
+      memRefType.getNumDynamicDims())
+    return op.emitOpError("dimension operand count does not equal memref "
+                          "dynamic dimension count");
+
+  unsigned numSymbols = 0;
+  if (!memRefType.getLayout().isIdentity())
+    numSymbols = memRefType.getLayout().getAffineMap().getNumSymbols();
+  if (op.symbolOperands().size() != numSymbols)
+    return op.emitOpError("symbol operand count does not equal memref symbol "
+                          "count");
+
+  return success();
+}
+
 namespace {
 
 /// Folding of memref.dim(gpu.alloc(%size), %idx) -> %size similar to

@@ -138,23 +138,32 @@ template<class In, class Out>
 
 // [alg.req.ind.copy], concept indirectly_copyable
 template<class In, class Out>
-  concept indirectly_copyable = see below;                  // since C++20
+  concept indirectly_copyable = see below;                 // since C++20
 
 template<class In, class Out>
-  concept indirectly_copyable_storable = see below;         // since C++20
+  concept indirectly_copyable_storable = see below;        // since C++20
 
 // [alg.req.ind.swap], concept indirectly_swappable
 template<class I1, class I2 = I1>
   concept indirectly_swappable = see below;                // since C++20
 
-// [alg.req.permutable], concept permutable                // since C++20
-template<class I>
-  concept permutable = see below;
-
 template<class I1, class I2, class R, class P1 = identity,
          class P2 = identity>
   concept indirectly_comparable =
     indirect_binary_predicate<R, projected<I1, P1>, projected<I2, P2>>; // since C++20
+
+// [alg.req.permutable], concept permutable
+template<class I>
+  concept permutable = see below;                          // since C++20
+
+ // [alg.req.mergeable], concept mergeable
+template<class I1, class I2, class Out,
+    class R = ranges::less, class P1 = identity, class P2 = identity>
+  concept mergeable = see below;                           // since C++20
+
+// [alg.req.sortable], concept sortable
+template<class I, class R = ranges::less, class P = identity>
+  concept sortable = see below;                            // since C++20
 
 template<input_or_output_iterator I, sentinel_for<I> S>
   requires (!same_as<I, S> && copyable<I>)
@@ -448,7 +457,8 @@ public:
     typedef traits                       traits_type;
     typedef basic_istream<charT, traits> istream_type;
 
-    constexpr istream_iterator();
+    istream_iterator(); // constexpr since C++11
+    constexpr istream_iterator(default_sentinel_t); // since C++20
     istream_iterator(istream_type& s);
     istream_iterator(const istream_iterator& x);
     ~istream_iterator();
@@ -457,6 +467,7 @@ public:
     const T* operator->() const;
     istream_iterator& operator++();
     istream_iterator  operator++(int);
+    friend bool operator==(const istream_iterator& i, default_sentinel_t); // since C++20
 };
 
 template <class T, class charT, class traits, class Distance>
@@ -464,7 +475,7 @@ bool operator==(const istream_iterator<T,charT,traits,Distance>& x,
                 const istream_iterator<T,charT,traits,Distance>& y);
 template <class T, class charT, class traits, class Distance>
 bool operator!=(const istream_iterator<T,charT,traits,Distance>& x,
-                const istream_iterator<T,charT,traits,Distance>& y);
+                const istream_iterator<T,charT,traits,Distance>& y); // until C++20
 
 template <class T, class charT = char, class traits = char_traits<charT> >
 class ostream_iterator
@@ -510,7 +521,8 @@ public:
     typedef basic_streambuf<charT, traits>  streambuf_type;
     typedef basic_istream<charT, traits>    istream_type;
 
-    istreambuf_iterator() noexcept;
+    istreambuf_iterator() noexcept; // constexpr since C++11
+    constexpr istreambuf_iterator(default_sentinel_t) noexcept; // since C++20
     istreambuf_iterator(istream_type& s) noexcept;
     istreambuf_iterator(streambuf_type* s) noexcept;
     istreambuf_iterator(a-private-type) noexcept;
@@ -521,6 +533,7 @@ public:
     a-private-type       operator++(int);
 
     bool equal(const istreambuf_iterator& b) const;
+    friend bool operator==(const istreambuf_iterator& i, default_sentinel_t s); // since C++20
 };
 
 template <class charT, class traits>
@@ -528,7 +541,7 @@ bool operator==(const istreambuf_iterator<charT,traits>& a,
                 const istreambuf_iterator<charT,traits>& b);
 template <class charT, class traits>
 bool operator!=(const istreambuf_iterator<charT,traits>& a,
-                const istreambuf_iterator<charT,traits>& b);
+                const istreambuf_iterator<charT,traits>& b); // until C++20
 
 template <class charT, class traits = char_traits<charT> >
 class ostreambuf_iterator
@@ -598,7 +611,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 
 #include <__config>
 #include <__debug>
-#include <__functional_base>
 #include <__iterator/access.h>
 #include <__iterator/advance.h>
 #include <__iterator/back_insert_iterator.h>
@@ -620,6 +632,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/mergeable.h>
 #include <__iterator/move_iterator.h>
 #include <__iterator/next.h>
 #include <__iterator/ostream_iterator.h>
@@ -631,6 +644,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/reverse_access.h>
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/size.h>
+#include <__iterator/sortable.h>
 #include <__iterator/unreachable_sentinel.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
@@ -642,6 +656,19 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
+#include <exception>
+#include <new>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

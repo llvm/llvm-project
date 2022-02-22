@@ -92,13 +92,13 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
            spirv::ElementwiseOpPattern<math::CosOp, spirv::GLSLCosOp>,
            spirv::ElementwiseOpPattern<math::ExpOp, spirv::GLSLExpOp>,
            spirv::ElementwiseOpPattern<math::FloorOp, spirv::GLSLFloorOp>,
+           spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLSLFmaOp>,
            spirv::ElementwiseOpPattern<math::LogOp, spirv::GLSLLogOp>,
            spirv::ElementwiseOpPattern<math::PowFOp, spirv::GLSLPowOp>,
            spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
            spirv::ElementwiseOpPattern<math::SinOp, spirv::GLSLSinOp>,
            spirv::ElementwiseOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
-           spirv::ElementwiseOpPattern<math::TanhOp, spirv::GLSLTanhOp>,
-           spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLSLFmaOp>>(
+           spirv::ElementwiseOpPattern<math::TanhOp, spirv::GLSLTanhOp>>(
           typeConverter, patterns.getContext());
 
   // OpenCL patterns
@@ -109,6 +109,7 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                spirv::ElementwiseOpPattern<math::ErfOp, spirv::OCLErfOp>,
                spirv::ElementwiseOpPattern<math::ExpOp, spirv::OCLExpOp>,
                spirv::ElementwiseOpPattern<math::FloorOp, spirv::OCLFloorOp>,
+               spirv::ElementwiseOpPattern<math::FmaOp, spirv::OCLFmaOp>,
                spirv::ElementwiseOpPattern<math::LogOp, spirv::OCLLogOp>,
                spirv::ElementwiseOpPattern<math::PowFOp, spirv::OCLPowOp>,
                spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::OCLRsqrtOp>,

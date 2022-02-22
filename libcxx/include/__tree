@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___TREE
 #define _LIBCPP___TREE
 
+#include <__algorithm/min.h>
 #include <__config>
 #include <__utility/forward.h>
-#include <algorithm>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -545,7 +545,7 @@ template <class ..._Args>
 struct __is_tree_value_type : false_type {};
 
 template <class _One>
-struct __is_tree_value_type<_One> : __is_tree_value_type_imp<typename __uncvref<_One>::type> {};
+struct __is_tree_value_type<_One> : __is_tree_value_type_imp<__uncvref_t<_One> > {};
 
 template <class _Tp>
 struct __tree_key_value_types {

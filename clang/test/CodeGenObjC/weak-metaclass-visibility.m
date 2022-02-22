@@ -24,7 +24,7 @@ __attribute__((availability(macosx,introduced=9876.5)))
 }
 @end
 
-void kit()
+void kit(void)
 {
     MyClass *wrapper = [MyClass alloc];
 }

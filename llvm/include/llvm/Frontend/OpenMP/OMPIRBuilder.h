@@ -145,8 +145,7 @@ public:
   /// Description of a LLVM-IR insertion point (IP) and a debug/source location
   /// (filename, line, column, ...).
   struct LocationDescription {
-    template <typename T, typename U>
-    LocationDescription(const IRBuilder<T, U> &IRB)
+    LocationDescription(const IRBuilderBase &IRB)
         : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {}
     LocationDescription(const InsertPointTy &IP) : IP(IP) {}
     LocationDescription(const InsertPointTy &IP, const DebugLoc &DL)
@@ -1367,7 +1366,7 @@ public:
   ///                     comparison. If forms that use 'ordop', it should be
   ///                     \p nullptr.
   /// \param AO           Atomic ordering of the generated atomic instructions.
-  /// \param OP           Atomic compare operation. It can only be ==, <, or >.
+  /// \param Op           Atomic compare operation. It can only be ==, <, or >.
   /// \param IsXBinopExpr True if the conditional statement is in the form where
   ///                     x is on LHS. It only matters for < or >.
   ///

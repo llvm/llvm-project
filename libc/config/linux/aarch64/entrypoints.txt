@@ -55,6 +55,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
 
+    # string.h entrypoints that depend on malloc
+    libc.src.string.strdup
+    libc.src.string.strndup
+
     # inttypes.h entrypoints
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
@@ -80,6 +84,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # stdlib.h external entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.free
 
     # sys/stat.h entrypoints
     libc.src.sys.stat.mkdir

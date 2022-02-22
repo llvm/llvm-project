@@ -318,8 +318,9 @@ protected:
     return B.CreateBitCast(V, Ty);
   }
   Address EnforceType(CGBuilderTy &B, Address V, llvm::Type *Ty) {
-    if (V.getType() == Ty) return V;
-    return B.CreateBitCast(V, Ty);
+    if (V.getType() == Ty)
+      return V;
+    return B.CreateElementBitCast(V, Ty->getPointerElementType());
   }
 
   // Some zeros used for GEPs in lots of places.
@@ -1263,8 +1264,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Value *GetClassNamed(CodeGenFunction &CGF,
                              const std::string &Name,
                              bool isWeak) override {
-    return CGF.Builder.CreateLoad(Address(GetClassVar(Name, isWeak),
-          CGM.getPointerAlign()));
+    return CGF.Builder.CreateLoad(
+        Address::deprecated(GetClassVar(Name, isWeak), CGM.getPointerAlign()));
   }
   int32_t FlagsForOwnership(Qualifiers::ObjCLifetime Ownership) {
     // typedef enum {

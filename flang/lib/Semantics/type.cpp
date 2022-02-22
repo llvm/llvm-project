@@ -177,10 +177,12 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
   return typeSymbol_.get<DerivedTypeDetails>().isForwardReferenced();
 }
 
-bool DerivedTypeSpec::HasDefaultInitialization() const {
+bool DerivedTypeSpec::HasDefaultInitialization(bool ignoreAllocatable) const {
   DirectComponentIterator components{*this};
-  return bool{std::find_if(components.begin(), components.end(),
-      [&](const Symbol &component) { return IsInitialized(component); })};
+  return bool{std::find_if(
+      components.begin(), components.end(), [&](const Symbol &component) {
+        return IsInitialized(component, true, ignoreAllocatable);
+      })};
 }
 
 bool DerivedTypeSpec::HasDestruction() const {

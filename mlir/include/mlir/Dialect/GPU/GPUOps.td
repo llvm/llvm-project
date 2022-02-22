@@ -273,7 +273,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Returns the type of this function.
     /// FIXME: We should drive this via the ODS `type` param.
-    FunctionType getType() { 
+    FunctionType getType() {
       return getTypeAttr().getValue().cast<FunctionType>();
     }
 
@@ -439,7 +439,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let hasVerifier = 1;
 }
 
-def GPU_LaunchOp : GPU_Op<"launch">,
+def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
     Arguments<(ins Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
@@ -901,6 +901,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
     `(` $dynamicSizes `)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
   }];
 
+  let verifier = [{ return ::verify(*this); }];
   let hasCanonicalizer = 1;
 }
 
@@ -1003,6 +1004,18 @@ def GPU_MemsetOp : GPU_Op<"memset",
     $dst`,` $value `:` type($dst)`,` type($value) attr-dict
   }];
   let hasFolder = 1;
+}
+
+def GPU_SetDefaultDeviceOp : GPU_Op<"set_default_device",
+                                    [MemoryEffects<[MemWrite]>]>,
+    Arguments<(ins I32:$devIndex)> {
+  let summary = "Set default GPU for operations after this by index";
+  let description = [{
+    Operation that sets the current default GPU, using a zero-based index
+    into the set of GPUs on the system. The default GPU setting may be
+    thread-local.
+  }];
+  let assemblyFormat = "attr-dict $devIndex";
 }
 
 def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",

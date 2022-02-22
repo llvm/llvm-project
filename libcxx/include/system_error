@@ -145,7 +145,6 @@ template <> struct hash<std::error_condition>;
 #include <__config>
 #include <__errc>
 #include <__functional/unary_function.h>
-#include <__functional_base>
 #include <compare>
 #include <stdexcept>
 #include <string>

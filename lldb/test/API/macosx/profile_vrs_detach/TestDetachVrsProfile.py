@@ -73,4 +73,4 @@ class TestDetachVrsProfile(TestBase):
 
         # Now detach:
         error = process.Detach()
-        self.assertTrue(error.Success(), "Detached successfully")
+        self.assertSuccess(error, "Detached successfully")

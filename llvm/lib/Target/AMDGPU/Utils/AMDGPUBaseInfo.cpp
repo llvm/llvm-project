@@ -33,6 +33,11 @@ static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
   llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(4),
   llvm::cl::ZeroOrMore);
 
+// TODO-GFX11: Remove this when full 16-bit codegen is implemented.
+static llvm::cl::opt<bool> LimitTo128VGPRs(
+  "amdgpu-npi-limit-to-128-vgprs", llvm::cl::Hidden,
+  llvm::cl::desc("Never use more than 128 VGPRs"));
+
 namespace {
 
 /// \returns Bit mask for given bit \p Shift and bit \p Width.
@@ -143,6 +148,22 @@ bool isHsaAbiVersion5(const MCSubtargetInfo *STI) {
 bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI) {
   return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI) ||
          isHsaAbiVersion5(STI);
+}
+
+// FIXME: All such magic numbers about the ABI should be in a
+// central TD file.
+unsigned getHostcallImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 24;
+  case 5:
+    return 80;
+  default:
+    llvm_unreachable("Unexpected code object version");
+    return 0;
+  }
 }
 
 #define GET_MIMGBaseOpcodesTable_IMPL
@@ -803,6 +824,14 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
+  if (LimitTo128VGPRs.getNumOccurrences() ? LimitTo128VGPRs : isGFX11Plus(*STI)) {
+    // GFX11 changes the encoding of 16-bit operands in VOP1/2/C instructions
+    // such that values 128..255 no longer mean v128..v255, they mean
+    // v0.hi..v127.hi instead. Until the compiler understands this, it is not
+    // safe to use v128..v255.
+    // TODO-GFX11: Remove this when full 16-bit codegen is implemented.
+    return 128;
+  }
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
   return 256;
@@ -1065,7 +1094,9 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
 
 namespace Hwreg {
 
-int64_t getHwregId(const StringRef Name) {
+int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
+  if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
+    return ID_HW_ID1;
   for (int Id = ID_SYMBOLIC_FIRST_; Id < ID_SYMBOLIC_LAST_; ++Id) {
     if (IdSymbolic[Id] && Name == IdSymbolic[Id])
       return Id;
@@ -1544,6 +1575,10 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+bool isKernelCC(const Function *Func) {
+  return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
+}
+
 bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
 }
@@ -1628,8 +1663,19 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
 }
 
+bool hasMAIInsts(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
+}
+
 bool hasVOPD(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureVOPD];
+}
+
+int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
+                         int32_t ArgNumVGPR) {
+  if (has90AInsts && ArgNumAGPR)
+    return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
+  return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
@@ -1637,13 +1683,6 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
     Reg == AMDGPU::SCC;
-}
-
-bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
-  for (MCRegAliasIterator R(Reg0, TRI, true); R.isValid(); ++R) {
-    if (*R == Reg1) return true;
-  }
-  return false;
 }
 
 #define MAP_REG2REG \

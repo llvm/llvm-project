@@ -14,7 +14,7 @@
 // known address. AMDGPUMachineFunction allocates the LDS global.
 //
 // Local variables with constant annotation or non-undef initializer are passed
-// through unchanged for simplication or error diagnostics in later passes.
+// through unchanged for simplification or error diagnostics in later passes.
 //
 // To reduce the memory overhead variables that are only used by kernels are
 // excluded from this transform. The analysis to determine whether a variable
@@ -28,7 +28,7 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPULDSUtils.h"
+#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"

@@ -15,4 +15,4 @@ TY(1) x; // FIXME: And we should warn here
 // Current list of keywords this can trigger on:
 // inline, restrict, asm, typeof, _asm
 
-void whatever() {}
+void whatever(void) {}

@@ -386,10 +386,8 @@ define <4 x i32> @rotl_binop_shuffle(<4 x i32>, <4 x i32>) {
 define <4 x i32> @rotr_binop_shuffle(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: rotr_binop_shuffle:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,2,3,3]
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    andl $31, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psllq %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE2-NEXT:    psllq %xmm1, %xmm0

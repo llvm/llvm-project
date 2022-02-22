@@ -39,7 +39,7 @@ double dd;
 __int128 i128;
 #endif
 
-int test() {
+int test(void) {
   // CHECK: define{{.*}} i32 @test{{.*}}
 
   // CHECKEXT:  [[TAG_u32:%.*]] = load i32, i32* @u32{{.*}}

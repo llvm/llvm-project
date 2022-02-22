@@ -2,8 +2,9 @@
 // since __config may be included from C headers which may create an
 // include cycle.
 module std_config [system] [extern_c] {
-  textual header "__config"
-  textual header "__config_site"
+  header "__config"
+  header "__config_site"
+  export *
 }
 
 module std [system] {
@@ -247,6 +248,7 @@ module std [system] {
       module generate                 { private header "__algorithm/generate.h" }
       module generate_n               { private header "__algorithm/generate_n.h" }
       module half_positive            { private header "__algorithm/half_positive.h" }
+      module in_fun_result            { private header "__algorithm/in_fun_result.h" }
       module in_in_out_result         { private header "__algorithm/in_in_out_result.h" }
       module in_in_result             { private header "__algorithm/in_in_result.h" }
       module in_out_out_result        { private header "__algorithm/in_out_out_result.h" }
@@ -284,6 +286,7 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_min_element       { private header "__algorithm/ranges_min_element.h" }
       module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module remove                   { private header "__algorithm/remove.h" }
       module remove_copy              { private header "__algorithm/remove_copy.h" }
@@ -625,6 +628,7 @@ module std [system] {
       module iter_swap             { private header "__iterator/iter_swap.h" }
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
+      module mergeable             { private header "__iterator/mergeable.h" }
       module move_iterator         { private header "__iterator/move_iterator.h" }
       module next                  { private header "__iterator/next.h" }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
@@ -636,6 +640,7 @@ module std [system] {
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module size                  { private header "__iterator/size.h" }
+      module sortable              { private header "__iterator/sortable.h" }
       module unreachable_sentinel  { private header "__iterator/unreachable_sentinel.h" }
       module wrap_iter             { private header "__iterator/wrap_iter.h" }
     }
@@ -812,7 +817,9 @@ module std [system] {
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
       module owning_view            { private header "__ranges/owning_view.h" }
       module range_adaptor          { private header "__ranges/range_adaptor.h" }
+      module rbegin                 { private header "__ranges/rbegin.h" }
       module ref_view               { private header "__ranges/ref_view.h" }
+      module rend                   { private header "__ranges/rend.h" }
       module reverse_view           { private header "__ranges/reverse_view.h" }
       module single_view            { private header "__ranges/single_view.h" }
       module size                   { private header "__ranges/size.h" }
@@ -956,6 +963,7 @@ module std [system] {
       module swap                { private header "__utility/swap.h" }
       module to_underlying       { private header "__utility/to_underlying.h" }
       module transaction         { private header "__utility/transaction.h" }
+      module unreachable         { private header "__utility/unreachable.h" }
     }
   }
   module valarray {
@@ -983,6 +991,7 @@ module std [system] {
 
   // __config not modularised due to a bug in Clang
   // FIXME: These should be private.
+  module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
   module __bits              { private header "__bits"              export * }
@@ -1015,10 +1024,6 @@ module std [system] {
     }
     module deque {
       header "experimental/deque"
-      export *
-    }
-    module filesystem {
-      header "experimental/filesystem"
       export *
     }
     module forward_list {

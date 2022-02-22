@@ -112,10 +112,8 @@ entry:
   ret void
 }
 
-!llvm.module.flags = !{!0}
 !llvm.printf.fmts = !{!1, !2}
 
-!0 = !{i32 1, !"amdgpu_hostcall", i32 1}
 !1 = !{!"1:1:4:%d\5Cn"}
 !2 = !{!"2:1:8:%g\5Cn"}
 

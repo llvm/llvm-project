@@ -11,7 +11,7 @@
 // CHECK:         call void @llvm.ppc.mtfsb0(i32 10)
 // CHECK-NEXT:    ret void
 //
-void mtfsb0 () {
+void mtfsb0 (void) {
   __mtfsb0 (10);
 }
 
@@ -19,7 +19,7 @@ void mtfsb0 () {
 // CHECK:         call void @llvm.ppc.mtfsb1(i32 0)
 // CHECK-NEXT:    ret void
 //
-void mtfsb1 () {
+void mtfsb1 (void) {
   __mtfsb1 (0);
 }
 
@@ -36,7 +36,7 @@ void mtfsf (unsigned int ui) {
 // CHECK:         call void @llvm.ppc.mtfsfi(i32 7, i32 15)
 // CHECK-NEXT:    ret void
 //
-void mtfsfi () {
+void mtfsfi (void) {
   __mtfsfi (7, 15);
 }
 

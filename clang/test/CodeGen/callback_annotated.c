@@ -34,7 +34,7 @@ static int ThreeInt2Int(int a, int b, int c) {
   return a * b + c;
 }
 
-void foo() {
+void foo(void) {
   broker0(VoidPtr2VoidPtr, 0l);
   broker1(0l, VoidPtr2VoidPtr);
   broker2(foo);

@@ -287,7 +287,7 @@ void f58(union u58 x) {}
 
 // CHECK-LABEL: define{{.*}} i64 @f59()
 struct s59 { float x __attribute((aligned(8))); };
-struct s59 f59() { while (1) {} }
+struct s59 f59(void) { while (1) {} }
 
 // CHECK-LABEL: define{{.*}} void @f60(%struct.s60* noundef byval(%struct.s60) align 4 %0, i32 noundef %y)
 struct s60 { int x __attribute((aligned(8))); };
@@ -323,7 +323,7 @@ void f64(struct s64 x) {}
 
 // CHECK-LABEL: define{{.*}} float @f65()
 struct s65 { signed char a[0]; float b; };
-struct s65 f65() { return (struct s65){{},2}; }
+struct s65 f65(void) { return (struct s65){{},2}; }
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @f66
 // CHECK: ptrtoint

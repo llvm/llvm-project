@@ -57,3 +57,139 @@ bb50:                                             ; preds = %bb43
 bb53:                                             ; preds = %bb53, %bb50, %bb22, %bb
   br label %bb53
 }
+
+declare void @exit()
+
+define void @unreachable_exit_with_no_call(i64* noalias %ptr, i1 %c.1) {
+; CHECK-LABEL: @unreachable_exit_with_no_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    store i64 0, i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 1, i64* %ptr, align 8
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:
+  unreachable
+
+if.end:
+  store i64 0, i64* %ptr, align 8
+  ret void
+}
+
+; Test for PR53800.
+define void @unreachable_exit_with_nounwind_call_pr53800(i64* noalias %ptr, i1 %c.1) {
+; CHECK-LABEL: @unreachable_exit_with_nounwind_call_pr53800(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @exit() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    store i64 0, i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 1, i64* %ptr, align 8
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:
+  tail call void @exit() nounwind
+  unreachable
+
+if.end:
+  store i64 0, i64* %ptr, align 8
+  ret void
+}
+
+; The call @exit may read %ptr as it is not marked as noalias
+define void @unreachable_exit_and_call_may_read(i64* %ptr, i1 %c.1) {
+; CHECK-LABEL: @unreachable_exit_and_call_may_read(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 1, i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @exit() #[[ATTR0]]
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 1, i64* %ptr, align 8
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:
+  tail call void @exit() nounwind
+  unreachable
+
+if.end:
+  store i64 0, i64* %ptr, align 8
+  ret void
+}
+
+define void @unreachable_exit_with_may_unwind_call(i64* noalias %ptr, i1 %c.1) {
+; CHECK-LABEL: @unreachable_exit_with_may_unwind_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 1, i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @exit()
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 1, i64* %ptr, align 8
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:
+  tail call void @exit()
+  unreachable
+
+if.end:
+  store i64 0, i64* %ptr, align 8
+  ret void
+}
+
+; Cannot remove the store in entry, because it is not dead on the path to e.1
+define void @unreachable_exit_but_another_exit(i64* noalias %ptr, i1 %c.1, i32 %s, i1 %c.2) {
+; CHECK-LABEL: @unreachable_exit_but_another_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 1, i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[E_0:%.*]], label [[E_1:%.*]]
+; CHECK:       e.0:
+; CHECK-NEXT:    tail call void @exit() #[[ATTR0]]
+; CHECK-NEXT:    unreachable
+; CHECK:       e.1:
+; CHECK-NEXT:    ret void
+; CHECK:       if.end:
+; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i64 1, i64* %ptr, align 8
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:
+  br i1 %c.2, label %e.0, label %e.1
+
+e.0:
+  tail call void @exit() nounwind
+  unreachable
+
+e.1:
+  ret void
+
+if.end:
+  store i64 0, i64* %ptr, align 8
+  ret void
+}

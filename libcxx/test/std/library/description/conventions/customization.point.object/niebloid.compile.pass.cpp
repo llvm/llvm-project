@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts, libcpp-has-no-incomplete-ranges
+// UNSUPPORTED: libcpp-no-concepts
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 // REQUIRES: stdlib=libc++
 
 // [algorithms.requirements]/2
@@ -100,7 +101,7 @@ int a[10];
 //static_assert(test(std::ranges::max_element, a));
 //static_assert(test(std::ranges::merge, a, a, a));
 //static_assert(test(std::ranges::min, a));
-//static_assert(test(std::ranges::min_element, a));
+static_assert(test(std::ranges::min_element, a));
 //static_assert(test(std::ranges::minmax, a));
 //static_assert(test(std::ranges::minmax_element, a));
 //static_assert(test(std::ranges::mismatch, a, a));

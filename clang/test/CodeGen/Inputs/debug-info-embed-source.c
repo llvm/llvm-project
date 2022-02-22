@@ -1,1 +1,1 @@
-void foo() { }
+void foo(void) { }

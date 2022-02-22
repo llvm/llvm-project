@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -602,6 +603,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP, MVT::f16, Promote);
     setOperationAction(ISD::UINT_TO_FP, MVT::f16, Promote);
     setOperationAction(ISD::FROUND, MVT::f16, Custom);
+    setOperationAction(ISD::FPTRUNC_ROUND, MVT::f16, Custom);
 
     // F16 - VOP2 Actions.
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
@@ -1118,6 +1120,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
+  Info.flags = MachineMemOperand::MONone;
+  if (CI.hasMetadata(LLVMContext::MD_invariant_load))
+    Info.flags |= MachineMemOperand::MOInvariant;
+
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
     AttributeList Attr = Intrinsic::getAttributes(CI.getContext(),
@@ -1136,7 +1142,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
           MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     }
 
-    Info.flags = MachineMemOperand::MODereferenceable;
+    Info.flags |= MachineMemOperand::MODereferenceable;
     if (Attr.hasFnAttr(Attribute::ReadOnly) ||
         IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load) {
       unsigned DMaskLanes = 4;
@@ -1179,9 +1185,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
                                             ISD::INTRINSIC_W_CHAIN;
       Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-      Info.flags = MachineMemOperand::MOLoad |
-                   MachineMemOperand::MOStore |
-                   MachineMemOperand::MODereferenceable;
+      Info.flags |= MachineMemOperand::MOLoad |
+                    MachineMemOperand::MOStore |
+                    MachineMemOperand::MODereferenceable;
 
       // XXX - Should this be volatile without known ordering?
       Info.flags |= MachineMemOperand::MOVolatile;
@@ -1201,7 +1207,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(4));
     if (!Vol->isZero())
@@ -1217,7 +1223,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal =
         MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
     if (!Vol || !Vol->isZero())
@@ -1231,7 +1237,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(1));
     if (!Vol->isZero())
@@ -1244,9 +1250,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MOVolatile;
+    Info.flags |= MachineMemOperand::MOLoad |
+                  MachineMemOperand::MOStore |
+                  MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
@@ -1256,8 +1262,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal =
         MFI->getImagePSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MODereferenceable;
+    Info.flags |= MachineMemOperand::MOLoad |
+                  MachineMemOperand::MODereferenceable;
     return true;
   }
   case Intrinsic::amdgcn_global_atomic_fadd:
@@ -1270,10 +1276,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable |
-                 MachineMemOperand::MOVolatile;
+    Info.flags |= MachineMemOperand::MOLoad |
+                  MachineMemOperand::MOStore |
+                  MachineMemOperand::MODereferenceable |
+                  MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -1293,9 +1299,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = 4;
     Info.align = Align(4);
 
-    Info.flags = MachineMemOperand::MOStore;
     if (IntrID == Intrinsic::amdgcn_ds_gws_barrier)
-      Info.flags = MachineMemOperand::MOLoad;
+      Info.flags |= MachineMemOperand::MOLoad;
+    else
+      Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
@@ -1590,11 +1597,11 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
   if (Subtarget->hasUnalignedBufferAccessEnabled() &&
       !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
         AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
-    // If we have an uniform constant load, it still requires using a slow
+    // If we have a uniform constant load, it still requires using a slow
     // buffer instruction if unaligned.
     if (IsFast) {
       // Accesses can really be issued as 1-byte aligned or 4-byte aligned, so
-      // 2-byte alignment is worse than 1 unless doing a 2-byte accesss.
+      // 2-byte alignment is worse than 1 unless doing a 2-byte access.
       *IsFast = (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
                  AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ?
         Alignment >= Align(4) : Alignment != Align(2);
@@ -4586,7 +4593,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 
     // Otherwise f32 mad is always full rate and returns the same result as
     // the separate operations so should be preferred over fma.
-    // However does not support denomals.
+    // However does not support denormals.
     if (hasFP32Denormals(MF))
       return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
 
@@ -4768,6 +4775,24 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
+  case ISD::FPTRUNC_ROUND: {
+    unsigned Opc;
+    SDLoc DL(Op);
+
+    if (Op.getOperand(0)->getValueType(0) != MVT::f32)
+      return SDValue();
+
+    // Get the rounding mode from the last operand
+    int RoundMode = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    if (RoundMode == (int)RoundingMode::TowardPositive)
+      Opc = AMDGPUISD::FPTRUNC_ROUND_UPWARD;
+    else if (RoundMode == (int)RoundingMode::TowardNegative)
+      Opc = AMDGPUISD::FPTRUNC_ROUND_DOWNWARD;
+    else
+      return SDValue();
+
+    return DAG.getNode(Opc, DL, Op.getNode()->getVTList(), Op->getOperand(0));
+  }
   case ISD::TRAP:
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:
@@ -8493,7 +8518,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  // If there is a possibilty that flat instruction access scratch memory
+  // If there is a possibility that flat instruction access scratch memory
   // then we need to use the same legalization rules we use for private.
   if (AS == AMDGPUAS::FLAT_ADDRESS &&
       !Subtarget->hasMultiDwordFlatScratchAddressing())
@@ -8581,7 +8606,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (NumElements > 2)
       return SplitVectorLoad(Op, DAG);
 
-    // SI has a hardware bug in the LDS / GDS boounds checking: if the base
+    // SI has a hardware bug in the LDS / GDS bounds checking: if the base
     // address is negative, then the instruction is incorrectly treated as
     // out-of-bounds even if base + offsets is in bounds. Split vectorized
     // loads here to avoid emitting ds_read2_b32. We may re-combine the
@@ -9043,7 +9068,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  // If there is a possibilty that flat instruction access scratch memory
+  // If there is a possibility that flat instruction access scratch memory
   // then we need to use the same legalization rules we use for private.
   if (AS == AMDGPUAS::FLAT_ADDRESS &&
       !Subtarget->hasMultiDwordFlatScratchAddressing())
@@ -9092,7 +9117,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     if (NumElements > 2)
       return SplitVectorStore(Op, DAG);
 
-    // SI has a hardware bug in the LDS / GDS boounds checking: if the base
+    // SI has a hardware bug in the LDS / GDS bounds checking: if the base
     // address is negative, then the instruction is incorrectly treated as
     // out-of-bounds even if base + offsets is in bounds. Split vectorized
     // stores here to avoid emitting ds_write2_b32. We may re-combine the
@@ -10132,7 +10157,7 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
         }
       }
 
-      // If one half is undef, and one is constant, perfer a splat vector rather
+      // If one half is undef, and one is constant, prefer a splat vector rather
       // than the normal qNaN. If it's a register, prefer 0.0 since that's
       // cheaper to use and may be free with a packed operation.
       if (NewElts[0].isUndef()) {
@@ -10854,7 +10879,7 @@ SDValue SITargetLowering::performFAddCombine(SDNode *N,
   SDValue RHS = N->getOperand(1);
 
   // These should really be instruction patterns, but writing patterns with
-  // source modiifiers is a pain.
+  // source modifiers is a pain.
 
   // fadd (fadd (a, a), b) -> mad 2.0, a, b
   if (LHS.getOpcode() == ISD::FADD) {
@@ -10951,8 +10976,8 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
     return SDValue();
 
   // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
-  // regardless of the denorm mode setting. Therefore, unsafe-fp-math/fp-contract
-  // is sufficient to allow generaing fdot2.
+  // regardless of the denorm mode setting. Therefore,
+  // unsafe-fp-math/fp-contract is sufficient to allow generating fdot2.
   const TargetOptions &Options = DAG.getTarget().Options;
   if (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
       (N->getFlags().hasAllowContract() &&
@@ -11653,7 +11678,7 @@ void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
   if (DstSize < InitIdx)
     return;
 
-  // Create a register for the intialization value.
+  // Create a register for the initialization value.
   Register PrevDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
   unsigned NewDst = 0; // Final initialized value will be in here
 
@@ -11699,7 +11724,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     TII->legalizeOperandsVOP3(MRI, MI);
 
     // Prefer VGPRs over AGPRs in mAI instructions where possible.
-    // This saves a chain-copy of registers and better ballance register
+    // This saves a chain-copy of registers and better balance register
     // use between vgpr and agpr as agpr tuples tend to be big.
     if (MI.getDesc().OpInfo) {
       unsigned Opc = MI.getOpcode();
@@ -12544,8 +12569,8 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
                               : AtomicExpansionKind::CmpXChg;
     }
 
-    // DS FP atomics do repect the denormal mode, but the rounding mode is fixed
-    // to round-to-nearest-even.
+    // DS FP atomics do respect the denormal mode, but the rounding mode is
+    // fixed to round-to-nearest-even.
     // The only exception is DS_ADD_F64 which never flushes regardless of mode.
     if (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomicAdd()) {
       if (!Ty->isDoubleTy())
@@ -12591,7 +12616,7 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
 // always uniform.
 static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
                       unsigned WaveSize) {
-  // FIXME: We asssume we never cast the mask results of a control flow
+  // FIXME: We assume we never cast the mask results of a control flow
   // intrinsic.
   // Early exit if the type won't be consistent as a compile time hack.
   IntegerType *IT = dyn_cast<IntegerType>(V->getType());
@@ -12695,7 +12720,7 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
                                            SDValue N1) const {
   if (!N0.hasOneUse())
     return false;
-  // Take care of the oportunity to keep N0 uniform
+  // Take care of the opportunity to keep N0 uniform
   if (N0->isDivergent() || !N1->isDivergent())
     return true;
   // Check if we have a good chance to form the memory access pattern with the

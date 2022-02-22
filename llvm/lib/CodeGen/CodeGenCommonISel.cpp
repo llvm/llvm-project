@@ -131,7 +131,7 @@ llvm::findSplitPointForStackProtector(MachineBasicBlock *BB,
   MachineBasicBlock::iterator Previous = SplitPoint;
   do {
     --Previous;
-  } while (Previous->isDebugInstr());
+  } while (Previous != Start && Previous->isDebugInstr());
 
   if (TII.isTailCall(*SplitPoint) &&
       Previous->getOpcode() == TII.getCallFrameDestroyOpcode()) {

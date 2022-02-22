@@ -5,12 +5,12 @@ extern CGColorSpaceRef CGColorSpaceCreateDeviceRGB(void);
 extern CGColorSpaceRef CGColorSpaceRetain(CGColorSpaceRef space);
 extern void CGColorSpaceRelease(CGColorSpaceRef space);
 
-void f() {
+void f(void) {
   CGColorSpaceRef X = CGColorSpaceCreateDeviceRGB(); // expected-warning{{leak}}
   CGColorSpaceRetain(X);
 }
 
-void fb() {
+void fb(void) {
   CGColorSpaceRef X = CGColorSpaceCreateDeviceRGB();
   CGColorSpaceRetain(X);
   CGColorSpaceRelease(X);

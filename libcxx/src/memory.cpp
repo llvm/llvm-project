@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "memory"
+#include <memory>
+
 #ifndef _LIBCPP_HAS_NO_THREADS
-#   include "mutex"
-#   include "thread"
-#   if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
-#       pragma comment(lib, "pthread")
-#   endif
+#  include <mutex>
+#  include <thread>
+#  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
+#    pragma comment(lib, "pthread")
+#  endif
 #endif
+
 #include "include/atomic_support.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -132,8 +134,8 @@ __shared_weak_count::__get_deleter(const type_info&) const noexcept
 
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
-_LIBCPP_SAFE_STATIC static const std::size_t __sp_mut_count = 16;
-_LIBCPP_SAFE_STATIC static __libcpp_mutex_t mut_back[__sp_mut_count] =
+static constexpr std::size_t __sp_mut_count = 16;
+static constinit __libcpp_mutex_t mut_back[__sp_mut_count] =
 {
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
@@ -171,8 +173,7 @@ __sp_mut::unlock() noexcept
 __sp_mut&
 __get_sp_mut(const void* p)
 {
-    static __sp_mut muts[__sp_mut_count]
-    {
+    static constinit __sp_mut muts[__sp_mut_count] = {
         &mut_back[ 0], &mut_back[ 1], &mut_back[ 2], &mut_back[ 3],
         &mut_back[ 4], &mut_back[ 5], &mut_back[ 6], &mut_back[ 7],
         &mut_back[ 8], &mut_back[ 9], &mut_back[10], &mut_back[11],

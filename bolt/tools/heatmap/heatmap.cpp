@@ -4,6 +4,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
@@ -84,7 +85,12 @@ int main(int argc, char **argv) {
   Binary &Binary = *BinaryOrErr.get().getBinary();
 
   if (auto *e = dyn_cast<ELFObjectFileBase>(&Binary)) {
-    RewriteInstance RI(e, argc, argv, ToolPath);
+    auto RIOrErr =
+        RewriteInstance::createRewriteInstance(e, argc, argv, ToolPath);
+    if (Error E = RIOrErr.takeError())
+      report_error("RewriteInstance", std::move(E));
+
+    RewriteInstance &RI = *RIOrErr.get();
     if (Error E = RI.setProfile(opts::PerfData))
       report_error(opts::PerfData, std::move(E));
 

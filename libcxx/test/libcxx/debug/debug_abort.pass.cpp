@@ -11,9 +11,9 @@
 
 // Test that the default debug handler aborts the program.
 
+#include <__assert>
 #include <csignal>
 #include <cstdlib>
-#include <__debug>
 
 #include "test_macros.h"
 

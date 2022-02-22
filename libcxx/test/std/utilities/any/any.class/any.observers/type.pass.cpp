@@ -22,25 +22,22 @@
 
 int main(int, char**)
 {
-    using std::any;
     {
-        any const a;
+        const std::any a;
         assert(a.type() == typeid(void));
         ASSERT_NOEXCEPT(a.type());
     }
     {
-        small const s(1);
-        any const a(s);
+        std::any a = small(1);
         assert(a.type() == typeid(small));
     }
     {
-        large const l(1);
-        any const a(l);
+        std::any a = large(1);
         assert(a.type() == typeid(large));
     }
     {
         int arr[3];
-        any const a(arr);
+        std::any a = arr;
         assert(a.type() == typeid(int*));  // ensure that it is decayed
     }
 

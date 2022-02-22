@@ -329,10 +329,6 @@ TEST_MACROS();
 #    endif
 #    include <experimental/deque>
 TEST_MACROS();
-#    ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
-#        include <experimental/filesystem>
-TEST_MACROS();
-#    endif
 #    include <experimental/forward_list>
 TEST_MACROS();
 #    include <experimental/functional>

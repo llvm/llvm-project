@@ -253,6 +253,7 @@ public:
 
   void SourceInitFileCwd(CommandReturnObject &result);
   void SourceInitFileHome(CommandReturnObject &result, bool is_repl);
+  void SourceInitFileGlobal(CommandReturnObject &result);
 
   bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
@@ -604,6 +605,8 @@ public:
                       llvm::Optional<std::string> output_file = llvm::None);
 
   FileSpec GetCurrentSourceDir();
+
+  bool IsInteractive();
 
 protected:
   friend class Debugger;

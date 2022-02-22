@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 414647
+#define LLVM_MAIN_REVISION 415601
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -114,6 +114,6 @@
 #cmakedefine LLVM_BUILD_SHARED_LIBS
 
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
-#cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN $(LLVM_FORCE_USE_OLD_TOOLCHAIN)
+#cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}
 
 #endif

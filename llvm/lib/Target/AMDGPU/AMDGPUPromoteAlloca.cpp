@@ -917,7 +917,7 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   // usage order.
   //
   // FIXME: It is also possible that if we're allowed to use all of the memory
-  // could could end up using more than the maximum due to alignment padding.
+  // could end up using more than the maximum due to alignment padding.
 
   uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
   uint32_t AllocSize = WorkGroupSize * DL.getTypeAllocSize(AllocaTy);

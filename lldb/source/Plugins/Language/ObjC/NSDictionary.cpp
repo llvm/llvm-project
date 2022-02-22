@@ -70,16 +70,16 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
       ScratchTypeSystemClang::GetForTarget(*target_sp);
 
   if (target_ast_context) {
-    ConstString g___lldb_autogen_nspair("__lldb_autogen_nspair");
+    ConstString g_lldb_autogen_nspair("__lldb_autogen_nspair");
 
     compiler_type =
         target_ast_context->GetTypeForIdentifier<clang::CXXRecordDecl>(
-            g___lldb_autogen_nspair);
+            g_lldb_autogen_nspair);
 
     if (!compiler_type) {
       compiler_type = target_ast_context->CreateRecordType(
           nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-          g___lldb_autogen_nspair.GetCString(), clang::TTK_Struct,
+          g_lldb_autogen_nspair.GetCString(), clang::TTK_Struct,
           lldb::eLanguageTypeC);
 
       if (compiler_type) {

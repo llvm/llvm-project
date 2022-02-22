@@ -462,6 +462,9 @@ enum NodeType {
   STRICT_FSETCC,
   STRICT_FSETCCS,
 
+  // FPTRUNC_ROUND - This corresponds to the fptrunc_round intrinsic.
+  FPTRUNC_ROUND,
+
   /// FMA - Perform a * b + c with no intermediate rounding step.
   FMA,
 
@@ -613,6 +616,17 @@ enum NodeType {
   /// part.
   MULHU,
   MULHS,
+
+  /// AVGFLOORS/AVGFLOORU - Averaging add - Add two integers using an integer of
+  /// type i[N+1], halving the result by shifting it one bit right.
+  /// shr(add(ext(X), ext(Y)), 1)
+  AVGFLOORS,
+  AVGFLOORU,
+  /// AVGCEILS/AVGCEILU - Rounding averaging add - Add two integers using an
+  /// integer of type i[N+2], add 1 and halve the result by shifting it one bit
+  /// right. shr(add(ext(X), ext(Y), 1), 1)
+  AVGCEILS,
+  AVGCEILU,
 
   // ABDS/ABDU - Absolute difference - Return the absolute difference between
   // two numbers interpreted as signed/unsigned.

@@ -33,7 +33,12 @@ struct AppProperties {
 
   // The properties of an application's TLS.
   TLS tls;
+
+  // Environment data.
+  uint64_t *envPtr;
 };
+
+extern AppProperties app;
 
 // Creates and initializes the TLS area for the current thread. Should not
 // be called before app.tls has been initialized.

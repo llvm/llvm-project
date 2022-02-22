@@ -948,7 +948,8 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
       Value.getElementType(), Value.getPointer(), Offset);
   CharUnits VBaseAlign =
     CGF.CGM.getVBaseAlignment(Value.getAlignment(), SrcDecl, PolymorphicBase);
-  return std::make_tuple(Address(Ptr, VBaseAlign), Offset, PolymorphicBase);
+  return std::make_tuple(Address(Ptr, CGF.Int8Ty, VBaseAlign), Offset,
+                         PolymorphicBase);
 }
 
 bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
@@ -1470,7 +1471,7 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
         Result.getElementType(), Result.getPointer(), VBaseOffset);
     CharUnits VBaseAlign =
       CGF.CGM.getVBaseAlignment(Result.getAlignment(), Derived, VBase);
-    Result = Address(VBasePtr, VBaseAlign);
+    Result = Address(VBasePtr, CGF.Int8Ty, VBaseAlign);
   }
   if (!StaticOffset.isZero()) {
     assert(StaticOffset.isPositive());
@@ -2217,10 +2218,10 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
       assert(TA.Virtual.Microsoft.VBPtrOffset > 0);
       assert(TA.Virtual.Microsoft.VBOffsetOffset >= 0);
       llvm::Value *VBPtr;
-      llvm::Value *VBaseOffset =
-          GetVBaseOffsetFromVBPtr(CGF, Address(V, CGF.getPointerAlign()),
-                                  -TA.Virtual.Microsoft.VBPtrOffset,
-                                  TA.Virtual.Microsoft.VBOffsetOffset, &VBPtr);
+      llvm::Value *VBaseOffset = GetVBaseOffsetFromVBPtr(
+          CGF, Address(V, CGF.Int8Ty, CGF.getPointerAlign()),
+          -TA.Virtual.Microsoft.VBPtrOffset,
+          TA.Virtual.Microsoft.VBOffsetOffset, &VBPtr);
       V = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, VBPtr, VBaseOffset);
     }
   }
@@ -2432,7 +2433,7 @@ static void emitTlsGuardCheck(CodeGenFunction &CGF, llvm::GlobalValue *TlsGuard,
                               llvm::BasicBlock *DynInitBB,
                               llvm::BasicBlock *ContinueBB) {
   llvm::LoadInst *TlsGuardValue =
-      CGF.Builder.CreateLoad(Address(TlsGuard, CharUnits::One()));
+      CGF.Builder.CreateLoad(Address(TlsGuard, CGF.Int8Ty, CharUnits::One()));
   llvm::Value *CmpResult =
       CGF.Builder.CreateICmpEQ(TlsGuardValue, CGF.Builder.getInt8(0));
   CGF.Builder.CreateCondBr(CmpResult, DynInitBB, ContinueBB);
@@ -2483,7 +2484,7 @@ LValue MicrosoftCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   V = CGF.Builder.CreateBitCast(V, RealVarTy->getPointerTo(AS));
 
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
-  Address Addr(V, Alignment);
+  Address Addr(V, RealVarTy, Alignment);
 
   LValue LV = VD->getType()->isReferenceType()
                   ? CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),

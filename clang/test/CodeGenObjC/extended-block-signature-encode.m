@@ -6,7 +6,7 @@
 
 typedef NSString*(^BBB)(NSArray*);
 
-int main ()
+int main (void)
 {
   BBB b1;
   ^(BBB arg1, double arg2){ return b1; }(0, 3.14);

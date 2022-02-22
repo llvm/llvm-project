@@ -2,9 +2,17 @@
 #ifndef _LIBCPP_SPLIT_BUFFER
 #define _LIBCPP_SPLIT_BUFFER
 
+#include <__algorithm/max.h>
+#include <__algorithm/move.h>
+#include <__algorithm/move_backward.h>
 #include <__config>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/move_iterator.h>
+#include <__memory/allocator.h>
+#include <__memory/compressed_pair.h>
 #include <__utility/forward.h>
-#include <algorithm>
+#include <memory>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

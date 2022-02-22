@@ -350,12 +350,12 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For destination vector type is the same as source vector.
-  // Input: (vector_in, vl)
+  // Input: (passthru, vector_in, vl)
   class RISCVUnaryAANoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_anyint_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
   // For destination vector type is the same as first source vector (with mask).
   // Input: (vector_in, mask, vl, ta)
@@ -367,7 +367,7 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
-  class RISCVUnaryAAMaskNoTA
+  class RISCVUnaryAAMaskTU
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
@@ -383,12 +383,13 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 2;
   }
   // For destination vector type is the same as first and second source vector.
-  // Input: (vector_in, int_vector_in, vl)
+  // Input: (passthru, vector_in, int_vector_in, vl)
   class RISCVRGatherVVNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>, llvm_anyint_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMVectorOfBitcastsToInt<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is the same as first and second source vector.
   // Input: (vector_in, vector_in, int_vector_in, vl, ta)
@@ -400,13 +401,14 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
-  // Input: (vector_in, int16_vector_in, vl)
+  // Input: (passthru, vector_in, int16_vector_in, vl)
   class RISCVRGatherEI16VVNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>,
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is the same as first and second source vector.
   // Input: (vector_in, vector_in, int16_vector_in, vl, ta)
@@ -421,12 +423,13 @@ let TargetPrefix = "riscv" in {
   }
   // For destination vector type is the same as first source vector, and the
   // second operand is XLen.
-  // Input: (vector_in, xlen_in, vl)
+  // Input: (passthru, vector_in, xlen_in, vl)
   class RISCVGatherVXNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_anyint_ty, LLVMMatchType<1>],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty, 
+                     LLVMMatchType<1>],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is the same as first source vector (with mask).
   // Second operand is XLen.
@@ -440,13 +443,14 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For destination vector type is the same as first source vector.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryAAXNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 1;
-    let VLOperand = 2;
+    let SplatOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is the same as first source vector (with mask).
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl, ta)
@@ -461,12 +465,13 @@ let TargetPrefix = "riscv" in {
   }
   // For destination vector type is the same as first source vector. The
   // second source operand must match the destination type or be an XLen scalar.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryAAShiftNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is the same as first source vector (with mask).
   // The second source operand must match the destination type or be an XLen scalar.
@@ -480,13 +485,14 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For destination vector type is NOT the same as first source vector.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryABXNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 1;
-    let VLOperand = 2;
+    let SplatOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is NOT the same as first source vector (with mask).
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl, ta)
@@ -501,12 +507,13 @@ let TargetPrefix = "riscv" in {
   }
   // For destination vector type is NOT the same as first source vector. The
   // second source operand must match the destination type or be an XLen scalar.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryABShiftNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For destination vector type is NOT the same as first source vector (with mask).
   // The second source operand must match the destination type or be an XLen scalar.
@@ -520,15 +527,15 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For binary operations with V0 as input.
-  // Input: (vector_in, vector_in/scalar_in, V0, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, V0, vl)
   class RISCVBinaryWithV0
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty,
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 1;
-    let VLOperand = 3;
+    let SplatOperand = 2;
+    let VLOperand = 4;
   }
   // For binary operations with mask type output and V0 as input.
   // Output: (mask type output)
@@ -576,32 +583,35 @@ let TargetPrefix = "riscv" in {
   }
   // For FP classify operations.
   // Output: (bit mask type output)
-  // Input: (vector_in, vl)
+  // Input: (passthru, vector_in, vl)
   class RISCVClassifyNoMask
         : Intrinsic<[LLVMVectorOfBitcastsToInt<0>],
-                    [llvm_anyvector_ty, llvm_anyint_ty],
+                    [LLVMVectorOfBitcastsToInt<0>, llvm_anyvector_ty,
+                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 1;
   }
   // For FP classify operations with mask.
   // Output: (bit mask type output)
-  // Input: (maskedoff, vector_in, mask, vl)
+  // Input: (maskedoff, vector_in, mask, vl, policy)
   class RISCVClassifyMask
         : Intrinsic<[LLVMVectorOfBitcastsToInt<0>],
                     [LLVMVectorOfBitcastsToInt<0>, llvm_anyvector_ty,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, 
+                     llvm_anyint_ty, LLVMMatchType<1>],
+                    [IntrNoMem, ImmArg<ArgIndex<4>>]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
   // For Saturating binary operations.
   // The destination vector type is the same as first source vector.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVSaturatingBinaryAAXNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
-    let SplatOperand = 1;
-    let VLOperand = 2;
+    let SplatOperand = 2;
+    let VLOperand = 3;
   }
   // For Saturating binary operations with mask.
   // The destination vector type is the same as first source vector.
@@ -618,12 +628,13 @@ let TargetPrefix = "riscv" in {
   // For Saturating binary operations.
   // The destination vector type is the same as first source vector.
   // The second source operand matches the destination type or is an XLen scalar.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVSaturatingBinaryAAShiftNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For Saturating binary operations with mask.
   // The destination vector type is the same as first source vector.
@@ -640,12 +651,13 @@ let TargetPrefix = "riscv" in {
   // For Saturating binary operations.
   // The destination vector type is NOT the same as first source vector.
   // The second source operand matches the destination type or is an XLen scalar.
-  // Input: (vector_in, vector_in/scalar_in, vl)
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl)
   class RISCVSaturatingBinaryABShiftNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     llvm_anyint_ty],
                     [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+    let VLOperand = 3;
   }
   // For Saturating binary operations with mask.
   // The destination vector type is NOT the same as first source vector (with mask).
@@ -674,11 +686,12 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
+  // Input: (vector_in, vector_in/scalar, vector_in, vl, policy)
   class RISCVTernaryAAXANoMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
-                     llvm_anyint_ty],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
     let SplatOperand = 1;
     let VLOperand = 3;
   }
@@ -692,11 +705,12 @@ let TargetPrefix = "riscv" in {
     let SplatOperand = 1;
     let VLOperand = 4;
   }
+  // Input: (vector_in, vector_in/scalar, vector_in, vl, policy)
   class RISCVTernaryWideNoMask
         : Intrinsic< [llvm_anyvector_ty],
                      [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
-                      llvm_anyint_ty],
-                     [IntrNoMem] >, RISCVVIntrinsic {
+                      llvm_anyint_ty, LLVMMatchType<3>],
+                     [ImmArg<ArgIndex<4>>, IntrNoMem] >, RISCVVIntrinsic {
     let SplatOperand = 1;
     let VLOperand = 3;
   }
@@ -750,12 +764,12 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 2;
   }
   // For destination vector type is NOT the same as source vector.
-  // Input: (vector_in, vl)
+  // Input: (passthru, vector_in, vl)
   class RISCVUnaryABNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [llvm_anyvector_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
   // For destination vector type is NOT the same as source vector (with mask).
   // Input: (maskedoff, vector_in, mask, vl, ta)
@@ -790,17 +804,24 @@ let TargetPrefix = "riscv" in {
   // Input: (vl)
   class RISCVNullaryIntrinsic
         : Intrinsic<[llvm_anyvector_ty],
-                    [llvm_anyint_ty],
-                    [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 0;
+                    [llvm_anyint_ty], [IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 1;
   }
-  // For Conversion unary operations.
-  // Input: (vector_in, vl)
-  class RISCVConversionNoMask
+  // Output: (vector)
+  // Input: (passthru, vl)
+  class RISCVNullaryIntrinsicTU
         : Intrinsic<[llvm_anyvector_ty],
-                    [llvm_anyvector_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 1;
+  }
+  // For Conversion unary operations.
+  // Input: (passthru, vector_in, vl)
+  class RISCVConversionNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 2;
   }
   // For Conversion unary operations with mask.
   // Input: (maskedoff, vector_in, mask, vl, ta)
@@ -1247,20 +1268,29 @@ let TargetPrefix = "riscv" in {
 
   defm vmerge : RISCVBinaryWithV0;
 
+  // Output: (vector)
+  // Input: (passthru, vector_in, vl)
   def int_riscv_vmv_v_v : Intrinsic<[llvm_anyvector_ty],
-                                    [LLVMMatchType<0>, llvm_anyint_ty],
+                                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                                     llvm_anyint_ty],
                                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
+  // Output: (vector)
+  // Input: (passthru, scalar, vl)
   def int_riscv_vmv_v_x : Intrinsic<[llvm_anyint_ty],
-                                    [LLVMVectorElementType<0>, llvm_anyint_ty],
+                                    [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                     llvm_anyint_ty],
                                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
+  // Output: (vector)
+  // Input: (passthru, scalar, vl)
   def int_riscv_vfmv_v_f : Intrinsic<[llvm_anyfloat_ty],
-                                     [LLVMVectorElementType<0>, llvm_anyint_ty],
+                                     [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                      llvm_anyint_ty],
                                      [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
 
   def int_riscv_vmv_x_s : Intrinsic<[LLVMVectorElementType<0>],
@@ -1330,7 +1360,7 @@ let TargetPrefix = "riscv" in {
   defm vrgather_vx : RISCVRGatherVX;
   defm vrgatherei16_vv : RISCVRGatherEI16VV;
 
-  def "int_riscv_vcompress" : RISCVUnaryAAMaskNoTA;
+  def "int_riscv_vcompress" : RISCVUnaryAAMaskTU;
 
   defm vaaddu : RISCVSaturatingBinaryAAX;
   defm vaadd : RISCVSaturatingBinaryAAX;
@@ -1414,12 +1444,13 @@ let TargetPrefix = "riscv" in {
   defm vfncvt_rod_f_f_w : RISCVConversion;
 
   // Output: (vector)
-  // Input: (mask type input, vl)
+  // Input: (passthru, mask type input, vl)
   def int_riscv_viota : Intrinsic<[llvm_anyvector_ty],
-                                  [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                  [LLVMMatchType<0>,
+                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                    llvm_anyint_ty],
                                   [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
   // Output: (vector)
   // Input: (maskedoff, mask type vector_in, mask, vl)
@@ -1432,8 +1463,8 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 3;
   }
   // Output: (vector)
-  // Input: (vl)
-  def int_riscv_vid : RISCVNullaryIntrinsic;
+  // Input: (passthru, vl)
+  def int_riscv_vid : RISCVNullaryIntrinsicTU;
 
   // Output: (vector)
   // Input: (maskedoff, mask, vl)
@@ -1508,7 +1539,7 @@ class ScalarCryptoByteSelectAny
     : Intrinsic<[llvm_anyint_ty],
                 [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
                 [IntrNoMem, IntrSpeculatable, IntrWillReturn,
-                 ImmArg<ArgIndex<2>>, Returned<ArgIndex<0>>]>;
+                 ImmArg<ArgIndex<2>>]>;
 
 // Zknd
 def int_riscv_aes32dsi  : ScalarCryptoByteSelect32;

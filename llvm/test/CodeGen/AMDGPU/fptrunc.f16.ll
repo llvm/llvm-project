@@ -18,8 +18,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fptrunc_f64_to_f16:
-; GCN: buffer_load_dwordx2 v{{\[}}[[A_F64_0:[0-9]+]]:[[A_F64_1:[0-9]+]]{{\]}}
-; GCN: v_cvt_f32_f64_e32 v[[A_F32:[0-9]+]], v{{\[}}[[A_F64_0]]:[[A_F64_1]]{{\]}}
+; GCN: buffer_load_dwordx2 v[[[A_F64_0:[0-9]+]]:[[A_F64_1:[0-9]+]]]
+; GCN: v_cvt_f32_f64_e32 v[[A_F32:[0-9]+]], v[[[A_F64_0]]:[[A_F64_1]]]
 ; GCN: v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[A_F32]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
@@ -34,7 +34,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fptrunc_v2f32_to_v2f16:
-; GCN:     buffer_load_dwordx2 v{{\[}}[[A_F32_0:[0-9]+]]:[[A_F32_1:[0-9]+]]{{\]}}
+; GCN:     buffer_load_dwordx2 v[[[A_F32_0:[0-9]+]]:[[A_F32_1:[0-9]+]]]
 ; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[A_F32_0]]
 ; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
 ; SI-DAG:  v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
@@ -60,9 +60,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fptrunc_v2f64_to_v2f16:
-; GCN: buffer_load_dwordx4 v{{\[}}[[A_F64_0:[0-9]+]]:[[A_F64_3:[0-9]+]]{{\]}}
-; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_0:[0-9]+]], v{{\[}}[[A_F64_0]]:{{[0-9]+}}{{\]}}
-; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_1:[0-9]+]], v{{\[}}{{[0-9]+}}:[[A_F64_3]]{{\]}}
+; GCN: buffer_load_dwordx4 v[[[A_F64_0:[0-9]+]]:[[A_F64_3:[0-9]+]]]
+; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_0:[0-9]+]], v[[[A_F64_0]]:{{[0-9]+}}]
+; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_1:[0-9]+]], v[{{[0-9]+}}:[[A_F64_3]]]
 ; VI: v_cvt_f16_f32_sdwa v[[R_F16_HI:[0-9]+]], v[[A_F32_1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[A_F32_0]]
 ;

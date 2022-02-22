@@ -9,43 +9,37 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
-#include "llvm/DebugInfo/DWARF/DWARFSection.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include <cstdint>
-#include <deque>
-#include <map>
 #include <memory>
 
 namespace llvm {
 
 class MCRegisterInfo;
 class MemoryBuffer;
-class raw_ostream;
+class AppleAcceleratorTable;
+class DWARFCompileUnit;
+class DWARFDebugAbbrev;
+class DWARFDebugAranges;
+class DWARFDebugFrame;
+class DWARFDebugLoc;
+class DWARFDebugMacro;
+class DWARFDebugNames;
+class DWARFGdbIndex;
+class DWARFTypeUnit;
+class DWARFUnitIndex;
 
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug

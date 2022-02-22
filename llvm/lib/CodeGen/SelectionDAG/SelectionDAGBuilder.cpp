@@ -6343,6 +6343,29 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #include "llvm/IR/VPIntrinsics.def"
     visitVectorPredicationIntrinsic(cast<VPIntrinsic>(I));
     return;
+  case Intrinsic::fptrunc_round: {
+    // Get the last argument, the metadata and convert it to an integer in the
+    // call
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    Optional<RoundingMode> RoundMode =
+        convertStrToRoundingMode(cast<MDString>(MD)->getString());
+
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+    // Propagate fast-math-flags from IR to node(s).
+    SDNodeFlags Flags;
+    Flags.copyFMF(*cast<FPMathOperator>(&I));
+    SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
+
+    SDValue Result;
+    Result = DAG.getNode(
+        ISD::FPTRUNC_ROUND, sdl, VT, getValue(I.getArgOperand(0)),
+        DAG.getTargetConstant((int)RoundMode.getValue(), sdl,
+                              TLI.getPointerTy(DAG.getDataLayout())));
+    setValue(&I, Result);
+
+    return;
+  }
   case Intrinsic::fmuladd: {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&

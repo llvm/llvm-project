@@ -1046,25 +1046,24 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
     RegClassStrings.add(Name);
 
-    // Emit the register list now.
-    OS << "  // " << Name << " Register Class...\n"
-       << "  const MCPhysReg " << Name
-       << "[] = {\n    ";
-    for (Record *Reg : Order) {
-      OS << getQualifiedName(Reg) << ", ";
-    }
-    OS << "\n  };\n\n";
+    // Emit the register list now (unless it would be a zero-length array).
+    if (!Order.empty()) {
+      OS << "  // " << Name << " Register Class...\n"
+         << "  const MCPhysReg " << Name << "[] = {\n    ";
+      for (Record *Reg : Order) {
+        OS << getQualifiedName(Reg) << ", ";
+      }
+      OS << "\n  };\n\n";
 
-    OS << "  // " << Name << " Bit set.\n"
-       << "  const uint8_t " << Name
-       << "Bits[] = {\n    ";
-    BitVectorEmitter BVE;
-    for (Record *Reg : Order) {
-      BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
+      OS << "  // " << Name << " Bit set.\n"
+         << "  const uint8_t " << Name << "Bits[] = {\n    ";
+      BitVectorEmitter BVE;
+      for (Record *Reg : Order) {
+        BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
+      }
+      BVE.print(OS);
+      OS << "\n  };\n\n";
     }
-    BVE.print(OS);
-    OS << "\n  };\n\n";
-
   }
   OS << "} // end anonymous namespace\n\n";
 
@@ -1076,14 +1075,17 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
+    ArrayRef<Record *> Order = RC.getOrder();
+    std::string RCName = Order.empty() ? "nullptr" : RC.getName();
+    std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
+    std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
     assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
-    OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
+    OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", sizeof(" << RC.getName() << "Bits), "
-       << RC.getQualifiedName() + "RegClassID"
+       << ", " << RCBitsSize << ", " << RC.getQualifiedName() + "RegClassID"
        << ", " << RegSize << ", " << RC.CopyCost << ", "
        << (RC.Allocatable ? "true" : "false") << " },\n";
   }

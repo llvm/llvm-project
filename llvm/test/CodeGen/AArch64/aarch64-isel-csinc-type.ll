@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
 ; char csinc1 (char a, char b) { return !a ? b+1 : b+3; }
-define dso_local i8 @csinc1(i8 %a, i8 %b) local_unnamed_addr #0 {
+define i8 @csinc1(i8 %a, i8 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tst w0, #0xff
@@ -22,7 +22,7 @@ entry:
 }
 
 ; short csinc2 (short a, short b) { return !a ? b+1 : b+3; }
-define dso_local i16 @csinc2(i16 %a, i16 %b) local_unnamed_addr #0 {
+define i16 @csinc2(i16 %a, i16 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tst w0, #0xffff
@@ -37,7 +37,7 @@ entry:
 }
 
 ; int csinc3 (int a, int b) { return !a ? b+1 : b+3; }
-define dso_local i32 @csinc3(i32 %a, i32 %b) local_unnamed_addr #0 {
+define i32 @csinc3(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #0
@@ -52,7 +52,7 @@ entry:
 }
 
 ; long long csinc4 (long long a, long long b) { return !a ? b+1 : b+3; }
-define dso_local i64 @csinc4(i64 %a, i64 %b) local_unnamed_addr #0 {
+define i64 @csinc4(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, #0
@@ -62,6 +62,36 @@ define dso_local i64 @csinc4(i64 %a, i64 %b) local_unnamed_addr #0 {
 entry:
   %tobool.not = icmp eq i64 %a, 0
   %cond.v = select i1 %tobool.not, i64 1, i64 3
+  %cond = add nsw i64 %cond.v, %b
+  ret i64 %cond
+}
+
+; long long csinc8 (long long a, long long b) { return a ? b-1 : b+1; }
+define i64 @csinc8(i64 %a, i64 %b) {
+; CHECK-LABEL: csinc8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub x8, x1, #1
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    csinc x0, x8, x1, ne
+; CHECK-NEXT:    ret
+entry:
+  %tobool.not = icmp eq i64 %a, 0
+  %cond.v = select i1 %tobool.not, i64 1, i64 -1
+  %cond = add nsw i64 %cond.v, %b
+  ret i64 %cond
+}
+
+; long long csinc9 (long long a, long long b) { return a ? b+1 : b-1; }
+define i64 @csinc9(i64 %a, i64 %b) {
+; CHECK-LABEL: csinc9:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub x8, x1, #1
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    csinc x0, x8, x1, eq
+; CHECK-NEXT:    ret
+entry:
+  %tobool.not = icmp eq i64 %a, 0
+  %cond.v = select i1 %tobool.not, i64 -1, i64 1
   %cond = add nsw i64 %cond.v, %b
   ret i64 %cond
 }

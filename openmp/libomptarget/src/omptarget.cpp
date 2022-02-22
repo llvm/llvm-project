@@ -802,6 +802,10 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
         // If we copied the struct to the host, we need to restore the pointer.
         if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
           void **ShadowHstPtrAddr = (void **)Itr->first;
+          // Wait for device-to-host memcopies for whole struct to complete,
+          // before restoring the correct host pointer.
+          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+            return OFFLOAD_FAIL;
           *ShadowHstPtrAddr = Itr->second.HstPtrVal;
           DP("Restoring original host pointer value " DPxMOD " for host "
              "pointer " DPxMOD "\n",
@@ -885,10 +889,15 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
 
     auto CB = [&](ShadowPtrListTy::iterator &Itr) {
       void **ShadowHstPtrAddr = (void **)Itr->first;
+      // Wait for device-to-host memcopies for whole struct to complete,
+      // before restoring the correct host pointer.
+      if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
       *ShadowHstPtrAddr = Itr->second.HstPtrVal;
       DP("Restoring original host pointer value " DPxMOD
          " for host pointer " DPxMOD "\n",
          DPxPTR(Itr->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
+      ++Itr;
       return OFFLOAD_SUCCESS;
     };
     applyToShadowMapEntries(Device, CB, HstPtrBegin, ArgSize, TPR);
@@ -911,6 +920,7 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
                               sizeof(void *), AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS)
         REPORT("Copying data to device failed.\n");
+      ++Itr;
       return Ret;
     };
     applyToShadowMapEntries(Device, CB, HstPtrBegin, ArgSize, TPR);

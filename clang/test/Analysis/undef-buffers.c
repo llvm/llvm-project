@@ -8,13 +8,13 @@ typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void free(void *);
 
-char stackBased1 () {
+char stackBased1 (void) {
   char buf[2];
   buf[0] = 'a';
   return buf[1]; // expected-warning{{Undefined}}
 }
 
-char stackBased2 () {
+char stackBased2 (void) {
   char buf[2];
   buf[1] = 'a';
   return buf[0]; // expected-warning{{Undefined}}
@@ -31,7 +31,7 @@ char stackBased3 (int *x) {
   return buf[0];
 }
 
-char heapBased1 () {
+char heapBased1 (void) {
   char *buf = malloc(2);
   buf[0] = 'a';
   char result = buf[1]; // expected-warning{{undefined}}
@@ -39,7 +39,7 @@ char heapBased1 () {
   return result;
 }
 
-char heapBased2 () {
+char heapBased2 (void) {
   char *buf = malloc(2);
   buf[1] = 'a';
   char result = buf[0]; // expected-warning{{undefined}}

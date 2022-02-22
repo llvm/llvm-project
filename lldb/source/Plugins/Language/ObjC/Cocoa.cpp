@@ -919,8 +919,8 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   ConstString class_name = descriptor->GetClassName();
 
   static const ConstString g_NSDate("NSDate");
-  static const ConstString g___NSDate("__NSDate");
-  static const ConstString g___NSTaggedDate("__NSTaggedDate");
+  static const ConstString g_dunder_NSDate("__NSDate");
+  static const ConstString g_NSTaggedDate("__NSTaggedDate");
   static const ConstString g_NSCalendarDate("NSCalendarDate");
   static const ConstString g_NSConstantDate("NSConstantDate");
 
@@ -928,8 +928,8 @@ bool lldb_private::formatters::NSDateSummaryProvider(
     return false;
 
   uint64_t info_bits = 0, value_bits = 0;
-  if ((class_name == g_NSDate) || (class_name == g___NSDate) ||
-      (class_name == g___NSTaggedDate) || (class_name == g_NSConstantDate)) {
+  if ((class_name == g_NSDate) || (class_name == g_dunder_NSDate) ||
+      (class_name == g_NSTaggedDate) || (class_name == g_NSConstantDate)) {
     if (descriptor->GetTaggedPointerInfo(&info_bits, &value_bits)) {
       date_value_bits = ((value_bits << 8) | (info_bits << 4));
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -967,7 +967,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   }
 
   // Accomodate for the __NSTaggedDate format introduced in Foundation 1600.
-  if (class_name == g___NSTaggedDate) {
+  if (class_name == g_NSTaggedDate) {
     auto *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
         ObjCLanguageRuntime::Get(*process_sp));
     if (runtime && runtime->GetFoundationVersion() >= 1600)

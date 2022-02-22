@@ -5,6 +5,7 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 declare <vscale x 1 x half> @llvm.riscv.vfsqrt.nxv1f16(
   <vscale x 1 x half>,
+  <vscale x 1 x half>,
   iXLen);
 
 define <vscale x 1 x half> @intrinsic_vfsqrt_v_nxv1f16_nxv1f16(<vscale x 1 x half> %0, iXLen %1) nounwind {
@@ -15,6 +16,7 @@ define <vscale x 1 x half> @intrinsic_vfsqrt_v_nxv1f16_nxv1f16(<vscale x 1 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vfsqrt.nxv1f16(
+    <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     iXLen %1)
 
@@ -46,6 +48,7 @@ entry:
 
 declare <vscale x 2 x half> @llvm.riscv.vfsqrt.nxv2f16(
   <vscale x 2 x half>,
+  <vscale x 2 x half>,
   iXLen);
 
 define <vscale x 2 x half> @intrinsic_vfsqrt_v_nxv2f16_nxv2f16(<vscale x 2 x half> %0, iXLen %1) nounwind {
@@ -56,6 +59,7 @@ define <vscale x 2 x half> @intrinsic_vfsqrt_v_nxv2f16_nxv2f16(<vscale x 2 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vfsqrt.nxv2f16(
+    <vscale x 2 x half> undef,
     <vscale x 2 x half> %0,
     iXLen %1)
 
@@ -87,6 +91,7 @@ entry:
 
 declare <vscale x 4 x half> @llvm.riscv.vfsqrt.nxv4f16(
   <vscale x 4 x half>,
+  <vscale x 4 x half>,
   iXLen);
 
 define <vscale x 4 x half> @intrinsic_vfsqrt_v_nxv4f16_nxv4f16(<vscale x 4 x half> %0, iXLen %1) nounwind {
@@ -97,6 +102,7 @@ define <vscale x 4 x half> @intrinsic_vfsqrt_v_nxv4f16_nxv4f16(<vscale x 4 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfsqrt.nxv4f16(
+    <vscale x 4 x half> undef,
     <vscale x 4 x half> %0,
     iXLen %1)
 
@@ -128,6 +134,7 @@ entry:
 
 declare <vscale x 8 x half> @llvm.riscv.vfsqrt.nxv8f16(
   <vscale x 8 x half>,
+  <vscale x 8 x half>,
   iXLen);
 
 define <vscale x 8 x half> @intrinsic_vfsqrt_v_nxv8f16_nxv8f16(<vscale x 8 x half> %0, iXLen %1) nounwind {
@@ -138,6 +145,7 @@ define <vscale x 8 x half> @intrinsic_vfsqrt_v_nxv8f16_nxv8f16(<vscale x 8 x hal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vfsqrt.nxv8f16(
+    <vscale x 8 x half> undef,
     <vscale x 8 x half> %0,
     iXLen %1)
 
@@ -169,6 +177,7 @@ entry:
 
 declare <vscale x 16 x half> @llvm.riscv.vfsqrt.nxv16f16(
   <vscale x 16 x half>,
+  <vscale x 16 x half>,
   iXLen);
 
 define <vscale x 16 x half> @intrinsic_vfsqrt_v_nxv16f16_nxv16f16(<vscale x 16 x half> %0, iXLen %1) nounwind {
@@ -179,6 +188,7 @@ define <vscale x 16 x half> @intrinsic_vfsqrt_v_nxv16f16_nxv16f16(<vscale x 16 x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vfsqrt.nxv16f16(
+    <vscale x 16 x half> undef,
     <vscale x 16 x half> %0,
     iXLen %1)
 
@@ -210,6 +220,7 @@ entry:
 
 declare <vscale x 32 x half> @llvm.riscv.vfsqrt.nxv32f16(
   <vscale x 32 x half>,
+  <vscale x 32 x half>,
   iXLen);
 
 define <vscale x 32 x half> @intrinsic_vfsqrt_v_nxv32f16_nxv32f16(<vscale x 32 x half> %0, iXLen %1) nounwind {
@@ -220,6 +231,7 @@ define <vscale x 32 x half> @intrinsic_vfsqrt_v_nxv32f16_nxv32f16(<vscale x 32 x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vfsqrt.nxv32f16(
+    <vscale x 32 x half> undef,
     <vscale x 32 x half> %0,
     iXLen %1)
 
@@ -251,6 +263,7 @@ entry:
 
 declare <vscale x 1 x float> @llvm.riscv.vfsqrt.nxv1f32(
   <vscale x 1 x float>,
+  <vscale x 1 x float>,
   iXLen);
 
 define <vscale x 1 x float> @intrinsic_vfsqrt_v_nxv1f32_nxv1f32(<vscale x 1 x float> %0, iXLen %1) nounwind {
@@ -261,6 +274,7 @@ define <vscale x 1 x float> @intrinsic_vfsqrt_v_nxv1f32_nxv1f32(<vscale x 1 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfsqrt.nxv1f32(
+    <vscale x 1 x float> undef,
     <vscale x 1 x float> %0,
     iXLen %1)
 
@@ -292,6 +306,7 @@ entry:
 
 declare <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(
   <vscale x 2 x float>,
+  <vscale x 2 x float>,
   iXLen);
 
 define <vscale x 2 x float> @intrinsic_vfsqrt_v_nxv2f32_nxv2f32(<vscale x 2 x float> %0, iXLen %1) nounwind {
@@ -302,6 +317,7 @@ define <vscale x 2 x float> @intrinsic_vfsqrt_v_nxv2f32_nxv2f32(<vscale x 2 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(
+    <vscale x 2 x float> undef,
     <vscale x 2 x float> %0,
     iXLen %1)
 
@@ -333,6 +349,7 @@ entry:
 
 declare <vscale x 4 x float> @llvm.riscv.vfsqrt.nxv4f32(
   <vscale x 4 x float>,
+  <vscale x 4 x float>,
   iXLen);
 
 define <vscale x 4 x float> @intrinsic_vfsqrt_v_nxv4f32_nxv4f32(<vscale x 4 x float> %0, iXLen %1) nounwind {
@@ -343,6 +360,7 @@ define <vscale x 4 x float> @intrinsic_vfsqrt_v_nxv4f32_nxv4f32(<vscale x 4 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfsqrt.nxv4f32(
+    <vscale x 4 x float> undef,
     <vscale x 4 x float> %0,
     iXLen %1)
 
@@ -374,6 +392,7 @@ entry:
 
 declare <vscale x 8 x float> @llvm.riscv.vfsqrt.nxv8f32(
   <vscale x 8 x float>,
+  <vscale x 8 x float>,
   iXLen);
 
 define <vscale x 8 x float> @intrinsic_vfsqrt_v_nxv8f32_nxv8f32(<vscale x 8 x float> %0, iXLen %1) nounwind {
@@ -384,6 +403,7 @@ define <vscale x 8 x float> @intrinsic_vfsqrt_v_nxv8f32_nxv8f32(<vscale x 8 x fl
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfsqrt.nxv8f32(
+    <vscale x 8 x float> undef,
     <vscale x 8 x float> %0,
     iXLen %1)
 
@@ -415,6 +435,7 @@ entry:
 
 declare <vscale x 16 x float> @llvm.riscv.vfsqrt.nxv16f32(
   <vscale x 16 x float>,
+  <vscale x 16 x float>,
   iXLen);
 
 define <vscale x 16 x float> @intrinsic_vfsqrt_v_nxv16f32_nxv16f32(<vscale x 16 x float> %0, iXLen %1) nounwind {
@@ -425,6 +446,7 @@ define <vscale x 16 x float> @intrinsic_vfsqrt_v_nxv16f32_nxv16f32(<vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfsqrt.nxv16f32(
+    <vscale x 16 x float> undef,
     <vscale x 16 x float> %0,
     iXLen %1)
 
@@ -456,6 +478,7 @@ entry:
 
 declare <vscale x 1 x double> @llvm.riscv.vfsqrt.nxv1f64(
   <vscale x 1 x double>,
+  <vscale x 1 x double>,
   iXLen);
 
 define <vscale x 1 x double> @intrinsic_vfsqrt_v_nxv1f64_nxv1f64(<vscale x 1 x double> %0, iXLen %1) nounwind {
@@ -466,6 +489,7 @@ define <vscale x 1 x double> @intrinsic_vfsqrt_v_nxv1f64_nxv1f64(<vscale x 1 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vfsqrt.nxv1f64(
+    <vscale x 1 x double> undef,
     <vscale x 1 x double> %0,
     iXLen %1)
 
@@ -497,6 +521,7 @@ entry:
 
 declare <vscale x 2 x double> @llvm.riscv.vfsqrt.nxv2f64(
   <vscale x 2 x double>,
+  <vscale x 2 x double>,
   iXLen);
 
 define <vscale x 2 x double> @intrinsic_vfsqrt_v_nxv2f64_nxv2f64(<vscale x 2 x double> %0, iXLen %1) nounwind {
@@ -507,6 +532,7 @@ define <vscale x 2 x double> @intrinsic_vfsqrt_v_nxv2f64_nxv2f64(<vscale x 2 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vfsqrt.nxv2f64(
+    <vscale x 2 x double> undef,
     <vscale x 2 x double> %0,
     iXLen %1)
 
@@ -538,6 +564,7 @@ entry:
 
 declare <vscale x 4 x double> @llvm.riscv.vfsqrt.nxv4f64(
   <vscale x 4 x double>,
+  <vscale x 4 x double>,
   iXLen);
 
 define <vscale x 4 x double> @intrinsic_vfsqrt_v_nxv4f64_nxv4f64(<vscale x 4 x double> %0, iXLen %1) nounwind {
@@ -548,6 +575,7 @@ define <vscale x 4 x double> @intrinsic_vfsqrt_v_nxv4f64_nxv4f64(<vscale x 4 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vfsqrt.nxv4f64(
+    <vscale x 4 x double> undef,
     <vscale x 4 x double> %0,
     iXLen %1)
 
@@ -579,6 +607,7 @@ entry:
 
 declare <vscale x 8 x double> @llvm.riscv.vfsqrt.nxv8f64(
   <vscale x 8 x double>,
+  <vscale x 8 x double>,
   iXLen);
 
 define <vscale x 8 x double> @intrinsic_vfsqrt_v_nxv8f64_nxv8f64(<vscale x 8 x double> %0, iXLen %1) nounwind {
@@ -589,6 +618,7 @@ define <vscale x 8 x double> @intrinsic_vfsqrt_v_nxv8f64_nxv8f64(<vscale x 8 x d
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vfsqrt.nxv8f64(
+    <vscale x 8 x double> undef,
     <vscale x 8 x double> %0,
     iXLen %1)
 

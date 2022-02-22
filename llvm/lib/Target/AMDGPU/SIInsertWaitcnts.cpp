@@ -121,7 +121,7 @@ static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
-  AGPR_OFFSET = 226, // Maximum programmable ArchVGPRs across all targets.
+  AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
   EXTRA_VGPR_LDS = 0,     // This is a placeholder the Shader algorithm uses.
@@ -1049,7 +1049,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
-      // load). We also need to check WAW depenancy with saved PC.
+      // load). We also need to check WAW dependency with saved PC.
       Wait = AMDGPU::Waitcnt();
 
       int CallAddrOpIdx =

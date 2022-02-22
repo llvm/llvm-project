@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
@@ -215,7 +216,11 @@ int main(int argc, char **argv) {
     Binary &Binary = *BinaryOrErr.get().getBinary();
 
     if (auto *e = dyn_cast<ELFObjectFileBase>(&Binary)) {
-      RewriteInstance RI(e, argc, argv, ToolPath);
+      auto RIOrErr =
+          RewriteInstance::createRewriteInstance(e, argc, argv, ToolPath);
+      if (Error E = RIOrErr.takeError())
+        report_error(opts::InputFilename, std::move(E));
+      RewriteInstance &RI = *RIOrErr.get();
       if (!opts::PerfData.empty()) {
         if (!opts::AggregateOnly) {
           errs() << ToolName
@@ -238,7 +243,11 @@ int main(int argc, char **argv) {
 
       RI.run();
     } else if (auto *O = dyn_cast<MachOObjectFile>(&Binary)) {
-      MachORewriteInstance MachORI(O, ToolPath);
+      auto MachORIOrErr =
+          MachORewriteInstance::createMachORewriteInstance(O, ToolPath);
+      if (Error E = MachORIOrErr.takeError())
+        report_error(opts::InputFilename, std::move(E));
+      MachORewriteInstance &MachORI = *MachORIOrErr.get();
 
       if (!opts::InputDataFilename.empty())
         if (Error E = MachORI.setProfile(opts::InputDataFilename))
@@ -265,10 +274,18 @@ int main(int argc, char **argv) {
   Binary &Binary2 = *BinaryOrErr2.get().getBinary();
   if (auto *ELFObj1 = dyn_cast<ELFObjectFileBase>(&Binary1)) {
     if (auto *ELFObj2 = dyn_cast<ELFObjectFileBase>(&Binary2)) {
-      RewriteInstance RI1(ELFObj1, argc, argv, ToolPath);
+      auto RI1OrErr =
+          RewriteInstance::createRewriteInstance(ELFObj1, argc, argv, ToolPath);
+      if (Error E = RI1OrErr.takeError())
+        report_error(opts::InputFilename, std::move(E));
+      RewriteInstance &RI1 = *RI1OrErr.get();
       if (Error E = RI1.setProfile(opts::InputDataFilename))
         report_error(opts::InputDataFilename, std::move(E));
-      RewriteInstance RI2(ELFObj2, argc, argv, ToolPath);
+      auto RI2OrErr =
+          RewriteInstance::createRewriteInstance(ELFObj2, argc, argv, ToolPath);
+      if (Error E = RI2OrErr.takeError())
+        report_error(opts::InputFilename2, std::move(E));
+      RewriteInstance &RI2 = *RI2OrErr.get();
       if (Error E = RI2.setProfile(opts::InputDataFilename2))
         report_error(opts::InputDataFilename2, std::move(E));
       outs() << "BOLT-DIFF: *** Analyzing binary 1: " << opts::InputFilename

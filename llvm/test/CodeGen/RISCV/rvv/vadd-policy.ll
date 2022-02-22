@@ -5,6 +5,7 @@
 declare <vscale x 8 x i8> @llvm.riscv.vadd.nxv8i8.nxv8i8(
   <vscale x 8 x i8>,
   <vscale x 8 x i8>,
+  <vscale x 8 x i8>,
   i64);
 
 define <vscale x 8 x i8> @intrinsic_vadd_vv_nxv8i8_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, <vscale x 8 x i8> %1, i64 %2) nounwind {
@@ -15,6 +16,7 @@ define <vscale x 8 x i8> @intrinsic_vadd_vv_nxv8i8_nxv8i8_nxv8i8(<vscale x 8 x i
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vadd.nxv8i8.nxv8i8(
+    <vscale x 8 x i8> undef,
     <vscale x 8 x i8> %0,
     <vscale x 8 x i8> %1,
     i64 %2)

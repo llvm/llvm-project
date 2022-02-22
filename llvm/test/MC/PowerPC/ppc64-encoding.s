@@ -238,9 +238,6 @@
 # CHECK-BE: ldux 2, 3, 4                    # encoding: [0x7c,0x43,0x20,0x6a]
 # CHECK-LE: ldux 2, 3, 4                    # encoding: [0x6a,0x20,0x43,0x7c]
             ldux 2, 3, 4
-# CHECK-BE: ldmx 2, 3, 4                    # encoding: [0x7c,0x43,0x22,0x6a]
-# CHECK-LE: ldmx 2, 3, 4                    # encoding: [0x6a,0x22,0x43,0x7c]
-            ldmx 2, 3, 4
 # CHECK-BE: lq 2, 128(4)                    # encoding: [0xe0,0x44,0x00,0x80]
 # CHECK-LE: lq 2, 128(4)                    # encoding: [0x80,0x00,0x44,0xe0]
             lq 2, 128(4)

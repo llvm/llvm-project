@@ -41,7 +41,7 @@ typedef unsigned char BOOL;
 @end
 
 // CHECK-IR: define internal {{.*}}void @test_numeric_literals()
-static inline void test_numeric_literals() {
+static inline void test_numeric_literals(void) {
   // CHECK-PRINT: id intlit = @17
   // CHECK-IR: {{call.*17}}
   id intlit = @17;
@@ -50,18 +50,18 @@ static inline void test_numeric_literals() {
   id floatlit = @17.45;
 }
 
-static inline void test_array_literals() {
+static inline void test_array_literals(void) {
   // CHECK-PRINT: id arraylit = @[ @17, @17.449999999999999
   id arraylit = @[@17, @17.45];
 }
 
-static inline void test_dictionary_literals() {
+static inline void test_dictionary_literals(void) {
   // CHECK-PRINT: id dictlit = @{ @17 : {{@17.449999999999999[^,]*}}, @"hello" : @"world" };
   id dictlit = @{@17 : @17.45, @"hello" : @"world" };
 }
 
 #else
-void test_all() {
+void test_all(void) {
   test_numeric_literals();
   test_array_literals();
   test_dictionary_literals();

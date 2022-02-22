@@ -50,11 +50,6 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
-static cl::opt<bool> EnableFlatScratch(
-  "amdgpu-enable-flat-scratch",
-  cl::desc("Use flat scratch instructions"),
-  cl::init(false));
-
 static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
@@ -281,6 +276,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FlatScratchInsts(false),
     ScalarFlatScratchInsts(false),
     HasArchitectedFlatScratch(false),
+    EnableFlatScratch(false),
     AddNoCarryInsts(false),
     HasUnpackedD16VMem(false),
     LDSMisalignedBug(false),
@@ -316,11 +312,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
   InstSelector.reset(new AMDGPUInstructionSelector(
   *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
-}
-
-bool GCNSubtarget::enableFlatScratch() const {
-  return flatScratchIsArchitected() ||
-         (EnableFlatScratch && hasFlatScratchInsts());
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {

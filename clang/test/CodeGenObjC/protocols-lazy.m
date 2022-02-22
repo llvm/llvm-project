@@ -12,7 +12,7 @@
 // RUN: grep OBJC_PROTOCOL_P2 %t | count 3
 // RUN: grep OBJC_PROTOCOL_INSTANCE_METHODS_P2 %t | count 3
 @protocol P2 -im1; @end
-void f0() { id x = @protocol(P2); }
+void f0(void) { id x = @protocol(P2); }
 
 // Forward definition triggered by protocol reference.
 // RUN: grep OBJC_PROTOCOL_P3 %t | count 3
@@ -51,5 +51,5 @@ void f0() { id x = @protocol(P2); }
 @protocol P6 -im1; @end
 @interface I1<P6> @end
 @implementation I1 -im1 { return 0; }; @end
-void f3() { id x = @protocol(P6); }
+void f3(void) { id x = @protocol(P6); }
 

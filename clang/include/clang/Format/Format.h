@@ -1770,17 +1770,29 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
-  /// If ``true``, concept will be placed on a new line.
-  /// \code
-  ///   true:
-  ///    template<typename T>
-  ///    concept ...
-  ///
-  ///   false:
-  ///    template<typename T> concept ...
-  /// \endcode
+  /// Different ways to break before concept declarations.
+  enum BreakBeforeConceptDeclarationsStyle {
+    /// Keep the template declaration line together with ``concept``.
+    /// \code
+    ///   template <typename T> concept C = ...;
+    /// \endcode
+    BBCDS_Never,
+    /// Breaking between template declaration and ``concept`` is allowed. The
+    /// actual behavior depends on the content and line breaking rules and
+    /// penalities.
+    BBCDS_Allowed,
+    /// Always break before ``concept``, putting it in the line after the
+    /// template declaration.
+    /// \code
+    ///   template <typename T>
+    ///   concept C = ...;
+    /// \endcode
+    BBCDS_Always,
+  };
+
+  /// The concept declaration style to use.
   /// \version 13
-  bool BreakBeforeConceptDeclarations;
+  BreakBeforeConceptDeclarationsStyle BreakBeforeConceptDeclarations;
 
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
@@ -2509,7 +2521,8 @@ struct FormatStyle {
   /// \version 12
   IndentExternBlockStyle IndentExternBlock;
 
-  /// Indent the requires clause in a template
+  /// Indent the requires clause in a template. This only applies when
+  /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
   /// \code
   ///    true:
   ///    template <typename It>
@@ -2526,7 +2539,7 @@ struct FormatStyle {
   ///    }
   /// \endcode
   /// \version 13
-  bool IndentRequires;
+  bool IndentRequiresClause;
 
   /// The number of columns to use for indentation.
   /// \code
@@ -3116,6 +3129,87 @@ struct FormatStyle {
   /// \version 14
   bool RemoveBracesLLVM;
 
+  /// \brief The possible positions for the requires clause. The
+  /// ``IndentRequires`` option is only used if the ``requires`` is put on the
+  /// start of a line.
+  enum RequiresClausePositionStyle {
+    /// Always put the ``requires`` clause on its own line.
+    /// \code
+    ///   template <typename T>
+    ///   requires C<T>
+    ///   struct Foo {...
+    ///
+    ///   template <typename T>
+    ///   requires C<T>
+    ///   void bar(T t) {...
+    ///
+    ///   template <typename T>
+    ///   void baz(T t)
+    ///   requires C<T>
+    ///   {...
+    /// \endcode
+    RCPS_OwnLine,
+    /// Try to put the clause together with the preceding part of a declaration.
+    /// For class templates: stick to the template declaration.
+    /// For function templates: stick to the template declaration.
+    /// For function declaration followed by a requires clause: stick to the
+    /// parameter list.
+    /// \code
+    ///   template <typename T> requires C<T>
+    ///   struct Foo {...
+    ///
+    ///   template <typename T> requires C<T>
+    ///   void bar(T t) {...
+    ///
+    ///   template <typename T>
+    ///   void baz(T t) requires C<T>
+    ///   {...
+    /// \endcode
+    RCPS_WithPreceding,
+    /// Try to put the ``requires`` clause together with the class or function
+    /// declaration.
+    /// \code
+    ///   template <typename T>
+    ///   requires C<T> struct Foo {...
+    ///
+    ///   template <typename T>
+    ///   requires C<T> void bar(T t) {...
+    ///
+    ///   template <typename T>
+    ///   void baz(T t)
+    ///   requires C<T> {...
+    /// \endcode
+    RCPS_WithFollowing,
+    /// Try to put everything in the same line if possible. Otherwise normal
+    /// line breaking rules take over.
+    /// \code
+    ///   // Fitting:
+    ///   template <typename T> requires C<T> struct Foo {...
+    ///
+    ///   template <typename T> requires C<T> void bar(T t) {...
+    ///
+    ///   template <typename T> void bar(T t) requires C<T> {...
+    ///
+    ///   // Not fitting, one possible example:
+    ///   template <typename LongName>
+    ///   requires C<LongName>
+    ///   struct Foo {...
+    ///
+    ///   template <typename LongName>
+    ///   requires C<LongName>
+    ///   void bar(LongName ln) {
+    ///
+    ///   template <typename LongName>
+    ///   void bar(LongName ln)
+    ///       requires C<LongName> {
+    /// \endcode
+    RCPS_SingleLine,
+  };
+
+  /// \brief The position of the ``requires`` clause.
+  /// \version 15
+  RequiresClausePositionStyle RequiresClausePosition;
+
   /// \brief The style if definition blocks should be separated.
   enum SeparateDefinitionStyle {
     /// Leave definition blocks as they are.
@@ -3500,6 +3594,25 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
+    /// If ``true``, put space between requires keyword in a requires clause and
+    /// opening parentheses, if there is one.
+    /// \code
+    ///    true:                                  false:
+    ///    template<typename T>            vs.    template<typename T>
+    ///    requires (A<T> && B<T>)                requires(A<T> && B<T>)
+    ///    ...                                    ...
+    /// \endcode
+    bool AfterRequiresInClause;
+    /// If ``true``, put space between requires keyword in a requires expression
+    /// and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    template<typename T>            vs.    template<typename T>
+    ///    concept C = requires (T t) {           concept C = requires(T t) {
+    ///                  ...                                    ...
+    ///                }                                      }
+    /// \endcode
+    bool AfterRequiresInExpression;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -3513,7 +3626,8 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), BeforeNonEmptyParentheses(false) {}
+          AfterOverloadedOperator(false), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -3523,6 +3637,8 @@ struct FormatStyle {
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
+             AfterRequiresInClause == Other.AfterRequiresInClause &&
+             AfterRequiresInExpression == Other.AfterRequiresInExpression &&
              BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
     }
   };
@@ -3889,8 +4005,8 @@ struct FormatStyle {
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentExternBlock == R.IndentExternBlock &&
-           IndentRequires == R.IndentRequires && IndentWidth == R.IndentWidth &&
-           Language == R.Language &&
+           IndentRequiresClause == R.IndentRequiresClause &&
+           IndentWidth == R.IndentWidth && Language == R.Language &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
@@ -3926,6 +4042,7 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RequiresClausePosition == R.RequiresClausePosition &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
            SortIncludes == R.SortIncludes &&

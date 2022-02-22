@@ -84,6 +84,10 @@ private:
   bool HasStdExtZve64d = false;
   bool HasStdExtZfhmin = false;
   bool HasStdExtZfh = false;
+  bool HasStdExtZfinx = false;
+  bool HasStdExtZdinx = false;
+  bool HasStdExtZhinxmin = false;
+  bool HasStdExtZhinx = false;
   bool HasStdExtZbkb = false;
   bool HasStdExtZbkc = false;
   bool HasStdExtZbkx = false;
@@ -172,6 +176,10 @@ public:
   bool hasStdExtZvl() const { return ZvlLen != ExtZvl::NotSet; }
   bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
   bool hasStdExtZfh() const { return HasStdExtZfh; }
+  bool hasStdExtZfinx() const { return HasStdExtZfinx; }
+  bool hasStdExtZdinx() const { return HasStdExtZdinx; }
+  bool hasStdExtZhinxmin() const { return HasStdExtZhinxmin; }
+  bool hasStdExtZhinx() const { return HasStdExtZhinx; }
   bool hasStdExtZbkb() const { return HasStdExtZbkb; }
   bool hasStdExtZbkc() const { return HasStdExtZbkc; }
   bool hasStdExtZbkx() const { return HasStdExtZbkx; }
@@ -205,19 +213,13 @@ public:
   }
 
   // Vector codegen related methods.
-  bool hasVInstructions() const { return HasStdExtV || HasStdExtZve32x; }
-  bool hasVInstructionsI64() const { return HasStdExtV || HasStdExtZve64x; }
-  bool hasVInstructionsF16() const {
-    return (HasStdExtV || HasStdExtZve32f) && HasStdExtZfh;
-  }
+  bool hasVInstructions() const { return HasStdExtZve32x; }
+  bool hasVInstructionsI64() const { return HasStdExtZve64x; }
+  bool hasVInstructionsF16() const { return HasStdExtZve32f && HasStdExtZfh; }
   // FIXME: Consider Zfinx in the future
-  bool hasVInstructionsF32() const {
-    return HasStdExtV || (HasStdExtZve32f && HasStdExtF);
-  }
+  bool hasVInstructionsF32() const { return HasStdExtZve32f && HasStdExtF; }
   // FIXME: Consider Zdinx in the future
-  bool hasVInstructionsF64() const {
-    return HasStdExtV || (HasStdExtZve64d && HasStdExtD);
-  }
+  bool hasVInstructionsF64() const { return HasStdExtZve64d && HasStdExtD; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   unsigned getMaxInterleaveFactor() const {

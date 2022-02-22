@@ -12,6 +12,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -102,7 +103,7 @@ static bool isDSAddress(const Constant *C) {
 
 /// Returns true if the function requires the implicit argument be passed
 /// regardless of the function contents.
-static bool funcRequiresImplicitArgPtr(const Function &F) {
+static bool funcRequiresHostcallPtr(const Function &F) {
   // Sanitizers require the hostcall buffer passed in the implicit arguments.
   return F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeThread) ||
@@ -341,12 +342,15 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     // If the function requires the implicit arg pointer due to sanitizers,
     // assume it's needed even if explicitly marked as not requiring it.
-    const bool NeedsImplicit = funcRequiresImplicitArgPtr(*F);
-    if (NeedsImplicit)
+    const bool NeedsHostcall = funcRequiresHostcallPtr(*F);
+    if (NeedsHostcall) {
       removeAssumedBits(IMPLICIT_ARG_PTR);
+      removeAssumedBits(HOSTCALL_PTR);
+    }
 
     for (auto Attr : ImplicitAttrs) {
-      if (NeedsImplicit && Attr.first == IMPLICIT_ARG_PTR)
+      if (NeedsHostcall &&
+          (Attr.first == IMPLICIT_ARG_PTR || Attr.first == HOSTCALL_PTR))
         continue;
 
       if (F->hasFnAttribute(Attr.second))
@@ -403,6 +407,11 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     if (NeedsQueuePtr) {
       removeAssumedBits(QUEUE_PTR);
+    }
+
+    if (funcRetrievesHostcallPtr(A)) {
+      removeAssumedBits(IMPLICIT_ARG_PTR);
+      removeAssumedBits(HOSTCALL_PTR);
     }
 
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
@@ -485,6 +494,35 @@ private:
     }
 
     return false;
+  }
+
+  bool funcRetrievesHostcallPtr(Attributor &A) {
+    auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
+
+    // Check if this is a call to the implicitarg_ptr builtin and it
+    // is used to retrieve the hostcall pointer. The implicit arg for
+    // hostcall is not used only if every use of the implicitarg_ptr
+    // is a load that clearly does not retrieve any byte of the
+    // hostcall pointer. We check this by tracing all the uses of the
+    // initial call to the implicitarg_ptr intrinsic.
+    auto DoesNotLeadToHostcallPtr = [&](Instruction &I) {
+      auto &Call = cast<CallBase>(I);
+      if (Call.getIntrinsicID() != Intrinsic::amdgcn_implicitarg_ptr)
+        return true;
+
+      const auto &PointerInfoAA = A.getAAFor<AAPointerInfo>(
+          *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
+
+      AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+      return PointerInfoAA.forallInterferingAccesses(
+          OAS, [](const AAPointerInfo::Access &Acc, bool IsExact) {
+            return Acc.getRemoteInst()->isDroppable();
+          });
+    };
+
+    bool UsedAssumedInformation = false;
+    return !A.checkForAllCallLikeInstructions(DoesNotLeadToHostcallPtr, *this,
+                                              UsedAssumedInformation);
   }
 };
 
@@ -638,7 +676,7 @@ public:
     AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, *TM);
     DenseSet<const char *> Allowed(
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
-         &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID});
+         &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID, &AAPointerInfo::ID});
 
     Attributor A(Functions, InfoCache, CGUpdater, &Allowed);
 

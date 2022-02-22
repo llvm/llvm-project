@@ -156,8 +156,8 @@ def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BAS(R)?(_XPLINK6
 def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "TLS_(G|L)DCALL$")>;
 
 // Return
-def : InstRW<[WLat1, LSU, EndGroup], (instregex "Return$")>;
-def : InstRW<[WLat1, LSU, NormalGr], (instregex "CondReturn$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "Return(_XPLINK)?$")>;
+def : InstRW<[WLat1, LSU, NormalGr], (instregex "CondReturn(_XPLINK)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Move instructions

@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=+unaligned-access-mode -verify-machineinstrs< %s | FileCheck -check-prefixes=SI,MUBUF,UNALIGNED %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,FLATSCR,ALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -mattr=+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,FLATSCR,ALIGNED %s
 
 ; SI-LABEL: {{^}}local_unaligned_load_store_i16:
 ; SI: ds_read_u8
@@ -538,10 +538,10 @@ define amdgpu_kernel void @constant_align2_load_i8(i8 addrspace(4)* %p, i8 addrs
 }
 
 ; SI-LABEL: {{^}}constant_align4_merge_load_2_i32:
-; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
+; SI: s_load_dwordx2 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
 ; SI-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[LO]]
 ; SI-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[HI]]
-; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
+; SI: buffer_store_dwordx2 v[[[VLO]]:[[VHI]]]
 define amdgpu_kernel void @constant_align4_merge_load_2_i32(i32 addrspace(4)* %p, i32 addrspace(1)* %r) #0 {
   %gep0 = getelementptr i32, i32 addrspace(4)* %p, i64 1
   %v0 = load i32, i32 addrspace(4)* %p, align 4

@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 \
 // RUN:  -analyzer-checker=debug.ExprInspection %s 2>&1 | FileCheck %s
 
-void clang_analyzer_printState();
+void clang_analyzer_printState(void);
 
 void test_equivalence_classes(int a, int b, int c, int d) {
   if (a + b != c)

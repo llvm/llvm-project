@@ -2,7 +2,7 @@
 
 #include "Inputs/system-header-simulator.h"
 
-void check_note_at_correct_open() {
+void check_note_at_correct_open(void) {
   FILE *F1 = tmpfile(); // expected-note {{Stream opened here}}
   if (!F1)
     // expected-note@-1 {{'F1' is non-null}}
@@ -22,7 +22,7 @@ void check_note_at_correct_open() {
 // expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
 // expected-note@-2 {{Opened stream never closed. Potential resource leak}}
 
-void check_note_fopen() {
+void check_note_fopen(void) {
   FILE *F = fopen("file", "r"); // expected-note {{Stream opened here}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
@@ -32,7 +32,7 @@ void check_note_fopen() {
 // expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
 // expected-note@-2 {{Opened stream never closed. Potential resource leak}}
 
-void check_note_freopen() {
+void check_note_freopen(void) {
   FILE *F = fopen("file", "r"); // expected-note {{Stream opened here}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
@@ -78,7 +78,7 @@ void check_note_leak_2(int c) {
   fclose(F2);
 }
 
-void check_track_null() {
+void check_track_null(void) {
   FILE *F;
   F = fopen("foo1.c", "r"); // expected-note {{Value assigned to 'F'}} expected-note {{Assuming pointer value is null}}
   if (F != NULL) {          // expected-note {{Taking false branch}} expected-note {{'F' is equal to NULL}}
@@ -89,7 +89,7 @@ void check_track_null() {
   // expected-note@-1 {{Stream pointer might be NULL}}
 }
 
-void check_eof_notes_feof_after_feof() {
+void check_eof_notes_feof_after_feof(void) {
   FILE *F;
   char Buf[10];
   F = fopen("foo1.c", "r");
@@ -108,7 +108,7 @@ void check_eof_notes_feof_after_feof() {
   fclose(F);
 }
 
-void check_eof_notes_feof_after_no_feof() {
+void check_eof_notes_feof_after_no_feof(void) {
   FILE *F;
   char Buf[10];
   F = fopen("foo1.c", "r");
@@ -131,7 +131,7 @@ void check_eof_notes_feof_after_no_feof() {
   fclose(F);
 }
 
-void check_eof_notes_feof_or_no_error() {
+void check_eof_notes_feof_or_no_error(void) {
   FILE *F;
   char Buf[10];
   F = fopen("foo1.c", "r");

@@ -4,18 +4,18 @@
 typedef __INTPTR_TYPE__ intptr_t;
 char const *p;
 
-void f0() {
+void f0(void) {
   char const str[] = "This will change";
   p = str;
 }  // expected-warning{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
 
-void f1() {
+void f1(void) {
   char const str[] = "This will change";
   p = str; 
   p = 0; // no-warning
 }
 
-void f2() {
+void f2(void) {
   p = (const char *) __builtin_alloca(12);
 } // expected-warning{{Address of stack memory allocated by call to alloca() on line 19 is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
 
@@ -28,30 +28,30 @@ static int pr7383(__const char *__)
 extern __const char *__const pr7383_list[];
 
 // Test that we catch multiple returns via globals when analyzing a function.
-void test_multi_return() {
+void test_multi_return(void) {
   static int *a, *b;
   int x;
   a = &x;
   b = &x;
 } // expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'a' upon returning}} expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'b' upon returning}}
 
-intptr_t returnAsNonLoc() {
+intptr_t returnAsNonLoc(void) {
   int x;
   return (intptr_t)&x; // expected-warning{{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning{{address of stack memory associated with local variable 'x' returned}}
 }
 
-bool returnAsBool() {
+bool returnAsBool(void) {
   int x;
   return &x; // no-warning
 }
 
-void assignAsNonLoc() {
+void assignAsNonLoc(void) {
   extern intptr_t ip;
   int x;
   ip = (intptr_t)&x;
 } // expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the global variable 'ip' upon returning}}
 
-void assignAsBool() {
+void assignAsBool(void) {
   extern bool b;
   int x;
   b = &x;

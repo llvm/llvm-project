@@ -406,8 +406,9 @@ static bool canThrow(const Value *V) {
   return true;
 }
 
-// Get a global variable with the given name. If it doesn't exist declare it,
-// which will generate an import and assume that it will exist at link time.
+// Get a thread-local global variable with the given name. If it doesn't exist
+// declare it, which will generate an import and assume that it will exist at
+// link time.
 static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
                                          WebAssemblyTargetMachine &TM,
                                          const char *Name) {
@@ -415,16 +416,11 @@ static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
   if (!GV)
     report_fatal_error(Twine("unable to create global: ") + Name);
 
-  // If the target supports TLS, make this variable thread-local. We can't just
-  // unconditionally make it thread-local and depend on
-  // CoalesceFeaturesAndStripAtomics to downgrade it, because stripping TLS has
-  // the side effect of disallowing the object from being linked into a
-  // shared-memory module, which we don't want to be responsible for.
-  auto *Subtarget = TM.getSubtargetImpl();
-  auto TLS = Subtarget->hasAtomics() && Subtarget->hasBulkMemory()
-                 ? GlobalValue::LocalExecTLSModel
-                 : GlobalValue::NotThreadLocal;
-  GV->setThreadLocalMode(TLS);
+  // Variables created by this function are thread local. If the target does not
+  // support TLS, we depend on CoalesceFeaturesAndStripAtomics to downgrade it
+  // to non-thread-local ones, in which case we don't allow this object to be
+  // linked with other objects using shared memory.
+  GV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
   return GV;
 }
 
@@ -1064,22 +1060,16 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       nullifySetjmp(F);
   }
 
-  if (!Changed) {
-    // Delete unused global variables and functions
-    if (ResumeF)
-      ResumeF->eraseFromParent();
-    if (EHTypeIDF)
-      EHTypeIDF->eraseFromParent();
-    if (EmLongjmpF)
-      EmLongjmpF->eraseFromParent();
-    if (SaveSetjmpF)
-      SaveSetjmpF->eraseFromParent();
-    if (TestSetjmpF)
-      TestSetjmpF->eraseFromParent();
-    return false;
-  }
+  // Delete unused global variables and functions
+  for (auto *V : {ThrewGV, ThrewValueGV})
+    if (V && V->use_empty())
+      V->eraseFromParent();
+  for (auto *V : {GetTempRet0F, SetTempRet0F, ResumeF, EHTypeIDF, EmLongjmpF,
+                  SaveSetjmpF, TestSetjmpF, WasmLongjmpF, CatchF})
+    if (V && V->use_empty())
+      V->eraseFromParent();
 
-  return true;
+  return Changed;
 }
 
 bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
@@ -1829,7 +1819,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
         if (auto *CPI = dyn_cast<CatchPadInst>(FromPad)) {
           UnwindDest = CPI->getCatchSwitch()->getUnwindDest();
           break;
-        } else if (auto *CPI = dyn_cast<CleanupPadInst>(FromPad)) {
+        }
+        if (auto *CPI = dyn_cast<CleanupPadInst>(FromPad)) {
           // getCleanupRetUnwindDest() can return nullptr when
           // 1. This cleanuppad's matching cleanupret uwninds to caller
           // 2. There is no matching cleanupret because it ends with

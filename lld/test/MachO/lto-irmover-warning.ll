@@ -2,7 +2,7 @@
 ; RUN: rm -rf %t; split-file %s %t
 ; RUN: llvm-as -o %t/first.bc %t/first.ll
 ; RUN: llvm-as -o %t/second.bc %t/second.ll
-; RUN: %no_fatal_warnings_lld -dylib %t/first.bc %t/second.bc -o /dev/null 2>&1 | FileCheck %s
+; RUN: %no-fatal-warnings-lld -dylib %t/first.bc %t/second.bc -o /dev/null 2>&1 | FileCheck %s
 
 ;; FIXME: can we replace ld-temp.o with a proper name?
 ; CHECK: warning: linking module flags 'foo': IDs have conflicting values ('i32 2' from {{.*}}second.bc with 'i32 1' from ld-temp.o)

@@ -92,19 +92,19 @@ def IsVecOff : PatLeaf<(i32 imm), [{
 
 
 def alignedload: PatFrag<(ops node:$a), (load $a), [{
-  return isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 def unalignedload: PatFrag<(ops node:$a), (load $a), [{
-  return !isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return !isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 def alignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
-  return isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 def unalignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
-  return !isAlignedMemNode(dyn_cast<MemSDNode>(N));
+  return !isAlignedMemNode(cast<MemSDNode>(N));
 }]>;
 
 
@@ -738,9 +738,14 @@ let Predicates = [UseHVX] in {
 
 def V2Q: OutPatFrag<(ops node:$Vs), (V6_vandvrt $Vs, (A2_tfrsi -1))>;
 
-let Predicates = [UseHVX] in
-  def: Pat<(select I1:$Pu, VecI1:$Qs, VecI1:$Qt),
+let Predicates = [UseHVX] in {
+  def: Pat<(select I1:$Pu, VecQ8:$Qs, VecQ8:$Qt),
            (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+  def: Pat<(select I1:$Pu, VecQ16:$Qs, VecQ16:$Qt),
+           (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+  def: Pat<(select I1:$Pu, VecQ32:$Qs, VecQ32:$Qt),
+           (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+}
 
 let Predicates = [UseHVX] in {
   def: Pat<(VecQ8   (qtrue)), (PS_qtrue)>;

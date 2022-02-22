@@ -3,7 +3,7 @@
 // RUN:     -fsanitize-trap=cfi-icall,cfi-nvcall -fsanitize-recover=cfi-vcall,cfi-unrelated-cast \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
-void caller(void (*f)()) {
+void caller(void (*f)(void)) {
   f();
 }
 

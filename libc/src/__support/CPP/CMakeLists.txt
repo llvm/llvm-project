@@ -10,14 +10,13 @@ add_header_library(
     Limits.h
     StringView.h
     TypeTraits.h
+    Utility.h
 )
 
-if(LLVM_LIBC_INCLUDE_SCUDO OR NOT LLVM_LIBC_FULL_BUILD)
-  add_header_library(
-    vector
-    HDRS
-      vector.h
-    DEPENDS
-      libc.include.stdlib
-  )
-endif()
+add_header_library(
+  vector
+  HDRS
+    vector.h
+  DEPENDS
+    libc.include.stdlib
+)

@@ -164,10 +164,10 @@ v_pk_fma_f16 v8, v0, s0, v1 neg_hi:[0,0,1]
 //
 // DOT
 //
-v_dot4_i32_i8 v3, v4, v5, v6
+v_dot4_i32_iu8 v3, v4, v5, v6
 // GFX11: v_dot4_i32_iu8 v3, v4, v5, v6                ; encoding: [0x03,0x40,0x16,0xcc,0x04,0x0b,0x1a,0x1c]
 
-v_dot4_i32_i8 v3, v4, v5, 0xf neg_lo:[1,1]
+v_dot4_i32_iu8 v3, v4, v5, 0xf neg_lo:[1,1]
 // GFX11: v_dot4_i32_iu8 v3, v4, v5, 15 neg_lo:[1,1,0] ; encoding: [0x03,0x40,0x16,0xcc,0x04,0x0b,0x3e,0x7a]
 
 v_dot4_u32_u8 v3, v4, v5, v6
@@ -179,7 +179,7 @@ v_dot4_i32_iu8 v3, v4, v5, 0xf
 v_dot8_i32_iu4 v3, v4, v5, 0xf neg_lo:[1,0]
 // GFX11: v_dot8_i32_iu4 v3, v4, v5, 15 neg_lo:[1,0,0] ; encoding: [0x03,0x40,0x18,0xcc,0x04,0x0b,0x3e,0x3a]
 
-v_dot8_i32_i4 v3, v4, v5, v0 neg_lo:[0,0]
+v_dot8_i32_iu4 v3, v4, v5, v0 neg_lo:[0,0]
 // GFX11: v_dot8_i32_iu4 v3, v4, v5, v0                ; encoding: [0x03,0x40,0x18,0xcc,0x04,0x0b,0x02,0x1c]
 
 v_dot8_u32_u4 v0, v1, v2, v3

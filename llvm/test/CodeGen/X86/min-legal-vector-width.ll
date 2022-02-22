@@ -72,8 +72,8 @@ define dso_local void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-ve
 define dso_local void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: avg_v64i8_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa64 (%rsi), %zmm0
-; CHECK-NEXT:    vpavgb (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
+; CHECK-NEXT:    vpavgb (%rsi), %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1699,7 +1699,6 @@ define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "mi
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpsllw %xmm1, %ymm2, %ymm2
 ; CHECK-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]

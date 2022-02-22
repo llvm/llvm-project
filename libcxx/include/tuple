@@ -169,7 +169,6 @@ template <class... Types>
 #include <__compare/synth_three_way.h>
 #include <__config>
 #include <__functional/unwrap_ref.h>
-#include <__functional_base>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
 #include <__tuple>
@@ -181,6 +180,17 @@ template <class... Types>
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
+#include <exception>
+#include <new>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1445,9 +1455,10 @@ struct __tuple_cat_return_1
 template <class ..._Types, class _Tuple0>
 struct __tuple_cat_return_1<tuple<_Types...>, true, _Tuple0>
 {
-    typedef _LIBCPP_NODEBUG typename __tuple_cat_type<tuple<_Types...>,
-            typename __make_tuple_types<typename __uncvref<_Tuple0>::type>::type>::type
-                                                                           type;
+  using type _LIBCPP_NODEBUG = typename __tuple_cat_type<
+      tuple<_Types...>,
+      typename __make_tuple_types<__uncvref_t<_Tuple0> >::type
+    >::type;
 };
 
 template <class ..._Types, class _Tuple0, class _Tuple1, class ..._Tuples>
@@ -1455,7 +1466,7 @@ struct __tuple_cat_return_1<tuple<_Types...>, true, _Tuple0, _Tuple1, _Tuples...
     : public __tuple_cat_return_1<
                  typename __tuple_cat_type<
                      tuple<_Types...>,
-                     typename __make_tuple_types<typename __uncvref<_Tuple0>::type>::type
+                     typename __make_tuple_types<__uncvref_t<_Tuple0> >::type
                  >::type,
                  __tuple_like<typename remove_reference<_Tuple1>::type>::value,
                  _Tuple1, _Tuples...>

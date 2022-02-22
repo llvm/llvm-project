@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-eabi %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-eabi %s -disable-strictnode-mutation -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-eabi -global-isel=true -global-isel-abort=2 -disable-strictnode-mutation %s -o - | FileCheck %s
 
 ; Check that constrained fp intrinsics are correctly lowered.
 
@@ -228,6 +229,20 @@ define float @maxnum_f32(float %x, float %y) #0 {
 ; CHECK: fminnm s0, s0, s1
 define float @minnum_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.minnum.f32(float %x, float %y, metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: maximum_f32:
+; CHECK: fmax s0, s0, s1
+define float @maximum_f32(float %x, float %y) #0 {
+  %val = call float @llvm.experimental.constrained.maximum.f32(float %x, float %y, metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: minimum_f32:
+; CHECK: fmin s0, s0, s1
+define float @minimum_f32(float %x, float %y) #0 {
+  %val = call float @llvm.experimental.constrained.minimum.f32(float %x, float %y, metadata !"fpexcept.strict") #0
   ret float %val
 }
 
@@ -698,6 +713,20 @@ define double @maxnum_f64(double %x, double %y) #0 {
 ; CHECK: fminnm d0, d0, d1
 define double @minnum_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.minnum.f64(double %x, double %y, metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: maximum_f64:
+; CHECK: fmax d0, d0, d1
+define double @maximum_f64(double %x, double %y) #0 {
+  %val = call double @llvm.experimental.constrained.maximum.f64(double %x, double %y, metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: minimum_f64:
+; CHECK: fmin d0, d0, d1
+define double @minimum_f64(double %x, double %y) #0 {
+  %val = call double @llvm.experimental.constrained.minimum.f64(double %x, double %y, metadata !"fpexcept.strict") #0
   ret double %val
 }
 
@@ -1483,6 +1512,8 @@ declare i32 @llvm.experimental.constrained.lrint.f32(float, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.maxnum.f32(float, float, metadata)
 declare float @llvm.experimental.constrained.minnum.f32(float, float, metadata)
+declare float @llvm.experimental.constrained.maximum.f32(float, float, metadata)
+declare float @llvm.experimental.constrained.minimum.f32(float, float, metadata)
 declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
 declare float @llvm.experimental.constrained.floor.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.lround.f32(float, metadata)
@@ -1525,6 +1556,8 @@ declare i32 @llvm.experimental.constrained.lrint.f64(double, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.maxnum.f64(double, double, metadata)
 declare double @llvm.experimental.constrained.minnum.f64(double, double, metadata)
+declare double @llvm.experimental.constrained.maximum.f64(double, double, metadata)
+declare double @llvm.experimental.constrained.minimum.f64(double, double, metadata)
 declare double @llvm.experimental.constrained.ceil.f64(double, metadata)
 declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.lround.f64(double, metadata)

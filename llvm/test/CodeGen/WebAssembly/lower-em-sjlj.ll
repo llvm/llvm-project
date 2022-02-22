@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -8,11 +8,9 @@ target triple = "wasm32-unknown-unknown"
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
 @global_var = global i32 0, align 4
-; NO-TLS-DAG: __THREW__ = external global [[PTR]]
-; NO-TLS-DAG: __threwValue = external global [[PTR]]
-; TLS-DAG: __THREW__ = external thread_local(localexec) global i32
-; TLS-DAG: __threwValue = external thread_local(localexec) global i32
 @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* @longjmp, align 4
+; CHECK-DAG: @__THREW__ = external thread_local global [[PTR]]
+; CHECK-DAG: @__threwValue = external thread_local global i32
 ; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void ([[PTR]], i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
 
 ; Test a simple setjmp - longjmp sequence

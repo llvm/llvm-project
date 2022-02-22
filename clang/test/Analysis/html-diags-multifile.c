@@ -9,7 +9,7 @@
 
 #define CALL_HAS_BUG(q) has_bug(q)
 
-void test_call_macro() {
+void test_call_macro(void) {
   CALL_HAS_BUG(0);
 }
 

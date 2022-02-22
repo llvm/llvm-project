@@ -22,6 +22,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -77,8 +78,8 @@ public:
 
   fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
                                  mlir::Location *loc = nullptr) override final {
-    TODO_NOLOC("Not implemented genExprAddr. Needed for more complex "
-               "expression lowering");
+    return createSomeExtendedAddress(loc ? *loc : toLocation(), *this, expr,
+                                     localSymbols);
   }
   fir::ExtendedValue
   genExprValue(const Fortran::lower::SomeExpr &expr,
@@ -95,13 +96,11 @@ public:
     TODO_NOLOC("Not implemented genType DataRef. Needed for more complex "
                "expression lowering");
   }
-  mlir::Type genType(const Fortran::lower::SomeExpr &) override final {
-    TODO_NOLOC("Not implemented genType SomeExpr. Needed for more complex "
-               "expression lowering");
+  mlir::Type genType(const Fortran::lower::SomeExpr &expr) override final {
+    return Fortran::lower::translateSomeExprToFIRType(*this, expr);
   }
-  mlir::Type genType(Fortran::lower::SymbolRef) override final {
-    TODO_NOLOC("Not implemented genType SymbolRef. Needed for more complex "
-               "expression lowering");
+  mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
+    return Fortran::lower::translateSymbolToFIRType(*this, sym);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
     TODO_NOLOC("Not implemented genType TypeCategory. Needed for more complex "
@@ -228,6 +227,59 @@ public:
     localSymbols.clear();
   }
 
+  /// Map mlir function block arguments to the corresponding Fortran dummy
+  /// variables. When the result is passed as a hidden argument, the Fortran
+  /// result is also mapped. The symbol map is used to hold this mapping.
+  void mapDummiesAndResults(Fortran::lower::pft::FunctionLikeUnit &funit,
+                            const Fortran::lower::CalleeInterface &callee) {
+    assert(builder && "require a builder object at this point");
+    using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
+    auto mapPassedEntity = [&](const auto arg) -> void {
+      if (arg.passBy == PassBy::AddressAndLength) {
+        // // TODO: now that fir call has some attributes regarding character
+        // // return, PassBy::AddressAndLength should be retired.
+        // mlir::Location loc = toLocation();
+        // fir::factory::CharacterExprHelper charHelp{*builder, loc};
+        // mlir::Value box =
+        //     charHelp.createEmboxChar(arg.firArgument, arg.firLength);
+        // addSymbol(arg.entity->get(), box);
+      } else {
+        if (arg.entity.has_value()) {
+          addSymbol(arg.entity->get(), arg.firArgument);
+        } else {
+          // assert(funit.parentHasHostAssoc());
+          // funit.parentHostAssoc().internalProcedureBindings(*this,
+          //                                                   localSymbols);
+        }
+      }
+    };
+    for (const Fortran::lower::CalleeInterface::PassedEntity &arg :
+         callee.getPassedArguments())
+      mapPassedEntity(arg);
+
+    // Allocate local skeleton instances of dummies from other entry points.
+    // Most of these locals will not survive into final generated code, but
+    // some will.  It is illegal to reference them at run time if they do.
+    for (const Fortran::semantics::Symbol *arg :
+         funit.nonUniversalDummyArguments) {
+      if (lookupSymbol(*arg))
+        continue;
+      mlir::Type type = genType(*arg);
+      // TODO: Account for VALUE arguments (and possibly other variants).
+      type = builder->getRefType(type);
+      addSymbol(*arg, builder->create<fir::UndefOp>(toLocation(), type));
+    }
+    if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
+            passedResult = callee.getPassedResult()) {
+      mapPassedEntity(*passedResult);
+      // FIXME: need to make sure things are OK here. addSymbol may not be OK
+      if (funit.primaryResult &&
+          passedResult->entity->get() != *funit.primaryResult)
+        addSymbol(*funit.primaryResult,
+                  getSymbolAddress(passedResult->entity->get()));
+    }
+  }
+
   /// Instantiate variable \p var and add it to the symbol map.
   /// See ConvertVariable.cpp.
   void instantiateVar(const Fortran::lower::pft::Variable &var) {
@@ -244,11 +296,16 @@ public:
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setInsertionPointToStart(&func.front());
 
+    mapDummiesAndResults(funit, callee);
+
     for (const Fortran::lower::pft::Variable &var :
          funit.getOrderedSymbolTable()) {
       const Fortran::semantics::Symbol &sym = var.getSymbol();
-      if (!sym.IsFuncResult() || !funit.primaryResult)
+      if (!sym.IsFuncResult() || !funit.primaryResult) {
         instantiateVar(var);
+      } else if (&sym == funit.primaryResult) {
+        instantiateVar(var);
+      }
     }
 
     // Create most function blocks in advance.
@@ -317,6 +374,30 @@ private:
     return {};
   }
 
+  /// Add the symbol to the local map and return `true`. If the symbol is
+  /// already in the map and \p forced is `false`, the map is not updated.
+  /// Instead the value `false` is returned.
+  bool addSymbol(const Fortran::semantics::SymbolRef sym, mlir::Value val,
+                 bool forced = false) {
+    if (!forced && lookupSymbol(sym))
+      return false;
+    localSymbols.addSymbol(sym, val, forced);
+    return true;
+  }
+
+  bool isNumericScalarCategory(Fortran::common::TypeCategory cat) {
+    return cat == Fortran::common::TypeCategory::Integer ||
+           cat == Fortran::common::TypeCategory::Real ||
+           cat == Fortran::common::TypeCategory::Complex ||
+           cat == Fortran::common::TypeCategory::Logical;
+  }
+  bool isCharacterCategory(Fortran::common::TypeCategory cat) {
+    return cat == Fortran::common::TypeCategory::Character;
+  }
+  bool isDerivedCategory(Fortran::common::TypeCategory cat) {
+    return cat == Fortran::common::TypeCategory::Derived;
+  }
+
   void genFIRBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
     builder->create<cf::BranchOp>(toLocation(), targetBlock);
@@ -335,6 +416,36 @@ private:
   }
   void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
 
+  /// END of procedure-like constructs
+  ///
+  /// Generate the cleanup block before the procedure exits
+  void genReturnSymbol(const Fortran::semantics::Symbol &functionSymbol) {
+    const Fortran::semantics::Symbol &resultSym =
+        functionSymbol.get<Fortran::semantics::SubprogramDetails>().result();
+    Fortran::lower::SymbolBox resultSymBox = lookupSymbol(resultSym);
+    mlir::Location loc = toLocation();
+    if (!resultSymBox) {
+      mlir::emitError(loc, "failed lowering function return");
+      return;
+    }
+    mlir::Value resultVal = resultSymBox.match(
+        [&](const fir::CharBoxValue &x) -> mlir::Value {
+          TODO(loc, "Function return CharBoxValue");
+        },
+        [&](const auto &) -> mlir::Value {
+          mlir::Value resultRef = resultSymBox.getAddr();
+          mlir::Type resultType = genType(resultSym);
+          mlir::Type resultRefType = builder->getRefType(resultType);
+          // A function with multiple entry points returning different types
+          // tags all result variables with one of the largest types to allow
+          // them to share the same storage.  Convert this to the actual type.
+          if (resultRef.getType() != resultRefType)
+            TODO(loc, "Convert to actual type");
+          return builder->create<fir::LoadOp>(loc, resultRef);
+        });
+    builder->create<mlir::ReturnOp>(loc, resultVal);
+  }
+
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
                            const Fortran::semantics::Symbol &symbol) {
     if (mlir::Block *finalBlock = funit.finalBlock) {
@@ -345,10 +456,116 @@ private:
       builder->setInsertionPoint(finalBlock, finalBlock->end());
     }
     if (Fortran::semantics::IsFunction(symbol)) {
-      TODO(toLocation(), "Function lowering");
+      genReturnSymbol(symbol);
     } else {
       genExitRoutine();
     }
+  }
+
+  [[maybe_unused]] static bool
+  isFuncResultDesignator(const Fortran::lower::SomeExpr &expr) {
+    const Fortran::semantics::Symbol *sym =
+        Fortran::evaluate::GetFirstSymbol(expr);
+    return sym && sym->IsFuncResult();
+  }
+
+  static bool isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
+    const Fortran::semantics::Symbol *sym =
+        Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr);
+    return sym && Fortran::semantics::IsAllocatable(*sym);
+  }
+
+  void genAssignment(const Fortran::evaluate::Assignment &assign) {
+    mlir::Location loc = toLocation();
+
+    std::visit(
+        Fortran::common::visitors{
+            // [1] Plain old assignment.
+            [&](const Fortran::evaluate::Assignment::Intrinsic &) {
+              const Fortran::semantics::Symbol *sym =
+                  Fortran::evaluate::GetLastSymbol(assign.lhs);
+
+              if (!sym)
+                TODO(loc, "assignment to pointer result of function reference");
+
+              std::optional<Fortran::evaluate::DynamicType> lhsType =
+                  assign.lhs.GetType();
+              assert(lhsType && "lhs cannot be typeless");
+              // Assignment to polymorphic allocatables may require changing the
+              // variable dynamic type (See Fortran 2018 10.2.1.3 p3).
+              if (lhsType->IsPolymorphic() && isWholeAllocatable(assign.lhs))
+                TODO(loc, "assignment to polymorphic allocatable");
+
+              // Note: No ad-hoc handling for pointers is required here. The
+              // target will be assigned as per 2018 10.2.1.3 p2. genExprAddr
+              // on a pointer returns the target address and not the address of
+              // the pointer variable.
+
+              if (assign.lhs.Rank() > 0) {
+                // Array assignment
+                // See Fortran 2018 10.2.1.3 p5, p6, and p7
+                TODO(toLocation(), "Array assignment");
+                return;
+              }
+
+              // Scalar assignment
+              const bool isNumericScalar =
+                  isNumericScalarCategory(lhsType->category());
+              fir::ExtendedValue rhs = isNumericScalar
+                                           ? genExprValue(assign.rhs)
+                                           : genExprAddr(assign.rhs);
+
+              if (isNumericScalar) {
+                // Fortran 2018 10.2.1.3 p8 and p9
+                // Conversions should have been inserted by semantic analysis,
+                // but they can be incorrect between the rhs and lhs. Correct
+                // that here.
+                mlir::Value addr = fir::getBase(genExprAddr(assign.lhs));
+                mlir::Value val = fir::getBase(rhs);
+                // A function with multiple entry points returning different
+                // types tags all result variables with one of the largest
+                // types to allow them to share the same storage.  Assignment
+                // to a result variable of one of the other types requires
+                // conversion to the actual type.
+                mlir::Type toTy = genType(assign.lhs);
+                mlir::Value cast =
+                    builder->convertWithSemantics(loc, toTy, val);
+                if (fir::dyn_cast_ptrEleTy(addr.getType()) != toTy) {
+                  assert(isFuncResultDesignator(assign.lhs) && "type mismatch");
+                  addr = builder->createConvert(
+                      toLocation(), builder->getRefType(toTy), addr);
+                }
+                builder->create<fir::StoreOp>(loc, cast, addr);
+              } else if (isCharacterCategory(lhsType->category())) {
+                TODO(toLocation(), "Character assignment");
+              } else if (isDerivedCategory(lhsType->category())) {
+                TODO(toLocation(), "Derived type assignment");
+              } else {
+                llvm_unreachable("unknown category");
+              }
+            },
+
+            // [2] User defined assignment. If the context is a scalar
+            // expression then call the procedure.
+            [&](const Fortran::evaluate::ProcedureRef &procRef) {
+              TODO(toLocation(), "User defined assignment");
+            },
+
+            // [3] Pointer assignment with possibly empty bounds-spec. R1035: a
+            // bounds-spec is a lower bound value.
+            [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
+              TODO(toLocation(),
+                   "Pointer assignment with possibly empty bounds-spec");
+            },
+
+            // [4] Pointer assignment with bounds-remapping. R1036: a
+            // bounds-remapping is a pair, lower bound and upper bound.
+            [&](const Fortran::evaluate::Assignment::BoundsRemapping
+                    &boundExprs) {
+              TODO(toLocation(), "Pointer assignment with bounds-remapping");
+            },
+        },
+        assign.u);
   }
 
   void genFIR(const Fortran::parser::CallStmt &stmt) {
@@ -614,7 +831,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::AssignmentStmt &stmt) {
-    TODO(toLocation(), "AssignmentStmt lowering");
+    genAssignment(*stmt.typedAssignment->v);
   }
 
   void genFIR(const Fortran::parser::SyncAllStmt &stmt) {
@@ -719,10 +936,6 @@ private:
     TODO(toLocation(), "EndDoStmt lowering");
   }
 
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {
-    TODO(toLocation(), "EndFunctionStmt lowering");
-  }
-
   void genFIR(const Fortran::parser::EndIfStmt &) {
     TODO(toLocation(), "EndIfStmt lowering");
   }
@@ -736,6 +949,7 @@ private:
   }
 
   // Nop statements - No code, or code is generated at the construct level.
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}   // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
 
   void genFIR(const Fortran::parser::EntryStmt &) {

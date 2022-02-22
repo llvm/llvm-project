@@ -165,6 +165,7 @@ protected:
   bool FlatScratchInsts;
   bool ScalarFlatScratchInsts;
   bool HasArchitectedFlatScratch;
+  bool EnableFlatScratch;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
   bool LDSMisalignedBug;
@@ -571,6 +572,11 @@ public:
     return ScalarFlatScratchInsts;
   }
 
+  bool enableFlatScratch() const {
+    return flatScratchIsArchitected() ||
+           (EnableFlatScratch && hasFlatScratchInsts());
+  }
+
   bool hasGlobalAddTidInsts() const {
     return GFX10_BEncoding;
   }
@@ -787,8 +793,6 @@ public:
     return true;
   }
 
-  bool enableFlatScratch() const;
-
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
@@ -983,6 +987,10 @@ public:
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }
 
   bool hasVALUPartialForwardingHazard() const {
+    return getGeneration() >= GFX11;
+  }
+
+  bool hasVALUTransUseHazard() const {
     return getGeneration() >= GFX11;
   }
 

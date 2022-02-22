@@ -3117,7 +3117,8 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
 class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // Custom memory allocation code for storage constructor.
   code allocator = ?;
-  // Custom comparator used to compare two instances for equality.
+  // Comparator used to compare two instances for equality. By default, it uses
+  // the C++ equality operator.
   code comparator = ?;
   // The C++ type of this parameter.
   string cppType = type;
@@ -3143,6 +3144,14 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // must be default constructible and be contextually convertible to `bool`.
   // Any `Optional<T>` and any attribute type satisfies these requirements.
   bit isOptional = 0;
+  // Provide a default value for the parameter. Parameters with default values
+  // are considered optional. If a value was not parsed for the parameter, it
+  // will be set to the default value. Parameters equal to their default values
+  // are elided when printing. Equality is checked using the `comparator` field,
+  // which by default is the C++ equality operator. The current MLIR context is
+  // made available through `$_ctx`, e.g., for constructing default values for
+  // attributes and types.
+  string defaultValue = ?;
 }
 class AttrParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
@@ -3191,6 +3200,13 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
 class OptionalParameter<string type, string desc = ""> :
     AttrOrTypeParameter<type, desc> {
   let isOptional = 1;
+}
+
+// A parameter with a default value.
+class DefaultValuedParameter<string type, string value, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let isOptional = 1;
+  let defaultValue = value;
 }
 
 // This is a special parameter used for AttrDefs that represents a `mlir::Type`

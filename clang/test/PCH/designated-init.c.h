@@ -54,8 +54,8 @@ struct P1 l1 = {
                .q.b = { [1] = 'x' }
 };
 
-extern struct Q1 *foo();
-static struct P1 test_foo() {
+extern struct Q1 *foo(void);
+static struct P1 test_foo(void) {
   struct P1 l = { *foo(),
                   .q.b = { "boo" },
                   .q.b = { [1] = 'x' }

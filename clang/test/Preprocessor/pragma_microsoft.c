@@ -53,7 +53,7 @@ __pragma(comment(linker," bar=" BAR))
 
 #define PRAGMA_IN_ARGS(p) p
 
-void f()
+void f(void)
 {
   __pragma() // expected-warning{{unknown pragma ignored}}
 // CHECK: #pragma
@@ -112,7 +112,7 @@ void test( void ) {
 // Test to make sure there are no use-after-free problems
 #define B "pp-record.h"
 #pragma include_alias("quux.h", B)
-void g() {}
+void g(int k) {}
 #include "quux.h"
 
 // Make sure that empty includes don't work

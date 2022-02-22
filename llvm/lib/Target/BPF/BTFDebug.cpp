@@ -552,6 +552,46 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
   }
 }
 
+/// Generate btf_type_tag chains.
+int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
+  SmallVector<const MDString *, 4> MDStrs;
+  DINodeArray Annots = DTy->getAnnotations();
+  if (Annots) {
+    // For type with "int __tag1 __tag2 *p", the MDStrs will have
+    // content: [__tag1, __tag2].
+    for (const Metadata *Annotations : Annots->operands()) {
+      const MDNode *MD = cast<MDNode>(Annotations);
+      const MDString *Name = cast<MDString>(MD->getOperand(0));
+      if (!Name->getString().equals("btf_type_tag"))
+        continue;
+      MDStrs.push_back(cast<MDString>(MD->getOperand(1)));
+    }
+  }
+
+  if (MDStrs.size() == 0)
+    return -1;
+
+  // With MDStrs [__tag1, __tag2], the output type chain looks like
+  //   PTR -> __tag2 -> __tag1 -> BaseType
+  // In the below, we construct BTF types with the order of __tag1, __tag2
+  // and PTR.
+  unsigned TmpTypeId;
+  std::unique_ptr<BTFTypeTypeTag> TypeEntry;
+  if (BaseTypeId >= 0)
+    TypeEntry =
+        std::make_unique<BTFTypeTypeTag>(BaseTypeId, MDStrs[0]->getString());
+  else
+    TypeEntry = std::make_unique<BTFTypeTypeTag>(DTy, MDStrs[0]->getString());
+  TmpTypeId = addType(std::move(TypeEntry));
+
+  for (unsigned I = 1; I < MDStrs.size(); I++) {
+    const MDString *Value = MDStrs[I];
+    TypeEntry = std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
+    TmpTypeId = addType(std::move(TypeEntry));
+  }
+  return TmpTypeId;
+}
+
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
@@ -684,9 +724,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
           /// pointee type will be replaced with either a real type or
           /// a forward declaration.
           auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, true);
-          auto &Fixup = FixupDerivedTypes[CTy->getName()];
-          Fixup.first = CTag == dwarf::DW_TAG_union_type;
-          Fixup.second.push_back(TypeEntry.get());
+          auto &Fixup = FixupDerivedTypes[CTy];
+          Fixup.push_back(std::make_pair(DTy, TypeEntry.get()));
           TypeId = addType(std::move(TypeEntry), DTy);
           return;
         }
@@ -695,34 +734,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   }
 
   if (Tag == dwarf::DW_TAG_pointer_type) {
-    SmallVector<const MDString *, 4> MDStrs;
-    DINodeArray Annots = DTy->getAnnotations();
-    if (Annots) {
-      // For type with "int __tag1 __tag2 *p", the MDStrs will have
-      // content: [__tag1, __tag2].
-      for (const Metadata *Annotations : Annots->operands()) {
-        const MDNode *MD = cast<MDNode>(Annotations);
-        const MDString *Name = cast<MDString>(MD->getOperand(0));
-        if (!Name->getString().equals("btf_type_tag"))
-          continue;
-        MDStrs.push_back(cast<MDString>(MD->getOperand(1)));
-      }
-    }
-
-    if (MDStrs.size() > 0) {
-      // With MDStrs [__tag1, __tag2], the output type chain looks like
-      //   PTR -> __tag2 -> __tag1 -> BaseType
-      // In the below, we construct BTF types with the order of __tag1, __tag2
-      // and PTR.
-      auto TypeEntry =
-          std::make_unique<BTFTypeTypeTag>(DTy, MDStrs[0]->getString());
-      unsigned TmpTypeId = addType(std::move(TypeEntry));
-      for (unsigned I = 1; I < MDStrs.size(); I++) {
-        const MDString *Value = MDStrs[I];
-        TypeEntry =
-            std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
-        TmpTypeId = addType(std::move(TypeEntry));
-      }
+    int TmpTypeId = genBTFTypeTags(DTy, -1);
+    if (TmpTypeId >= 0) {
       auto TypeDEntry =
           std::make_unique<BTFTypeDerived>(TmpTypeId, Tag, DTy->getName());
       TypeId = addType(std::move(TypeDEntry), DTy);
@@ -773,15 +786,31 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
     // already defined, we should keep moving to eventually
     // bring in types for "struct t". Otherwise, the "struct s2"
     // definition won't be correct.
+    //
+    // In the above, we have following debuginfo:
+    //  {ptr, struct_member} ->  typedef -> struct
+    // and BTF type for 'typedef' is generated while 'struct' may
+    // be in FixUp. But let us generalize the above to handle
+    //  {different types} -> [various derived types]+ -> another type.
+    // For example,
+    //  {func_param, struct_member} -> const -> ptr -> volatile -> struct
+    // We will traverse const/ptr/volatile which already have corresponding
+    // BTF types and generate type for 'struct' which might be in Fixup
+    // state.
     if (Ty && (!CheckPointer || !SeenPointer)) {
       if (const auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-        unsigned Tag = DTy->getTag();
-        if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
-            Tag == dwarf::DW_TAG_volatile_type ||
-            Tag == dwarf::DW_TAG_restrict_type) {
-          uint32_t TmpTypeId;
-          visitTypeEntry(DTy->getBaseType(), TmpTypeId, CheckPointer,
-                         SeenPointer);
+        while (DTy) {
+          const DIType *BaseTy = DTy->getBaseType();
+          if (!BaseTy)
+            break;
+
+          if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
+            DTy = dyn_cast<DIDerivedType>(BaseTy);
+          } else {
+            uint32_t TmpTypeId;
+            visitTypeEntry(BaseTy, TmpTypeId, CheckPointer, SeenPointer);
+            break;
+          }
         }
       }
     }
@@ -1480,8 +1509,9 @@ void BTFDebug::endModule() {
 
   // Fixups
   for (auto &Fixup : FixupDerivedTypes) {
-    StringRef TypeName = Fixup.first;
-    bool IsUnion = Fixup.second.first;
+    const DICompositeType *CTy = Fixup.first;
+    StringRef TypeName = CTy->getName();
+    bool IsUnion = CTy->getTag() == dwarf::DW_TAG_union_type;
 
     // Search through struct types
     uint32_t StructTypeId = 0;
@@ -1497,8 +1527,15 @@ void BTFDebug::endModule() {
       StructTypeId = addType(std::move(FwdTypeEntry));
     }
 
-    for (auto &DType : Fixup.second.second) {
-      DType->setPointeeType(StructTypeId);
+    for (auto &TypeInfo : Fixup.second) {
+      const DIDerivedType *DTy = TypeInfo.first;
+      BTFTypeDerived *BDType = TypeInfo.second;
+
+      int TmpTypeId = genBTFTypeTags(DTy, StructTypeId);
+      if (TmpTypeId >= 0)
+        BDType->setPointeeType(TmpTypeId);
+      else
+        BDType->setPointeeType(StructTypeId);
     }
   }
 

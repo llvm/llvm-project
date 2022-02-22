@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -emit-llvm -triple i686-apple-darwin -mregparm 3 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -emit-llvm -triple i686-apple-darwin -mregparm 3 %s -o - | FileCheck %s
 // PR3967
 
 enum kobject_action {

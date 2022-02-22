@@ -14,7 +14,7 @@ void * f2(int n)
   return malloc(sizeof(int) * n); // // expected-warning {{the computation of the size of the memory allocation may overflow}}
 }
 
-void * f3()
+void * f3(void)
 {
   return malloc(4 * sizeof(int));  // no-warning
 }

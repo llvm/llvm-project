@@ -42,7 +42,7 @@
 # EXPORT-DAG: g     F __TEXT,__text _keep_lazy
 
 ## Check that exported symbol is global
-# RUN: %no_fatal_warnings_lld -dylib %t/default.o -o %t/hidden-export \
+# RUN: %no-fatal-warnings-lld -dylib %t/default.o -o %t/hidden-export \
 # RUN:         -exported_symbol _private_extern 2>&1 | \
 # RUN:     FileCheck --check-prefix=PRIVATE %s
 
@@ -143,9 +143,9 @@
 # RUN:   %t/weak-private-extern.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
 
-# EXP-AUTOHIDE: T _foo        
+# EXP-AUTOHIDE: T _foo
 # AUTOHIDE-PRIVATE: error: cannot export hidden symbol _foo
-        
+
 #--- default.s
 
 .globl _keep_globl, _hide_globl
@@ -214,6 +214,6 @@ _foo:
 #--- weak-private-extern.s
 .global _foo
 .weak_definition _foo
-.private_extern _foo        
+.private_extern _foo
 _foo:
   retq

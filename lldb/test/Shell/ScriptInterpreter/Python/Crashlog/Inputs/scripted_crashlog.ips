@@ -1,0 +1,75 @@
+{"app_name":"scripted_crashlog_json.test.tmp.out","timestamp":"2022-02-14 16:30:31.00 -0800","app_version":"","slice_uuid":"b928ee77-9429-334f-ac88-41440bb3d4c7","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 12.3","incident_id":"E57CADE7-DC44-45CE-8D16-18EBC4406B97","name":"scripted_crashlog_json.test.tmp.out"}
+{
+  "uptime" : 260000,
+  "procLaunch" : "2022-02-14 16:30:31.8048 -0800",
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "MacBookPro18,2",
+  "procStartAbsTime" : 6478056069413,
+  "coalitionID" : 22196,
+  "osVersion" : {
+    "train" : "macOS 12.3",
+    "build" : "",
+    "releaseType" : ""
+  },
+  "captureTime" : "2022-02-14 16:30:31.8096 -0800",
+  "incident" : "E57CADE7-DC44-45CE-8D16-18EBC4406B97",
+  "bug_type" : "309",
+  "pid" : 92190,
+  "procExitAbsTime" : 6478056175721,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procName" : "scripted_crashlog_json.test.tmp.out",
+  "procPath" : "\/Users\/USER\/*\/scripted_crashlog_json.test.tmp.out",
+  "parentProc" : "zsh",
+  "parentPid" : 82132,
+  "coalitionName" : "com.apple.Terminal",
+  "crashReporterKey" : "CDC11418-EDBF-2A49-0D83-8B441A5004B0",
+  "responsiblePid" : 76395,
+  "responsibleProc" : "Terminal",
+  "wakeTime" : 14889,
+  "sleepWakeUUID" : "BCA947AE-2F0A-44C7-8445-FEDFFA236CD0",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0 is not in any region.  Bytes before following region: 4372692992\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      104a20000-104a24000    [   16K] r-x\/r-x SM=COW  ....test.tmp.out",
+  "isCorpse" : 1,
+  "exception" : {"codes":"0x0000000000000001, 0x0000000000000000","rawCodes":[1,0],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x0000000000000000"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":92190},
+  "vmregioninfo" : "0 is not in any region.  Bytes before following region: 4372692992\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      104a20000-104a24000    [   16K] r-x\/r-x SM=COW  ....test.tmp.out",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":156,"task_for_pid":28},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":4567339,"threadState":{"x":[{"value":1},{"value":6094187136},{"value":6094187152},{"value":6094187720},{"value":0},{"value":0},{"value":0},{"value":0},{"value":1},{"value":0},{"value":0},{"value":2},{"value":2},{"value":0},{"value":80},{"value":0},{"value":13118353544},{"value":7701436843874442528},{"value":0},{"value":4373676128},{"sourceLine":8,"value":4372709256,"sourceFile":"test.c","symbol":"main","symbolLocation":0},{"value":4373332080,"symbolLocation":0,"symbol":"dyld4::sConfigBuffer"},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372709248},"cpsr":{"value":1610616832},"fp":{"value":6094186736},"sp":{"value":6094186720},"esr":{"value":2449473606,"description":"(Data Abort) byte write Translation fault"},"pc":{"value":4372709224,"matchesCrashFrame":1},"far":{"value":0}},"queue":"com.apple.main-thread","frames":[{"imageOffset":16232,"sourceLine":3,"sourceFile":"test.c","symbol":"foo","imageIndex":0,"symbolLocation":16},{"imageOffset":16256,"sourceLine":6,"sourceFile":"test.c","symbol":"bar","imageIndex":0,"symbolLocation":12},{"imageOffset":16288,"sourceLine":8,"sourceFile":"test.c","symbol":"main","imageIndex":0,"symbolLocation":24},{"imageOffset":20620,"symbol":"start","symbolLocation":520,"imageIndex":1}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4372692992,
+    "size" : 16384,
+    "uuid" : "b928ee77-9429-334f-ac88-41440bb3d4c7",
+    "path" : "\/Users\/USER\/*\/scripted_crashlog_json.test.tmp.out",
+    "name" : "scripted_crashlog_json.test.tmp.out"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4372938752,
+    "size" : 393216,
+    "uuid" : "41293cda-474b-3700-924e-6ba0f7698eac",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  }
+],
+  "sharedCache" : {
+  "base" : 6924156928,
+  "size" : 3151052800,
+  "uuid" : "2ff78c31-e522-3e4a-a414-568e926f7274"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=589.5M resident=0K(0%) swapped_out_or_unallocated=589.5M(100%)\nWritable regions: Total=529.1M written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=529.1M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nKernel Alloc Once                   32K        1 \nMALLOC                           137.2M       11 \nMALLOC guard page                   96K        5 \nMALLOC_NANO (reserved)           384.0M        1         reserved VM address space (unallocated)\nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \n__AUTH                              46K       11 \n__AUTH_CONST                        67K       38 \n__DATA                             173K       36 \n__DATA_CONST                       242K       39 \n__DATA_DIRTY                        73K       21 \n__LINKEDIT                       584.9M        3 \n__OBJC_CONST                        10K        5 \n__OBJC_RO                         82.9M        1 \n__OBJC_RW                         3168K        1 \n__TEXT                            4696K       43 \ndyld private memory               1024K        1 \nshared memory                       48K        2 \n===========                     =======  ======= \nTOTAL                              1.2G      221 \nTOTAL, minus reserved VM space   878.5M      221 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "com.apple.main-thread"
+  }
+},
+  "trialInfo" : {  }
+}

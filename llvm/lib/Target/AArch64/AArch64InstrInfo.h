@@ -103,6 +103,12 @@ public:
   /// Returns whether the instruction is a pre-indexed load/store.
   static bool isPreLdSt(const MachineInstr &MI);
 
+  /// Returns whether the instruction is FP or NEON.
+  static bool isFpOrNEON(const MachineInstr &MI);
+
+  /// Returns whether the instruction is in Q form (128 bit operands)
+  static bool isQForm(const MachineInstr &MI);
+
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 
@@ -283,7 +289,7 @@ public:
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     const outliner::Candidate &C) const override;
+                     outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;
@@ -347,7 +353,7 @@ private:
 
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.
-  unsigned findRegisterToSaveLRTo(const outliner::Candidate &C) const;
+  Register findRegisterToSaveLRTo(outliner::Candidate &C) const;
 
   /// Remove a ptest of a predicate-generating operation that already sets, or
   /// can be made to set, the condition codes in an identical manner

@@ -12,7 +12,7 @@
 // RUN: %clang_cl --target=x86_64-windows-msvc /hotpatch -### -- %s 2>&1 \
 // RUN:    | FileCheck %s --check-prefix=FUNCTIONPADMIN
 // FUNCTIONPADMIN: clang{{.*}}
-// FUNCTIONPADMIN: {{link.*"}}
+// FUNCTIONPADMIN: {{link[^"]*"}} 
 // FUNCTIONPADMIN: -functionpadmin
 
 int main() {

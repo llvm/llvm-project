@@ -452,7 +452,7 @@ class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC
   let InsVOP3Base = Ins64;
   // Dst and SrcC cannot partially overlap if SrcC/Dst is bigger than 4 VGPRs.
   // We then create two versions of the instruction: with tied dst and src2
-  // and with the eralyclobber flag on the dst. This is strciter than the
+  // and with the earlyclobber flag on the dst. This is stricter than the
   // actual HW restriction. In particular earlyclobber also affects src0 and
   // src1 allocation which is not required.
   bit NoDstOverlap = !gt(DstVT.Size, 128);
@@ -819,12 +819,8 @@ let AssemblerPredicate = isGFX11Plus,
         VOP3P_Real_dpp8_gfx11<op, backing_ps_name, asmName>;
 } // End AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11"
 
-// The name for the old signed only version of these instructions is accepted
-// but will function differently on GFX11+.
 defm V_DOT4_I32_IU8              : VOP3P_Real_gfx11 <0x16>;
-def : MnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">, Requires<[isGFX11Plus]>;
 defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18>;
-def : MnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">, Requires<[isGFX11Plus]>;
 defm V_DOT2_F32_BF16             : VOP3P_Real_gfx11 <0x1a>;
 
 multiclass VOP3P_Real_WMMA <bits<7> op> {

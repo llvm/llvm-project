@@ -163,7 +163,7 @@ void testBlockLayoutWeak(__weak id x) {
 // CHECK: call void @checkpoint(i32 noundef 2)
 // CHECK: call void @llvm.objc.storeStrong(i8** [[Y]], i8* null)
 extern void checkpoint(int n);
-void testCatch() {
+void testCatch(void) {
   @try {
     checkpoint(0);
   } @catch (A *x) {

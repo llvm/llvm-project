@@ -246,10 +246,6 @@ public:
   /// Prints a textual representation of this predicate with an indentation of
   /// \p Depth.
   virtual void print(raw_ostream &OS, unsigned Depth = 0) const = 0;
-
-  /// Returns the SCEV to which this predicate applies, or nullptr if this is
-  /// a SCEVUnionPredicate.
-  virtual const SCEV *getExpr() const = 0;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SCEVPredicate &P) {
@@ -293,7 +289,6 @@ public:
   bool implies(const SCEVPredicate *N) const override;
   void print(raw_ostream &OS, unsigned Depth = 0) const override;
   bool isAlwaysTrue() const override;
-  const SCEV *getExpr() const override;
 
   ICmpInst::Predicate getPredicate() const { return Pred; }
 
@@ -397,7 +392,7 @@ public:
   IncrementWrapFlags getFlags() const { return Flags; }
 
   /// Implementation of the SCEVPredicate interface
-  const SCEV *getExpr() const override;
+  const SCEVAddRecExpr *getExpr() const;
   bool implies(const SCEVPredicate *N) const override;
   void print(raw_ostream &OS, unsigned Depth = 0) const override;
   bool isAlwaysTrue() const override;
@@ -422,9 +417,6 @@ private:
   /// Vector with references to all predicates in this union.
   SmallVector<const SCEVPredicate *, 16> Preds;
 
-  /// Maps SCEVs to predicates for quick look-ups.
-  PredicateMap SCEVToPreds;
-
   /// Adds a predicate to this union.
   void add(const SCEVPredicate *N);
 
@@ -435,15 +427,10 @@ public:
     return Preds;
   }
 
-  /// Returns a reference to a vector containing all predicates which apply to
-  /// \p Expr.
-  ArrayRef<const SCEVPredicate *> getPredicatesForExpr(const SCEV *Expr) const;
-
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
   bool implies(const SCEVPredicate *N) const override;
   void print(raw_ostream &OS, unsigned Depth) const override;
-  const SCEV *getExpr() const override;
 
   /// We estimate the complexity of a union predicate as the size number of
   /// predicates in the union.
@@ -1600,6 +1587,19 @@ private:
   /// *add* recurrences with loop invariant steps aren't represented by
   /// SCEVUnknowns and thus don't use this mechanism.
   ConstantRange getRangeForUnknownRecurrence(const SCEVUnknown *U);
+
+  /// Return true and fill \p SCC with elements of PNINode-composed strongly
+  /// connected component that contains \p Phi. Here SCC is a maximum by
+  /// inclusion subgraph composed of Phis that transitively use one another as
+  /// inputs. Otherwise, return false and conservatively put \p Phi into \p SCC
+  /// as the only element of its strongly connected component.
+  bool collectSCC(const PHINode *Phi,
+                  SmallVectorImpl<const PHINode *> &SCC) const;
+
+  /// Sharpen range of entire SCEVUnknown Phi strongly connected component that
+  /// includes \p Phi. On output, \p ConservativeResult is the sharpened range.
+  void sharpenPhiSCCRange(const PHINode *Phi, ConstantRange &ConservativeResult,
+                          ScalarEvolution::RangeSignHint SignHint);
 
   /// We know that there is no SCEV for the specified value.  Analyze the
   /// expression.

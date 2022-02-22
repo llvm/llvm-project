@@ -211,7 +211,7 @@ class BinaryContext {
   std::map<unsigned, DwarfLineTable> DwarfLineTablesCUMap;
 
 public:
-  static std::unique_ptr<BinaryContext>
+  static Expected<std::unique_ptr<BinaryContext>>
   createBinaryContext(const ObjectFile *File, bool IsPIC,
                       std::unique_ptr<DWARFContext> DwCtx);
 
@@ -1192,14 +1192,14 @@ public:
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(
-        TheTarget->createMCCodeEmitter(*MII, *MRI, *MCEInstance.LocalCtx));
+        TheTarget->createMCCodeEmitter(*MII, *MCEInstance.LocalCtx));
     return MCEInstance;
   }
 
   /// Creating MCStreamer instance.
   std::unique_ptr<MCStreamer>
   createStreamer(llvm::raw_pwrite_stream &OS) const {
-    MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *Ctx);
+    MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *Ctx);
     MCAsmBackend *MAB =
         TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);

@@ -3,7 +3,7 @@
 // rdar://problem/44978988
 // expected-no-diagnostics
 
-int foo();
+int foo(void);
 
 int gTotal;
 

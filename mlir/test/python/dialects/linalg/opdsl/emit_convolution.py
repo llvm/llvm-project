@@ -16,8 +16,8 @@ def conv_poly(
     I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
     K=TensorDef(T2, S.KH, S.KW, S.C),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
-    strides=IndexAttrDef(S.SH, S.SW),
-    dilations=IndexAttrDef(S.DH, S.DW)):
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 2])):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] += TypeFn.cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -51,8 +51,9 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2, 1), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
     def test_f32i32_conv(input, filter, init_result):
+      # Use default dilations and set non-default strides.
       return conv_poly(
-          input, filter, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+          input, filter, outs=[init_result], strides=[2, 4])
 
 
 print(module)

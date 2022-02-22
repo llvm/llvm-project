@@ -2,7 +2,7 @@
 // rdar://6551276
 
 void foo(const unsigned short *);
-void bar() {
+void bar(void) {
   unsigned short *s[3];
   int i;
   @try { } @catch (id anException) { }

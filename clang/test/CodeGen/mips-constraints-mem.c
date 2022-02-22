@@ -3,7 +3,7 @@
 
 // This checks that the frontend will accept inline asm memory constraints.
 
-int foo()
+int foo(void)
 {
 
  // 'R': An address that can be used in a non-macro load or stor'

@@ -29,7 +29,7 @@ static const double dVal = 19637/7.0;           // 2805.2857142857142857        
 
 static const long double ldVal = 3/1234567.0L;  //    2.4300017739012949479e-06 (<depends on size of long double>)
 
-int main() {
+int main(void) {
   return hVal + fVal + dVal + ldVal;
 }
 

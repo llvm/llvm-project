@@ -18,7 +18,7 @@ Search,binary_search,Christopher Di Bella,n/a,Not started
 Search,min,Not assigned,n/a,Not started
 Search,max,Not assigned,n/a,Not started
 Search,minmax,Not assigned,n/a,Not started
-Search,min_element,Not assigned,n/a,Not started
+Search,min_element,Nikolas Klauser,n/a,✅
 Search,max_element,Not assigned,n/a,Not started
 Search,minmax_element,Not assigned,n/a,Not started
 Search,count,Not assigned,n/a,Not started
@@ -46,14 +46,14 @@ Write,fill,Not assigned,n/a,Not started
 Write,fill_n,Not assigned,n/a,Not started
 Write,transform,Not assigned,n/a,Not started
 Write,generate,Not assigned,n/a,Not started
-Write,generate_nNot assigned,n/a,Not started
+Write,generate_n,Not assigned,n/a,Not started
 Write,remove_copy,Not assigned,n/a,Not started
 Write,remove_copy_if,Not assigned,n/a,Not started
 Write,replace,Not assigned,n/a,Not started
 Write,replace_if,Not assigned,n/a,Not started
 Write,replace_copy,Not assigned,n/a,Not started
 Write,replace_copy_if,Not assigned,n/a,Not started
-Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,Complete
+Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Not assigned,n/a,Not started
 Write,rotate_copy,Not assigned,n/a,Not started
 Write,sample,Not assigned,n/a,Not started

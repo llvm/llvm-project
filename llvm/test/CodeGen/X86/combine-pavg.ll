@@ -21,7 +21,6 @@ define <16 x i8> @combine_pavgb_self(<16 x i8> %a0) {
   ret <16 x i8> %1
 }
 
-; TODO: Failure to remove masks as we know the upper bits are zero
 define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; SSE-LABEL: combine_pavgw_knownbits:
 ; SSE:       # %bb.0:
@@ -32,11 +31,20 @@ define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 ; SSE-NEXT:    pand %xmm4, %xmm2
 ; SSE-NEXT:    pand %xmm4, %xmm3
 ; SSE-NEXT:    pavgw %xmm2, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE-NEXT:    pand %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    packuswb %xmm3, %xmm0
 ; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pavgw_knownbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm4 = [31,31,31,31,31,31,31,31]
+; AVX-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm4, %xmm1, %xmm1
+; AVX-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm4, %xmm2, %xmm1
+; AVX-NEXT:    vpand %xmm4, %xmm3, %xmm2
+; AVX-NEXT:    vpavgw %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %m0 = and <8 x i16> %a0, <i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31>
   %m1 = and <8 x i16> %a1, <i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31>
   %m2 = and <8 x i16> %a2, <i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31>

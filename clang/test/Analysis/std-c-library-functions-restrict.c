@@ -19,6 +19,6 @@ void __test_restrict_param_2(void *restrict p);
 
 // Must have at least one call expression to initialize the summary map.
 int bar(void);
-void foo() {
+void foo(void) {
   bar();
 }

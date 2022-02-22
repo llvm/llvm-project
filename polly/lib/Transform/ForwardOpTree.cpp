@@ -1149,12 +1149,6 @@ Pass *polly::createForwardOpTreeWrapperPass() {
   return new ForwardOpTreeWrapperPass();
 }
 
-INITIALIZE_PASS_BEGIN(ForwardOpTreeWrapperPass, "polly-optree",
-                      "Polly - Forward operand tree", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(ForwardOpTreeWrapperPass, "polly-optree",
-                    "Polly - Forward operand tree", false, false)
-
 llvm::PreservedAnalyses ForwardOpTreePass::run(Scop &S,
                                                ScopAnalysisManager &SAM,
                                                ScopStandardAnalysisResults &SAR,
@@ -1167,3 +1161,9 @@ ForwardOpTreePrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
                               ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
   return runForwardOpTreeUsingNPM(S, SAM, SAR, U, &OS);
 }
+
+INITIALIZE_PASS_BEGIN(ForwardOpTreeWrapperPass, "polly-optree",
+                      "Polly - Forward operand tree", false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(ForwardOpTreeWrapperPass, "polly-optree",
+                    "Polly - Forward operand tree", false, false)

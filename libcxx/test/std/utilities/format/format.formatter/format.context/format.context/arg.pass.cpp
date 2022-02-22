@@ -34,6 +34,7 @@ void test() {
   const std::basic_format_context context =
       test_format_context_create(OutIt{output}, args);
   LIBCPP_ASSERT(args.__size() == 4);
+  ASSERT_NOEXCEPT(context.arg(0));
   for (size_t i = 0, e = args.__size(); i != e; ++i) {
     assert(context.arg(i));
   }
@@ -51,7 +52,7 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>();
 #endif
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#ifndef TEST_HAS_NO_CHAR8_T
   test<std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>();
 #endif
 #ifndef TEST_HAS_NO_UNICODE_CHARS

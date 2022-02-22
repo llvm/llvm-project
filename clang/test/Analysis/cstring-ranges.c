@@ -7,7 +7,7 @@
 
 char *strcpy(char *, const char *);
 
-void foo() {
+void foo(void) {
   char *a = 0, *b = 0;
   strcpy(a, b);
 }

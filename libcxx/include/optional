@@ -158,11 +158,10 @@ template<class T>
 
 */
 
+#include <__assert>
 #include <__availability>
 #include <__concepts/invocable.h>
 #include <__config>
-#include <__debug>
-#include <__functional_base>
 #include <compare>
 #include <functional>
 #include <initializer_list>
@@ -171,6 +170,11 @@ template<class T>
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1039,7 +1043,7 @@ public:
 
 #if _LIBCPP_STD_VER > 20
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto and_then(_Func&& __f) & {
     using _Up = invoke_result_t<_Func, value_type&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1050,7 +1054,7 @@ public:
   }
 
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto and_then(_Func&& __f) const& {
     using _Up = invoke_result_t<_Func, const value_type&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1061,7 +1065,7 @@ public:
   }
 
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto and_then(_Func&& __f) && {
     using _Up = invoke_result_t<_Func, value_type&&>;
     static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
@@ -1083,7 +1087,7 @@ public:
   }
 
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto transform(_Func&& __f) & {
     using _Up = remove_cv_t<invoke_result_t<_Func, value_type&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
@@ -1098,7 +1102,7 @@ public:
   }
 
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto transform(_Func&& __f) const& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const value_type&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
@@ -1113,7 +1117,7 @@ public:
   }
 
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto transform(_Func&& __f) && {
     using _Up = remove_cv_t<invoke_result_t<_Func, value_type&&>>;
     static_assert(!is_array_v<_Up>, "Result of f(std::move(value())) should not be an Array");
@@ -1128,7 +1132,7 @@ public:
   }
 
   template<class _Func>
-  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto transform(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const value_type&&>>;
     static_assert(!is_array_v<_Up>, "Result of f(std::move(value())) should not be an Array");

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/linux/app.h"
-#include "include/sys/mman.h"
-#include "include/sys/syscall.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/string/memcpy.h"
 
@@ -16,6 +14,8 @@
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 #include <stdint.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
 
 extern "C" int main(int, char **, char **);
 
@@ -29,9 +29,6 @@ static constexpr long mmapSyscallNumber = SYS_mmap;
 #error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
 #endif
 
-// TODO: Declare var an extern var in config/linux/app.h so that other
-// libc functions can make use of the application wide information. For
-// example, mmap can pick up the page size from here.
 AppProperties app;
 
 // TODO: The function is x86_64 specific. Move it to config/linux/app.h
@@ -109,6 +106,7 @@ extern "C" void _start() {
   // value. We step over it (the "+ 1" below) to get to the env values.
   uint64_t *env_ptr = args->argv + args->argc + 1;
   uint64_t *env_end_marker = env_ptr;
+  app.envPtr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
 

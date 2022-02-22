@@ -52,8 +52,8 @@ def relative_path(path):
 def is_still_public(path):
     rp = relative_path(path)
     return not rp.startswith('__support') and rp not in [
-        "__bsd_locale_defaults.h", "__bsd_locale_fallbacks.h", "__config",
-        "__config_site.in", "__debug", "__hash_table", "__functional_base",
+        "__assert", "__bsd_locale_defaults.h", "__bsd_locale_fallbacks.h", "__config",
+        "__config_site.in", "__debug", "__hash_table",
         "__libcpp_version", "__threading_support", "__tree", "__undef_macros"
     ]
 

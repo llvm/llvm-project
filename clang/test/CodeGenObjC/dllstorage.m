@@ -124,7 +124,7 @@ id f(Q *q) {
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
-int g() {
+int g(void) {
   @autoreleasepool {
     M *mi = [M new];
     @try {

@@ -310,7 +310,8 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
       OMPT_VERBOSE_INIT_PRINT("Opening %s... ", fname);
       HMODULE h = LoadLibrary(fname);
       if (!h) {
-        OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: Error %u\n", GetLastError());
+        OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: Error %u\n",
+                                          (unsigned)GetLastError());
       } else {
         OMPT_VERBOSE_INIT_CONTINUED_PRINT("Success. \n");
         OMPT_VERBOSE_INIT_PRINT("Searching for ompt_start_tool in %s... ",
@@ -318,7 +319,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
         start_tool = (ompt_start_tool_t)GetProcAddress(h, "ompt_start_tool");
         if (!start_tool) {
           OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: Error %u\n",
-                                            GetLastError());
+                                            (unsigned)GetLastError());
         } else
 #else
 #error Activation of OMPT is not supported on this platform.

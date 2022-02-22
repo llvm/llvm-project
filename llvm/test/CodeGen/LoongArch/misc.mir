@@ -90,16 +90,16 @@ body: |
 ---
 # CHECK-LABEL: test_BSTRINS_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 1 0 0 1 1 1 0 0 0 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bstrins.w	a0, a1, 7, 2
+# CHECK-ASM: bstrins.w	$a0, $a1, 7, 2
 name: test_BSTRINS_W
 body: |
   bb.0:
-    $r4 = BSTRINS_W $r5, 7, 2
+    $r4 = BSTRINS_W $r4, $r5, 7, 2
 ...
 ---
 # CHECK-LABEL: test_BSTRPICK_W:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 1 1 0 1 0 1 0 1 0 0 1 0 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bstrpick.w	a0, a1, 10, 4
+# CHECK-ASM: bstrpick.w	$a0, $a1, 10, 4
 name: test_BSTRPICK_W
 body: |
   bb.0:
@@ -118,16 +118,16 @@ body: |
 ---
 # CHECK-LABEL: test_BSTRINS_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 1 0 0 0 0 1 1 1 0 0 0 0 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bstrins.d	a0, a1, 7, 2
+# CHECK-ASM: bstrins.d	$a0, $a1, 7, 2
 name: test_BSTRINS_D
 body: |
   bb.0:
-    $r4 = BSTRINS_D $r5, 7, 2
+    $r4 = BSTRINS_D $r4, $r5, 7, 2
 ...
 ---
 # CHECK-LABEL: test_BSTRPICK_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 1 1 1 0 0 1 1 1 0 1 0 1 1 0 0 0 1 0 1 0 0 1 0 0
-# CHECK-ASM: bstrpick.d	a0, a1, 39, 22
+# CHECK-ASM: bstrpick.d	$a0, $a1, 39, 22
 name: test_BSTRPICK_D
 body: |
   bb.0:
@@ -146,7 +146,7 @@ body: |
 ---
 # CHECK-LABEL: test_ASRTLE_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 1 0 0 1 0 0 0 0 0 0 0
-# CHECK-ASM: asrtle.d	a0, a1
+# CHECK-ASM: asrtle.d	$a0, $a1
 name: test_ASRTLE_D
 body: |
   bb.0:
@@ -155,7 +155,7 @@ body: |
 ---
 # CHECK-LABEL: test_ASRTGT_D:
 # CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 1 0 1 0 0 1 0 0 0 0 0 0 0
-# CHECK-ASM: asrtgt.d	a0, a1
+# CHECK-ASM: asrtgt.d	$a0, $a1
 name: test_ASRTGT_D
 body: |
   bb.0:
@@ -174,7 +174,7 @@ body: |
 ---
 # CHECK-LABEL: test_PRELD:
 # CHECK-ENC: 0 0 1 0 1 0 1 0 1 1 0 0 0 0 0 0 0 1 0 1 0 1 0 0 1 0 0 0 1 1 1 1
-# CHECK-ASM: preld	15, a0, 21
+# CHECK-ASM: preld	15, $a0, 21
 name: test_PRELD
 body: |
   bb.0:
@@ -193,7 +193,7 @@ body: |
 ---
 # CHECK-LABEL: test_PRELDX:
 # CHECK-ENC: 0 0 1 1 1 0 0 0 0 0 1 0 1 1 0 0 0 0 0 1 0 1 0 0 1 0 0 0 1 0 1 1
-# CHECK-ASM: preldx	11, a0, a1
+# CHECK-ASM: preldx	11, $a0, $a1
 name: test_PRELDX
 body: |
   bb.0:

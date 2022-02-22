@@ -10,10 +10,13 @@
 #ifndef _LIBCPP__HASH_TABLE
 #define _LIBCPP__HASH_TABLE
 
+#include <__algorithm/max.h>
+#include <__algorithm/min.h>
+#include <__assert>
 #include <__bits> // __libcpp_clz
 #include <__config>
 #include <__debug>
-#include <algorithm>
+#include <__functional/hash.h>
 #include <cmath>
 #include <initializer_list>
 #include <iterator>
@@ -44,7 +47,7 @@ template <class ..._Args>
 struct __is_hash_value_type : false_type {};
 
 template <class _One>
-struct __is_hash_value_type<_One> : __is_hash_value_type_imp<typename __uncvref<_One>::type> {};
+struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__uncvref_t<_One> > {};
 
 _LIBCPP_FUNC_VIS
 size_t __next_prime(size_t __n);

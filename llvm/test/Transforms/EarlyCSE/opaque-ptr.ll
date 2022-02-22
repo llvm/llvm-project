@@ -30,3 +30,14 @@ define i32 @different_types_store(ptr %p, i32 %a) {
   %sub = sub i32 %a, %v2.c
   ret i32 %sub
 }
+
+define void @dse(ptr %p, i32 %i1, i8 %i2) {
+; CHECK-LABEL: @dse(
+; CHECK-NEXT:    store i32 [[I1:%.*]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i8 [[I2:%.*]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 %i1, ptr %p
+  store i8 %i2, ptr %p
+  ret void
+}

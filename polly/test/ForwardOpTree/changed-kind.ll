@@ -43,12 +43,5 @@ lor.end93:
 
 
 ; CHECK: Statistics {
-; CHECK:     Reloads: 1
-; CHECK: }
-
-; CHECK: After statements {
-; CHECK:     Stmt_lor_end93
-; CHECK-NEXT:        ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:            { Stmt_lor_end93[] -> MemRef3[] };
-; CHECK-NEXT:       new: { Stmt_lor_end93[] -> MemRef_c[0] };
+; CHECK:     Reloads: 0
 ; CHECK: }

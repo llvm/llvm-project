@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int sign(int x)
+TEST_CONSTEXPR_CXX20 int sign(int x)
 {
     if (x == 0)
         return 0;
@@ -28,7 +28,7 @@ int sign(int x)
 }
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s, typename S::size_type pos1, typename S::size_type n1,
      SV sv, int x)
 {
@@ -51,7 +51,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
 }
 
 template <class S, class SV>
-void test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
     test(S(""), 0, 0, SV(""), 0);
     test(S(""), 0, 0, SV("abcde"), -5);
@@ -156,7 +156,7 @@ void test0()
 }
 
 template <class S, class SV>
-void test1()
+TEST_CONSTEXPR_CXX20 void test1()
 {
     test(S("abcde"), 6, 0, SV(""), 0);
     test(S("abcde"), 6, 0, SV("abcde"), 0);
@@ -261,7 +261,7 @@ void test1()
 }
 
 template <class S, class SV>
-void test2()
+TEST_CONSTEXPR_CXX20 void test2()
 {
     test(S("abcdefghijklmnopqrst"), 0, 0, SV(""), 0);
     test(S("abcdefghijklmnopqrst"), 0, 0, SV("abcde"), -5);
@@ -361,23 +361,32 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, SV("abcdefghijklmnopqrst"), 0);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     typedef std::string_view SV;
     test0<S, SV>();
     test1<S, SV>();
     test2<S, SV>();
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     typedef std::string_view SV;
     test0<S, SV>();
     test1<S, SV>();
     test2<S, SV>();
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

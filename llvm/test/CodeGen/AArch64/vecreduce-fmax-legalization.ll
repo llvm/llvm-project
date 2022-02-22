@@ -302,14 +302,14 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-FP-NEXT:    mvni v1.8h, #4, lsl #8
-; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[0], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #8
-; CHECK-FP-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[1], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #16
-; CHECK-FP-NEXT:    mov v0.h[4], v4.h[0]
+; CHECK-FP-NEXT:    mov v0.h[3], v3.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-FP-NEXT:    mov v0.h[4], v4.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[5], v5.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[7], v7.h[0]

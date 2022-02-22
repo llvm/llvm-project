@@ -1318,7 +1318,7 @@ void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
   isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
   Index = isl_ast_expr_address_of(Index);
   Value *GlobalAddr = ExprBuilder.create(Index);
-  Type *IndexTy = cast<PointerType>(GlobalAddr->getType())->getElementType();
+  Type *IndexTy = GlobalAddr->getType()->getPointerElementType();
 
   if (KernelStmt->u.c.read) {
     LoadInst *Load = Builder.CreateLoad(IndexTy, GlobalAddr, "shared.read");
@@ -3445,7 +3445,7 @@ public:
       for (Value *Op : Inst.operands())
         // Look for (<func-type>*) among operands of Inst
         if (auto PtrTy = dyn_cast<PointerType>(Op->getType())) {
-          if (isa<FunctionType>(PtrTy->getElementType())) {
+          if (isa<FunctionType>(PtrTy->getPointerElementType())) {
             LLVM_DEBUG(dbgs()
                        << Inst << " has illegal use of function in kernel.\n");
             return true;

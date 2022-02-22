@@ -14,7 +14,7 @@
 @property C *c;
 @end
 
-J *conjure_J();
+J *conjure_J(void);
 
 @implementation I
 - (void)bar {

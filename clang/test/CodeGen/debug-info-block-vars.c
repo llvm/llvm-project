@@ -13,7 +13,7 @@
 // CHECK-OPT-NOT: alloca
 // CHECK-OPT: call void @llvm.dbg.value(metadata i8* %.block_descriptor,
 // CHECK-OPT-SAME:                      metadata !DIExpression())
-void f() {
+void f(void) {
   a(^{
     b();
   });

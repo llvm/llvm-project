@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX900,GFX900-MUBUF %s
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -amdgpu-sroa=0 -mattr=-promote-alloca,+sram-ecc -verify-machineinstrs < %s | FileCheck --check-prefix=GFX906 %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck --check-prefix=GFX803 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs --amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GFX900,GFX900-FLATSCR %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs --mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GFX900,GFX900-FLATSCR %s
 
 define <2 x i16> @load_local_lo_v2i16_undeflo(i16 addrspace(3)* %in) #0 {
 ; GFX900-LABEL: load_local_lo_v2i16_undeflo:

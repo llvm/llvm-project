@@ -405,7 +405,7 @@ void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func,
   if (HiddenArgNumBytes >= 32) {
     if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenPrintfBuffer);
-    else if (Func.getParent()->getFunction("__ockl_hostcall_internal")) {
+    else if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
       // The printf runtime binding pass should have ensured that hostcall and
       // printf are not used in the same module.
       assert(!Func.getParent()->getNamedMetadata("llvm.printf.fmts"));
@@ -794,6 +794,7 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
                                               msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned HiddenArgNumBytes = ST.getImplicitArgNumBytes(Func);
   if (!HiddenArgNumBytes)
@@ -822,7 +823,7 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
     if (M->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
                     Args);
-    else if (M->getModuleFlag("amdgpu_hostcall")) {
+    else if (MFI.hasHostcallPtr()) {
       // The printf runtime binding pass should have ensured that hostcall and
       // printf are not used in the same module.
       assert(!M->getNamedMetadata("llvm.printf.fmts"));
@@ -876,6 +877,12 @@ MetadataStreamerV3::getHSAKernelProps(const MachineFunction &MF,
       Kern.getDocument()->getNode(STM.getWavefrontSize());
   Kern[".sgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumSGPR);
   Kern[".vgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumVGPR);
+
+  // Only add AGPR count to metadata for supported devices
+  if (STM.hasMAIInsts()) {
+    Kern[".agpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumAccVGPR);
+  }
+
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
   Kern[".sgpr_spill_count"] =
@@ -973,6 +980,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const Module *M = Func.getParent();
   auto &DL = M->getDataLayout();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
   auto Int64Ty = Type::getInt64Ty(Func.getContext());
   auto Int32Ty = Type::getInt32Ty(Func.getContext());
@@ -1011,7 +1019,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   } else
     Offset += 8; // Skipped.
 
-  if (M->getModuleFlag("amdgpu_hostcall")) {
+  if (MFI.hasHostcallPtr()) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                   Args);
   } else
@@ -1041,7 +1049,6 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   } else
     Offset += 8; // Skipped.
 
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   if (MFI.hasQueuePtr())
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }

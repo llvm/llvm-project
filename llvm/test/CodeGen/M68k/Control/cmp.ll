@@ -297,7 +297,7 @@ define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
 ; CHECK-NEXT:    move.l (16,%sp), %a0
 ; CHECK-NEXT:    move.b (15,%sp), %d2
 ; CHECK-NEXT:    and.l #255, %d2
-; CHECK-NEXT:    add.l %d2, %d1
+; CHECK-NEXT:    add.l %d1, %d2
 ; CHECK-NEXT:    sne (%a0)
 ; CHECK-NEXT:    cmpi.l #0, %d0
 ; CHECK-NEXT:    lea (d,%pc), %a0

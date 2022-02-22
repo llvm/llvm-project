@@ -74,31 +74,6 @@ getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
-/// Parse a reshape-like op, i.e. linalg::(Tensor)ExpandShapeOp,
-/// linalg::(Tensor)CollapseShapeOp.
-ParseResult parseReshapeLikeOp(OpAsmParser &parser, OperationState &result);
-
-/// Print a reshape-like op, i.e. linalg::(Tensor)ExpandShapeOp,
-/// linalg::(Tensor)CollapseShapeOp.
-template <typename ReshapeLikeOp>
-void printReshapeOp(OpAsmPrinter &p, ReshapeLikeOp op) {
-  p << ' ' << op.src() << " [";
-
-  llvm::interleaveComma(op.reassociation(), p, [&](const Attribute &attr) {
-    p << '[';
-    auto arrayAttr = attr.template cast<ArrayAttr>();
-    llvm::interleaveComma(arrayAttr, p, [&](const Attribute &attr) {
-      p << attr.cast<IntegerAttr>().getInt();
-    });
-    p << ']';
-  });
-
-  p << "] ";
-  p.printOptionalAttrDict(op->getAttrs(),
-                          /*elidedAttrs=*/{getReassociationAttrName()});
-  p << ": " << op.src().getType() << " into " << op.getType();
-}
-
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {

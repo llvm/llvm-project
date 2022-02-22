@@ -33,7 +33,7 @@ test(InputIterator f, InputIterator l, const Allocator& a)
     C d(f, l, a);
     assert(d.get_allocator() == a);
     assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
-    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
         assert(*i == *f);
 }

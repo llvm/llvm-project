@@ -145,6 +145,8 @@ STATISTIC(NumTripCountsNotComputed,
           "Number of loops without predictable loop counts");
 STATISTIC(NumBruteForceTripCountsComputed,
           "Number of loops with trip counts computed by force");
+STATISTIC(NumFoundPhiSCCs,
+          "Number of found Phi-composed strongly connected components");
 
 static cl::opt<unsigned>
 MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
@@ -230,6 +232,12 @@ static cl::opt<bool> UseExpensiveRangeSharpening(
     cl::init(false),
     cl::desc("Use more powerful methods of sharpening expression ranges. May "
              "be costly in terms of compile time"));
+
+static cl::opt<unsigned> MaxPhiSCCAnalysisSize(
+    "scalar-evolution-max-scc-analysis-depth", cl::Hidden,
+    cl::desc("Maximum amount of nodes to process while searching SCEVUnknown "
+             "Phi strongly connected components"),
+    cl::init(8));
 
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
@@ -5887,6 +5895,42 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   return getUnknown(PN);
 }
 
+bool SCEVMinMaxExprContains(const SCEV *Root, const SCEV *OperandToFind,
+                            SCEVTypes RootKind) {
+  struct FindClosure {
+    const SCEV *OperandToFind;
+    const SCEVTypes RootKind; // Must be a sequential min/max expression.
+    const SCEVTypes NonSequentialRootKind; // Non-seq variant of RootKind.
+
+    bool Found = false;
+
+    bool canRecurseInto(SCEVTypes Kind) const {
+      // We can only recurse into the SCEV expression of the same effective type
+      // as the type of our root SCEV expression, and into zero-extensions.
+      return RootKind == Kind || NonSequentialRootKind == Kind ||
+             scZeroExtend == Kind;
+    };
+
+    FindClosure(const SCEV *OperandToFind, SCEVTypes RootKind)
+        : OperandToFind(OperandToFind), RootKind(RootKind),
+          NonSequentialRootKind(
+              SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(
+                  RootKind)) {}
+
+    bool follow(const SCEV *S) {
+      Found = S == OperandToFind;
+
+      return !isDone() && canRecurseInto(S->getSCEVType());
+    }
+
+    bool isDone() const { return Found; }
+  };
+
+  FindClosure FC(OperandToFind, RootKind);
+  visitAll(Root, FC);
+  return FC.Found;
+}
+
 const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     Instruction *I, ICmpInst *Cond, Value *TrueVal, Value *FalseVal) {
   // Try to match some simple smax or umax patterns.
@@ -5952,31 +5996,36 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     }
     break;
   case ICmpInst::ICMP_NE:
-    // n != 0 ? n+x : 1+x  ->  umax(n, 1)+x
-    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType()) &&
-        isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero()) {
-      const SCEV *One = getOne(I->getType());
-      const SCEV *LS = getNoopOrZeroExtend(getSCEV(LHS), I->getType());
-      const SCEV *LA = getSCEV(TrueVal);
-      const SCEV *RA = getSCEV(FalseVal);
-      const SCEV *LDiff = getMinusSCEV(LA, LS);
-      const SCEV *RDiff = getMinusSCEV(RA, One);
-      if (LDiff == RDiff)
-        return getAddExpr(getUMaxExpr(One, LS), LDiff);
-    }
-    break;
+    // x != 0 ? x+y : C+y  ->  x == 0 ? C+y : x+y
+    std::swap(TrueVal, FalseVal);
+    LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_EQ:
-    // n == 0 ? 1+x : n+x  ->  umax(n, 1)+x
+    // x == 0 ? C+y : x+y  ->  umax(x, C)+y   iff C u<= 1
     if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType()) &&
         isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero()) {
-      const SCEV *One = getOne(I->getType());
-      const SCEV *LS = getNoopOrZeroExtend(getSCEV(LHS), I->getType());
-      const SCEV *LA = getSCEV(TrueVal);
-      const SCEV *RA = getSCEV(FalseVal);
-      const SCEV *LDiff = getMinusSCEV(LA, One);
-      const SCEV *RDiff = getMinusSCEV(RA, LS);
-      if (LDiff == RDiff)
-        return getAddExpr(getUMaxExpr(One, LS), LDiff);
+      const SCEV *X = getNoopOrZeroExtend(getSCEV(LHS), I->getType());
+      const SCEV *TrueValExpr = getSCEV(TrueVal);    // C+y
+      const SCEV *FalseValExpr = getSCEV(FalseVal);  // x+y
+      const SCEV *Y = getMinusSCEV(FalseValExpr, X); // y = (x+y)-x
+      const SCEV *C = getMinusSCEV(TrueValExpr, Y);  // C = (C+y)-y
+      if (isa<SCEVConstant>(C) && cast<SCEVConstant>(C)->getAPInt().ule(1))
+        return getAddExpr(getUMaxExpr(X, C), Y);
+    }
+    // x == 0 ? 0 : umin    (..., x, ...)  ->  umin_seq(x, umin    (...))
+    // x == 0 ? 0 : umin_seq(..., x, ...)  ->  umin_seq(x, umin_seq(...))
+    // x == 0 ? 0 : umin    (..., umin_seq(..., x, ...), ...)
+    //                    ->  umin_seq(x, umin (..., umin_seq(...), ...))
+    if (isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero() &&
+        isa<ConstantInt>(TrueVal) && cast<ConstantInt>(TrueVal)->isZero()) {
+      const SCEV *X = getSCEV(LHS);
+      while (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(X))
+        X = ZExt->getOperand();
+      if (getTypeSizeInBits(X->getType()) <= getTypeSizeInBits(I->getType())) {
+        const SCEV *FalseValExpr = getSCEV(FalseVal);
+        if (SCEVMinMaxExprContains(FalseValExpr, X, scSequentialUMinExpr))
+          return getUMinExpr(getNoopOrZeroExtend(X, I->getType()), FalseValExpr,
+                             /*Sequential=*/true);
+      }
     }
     break;
   default:
@@ -6525,29 +6574,130 @@ ScalarEvolution::getRangeRef(const SCEV *S,
           RangeType);
 
     // A range of Phi is a subset of union of all ranges of its input.
-    if (const PHINode *Phi = dyn_cast<PHINode>(U->getValue())) {
-      // Make sure that we do not run over cycled Phis.
-      if (PendingPhiRanges.insert(Phi).second) {
-        ConstantRange RangeFromOps(BitWidth, /*isFullSet=*/false);
-        for (auto &Op : Phi->operands()) {
-          auto OpRange = getRangeRef(getSCEV(Op), SignHint);
-          RangeFromOps = RangeFromOps.unionWith(OpRange);
-          // No point to continue if we already have a full set.
-          if (RangeFromOps.isFullSet())
-            break;
-        }
-        ConservativeResult =
-            ConservativeResult.intersectWith(RangeFromOps, RangeType);
-        bool Erased = PendingPhiRanges.erase(Phi);
-        assert(Erased && "Failed to erase Phi properly?");
-        (void) Erased;
-      }
-    }
+    if (const PHINode *Phi = dyn_cast<PHINode>(U->getValue()))
+      if (!PendingPhiRanges.count(Phi))
+        sharpenPhiSCCRange(Phi, ConservativeResult, SignHint);
 
     return setRange(U, SignHint, std::move(ConservativeResult));
   }
 
   return setRange(S, SignHint, std::move(ConservativeResult));
+}
+
+bool ScalarEvolution::collectSCC(const PHINode *Phi,
+                                 SmallVectorImpl<const PHINode *> &SCC) const {
+  assert(SCC.empty() && "Precondition: SCC should be empty.");
+  auto Bail = [&]() {
+    SCC.clear();
+    SCC.push_back(Phi);
+    return false;
+  };
+  SmallPtrSet<const PHINode *, 4> Reachable;
+  {
+    // First, find all PHI nodes that are reachable from Phi.
+    SmallVector<const PHINode *, 4> Worklist;
+    Reachable.insert(Phi);
+    Worklist.push_back(Phi);
+    while (!Worklist.empty()) {
+      if (Reachable.size() > MaxPhiSCCAnalysisSize)
+        // Too many nodes to process. Assume that SCC is composed of Phi alone.
+        return Bail();
+      auto *Curr = Worklist.pop_back_val();
+      for (auto &Op : Curr->operands()) {
+        if (auto *PhiOp = dyn_cast<PHINode>(&*Op)) {
+          if (PendingPhiRanges.count(PhiOp))
+            // Do not want to deal with this situation, so conservatively bail.
+            return Bail();
+          if (Reachable.insert(PhiOp).second)
+            Worklist.push_back(PhiOp);
+        }
+      }
+    }
+  }
+  {
+    // Out of reachable nodes, find those from which Phi is also reachable. This
+    // defines a SCC.
+    SmallVector<const PHINode *, 4> Worklist;
+    SmallPtrSet<const PHINode *, 4> SCCSet;
+    SCCSet.insert(Phi);
+    SCC.push_back(Phi);
+    Worklist.push_back(Phi);
+    while (!Worklist.empty()) {
+      auto *Curr = Worklist.pop_back_val();
+      for (auto *User : Curr->users())
+        if (auto *PN = dyn_cast<PHINode>(User))
+          if (Reachable.count(PN) && SCCSet.insert(PN).second) {
+            Worklist.push_back(PN);
+            SCC.push_back(PN);
+          }
+    }
+  }
+  return true;
+}
+
+void
+ScalarEvolution::sharpenPhiSCCRange(const PHINode *Phi,
+                                    ConstantRange &ConservativeResult,
+                                    ScalarEvolution::RangeSignHint SignHint) {
+  // Collect strongly connected component (further on - SCC ) composed of Phis.
+  // Analyze all values that are incoming to this SCC (we call them roots).
+  // All SCC elements have range that is not wider than union of ranges of
+  // roots.
+  SmallVector<const PHINode *, 8> SCC;
+  if (collectSCC(Phi, SCC))
+    ++NumFoundPhiSCCs;
+
+  // Collect roots: inputs of SCC nodes that come from outside of SCC.
+  SmallPtrSet<Value *, 4> Roots;
+  const SmallPtrSet<const PHINode *, 8> SCCSet(SCC.begin(), SCC.end());
+  for (auto *PN : SCC)
+    for (auto &Op : PN->operands()) {
+      auto *PhiInput = dyn_cast<PHINode>(Op);
+      if (!PhiInput || !SCCSet.count(PhiInput))
+        Roots.insert(Op);
+    }
+
+  // Mark SCC elements as pending to avoid infinite recursion if there is a
+  // cyclic dependency through some instruction that is not a PHI.
+  for (auto *PN : SCC) {
+    bool Inserted = PendingPhiRanges.insert(PN).second;
+    assert(Inserted && "PHI is already pending?");
+    (void)Inserted;
+  }
+
+  auto BitWidth = ConservativeResult.getBitWidth();
+  ConstantRange RangeFromRoots(BitWidth, /*isFullSet=*/false);
+  for (auto *Root : Roots) {
+    auto OpRange = getRangeRef(getSCEV(Root), SignHint);
+    RangeFromRoots = RangeFromRoots.unionWith(OpRange);
+    // No point to continue if we already have a full set.
+    if (RangeFromRoots.isFullSet())
+      break;
+  }
+  ConstantRange::PreferredRangeType RangeType =
+      SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED ? ConstantRange::Unsigned
+                                                       : ConstantRange::Signed;
+  ConservativeResult =
+      ConservativeResult.intersectWith(RangeFromRoots, RangeType);
+
+  DenseMap<const SCEV *, ConstantRange> &Cache =
+      SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED ? UnsignedRanges
+                                                       : SignedRanges;
+  // Entire SCC has the same range.
+  for (auto *PN : SCC) {
+    bool Erased = PendingPhiRanges.erase(PN);
+    assert(Erased && "Failed to erase Phi properly?");
+    (void)Erased;
+    auto *PNSCEV = getSCEV(const_cast<PHINode *>(PN));
+    auto I = Cache.find(PNSCEV);
+    if (I == Cache.end())
+      setRange(PNSCEV, SignHint, ConservativeResult);
+    else {
+      auto SharpenedRange =
+          I->second.intersectWith(ConservativeResult, RangeType);
+      setRange(PNSCEV, SignHint, SharpenedRange);
+    }
+  }
 }
 
 // Given a StartRange, Step and MaxBECount for an expression compute a range of
@@ -12866,8 +13016,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   if (!isa<SCEVCouldNotCompute>(PBT)) {
     OS << "Predicated backedge-taken count is " << *PBT << "\n";
     OS << " Predicates:\n";
-    SCEVUnionPredicate Dedup(Preds);
-    Dedup.print(OS, 4);
+    for (auto *P : Preds)
+      P->print(OS, 4);
   } else {
     OS << "Unpredictable predicated backedge-taken count. ";
   }
@@ -13642,8 +13792,7 @@ public:
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
     if (Pred) {
       if (auto *U = dyn_cast<SCEVUnionPredicate>(Pred)) {
-        auto ExprPreds = U->getPredicatesForExpr(Expr);
-        for (auto *Pred : ExprPreds)
+        for (auto *Pred : U->getPredicates())
           if (const auto *IPred = dyn_cast<SCEVComparePredicate>(Pred))
             if (IPred->getLHS() == Expr &&
                 IPred->getPredicate() == ICmpInst::ICMP_EQ)
@@ -13726,8 +13875,7 @@ private:
     for (auto *P : PredicatedRewrite->second){
       // Wrap predicates from outer loops are not supported.
       if (auto *WP = dyn_cast<const SCEVWrapPredicate>(P)) {
-        auto *AR = cast<const SCEVAddRecExpr>(WP->getExpr());
-        if (L != AR->getLoop())
+        if (L != WP->getExpr()->getLoop())
           return Expr;
       }
       if (!addOverflowAssumption(P))
@@ -13794,8 +13942,6 @@ bool SCEVComparePredicate::implies(const SCEVPredicate *N) const {
 
 bool SCEVComparePredicate::isAlwaysTrue() const { return false; }
 
-const SCEV *SCEVComparePredicate::getExpr() const { return LHS; }
-
 void SCEVComparePredicate::print(raw_ostream &OS, unsigned Depth) const {
   if (Pred == ICmpInst::ICMP_EQ)
     OS.indent(Depth) << "Equal predicate: " << *LHS << " == " << *RHS << "\n";
@@ -13811,7 +13957,7 @@ SCEVWrapPredicate::SCEVWrapPredicate(const FoldingSetNodeIDRef ID,
                                      IncrementWrapFlags Flags)
     : SCEVPredicate(ID, P_Wrap), AR(AR), Flags(Flags) {}
 
-const SCEV *SCEVWrapPredicate::getExpr() const { return AR; }
+const SCEVAddRecExpr *SCEVWrapPredicate::getExpr() const { return AR; }
 
 bool SCEVWrapPredicate::implies(const SCEVPredicate *N) const {
   const auto *Op = dyn_cast<SCEVWrapPredicate>(N);
@@ -13871,29 +14017,14 @@ bool SCEVUnionPredicate::isAlwaysTrue() const {
                 [](const SCEVPredicate *I) { return I->isAlwaysTrue(); });
 }
 
-ArrayRef<const SCEVPredicate *>
-SCEVUnionPredicate::getPredicatesForExpr(const SCEV *Expr) const {
-  auto I = SCEVToPreds.find(Expr);
-  if (I == SCEVToPreds.end())
-    return ArrayRef<const SCEVPredicate *>();
-  return I->second;
-}
-
 bool SCEVUnionPredicate::implies(const SCEVPredicate *N) const {
   if (const auto *Set = dyn_cast<SCEVUnionPredicate>(N))
     return all_of(Set->Preds,
                   [this](const SCEVPredicate *I) { return this->implies(I); });
 
-  auto ScevPredsIt = SCEVToPreds.find(N->getExpr());
-  if (ScevPredsIt == SCEVToPreds.end())
-    return false;
-  auto &SCEVPreds = ScevPredsIt->second;
-
-  return any_of(SCEVPreds,
+  return any_of(Preds,
                 [N](const SCEVPredicate *I) { return I->implies(N); });
 }
-
-const SCEV *SCEVUnionPredicate::getExpr() const { return nullptr; }
 
 void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
   for (auto Pred : Preds)
@@ -13907,14 +14038,6 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N) {
     return;
   }
 
-  if (implies(N))
-    return;
-
-  const SCEV *Key = N->getExpr();
-  assert(Key && "Only SCEVUnionPredicate doesn't have an "
-                " associated expression!");
-
-  SCEVToPreds[Key].push_back(N);
   Preds.push_back(N);
 }
 

@@ -65,8 +65,8 @@ Section,Description,Dependencies,Assignee,Complete
 | [iterator.cust.swap]",Zoe Carver,✅
 `[alg.req] <https://wg21.link/alg.req>`_: pt. 3,`indirectly_comparable <https://llvm.org/D116268>`_,[projected],Nikolas Klauser,✅
 `[alg.req] <https://wg21.link/alg.req>`_: pt. 4,"| `permutable <https://llvm.org/D119222>`_
-| mergeable
-| sortable",[iterator.concepts],Konstantin Varlamov,In progress
+| `mergeable <https://llvm.org/D119489>`_
+| `sortable <https://llvm.org/D119619>`_",[iterator.concepts],Konstantin Varlamov,✅
 `[std.iterator.tags] <https://wg21.link/std.iterator.tags>`_,"| `contiguous_iterator_tag <https://llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
 | `iterator_concept specialization for pointers <https://llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
 ",[iterator.traits],Eric Fiselier,✅
@@ -91,24 +91,24 @@ Section,Description,Dependencies,Assignee,Complete
 | [iterator.cust.move]
 | [default.sentinels]",Zoe Carver,✅
 `[stream.iterators] <https://wg21.link/stream.iterators>`_,"
-| Updates to istream_iterator
+| `Updates to istream_iterator <https://llvm.org/D119620>`_
 | `Updates to ostream_iterator <https://llvm.org/D103273>`_
-| Updates to istreambuf_iterator
+| `Updates to istreambuf_iterator <https://llvm.org/D119620>`_
 | `Updates to ostreambuf_iterator <https://llvm.org/D103273>`_
-",[default.sentinels],Various,In progress
+",[default.sentinels],Various,✅
 `[range.access] <https://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
 | `ranges::end <https://llvm.org/D100255>`_
 | `range::cbegin <https://llvm.org/D100255>`_
 | `ranges::cend <https://llvm.org/D100255>`_
-| ranges::rbegin
-| ranges::rend
-| ranges::crbegin
-| ranges::crend
+| `ranges::rbegin <https://llvm.org/D119057>`_
+| `ranges::rend <https://llvm.org/D119057>`_
+| `ranges::crbegin <https://llvm.org/D119057>`_
+| `ranges::crend <https://llvm.org/D119057>`_
 | `ranges::size <https://llvm.org/D101079>`_
 | `ranges::ssize <https://llvm.org/D101189>`_
 | `ranges::empty <https://llvm.org/D101193>`_
 | `ranges::data <https://llvm.org/D101476>`_
-| `ranges::cdata <https://llvm.org/D117044>`_",[iterator.concepts],Christopher Di Bella and Zoe Carver,In progress
+| `ranges::cdata <https://llvm.org/D117044>`_",[iterator.concepts],Various,✅
 `[range.range] <https://wg21.link/range.range>`_,"| `ranges::range <https://llvm.org/D100269>`_
 | `ranges::borrowed_range <https://llvm.org/D102426>`_
 | `ranges::enable_borrowed_range <https://llvm.org/D90999>`_

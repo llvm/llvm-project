@@ -30,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
   template<class>
@@ -67,8 +67,8 @@ namespace ranges {
 
     static constexpr bool _UseCache = !is_reference_v<_InnerRange>;
     using _Cache = _If<_UseCache, __non_propagating_cache<remove_cvref_t<_InnerRange>>, __empty_cache>;
-    [[no_unique_address]] _Cache __cache_;
-    _View __base_ = _View(); // TODO: [[no_unique_address]] makes clang crash! File a bug :)
+    _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cache_;
+    _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
   public:
     _LIBCPP_HIDE_FROM_ABI
@@ -76,13 +76,13 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr explicit join_view(_View __base)
-      : __base_(_VSTD::move(__base)) {}
+      : __base_(std::move(__base)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr _View base() && { return _VSTD::move(__base_); }
+    constexpr _View base() && { return std::move(__base_); }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() {
@@ -152,7 +152,7 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr __sentinel(__sentinel<!_Const> __s)
       requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
-      : __end_(_VSTD::move(__s.__end_)) {}
+      : __end_(std::move(__s.__end_)) {}
 
     template<bool _OtherConst>
       requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
@@ -223,8 +223,8 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __iterator(_Parent& __parent, _Outer __outer)
-      : __outer_(_VSTD::move(__outer))
-      , __parent_(_VSTD::addressof(__parent)) {
+      : __outer_(std::move(__outer))
+      , __parent_(std::addressof(__parent)) {
       __satisfy();
     }
 
@@ -233,8 +233,8 @@ namespace ranges {
       requires _Const &&
                convertible_to<iterator_t<_View>, _Outer> &&
                convertible_to<iterator_t<_InnerRange>, _Inner>
-      : __outer_(_VSTD::move(__i.__outer_))
-      , __inner_(_VSTD::move(__i.__inner_))
+      : __outer_(std::move(__i.__outer_))
+      , __inner_(std::move(__i.__inner_))
       , __parent_(__i.__parent_) {}
 
     _LIBCPP_HIDE_FROM_ABI
@@ -343,7 +343,7 @@ namespace ranges {
 
 #undef _CONSTEXPR_TERNARY
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

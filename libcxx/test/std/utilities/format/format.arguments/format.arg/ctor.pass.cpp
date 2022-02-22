@@ -34,7 +34,7 @@ void test() {
 void test() {
   test<char>();
   test<wchar_t>();
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#ifndef TEST_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
 #ifndef TEST_HAS_NO_UNICODE_CHARS

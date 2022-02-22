@@ -879,16 +879,17 @@ func @fold_reshape_trailing_unit_dims(%arg0: tensor<12x42x1x1xf32>)
 
 // -----
 
-func @no_fold_reshapes(%arg0 : tensor<?x?x?xf32>) -> tensor<?x?xf32> {
+func @fold_reshapes_unit_dims_in_middle(%arg0 : tensor<?x?x?xf32>) -> tensor<?x?xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3]]
       : tensor<?x?x?xf32> into tensor<?x?x1x?xf32>
   %1 = tensor.collapse_shape %0 [[0], [1, 2, 3]]
       : tensor<?x?x1x?xf32> into tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
-// CHECK-LABEL: func @no_fold_reshapes
-//       CHECK:   tensor.expand_shape
-//       CHECK:   tensor.collapse_shape
+// CHECK-LABEL: func @fold_reshapes_unit_dims_in_middle
+//  CHECK-SAME: (%[[ARG:.*]]: tensor<?x?x?xf32>
+//       CHECK: tensor.collapse_shape %[[ARG]] {{\[}}[0], [1, 2]]
+//  CHECK-SAME:   tensor<?x?x?xf32> into tensor<?x?xf32>
 
 // -----
 
@@ -1230,4 +1231,19 @@ func @splat_fold() -> tensor<4xf32> {
 
   // CHECK-NEXT: [[T:%.*]] = arith.constant dense<1.000000e+00> : tensor<4xf32>
   // CHECK-NEXT: return [[T]] : tensor<4xf32>
+}
+
+// -----
+
+// There was an issue in cast + insert_slice folding generating invalid ir.
+// https://github.com/llvm/llvm-project/issues/53099
+// CHECK-LABEL: func @insert_slice_cast
+func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
+  // CHECK: %[[CAST:.*]] = tensor.cast %{{.*}} : tensor<1x?xf32> to tensor<?x?xf32>
+  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x?xf32>
+  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[CAST]]
+  // CHECK-SAME: : tensor<?x?xf32> into tensor<?x?xf32>
+  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, %arg5] [%arg6, %arg7] : tensor<?x?xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RES]] : tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
 }

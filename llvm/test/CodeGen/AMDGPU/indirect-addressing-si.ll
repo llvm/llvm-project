@@ -176,7 +176,7 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 v[[INS:[0-9]+]], 0x41880000
 
 ; MOVREL: v_movreld_b32_e32 v[[ELT0]], v[[INS]]
-; MOVREL: buffer_store_dwordx4 v{{\[}}[[ELT0]]:[[ELT3]]{{\]}}
+; MOVREL: buffer_store_dwordx4 v[[[ELT0]]:[[ELT3]]]
 define amdgpu_kernel void @insert_w_offset(<16 x float> addrspace(1)* %out, i32 %in) {
 entry:
   %add = add i32 %in, 1
@@ -240,7 +240,7 @@ entry:
 ; IDXMODE-NEXT: v_mov_b32_e32 v[[ELT0:[0-9]+]], v{{[0-9]+}}
 ; IDXMODE-NEXT: s_set_gpr_idx_off
 
-; GCN: buffer_store_dwordx4 v{{\[}}[[ELT0]]:
+; GCN: buffer_store_dwordx4 v[[[ELT0]]:
 define amdgpu_kernel void @insert_wo_offset(<16 x float> addrspace(1)* %out, i32 %in) {
 entry:
   %ins = insertelement <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, float 17.0, i32 %in
@@ -424,7 +424,7 @@ bb:
 
 ; offset puts outside of superegister bounaries, so clamp to 1st element.
 ; GCN-LABEL: {{^}}extract_largest_inbounds_offset:
-; GCN-DAG: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]
+; GCN-DAG: buffer_load_dwordx4 v[[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]
 ; GCN-DAG: s_load_dword [[IDX0:s[0-9]+]]
 ; GCN-DAG: s_add_i32 [[IDX:s[0-9]+]], [[IDX0]], 15
 
@@ -446,7 +446,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}extract_out_of_bounds_offset:
-; GCN-DAG: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
+; GCN-DAG: buffer_load_dwordx4 v[[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]]
 ; GCN-DAG: s_load_dword [[IDX:s[0-9]+]]
 ; GCN: s_add_i32 [[ADD_IDX:s[0-9]+]], [[IDX]], 16
 

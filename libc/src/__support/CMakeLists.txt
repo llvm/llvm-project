@@ -53,5 +53,6 @@ add_header_library(
     integer_operations.h
 )
 
+add_subdirectory(File)
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)

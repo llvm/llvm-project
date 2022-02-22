@@ -52,11 +52,11 @@ define <8 x i8> @sdiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 
 ; VBITS_EQ_128-LABEL: sdiv_v8i8:
 ; VBITS_EQ_128:         sshll v1.8h, v1.8b, #0
-; VBITS_EQ_128-NEXT:    sshll v0.8h, v0.8b, #0
 ; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    sshll v0.8h, v0.8b, #0
 ; VBITS_EQ_128-NEXT:    sunpkhi z2.s, z1.h
-; VBITS_EQ_128-NEXT:    sunpkhi z3.s, z0.h
 ; VBITS_EQ_128-NEXT:    sunpklo z1.s, z1.h
+; VBITS_EQ_128-NEXT:    sunpkhi z3.s, z0.h
 ; VBITS_EQ_128-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_EQ_128-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; VBITS_EQ_128-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
@@ -350,8 +350,8 @@ define void @sdiv_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 define <4 x i16> @sdiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: sdiv_v4i16:
 ; CHECK: sshll v1.4s, v1.4h, #0
-; CHECK-NEXT: sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl4
+; CHECK-NEXT: sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT: sdivr [[DIV1:z[0-9]+]].s, [[PG1]]/m, [[OP2:z[0-9]+]].s, [[OP1:z[0-9]+]].s
 ; CHECK-NEXT: mov w8, v1.s[1]
 ; CHECK-NEXT: mov w9, v1.s[2]
@@ -364,8 +364,8 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 
 ; VBITS_EQ_128-LABEL: sdiv_v4i16:
 ; VBITS_EQ_128:         sshll v1.4s, v1.4h, #0
-; VBITS_EQ_128-NEXT:    sshll v0.4s, v0.4h, #0
 ; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    sshll v0.4s, v0.4h, #0
 ; VBITS_EQ_128-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; VBITS_EQ_128-NEXT:    xtn v0.4h, v0.4s
 ; VBITS_EQ_128-NEXT:    ret
@@ -744,11 +744,11 @@ define <8 x i8> @udiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 
 ; VBITS_EQ_128-LABEL: udiv_v8i8:
 ; VBITS_EQ_128:         ushll v1.8h, v1.8b, #0
-; VBITS_EQ_128-NEXT:    ushll v0.8h, v0.8b, #0
 ; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    ushll v0.8h, v0.8b, #0
 ; VBITS_EQ_128-NEXT:    uunpkhi z2.s, z1.h
-; VBITS_EQ_128-NEXT:    uunpkhi z3.s, z0.h
 ; VBITS_EQ_128-NEXT:    uunpklo z1.s, z1.h
+; VBITS_EQ_128-NEXT:    uunpkhi z3.s, z0.h
 ; VBITS_EQ_128-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_EQ_128-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; VBITS_EQ_128-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
@@ -1040,8 +1040,8 @@ define void @udiv_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 define <4 x i16> @udiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: udiv_v4i16:
 ; CHECK: ushll v1.4s, v1.4h, #0
-; CHECK-NEXT: ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl4
+; CHECK-NEXT: ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT: udivr [[DIV1:z[0-9]+]].s, [[PG1]]/m, [[OP2:z[0-9]+]].s, [[OP1:z[0-9]+]].s
 ; CHECK-NEXT: mov w8, v1.s[1]
 ; CHECK-NEXT: mov w9, v1.s[2]
@@ -1054,8 +1054,8 @@ define <4 x i16> @udiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 
 ; VBITS_EQ_128-LABEL: udiv_v4i16:
 ; VBITS_EQ_128:         ushll v1.4s, v1.4h, #0
-; VBITS_EQ_128-NEXT:    ushll v0.4s, v0.4h, #0
 ; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    ushll v0.4s, v0.4h, #0
 ; VBITS_EQ_128-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
 ; VBITS_EQ_128-NEXT:    xtn v0.4h, v0.4s
 ; VBITS_EQ_128-NEXT:    ret

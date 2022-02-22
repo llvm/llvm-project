@@ -10,8 +10,8 @@
 // CHECK: call {{.*}} @func
 // CHECK: define internal {{.*}}i32 @func(
 static int func();
-void bar() {
-  int func();
+void bar(void) {
+  int func(void);
   foo(func);
 }
 static int func(char** A, char ** B) {}

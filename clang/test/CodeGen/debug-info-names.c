@@ -6,5 +6,5 @@
 // DEFAULT-NOT: !DICompileUnit({{.*}}, nameTableKind:
 // GNU: !DICompileUnit({{.*}}, nameTableKind: GNU
 
-void f1() {
+void f1(void) {
 }

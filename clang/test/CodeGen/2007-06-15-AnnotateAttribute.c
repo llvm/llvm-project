@@ -14,7 +14,7 @@ int foo(int y __attribute__((annotate("LocalValAnnotation")))) {
   return y + x;
 }
 
-int main() {
+int main(void) {
   static int a __attribute__((annotate("GlobalValAnnotation")));
   a = foo(2);
   return 0;

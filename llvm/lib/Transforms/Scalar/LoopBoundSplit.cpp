@@ -33,26 +33,23 @@ using namespace PatternMatch;
 namespace {
 struct ConditionInfo {
   /// Branch instruction with this condition
-  BranchInst *BI;
+  BranchInst *BI = nullptr;
   /// ICmp instruction with this condition
-  ICmpInst *ICmp;
+  ICmpInst *ICmp = nullptr;
   /// Preciate info
-  ICmpInst::Predicate Pred;
+  ICmpInst::Predicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
   /// AddRec llvm value
-  Value *AddRecValue;
+  Value *AddRecValue = nullptr;
   /// Non PHI AddRec llvm value
   Value *NonPHIAddRecValue;
   /// Bound llvm value
-  Value *BoundValue;
+  Value *BoundValue = nullptr;
   /// AddRec SCEV
-  const SCEVAddRecExpr *AddRecSCEV;
+  const SCEVAddRecExpr *AddRecSCEV = nullptr;
   /// Bound SCEV
-  const SCEV *BoundSCEV;
+  const SCEV *BoundSCEV = nullptr;
 
-  ConditionInfo()
-      : BI(nullptr), ICmp(nullptr), Pred(ICmpInst::BAD_ICMP_PREDICATE),
-        AddRecValue(nullptr), BoundValue(nullptr), AddRecSCEV(nullptr),
-        BoundSCEV(nullptr) {}
+  ConditionInfo() = default;
 };
 } // namespace
 

@@ -19,6 +19,9 @@ namespace std
 {
 
 namespace ranges {
+  template <class I, class F>
+    struct in_fun_result; // since C++20
+
   template <class I1, class I2>
     struct in_in_result;     // since C++20
 
@@ -27,6 +30,14 @@ namespace ranges {
 
   template <class I, class O1, class O2>
     struct in_out_out_result; // since C++20
+
+  template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
+    indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>             // since C++20
+  constexpr I min_element(I first, S last, Comp comp = {}, Proj proj = {});
+
+  template<forward_range R, class Proj = identity,
+    indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less> // since C++20
+  constexpr borrowed_iterator_t<R> min_element(R&& r, Comp comp = {}, Proj proj = {});
 }
 
 template <class InputIterator, class Predicate>
@@ -661,13 +672,6 @@ template <class BidirectionalIterator>
 template <class BidirectionalIterator, class Compare>
     constexpr bool     // constexpr in C++20
     prev_permutation(BidirectionalIterator first, BidirectionalIterator last, Compare comp);
-
-namespace ranges {
-// [algorithms.results], algorithm result types
-template<class InputIterator, class OutputIterator>
-    struct in_out_result;
-}
-
 }  // std
 
 */
@@ -712,6 +716,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/generate.h>
 #include <__algorithm/generate_n.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/in_fun_result.h>
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/in_in_result.h>
 #include <__algorithm/in_out_out_result.h>
@@ -749,6 +754,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/pop_heap.h>
 #include <__algorithm/prev_permutation.h>
 #include <__algorithm/push_heap.h>
+#include <__algorithm/ranges_min_element.h>
 #include <__algorithm/ranges_swap_ranges.h>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_copy.h>

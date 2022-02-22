@@ -28,9 +28,9 @@ int expect_not_taken(int x) {
 
 int x;
 int y(void);
-void foo();
+void foo(void);
 
-void expect_value_side_effects() {
+void expect_value_side_effects(void) {
 // ALL-LABEL: define{{.*}} void @expect_value_side_effects()
 // ALL:       [[CALL:%.*]] = call i32 @y
 // O1:        [[SEXT:%.*]] = sext i32 [[CALL]] to i64
@@ -46,12 +46,12 @@ void expect_value_side_effects() {
 // There's no compare, so there's nothing to expect?
 // rdar://9330105
 void isigprocmask(void);
-long bar();
+long bar(void);
 
-int main() {
+int main(void) {
 // ALL-LABEL: define{{.*}} i32 @main()
 // ALL:       call void @isigprocmask()
-// ALL:       [[CALL:%.*]] = call i64 (...) @bar()
+// ALL:       [[CALL:%.*]] = call i64 @bar()
 // O1:        call i64 @llvm.expect.i64(i64 0, i64 [[CALL]])
 // O0-NOT:    @llvm.expect
 

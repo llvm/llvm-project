@@ -192,9 +192,12 @@ class Tool(TestToolBase):
             steps_changed = steps_str != prev_steps_str
             prev_steps_str = steps_str
 
-            # If this is the first pass, or something has changed, write a text
-            # file containing verbose information on the current status.
-            if current_limit == 0 or score_difference or steps_changed:
+            # If a results directory has been specified and this is the first
+            # pass or something has changed, write a text file containing
+            # verbose information on the current status.
+            if options.results_directory and (current_limit == 0 or
+                                              score_difference or
+                                              steps_changed):
                 file_name = '-'.join(
                     str(s) for s in [
                         'status', test_name, '{{:0>{}}}'.format(
@@ -231,31 +234,33 @@ class Tool(TestToolBase):
                 current_bisect_pass_summary[pass_info[1]].append(
                     score_difference)
 
-        per_pass_score_path = os.path.join(
-            options.results_directory,
-            '{}-per_pass_score.csv'.format(test_name))
+        if options.results_directory:
+            per_pass_score_path = os.path.join(
+                options.results_directory,
+                '{}-per_pass_score.csv'.format(test_name))
 
-        with open(per_pass_score_path, mode='w', newline='') as fp:
-            writer = csv.writer(fp, delimiter=',')
-            writer.writerow(['Source File', 'Pass', 'Score'])
+            with open(per_pass_score_path, mode='w', newline='') as fp:
+                writer = csv.writer(fp, delimiter=',')
+                writer.writerow(['Source File', 'Pass', 'Score'])
 
-            for path, pass_, score in per_pass_score:
-                writer.writerow([path, pass_, score])
-        self.context.o.blue('wrote "{}"\n'.format(per_pass_score_path))
+                for path, pass_, score in per_pass_score:
+                    writer.writerow([path, pass_, score])
+            self.context.o.blue('wrote "{}"\n'.format(per_pass_score_path))
 
-        pass_summary_path = os.path.join(
-            options.results_directory, '{}-pass-summary.csv'.format(test_name))
+            pass_summary_path = os.path.join(
+                options.results_directory, '{}-pass-summary.csv'.format(test_name))
 
-        self._write_pass_summary(pass_summary_path,
-                                 current_bisect_pass_summary)
+            self._write_pass_summary(pass_summary_path,
+                                     current_bisect_pass_summary)
 
     def _handle_results(self) -> ReturnCode:
         options = self.context.options
-        pass_summary_path = os.path.join(options.results_directory,
-                                         'overall-pass-summary.csv')
+        if options.results_directory:
+            pass_summary_path = os.path.join(options.results_directory,
+                                             'overall-pass-summary.csv')
 
-        self._write_pass_summary(pass_summary_path,
-                                 self._all_bisect_pass_summary)
+            self._write_pass_summary(pass_summary_path,
+                                     self._all_bisect_pass_summary)
         return ReturnCode.OK
 
     def _clang_opt_bisect_build(self, opt_bisect_limits):

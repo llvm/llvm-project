@@ -19,9 +19,12 @@ on:
     types:
       - created
       - edited
+  issues:
+    types:
+      - opened
 
 env:
-  COMMENT_BODY: ${{ github.event.comment.body }}
+  COMMENT_BODY: ${{ github.event.action == 'opened' && github.event.issue.body || github.event.comment.body  }}
 
 jobs:
   backport-commits:
@@ -30,7 +33,7 @@ jobs:
     if: >-
         (github.repository == 'llvm/llvm-project') &&
         !startswith(github.event.comment.body, '<!--IGNORE-->') &&
-        contains(github.event.comment.body, '/cherry-pick')
+        contains(github.event.action == 'opened' && github.event.issue.body || github.event.comment.body, '/cherry-pick')
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v2

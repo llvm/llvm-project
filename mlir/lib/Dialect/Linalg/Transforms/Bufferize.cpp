@@ -116,30 +116,6 @@ public:
   }
 };
 
-/// Conversion pattern that replaces `linalg.tensor_reshape` with
-/// `linalg.reshape`.
-template <typename TensorReshapeOp,
-          typename Adaptor = typename TensorReshapeOp::Adaptor>
-class BufferizeTensorReshapeOp : public OpConversionPattern<TensorReshapeOp> {
-public:
-  using OpConversionPattern<TensorReshapeOp>::OpConversionPattern;
-  using ReshapeOp = typename std::conditional_t<
-      std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value,
-      memref::ExpandShapeOp, memref::CollapseShapeOp>;
-
-  LogicalResult
-  matchAndRewrite(TensorReshapeOp op, Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<ReshapeOp>(op,
-                                           this->getTypeConverter()
-                                               ->convertType(op.getType())
-                                               .template cast<MemRefType>(),
-                                           adaptor.src(),
-                                           adaptor.reassociation());
-    return success();
-  }
-};
-
 /// Conversion pattern that bufferizes `linalg.fill` operation.
 class BufferizeFillOp : public OpConversionPattern<FillOp> {
 public:
@@ -191,120 +167,6 @@ public:
     return success();
   }
 };
-
-/// Convert `extract_slice %t [offsets][sizes][strides] -> %st` to an
-/// alloc + copy pattern.
-/// ```
-///   %a = alloc(sizes)
-///   %sv = subview %source [offsets][sizes][strides]
-///   memref.copy(%sv, %a)
-/// ```
-///
-/// This pattern is arguable a std pattern once memref::CopyOp becomes
-/// std::CopyOp.
-class ExtractSliceOpConverter
-    : public OpConversionPattern<tensor::ExtractSliceOp> {
-public:
-  using OpConversionPattern<tensor::ExtractSliceOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(tensor::ExtractSliceOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Value sourceMemref = adaptor.source();
-    assert(sourceMemref.getType().isa<MemRefType>());
-
-    MemRefType subviewMemRefType =
-        getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
-    // op.sizes() capture exactly the dynamic alloc operands matching the
-    // subviewMemRefType thanks to subview/slice canonicalization and
-    // verification.
-    Value alloc = rewriter.create<memref::AllocOp>(
-        op.getLoc(), subviewMemRefType, op.sizes());
-    Value subView = rewriter.create<memref::SubViewOp>(
-        op.getLoc(), sourceMemref, op.getMixedOffsets(), op.getMixedSizes(),
-        op.getMixedStrides());
-    rewriter.create<memref::CopyOp>(op.getLoc(), subView, alloc);
-    rewriter.replaceOp(op, alloc);
-    return success();
-  }
-};
-
-/// Convert `insert_slice %source into %dest [offsets][sizes][strides] ->
-/// %t` to an buffer_cast + subview + copy + tensor_load pattern.
-/// buffer_cast and tensor_load are inserted automatically by the
-/// conversion infra:
-/// ```
-///   %sv = subview %dest [offsets][sizes][strides]
-///   memref.copy(%source, %sv)
-///   // replace with %dest
-/// ```
-///
-/// This pattern is arguable a std pattern once memref::CopyOp becomes
-/// std::CopyOp.
-class InsertSliceOpConverter
-    : public OpConversionPattern<tensor::InsertSliceOp> {
-public:
-  using OpConversionPattern<tensor::InsertSliceOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(tensor::InsertSliceOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Value sourceMemRef = adaptor.source();
-    assert(sourceMemRef.getType().isa<MemRefType>());
-
-    // For now, be conservative and copy the converted input memref.
-    // In general, the converted input memref here could be aliased or could
-    // point into constant memory, so mutating it would lead to miscompilations.
-    Value destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
-    assert(destMemRef.getType().isa<MemRefType>());
-
-    // Take a subview to copy the small memref.
-    Value subview = rewriter.create<memref::SubViewOp>(
-        op.getLoc(), destMemRef, op.getMixedOffsets(), op.getMixedSizes(),
-        op.getMixedStrides());
-    // Copy the small memref.
-    rewriter.create<memref::CopyOp>(op.getLoc(), sourceMemRef, subview);
-    rewriter.replaceOp(op, destMemRef);
-    return success();
-  }
-};
-
-class VectorTransferReadOpConverter
-    : public OpConversionPattern<vector::TransferReadOp> {
-public:
-  using OpConversionPattern<vector::TransferReadOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::TransferReadOp readOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (readOp.getShapedType().isa<MemRefType>())
-      return failure();
-    rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-        readOp, readOp.getType(), adaptor.source(), adaptor.indices(),
-        adaptor.permutation_mapAttr(), adaptor.padding(), adaptor.mask(),
-        adaptor.in_boundsAttr());
-    return success();
-  }
-};
-
-class VectorTransferWriteOpConverter
-    : public OpConversionPattern<vector::TransferWriteOp> {
-public:
-  using OpConversionPattern<vector::TransferWriteOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::TransferWriteOp writeOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (writeOp.getShapedType().isa<MemRefType>())
-      return failure();
-    rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), adaptor.vector(), adaptor.source(), adaptor.indices(),
-        adaptor.permutation_mapAttr(),
-        adaptor.in_bounds() ? adaptor.in_boundsAttr() : ArrayAttr());
-    rewriter.replaceOp(writeOp, adaptor.source());
-    return success();
-  }
-};
 } // namespace
 
 namespace {
@@ -320,18 +182,13 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addLegalDialect<arith::ArithmeticDialect, AffineDialect,
                            memref::MemRefDialect, StandardOpsDialect,
                            tensor::TensorDialect>();
-    target.addIllegalOp<InitTensorOp, tensor::PadOp, tensor::CollapseShapeOp,
-                        tensor::ExpandShapeOp, tensor::ExtractSliceOp,
-                        tensor::InsertSliceOp>();
+    target.addIllegalOp<InitTensorOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
-    target
-        .addDynamicallyLegalOp<vector::TransferReadOp, vector::TransferWriteOp>(
-            isLegalOperation);
 
     RewritePatternSet patterns(&context);
     populateLinalgBufferizePatterns(typeConverter, patterns);
@@ -354,14 +211,7 @@ void mlir::linalg::populateLinalgBufferizePatterns(
   patterns.add<
       BufferizeAnyLinalgOp,
       BufferizeFillOp,
-      BufferizeInitTensorOp,
-      BufferizeTensorReshapeOp<tensor::ExpandShapeOp>,
-      BufferizeTensorReshapeOp<tensor::CollapseShapeOp>,
-      ExtractSliceOpConverter,
-      InsertSliceOpConverter,
-      VectorTransferReadOpConverter,
-      VectorTransferWriteOpConverter
+      BufferizeInitTensorOp
     >(typeConverter, patterns.getContext());
   // clang-format on
-  patterns.add<GeneralizePadOpPattern>(patterns.getContext());
 }

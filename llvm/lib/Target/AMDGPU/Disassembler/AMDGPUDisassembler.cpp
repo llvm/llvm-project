@@ -1536,7 +1536,7 @@ MCOperand AMDGPUDisassembler::decodeVOPDDstYOp(MCInst &Inst,
       AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::vdstX);
   assert(VDstXInd != -1);
   assert(Inst.getOperand(VDstXInd).isReg());
-  unsigned XDstReg = Inst.getOperand(VDstXInd).getReg();
+  unsigned XDstReg = MRI.getEncodingValue(Inst.getOperand(VDstXInd).getReg());
   Val |= ~XDstReg & 1;
   auto Width = llvm::AMDGPUDisassembler::OPW32;
   return createRegOperand(getVgprClassId(Width), Val);

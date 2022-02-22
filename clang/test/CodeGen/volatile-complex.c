@@ -13,7 +13,7 @@ volatile _Complex float cf32 __attribute__((aligned(32)));
 volatile _Complex double cd32 __attribute__((aligned(32)));
 
 // CHECK-LABEL: define{{.*}} void @test_cf()
-void test_cf() {
+void test_cf(void) {
   // CHECK:      load volatile float, float* getelementptr inbounds ({ float, float }, { float, float }* @cf, i32 0, i32 0), align 4
   // CHECK-NEXT: load volatile float, float* getelementptr inbounds ({ float, float }, { float, float }* @cf, i32 0, i32 1), align 4
   (void)(cf);
@@ -26,7 +26,7 @@ void test_cf() {
 }
 
 // CHECK-LABEL: define{{.*}} void @test_cd()
-void test_cd() {
+void test_cd(void) {
   // CHECK:      load volatile double, double* getelementptr inbounds ({ double, double }, { double, double }* @cd, i32 0, i32 0), align 8
   // CHECK-NEXT: load volatile double, double* getelementptr inbounds ({ double, double }, { double, double }* @cd, i32 0, i32 1), align 8
   (void)(cd);
@@ -39,7 +39,7 @@ void test_cd() {
 }
 
 // CHECK-LABEL: define{{.*}} void @test_cf32()
-void test_cf32() {
+void test_cf32(void) {
   // CHECK:      load volatile float, float* getelementptr inbounds ({ float, float }, { float, float }* @cf32, i32 0, i32 0), align 32
   // CHECK-NEXT: load volatile float, float* getelementptr inbounds ({ float, float }, { float, float }* @cf32, i32 0, i32 1), align 4
   (void)(cf32);
@@ -52,7 +52,7 @@ void test_cf32() {
 }
 
 // CHECK-LABEL: define{{.*}} void @test_cd32()
-void test_cd32() {
+void test_cd32(void) {
   // CHECK:      load volatile double, double* getelementptr inbounds ({ double, double }, { double, double }* @cd32, i32 0, i32 0), align 32
   // CHECK-NEXT: load volatile double, double* getelementptr inbounds ({ double, double }, { double, double }* @cd32, i32 0, i32 1), align 8
   (void)(cd32);

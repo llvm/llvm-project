@@ -6,18 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "__config"
-
-#include "system_error"
+#include <__assert>
+#include <__config>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <string.h>
+#include <system_error>
 
 #include "include/config_elast.h"
-#include "cerrno"
-#include "cstring"
-#include "cstdio"
-#include "cstdlib"
-#include "string"
-#include "string.h"
-#include "__debug"
 
 #if defined(__ANDROID__)
 #include <android/api-level.h>

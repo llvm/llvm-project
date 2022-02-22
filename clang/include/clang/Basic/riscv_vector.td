@@ -130,6 +130,14 @@
 //
 // There are a number of attributes that are used to constraint the number and
 // shape of the builtins generated. Refer to the comments below for them.
+
+class Policy<int val>{
+  int Value = val;
+}
+def NonePolicy : Policy<0>;
+def HasPassthruOperand : Policy<1>;
+def HasPolicyOperand : Policy<2>;
+
 class RVVBuiltin<string suffix, string prototype, string type_range,
                  string mangled_suffix = ""> {
   // Base name that will be prepended in __builtin_rvv_ and appended the
@@ -173,19 +181,16 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin has a granted vector length parameter.
   bit HasVL = true;
 
-  // There are several cases for specifying tail policy.
-  // 1. Add tail policy argument to masked intrinsics. It may have the maskedoff
-  //    argument or not.
-  //  * Have the maskedoff argument: (HasPolicy = true, HasMaskedOffOperand = true)
-  //    Ex: vadd_vv_i8m1_mt(mask, maskedoff, op1, op2, vl, ta);
-  //  * Do not have the maskedoff argument: (HasPolicy = true, HasMaskedOffOperand = false)
-  //    Ex: vmacc_vv_i8m1_mt(mask, vd, vs1, vs2, vl, ta);
-  // 2. Add dest argument for no mask intrinsics. (TODO)
-  //    Ex: vmv_v_x_i8m1_t(dest, src, vl);
-  // 3. Always tail agnostic. (HasPolicy = false)
-  //    Ex: vmseq_vv_i8m1_b8_m(mask, maskedoff, op1, op2, vl);
-  // The tail policy argument is located at the last position.
+  // The masked intrinsic IR have the policy operand.
+  // The policy argument is located at the last position.
   bit HasPolicy = true;
+
+  // The policy scheme for nomask intrinsic IR.
+  // HasPassthruOperand: Has a passthru operand to decide tail policy. If it is
+  // undef, tail policy is tail agnostic, otherwise policy is tail undisturbed.
+  // HasPolicyOperand: Has a policy operand. 1 is tail agnostic and 0 is tail
+  // undisturbed.
+  Policy NoMaskPolicy = NonePolicy;
 
   // This builtin supports non-masked function overloading api.
   // All masked operations support overloading api.
@@ -637,7 +642,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         clang::CharUnits Align =
             CGM.getNaturalPointeeTypeAlignment(E->getArg(1)->getType());
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
-                            Address(NewVL, Align));
+                            Address::deprecated(NewVL, Align));
         return V;
       }
       }],
@@ -657,7 +662,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         clang::CharUnits Align =
             CGM.getNaturalPointeeTypeAlignment(E->getArg(3)->getType());
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
-                            Address(NewVL, Align));
+                            Address::deprecated(NewVL, Align));
         return V;
       }
       }] in {
@@ -875,7 +880,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address(Ops[I], Align));
+                                Address::deprecated(Ops[I], Align));
       }
       return V;
     }
@@ -901,7 +906,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address(Ops[I], Align));
+                                Address::deprecated(Ops[I], Align));
       }
       return V;
     }
@@ -946,11 +951,11 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       for (unsigned I = 0; I < NF; ++I) {
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                            Address(Ops[I], Align));
+                            Address::deprecated(Ops[I], Align));
       }
       // Store new_vl.
       return Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {NF}),
-                                 Address(NewVL, Align));
+                                 Address::deprecated(NewVL, Align));
     }
             }],
             ManualCodegenMask = [{
@@ -974,11 +979,11 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       for (unsigned I = 0; I < NF; ++I) {
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                            Address(Ops[I], Align));
+                            Address::deprecated(Ops[I], Align));
       }
       // Store new_vl.
       return Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {NF}),
-                                 Address(NewVL, Align));
+                                 Address::deprecated(NewVL, Align));
     }
             }] in {
           defvar PV = PVString<nf, /*signed=*/true>.S;
@@ -1021,7 +1026,7 @@ multiclass RVVStridedSegLoad<string op> {
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address(Ops[I], Align));
+                                Address::deprecated(Ops[I], Align));
       }
       return V;
     }
@@ -1048,7 +1053,7 @@ multiclass RVVStridedSegLoad<string op> {
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address(Ops[I], Align));
+                                Address::deprecated(Ops[I], Align));
       }
       return V;
     }
@@ -1088,7 +1093,7 @@ multiclass RVVIndexedSegLoad<string op> {
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address(Ops[I], Align));
+                                Address::deprecated(Ops[I], Align));
       }
       return V;
     }
@@ -1115,7 +1120,7 @@ multiclass RVVIndexedSegLoad<string op> {
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address(Ops[I], Align));
+                                Address::deprecated(Ops[I], Align));
       }
       return V;
     }
@@ -1290,6 +1295,8 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
                           cast<llvm::VectorType>(ResultType)->getElementType(),
                           Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[1]));
+        // insert undef passthru
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
@@ -1321,6 +1328,8 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
                           Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1,
                    llvm::Constant::getAllOnesValue(IntrinsicTypes[1]));
+        // insert undef passthru
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
@@ -1369,6 +1378,8 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
         IntrinsicTypes = {ResultType,
                           Ops[0]->getType(), Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, Ops[0]);
+        // insert undef passthru
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
@@ -1402,6 +1413,8 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
                           cast<llvm::VectorType>(Ops[0]->getType())->getElementType(),
                           Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        // insert undef passthru
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
@@ -1438,6 +1451,8 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
                           Ops[1]->getType(),
                           Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        // insert undef passthru
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
@@ -1583,15 +1598,18 @@ defm : RVVIndexedSegStore<"vsoxseg">;
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
+let NoMaskPolicy = HasPassthruOperand in {
 defm vadd : RVVIntBinBuiltinSet;
 defm vsub : RVVIntBinBuiltinSet;
 defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
                                  [["vx", "v", "vve"],
                                   ["vx", "Uv", "UvUvUe"]]>;
+}
 defm vneg_v : RVVPseudoUnaryBuiltin<"vrsub", "csil">;
 
 // 12.2. Vector Widening Integer Add/Subtract
 // Widening unsigned integer add/subtract, 2*SEW = SEW +/- SEW
+let NoMaskPolicy = HasPassthruOperand in {
 defm vwaddu : RVVUnsignedWidenBinBuiltinSet;
 defm vwsubu : RVVUnsignedWidenBinBuiltinSet;
 // Widening signed integer add/subtract, 2*SEW = SEW +/- SEW
@@ -1603,12 +1621,14 @@ defm vwsubu : RVVUnsignedWidenOp0BinBuiltinSet;
 // Widening signed integer add/subtract, 2*SEW = 2*SEW +/- SEW
 defm vwadd : RVVSignedWidenOp0BinBuiltinSet;
 defm vwsub : RVVSignedWidenOp0BinBuiltinSet;
+}
 defm vwcvtu_x_x_v : RVVPseudoVWCVTBuiltin<"vwaddu", "vwcvtu_x", "csi",
                                           [["Uw", "UwUv"]]>;
 defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
                                          [["w", "wv"]]>;
 
 // 12.3. Vector Integer Extension
+let NoMaskPolicy = HasPassthruOperand in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
   def vzext_vf2 : RVVIntExt<"vzext", "Uw", "UwUv", "csi">;
@@ -1621,24 +1641,30 @@ let Log2LMUL = [-3, -2, -1, 0] in {
   def vsext_vf8 : RVVIntExt<"vsext", "o", "ov", "c">;
   def vzext_vf8 : RVVIntExt<"vzext", "Uo", "UoUv", "c">;
 }
+}
 
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 let HasMask = false, HasPolicy = false in {
-  defm vadc : RVVCarryinBuiltinSet;
+  let NoMaskPolicy = HasPassthruOperand in {
+    defm vadc : RVVCarryinBuiltinSet;
+    defm vsbc : RVVCarryinBuiltinSet;
+  }
   defm vmadc : RVVCarryOutInBuiltinSet<"vmadc_carry_in">;
   defm vmadc : RVVIntMaskOutBuiltinSet;
-  defm vsbc : RVVCarryinBuiltinSet;
   defm vmsbc : RVVCarryOutInBuiltinSet<"vmsbc_borrow_in">;
   defm vmsbc : RVVIntMaskOutBuiltinSet;
 }
 
 // 12.5. Vector Bitwise Logical Instructions
+let NoMaskPolicy = HasPassthruOperand in {
 defm vand : RVVIntBinBuiltinSet;
 defm vxor : RVVIntBinBuiltinSet;
 defm vor : RVVIntBinBuiltinSet;
+}
 defm vnot_v : RVVPseudoVNotBuiltin<"vxor", "csil">;
 
 // 12.6. Vector Single-Width Bit Shift Instructions
+let NoMaskPolicy = HasPassthruOperand in {
 defm vsll : RVVShiftBuiltinSet;
 defm vsrl : RVVUnsignedShiftBuiltinSet;
 defm vsra : RVVSignedShiftBuiltinSet;
@@ -1646,6 +1672,7 @@ defm vsra : RVVSignedShiftBuiltinSet;
 // 12.7. Vector Narrowing Integer Right Shift Instructions
 defm vnsrl : RVVUnsignedNShiftBuiltinSet;
 defm vnsra : RVVSignedNShiftBuiltinSet;
+}
 defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                          [["v", "vw"],
                                           ["Uv", "UvUw"]]>;
@@ -1665,6 +1692,7 @@ defm vmsge : RVVSignedMaskOutBuiltinSet;
 }
 
 // 12.9. Vector Integer Min/Max Instructions
+let NoMaskPolicy = HasPassthruOperand in {
 defm vminu : RVVUnsignedBinBuiltinSet;
 defm vmin : RVVSignedBinBuiltinSet;
 defm vmaxu : RVVUnsignedBinBuiltinSet;
@@ -1685,9 +1713,10 @@ defm vdivu : RVVUnsignedBinBuiltinSet;
 defm vdiv : RVVSignedBinBuiltinSet;
 defm vremu : RVVUnsignedBinBuiltinSet;
 defm vrem : RVVSignedBinBuiltinSet;
+}
 
 // 12.12. Vector Widening Integer Multiply Instructions
-let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+let Log2LMUL = [-3, -2, -1, 0, 1, 2], NoMaskPolicy = HasPassthruOperand in {
 defm vwmul : RVVOutOp0Op1BuiltinSet<"vwmul", "csi",
                                     [["vv", "w", "wvv"],
                                      ["vx", "w", "wve"]]>;
@@ -1700,6 +1729,7 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
+let NoMaskPolicy = HasPolicyOperand in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1720,6 +1750,7 @@ defm vwmaccsu : RVVOutOp1Op2BuiltinSet<"vwmaccsu", "csi",
 defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
                                        [["vx", "w", "wwUev"]]>;
 }
+}
 
 // 12.15. Vector Integer Merge Instructions
 // C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (op1, op2, mask, vl)
@@ -1727,6 +1758,8 @@ let HasMask = false, HasPolicy = false,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      // insert undef passthru
+      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
                                     [["vvm", "v", "vmvv"],
@@ -1736,7 +1769,7 @@ let HasMask = false, HasPolicy = false,
 }
 
 // 12.16. Vector Integer Move Instructions
-let HasMask = false, HasPolicy = false in {
+let HasMask = false, NoMaskPolicy = HasPassthruOperand, HasPolicy = false in {
   let MangledName = "vmv_v" in {
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csil",
                                    [["v", "Uv", "UvUv"]]>;
@@ -1751,6 +1784,7 @@ let HasMask = false, HasPolicy = false in {
 
 // 13. Vector Fixed-Point Arithmetic Instructions
 // 13.1. Vector Single-Width Saturating Add and Subtract
+let NoMaskPolicy = HasPassthruOperand in {
 defm vsaddu : RVVUnsignedBinBuiltinSet;
 defm vsadd : RVVSignedBinBuiltinSet;
 defm vssubu : RVVUnsignedBinBuiltinSet;
@@ -1800,8 +1834,10 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
                                        [["vv", "w", "wvv"],
                                         ["vf", "w", "wve"]]>;
 }
+}
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+let NoMaskPolicy = HasPolicyOperand in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -1816,8 +1852,10 @@ defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
 defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
 defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
 defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+}
 
 // 14.8. Vector Floating-Point Square-Root Instruction
+let NoMaskPolicy = HasPassthruOperand in {
 def vfsqrt : RVVFloatingUnaryVVBuiltin;
 
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
@@ -1834,6 +1872,7 @@ defm vfmax : RVVFloatingBinBuiltinSet;
 defm vfsgnj  : RVVFloatingBinBuiltinSet;
 defm vfsgnjn : RVVFloatingBinBuiltinSet;
 defm vfsgnjx : RVVFloatingBinBuiltinSet;
+}
 defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "xfd">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "xfd">;
 
@@ -1848,7 +1887,7 @@ defm vmfge : RVVFloatingMaskOutBuiltinSet;
 }
 
 // 14.14. Vector Floating-Point Classify Instruction
-let Name = "vfclass_v", HasPolicy = false in
+let Name = "vfclass_v", NoMaskPolicy = HasPassthruOperand in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "xfd">;
 
 // 14.15. Vector Floating-Point Merge Instructio
@@ -1857,6 +1896,8 @@ let HasMask = false, HasPolicy = false,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      // insert undef passthru
+      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
                                     [["vvm", "v", "vmvv"]]>;
@@ -1865,11 +1906,13 @@ let HasMask = false, HasPolicy = false,
 }
 
 // 14.16. Vector Floating-Point Move Instruction
-let HasMask = false, HasNoMaskedOverloaded = false, HasPolicy = false in
+let HasMask = false, NoMaskPolicy = HasPassthruOperand,
+    HasNoMaskedOverloaded = false, HasPolicy = false in
   defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "xfd",
                                   [["f", "v", "ve"]]>;
 
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+let NoMaskPolicy = HasPassthruOperand in {
 def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
 def vfcvt_x_f_v : RVVConvToSignedBuiltin<"vfcvt_x">;
 def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
@@ -1898,6 +1941,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_f_x_w : RVVConvBuiltin<"Fv", "Fvw", "csi", "vfncvt_f">;
   def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_f">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
+}
 }
 
 // 15. Vector Reduction Operations
@@ -1964,7 +2008,7 @@ def vmsif : RVVMaskUnaryBuiltin;
 // 16.6. vmsof.m set-only-first mask bit
 def vmsof : RVVMaskUnaryBuiltin;
 
-let HasNoMaskedOverloaded = false in {
+let NoMaskPolicy = HasPassthruOperand, HasNoMaskedOverloaded = false in {
   // 16.8. Vector Iota Instruction
   defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
 
@@ -2005,6 +2049,7 @@ defm vslideup   : RVVSlideBuiltinSet;
 defm vslidedown : RVVSlideBuiltinSet;
 
 // 17.3.3. Vector Slide1up Instructions
+let NoMaskPolicy = HasPassthruOperand in {
 defm vslide1up : RVVSlideOneBuiltinSet;
 defm vfslide1up : RVVFloatingBinVFBuiltinSet;
 
@@ -2027,6 +2072,7 @@ defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csil",
                                  [["vx", "Uv", "UvUvz"]]>;
 defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
                                      [["vv", "Uv", "UvUv(Log2EEW:4)Uv"]]>;
+}
 
 // 17.5. Vector Compress Instruction
 let HasMask = false, HasPolicy = false,

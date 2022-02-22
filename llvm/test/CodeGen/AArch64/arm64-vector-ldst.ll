@@ -50,7 +50,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #4
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, [[SHIFTEDOFFSET]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <2 x i64>, <2 x i64>* %array, i64 %offset
   %tmp = load <2 x i64>, <2 x i64>* %arrayidx, align 16
   %tmp1 = load <2 x i64>*, <2 x i64>** @globalArray64x2, align 8
@@ -64,7 +64,7 @@ entry:
 ; CHECK-LABEL: fct2_64x2:
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, #48]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #80]
+; CHECK: str [[DEST]], [[[BASE]], #80]
   %arrayidx = getelementptr inbounds <2 x i64>, <2 x i64>* %array, i64 3
   %tmp = load <2 x i64>, <2 x i64>* %arrayidx, align 16
   %tmp1 = load <2 x i64>*, <2 x i64>** @globalArray64x2, align 8
@@ -79,7 +79,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #4
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <4 x i32>, <4 x i32>* %array, i64 %offset
   %tmp = load <4 x i32>, <4 x i32>* %arrayidx, align 16
   %tmp1 = load <4 x i32>*, <4 x i32>** @globalArray32x4, align 8
@@ -93,7 +93,7 @@ entry:
 ; CHECK-LABEL: fct2_32x4:
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, #48]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #80]
+; CHECK: str [[DEST]], [[[BASE]], #80]
   %arrayidx = getelementptr inbounds <4 x i32>, <4 x i32>* %array, i64 3
   %tmp = load <4 x i32>, <4 x i32>* %arrayidx, align 16
   %tmp1 = load <4 x i32>*, <4 x i32>** @globalArray32x4, align 8
@@ -108,7 +108,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #4
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <8 x i16>, <8 x i16>* %array, i64 %offset
   %tmp = load <8 x i16>, <8 x i16>* %arrayidx, align 16
   %tmp1 = load <8 x i16>*, <8 x i16>** @globalArray16x8, align 8
@@ -122,7 +122,7 @@ entry:
 ; CHECK-LABEL: fct2_16x8:
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, #48]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #80]
+; CHECK: str [[DEST]], [[[BASE]], #80]
   %arrayidx = getelementptr inbounds <8 x i16>, <8 x i16>* %array, i64 3
   %tmp = load <8 x i16>, <8 x i16>* %arrayidx, align 16
   %tmp1 = load <8 x i16>*, <8 x i16>** @globalArray16x8, align 8
@@ -137,7 +137,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #4
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <16 x i8>, <16 x i8>* %array, i64 %offset
   %tmp = load <16 x i8>, <16 x i8>* %arrayidx, align 16
   %tmp1 = load <16 x i8>*, <16 x i8>** @globalArray8x16, align 8
@@ -151,7 +151,7 @@ entry:
 ; CHECK-LABEL: fct2_8x16:
 ; CHECK: ldr [[DEST:q[0-9]+]], [x0, #48]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #80]
+; CHECK: str [[DEST]], [[[BASE]], #80]
   %arrayidx = getelementptr inbounds <16 x i8>, <16 x i8>* %array, i64 3
   %tmp = load <16 x i8>, <16 x i8>* %arrayidx, align 16
   %tmp1 = load <16 x i8>*, <16 x i8>** @globalArray8x16, align 8
@@ -166,7 +166,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #3
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <1 x i64>, <1 x i64>* %array, i64 %offset
   %tmp = load <1 x i64>, <1 x i64>* %arrayidx, align 8
   %tmp1 = load <1 x i64>*, <1 x i64>** @globalArray64x1, align 8
@@ -180,7 +180,7 @@ entry:
 ; CHECK-LABEL: fct2_64x1:
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, #24]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #40]
+; CHECK: str [[DEST]], [[[BASE]], #40]
   %arrayidx = getelementptr inbounds <1 x i64>, <1 x i64>* %array, i64 3
   %tmp = load <1 x i64>, <1 x i64>* %arrayidx, align 8
   %tmp1 = load <1 x i64>*, <1 x i64>** @globalArray64x1, align 8
@@ -195,7 +195,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #3
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <2 x i32>, <2 x i32>* %array, i64 %offset
   %tmp = load <2 x i32>, <2 x i32>* %arrayidx, align 8
   %tmp1 = load <2 x i32>*, <2 x i32>** @globalArray32x2, align 8
@@ -209,7 +209,7 @@ entry:
 ; CHECK-LABEL: fct2_32x2:
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, #24]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #40]
+; CHECK: str [[DEST]], [[[BASE]], #40]
   %arrayidx = getelementptr inbounds <2 x i32>, <2 x i32>* %array, i64 3
   %tmp = load <2 x i32>, <2 x i32>* %arrayidx, align 8
   %tmp1 = load <2 x i32>*, <2 x i32>** @globalArray32x2, align 8
@@ -224,7 +224,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #3
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <4 x i16>, <4 x i16>* %array, i64 %offset
   %tmp = load <4 x i16>, <4 x i16>* %arrayidx, align 8
   %tmp1 = load <4 x i16>*, <4 x i16>** @globalArray16x4, align 8
@@ -238,7 +238,7 @@ entry:
 ; CHECK-LABEL: fct2_16x4:
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, #24]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], #40]
+; CHECK: str [[DEST]], [[[BASE]], #40]
   %arrayidx = getelementptr inbounds <4 x i16>, <4 x i16>* %array, i64 3
   %tmp = load <4 x i16>, <4 x i16>* %arrayidx, align 8
   %tmp1 = load <4 x i16>*, <4 x i16>** @globalArray16x4, align 8
@@ -253,7 +253,7 @@ entry:
 ; CHECK: lsl [[SHIFTEDOFFSET:x[0-9]+]], x1, #3
 ; CHECK: ldr [[DEST:d[0-9]+]], [x0, [[SHIFTEDOFFSET]]]
 ; CHECK: ldr [[BASE:x[0-9]+]],
-; CHECK: str [[DEST]], {{\[}}[[BASE]], [[SHIFTEDOFFSET]]]
+; CHECK: str [[DEST]], [[[BASE]], [[SHIFTEDOFFSET]]]
   %arrayidx = getelementptr inbounds <8 x i8>, <8 x i8>* %array, i64 %offset
   %tmp = load <8 x i8>, <8 x i8>* %arrayidx, align 8
   %tmp1 = load <8 x i8>*, <8 x i8>** @globalArray8x8, align 8
@@ -348,8 +348,8 @@ entry:
 define void @fct8(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct8:
-; CHECK: ldur [[DESTREG:d[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:d[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <1 x i64>*
   %0 = load <1 x i64>, <1 x i64>* %q, align 8
@@ -362,8 +362,8 @@ entry:
 define void @fct9(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct9:
-; CHECK: ldur [[DESTREG:d[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:d[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <2 x i32>*
   %0 = load <2 x i32>, <2 x i32>* %q, align 8
@@ -376,8 +376,8 @@ entry:
 define void @fct10(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct10:
-; CHECK: ldur [[DESTREG:d[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:d[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <4 x i16>*
   %0 = load <4 x i16>, <4 x i16>* %q, align 8
@@ -390,8 +390,8 @@ entry:
 define void @fct11(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct11:
-; CHECK: ldur [[DESTREG:d[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:d[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <8 x i8>*
   %0 = load <8 x i8>, <8 x i8>* %q, align 8
@@ -404,8 +404,8 @@ entry:
 define void @fct12(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct12:
-; CHECK: ldur [[DESTREG:q[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:q[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <2 x i64>*
   %0 = load <2 x i64>, <2 x i64>* %q, align 16
@@ -418,8 +418,8 @@ entry:
 define void @fct13(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct13:
-; CHECK: ldur [[DESTREG:q[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:q[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <4 x i32>*
   %0 = load <4 x i32>, <4 x i32>* %q, align 16
@@ -432,8 +432,8 @@ entry:
 define void @fct14(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct14:
-; CHECK: ldur [[DESTREG:q[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:q[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <8 x i16>*
   %0 = load <8 x i16>, <8 x i16>* %q, align 16
@@ -446,8 +446,8 @@ entry:
 define void @fct15(i8* %str) nounwind ssp {
 entry:
 ; CHECK-LABEL: fct15:
-; CHECK: ldur [[DESTREG:q[0-9]+]], {{\[}}[[BASEREG:x[0-9]+]], #3]
-; CHECK: stur [[DESTREG]], {{\[}}[[BASEREG]], #4]
+; CHECK: ldur [[DESTREG:q[0-9]+]], [[[BASEREG:x[0-9]+]], #3]
+; CHECK: stur [[DESTREG]], [[[BASEREG]], #4]
   %p = getelementptr inbounds i8, i8* %str, i64 3
   %q = bitcast i8* %p to <16 x i8>*
   %0 = load <16 x i8>, <16 x i8>* %q, align 16

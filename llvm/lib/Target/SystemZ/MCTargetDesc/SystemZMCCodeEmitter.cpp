@@ -328,7 +328,6 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
 #include "SystemZGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
-                                                const MCRegisterInfo &MRI,
                                                 MCContext &Ctx) {
   return new SystemZMCCodeEmitter(MCII, Ctx);
 }

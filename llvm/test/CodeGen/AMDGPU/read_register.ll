@@ -17,7 +17,7 @@ define amdgpu_kernel void @test_read_m0(i32 addrspace(1)* %out) #0 {
 ; CHECK-LABEL: {{^}}test_read_exec:
 ; CHECK: v_mov_b32_e32 v[[LO:[0-9]+]], exec_lo
 ; CHECK: v_mov_b32_e32 v[[HI:[0-9]+]], exec_hi
-; CHECK: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; CHECK: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_read_exec(i64 addrspace(1)* %out) #0 {
   %exec = call i64 @llvm.read_register.i64(metadata !1)
   store i64 %exec, i64 addrspace(1)* %out
@@ -27,7 +27,7 @@ define amdgpu_kernel void @test_read_exec(i64 addrspace(1)* %out) #0 {
 ; CHECK-LABEL: {{^}}test_read_flat_scratch:
 ; CHECK: v_mov_b32_e32 v[[LO:[0-9]+]], flat_scratch_lo
 ; CHECK: v_mov_b32_e32 v[[HI:[0-9]+]], flat_scratch_hi
-; CHECK: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; CHECK: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_read_flat_scratch(i64 addrspace(1)* %out) #0 {
   %flat_scratch = call i64 @llvm.read_register.i64(metadata !2)
   store i64 %flat_scratch, i64 addrspace(1)* %out

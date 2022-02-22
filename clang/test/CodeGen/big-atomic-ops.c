@@ -177,7 +177,7 @@ _Bool fsb(_Bool *c) {
 
 char flag1;
 volatile char flag2;
-void test_and_set() {
+void test_and_set(void) {
   // CHECK: atomicrmw xchg i8* @flag1, i8 1 seq_cst, align 1
   __atomic_test_and_set(&flag1, memory_order_seq_cst);
   // CHECK: atomicrmw volatile xchg i8* @flag2, i8 1 acquire, align 1
@@ -243,7 +243,7 @@ struct bar smallThing, thing1, thing2;
 struct foo bigThing;
 _Atomic(struct foo) bigAtomic;
 
-void structAtomicStore() {
+void structAtomicStore(void) {
   // CHECK: @structAtomicStore
   struct foo f = {0};
   __c11_atomic_store(&bigAtomic, f, 5);
@@ -256,7 +256,7 @@ void structAtomicStore() {
   __atomic_store(&bigThing, &f, 5);
   // CHECK: call void @__atomic_store(i64 noundef 512, i8* noundef {{.*}} @bigThing
 }
-void structAtomicLoad() {
+void structAtomicLoad(void) {
   // CHECK: @structAtomicLoad
   struct foo f = __c11_atomic_load(&bigAtomic, 5);
   // CHECK: call void @__atomic_load(i64 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
@@ -268,7 +268,7 @@ void structAtomicLoad() {
   __atomic_load(&bigThing, &f, 5);
   // CHECK: call void @__atomic_load(i64 noundef 512, i8* noundef {{.*}} @bigThing
 }
-struct foo structAtomicExchange() {
+struct foo structAtomicExchange(void) {
   // CHECK: @structAtomicExchange
   struct foo f = {0};
   struct foo old;
@@ -278,7 +278,7 @@ struct foo structAtomicExchange() {
   return __c11_atomic_exchange(&bigAtomic, f, 5);
   // CHECK: call void @__atomic_exchange(i64 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
 }
-int structAtomicCmpExchange() {
+int structAtomicCmpExchange(void) {
   // CHECK: @structAtomicCmpExchange
   _Bool x = __atomic_compare_exchange(&smallThing, &thing1, &thing2, 1, 5, 5);
   // CHECK: call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, {{.*}} @smallThing{{.*}} @thing1{{.*}} @thing2
@@ -295,7 +295,7 @@ int structAtomicCmpExchange() {
 _Atomic(int) atomic_init_i = 42;
 
 // CHECK: @atomic_init_foo
-void atomic_init_foo()
+void atomic_init_foo(void)
 {
   // CHECK-NOT: }
   // CHECK-NOT: atomic

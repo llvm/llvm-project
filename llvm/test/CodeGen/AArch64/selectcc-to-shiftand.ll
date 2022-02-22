@@ -165,8 +165,8 @@ define i64 @sel_shift_bool_i64(i1 %t) {
 define <16 x i8> @sel_shift_bool_v16i8(<16 x i1> %t) {
 ; CHECK-LABEL: sel_shift_bool_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    movi v1.16b, #128
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -205,8 +205,8 @@ define <2 x i64> @sel_shift_bool_v2i64(<2 x i1> %t) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    mov w8, #65536
-; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #63
+; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

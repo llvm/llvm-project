@@ -9,16 +9,15 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 #define LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
 class DWARFUnit;
+struct DIDumpOptions;
 class MCRegisterInfo;
 class raw_ostream;
 

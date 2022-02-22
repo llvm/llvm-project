@@ -48,7 +48,7 @@ class BreakpointAutoContinue(TestBase):
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
 
         process = self.target.Launch(launch_info, error)
-        self.assertTrue(error.Success(), "Launch failed.")
+        self.assertSuccess(error, "Launch failed.")
 
         state = process.GetState()
         self.assertEqual(state, expected_state, "Didn't get expected state")

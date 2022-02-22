@@ -143,10 +143,10 @@ uint32_t uint32_to_uint32(uint32_t src) {
 // ========================================================================== //
 
 enum a { b = ~2147483647 };
-enum a c();
+enum a c(void);
 void d(int);
-void e();
-void e() {
+void e(void);
+void e(void) {
   enum a f = c();
   d(f);
 }

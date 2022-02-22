@@ -13,7 +13,6 @@
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
-#include <__functional_base>
 #include <__memory/allocator_traits.h> // __pointer
 #include <__memory/compressed_pair.h>
 #include <__utility/forward.h>
@@ -264,7 +263,6 @@ public:
   unique_ptr& operator=(unique_ptr const&) = delete;
 #endif
 
-
   _LIBCPP_INLINE_VISIBILITY
   ~unique_ptr() { reset(); }
 
@@ -486,7 +484,6 @@ public:
   unique_ptr(unique_ptr const&) = delete;
   unique_ptr& operator=(unique_ptr const&) = delete;
 #endif
-
 public:
   _LIBCPP_INLINE_VISIBILITY
   ~unique_ptr() { reset(); }

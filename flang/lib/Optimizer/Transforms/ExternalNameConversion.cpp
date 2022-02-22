@@ -46,12 +46,12 @@ public:
   matchAndRewrite(fir::CallOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
-    auto callee = op.callee();
+    auto callee = op.getCallee();
     if (callee.hasValue()) {
       auto result = fir::NameUniquer::deconstruct(
           callee.getValue().getRootReference().getValue());
       if (fir::NameUniquer::isExternalFacingUniquedName(result))
-        op.calleeAttr(
+        op.setCalleeAttr(
             SymbolRefAttr::get(op.getContext(), mangleExternalName(result)));
     }
     rewriter.finalizeRootUpdate(op);
@@ -87,10 +87,10 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
     auto result = fir::NameUniquer::deconstruct(
-        op.symref().getRootReference().getValue());
+        op.getSymref().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
       auto newName = mangleExternalName(result);
-      op.symrefAttr(mlir::SymbolRefAttr::get(op.getContext(), newName));
+      op.setSymrefAttr(mlir::SymbolRefAttr::get(op.getContext(), newName));
       SymbolTable::setSymbolName(op, newName);
     }
     rewriter.finalizeRootUpdate(op);
@@ -106,11 +106,11 @@ public:
   matchAndRewrite(fir::AddrOfOp op,
                   mlir::PatternRewriter &rewriter) const override {
     auto result = fir::NameUniquer::deconstruct(
-        op.symbol().getRootReference().getValue());
+        op.getSymbol().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
       auto newName =
           SymbolRefAttr::get(op.getContext(), mangleExternalName(result));
-      rewriter.replaceOpWithNewOp<fir::AddrOfOp>(op, op.resTy().getType(),
+      rewriter.replaceOpWithNewOp<fir::AddrOfOp>(op, op.getResTy().getType(),
                                                  newName);
     }
     return success();
@@ -127,9 +127,9 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
     auto result = fir::NameUniquer::deconstruct(
-        op.funcname().getRootReference().getValue());
+        op.getFuncname().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result))
-      op.funcnameAttr(
+      op.setFuncnameAttr(
           SymbolRefAttr::get(op.getContext(), mangleExternalName(result)));
     rewriter.finalizeRootUpdate(op);
     return success();
@@ -158,9 +158,9 @@ void ExternalNameConversionPass::runOnOperation() {
                          acc::OpenACCDialect, omp::OpenMPDialect>();
 
   target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp op) {
-    if (op.callee().hasValue())
+    if (op.getCallee().hasValue())
       return !fir::NameUniquer::needExternalNameMangling(
-          op.callee().getValue().getRootReference().getValue());
+          op.getCallee().getValue().getRootReference().getValue());
     return true;
   });
 
@@ -170,17 +170,17 @@ void ExternalNameConversionPass::runOnOperation() {
 
   target.addDynamicallyLegalOp<fir::GlobalOp>([](fir::GlobalOp op) {
     return !fir::NameUniquer::needExternalNameMangling(
-        op.symref().getRootReference().getValue());
+        op.getSymref().getRootReference().getValue());
   });
 
   target.addDynamicallyLegalOp<fir::AddrOfOp>([](fir::AddrOfOp op) {
     return !fir::NameUniquer::needExternalNameMangling(
-        op.symbol().getRootReference().getValue());
+        op.getSymbol().getRootReference().getValue());
   });
 
   target.addDynamicallyLegalOp<fir::EmboxProcOp>([](fir::EmboxProcOp op) {
     return !fir::NameUniquer::needExternalNameMangling(
-        op.funcname().getRootReference().getValue());
+        op.getFuncname().getRootReference().getValue());
   });
 
   if (failed(applyPartialConversion(op, target, std::move(patterns))))

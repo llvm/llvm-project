@@ -655,10 +655,13 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
   case Instruction::IntToPtr: {
     assert(isNoopPtrIntCastPair(cast<Operator>(I), *DL, TTI));
     Value *Src = cast<Operator>(I->getOperand(0))->getOperand(0);
-    assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-    if (Src->getType() != NewPtrType)
-      return new BitCastInst(Src, NewPtrType);
-    return Src;
+    if (Src->getType() == NewPtrType)
+      return Src;
+
+    // If we had a no-op inttoptr/ptrtoint pair, we may still have inferred a
+    // source address space from a generic pointer source need to insert a cast
+    // back.
+    return CastInst::CreatePointerBitCastOrAddrSpaceCast(Src, NewPtrType);
   }
   default:
     llvm_unreachable("Unexpected opcode");
@@ -1249,12 +1252,18 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         }
 
         // Otherwise, replaces the use with flat(NewV).
-        if (Instruction *Inst = dyn_cast<Instruction>(V)) {
+        if (Instruction *VInst = dyn_cast<Instruction>(V)) {
           // Don't create a copy of the original addrspacecast.
           if (U == V && isa<AddrSpaceCastInst>(V))
             continue;
 
-          BasicBlock::iterator InsertPos = std::next(Inst->getIterator());
+          // Insert the addrspacecast after NewV.
+          BasicBlock::iterator InsertPos;
+          if (Instruction *NewVInst = dyn_cast<Instruction>(NewV))
+            InsertPos = std::next(NewVInst->getIterator());
+          else
+            InsertPos = std::next(VInst->getIterator());
+
           while (isa<PHINode>(InsertPos))
             ++InsertPos;
           U.set(new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));

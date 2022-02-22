@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <bitset>
 #include <cassert>
@@ -130,6 +131,7 @@ public:
   static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
   static Attribute getWithPreallocatedType(LLVMContext &Context, Type *Ty);
   static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
+  static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -222,6 +224,9 @@ public:
   /// Returns the maximum value for the vscale_range attribute or None when
   /// unknown.
   Optional<unsigned> getVScaleRangeMax() const;
+
+  // Returns the unwind table kind.
+  UWTableKind getUWTableKind() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -353,6 +358,7 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   unsigned getVScaleRangeMin() const;
   Optional<unsigned> getVScaleRangeMax() const;
+  UWTableKind getUWTableKind() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -841,6 +847,9 @@ public:
   /// arg.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
 
+  /// Get the unwind table kind requested for the function.
+  UWTableKind getUWTableKind() const;
+
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
@@ -1189,6 +1198,10 @@ public:
   /// Add a vscale_range attribute, using the representation returned by
   /// Attribute.getIntValue().
   AttrBuilder &addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
+
+  /// This turns the unwind table kind into the form used internally in
+  /// Attribute.
+  AttrBuilder &addUWTableAttr(UWTableKind Kind);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

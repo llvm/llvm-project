@@ -2558,10 +2558,9 @@ static Value *CreateStepValue(const SCEV *Step, ScalarEvolution &SE,
 /// For pointer induction, returns StartValue[Index * StepValue].
 /// FIXME: The newly created binary instructions should contain nsw/nuw
 /// flags, which can be found from the original scalar operations.
-static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *Step,
+static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
+                                   Value *StartValue, Value *Step,
                                    const InductionDescriptor &ID) {
-
-  auto StartValue = ID.getStartValue();
   assert(Index->getType()->getScalarType() == Step->getType() &&
          "Index scalar type does not match StepValue type");
 
@@ -2676,7 +2675,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
           NeededType->isIntegerTy()
               ? Builder.CreateSExtOrTrunc(ScalarIV, NeededType)
               : Builder.CreateCast(Instruction::SIToFP, ScalarIV, NeededType);
-      ScalarIV = emitTransformedIndex(Builder, ScalarIV, Step, ID);
+      ScalarIV = emitTransformedIndex(Builder, ScalarIV, Start, Step, ID);
       ScalarIV->setName("offset.idx");
     }
     if (Trunc) {
@@ -3411,7 +3410,7 @@ void InnerLoopVectorizer::createInductionResumeValues(
       Value *CRD = B.CreateCast(CastOp, VectorTripCount, StepType, "cast.crd");
       Value *Step =
           CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
-      EndValue = emitTransformedIndex(B, CRD, Step, II);
+      EndValue = emitTransformedIndex(B, CRD, II.getStartValue(), Step, II);
       EndValue->setName("ind.end");
 
       // Compute the end value for the additional bypass (if applicable).
@@ -3423,7 +3422,8 @@ void InnerLoopVectorizer::createInductionResumeValues(
             CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
         CRD =
             B.CreateCast(CastOp, AdditionalBypass.second, StepType, "cast.crd");
-        EndValueFromAdditionalBypass = emitTransformedIndex(B, CRD, Step, II);
+        EndValueFromAdditionalBypass =
+            emitTransformedIndex(B, CRD, II.getStartValue(), Step, II);
         EndValueFromAdditionalBypass->setName("ind.end");
       }
     }
@@ -3616,7 +3616,8 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
 
       Value *Step = CreateStepValue(II.getStep(), *PSE.getSE(),
                                     LoopVectorBody->getTerminator());
-      Value *Escape = emitTransformedIndex(B, CMO, Step, II);
+      Value *Escape =
+          emitTransformedIndex(B, CMO, II.getStartValue(), Step, II);
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
@@ -4507,7 +4508,8 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
 
           Value *Step = CreateStepValue(II.getStep(), *PSE.getSE(),
                                         State.CFG.PrevBB->getTerminator());
-          Value *SclrGep = emitTransformedIndex(Builder, GlobalIdx, Step, II);
+          Value *SclrGep = emitTransformedIndex(Builder, GlobalIdx,
+                                                II.getStartValue(), Step, II);
           SclrGep->setName("next.gep");
           State.set(PhiR, SclrGep, VPIteration(Part, Lane));
         }

@@ -584,7 +584,7 @@ defm : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
 foreach vti = AllIntegerVectors in {
   // Emit shift by 1 as an add since it might be faster.
   def : Pat<(shl (vti.Vector vti.RegClass:$rs1),
-                 (vti.Vector (riscv_vmv_v_x_vl 1, (XLenVT srcvalue)))),
+                 (vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), 1, (XLenVT srcvalue)))),
             (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
 

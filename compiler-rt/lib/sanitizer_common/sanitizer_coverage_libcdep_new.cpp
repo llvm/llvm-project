@@ -10,11 +10,12 @@
 #include "sanitizer_platform.h"
 
 #if !SANITIZER_FUCHSIA
-#include "sancov_flags.h"
-#include "sanitizer_allocator_internal.h"
-#include "sanitizer_atomic.h"
-#include "sanitizer_common.h"
-#include "sanitizer_file.h"
+#  include "sancov_flags.h"
+#  include "sanitizer_allocator_internal.h"
+#  include "sanitizer_atomic.h"
+#  include "sanitizer_common.h"
+#  include "sanitizer_file.h"
+#  include "sanitizer_interface_internal.h"
 
 using namespace __sanitizer;
 

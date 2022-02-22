@@ -25,7 +25,7 @@ void testInstanceMethod(Derived *x) {
 // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}){{$}}
 
 // A direct call of a class method will normally never have a null receiver.
-void testClassMethod() {
+void testClassMethod(void) {
   [Derived abort];
 }
 // CHECK-LABEL: @testClassMethod
@@ -40,7 +40,7 @@ __attribute__((weak_import))
 @end
 
 // The class pointer of a weakly-imported class may be null.
-void testWeakImport() {
+void testWeakImport(void) {
   [WeakDerived abort];
 }
 // CHECK-LABEL: @testWeakImport

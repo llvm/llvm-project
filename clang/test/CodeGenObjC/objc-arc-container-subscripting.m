@@ -5,7 +5,7 @@
 - (void)setObject:(id)object atIndexedSubscript:(int)index;
 @end
 
-id func() {
+id func(void) {
   NSMutableArray *array;
   array[3] = 0;
   return array[3];

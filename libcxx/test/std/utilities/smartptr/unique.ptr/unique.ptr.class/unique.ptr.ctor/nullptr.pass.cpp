@@ -20,8 +20,8 @@
 
 
 #if TEST_STD_VER >= 11
-TEST_SAFE_STATIC std::unique_ptr<int> global_static_unique_ptr_single(nullptr);
-TEST_SAFE_STATIC std::unique_ptr<int[]> global_static_unique_ptr_runtime(nullptr);
+TEST_CONSTINIT std::unique_ptr<int> global_static_unique_ptr_single(nullptr);
+TEST_CONSTINIT std::unique_ptr<int[]> global_static_unique_ptr_runtime(nullptr);
 
 struct NonDefaultDeleter {
   NonDefaultDeleter() = delete;

@@ -21,8 +21,10 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <memory>
 
 namespace opts {
 
@@ -81,11 +83,28 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 
 #define DEBUG_TYPE "bolt"
 
+Expected<std::unique_ptr<MachORewriteInstance>>
+MachORewriteInstance::createMachORewriteInstance(
+    object::MachOObjectFile *InputFile, StringRef ToolPath) {
+  Error Err = Error::success();
+  auto MachORI =
+      std::make_unique<MachORewriteInstance>(InputFile, ToolPath, Err);
+  if (Err)
+    return std::move(Err);
+  return MachORI;
+}
+
 MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
-                                           StringRef ToolPath)
-    : InputFile(InputFile), ToolPath(ToolPath),
-      BC(BinaryContext::createBinaryContext(InputFile, /* IsPIC */ true,
-                                            DWARFContext::create(*InputFile))) {
+                                           StringRef ToolPath, Error &Err)
+    : InputFile(InputFile), ToolPath(ToolPath) {
+  ErrorAsOutParameter EAO(&Err);
+  auto BCOrErr = BinaryContext::createBinaryContext(
+      InputFile, /* IsPIC */ true, DWARFContext::create(*InputFile));
+  if (Error E = BCOrErr.takeError()) {
+    Err = std::move(E);
+    return;
+  }
+  BC = std::move(BCOrErr.get());
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
       BC->TheTriple->getArch(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));
   if (opts::Instrument)

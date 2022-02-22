@@ -93,7 +93,7 @@ private:
   LaneBitmask transferUsedLanes(const MachineInstr &MI, LaneBitmask UsedLanes,
                                 const MachineOperand &MO) const;
 
-  bool runOnce(MachineFunction &MF);
+  std::pair<bool, bool> runOnce(MachineFunction &MF);
 
   LaneBitmask determineInitialDefinedLanes(unsigned Reg);
   LaneBitmask determineInitialUsedLanes(unsigned Reg);
@@ -487,7 +487,7 @@ bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
   return true;
 }
 
-bool DetectDeadLanes::runOnce(MachineFunction &MF) {
+std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
   // First pass: Populate defs/uses of vregs with initial values
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
   for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
@@ -528,6 +528,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
     dbgs() << "\n";
   });
 
+  bool Changed = false;
   bool Again = false;
   // Mark operands as dead/unused.
   for (MachineBasicBlock &MBB : MF) {
@@ -544,6 +545,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
           LLVM_DEBUG(dbgs()
                      << "Marking operand '" << MO << "' as dead in " << MI);
           MO.setIsDead();
+          Changed = true;
         }
         if (MO.readsReg()) {
           bool CrossCopy = false;
@@ -551,10 +553,12 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
             LLVM_DEBUG(dbgs()
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
+            Changed = true;
           } else if (isUndefInput(MO, &CrossCopy)) {
             LLVM_DEBUG(dbgs()
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
+            Changed = true;
             if (CrossCopy)
               Again = true;
           }
@@ -563,7 +567,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
     }
   }
 
-  return Again;
+  return std::make_pair(Changed, Again);
 }
 
 bool DetectDeadLanes::runOnMachineFunction(MachineFunction &MF) {
@@ -585,13 +589,16 @@ bool DetectDeadLanes::runOnMachineFunction(MachineFunction &MF) {
   WorklistMembers.resize(NumVirtRegs);
   DefinedByCopy.resize(NumVirtRegs);
 
+  bool Changed = false;
   bool Again;
   do {
-    Again = runOnce(MF);
+    bool LocalChanged;
+    std::tie(LocalChanged, Again) = runOnce(MF);
+    Changed |= LocalChanged;
   } while(Again);
 
   DefinedByCopy.clear();
   WorklistMembers.clear();
   delete[] VRegInfos;
-  return true;
+  return Changed;
 }
