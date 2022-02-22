@@ -1,3 +1,4 @@
+// Check libraries used when linking C++
 // RUN: %clangxx %s -### -o %t.o -target amd64-pc-openbsd 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CXX %s
 // RUN: %clangxx %s -### -o %t.o -target i686-pc-openbsd 2>&1 \
@@ -8,6 +9,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CXX %s
 // CHECK-CXX: "-lc++" "-lc++abi" "-lpthread" "-lm"
 
+// Check for profiling variants of libraries when linking C++
 // RUN: %clangxx %s -### -pg -o %t.o -target amd64-pc-openbsd 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-CXX %s
 // RUN: %clangxx %s -### -pg -o %t.o -target i686-pc-openbsd 2>&1 \
