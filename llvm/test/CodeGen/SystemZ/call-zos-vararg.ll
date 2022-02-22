@@ -189,6 +189,40 @@ entry:
   ret i64 %retval
 }
 
+; Derived from C source:
+; #define _VARARG_EXT_
+; #include <stdarg.h>
+;
+; long pass(long x, ...) {
+;   va_list va;
+;   va_start(va, x);
+;   long ret = va_arg(va, long);
+;   va_end(va);
+;   return ret;
+; }
+;
+; CHECK-LABEL: pass_vararg:
+; CHECK: aghi    4, -160
+; CHECK: la      0, 2208(4)
+; CHECK: stg     0, 2200(4)
+define hidden i64 @pass_vararg(i64 %x, ...) {
+entry:
+  %va = alloca i8*, align 8
+  %va1 = bitcast i8** %va to i8*
+  call void @llvm.va_start(i8* %va1)
+  %argp.cur = load i8*, i8** %va, align 8
+  %argp.next = getelementptr inbounds i8, i8* %argp.cur, i64 8
+  store i8* %argp.next, i8** %va, align 8
+  %0 = bitcast i8* %argp.cur to i64*
+  %ret = load i64, i64* %0, align 8
+  %va2 = bitcast i8** %va to i8*
+  call void @llvm.va_end(i8* %va2)
+  ret i64 %ret
+}
+
+declare void @llvm.va_start(i8*)
+declare void @llvm.va_end(i8*)
+
 declare i64 @pass_vararg0(i64 %arg0, i64 %arg1, ...)
 declare i64 @pass_vararg1(fp128 %arg0, ...)
 declare i64 @pass_vararg2(i64 %arg0, ...)
