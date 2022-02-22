@@ -201,22 +201,25 @@ define void @larger_smull(i16* nocapture noundef readonly %x, i16 noundef %y, i3
 ; CHECK-NEXT:    b .LBB3_6
 ; CHECK-NEXT:  .LBB3_3: // %vector.ph
 ; CHECK-NEXT:    and x10, x9, #0xfffffff0
-; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    add x11, x2, #32
 ; CHECK-NEXT:    add x12, x0, #16
 ; CHECK-NEXT:    mov x13, x10
-; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:  .LBB3_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q2, q3, [x12, #-16]
+; CHECK-NEXT:    ldp q1, q2, [x12, #-16]
 ; CHECK-NEXT:    subs x13, x13, #16
 ; CHECK-NEXT:    add x12, x12, #32
-; CHECK-NEXT:    smull2 v4.4s, v1.8h, v2.8h
-; CHECK-NEXT:    smull v2.4s, v0.4h, v2.4h
-; CHECK-NEXT:    smull2 v5.4s, v1.8h, v3.8h
-; CHECK-NEXT:    smull v3.4s, v0.4h, v3.4h
-; CHECK-NEXT:    stp q2, q4, [x11, #-32]
-; CHECK-NEXT:    stp q3, q5, [x11], #64
+; CHECK-NEXT:    sshll2 v3.4s, v1.8h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    sshll2 v4.4s, v2.8h, #0
+; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-NEXT:    mul v3.4s, v0.4s, v3.4s
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v4.4s, v0.4s, v4.4s
+; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-NEXT:    stp q1, q3, [x11, #-32]
+; CHECK-NEXT:    stp q2, q4, [x11], #64
 ; CHECK-NEXT:    b.ne .LBB3_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x10, x9
@@ -314,22 +317,25 @@ define void @larger_umull(i16* nocapture noundef readonly %x, i16 noundef %y, i3
 ; CHECK-NEXT:    b .LBB4_6
 ; CHECK-NEXT:  .LBB4_3: // %vector.ph
 ; CHECK-NEXT:    and x10, x9, #0xfffffff0
-; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    add x11, x2, #32
 ; CHECK-NEXT:    add x12, x0, #16
 ; CHECK-NEXT:    mov x13, x10
-; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:  .LBB4_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q2, q3, [x12, #-16]
+; CHECK-NEXT:    ldp q1, q2, [x12, #-16]
 ; CHECK-NEXT:    subs x13, x13, #16
 ; CHECK-NEXT:    add x12, x12, #32
-; CHECK-NEXT:    umull2 v4.4s, v1.8h, v2.8h
-; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
-; CHECK-NEXT:    umull2 v5.4s, v1.8h, v3.8h
-; CHECK-NEXT:    umull v3.4s, v0.4h, v3.4h
-; CHECK-NEXT:    stp q2, q4, [x11, #-32]
-; CHECK-NEXT:    stp q3, q5, [x11], #64
+; CHECK-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v4.4s, v2.8h, #0
+; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-NEXT:    mul v3.4s, v0.4s, v3.4s
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v4.4s, v0.4s, v4.4s
+; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-NEXT:    stp q1, q3, [x11, #-32]
+; CHECK-NEXT:    stp q2, q4, [x11], #64
 ; CHECK-NEXT:    b.ne .LBB4_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x10, x9
@@ -429,13 +435,12 @@ define i16 @red_mla_dup_ext_u8_s8_s16(i8* noalias nocapture noundef readonly %A,
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_4: // %vector.ph
-; CHECK-NEXT:    dup v2.8b, w9
 ; CHECK-NEXT:    and x11, x10, #0xfffffff0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    add x8, x0, #8
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x12, x11
-; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    dup v2.8h, w9
 ; CHECK-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp d3, d4, [x8, #-8]
