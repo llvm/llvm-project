@@ -231,6 +231,11 @@ def pointer_size():
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
+    if fpath == None:
+        return False
+    if sys.platform == 'win32':
+        if not fpath.endswith(".exe"):
+            fpath += ".exe"
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 
