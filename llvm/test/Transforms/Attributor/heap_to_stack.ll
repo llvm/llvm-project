@@ -218,6 +218,20 @@ define void @test3c(i64 %alignment) {
   ret void
 }
 
+; leave alone a constant-but-invalid alignment
+define void @test3d(i8* %p) {
+; CHECK-LABEL: define {{[^@]+}}@test3d
+; CHECK-SAME; (i8* nocapture [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @aligned_alloc(i64 noundef 33, i64 noundef 128)
+; CHECK:    tail call void @free(i8* noalias nocapture [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  %1 = tail call noalias i8* @aligned_alloc(i64 33, i64 128)
+  tail call void @nofree_arg_only(i8* %1, i8* %p)
+  tail call void @free(i8* %1)
+  ret void
+}
+
 declare noalias i8* @calloc(i64, i64)
 
 define void @test0() {
