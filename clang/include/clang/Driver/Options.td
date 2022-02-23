@@ -1662,9 +1662,11 @@ defm sanitize_address_poison_custom_array_cookie : BoolOption<"f", "sanitize-add
   PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " poisoning array cookies when using custom operator new[] in AddressSanitizer">>,
   Group<f_clang_Group>;
-def fsanitize_address_globals_dead_stripping : Flag<["-"], "fsanitize-address-globals-dead-stripping">,
-  Group<f_clang_Group>, HelpText<"Enable linker dead stripping of globals in AddressSanitizer">,
-  MarshallingInfoFlag<CodeGenOpts<"SanitizeAddressGlobalsDeadStripping">, "false">;
+defm sanitize_address_globals_dead_stripping : BoolOption<"f", "sanitize-address-globals-dead-stripping",
+  CodeGenOpts<"SanitizeAddressGlobalsDeadStripping">, DefaultFalse,
+  PosFlag<SetTrue, [], "Enable linker dead stripping of globals in AddressSanitizer">,
+  NegFlag<SetFalse, [], "Disable linker dead stripping of globals in AddressSanitizer">>,
+  Group<f_clang_Group>;
 defm sanitize_address_use_odr_indicator : BoolOption<"f", "sanitize-address-use-odr-indicator",
   CodeGenOpts<"SanitizeAddressUseOdrIndicator">, DefaultFalse,
   PosFlag<SetTrue, [], "Enable ODR indicator globals to avoid false ODR violation"
