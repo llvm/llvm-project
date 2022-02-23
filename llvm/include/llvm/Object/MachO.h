@@ -364,8 +364,7 @@ class MachOChainedFixupEntry : public MachOAbstractFixupEntry {
 public:
   enum class FixupKind { All, Bind, WeakBind, Rebase };
 
-  MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, FixupKind Kind,
-                         bool Parse);
+  MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, bool Parse);
 
   bool operator==(const MachOChainedFixupEntry &) const;
 
@@ -376,7 +375,6 @@ public:
 private:
   std::vector<ChainedFixupTarget> FixupTargets;
   uint32_t FixupIndex = 0;
-  FixupKind Kind;
 };
 using fixup_iterator = content_iterator<MachOChainedFixupEntry>;
 
@@ -523,8 +521,7 @@ public:
   iterator_range<bind_iterator> bindTable(Error &Err);
 
   /// For iterating over all chained fixups.
-  iterator_range<fixup_iterator>
-  fixupTable(Error &Err, MachOChainedFixupEntry::FixupKind Kind);
+  iterator_range<fixup_iterator> fixupTable(Error &Err);
 
   /// For use iterating over all lazy bind table entries.
   iterator_range<bind_iterator> lazyBindTable(Error &Err);

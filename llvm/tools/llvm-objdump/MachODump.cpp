@@ -1184,11 +1184,9 @@ static void PrintLinkOptHints(MachOObjectFile *O) {
   }
 }
 
-static void printMachOChainedFixups(object::MachOObjectFile *Obj,
-                                    MachOChainedFixupEntry::FixupKind Type) {
+static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   Error Err = Error::success();
-  for (const object::MachOChainedFixupEntry &Entry :
-       Obj->fixupTable(Err, Type)) {
+  for (const object::MachOChainedFixupEntry &Entry : Obj->fixupTable(Err)) {
     (void)Entry;
   }
   if (Err)
@@ -1197,7 +1195,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj,
 
 static void PrintDyldInfo(MachOObjectFile *O) {
   outs() << "dyld information:" << '\n';
-  printMachOChainedFixups(O, MachOChainedFixupEntry::FixupKind::Bind);
+  printMachOChainedFixups(O);
 }
 
 static void PrintDylibs(MachOObjectFile *O, bool JustId) {
