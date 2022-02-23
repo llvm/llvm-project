@@ -364,6 +364,53 @@ define i1 @consistent_nocapture_through_global() {
   ret i1 %cmp
 }
 
+; End consistent heap layout tests
+
+; We can fold this by assuming a single heap layout
+define i1 @two_nonnull_mallocs() {
+; CHECK-LABEL: @two_nonnull_mallocs(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call nonnull i8* @malloc(i64 4)
+  %n = call nonnull i8* @malloc(i64 4)
+  %cmp = icmp eq i8* %m, %n
+  ret i1 %cmp
+}
+
+; The address of %n is captured, but %m can be arranged to make
+; the comparison non-equal.
+define i1 @two_nonnull_mallocs2() {
+; CHECK-LABEL: @two_nonnull_mallocs2(
+; CHECK-NEXT:    [[N:%.*]] = call nonnull dereferenceable(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    call void @unknown(i8* nonnull [[N]])
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call nonnull i8* @malloc(i64 4)
+  %n = call nonnull i8* @malloc(i64 4)
+  call void @unknown(i8* %n)
+  %cmp = icmp eq i8* %m, %n
+  ret i1 %cmp
+}
+
+; TODO: We can fold this, but don't with the current scheme.
+define i1 @two_nonnull_mallocs_hidden() {
+; CHECK-LABEL: @two_nonnull_mallocs_hidden(
+; CHECK-NEXT:    [[M:%.*]] = call nonnull dereferenceable(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[N:%.*]] = call nonnull dereferenceable(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, i8* [[M]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, i8* [[N]], i64 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %m = call nonnull i8* @malloc(i64 4)
+  %n = call nonnull i8* @malloc(i64 4)
+  %gep1 = getelementptr i8, i8* %m, i32 1
+  %gep2 = getelementptr i8, i8* %n, i32 2
+  %cmp = icmp eq i8* %gep1, %gep2
+  ret i1 %cmp
+}
+
+
 !0 = !{}
 
 
