@@ -21,12 +21,12 @@ func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
                  %arg3 : index, %arg4 : index) {
   // CHECK: %[[CST:.*]] = arith.constant 0.0
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1
-  // CHECK: llvm.intr.stacksave
   // CHECK: %[[BUF:.*]] = llvm.alloca %[[ONE]] x f32
   // CHECK: llvm.store %[[CST]], %[[BUF]]
   %step = arith.constant 1 : index
   %zero = arith.constant 0.0 : f32
   // CHECK: omp.parallel
+  // CHECK: memref.alloca_scope
   // CHECK: omp.wsloop
   // CHECK-SAME: reduction(@[[$REDF]] -> %[[BUF]]
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -43,7 +43,6 @@ func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
   }
   // CHECK: omp.terminator
   // CHECK: llvm.load %[[BUF]]
-  // CHECK: llvm.intr.stackrestore
   return
 }
 
@@ -162,6 +161,7 @@ func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
   // CHECK: llvm.store %[[IONE]], %[[BUF2]]
 
   // CHECK: omp.parallel
+  // CHECK: memref.alloca_scope
   // CHECK: omp.wsloop
   // CHECK-SAME: reduction(@[[$REDF1]] -> %[[BUF1]]
   // CHECK-SAME:           @[[$REDF2]] -> %[[BUF2]]

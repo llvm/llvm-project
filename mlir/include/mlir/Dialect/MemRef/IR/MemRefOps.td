@@ -274,6 +274,7 @@ def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
   let regions = (region SizedRegion<1>:$bodyRegion);
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
