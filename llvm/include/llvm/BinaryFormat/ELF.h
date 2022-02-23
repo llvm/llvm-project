@@ -1042,6 +1042,9 @@ enum : unsigned {
 
   SHF_MASKOS = 0x0ff00000,
 
+  // Solaris equivalent of SHF_GNU_RETAIN.
+  SHF_SUNW_NODISCARD = 0x00100000,
+
   // Bits indicating processor-specific flags.
   SHF_MASKPROC = 0xf0000000,
 
