@@ -24,8 +24,9 @@ namespace mlir {
 /// Parses a IntegerPolyhedron from a StringRef. It is expected that the
 /// string represents a valid IntegerSet, otherwise it will violate a gtest
 /// assertion.
-inline IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
+inline IntegerPolyhedron parsePoly(StringRef str) {
+  MLIRContext context(MLIRContext::Threading::DISABLED);
+  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, &context);
   EXPECT_TRUE(succeeded(poly));
   return *poly;
 }
