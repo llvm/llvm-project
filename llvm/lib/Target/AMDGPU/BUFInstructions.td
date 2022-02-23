@@ -1075,7 +1075,7 @@ def BUFFER_WBINVL1_SC : MUBUF_Invalidate <"buffer_wbinvl1_sc",
                                           int_amdgcn_buffer_wbinvl1_sc>;
 }
 
-let SubtargetPredicate = isGFX6GFX7GFX10 in {
+let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
 
 defm BUFFER_ATOMIC_FCMPSWAP : MUBUF_Pseudo_Atomics <
   "buffer_atomic_fcmpswap", VReg_64, v2f32, null_frag
@@ -1086,6 +1086,11 @@ defm BUFFER_ATOMIC_FMIN : MUBUF_Pseudo_Atomics <
 defm BUFFER_ATOMIC_FMAX : MUBUF_Pseudo_Atomics <
   "buffer_atomic_fmax", VGPR_32, f32, null_frag
 >;
+
+}
+
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
+
 defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_fcmpswap_x2", VReg_128, v2f64, null_frag
 >;
@@ -1465,9 +1470,11 @@ defm : BufferAtomicPatterns<SIbuffer_atomic_xor, i64, "BUFFER_ATOMIC_XOR_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_inc, i64, "BUFFER_ATOMIC_INC_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_dec, i64, "BUFFER_ATOMIC_DEC_X2">;
 
-let SubtargetPredicate = isGFX6GFX7GFX10 in {
+let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
   defm : BufferAtomicPatterns<SIbuffer_atomic_fmin, f32, "BUFFER_ATOMIC_FMIN">;
   defm : BufferAtomicPatterns<SIbuffer_atomic_fmax, f32, "BUFFER_ATOMIC_FMAX">;
+}
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
   defm : BufferAtomicPatterns<SIbuffer_atomic_fmin, f64, "BUFFER_ATOMIC_FMIN_X2">;
   defm : BufferAtomicPatterns<SIbuffer_atomic_fmax, f64, "BUFFER_ATOMIC_FMAX_X2">;
 }

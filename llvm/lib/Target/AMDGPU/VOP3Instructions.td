@@ -263,9 +263,9 @@ def : GCNPat<
 >;
 
 let isReMaterializable = 1 in {
-let SubtargetPredicate = isGFX6GFX7GFX10 in {
+let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
 defm V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
-} // End SubtargetPredicate = isGFX6GFX7GFX10
+} // End SubtargetPredicate = isGFX6GFX7GFX10Plus
 
 let SchedRW = [Write32Bit] in {
 let SubtargetPredicate = isGFX8Plus in {
