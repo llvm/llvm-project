@@ -16,6 +16,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Error.h"
 
@@ -67,6 +68,11 @@ struct ExecutionEngineOptions {
   /// If `sharedLibPaths` are provided, the underlying JIT-compilation will
   /// open and link the shared libraries for symbol resolution.
   ArrayRef<StringRef> sharedLibPaths = {};
+
+  /// Specifies an existing `sectionMemoryMapper` to be associated with the
+  /// compiled code. If none is provided, a default memory mapper that directly
+  /// calls into the operating system is used.
+  llvm::SectionMemoryManager::MemoryMapper *sectionMemoryMapper = nullptr;
 
   /// If `enableObjectCache` is set, the JIT compiler will create one to store
   /// the object generated for the given module.
