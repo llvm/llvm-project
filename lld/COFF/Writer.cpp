@@ -712,7 +712,7 @@ bool Writer::fixGnuImportChunks() {
 
   bool hasIdata = false;
   // Sort all .idata$* chunks, grouping chunks from the same library,
-  // with alphabetical ordering of the object fils within a library.
+  // with alphabetical ordering of the object files within a library.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
     if (!pSec->name.startswith(".idata"))

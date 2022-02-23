@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -analyze < %s | FileCheck %s
 ;
-; Verify that the accesses are correctly expanded 
+; Verify that the accesses are correctly expanded
 ;
 ; Original source code :
 ;

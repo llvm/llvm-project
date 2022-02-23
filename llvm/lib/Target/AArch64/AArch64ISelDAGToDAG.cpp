@@ -1852,6 +1852,7 @@ static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
     VT = Opd0->getValueType(0);
   } else if (isOpcWithIntImmediate(Op0, ISD::SRL, SrlImm)) {
     Opd0 = Op0->getOperand(0);
+    ClampMSB = (VT == MVT::i32);
   } else if (BiggerPattern) {
     // Let's pretend a 0 shift right has been performed.
     // The resulting code will be at least as good as the original one

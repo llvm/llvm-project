@@ -7,16 +7,16 @@
 ;
 ; #define Ni 2000
 ; #define Nj 2000
-; 
+;
 ; double mse(double A[Ni], double B[Nj]) {
 ;   int i;
 ;   double tmp = 6;
 ;   for (i = 0; i < Ni; i++) {
-;     B[i] = 2; 
+;     B[i] = 2;
 ;     for (int j = 0; j<Nj; j++) {
 ;       B[j] = j;
 ;     }
-;     A[i] = B[i]; 
+;     A[i] = B[i];
 ;   }
 ;   return tmp;
 ; }

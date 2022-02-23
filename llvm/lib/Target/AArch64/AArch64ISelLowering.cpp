@@ -13468,7 +13468,8 @@ static SDValue performBuildVectorExtendCombine(SDValue BV, SelectionDAG &DAG) {
 
   // Restrict valid pre-extend data type
   EVT PreExtendType = calculatePreExtendType(Extend);
-  if (PreExtendType.getSizeInBits() != VT.getScalarSizeInBits() / 2)
+  if (PreExtendType == MVT::Other ||
+      PreExtendType.getSizeInBits() != VT.getScalarSizeInBits() / 2)
     return SDValue();
 
   // Make sure all other operands are equally extended

@@ -2266,6 +2266,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     case DT_MIPS_PLTGOT:
     case DT_MIPS_RWPLT:
     case DT_MIPS_RLD_MAP_REL:
+    case DT_MIPS_XHASH:
       return FormatHexValue(Value);
     case DT_MIPS_FLAGS:
       return FormatFlags(Value, makeArrayRef(ElfDynamicDTMipsFlags));
@@ -6962,10 +6963,13 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
       W.printString("Name", FuncName);
 
       ListScope L(W, "BB entries");
+      uint32_t FunctionRelativeAddress = 0;
       for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
         DictScope L(W);
-        W.printHex("Offset", BBE.Offset);
+        FunctionRelativeAddress += BBE.Offset;
+        W.printHex("Offset", FunctionRelativeAddress);
         W.printHex("Size", BBE.Size);
+        FunctionRelativeAddress += BBE.Size;
         W.printBoolean("HasReturn", BBE.HasReturn);
         W.printBoolean("HasTailCall", BBE.HasTailCall);
         W.printBoolean("IsEHPad", BBE.IsEHPad);

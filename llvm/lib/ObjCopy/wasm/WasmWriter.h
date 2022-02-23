@@ -1,4 +1,4 @@
-//===- Writer.h -------------------------------------------------*- C++ -*-===//
+//===- WasmWriter.h ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_WASM_WRITER_H
-#define LLVM_LIB_OBJCOPY_WASM_WRITER_H
+#ifndef LLVM_LIB_OBJCOPY_WASM_WASMWRITER_H
+#define LLVM_LIB_OBJCOPY_WASM_WASMWRITER_H
 
-#include "Object.h"
+#include "WasmObject.h"
 #include <cstdint>
 #include <vector>
 
@@ -46,4 +46,4 @@ private:
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_WASM_WRITER_H
+#endif // LLVM_LIB_OBJCOPY_WASM_WASMWRITER_H

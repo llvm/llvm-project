@@ -18,7 +18,7 @@
 ;         x = 0;
 ;         if(control) x = C[i];
 ;         B[i] = x * A[i];
-; 
+;
 ;     }
 ; #pragma endscop
 ; }

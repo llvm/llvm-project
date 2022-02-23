@@ -1,4 +1,4 @@
-//===- Object.cpp - Mach-O object file model --------------------*- C++ -*-===//
+//===- MachOObject.cpp - Mach-O object file model ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Object.h"
+#include "MachOObject.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <unordered_set>
 

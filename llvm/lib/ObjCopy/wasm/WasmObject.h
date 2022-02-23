@@ -1,4 +1,4 @@
-//===- Object.h -------------------------------------------------*- C++ -*-===//
+//===- WasmObject.h ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_WASM_OBJECT_H
-#define LLVM_LIB_OBJCOPY_WASM_OBJECT_H
+#ifndef LLVM_LIB_OBJCOPY_WASM_WASMOBJECT_H
+#define LLVM_LIB_OBJCOPY_WASM_WASMOBJECT_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,4 +44,4 @@ private:
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_WASM_OBJECT_H
+#endif // LLVM_LIB_OBJCOPY_WASM_WASMOBJECT_H

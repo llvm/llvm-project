@@ -2,7 +2,7 @@
 
 ; Derived from test-suite/SingleSource/UnitTests/Vector/SSE/sse.stepfft.c
 
-; The values %mul.i44 is simplified to constant 4 by ScalarEvolution, but 
+; The values %mul.i44 is simplified to constant 4 by ScalarEvolution, but
 ; SCEVAffinator used to check whether the sdiv's argument was constant.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

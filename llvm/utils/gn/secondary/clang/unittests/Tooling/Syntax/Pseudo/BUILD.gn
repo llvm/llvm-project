@@ -12,6 +12,6 @@ unittest("ClangPseudoTests") {
   ]
   sources = [
     "GrammarTest.cpp",
-    "LRGraphTest.cpp",
+    "LRTableTest.cpp",
   ]
 }
