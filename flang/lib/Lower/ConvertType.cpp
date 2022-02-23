@@ -520,7 +520,7 @@ mlir::Type Fortran::lower::translateVariableToFIRType(
 }
 
 mlir::Type Fortran::lower::convertReal(mlir::MLIRContext *context, int kind) {
-  return genFIRType<Fortran::common::TypeCategory::Real>(context, kind);
+  return genRealType(context, kind);
 }
 
 mlir::Type Fortran::lower::getSequenceRefType(mlir::Type refType) {
