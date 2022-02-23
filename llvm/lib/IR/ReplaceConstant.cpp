@@ -13,6 +13,7 @@
 
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueMap.h"
 
