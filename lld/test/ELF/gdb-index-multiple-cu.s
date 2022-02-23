@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld --gdb-index %t.o -o %t
+# RUN: ld.lld --gdb-index %t.o -o %t 2>&1 | count 0
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s
 
 # cuIndexAndAttrs of _start:
@@ -40,7 +40,7 @@ foo:
 	.long	.Lcu_end0 - .Lcu_begin0 - 4
 	.short	4              # DWARF version number
 	.long	0              # Offset Into Abbrev. Section
-	.byte	4              # Address Size
+	.byte	8              # Address Size
 .Ldie0:
 	.byte	1              # Abbrev [1] DW_TAG_compile_unit
 	.byte	2              # Abbrev [2] DW_TAG_subprogram
@@ -52,7 +52,7 @@ foo:
 	.long	.Lcu_end1 - .Lcu_begin1 - 4
 	.short	4              # DWARF version number
 	.long	0              # Offset Into Abbrev. Section
-	.byte	4              # Address Size
+	.byte	8              # Address Size
 .Ldie1:
 	.byte	1              # Abbrev [1] DW_TAG_compile_unit
 	.byte	2              # Abbrev [2] DW_TAG_subprogram

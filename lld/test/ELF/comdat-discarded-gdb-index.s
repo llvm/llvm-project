@@ -40,14 +40,13 @@ foo:
   .long   .Lcu_end0 - .Lcu_begin0 - 4
   .short  4              # DWARF version number
   .long   0              # Offset Into Abbrev. Section
-  .byte   4              # Address Size
+  .byte   8              # Address Size
 .Ldie0:
   .byte   1              # Abbrev [1] DW_TAG_compile_unit
   .quad   .Lfunc_begin0  # DW_AT_low_pc
   .long   .Lfunc_end0 - .Lfunc_begin0 # DW_AT_high_pc
   .byte   2              # Abbrev [2] DW_TAG_subprogram
   .asciz  "foo"          # DW_AT_name
-  .byte   0
   .byte   0
 .Lcu_end0:
 
