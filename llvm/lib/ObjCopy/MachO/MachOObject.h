@@ -1,4 +1,4 @@
-//===- Object.h - Mach-O object file model ----------------------*- C++ -*-===//
+//===- MachOObject.h - Mach-O object file model -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_MACHO_OBJECT_H
-#define LLVM_LIB_OBJCOPY_MACHO_OBJECT_H
+#ifndef LLVM_LIB_OBJCOPY_MACHO_MACHOOBJECT_H
+#define LLVM_LIB_OBJCOPY_MACHO_MACHOOBJECT_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -371,4 +371,4 @@ struct Object {
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_MACHO_OBJECT_H
+#endif // LLVM_LIB_OBJCOPY_MACHO_MACHOOBJECT_H
