@@ -12,7 +12,7 @@
 #ifndef HEADER
 #define HEADER
 
-void foo() {
+void foo(void) {
   char cx, ce, cd;
   unsigned char ucx, uce, ucd;
   short sx, se, sd;
