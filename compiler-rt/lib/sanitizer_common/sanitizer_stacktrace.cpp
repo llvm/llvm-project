@@ -20,11 +20,10 @@
 namespace __sanitizer {
 
 uptr StackTrace::GetNextInstructionPc(uptr pc) {
-#if defined(__sparc__) || defined(__mips__)
-  return pc + 8;
-#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__) || \
-    defined(__hexagon__)
+#if defined(__aarch64__)
   return STRIP_PAC_PC((void *)pc) + 4;
+#elif defined(__sparc__) || defined(__mips__)
+  return pc + 8;
 #elif SANITIZER_RISCV64
   // Current check order is 4 -> 2 -> 6 -> 8
   u8 InsnByte = *(u8 *)(pc);
@@ -47,8 +46,10 @@ uptr StackTrace::GetNextInstructionPc(uptr pc) {
   }
   // bail-out if could not figure out the instruction size
   return 0;
-#else
+#elif SANITIZER_I386 || SANITIZER_X32 || SANITIZER_X64
   return pc + 1;
+#else
+  return pc + 4;
 #endif
 }
 
