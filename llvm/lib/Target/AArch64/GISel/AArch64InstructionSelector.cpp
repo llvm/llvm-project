@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -62,6 +63,7 @@ namespace {
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "AArch64GenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATE_BITSET
+
 
 class AArch64InstructionSelector : public InstructionSelector {
 public:
@@ -294,6 +296,20 @@ private:
   emitOverflowOp(unsigned Opcode, Register Dst, MachineOperand &LHS,
                  MachineOperand &RHS, MachineIRBuilder &MIRBuilder) const;
 
+  /// Emit expression as a conjunction (a series of CCMP/CFCMP ops).
+  /// In some cases this is even possible with OR operations in the expression.
+  MachineInstr *emitConjunction(Register Val, AArch64CC::CondCode &OutCC,
+                                MachineIRBuilder &MIB) const;
+  MachineInstr *emitConditionalComparison(Register LHS, Register RHS,
+                                          CmpInst::Predicate CC,
+                                          AArch64CC::CondCode Predicate,
+                                          AArch64CC::CondCode OutCC,
+                                          MachineIRBuilder &MIB) const;
+  MachineInstr *emitConjunctionRec(Register Val, AArch64CC::CondCode &OutCC,
+                                   bool Negate, Register CCOp,
+                                   AArch64CC::CondCode Predicate,
+                                   MachineIRBuilder &MIB) const;
+
   /// Emit a TB(N)Z instruction which tests \p Bit in \p TestReg.
   /// \p IsNegative is true if the test should be "not zero".
   /// This will also optimize the test bit instruction when possible.
@@ -425,7 +441,8 @@ private:
   void materializeLargeCMVal(MachineInstr &I, const Value *V, unsigned OpFlags);
 
   // Optimization methods.
-  bool tryOptSelect(MachineInstr &MI);
+  bool tryOptSelect(GSelect &Sel);
+  bool tryOptSelectConjunction(GSelect &Sel, MachineInstr &CondMI);
   MachineInstr *tryFoldIntegerCompare(MachineOperand &LHS, MachineOperand &RHS,
                                       MachineOperand &Predicate,
                                       MachineIRBuilder &MIRBuilder) const;
@@ -1307,6 +1324,90 @@ static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
     return AArch64CC::LO;
   case CmpInst::ICMP_ULE:
     return AArch64CC::LS;
+  }
+}
+
+/// changeFPCCToORAArch64CC - Convert an IR fp condition code to an AArch64 CC.
+static void changeFPCCToORAArch64CC(CmpInst::Predicate CC,
+                                    AArch64CC::CondCode &CondCode,
+                                    AArch64CC::CondCode &CondCode2) {
+  CondCode2 = AArch64CC::AL;
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown FP condition!");
+  case CmpInst::FCMP_OEQ:
+    CondCode = AArch64CC::EQ;
+    break;
+  case CmpInst::FCMP_OGT:
+    CondCode = AArch64CC::GT;
+    break;
+  case CmpInst::FCMP_OGE:
+    CondCode = AArch64CC::GE;
+    break;
+  case CmpInst::FCMP_OLT:
+    CondCode = AArch64CC::MI;
+    break;
+  case CmpInst::FCMP_OLE:
+    CondCode = AArch64CC::LS;
+    break;
+  case CmpInst::FCMP_ONE:
+    CondCode = AArch64CC::MI;
+    CondCode2 = AArch64CC::GT;
+    break;
+  case CmpInst::FCMP_ORD:
+    CondCode = AArch64CC::VC;
+    break;
+  case CmpInst::FCMP_UNO:
+    CondCode = AArch64CC::VS;
+    break;
+  case CmpInst::FCMP_UEQ:
+    CondCode = AArch64CC::EQ;
+    CondCode2 = AArch64CC::VS;
+    break;
+  case CmpInst::FCMP_UGT:
+    CondCode = AArch64CC::HI;
+    break;
+  case CmpInst::FCMP_UGE:
+    CondCode = AArch64CC::PL;
+    break;
+  case CmpInst::FCMP_ULT:
+    CondCode = AArch64CC::LT;
+    break;
+  case CmpInst::FCMP_ULE:
+    CondCode = AArch64CC::LE;
+    break;
+  case CmpInst::FCMP_UNE:
+    CondCode = AArch64CC::NE;
+    break;
+  }
+}
+
+/// Convert an IR fp condition code to an AArch64 CC.
+/// This differs from changeFPCCToAArch64CC in that it returns cond codes that
+/// should be AND'ed instead of OR'ed.
+static void changeFPCCToANDAArch64CC(CmpInst::Predicate CC,
+                                     AArch64CC::CondCode &CondCode,
+                                     AArch64CC::CondCode &CondCode2) {
+  CondCode2 = AArch64CC::AL;
+  switch (CC) {
+  default:
+    changeFPCCToORAArch64CC(CC, CondCode, CondCode2);
+    assert(CondCode2 == AArch64CC::AL);
+    break;
+  case CmpInst::FCMP_ONE:
+    // (a one b)
+    // == ((a olt b) || (a ogt b))
+    // == ((a ord b) && (a une b))
+    CondCode = AArch64CC::VC;
+    CondCode2 = AArch64CC::NE;
+    break;
+  case CmpInst::FCMP_UEQ:
+    // (a ueq b)
+    // == ((a uno b) || (a oeq b))
+    // == ((a ule b) && (a uge b))
+    CondCode = AArch64CC::PL;
+    CondCode2 = AArch64CC::LE;
+    break;
   }
 }
 
@@ -3292,17 +3393,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectCopy(I, TII, MRI, TRI, RBI);
 
   case TargetOpcode::G_SELECT: {
-    if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(1)) {
+    auto &Sel = cast<GSelect>(I);
+    if (MRI.getType(Sel.getCondReg()) != LLT::scalar(1)) {
       LLVM_DEBUG(dbgs() << "G_SELECT cond has type: " << Ty
                         << ", expected: " << LLT::scalar(1) << '\n');
       return false;
     }
 
-    const Register CondReg = I.getOperand(1).getReg();
-    const Register TReg = I.getOperand(2).getReg();
-    const Register FReg = I.getOperand(3).getReg();
+    const Register CondReg = Sel.getCondReg();
+    const Register TReg = Sel.getTrueReg();
+    const Register FReg = Sel.getFalseReg();
 
-    if (tryOptSelect(I))
+    if (tryOptSelect(Sel))
       return true;
 
     // Make sure to use an unused vreg instead of wzr, so that the peephole
@@ -3311,9 +3413,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     auto TstMI = MIB.buildInstr(AArch64::ANDSWri, {DeadVReg}, {CondReg})
                      .addImm(AArch64_AM::encodeLogicalImmediate(1, 32));
     constrainSelectedInstRegOperands(*TstMI, TII, TRI, RBI);
-    if (!emitSelect(I.getOperand(0).getReg(), TReg, FReg, AArch64CC::NE, MIB))
+    if (!emitSelect(Sel.getReg(0), TReg, FReg, AArch64CC::NE, MIB))
       return false;
-    I.eraseFromParent();
+    Sel.eraseFromParent();
     return true;
   }
   case TargetOpcode::G_ICMP: {
@@ -4702,7 +4804,256 @@ AArch64InstructionSelector::emitOverflowOp(unsigned Opcode, Register Dst,
   }
 }
 
-bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) {
+/// Returns true if @p Val is a tree of AND/OR/CMP operations that can be
+/// expressed as a conjunction.
+/// \param CanNegate    Set to true if we can negate the whole sub-tree just by
+///                     changing the conditions on the CMP tests.
+///                     (this means we can call emitConjunctionRec() with
+///                      Negate==true on this sub-tree)
+/// \param MustBeFirst  Set to true if this subtree needs to be negated and we
+///                     cannot do the negation naturally. We are required to
+///                     emit the subtree first in this case.
+/// \param WillNegate   Is true if are called when the result of this
+///                     subexpression must be negated. This happens when the
+///                     outer expression is an OR. We can use this fact to know
+///                     that we have a double negation (or (or ...) ...) that
+///                     can be implemented for free.
+static bool canEmitConjunction(Register Val, bool &CanNegate, bool &MustBeFirst,
+                               bool WillNegate, MachineRegisterInfo &MRI,
+                               unsigned Depth = 0) {
+  if (!MRI.hasOneNonDBGUse(Val))
+    return false;
+  MachineInstr *ValDef = MRI.getVRegDef(Val);
+  unsigned Opcode = ValDef->getOpcode();
+  if (Opcode == TargetOpcode::G_TRUNC) {
+    // Look through a trunc.
+    Val = ValDef->getOperand(1).getReg();
+    ValDef = MRI.getVRegDef(Val);
+    Opcode = ValDef->getOpcode();
+  }
+  if (isa<GAnyCmp>(ValDef)) {
+    CanNegate = true;
+    MustBeFirst = false;
+    return true;
+  }
+  // Protect against exponential runtime and stack overflow.
+  if (Depth > 6)
+    return false;
+  if (Opcode == TargetOpcode::G_AND || Opcode == TargetOpcode::G_OR) {
+    bool IsOR = Opcode == TargetOpcode::G_OR;
+    Register O0 = ValDef->getOperand(1).getReg();
+    Register O1 = ValDef->getOperand(2).getReg();
+    bool CanNegateL;
+    bool MustBeFirstL;
+    if (!canEmitConjunction(O0, CanNegateL, MustBeFirstL, IsOR, MRI, Depth + 1))
+      return false;
+    bool CanNegateR;
+    bool MustBeFirstR;
+    if (!canEmitConjunction(O1, CanNegateR, MustBeFirstR, IsOR, MRI, Depth + 1))
+      return false;
+
+    if (MustBeFirstL && MustBeFirstR)
+      return false;
+
+    if (IsOR) {
+      // For an OR expression we need to be able to naturally negate at least
+      // one side or we cannot do the transformation at all.
+      if (!CanNegateL && !CanNegateR)
+        return false;
+      // If we the result of the OR will be negated and we can naturally negate
+      // the leaves, then this sub-tree as a whole negates naturally.
+      CanNegate = WillNegate && CanNegateL && CanNegateR;
+      // If we cannot naturally negate the whole sub-tree, then this must be
+      // emitted first.
+      MustBeFirst = !CanNegate;
+    } else {
+      assert(Opcode == TargetOpcode::G_AND && "Must be G_AND");
+      // We cannot naturally negate an AND operation.
+      CanNegate = false;
+      MustBeFirst = MustBeFirstL || MustBeFirstR;
+    }
+    return true;
+  }
+  return false;
+}
+
+MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
+    Register LHS, Register RHS, CmpInst::Predicate CC,
+    AArch64CC::CondCode Predicate, AArch64CC::CondCode OutCC,
+    MachineIRBuilder &MIB) const {
+  // TODO: emit CMN as an optimization.
+  auto &MRI = *MIB.getMRI();
+  LLT OpTy = MRI.getType(LHS);
+  assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
+  unsigned CCmpOpc;
+  if (CmpInst::isIntPredicate(CC)) {
+    CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+  } else {
+    switch (OpTy.getSizeInBits()) {
+    case 16:
+      CCmpOpc = AArch64::FCCMPHrr;
+      break;
+    case 32:
+      CCmpOpc = AArch64::FCCMPSrr;
+      break;
+    case 64:
+      CCmpOpc = AArch64::FCCMPDrr;
+      break;
+    default:
+      return nullptr;
+    }
+  }
+  AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
+  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
+  auto CCmp =
+      MIB.buildInstr(CCmpOpc, {}, {LHS, RHS}).addImm(NZCV).addImm(Predicate);
+  constrainSelectedInstRegOperands(*CCmp, TII, TRI, RBI);
+  return &*CCmp;
+}
+
+MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
+    Register Val, AArch64CC::CondCode &OutCC, bool Negate, Register CCOp,
+    AArch64CC::CondCode Predicate, MachineIRBuilder &MIB) const {
+  // We're at a tree leaf, produce a conditional comparison operation.
+  auto &MRI = *MIB.getMRI();
+  MachineInstr *ValDef = MRI.getVRegDef(Val);
+  unsigned Opcode = ValDef->getOpcode();
+  if (Opcode == TargetOpcode::G_TRUNC) {
+    // Look through a trunc.
+    Val = ValDef->getOperand(1).getReg();
+    ValDef = MRI.getVRegDef(Val);
+    Opcode = ValDef->getOpcode();
+  }
+  if (auto *Cmp = dyn_cast<GAnyCmp>(ValDef)) {
+    Register LHS = Cmp->getLHSReg();
+    Register RHS = Cmp->getRHSReg();
+    CmpInst::Predicate CC = Cmp->getCond();
+    if (Negate)
+      CC = CmpInst::getInversePredicate(CC);
+    if (isa<GICmp>(Cmp)) {
+      OutCC = changeICMPPredToAArch64CC(CC);
+    } else {
+      // Handle special FP cases.
+      AArch64CC::CondCode ExtraCC;
+      changeFPCCToANDAArch64CC(CC, OutCC, ExtraCC);
+      // Some floating point conditions can't be tested with a single condition
+      // code. Construct an additional comparison in this case.
+      if (ExtraCC != AArch64CC::AL) {
+        MachineInstr *ExtraCmp;
+        if (!CCOp)
+          ExtraCmp = emitFPCompare(LHS, RHS, MIB, CC);
+        else
+          ExtraCmp =
+              emitConditionalComparison(LHS, RHS, CC, Predicate, ExtraCC, MIB);
+        CCOp = ExtraCmp->getOperand(0).getReg();
+        Predicate = ExtraCC;
+      }
+    }
+
+    // Produce a normal comparison if we are first in the chain
+    if (!CCOp) {
+      auto Dst = MRI.cloneVirtualRegister(LHS);
+      if (isa<GICmp>(Cmp))
+        return emitSUBS(Dst, Cmp->getOperand(2), Cmp->getOperand(3), MIB);
+      return emitFPCompare(Cmp->getOperand(2).getReg(),
+                           Cmp->getOperand(3).getReg(), MIB);
+    }
+    // Otherwise produce a ccmp.
+    return emitConditionalComparison(LHS, RHS, CC, Predicate, OutCC, MIB);
+  }
+  assert(MRI.hasOneNonDBGUse(Val) && "Valid conjunction/disjunction tree");
+
+  bool IsOR = Opcode == TargetOpcode::G_OR;
+
+  Register LHS = ValDef->getOperand(1).getReg();
+  bool CanNegateL;
+  bool MustBeFirstL;
+  bool ValidL = canEmitConjunction(LHS, CanNegateL, MustBeFirstL, IsOR, MRI);
+  assert(ValidL && "Valid conjunction/disjunction tree");
+  (void)ValidL;
+
+  Register RHS = ValDef->getOperand(2).getReg();
+  bool CanNegateR;
+  bool MustBeFirstR;
+  bool ValidR = canEmitConjunction(RHS, CanNegateR, MustBeFirstR, IsOR, MRI);
+  assert(ValidR && "Valid conjunction/disjunction tree");
+  (void)ValidR;
+
+  // Swap sub-tree that must come first to the right side.
+  if (MustBeFirstL) {
+    assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
+    std::swap(LHS, RHS);
+    std::swap(CanNegateL, CanNegateR);
+    std::swap(MustBeFirstL, MustBeFirstR);
+  }
+
+  bool NegateR;
+  bool NegateAfterR;
+  bool NegateL;
+  bool NegateAfterAll;
+  if (Opcode == TargetOpcode::G_OR) {
+    // Swap the sub-tree that we can negate naturally to the left.
+    if (!CanNegateL) {
+      assert(CanNegateR && "at least one side must be negatable");
+      assert(!MustBeFirstR && "invalid conjunction/disjunction tree");
+      assert(!Negate);
+      std::swap(LHS, RHS);
+      NegateR = false;
+      NegateAfterR = true;
+    } else {
+      // Negate the left sub-tree if possible, otherwise negate the result.
+      NegateR = CanNegateR;
+      NegateAfterR = !CanNegateR;
+    }
+    NegateL = true;
+    NegateAfterAll = !Negate;
+  } else {
+    assert(Opcode == TargetOpcode::G_AND &&
+           "Valid conjunction/disjunction tree");
+    assert(!Negate && "Valid conjunction/disjunction tree");
+
+    NegateL = false;
+    NegateR = false;
+    NegateAfterR = false;
+    NegateAfterAll = false;
+  }
+
+  // Emit sub-trees.
+  AArch64CC::CondCode RHSCC;
+  MachineInstr *CmpR =
+      emitConjunctionRec(RHS, RHSCC, NegateR, CCOp, Predicate, MIB);
+  if (NegateAfterR)
+    RHSCC = AArch64CC::getInvertedCondCode(RHSCC);
+  MachineInstr *CmpL = emitConjunctionRec(
+      LHS, OutCC, NegateL, CmpR->getOperand(0).getReg(), RHSCC, MIB);
+  if (NegateAfterAll)
+    OutCC = AArch64CC::getInvertedCondCode(OutCC);
+  return CmpL;
+}
+
+MachineInstr *AArch64InstructionSelector::emitConjunction(
+    Register Val, AArch64CC::CondCode &OutCC, MachineIRBuilder &MIB) const {
+  bool DummyCanNegate;
+  bool DummyMustBeFirst;
+  if (!canEmitConjunction(Val, DummyCanNegate, DummyMustBeFirst, false,
+                          *MIB.getMRI()))
+    return nullptr;
+  return emitConjunctionRec(Val, OutCC, false, Register(), AArch64CC::AL, MIB);
+}
+
+bool AArch64InstructionSelector::tryOptSelectConjunction(GSelect &SelI,
+                                                         MachineInstr &CondMI) {
+  AArch64CC::CondCode AArch64CC;
+  MachineInstr *ConjMI = emitConjunction(SelI.getCondReg(), AArch64CC, MIB);
+  if (!ConjMI)
+    return false;
+
+  emitSelect(SelI.getReg(0), SelI.getTrueReg(), SelI.getFalseReg(), AArch64CC, MIB);
+  SelI.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::tryOptSelect(GSelect &I) {
   MachineRegisterInfo &MRI = *MIB.getMRI();
   // We want to recognize this pattern:
   //
@@ -4755,8 +5106,11 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) {
     return false;
 
   unsigned CondOpc = CondDef->getOpcode();
-  if (CondOpc != TargetOpcode::G_ICMP && CondOpc != TargetOpcode::G_FCMP)
+  if (CondOpc != TargetOpcode::G_ICMP && CondOpc != TargetOpcode::G_FCMP) {
+    if (tryOptSelectConjunction(I, *CondDef))
+      return true;
     return false;
+  }
 
   AArch64CC::CondCode CondCode;
   if (CondOpc == TargetOpcode::G_ICMP) {
