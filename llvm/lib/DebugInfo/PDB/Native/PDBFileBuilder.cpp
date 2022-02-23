@@ -26,6 +26,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
+#include <ctime>
+
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
