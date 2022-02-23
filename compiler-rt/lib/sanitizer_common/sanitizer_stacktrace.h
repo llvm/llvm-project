@@ -98,7 +98,7 @@ uptr StackTrace::GetPreviousInstructionPc(uptr pc) {
   // It seems difficult to figure out the exact instruction length -
   // pc - 2 seems like a safe option for the purposes of stack tracing
   return pc - 2;
-#elif SANITIZER_I386 || SANITIZER_X32 || SANITIZER_X64
+#elif SANITIZER_S390 || SANITIZER_I386 || SANITIZER_X32 || SANITIZER_X64
   return pc - 1;
 #else
   return pc - 4;

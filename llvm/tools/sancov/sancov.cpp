@@ -698,7 +698,7 @@ static uint64_t getPreviousInstructionPc(uint64_t PC,
     return PC - 8;
   if (TheTriple.isRISCV())
     return PC - 2;
-  if (TheTriple.isX86())
+  if (TheTriple.isX86() || TheTriple.isSystemZ())
     return PC - 1;
   return PC - 4;
 }
