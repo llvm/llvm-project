@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TruncInstCombine - looks for expression graphs post-dominated by TruncInst
-// and for each eligible graph, it will create a reduced bit-width expression,
-// replace the old expression with this new one and remove the old expression.
-// Eligible expression graph is such that:
+// TruncInstCombine - looks for expression dags post-dominated by TruncInst and
+// for each eligible dag, it will create a reduced bit-width expression, replace
+// the old expression with this new one and remove the old expression.
+// Eligible expression dag is such that:
 //   1. Contains only supported instructions.
 //   2. Supported leaves: ZExtInst, SExtInst, TruncInst and Constant value.
 //   3. Can be evaluated into type with reduced legal bit-width.
-//   4. All instructions in the graph must not have users outside the graph.
+//   4. All instructions in the dag must not have users outside the dag.
 //      The only exception is for {ZExt, SExt}Inst with operand type equal to
 //      the new reduced type evaluated in (3).
 //
@@ -39,13 +39,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-STATISTIC(NumExprsReduced, "Number of truncations eliminated by reducing bit "
-                           "width of expression graph");
+STATISTIC(
+    NumDAGsReduced,
+    "Number of truncations eliminated by reducing bit width of expression DAG");
 STATISTIC(NumInstrsReduced,
           "Number of instructions whose bit width was reduced");
 
 /// Given an instruction and a container, it fills all the relevant operands of
-/// that instruction, with respect to the Trunc expression graph optimizaton.
+/// that instruction, with respect to the Trunc expression dag optimizaton.
 static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   unsigned Opc = I->getOpcode();
   switch (Opc) {
@@ -77,19 +78,15 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
     Ops.push_back(I->getOperand(1));
     Ops.push_back(I->getOperand(2));
     break;
-  case Instruction::PHI:
-    for (Value *V : cast<PHINode>(I)->incoming_values())
-      Ops.push_back(V);
-    break;
   default:
     llvm_unreachable("Unreachable!");
   }
 }
 
-bool TruncInstCombine::buildTruncExpressionGraph() {
+bool TruncInstCombine::buildTruncExpressionDag() {
   SmallVector<Value *, 8> Worklist;
   SmallVector<Instruction *, 8> Stack;
-  // Clear old instructions info.
+  // Clear old expression dag.
   InstInfoMap.clear();
 
   Worklist.push_back(CurrentTruncInst->getOperand(0));
@@ -153,19 +150,11 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       append_range(Worklist, Operands);
       break;
     }
-    case Instruction::PHI: {
-      SmallVector<Value *, 2> Operands;
-      getRelevantOperands(I, Operands);
-      // Add only operands not in Stack to prevent cycle
-      for (auto *Op : Operands)
-        if (all_of(Stack, [Op](Value *V) { return Op != V; }))
-          Worklist.push_back(Op);
-      break;
-    }
     default:
       // TODO: Can handle more cases here:
       // 1. shufflevector
       // 2. sdiv, srem
+      // 3. phi node(and loop handling)
       // ...
       return false;
     }
@@ -265,7 +254,7 @@ unsigned TruncInstCombine::getMinBitWidth() {
 }
 
 Type *TruncInstCombine::getBestTruncatedType() {
-  if (!buildTruncExpressionGraph())
+  if (!buildTruncExpressionDag())
     return nullptr;
 
   // We don't want to duplicate instructions, which isn't profitable. Thus, we
@@ -378,10 +367,8 @@ Value *TruncInstCombine::getReducedOperand(Value *V, Type *SclTy) {
   return Entry.NewValue;
 }
 
-void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
+void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
   NumInstrsReduced += InstInfoMap.size();
-  // Pairs of old and new phi-nodes
-  SmallVector<std::pair<PHINode *, PHINode *>, 2> OldNewPHINodes;
   for (auto &Itr : InstInfoMap) { // Forward
     Instruction *I = Itr.first;
     TruncInstCombine::Info &NodeInfo = Itr.second;
@@ -464,12 +451,6 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       Res = Builder.CreateSelect(Op0, LHS, RHS);
       break;
     }
-    case Instruction::PHI: {
-      Res = Builder.CreatePHI(getReducedType(I, SclTy), I->getNumOperands());
-      OldNewPHINodes.push_back(
-          std::make_pair(cast<PHINode>(I), cast<PHINode>(Res)));
-      break;
-    }
     default:
       llvm_unreachable("Unhandled instruction");
     }
@@ -477,14 +458,6 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
     NodeInfo.NewValue = Res;
     if (auto *ResI = dyn_cast<Instruction>(Res))
       ResI->takeName(I);
-  }
-
-  for (auto &Node : OldNewPHINodes) {
-    PHINode *OldPN = Node.first;
-    PHINode *NewPN = Node.second;
-    for (auto Incoming : zip(OldPN->incoming_values(), OldPN->blocks()))
-      NewPN->addIncoming(getReducedOperand(std::get<0>(Incoming), SclTy),
-                         std::get<1>(Incoming));
   }
 
   Value *Res = getReducedOperand(CurrentTruncInst->getOperand(0), SclTy);
@@ -497,31 +470,17 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
   }
   CurrentTruncInst->replaceAllUsesWith(Res);
 
-  // Erase old expression graph, which was replaced by the reduced expression
-  // graph.
-  CurrentTruncInst->eraseFromParent();
-  // First, erase old phi-nodes and its uses
-  for (auto &Node : OldNewPHINodes) {
-    PHINode *OldPN = Node.first;
-    OldPN->replaceAllUsesWith(PoisonValue::get(OldPN->getType()));
-    OldPN->eraseFromParent();
-  }
-  // Now we have expression graph turned into dag.
-  // We iterate backward, which means we visit the instruction before we
-  // visit any of its operands, this way, when we get to the operand, we already
+  // Erase old expression dag, which was replaced by the reduced expression dag.
+  // We iterate backward, which means we visit the instruction before we visit
+  // any of its operands, this way, when we get to the operand, we already
   // removed the instructions (from the expression dag) that uses it.
+  CurrentTruncInst->eraseFromParent();
   for (auto &I : llvm::reverse(InstInfoMap)) {
-    // Skip phi-nodes since they were erased before
-    if (isa<PHINode>(I.first))
-      continue;
     // We still need to check that the instruction has no users before we erase
     // it, because {SExt, ZExt}Inst Instruction might have other users that was
     // not reduced, in such case, we need to keep that instruction.
     if (I.first->use_empty())
       I.first->eraseFromParent();
-    else
-      assert((isa<SExtInst>(I.first) || isa<ZExtInst>(I.first)) &&
-             "Only {SExt, ZExt}Inst might have unreduced users");
   }
 }
 
@@ -539,18 +498,18 @@ bool TruncInstCombine::run(Function &F) {
   }
 
   // Process all TruncInst in the Worklist, for each instruction:
-  //   1. Check if it dominates an eligible expression graph to be reduced.
-  //   2. Create a reduced expression graph and replace the old one with it.
+  //   1. Check if it dominates an eligible expression dag to be reduced.
+  //   2. Create a reduced expression dag and replace the old one with it.
   while (!Worklist.empty()) {
     CurrentTruncInst = Worklist.pop_back_val();
 
     if (Type *NewDstSclTy = getBestTruncatedType()) {
       LLVM_DEBUG(
-          dbgs() << "ICE: TruncInstCombine reducing type of expression graph "
+          dbgs() << "ICE: TruncInstCombine reducing type of expression dag "
                     "dominated by: "
                  << CurrentTruncInst << '\n');
-      ReduceExpressionGraph(NewDstSclTy);
-      ++NumExprsReduced;
+      ReduceExpressionDag(NewDstSclTy);
+      ++NumDAGsReduced;
       MadeIRChange = true;
     }
   }
