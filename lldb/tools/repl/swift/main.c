@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
+#define REPL_MAIN $s10repl_swift0A5_mainSiyF
 
 #if !defined(__has_attribute)
 #define __has_attribute(attribute) 0
