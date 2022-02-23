@@ -3242,7 +3242,7 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/GPU/GPUBase.td",
-    deps = [":GPUOpsTdFiles"],
+    deps = [":OpBaseTdFiles"],
 )
 
 gentbl_cc_library(
