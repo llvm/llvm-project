@@ -3256,8 +3256,8 @@ void MachOAbstractFixupEntry::moveToEnd() { Done = true; }
 
 MachOChainedFixupEntry::MachOChainedFixupEntry(Error *E,
                                                const MachOObjectFile *O,
-                                               FixupKind Kind, bool Parse)
-    : MachOAbstractFixupEntry(E, O), Kind(Kind) {
+                                               bool Parse)
+    : MachOAbstractFixupEntry(E, O) {
   ErrorAsOutParameter e(E);
   if (Parse) {
     if (auto FixupTargetsOrErr = O->getDyldChainedFixupTargets())
@@ -4298,13 +4298,11 @@ iterator_range<bind_iterator> MachOObjectFile::weakBindTable(Error &Err) {
                    MachOBindEntry::Kind::Weak);
 }
 
-iterator_range<fixup_iterator>
-MachOObjectFile::fixupTable(Error &Err,
-                            MachOChainedFixupEntry::FixupKind Kind) {
-  MachOChainedFixupEntry Start(&Err, this, Kind, true);
+iterator_range<fixup_iterator> MachOObjectFile::fixupTable(Error &Err) {
+  MachOChainedFixupEntry Start(&Err, this, true);
   Start.moveToFirst();
 
-  MachOChainedFixupEntry Finish(&Err, this, Kind, false);
+  MachOChainedFixupEntry Finish(&Err, this, false);
   Finish.moveToEnd();
 
   return make_range(fixup_iterator(Start), fixup_iterator(Finish));
