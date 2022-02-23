@@ -138,6 +138,14 @@ static cl::opt<int>
 MaxStoreLookup("slp-max-store-lookup", cl::init(32), cl::Hidden,
     cl::desc("Maximum depth of the lookup for consecutive stores."));
 
+/// Limits the size of scheduling regions in a block.
+/// It avoid long compile times for _very_ large blocks where vector
+/// instructions are spread over a wide range.
+/// This limit is way higher than needed by real-world functions.
+static cl::opt<int>
+ScheduleRegionSizeBudget("slp-schedule-budget", cl::init(100000), cl::Hidden,
+    cl::desc("Limit the size of the SLP scheduling region per block"));
+
 static cl::opt<int> MinVectorRegSizeOption(
     "slp-min-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -168,6 +176,10 @@ static const unsigned AliasedCheckLimit = 10;
 // instructions where alias checks are done.
 // This limit is useful for very large basic blocks.
 static const unsigned MaxMemDepDistance = 160;
+
+/// If the ScheduleRegionSizeBudget is exhausted, we allow small scheduling
+/// regions to be handled.
+static const int MinScheduleRegionSize = 16;
 
 /// Predicate for the element types that the SLP vectorizer supports.
 ///
@@ -2612,6 +2624,13 @@ private:
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
 
+      // Reduce the maximum schedule region size by the size of the
+      // previous scheduling run.
+      ScheduleRegionSizeLimit -= ScheduleRegionSize;
+      if (ScheduleRegionSizeLimit < MinScheduleRegionSize)
+        ScheduleRegionSizeLimit = MinScheduleRegionSize;
+      ScheduleRegionSize = 0;
+
       // Make a new scheduling region, i.e. all existing ScheduleData is not
       // in the new region yet.
       ++SchedulingRegionID;
@@ -2792,7 +2811,7 @@ private:
 
     /// Extends the scheduling region so that V is inside the region.
     /// \returns true if the region size is within the limit.
-    void extendSchedulingRegion(Value *V, const InstructionsState &S);
+    bool extendSchedulingRegion(Value *V, const InstructionsState &S);
 
     /// Initialize the ScheduleData structures for new instructions in the
     /// scheduling region.
@@ -2845,6 +2864,12 @@ private:
     /// The last memory accessing instruction in the scheduling region
     /// (can be null).
     ScheduleData *LastLoadStoreInRegion = nullptr;
+
+    /// The current size of the scheduling region.
+    int ScheduleRegionSize = 0;
+
+    /// The maximum size allowed for the scheduling region.
+    int ScheduleRegionSizeLimit = ScheduleRegionSizeBudget;
 
     /// The ID of the scheduling region. For a new vectorization iteration this
     /// is incremented which "removes" all ScheduleData from the region.
@@ -7489,9 +7514,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
       ReSchedule = true;
     }
-    LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle
-                      << " in block " << BB->getName() << "\n");
-    calculateDependencies(Bundle, /*InsertInReadyList=*/true, SLP);
+    if (Bundle) {
+      LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle
+                        << " in block " << BB->getName() << "\n");
+      calculateDependencies(Bundle, /*InsertInReadyList=*/true, SLP);
+    }
 
     if (ReSchedule) {
       resetSchedule();
@@ -7502,7 +7529,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // dependencies. As soon as the bundle is "ready" it means that there are no
     // cyclic dependencies and we can schedule it. Note that's important that we
     // don't "schedule" the bundle yet (see cancelScheduling).
-    while (!Bundle->isReady() && !ReadyInsts.empty()) {
+    while (((!Bundle && ReSchedule) || (Bundle && !Bundle->isReady())) &&
+           !ReadyInsts.empty()) {
       ScheduleData *Picked = ReadyInsts.pop_back_val();
       assert(Picked->isSchedulingEntity() && Picked->isReady() &&
              "must be ready to schedule");
@@ -7512,8 +7540,18 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
   // Make sure that the scheduling region contains all
   // instructions of the bundle.
-  for (Value *V : VL)
-    extendSchedulingRegion(V, S);
+  for (Value *V : VL) {
+    if (!extendSchedulingRegion(V, S)) {
+      // If the scheduling region got new instructions at the lower end (or it
+      // is a new region for the first bundle). This makes it necessary to
+      // recalculate all dependencies.
+      // Otherwise the compiler may crash trying to incorrectly calculate
+      // dependencies and emit instruction in the wrong order at the actual
+      // scheduling.
+      TryScheduleBundleImpl(/*ReSchedule=*/false, nullptr);
+      return None;
+    }
+  }
 
   bool ReSchedule = false;
   for (Value *V : VL) {
@@ -7583,11 +7621,10 @@ BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::allocateScheduleDataChunks() {
   return &(ScheduleDataChunks.back()[ChunkPos++]);
 }
 
-void
-BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
-                                                 const InstructionsState &S) {
+bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
+                                                      const InstructionsState &S) {
   if (getScheduleData(V, isOneOf(S, V)))
-    return;
+    return true;
   Instruction *I = dyn_cast<Instruction>(V);
   assert(I && "bundle member must be an instruction");
   assert(!isa<PHINode>(I) && !isVectorLikeInstWithConstOps(I) &&
@@ -7606,7 +7643,7 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
     return true;
   };
   if (CheckSheduleForI(I))
-    return;
+    return true;
   if (!ScheduleStart) {
     // It's the first instruction in the new region.
     initScheduleData(I, I->getNextNode(), nullptr, nullptr);
@@ -7616,7 +7653,7 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
       CheckSheduleForI(I);
     assert(ScheduleEnd && "tried to vectorize a terminator?");
     LLVM_DEBUG(dbgs() << "SLP:  initialize schedule region to " << *I << "\n");
-    return;
+    return true;
   }
   // Search up and down at the same time, because we don't know if the new
   // instruction is above or below the existing scheduling region.
@@ -7627,6 +7664,11 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
   BasicBlock::iterator LowerEnd = BB->end();
   while (UpIter != UpperEnd && DownIter != LowerEnd && &*UpIter != I &&
          &*DownIter != I) {
+    if (++ScheduleRegionSize > ScheduleRegionSizeLimit) {
+      LLVM_DEBUG(dbgs() << "SLP:  exceeded schedule region size limit\n");
+      return false;
+    }
+
     ++UpIter;
     ++DownIter;
   }
@@ -7639,7 +7681,7 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
       CheckSheduleForI(I);
     LLVM_DEBUG(dbgs() << "SLP:  extend schedule region start to " << *I
                       << "\n");
-    return;
+    return true;
   }
   assert((UpIter == UpperEnd || (DownIter != LowerEnd && &*DownIter == I)) &&
          "Expected to reach top of the basic block or instruction down the "
@@ -7653,7 +7695,7 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
     CheckSheduleForI(I);
   assert(ScheduleEnd && "tried to vectorize a terminator?");
   LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I << "\n");
-  return;
+  return true;
 }
 
 void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
