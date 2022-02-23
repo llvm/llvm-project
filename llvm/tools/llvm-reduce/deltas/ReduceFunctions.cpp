@@ -15,6 +15,7 @@
 #include "ReduceFunctions.h"
 #include "Delta.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include <iterator>
 #include <vector>

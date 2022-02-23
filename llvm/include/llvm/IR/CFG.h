@@ -25,7 +25,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>

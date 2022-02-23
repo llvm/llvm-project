@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_SPARSEPROPAGATION_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include <set>
