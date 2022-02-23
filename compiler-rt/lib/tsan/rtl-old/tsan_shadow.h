@@ -94,6 +94,7 @@ class FastState {
 // Shadow (from most significant bit):
 //   freed           : 1
 //   tid             : kTidBits
+//   unused          : 1
 //   is_atomic       : 1
 //   is_read         : 1
 //   size_log        : 2
