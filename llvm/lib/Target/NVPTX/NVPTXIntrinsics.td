@@ -568,12 +568,13 @@ class F_MATH_2<string OpcStr, NVPTXRegClass t_regclass,
 
 class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
   NVPTXRegClass s0_regclass, NVPTXRegClass s1_regclass,
-  NVPTXRegClass s2_regclass, Intrinsic IntOP>
+  NVPTXRegClass s2_regclass, Intrinsic IntOP, list<Predicate> Preds = []>
             : NVPTXInst<(outs t_regclass:$dst),
               (ins s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2),
             OpcStr,
         [(set t_regclass:$dst,
-          (IntOP s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2))]>;
+          (IntOP s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2))]>,
+          Requires<Preds>;
 
 //
 // MISC
@@ -648,6 +649,7 @@ def INT_NVVM_FMAX_D : F_MATH_2<"max.f64 \t$dst, $src0, $src1;", Float64Regs,
 //
 // Min Max f16, f16x2, bf16, bf16x2
 //
+
 class MIN_MAX_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
                     list<Predicate> Preds = [hasPTX70, hasSM80]> {
   string Variant = V;
@@ -931,35 +933,72 @@ def INT_NVVM_COS_APPROX_F : F_MATH_1<"cos.approx.f32 \t$dst, $src0;",
 // Fma
 //
 
-def INT_NVVM_FMA_RN_FTZ_F
-  : F_MATH_3<"fma.rn.ftz.f32 \t$dst, $src0, $src1, $src2;", Float32Regs,
-    Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rn_ftz_f>;
-def INT_NVVM_FMA_RN_F : F_MATH_3<"fma.rn.f32 \t$dst, $src0, $src1, $src2;",
-  Float32Regs, Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rn_f>;
-def INT_NVVM_FMA_RZ_FTZ_F
-  : F_MATH_3<"fma.rz.ftz.f32 \t$dst, $src0, $src1, $src2;", Float32Regs,
-    Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rz_ftz_f>;
-def INT_NVVM_FMA_RZ_F : F_MATH_3<"fma.rz.f32 \t$dst, $src0, $src1, $src2;",
-  Float32Regs, Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rz_f>;
-def INT_NVVM_FMA_RM_FTZ_F
-  : F_MATH_3<"fma.rm.ftz.f32 \t$dst, $src0, $src1, $src2;", Float32Regs,
-    Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rm_ftz_f>;
-def INT_NVVM_FMA_RM_F : F_MATH_3<"fma.rm.f32 \t$dst, $src0, $src1, $src2;",
-  Float32Regs, Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rm_f>;
-def INT_NVVM_FMA_RP_FTZ_F
-  : F_MATH_3<"fma.rp.ftz.f32 \t$dst, $src0, $src1, $src2;", Float32Regs,
-    Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rp_ftz_f>;
-def INT_NVVM_FMA_RP_F : F_MATH_3<"fma.rp.f32 \t$dst, $src0, $src1, $src2;",
-  Float32Regs, Float32Regs, Float32Regs, Float32Regs, int_nvvm_fma_rp_f>;
+class FMA_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
+                list<Predicate> Preds = []> {
+  string Variant = V;
+  Intrinsic Intr = I;
+  NVPTXRegClass RegClass = RC;
+  list<Predicate> Predicates = Preds;
+}
 
-def INT_NVVM_FMA_RN_D : F_MATH_3<"fma.rn.f64 \t$dst, $src0, $src1, $src2;",
-  Float64Regs, Float64Regs, Float64Regs, Float64Regs, int_nvvm_fma_rn_d>;
-def INT_NVVM_FMA_RZ_D : F_MATH_3<"fma.rz.f64 \t$dst, $src0, $src1, $src2;",
-  Float64Regs, Float64Regs, Float64Regs, Float64Regs, int_nvvm_fma_rz_d>;
-def INT_NVVM_FMA_RM_D : F_MATH_3<"fma.rm.f64 \t$dst, $src0, $src1, $src2;",
-  Float64Regs, Float64Regs, Float64Regs, Float64Regs, int_nvvm_fma_rm_d>;
-def INT_NVVM_FMA_RP_D : F_MATH_3<"fma.rp.f64 \t$dst, $src0, $src1, $src2;",
-  Float64Regs, Float64Regs, Float64Regs, Float64Regs, int_nvvm_fma_rp_d>;
+multiclass FMA_INST {
+  foreach P = [
+    FMA_TUPLE<"_rn_f64", int_nvvm_fma_rn_d, Float64Regs>,
+    FMA_TUPLE<"_rz_f64", int_nvvm_fma_rz_d, Float64Regs>,
+    FMA_TUPLE<"_rm_f64", int_nvvm_fma_rm_d, Float64Regs>,
+    FMA_TUPLE<"_rp_f64", int_nvvm_fma_rp_d, Float64Regs>,
+
+    FMA_TUPLE<"_rn_ftz_f32", int_nvvm_fma_rn_ftz_f, Float32Regs>,
+    FMA_TUPLE<"_rn_f32", int_nvvm_fma_rn_f, Float32Regs>,
+    FMA_TUPLE<"_rz_ftz_f32", int_nvvm_fma_rz_ftz_f, Float32Regs>,
+    FMA_TUPLE<"_rz_f32", int_nvvm_fma_rz_f, Float32Regs>,
+    FMA_TUPLE<"_rm_f32", int_nvvm_fma_rm_f, Float32Regs>,
+    FMA_TUPLE<"_rm_ftz_f32", int_nvvm_fma_rm_ftz_f, Float32Regs>,
+    FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, Float32Regs>,
+    FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, Float32Regs>,
+
+    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, Float16Regs, [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, Float16Regs,
+      [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, Float16Regs,
+      [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, Float16Regs,
+      [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, Float16Regs,
+      [hasPTX70, hasSM80]>,
+    FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, Float16Regs,
+      [hasPTX70, hasSM80]>,
+
+    FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, Float16x2Regs,
+      [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, Float16x2Regs,
+      [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, Float16x2Regs,
+      [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_ftz_sat_f16x2", int_nvvm_fma_rn_ftz_sat_f16x2,
+      Float16x2Regs, [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, Float16x2Regs,
+      [hasPTX70, hasSM80]>,
+    FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2,
+      Float16x2Regs, [hasPTX70, hasSM80]>,
+
+    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, Int16Regs, [hasPTX70, hasSM80]>,
+    FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, Int16Regs,
+      [hasPTX70, hasSM80]>,
+
+    FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, Int32Regs,
+      [hasPTX70, hasSM80]>,
+    FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, Int32Regs,
+      [hasPTX70, hasSM80]>
+  ] in {
+    def P.Variant :
+      F_MATH_3<!strconcat("fma",
+        !subst("_", ".", P.Variant), " \t$dst, $src0, $src1, $src2;"),
+        P.RegClass, P.RegClass, P.RegClass, P.RegClass, P.Intr, P.Predicates>;
+  }
+}
+
+defm INT_NVVM_FMA : FMA_INST;
 
 //
 // Rcp
