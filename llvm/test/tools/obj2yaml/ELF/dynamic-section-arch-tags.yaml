@@ -97,6 +97,8 @@
 # MIPS-NEXT:   Value:           0x2D
 # MIPS-NEXT: - Tag:             DT_MIPS_RLD_MAP_REL
 # MIPS-NEXT:   Value:           0x2E
+# MIPS-NEXT: - Tag:             DT_MIPS_XHASH
+# MIPS-NEXT:   Value:           0x2F
 
 --- !ELF
 FileHeader:
@@ -200,6 +202,8 @@ Sections:
         Value:           0x000000000000002D
       - Tag:             DT_MIPS_RLD_MAP_REL
         Value:           0x000000000000002E
+      - Tag:             DT_MIPS_XHASH
+        Value:           0x000000000000002F
 
 ## Check we can handle Hexagon specific tags.
 # RUN: yaml2obj --docnum=2 %s -o %t2
