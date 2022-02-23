@@ -407,7 +407,7 @@ void testUnknownFunction(void (*foo)(void)) {
   foo(); // no-crash
 }
 
-void testProctitleFalseNegative() {
+void testProctitleFalseNegative(void) {
   char flag[80];
   fscanf(stdin, "%79s", flag);
   char *argv[] = {"myapp", flag};

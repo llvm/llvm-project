@@ -4,6 +4,6 @@
 // RV64: "target-features"="+64bit,+a,+c,+m,+relax,-save-restore"
 
 // Dummy function
-int foo(){
+int foo(void){
   return  3;
 }
