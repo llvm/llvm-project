@@ -556,6 +556,9 @@ public:
 
   std::unique_ptr<MCDisassembler> DisAsm;
 
+  /// Symbolic disassembler.
+  std::unique_ptr<MCDisassembler> SymbolicDisAsm;
+
   std::unique_ptr<MCAsmBackend> MAB;
 
   /// Indicates if relocations are available for usage.

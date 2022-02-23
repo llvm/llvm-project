@@ -1028,6 +1028,8 @@ bool BinaryFunction::disassemble() {
   auto &Ctx = BC.Ctx;
   auto &MIB = BC.MIB;
 
+  BC.SymbolicDisAsm->setSymbolizer(MIB->createTargetSymbolizer(*this));
+
   // Insert a label at the beginning of the function. This will be our first
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
@@ -1201,9 +1203,9 @@ bool BinaryFunction::disassemble() {
       continue;
     }
 
-    if (!BC.DisAsm->getInstruction(Instruction, Size,
-                                   FunctionData.slice(Offset),
-                                   AbsoluteInstrAddr, nulls())) {
+    if (!BC.SymbolicDisAsm->getInstruction(Instruction, Size,
+                                           FunctionData.slice(Offset),
+                                           AbsoluteInstrAddr, nulls())) {
       // Functions with "soft" boundaries, e.g. coming from assembly source,
       // can have 0-byte padding at the end.
       if (isZeroPaddingAt(Offset))
@@ -1243,12 +1245,16 @@ bool BinaryFunction::disassemble() {
         break;
       }
 
-      // Check if our disassembly is correct and matches the assembler output.
-      if (!BC.validateEncoding(Instruction, FunctionData.slice(Offset, Size))) {
-        if (opts::Verbosity >= 1) {
+      // Disassemble again without the symbolizer and check that the disassembly
+      // matches the assembler output.
+      MCInst TempInst;
+      BC.DisAsm->getInstruction(TempInst, Size, FunctionData.slice(Offset),
+                                AbsoluteInstrAddr, nulls());
+      if (!BC.validateEncoding(TempInst, FunctionData.slice(Offset, Size))) {
+        if (opts::Verbosity >= 0) {
           errs() << "BOLT-WARNING: internal assembler/disassembler error "
                     "detected for AVX512 instruction:\n";
-          BC.printInstruction(errs(), Instruction, AbsoluteInstrAddr);
+          BC.printInstruction(errs(), TempInst, AbsoluteInstrAddr);
           errs() << " in function " << *this << '\n';
         }
 
@@ -1341,7 +1347,7 @@ bool BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else {
+    } else if (BC.isAArch64()) {
       // Check if there's a relocation associated with this instruction.
       bool UsedReloc = false;
       for (auto Itr = Relocations.lower_bound(Offset),
@@ -1352,60 +1358,17 @@ bool BinaryFunction::disassemble() {
         if (Relocation.isPCRelative())
           SymbolValue += getAddress() + Relocation.Offset;
 
-        // Process reference to the symbol.
-        if (BC.isX86())
-          BC.handleAddressRef(SymbolValue, *this, Relocation.isPCRelative());
+        int64_t Value = Relocation.Value;
+        const bool Result = BC.MIB->replaceImmWithSymbolRef(
+            Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(), Value,
+            Relocation.Type);
+        (void)Result;
+        assert(Result && "cannot replace immediate with relocation");
 
-        if (BC.isAArch64() || !Relocation.isPCRelative()) {
-          int64_t Value = Relocation.Value;
-          const bool Result = BC.MIB->replaceImmWithSymbolRef(
-              Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(),
-              Value, Relocation.Type);
-          (void)Result;
-          assert(Result && "cannot replace immediate with relocation");
-
-          if (BC.isX86()) {
-            // Make sure we replaced the correct immediate (instruction
-            // can have multiple immediate operands).
-            assert(
-                truncateToSize(static_cast<uint64_t>(Value),
-                               Relocation::getSizeForType(Relocation.Type)) ==
-                    truncateToSize(Relocation.Value, Relocation::getSizeForType(
-                                                         Relocation.Type)) &&
-                "immediate value mismatch in function");
-          } else if (BC.isAArch64()) {
-            // For aarch, if we replaced an immediate with a symbol from a
-            // relocation, we mark it so we do not try to further process a
-            // pc-relative operand. All we need is the symbol.
-            UsedReloc = true;
-          }
-        } else {
-          // Check if the relocation matches memop's Disp.
-          uint64_t TargetAddress;
-          if (!BC.MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
-                                                AbsoluteInstrAddr, Size)) {
-            errs() << "BOLT-ERROR: PC-relative operand can't be evaluated\n";
-            exit(1);
-          }
-          assert(TargetAddress == Relocation.Value + AbsoluteInstrAddr + Size &&
-                 "Immediate value mismatch detected.");
-
-          const MCExpr *Expr = MCSymbolRefExpr::create(
-              Relocation.Symbol, MCSymbolRefExpr::VK_None, *BC.Ctx);
-          // Real addend for pc-relative targets is adjusted with a delta
-          // from relocation placement to the next instruction.
-          const uint64_t TargetAddend =
-              Relocation.Addend + Offset + Size - Relocation.Offset;
-          if (TargetAddend) {
-            const MCConstantExpr *Offset =
-                MCConstantExpr::create(TargetAddend, *BC.Ctx);
-            Expr = MCBinaryExpr::createAdd(Expr, Offset, *BC.Ctx);
-          }
-          BC.MIB->replaceMemOperandDisp(
-              Instruction, MCOperand::createExpr(BC.MIB->getTargetExprFor(
-                               Instruction, Expr, *BC.Ctx, 0)));
-          UsedReloc = true;
-        }
+        // For aarch64, if we replaced an immediate with a symbol from a
+        // relocation, we mark it so we do not try to further process a
+        // pc-relative operand. All we need is the symbol.
+        UsedReloc = true;
       }
 
       if (MIB->hasPCRelOperand(Instruction) && !UsedReloc)
@@ -1431,6 +1394,9 @@ add_instruction:
 
     addInstruction(Offset, std::move(Instruction));
   }
+
+  // Reset symbolizer for the disassembler.
+  BC.SymbolicDisAsm->setSymbolizer(nullptr);
 
   clearList(Relocations);
 
