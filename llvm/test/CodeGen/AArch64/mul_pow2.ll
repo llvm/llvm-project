@@ -704,8 +704,7 @@ define i32 @ntest16(i32 %x) {
 define i32 @muladd_demand(i32 %x, i32 %y) {
 ; CHECK-LABEL: muladd_demand:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #131008
-; CHECK-NEXT:    madd w8, w0, w8, w1
+; CHECK-NEXT:    sub w8, w1, w0, lsl #6
 ; CHECK-NEXT:    and w0, w8, #0x1ffc0
 ; CHECK-NEXT:    ret
 ;
@@ -724,11 +723,10 @@ define i32 @muladd_demand(i32 %x, i32 %y) {
 define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: muladd_demand_commute:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #131008
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
-; CHECK-NEXT:    movi v0.4s, #1, msl #16
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    movi v2.4s, #1, msl #16
+; CHECK-NEXT:    shl v0.4s, v0.4s, #6
+; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: muladd_demand_commute:

@@ -4,8 +4,9 @@
 define i64 @muladd_demand(i64 %x, i64 %y) {
 ; CHECK-LABEL: muladd_demand:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    imull $131008, %edi, %eax # imm = 0x1FFC0
-; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shll $6, %edi
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    shlq $47, %rax
 ; CHECK-NEXT:    retq
   %m = mul i64 %x, 131008 ; 0x0001ffc0
@@ -17,9 +18,10 @@ define i64 @muladd_demand(i64 %x, i64 %y) {
 define <2 x i64> @muladd_demand_commute(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: muladd_demand_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    paddq %xmm1, %xmm0
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    psllq $6, %xmm0
+; CHECK-NEXT:    psubq %xmm0, %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %m = mul <2 x i64> %x, <i64 131008, i64 131008>
   %a = add <2 x i64> %y, %m
