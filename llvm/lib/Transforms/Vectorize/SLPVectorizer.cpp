@@ -2563,9 +2563,6 @@ private:
     /// the current SchedulingRegionID of BlockScheduling.
     int SchedulingRegionID = 0;
 
-    /// Used for getting a "good" final ordering of instructions.
-    int SchedulingPriority = 0;
-
     /// The number of dependencies. Constitutes of the number of users of the
     /// instruction plus the number of dependent memory instructions (if any).
     /// This value is calculated on demand.
@@ -7828,23 +7825,23 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   // For the real scheduling we use a more sophisticated ready-list: it is
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
-  struct ScheduleDataCompare {
-    bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
-      return SD2->SchedulingPriority < SD1->SchedulingPriority;
-    }
+  DenseMap<ScheduleData *, unsigned> OriginalOrder;
+  auto ScheduleDataCompare = [&](ScheduleData *SD1, ScheduleData *SD2) {
+    return OriginalOrder[SD2] < OriginalOrder[SD1];
   };
-  std::set<ScheduleData *, ScheduleDataCompare> ReadyInsts;
+  std::set<ScheduleData *, decltype(ScheduleDataCompare)>
+    ReadyInsts(ScheduleDataCompare);
 
   // Ensure that all dependency data is updated (for nodes in the sub-graph)
   // and fill the ready-list with initial instructions.
   int Idx = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, BS](ScheduleData *SD) {
+    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() == (getTreeEntry(SD->Inst) != nullptr)) &&
              "scheduler and vectorizer bundle mismatch");
-      SD->FirstInBundle->SchedulingPriority = Idx++;
+      OriginalOrder[SD->FirstInBundle] = Idx++;
 
       if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
