@@ -9,10 +9,11 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
+#include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompilandDetails.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompilandEnv.h"
-#include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"

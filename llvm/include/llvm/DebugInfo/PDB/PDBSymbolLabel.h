@@ -14,7 +14,6 @@
 
 namespace llvm {
 
-class raw_ostream;
 namespace pdb {
 
 class PDBSymbolLabel : public PDBSymbol {
