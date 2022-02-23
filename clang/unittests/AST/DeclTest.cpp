@@ -157,3 +157,17 @@ TEST(Decl, EnumDeclRange) {
   EXPECT_EQ(SM.getFileOffset(BarRange.getBegin()), Code.range().Begin);
   EXPECT_EQ(SM.getFileOffset(BarRange.getEnd()), Code.range().End);
 }
+
+TEST(Decl, IsInExportDeclContext) {
+  llvm::Annotations Code(R"(
+    export module m;
+    export template <class T>
+    void f() {})");
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto *f =
+      selectFirst<FunctionDecl>("f", match(functionDecl().bind("f"), Ctx));
+  EXPECT_TRUE(f->isInExportDeclContext());
+}
