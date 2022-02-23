@@ -465,7 +465,8 @@ struct ShadowMapping {
 static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                                       bool IsKasan) {
   bool IsAndroid = TargetTriple.isAndroid();
-  bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS();
+  bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS() ||
+               TargetTriple.isDriverKit();
   bool IsMacOS = TargetTriple.isMacOSX();
   bool IsFreeBSD = TargetTriple.isOSFreeBSD();
   bool IsNetBSD = TargetTriple.isOSNetBSD();
@@ -2124,6 +2125,8 @@ bool ModuleAddressSanitizer::ShouldUseMachOGlobalsSection() const {
   if (TargetTriple.isiOS() /* or tvOS */ && !TargetTriple.isOSVersionLT(9))
     return true;
   if (TargetTriple.isWatchOS() && !TargetTriple.isOSVersionLT(2))
+    return true;
+  if (TargetTriple.isDriverKit())
     return true;
 
   return false;

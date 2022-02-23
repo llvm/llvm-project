@@ -73,10 +73,10 @@ bool IntegerPolyhedron::isSubsetOf(const IntegerPolyhedron &other) const {
 }
 
 MaybeOptimum<SmallVector<Fraction, 8>>
-IntegerPolyhedron::getRationalLexMin() const {
+IntegerPolyhedron::findRationalLexMin() const {
   assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
   MaybeOptimum<SmallVector<Fraction, 8>> maybeLexMin =
-      LexSimplex(*this).getRationalLexMin();
+      LexSimplex(*this).findRationalLexMin();
 
   if (!maybeLexMin.isBounded())
     return maybeLexMin;
@@ -93,10 +93,10 @@ IntegerPolyhedron::getRationalLexMin() const {
 }
 
 MaybeOptimum<SmallVector<int64_t, 8>>
-IntegerPolyhedron::getIntegerLexMin() const {
+IntegerPolyhedron::findIntegerLexMin() const {
   assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
   MaybeOptimum<SmallVector<int64_t, 8>> maybeLexMin =
-      LexSimplex(*this).getIntegerLexMin();
+      LexSimplex(*this).findIntegerLexMin();
 
   if (!maybeLexMin.isBounded())
     return maybeLexMin.getKind();

@@ -1058,7 +1058,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   // to check for a pair of icmp/select, for which we use getNextInstruction and
   // isCorrectOpcode functions to step the right number of instruction, and
   // check the icmp/select pair.
-  // FIXME: We also do not attempt to look through Phi/Select's yet, which might
+  // FIXME: We also do not attempt to look through Select's yet, which might
   // be part of the reduction chain, or attempt to looks through And's to find a
   // smaller bitwidth. Subs are also currently not allowed (which are usually
   // treated as part of a add reduction) as they are expected to generally be
@@ -1068,16 +1068,21 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp)
     ExpectedUses = 2;
 
-  auto getNextInstruction = [&](Instruction *Cur) {
-    if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp) {
-      // We are expecting a icmp/select pair, which we go to the next select
-      // instruction if we can. We already know that Cur has 2 uses.
-      if (isa<SelectInst>(*Cur->user_begin()))
-        return cast<Instruction>(*Cur->user_begin());
-      else
-        return cast<Instruction>(*std::next(Cur->user_begin()));
+  auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
+    for (auto User : Cur->users()) {
+      Instruction *UI = cast<Instruction>(User);
+      if (isa<PHINode>(UI))
+        continue;
+      if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp) {
+        // We are expecting a icmp/select pair, which we go to the next select
+        // instruction if we can. We already know that Cur has 2 uses.
+        if (isa<SelectInst>(UI))
+          return UI;
+        continue;
+      }
+      return UI;
     }
-    return cast<Instruction>(*Cur->user_begin());
+    return nullptr;
   };
   auto isCorrectOpcode = [&](Instruction *Cur) {
     if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp) {
@@ -1092,22 +1097,46 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     return Cur->getOpcode() == RedOp;
   };
 
+  // Attempt to look through Phis which are part of the reduction chain
+  unsigned ExtraPhiUses = 0;
+  Instruction *RdxInstr = LoopExitInstr;
+  if (auto ExitPhi = dyn_cast<PHINode>(LoopExitInstr)) {
+    if (ExitPhi->getNumIncomingValues() != 2)
+      return {};
+
+    Instruction *Inc0 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(0));
+    Instruction *Inc1 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(1));
+
+    Instruction *Chain = nullptr;
+    if (Inc0 == Phi)
+      Chain = Inc1;
+    else if (Inc1 == Phi)
+      Chain = Inc0;
+    else
+      return {};
+
+    RdxInstr = Chain;
+    ExtraPhiUses = 1;
+  }
+
   // The loop exit instruction we check first (as a quick test) but add last. We
   // check the opcode is correct (and dont allow them to be Subs) and that they
   // have expected to have the expected number of uses. They will have one use
   // from the phi and one from a LCSSA value, no matter the type.
-  if (!isCorrectOpcode(LoopExitInstr) || !LoopExitInstr->hasNUses(2))
+  if (!isCorrectOpcode(RdxInstr) || !LoopExitInstr->hasNUses(2))
     return {};
 
-  // Check that the Phi has one (or two for min/max) uses.
-  if (!Phi->hasNUses(ExpectedUses))
+  // Check that the Phi has one (or two for min/max) uses, plus an extra use
+  // for conditional reductions.
+  if (!Phi->hasNUses(ExpectedUses + ExtraPhiUses))
     return {};
+
   Instruction *Cur = getNextInstruction(Phi);
 
   // Each other instruction in the chain should have the expected number of uses
   // and be the correct opcode.
-  while (Cur != LoopExitInstr) {
-    if (!isCorrectOpcode(Cur) || !Cur->hasNUses(ExpectedUses))
+  while (Cur != RdxInstr) {
+    if (!Cur || !isCorrectOpcode(Cur) || !Cur->hasNUses(ExpectedUses))
       return {};
 
     ReductionOperations.push_back(Cur);

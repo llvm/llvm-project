@@ -48,24 +48,6 @@ Status HostProcessWindows::Terminate() {
   return error;
 }
 
-Status HostProcessWindows::GetMainModule(FileSpec &file_spec) const {
-  Status error;
-  if (m_process == nullptr)
-    error.SetError(ERROR_INVALID_HANDLE, lldb::eErrorTypeWin32);
-
-  std::vector<wchar_t> wpath(PATH_MAX);
-  if (::GetProcessImageFileNameW(m_process, wpath.data(), wpath.size())) {
-    std::string path;
-    if (llvm::convertWideToUTF8(wpath.data(), path))
-      file_spec.SetFile(path, FileSpec::Style::native);
-    else
-      error.SetErrorString("Error converting path to UTF-8");
-  } else
-    error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
-
-  return error;
-}
-
 lldb::pid_t HostProcessWindows::GetProcessId() const {
   return (m_process == LLDB_INVALID_PROCESS) ? -1 : ::GetProcessId(m_process);
 }

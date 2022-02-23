@@ -261,6 +261,8 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
                                : ModuleScopes.back().Module->Kind) {
   case Module::ModuleMapModule:
   case Module::GlobalModuleFragment:
+  case Module::ModulePartitionImplementation:
+  case Module::ModulePartitionInterface:
     Diag(PrivateLoc, diag::err_private_module_fragment_not_module);
     return nullptr;
 

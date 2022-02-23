@@ -12,17 +12,17 @@
 eors    p0.b, p0/z, p0.b, p1.b
 // CHECK-INST: eors    p0.b, p0/z, p0.b, p1.b
 // CHECK-ENCODING: [0x00,0x42,0x41,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 42 41 25 <unknown>
 
 eors    p0.b, p0/z, p0.b, p0.b
 // CHECK-INST: nots    p0.b, p0/z, p0.b
 // CHECK-ENCODING: [0x00,0x42,0x40,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 42 40 25 <unknown>
 
 eors    p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: nots    p15.b, p15/z, p15.b
 // CHECK-ENCODING: [0xef,0x7f,0x4f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ef 7f 4f 25 <unknown>

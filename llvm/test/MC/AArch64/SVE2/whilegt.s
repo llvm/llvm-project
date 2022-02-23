@@ -12,59 +12,59 @@
 whilegt  p15.b, xzr, x0
 // CHECK-INST: whilegt	p15.b, xzr, x0
 // CHECK-ENCODING: [0xff,0x13,0x20,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: ff 13 20 25 <unknown>
 
 whilegt  p15.b, x0, xzr
 // CHECK-INST: whilegt	p15.b, x0, xzr
 // CHECK-ENCODING: [0x1f,0x10,0x3f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 10 3f 25 <unknown>
 
 whilegt  p15.b, wzr, w0
 // CHECK-INST: whilegt	p15.b, wzr, w0
 // CHECK-ENCODING: [0xff,0x03,0x20,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: ff 03 20 25 <unknown>
 
 whilegt  p15.b, w0, wzr
 // CHECK-INST: whilegt	p15.b, w0, wzr
 // CHECK-ENCODING: [0x1f,0x00,0x3f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 00 3f 25 <unknown>
 
 whilegt  p15.h, x0, xzr
 // CHECK-INST: whilegt	p15.h, x0, xzr
 // CHECK-ENCODING: [0x1f,0x10,0x7f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 10 7f 25 <unknown>
 
 whilegt  p15.h, w0, wzr
 // CHECK-INST: whilegt	p15.h, w0, wzr
 // CHECK-ENCODING: [0x1f,0x00,0x7f,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 00 7f 25 <unknown>
 
 whilegt  p15.s, x0, xzr
 // CHECK-INST: whilegt	p15.s, x0, xzr
 // CHECK-ENCODING: [0x1f,0x10,0xbf,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 10 bf 25 <unknown>
 
 whilegt  p15.s, w0, wzr
 // CHECK-INST: whilegt	p15.s, w0, wzr
 // CHECK-ENCODING: [0x1f,0x00,0xbf,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 00 bf 25 <unknown>
 
 whilegt  p15.d, w0, wzr
 // CHECK-INST: whilegt	p15.d, w0, wzr
 // CHECK-ENCODING: [0x1f,0x00,0xff,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 00 ff 25 <unknown>
 
 whilegt  p15.d, x0, xzr
 // CHECK-INST: whilegt	p15.d, x0, xzr
 // CHECK-ENCODING: [0x1f,0x10,0xff,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 1f 10 ff 25 <unknown>

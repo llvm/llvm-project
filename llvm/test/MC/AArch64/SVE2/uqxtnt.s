@@ -13,17 +13,17 @@
 uqxtnt z0.b, z31.h
 // CHECK-INST: uqxtnt	z0.b, z31.h
 // CHECK-ENCODING: [0xe0,0x4f,0x28,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: e0 4f 28 45 <unknown>
 
 uqxtnt z0.h, z31.s
 // CHECK-INST: uqxtnt	z0.h, z31.s
 // CHECK-ENCODING: [0xe0,0x4f,0x30,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: e0 4f 30 45 <unknown>
 
 uqxtnt z0.s, z31.d
 // CHECK-INST: uqxtnt	z0.s, z31.d
 // CHECK-ENCODING: [0xe0,0x4f,0x60,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: e0 4f 60 45 <unknown>
