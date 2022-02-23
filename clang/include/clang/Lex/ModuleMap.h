@@ -584,6 +584,12 @@ public:
     return ModuleScopeIDs[ExistingModule] < CurrentModuleScopeID;
   }
 
+  /// Check whether a framework module can be inferred in the given directory.
+  bool canInferFrameworkModule(const DirectoryEntry *Dir) const {
+    auto It = InferredDirectories.find(Dir);
+    return It != InferredDirectories.end() && It->getSecond().InferModules;
+  }
+
   /// Retrieve the module map file containing the definition of the given
   /// module.
   ///
