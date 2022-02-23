@@ -120,6 +120,9 @@ StringRef spirv::getEntryPointABIAttrName() { return "spv.entry_point_abi"; }
 
 spirv::EntryPointABIAttr
 spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
+  if (localSize.empty())
+    return spirv::EntryPointABIAttr::get(nullptr, context);
+
   assert(localSize.size() == 3);
   return spirv::EntryPointABIAttr::get(
       DenseElementsAttr::get<int32_t>(
