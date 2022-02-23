@@ -11,9 +11,10 @@
 #define _LIBCPP_THREADING_SUPPORT
 
 #include <__availability>
+#include <__chrono/convert_to_timespec.h>
+#include <__chrono/duration.h>
 #include <__config>
 #include <__thread/poll_with_backoff.h>
-#include <chrono>
 #include <errno.h>
 #include <iosfwd>
 #include <limits>

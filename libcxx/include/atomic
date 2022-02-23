@@ -519,6 +519,7 @@ template <class T>
 */
 
 #include <__availability>
+#include <__chrono/duration.h>
 #include <__config>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
