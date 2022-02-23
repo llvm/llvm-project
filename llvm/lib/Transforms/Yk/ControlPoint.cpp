@@ -168,13 +168,16 @@ public:
     // The old control point should be of the form:
     //    control_point(YkMT*, YkLocation*)
     assert(OldCtrlPointCall->arg_size() == YK_OLD_CONTROL_POINT_NUM_ARGS);
-    Type *YkMTTy = OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX)->getType();
-    Type *YkLocTy = OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX)->getType();
+    Type *YkMTTy =
+        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX)->getType();
+    Type *YkLocTy =
+        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX)
+            ->getType();
 
     // Create the new control point.
-    FunctionType *FType =
-        FunctionType::get(Type::getVoidTy(Context),
-                          {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo()}, false);
+    FunctionType *FType = FunctionType::get(
+        Type::getVoidTy(Context),
+        {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo()}, false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
@@ -197,11 +200,9 @@ public:
 
     // Insert call to the new control point.
     Instruction *NewCtrlPointCallInst = Builder.CreateCall(
-        NF, {
-          OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
-          OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-          InputStruct
-        });
+        NF, {OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
+             OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
+             InputStruct});
 
     // Once the control point returns we need to extract the (potentially
     // mutated) values from the returned YkCtrlPointStruct and reassign them to
