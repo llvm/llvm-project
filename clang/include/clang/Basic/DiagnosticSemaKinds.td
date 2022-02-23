@@ -556,9 +556,6 @@ def err_using_decl_can_not_refer_to_class_member : Error<
 def warn_cxx17_compat_using_decl_class_member_enumerator : Warning<
   "member using declaration naming a non-member enumerator is incompatible "
   "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-def ext_using_decl_class_member_enumerator : ExtWarn<
-  "member using declaration naming a non-member enumerator is "
-  "a C++20 extension">, InGroup<CXX20>;
 def err_using_enum_is_dependent : Error<
   "using-enum cannot name a dependent type">;
 def err_ambiguous_inherited_constructor : Error<
@@ -1696,8 +1693,6 @@ def err_missing_exception_specification : Error<
 def ext_missing_exception_specification : ExtWarn<
   err_missing_exception_specification.Text>,
   InGroup<DiagGroup<"missing-exception-spec">>;
-def err_noexcept_needs_constant_expression : Error<
-  "argument to noexcept specifier must be a constant expression">;
 def err_exception_spec_not_parsed : Error<
   "exception specification is not available until end of class definition">;
 def err_exception_spec_cycle : Error<
@@ -3524,8 +3519,6 @@ def warn_attribute_not_on_decl : Warning<
   "%0 attribute ignored when parsing type">, InGroup<IgnoredAttributes>;
 def err_base_specifier_attribute : Error<
   "%0 attribute cannot be applied to a base specifier">;
-def err_invalid_attribute_on_virtual_function : Error<
-  "%0 attribute cannot be applied to virtual functions">;
 def warn_declspec_allocator_nonpointer : Warning<
   "ignoring __declspec(allocator) because the function return type %0 is not "
   "a pointer or reference type">, InGroup<IgnoredAttributes>;
@@ -4976,8 +4969,6 @@ def err_template_spec_unknown_kind : Error<
   "class template">;
 def note_specialized_entity : Note<
   "explicitly specialized declaration is here">;
-def note_explicit_specialization_declared_here : Note<
-  "explicit specialization declared here">;
 def err_template_spec_decl_function_scope : Error<
   "explicit specialization of %0 in function scope">;
 def err_template_spec_decl_friend : Error<
@@ -5086,8 +5077,6 @@ def err_partial_spec_ordering_ambiguous : Error<
 def note_partial_spec_match : Note<"partial specialization matches %0">;
 def err_partial_spec_redeclared : Error<
   "class template partial specialization %0 cannot be redeclared">;
-def note_partial_specialization_declared_here : Note<
-  "explicit specialization declared here">;
 def note_prev_partial_spec_here : Note<
   "previous declaration of class template partial specialization %0 is here">;
 def err_partial_spec_fully_specialized : Error<
@@ -7364,8 +7353,6 @@ def err_bad_dynamic_cast_not_polymorphic : Error<"%0 is not polymorphic">;
 // Other C++ expressions
 def err_need_header_before_typeid : Error<
   "you need to include <typeinfo> before using the 'typeid' operator">;
-def err_need_header_before_ms_uuidof : Error<
-  "you need to include <guiddef.h> before using the '__uuidof' operator">;
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
@@ -11319,9 +11306,6 @@ def err_multiversion_disallowed_other_attr
             "'%select{|target|cpu_specific|cpu_dispatch|target_clones}0' "
             "multiversioning cannot be combined"
             " with attribute %1">;
-def err_multiversion_mismatched_attrs
-    : Error<"attributes on multiversioned functions must all match, attribute "
-            "%0 %select{is missing|has different arguments}1">;
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|linkage|"

@@ -362,6 +362,33 @@ private:
                           const MachineRegisterInfo *MRI) const;
 };
 
+struct UsedNZCV {
+  bool N = false;
+  bool Z = false;
+  bool C = false;
+  bool V = false;
+
+  UsedNZCV() = default;
+
+  UsedNZCV &operator|=(const UsedNZCV &UsedFlags) {
+    this->N |= UsedFlags.N;
+    this->Z |= UsedFlags.Z;
+    this->C |= UsedFlags.C;
+    this->V |= UsedFlags.V;
+    return *this;
+  }
+};
+
+/// \returns Conditions flags used after \p CmpInstr in its MachineBB if  NZCV
+/// flags are not alive in successors of the same \p CmpInstr and \p MI parent.
+/// \returns None otherwise.
+///
+/// Collect instructions using that flags in \p CCUseInstrs if provided.
+Optional<UsedNZCV>
+examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
+                 const TargetRegisterInfo &TRI,
+                 SmallVectorImpl<MachineInstr *> *CCUseInstrs = nullptr);
+
 /// Return true if there is an instruction /after/ \p DefMI and before \p UseMI
 /// which either reads or clobbers NZCV.
 bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,

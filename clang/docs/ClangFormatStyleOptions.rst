@@ -1988,7 +1988,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**BreakBeforeConceptDeclarations** (``BreakBeforeConceptDeclarationsStyle``) :versionbadge:`clang-format 13`
+**BreakBeforeConceptDeclarations** (``BreakBeforeConceptDeclarationsStyle``) :versionbadge:`clang-format 12`
   The concept declaration style to use.
 
   Possible values:
@@ -2278,7 +2278,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**EmptyLineBeforeAccessModifier** (``EmptyLineBeforeAccessModifierStyle``) :versionbadge:`clang-format 13`
+**EmptyLineBeforeAccessModifier** (``EmptyLineBeforeAccessModifierStyle``) :versionbadge:`clang-format 12`
   Defines in which cases to put empty line before access modifiers.
 
   Possible values:
@@ -2706,9 +2706,11 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IndentRequiresClause** (``Boolean``) :versionbadge:`clang-format 13`
+**IndentRequiresClause** (``Boolean``) :versionbadge:`clang-format 15`
   Indent the requires clause in a template. This only applies when
   ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+
+  In clang-format 13 and 14 it was named ``IndentRequires``.
 
   .. code-block:: c++
 

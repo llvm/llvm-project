@@ -17,9 +17,14 @@
 # CHECK:      00 .data_noload_a .data_noload_b .no_input_sec_noload {{$}}
 # CHECK:      01 .text {{$}}
 
-# RUN: not ld.lld --script %t/lds %t.o %t/mismatch.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+## The output SHT_PROBITS is contrary to the user expectation of SHT_NOBITS.
+## Issue a warning. See https://github.com/ClangBuiltLinux/linux/issues/1597
+# RUN: ld.lld --script %t/lds %t.o %t/mismatch.o -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readelf -S -l %t/out | FileCheck %s --check-prefix=CHECK2
 
-# ERR: error: section type mismatch for .data_noload_a
+# WARN:   warning: section type mismatch for .data_noload_a
+# CHECK2:      Name                 Type     Address          Off               Size
+# CHECK2:      .data_noload_a       PROGBITS 0000000000000000 [[OFF:[0-9a-f]+]] 001001
 
 #--- asm
 .section .text,"ax",@progbits

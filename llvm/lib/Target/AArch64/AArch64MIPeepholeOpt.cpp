@@ -60,12 +60,13 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   MachineLoopInfo *MLI;
   MachineRegisterInfo *MRI;
 
+  using OpcodePair = std::pair<unsigned, unsigned>;
   template <typename T>
   using SplitAndOpcFunc =
-      std::function<Optional<unsigned>(T, unsigned, T &, T &)>;
+      std::function<Optional<OpcodePair>(T, unsigned, T &, T &)>;
   using BuildMIFunc =
-      std::function<void(MachineInstr &, unsigned, unsigned, unsigned, Register,
-                         Register, Register)>;
+      std::function<void(MachineInstr &, OpcodePair, unsigned, unsigned,
+                         Register, Register, Register)>;
 
   /// For instructions where an immediate operand could be split into two
   /// separate immediate instructions, use the splitTwoPartImm two handle the
@@ -92,6 +93,10 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   template <typename T>
   bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI,
                    SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
+  template <typename T>
+  bool visitADDSSUBS(OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI,
+                     SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
+
   template <typename T>
   bool visitAND(unsigned Opc, MachineInstr &MI,
                 SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
@@ -171,20 +176,20 @@ bool AArch64MIPeepholeOpt::visitAND(
 
   return splitTwoPartImm<T>(
       MI, ToBeRemoved,
-      [Opc](T Imm, unsigned RegSize, T &Imm0, T &Imm1) -> Optional<unsigned> {
+      [Opc](T Imm, unsigned RegSize, T &Imm0, T &Imm1) -> Optional<OpcodePair> {
         if (splitBitmaskImm(Imm, RegSize, Imm0, Imm1))
-          return Opc;
+          return std::make_pair(Opc, Opc);
         return None;
       },
-      [&TII = TII](MachineInstr &MI, unsigned Opcode, unsigned Imm0,
+      [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,
                    unsigned Imm1, Register SrcReg, Register NewTmpReg,
                    Register NewDstReg) {
         DebugLoc DL = MI.getDebugLoc();
         MachineBasicBlock *MBB = MI.getParent();
-        BuildMI(*MBB, MI, DL, TII->get(Opcode), NewTmpReg)
+        BuildMI(*MBB, MI, DL, TII->get(Opcode.first), NewTmpReg)
             .addReg(SrcReg)
             .addImm(Imm0);
-        BuildMI(*MBB, MI, DL, TII->get(Opcode), NewDstReg)
+        BuildMI(*MBB, MI, DL, TII->get(Opcode.second), NewDstReg)
             .addReg(NewTmpReg)
             .addImm(Imm1);
       });
@@ -273,23 +278,64 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
   return splitTwoPartImm<T>(
       MI, ToBeRemoved,
       [PosOpc, NegOpc](T Imm, unsigned RegSize, T &Imm0,
-                       T &Imm1) -> Optional<unsigned> {
+                       T &Imm1) -> Optional<OpcodePair> {
         if (splitAddSubImm(Imm, RegSize, Imm0, Imm1))
-          return PosOpc;
+          return std::make_pair(PosOpc, PosOpc);
         if (splitAddSubImm(-Imm, RegSize, Imm0, Imm1))
-          return NegOpc;
+          return std::make_pair(NegOpc, NegOpc);
         return None;
       },
-      [&TII = TII](MachineInstr &MI, unsigned Opcode, unsigned Imm0,
+      [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,
                    unsigned Imm1, Register SrcReg, Register NewTmpReg,
                    Register NewDstReg) {
         DebugLoc DL = MI.getDebugLoc();
         MachineBasicBlock *MBB = MI.getParent();
-        BuildMI(*MBB, MI, DL, TII->get(Opcode), NewTmpReg)
+        BuildMI(*MBB, MI, DL, TII->get(Opcode.first), NewTmpReg)
             .addReg(SrcReg)
             .addImm(Imm0)
             .addImm(12);
-        BuildMI(*MBB, MI, DL, TII->get(Opcode), NewDstReg)
+        BuildMI(*MBB, MI, DL, TII->get(Opcode.second), NewDstReg)
+            .addReg(NewTmpReg)
+            .addImm(Imm1)
+            .addImm(0);
+      });
+}
+
+template <typename T>
+bool AArch64MIPeepholeOpt::visitADDSSUBS(
+    OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI,
+    SmallSetVector<MachineInstr *, 8> &ToBeRemoved) {
+  // Try the same transformation as ADDSUB but with additional requirement
+  // that the condition code usages are only for Equal and Not Equal
+  return splitTwoPartImm<T>(
+      MI, ToBeRemoved,
+      [PosOpcs, NegOpcs, &MI, &TRI = TRI, &MRI = MRI](
+          T Imm, unsigned RegSize, T &Imm0, T &Imm1) -> Optional<OpcodePair> {
+        OpcodePair OP;
+        if (splitAddSubImm(Imm, RegSize, Imm0, Imm1))
+          OP = PosOpcs;
+        else if (splitAddSubImm(-Imm, RegSize, Imm0, Imm1))
+          OP = NegOpcs;
+        else
+          return None;
+        // Check conditional uses last since it is expensive for scanning
+        // proceeding instructions
+        MachineInstr &SrcMI = *MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
+        Optional<UsedNZCV> NZCVUsed = examineCFlagsUse(SrcMI, MI, *TRI);
+        if (!NZCVUsed || NZCVUsed->C || NZCVUsed->V)
+          return None;
+        return OP;
+      },
+      [&TII = TII](MachineInstr &MI, OpcodePair Opcode, unsigned Imm0,
+                   unsigned Imm1, Register SrcReg, Register NewTmpReg,
+                   Register NewDstReg) {
+        DebugLoc DL = MI.getDebugLoc();
+        MachineBasicBlock *MBB = MI.getParent();
+        BuildMI(*MBB, MI, DL, TII->get(Opcode.first), NewTmpReg)
+            .addReg(SrcReg)
+            .addImm(Imm0)
+            .addImm(12);
+        BuildMI(*MBB, MI, DL, TII->get(Opcode.second), NewDstReg)
             .addReg(NewTmpReg)
             .addImm(Imm1)
             .addImm(0);
@@ -357,33 +403,57 @@ bool AArch64MIPeepholeOpt::splitTwoPartImm(
   // number since it was sign extended when we assign to the 64-bit Imm.
   if (SubregToRegMI)
     Imm &= 0xFFFFFFFF;
-  unsigned Opcode;
+  OpcodePair Opcode;
   if (auto R = SplitAndOpc(Imm, RegSize, Imm0, Imm1))
     Opcode = R.getValue();
   else
     return false;
 
-  // Create new ADD/SUB MIs.
+  // Create new MIs using the first and second opcodes. Opcodes might differ for
+  // flag setting operations that should only set flags on second instruction.
+  // NewTmpReg = Opcode.first SrcReg Imm0
+  // NewDstReg = Opcode.second NewTmpReg Imm1
+
+  // Determine register classes for destinations and register operands
   MachineFunction *MF = MI.getMF();
-  const TargetRegisterClass *RC =
-      TII->getRegClass(TII->get(Opcode), 0, TRI, *MF);
-  const TargetRegisterClass *ORC =
-      TII->getRegClass(TII->get(Opcode), 1, TRI, *MF);
+  const TargetRegisterClass *FirstInstrDstRC =
+      TII->getRegClass(TII->get(Opcode.first), 0, TRI, *MF);
+  const TargetRegisterClass *FirstInstrOperandRC =
+      TII->getRegClass(TII->get(Opcode.first), 1, TRI, *MF);
+  const TargetRegisterClass *SecondInstrDstRC =
+      (Opcode.first == Opcode.second)
+          ? FirstInstrDstRC
+          : TII->getRegClass(TII->get(Opcode.second), 0, TRI, *MF);
+  const TargetRegisterClass *SecondInstrOperandRC =
+      (Opcode.first == Opcode.second)
+          ? FirstInstrOperandRC
+          : TII->getRegClass(TII->get(Opcode.second), 1, TRI, *MF);
+
+  // Get old registers destinations and new register destinations
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  Register NewTmpReg = MRI->createVirtualRegister(RC);
-  Register NewDstReg = MRI->createVirtualRegister(RC);
+  Register NewTmpReg = MRI->createVirtualRegister(FirstInstrDstRC);
+  // In the situation that DstReg is not Virtual (likely WZR or XZR), we want to
+  // reuse that same destination register.
+  Register NewDstReg = DstReg.isVirtual()
+                           ? MRI->createVirtualRegister(SecondInstrDstRC)
+                           : DstReg;
 
-  MRI->constrainRegClass(SrcReg, RC);
-  MRI->constrainRegClass(NewTmpReg, ORC);
-  MRI->constrainRegClass(NewDstReg, MRI->getRegClass(DstReg));
+  // Constrain registers based on their new uses
+  MRI->constrainRegClass(SrcReg, FirstInstrOperandRC);
+  MRI->constrainRegClass(NewTmpReg, SecondInstrOperandRC);
+  if (DstReg != NewDstReg)
+    MRI->constrainRegClass(NewDstReg, MRI->getRegClass(DstReg));
 
+  // Call the delegating operation to build the instruction
   BuildInstr(MI, Opcode, Imm0, Imm1, SrcReg, NewTmpReg, NewDstReg);
 
-  MRI->replaceRegWith(DstReg, NewDstReg);
   // replaceRegWith changes MI's definition register. Keep it for SSA form until
-  // deleting MI.
-  MI.getOperand(0).setReg(DstReg);
+  // deleting MI. Only if we made a new destination register.
+  if (DstReg != NewDstReg) {
+    MRI->replaceRegWith(DstReg, NewDstReg);
+    MI.getOperand(0).setReg(DstReg);
+  }
 
   // Record the MIs need to be removed.
   ToBeRemoved.insert(&MI);
@@ -438,6 +508,26 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
       case AArch64::SUBXrr:
         Changed = visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI,
                                         ToBeRemoved);
+        break;
+      case AArch64::ADDSWrr:
+        Changed = visitADDSSUBS<uint32_t>({AArch64::ADDWri, AArch64::ADDSWri},
+                                          {AArch64::SUBWri, AArch64::SUBSWri},
+                                          MI, ToBeRemoved);
+        break;
+      case AArch64::SUBSWrr:
+        Changed = visitADDSSUBS<uint32_t>({AArch64::SUBWri, AArch64::SUBSWri},
+                                          {AArch64::ADDWri, AArch64::ADDSWri},
+                                          MI, ToBeRemoved);
+        break;
+      case AArch64::ADDSXrr:
+        Changed = visitADDSSUBS<uint64_t>({AArch64::ADDXri, AArch64::ADDSXri},
+                                          {AArch64::SUBXri, AArch64::SUBSXri},
+                                          MI, ToBeRemoved);
+        break;
+      case AArch64::SUBSXrr:
+        Changed = visitADDSSUBS<uint64_t>({AArch64::SUBXri, AArch64::SUBSXri},
+                                          {AArch64::ADDXri, AArch64::ADDSXri},
+                                          MI, ToBeRemoved);
         break;
       }
     }

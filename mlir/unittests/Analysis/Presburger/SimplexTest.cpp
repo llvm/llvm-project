@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 
 namespace mlir {
+using namespace presburger_utils;
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
 /// The set should not be empty after rolling back. We add additional
@@ -406,9 +407,9 @@ TEST(Simplextest, pivotRedundantRegressionTest) {
   // After the rollback, the only remaining constraint is x <= -1.
   // The maximum value of x should be -1.
   simplex.rollback(snapshot);
-  Optional<Fraction> maxX =
+  MaybeOptimum<Fraction> maxX =
       simplex.computeOptimum(Simplex::Direction::Up, {1, 0, 0});
-  EXPECT_TRUE(maxX.hasValue() && *maxX == Fraction(-1, 1));
+  EXPECT_TRUE(maxX.isBounded() && *maxX == Fraction(-1, 1));
 }
 
 TEST(SimplexTest, addInequality_already_redundant) {
@@ -440,8 +441,9 @@ TEST(SimplexTest, appendVariable) {
 
   EXPECT_EQ(simplex.getNumVariables(), 2u);
   EXPECT_EQ(simplex.getNumConstraints(), 2u);
-  EXPECT_EQ(simplex.computeIntegerBounds({0, 1, 0}),
-            std::make_pair(Optional<int64_t>(yMin), Optional<int64_t>(yMax)));
+  EXPECT_EQ(
+      simplex.computeIntegerBounds({0, 1, 0}),
+      std::make_pair(MaybeOptimum<int64_t>(yMin), MaybeOptimum<int64_t>(yMax)));
 
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
@@ -460,6 +462,28 @@ TEST(SimplexTest, isRedundantInequality) {
   EXPECT_FALSE(simplex.isRedundantInequality({-1, 0, -1})); // x <= -1.
   EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -2}));  // y >= 2.
   EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -1}));  // y >= 1.
+}
+
+TEST(SimplexTest, ineqType) {
+  Simplex simplex(2);
+  simplex.addInequality({0, -1, 2}); // y <= 2.
+  simplex.addInequality({1, 0, 0});  // x >= 0.
+  simplex.addEquality({-1, 1, 0});   // y = x.
+
+  EXPECT_TRUE(simplex.findIneqType({-1, 0, 2}) ==
+              Simplex::IneqType::Redundant); // x <= 2.
+  EXPECT_TRUE(simplex.findIneqType({0, 1, 0}) ==
+              Simplex::IneqType::Redundant); // y >= 0.
+
+  EXPECT_TRUE(simplex.findIneqType({0, 1, -1}) ==
+              Simplex::IneqType::Cut); // y >= 1.
+  EXPECT_TRUE(simplex.findIneqType({-1, 0, 1}) ==
+              Simplex::IneqType::Cut); // x <= 1.
+  EXPECT_TRUE(simplex.findIneqType({0, 1, -2}) ==
+              Simplex::IneqType::Cut); // y >= 2.
+
+  EXPECT_TRUE(simplex.findIneqType({-1, 0, -1}) ==
+              Simplex::IneqType::Separate); // x <= -1.
 }
 
 TEST(SimplexTest, isRedundantEquality) {
