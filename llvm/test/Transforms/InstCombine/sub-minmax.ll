@@ -567,5 +567,75 @@ define i8 @umax_sub_op1_use(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+define i8 @umin_sub_op1(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_sub_op1(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y]], [[U]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  %r = sub i8 %y, %u
+  ret i8 %r
+}
+
+define i8 @umin_sub_op1_commute(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_sub_op1_commute(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y]], [[U]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %r = sub i8 %y, %u
+  ret i8 %r
+}
+
+define i8 @umin_sub_op0(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_sub_op0(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[U]], [[Y]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  %r = sub i8 %u, %y
+  ret i8 %r
+}
+
+define i8 @umin_sub_op0_commute(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_sub_op0_commute(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[U]], [[Y]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %r = sub i8 %u, %y
+  ret i8 %r
+}
+
+define i8 @umin_sub_op1_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_sub_op1_use(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
+; CHECK-NEXT:    call void @use8(i8 [[U]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y]], [[U]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  call void @use8(i8 %u)
+  %r = sub i8 %y, %u
+  ret i8 %r
+}
+
+define i8 @umin_sub_op0_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_sub_op0_use(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
+; CHECK-NEXT:    call void @use8(i8 [[U]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[U]], [[Y]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umin.i8(i8 %y, i8 %x)
+  call void @use8(i8 %u)
+  %r = sub i8 %u, %y
+  ret i8 %r
+}
+
 declare void @use8(i8)
 declare void @use32(i32 %u)
