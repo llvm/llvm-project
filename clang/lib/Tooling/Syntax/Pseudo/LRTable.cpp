@@ -31,6 +31,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
   case LRTable::Action::Sentinel:
     llvm_unreachable("unexpected Sentinel action kind!");
   }
+  llvm_unreachable("unexpected action kind!");
 }
 
 std::string LRTable::dumpStatistics() const {
