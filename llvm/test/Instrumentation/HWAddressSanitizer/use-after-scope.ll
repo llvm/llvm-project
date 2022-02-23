@@ -45,9 +45,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP8]], i64 16)
 ; NOSCOPE-NEXT:    br label [[TMP9:%.*]]
 ; NOSCOPE:       9:
-; NOSCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    [[TMP10:%.*]] = tail call i1 (...) @cond()
-; NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP9]]
 ; NOSCOPE:       11:
 ; NOSCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -153,12 +151,10 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; NOSCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
 ; NOSCOPE-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i8
 ; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP8]], i64 16)
-; NOSCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    [[TMP9:%.*]] = tail call i1 (...) @cond()
 ; NOSCOPE-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]]
 ; NOSCOPE:       10:
 ; NOSCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
-; NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 0, i64 16)
 ; NOSCOPE-NEXT:    ret i32 0
 ; NOSCOPE:       11:
