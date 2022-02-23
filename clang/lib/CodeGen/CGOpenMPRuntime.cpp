@@ -10358,8 +10358,8 @@ void CGOpenMPRuntime::emitTargetCall(
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
   // Generate code for the host fallback function.
-  auto &&FallbackGen = [this, OutlinedFn, &D, &CapturedVars, RequiresOuterTask,
-                        &CS, OffloadingMandatory](CodeGenFunction &CGF) {
+  auto &&FallbackGen = [this, &D, OutlinedFn, &CapturedVars, RequiresOuterTask, &CS,
+                        OffloadingMandatory](CodeGenFunction &CGF) {
     if (OffloadingMandatory) {
       CGF.Builder.CreateUnreachable();
     } else {
@@ -10371,9 +10371,8 @@ void CGOpenMPRuntime::emitTargetCall(
     }
   };
   // Fill up the pointer arrays and transfer execution to the device.
-  auto &&ThenGen = [this, Device, OutlinedFn, OutlinedFnID, &D, &InputInfo,
-                    &MapTypesArray, &MapNamesArray, &CS, RequiresOuterTask,
-                    &CapturedVars, SizeEmitter,
+  auto &&ThenGen = [this, Device, OutlinedFnID, &D, &InputInfo,
+                    &MapTypesArray, &MapNamesArray, SizeEmitter,
                     FallbackGen](CodeGenFunction &CGF, PrePostActionTy &) {
     if (Device.getInt() == OMPC_DEVICE_ancestor) {
       // Reverse offloading is not supported, so just execute on the host.
@@ -10392,6 +10391,7 @@ void CGOpenMPRuntime::emitTargetCall(
 
     // From this point on, we need to have an ID of the target region defined.
     assert(OutlinedFnID && "Invalid outlined function ID!");
+    (void)OutlinedFnID;
 
     // Emit device ID if any.
     llvm::Value *DeviceID;
@@ -10529,8 +10529,7 @@ void CGOpenMPRuntime::emitTargetCall(
   };
 
   // Notify that the host version must be executed.
-  auto &&ElseGen = [this, &D, OutlinedFn, &CS, &CapturedVars, RequiresOuterTask,
-                    FallbackGen](CodeGenFunction &CGF, PrePostActionTy &) {
+  auto &&ElseGen = [FallbackGen](CodeGenFunction &CGF, PrePostActionTy &) {
     FallbackGen(CGF);
   };
 
