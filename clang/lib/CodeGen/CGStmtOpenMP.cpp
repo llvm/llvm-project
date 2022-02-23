@@ -6042,12 +6042,12 @@ static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
   }
 
   LValue XLVal = CGF.EmitLValue(X);
-  llvm::Value *XPtr = XLVal.getPointer(CGF);
+  Address XAddr = XLVal.getAddress(CGF);
   llvm::Value *EVal = CGF.EmitScalarExpr(E);
   llvm::Value *DVal = D ? CGF.EmitScalarExpr(D) : nullptr;
 
   llvm::OpenMPIRBuilder::AtomicOpValue XOpVal{
-      XPtr, XPtr->getType()->getPointerElementType(),
+      XAddr.getPointer(), XAddr.getElementType(),
       X->getType().isVolatileQualified(),
       X->getType()->hasSignedIntegerRepresentation()};
 
