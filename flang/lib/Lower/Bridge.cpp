@@ -19,6 +19,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Support/FIRContext.h"
@@ -77,15 +78,17 @@ public:
   }
 
   fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
+                                 Fortran::lower::StatementContext &context,
                                  mlir::Location *loc = nullptr) override final {
     return createSomeExtendedAddress(loc ? *loc : toLocation(), *this, expr,
-                                     localSymbols);
+                                     localSymbols, context);
   }
   fir::ExtendedValue
   genExprValue(const Fortran::lower::SomeExpr &expr,
+               Fortran::lower::StatementContext &context,
                mlir::Location *loc = nullptr) override final {
     return createSomeExtendedExpression(loc ? *loc : toLocation(), *this, expr,
-                                        localSymbols);
+                                        localSymbols, context);
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -224,6 +227,7 @@ public:
                                 {builder->getRegion()}); // remove dead code
     delete builder;
     builder = nullptr;
+    hostAssocTuple = mlir::Value{};
     localSymbols.clear();
   }
 
@@ -357,6 +361,8 @@ public:
       lowerFunc(f); // internal procedure
   }
 
+  mlir::Value hostAssocTupleValue() override final { return hostAssocTuple; }
+
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
@@ -476,8 +482,8 @@ private:
   }
 
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
+    Fortran::lower::StatementContext stmtCtx;
     mlir::Location loc = toLocation();
-
     std::visit(
         Fortran::common::visitors{
             // [1] Plain old assignment.
@@ -512,15 +518,16 @@ private:
               const bool isNumericScalar =
                   isNumericScalarCategory(lhsType->category());
               fir::ExtendedValue rhs = isNumericScalar
-                                           ? genExprValue(assign.rhs)
-                                           : genExprAddr(assign.rhs);
+                                           ? genExprValue(assign.rhs, stmtCtx)
+                                           : genExprAddr(assign.rhs, stmtCtx);
 
               if (isNumericScalar) {
                 // Fortran 2018 10.2.1.3 p8 and p9
                 // Conversions should have been inserted by semantic analysis,
                 // but they can be incorrect between the rhs and lhs. Correct
                 // that here.
-                mlir::Value addr = fir::getBase(genExprAddr(assign.lhs));
+                mlir::Value addr =
+                    fir::getBase(genExprAddr(assign.lhs, stmtCtx));
                 mlir::Value val = fir::getBase(rhs);
                 // A function with multiple entry points returning different
                 // types tags all result variables with one of the largest
@@ -568,8 +575,16 @@ private:
         assign.u);
   }
 
+  /// Lowering of CALL statement
   void genFIR(const Fortran::parser::CallStmt &stmt) {
-    TODO(toLocation(), "CallStmt lowering");
+    Fortran::lower::StatementContext stmtCtx;
+    setCurrentPosition(stmt.v.source);
+    assert(stmt.typedCall && "Call was not analyzed");
+    // Call statement lowering shares code with function call lowering.
+    mlir::Value res = Fortran::lower::createSubroutineCall(
+        *this, *stmt.typedCall, localSymbols, stmtCtx);
+    if (!res)
+      return; // "Normal" subroutine call.
   }
 
   void genFIR(const Fortran::parser::ComputedGotoStmt &stmt) {
@@ -999,6 +1014,9 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
+
+  /// Tuple of host assoicated variables.
+  mlir::Value hostAssocTuple;
 };
 
 } // namespace
