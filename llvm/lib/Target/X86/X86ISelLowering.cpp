@@ -38389,9 +38389,9 @@ static SDValue combineX86ShufflesRecursively(
   assert(RootMask.size() > 0 &&
          (RootMask.size() > 1 || (RootMask[0] == 0 && SrcOpIndex == 0)) &&
          "Illegal shuffle root mask");
-  assert(Root.getSimpleValueType().isVector() &&
-         "Shuffles operate on vector types!");
-  unsigned RootSizeInBits = Root.getSimpleValueType().getSizeInBits();
+  MVT RootVT = Root.getSimpleValueType();
+  assert(RootVT.isVector() && "Shuffles operate on vector types!");
+  unsigned RootSizeInBits = RootVT.getSizeInBits();
 
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
@@ -38610,13 +38610,12 @@ static SDValue combineX86ShufflesRecursively(
 
   // Handle the all undef/zero/ones cases early.
   if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
-    return DAG.getUNDEF(Root.getValueType());
+    return DAG.getUNDEF(RootVT);
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
-    return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG,
-                         SDLoc(Root));
+    return getZeroVector(RootVT, Subtarget, DAG, SDLoc(Root));
   if (Ops.size() == 1 && ISD::isBuildVectorAllOnes(Ops[0].getNode()) &&
       none_of(Mask, [](int M) { return M == SM_SentinelZero; }))
-    return getOnesVector(Root.getValueType(), DAG, SDLoc(Root));
+    return getOnesVector(RootVT, DAG, SDLoc(Root));
 
   assert(!Ops.empty() && "Shuffle with no inputs detected");
   HasVariableMask |= IsOpVariableMask;
@@ -38676,7 +38675,7 @@ static SDValue combineX86ShufflesRecursively(
   // NOTE: This will update the Ops and Mask.
   if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
           Ops, Mask, RootSizeInBits, SDLoc(Root), DAG, Subtarget))
-    return DAG.getBitcast(Root.getValueType(), HOp);
+    return DAG.getBitcast(RootVT, HOp);
 
   // Try to refine our inputs given our knowledge of target shuffle mask.
   for (auto I : enumerate(Ops)) {
