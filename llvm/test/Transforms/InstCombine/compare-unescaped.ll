@@ -316,6 +316,53 @@ define i1 @neg_consistent_fold4() {
   ret i1 %res
 }
 
+declare void @unknown(i8*)
+
+; Points out that a nocapture call can't cause a consistent result issue
+; as it is (by assumption) not able to contain a comparison which might
+; capture the address.
+
+define i1 @consistent_nocapture_inttoptr() {
+; CHECK-LABEL: @consistent_nocapture_inttoptr(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    call void @unknown(i8* nocapture [[M]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[M]], inttoptr (i64 2048 to i8*)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %m = call i8* @malloc(i64 4)
+  call void @unknown(i8* nocapture %m)
+  %rhs = inttoptr i64 2048 to i8*
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @consistent_nocapture_offset() {
+; CHECK-LABEL: @consistent_nocapture_offset(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    call void @unknown(i8* nocapture [[M]])
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call i8* @malloc(i64 4)
+  call void @unknown(i8* nocapture %m)
+  %n = call i8* @malloc(i64 4)
+  %rhs = getelementptr i8, i8* %n, i32 4
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @consistent_nocapture_through_global() {
+; CHECK-LABEL: @consistent_nocapture_through_global(
+; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i64 4)
+; CHECK-NEXT:    call void @unknown(i8* nocapture [[M]])
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call i8* @malloc(i64 4)
+  call void @unknown(i8* nocapture %m)
+  %bc = bitcast i8* %m to i32*
+  %lgp = load i32*, i32** @gp, align 8, !nonnull !0
+  %cmp = icmp eq i32* %bc, %lgp
+  ret i1 %cmp
+}
 
 !0 = !{}
 
