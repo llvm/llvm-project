@@ -19406,8 +19406,8 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 // Return false to prevent folding
 // (mul (add r, c0), c1) -> (add (mul r, c1), c0*c1) in DAGCombine,
 // if the folding leads to worse code.
-bool ARMTargetLowering::isMulAddWithConstProfitable(
-    const SDValue &AddNode, const SDValue &ConstNode) const {
+bool ARMTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
+                                                    SDValue ConstNode) const {
   // Let the DAGCombiner decide for vector types and large types.
   const EVT VT = AddNode.getValueType();
   if (VT.isVector() || VT.getScalarSizeInBits() > 32)

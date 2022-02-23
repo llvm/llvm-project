@@ -12905,7 +12905,7 @@ bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
 // (mul (add x, c1), c2) -> (add (mul x, c2), c2*c1) in DAGCombine,
 // if the folding leads to worse code.
 bool AArch64TargetLowering::isMulAddWithConstProfitable(
-    const SDValue &AddNode, const SDValue &ConstNode) const {
+    SDValue AddNode, SDValue ConstNode) const {
   // Let the DAGCombiner decide for vector types and large types.
   const EVT VT = AddNode.getValueType();
   if (VT.isVector() || VT.getScalarSizeInBits() > 64)

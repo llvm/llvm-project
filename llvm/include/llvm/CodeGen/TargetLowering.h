@@ -2128,8 +2128,8 @@ public:
   /// about some cases, a default true can be returned to let the DAGCombiner
   /// decide.
   /// AddNode is (add x, c1), and ConstNode is c2.
-  virtual bool isMulAddWithConstProfitable(const SDValue &AddNode,
-                                           const SDValue &ConstNode) const {
+  virtual bool isMulAddWithConstProfitable(SDValue AddNode,
+                                           SDValue ConstNode) const {
     return true;
   }
 

@@ -666,9 +666,8 @@ namespace {
     /// of folding (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2).
     /// MulNode is the original multiply, AddNode is (add x, c1),
     /// and ConstNode is c2.
-    bool isMulAddWithConstProfitable(SDNode *MulNode,
-                                     SDValue &AddNode,
-                                     SDValue &ConstNode);
+    bool isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
+                                     SDValue ConstNode);
 
     /// This is a helper function for visitAND and visitZERO_EXTEND.  Returns
     /// true if the (and (load x) c) pattern matches an extload.  ExtVT returns
@@ -17355,9 +17354,8 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
 //     (A + c1) * c3
 //     (A + c2) * c3
 // We're checking for cases where we have common "c3 * A" expressions.
-bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode,
-                                              SDValue &AddNode,
-                                              SDValue &ConstNode) {
+bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
+                                              SDValue ConstNode) {
   APInt Val;
 
   // If the add only has one use, and the target thinks the folding is
