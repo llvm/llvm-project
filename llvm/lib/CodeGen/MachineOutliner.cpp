@@ -258,10 +258,6 @@ struct InstructionMapper {
     if (!TII.isMBBSafeToOutlineFrom(MBB, Flags))
       return;
 
-    auto Ranges = TII.getOutlinableRanges(MBB, Flags);
-    if (Ranges.empty())
-      return;
-
     // Store info for the MBB for later outlining.
     MBBFlagsMap[&MBB] = Flags;
 
@@ -284,47 +280,34 @@ struct InstructionMapper {
     std::vector<unsigned> UnsignedVecForMBB;
     std::vector<MachineBasicBlock::iterator> InstrListForMBB;
 
-    for (auto &Range : Ranges) {
-      auto RangeStart = Range.first;
-      auto RangeEnd = Range.second;
-      // Everything outside of an outlinable range is illegal.
-      for (; It != RangeStart; ++It)
+    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; ++It) {
+      // Keep track of where this instruction is in the module.
+      switch (TII.getOutliningType(It, Flags)) {
+      case InstrType::Illegal:
         mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                              InstrListForMBB);
-      assert(It != MBB.end() && "Should still have instructions?");
-      // `It` is now positioned at the beginning of a range of instructions
-      // which may be outlinable. Check if each instruction is known to be safe.
-      for (; It != RangeEnd; ++It) {
-        // Keep track of where this instruction is in the module.
-        switch (TII.getOutliningType(It, Flags)) {
-        case InstrType::Illegal:
-          mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
-                               InstrListForMBB);
-          break;
+        break;
 
-        case InstrType::Legal:
-          mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
-                             NumLegalInBlock, UnsignedVecForMBB,
+      case InstrType::Legal:
+        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
+        break;
+
+      case InstrType::LegalTerminator:
+        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
+        // The instruction also acts as a terminator, so we have to record that
+        // in the string.
+        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                              InstrListForMBB);
-          break;
+        break;
 
-        case InstrType::LegalTerminator:
-          mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
-                             NumLegalInBlock, UnsignedVecForMBB,
-                             InstrListForMBB);
-          // The instruction also acts as a terminator, so we have to record
-          // that in the string.
-          mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
-                               InstrListForMBB);
-          break;
-
-        case InstrType::Invisible:
-          // Normally this is set by mapTo(Blah)Unsigned, but we just want to
-          // skip this instruction. So, unset the flag here.
-          ++NumInvisible;
-          AddedIllegalLastTime = false;
-          break;
-        }
+      case InstrType::Invisible:
+        // Normally this is set by mapTo(Blah)Unsigned, but we just want to
+        // skip this instruction. So, unset the flag here.
+        ++NumInvisible;
+        AddedIllegalLastTime = false;
+        break;
       }
     }
 

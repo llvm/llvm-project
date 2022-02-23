@@ -280,11 +280,10 @@ public:
                                    bool OutlineFromLinkOnceODRs) const override;
   outliner::OutlinedFunction getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
-  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MIT,
-                                       unsigned Flags) const override;
-  SmallVector<
-      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
-  getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;
+  outliner::InstrType
+  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                              unsigned &Flags) const override;
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                           const outliner::OutlinedFunction &OF) const override;
   MachineBasicBlock::iterator
