@@ -4322,7 +4322,7 @@ varDecl(isExternC())
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isInline1')"><a name="isInline1Anchor">isInline</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInline1"><pre>Matches function and namespace declarations that are marked with
+<tr><td colspan="4" class="doc" id="isInline1"><pre>Matches functions, variables and namespace declarations that are marked with
 the inline keyword.
 
 Given
@@ -4331,8 +4331,10 @@ Given
   namespace n {
   inline namespace m {}
   }
+  inline int Foo = 5;
 functionDecl(isInline()) will match ::f().
 namespaceDecl(isInline()) will match n::m.
+varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
@@ -4697,7 +4699,7 @@ namespaceDecl(isAnonymous()) will match #1 but not ::n.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamespaceDecl.html">NamespaceDecl</a>&gt;</td><td class="name" onclick="toggle('isInline0')"><a name="isInline0Anchor">isInline</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInline0"><pre>Matches function and namespace declarations that are marked with
+<tr><td colspan="4" class="doc" id="isInline0"><pre>Matches functions, variables and namespace declarations that are marked with
 the inline keyword.
 
 Given
@@ -4706,8 +4708,10 @@ Given
   namespace n {
   inline namespace m {}
   }
+  inline int Foo = 5;
 functionDecl(isInline()) will match ::f().
 namespaceDecl(isInline()) will match n::m.
+varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
@@ -5725,6 +5729,23 @@ capture.
 
 Example matches x (matcher = varDecl(isInitCapture()))
 auto f = [x=3]() { return x; };
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isInline2')"><a name="isInline2Anchor">isInline</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInline2"><pre>Matches functions, variables and namespace declarations that are marked with
+the inline keyword.
+
+Given
+  inline void f();
+  void g();
+  namespace n {
+  inline namespace m {}
+  }
+  inline int Foo = 5;
+functionDecl(isInline()) will match ::f().
+namespaceDecl(isInline()) will match n::m.
+varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 

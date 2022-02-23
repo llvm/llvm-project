@@ -197,6 +197,8 @@ TEST(IsInlineMatcher, IsInline) {
                       functionDecl(isInline(), hasName("f"))));
   EXPECT_TRUE(matches("namespace n { inline namespace m {} }",
                       namespaceDecl(isInline(), hasName("m"))));
+  EXPECT_TRUE(matches("inline int Foo = 5;",
+                      varDecl(isInline(), hasName("Foo")), {Lang_CXX17}));
 }
 
 // FIXME: Figure out how to specify paths so the following tests pass on
