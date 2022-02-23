@@ -823,6 +823,7 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
   case Module::PrivateModuleFragment:
     return "Private Module Fragment";
   }
+  llvm_unreachable("unknown module kind!");
 }
 
 void DumpModuleInfoAction::ExecuteAction() {
