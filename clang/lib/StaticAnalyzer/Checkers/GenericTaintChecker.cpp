@@ -32,6 +32,8 @@
 #include <memory>
 #include <utility>
 
+#define DEBUG_TYPE "taint-checker"
+
 using namespace clang;
 using namespace ento;
 using namespace taint;
@@ -691,6 +693,13 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
   if (TaintArgs.isEmpty())
     return;
 
+  LLVM_DEBUG(for (ArgIdxTy I
+                  : TaintArgs) {
+    llvm::dbgs() << "PostCall<";
+    Call.dump(llvm::dbgs());
+    llvm::dbgs() << "> actually wants to taint arg index: " << I << '\n';
+  });
+
   for (ArgIdxTy ArgNum : TaintArgs) {
     // Special handling for the tainted return value.
     if (ArgNum == ReturnValueIndex) {
@@ -768,15 +777,25 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
 
   /// Propagate taint where it is necessary.
   ForEachCallArg(
-      [this, &State, WouldEscape](ArgIdxTy I, const Expr *E, SVal V) {
-        if (PropDstArgs.contains(I))
+      [this, &State, WouldEscape, &Call](ArgIdxTy I, const Expr *E, SVal V) {
+        if (PropDstArgs.contains(I)) {
+          LLVM_DEBUG(llvm::dbgs() << "PreCall<"; Call.dump(llvm::dbgs());
+                     llvm::dbgs()
+                     << "> prepares tainting arg index: " << I << '\n';);
           State = State->add<TaintArgsOnPostVisit>(I);
+        }
 
         // TODO: We should traverse all reachable memory regions via the
         // escaping parameter. Instead of doing that we simply mark only the
         // referred memory region as tainted.
-        if (WouldEscape(V, E->getType()))
+        if (WouldEscape(V, E->getType())) {
+          LLVM_DEBUG(if (!State->contains<TaintArgsOnPostVisit>(I)) {
+            llvm::dbgs() << "PreCall<";
+            Call.dump(llvm::dbgs());
+            llvm::dbgs() << "> prepares tainting arg index: " << I << '\n';
+          });
           State = State->add<TaintArgsOnPostVisit>(I);
+        }
       });
 
   C.addTransition(State);
