@@ -21,16 +21,11 @@ void top(const char *fname, char *buf) {
 
   (void)fgets(buf, 42, fp); // Trigger taint propagation.
 
-  // FIXME: Why is the arg index 1 prepared for taint?
-  // Before the call it wasn't tainted, and it also shouldn't be tainted after the call.
-
   // CHECK-NEXT: PreCall<fgets(buf, 42, fp)> prepares tainting arg index: -1
   // CHECK-NEXT: PreCall<fgets(buf, 42, fp)> prepares tainting arg index: 0
-  // CHECK-NEXT: PreCall<fgets(buf, 42, fp)> prepares tainting arg index: 1
   // CHECK-NEXT: PreCall<fgets(buf, 42, fp)> prepares tainting arg index: 2
   //
   // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: -1
   // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: 0
-  // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: 1
   // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: 2
 }
