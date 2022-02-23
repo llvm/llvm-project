@@ -756,6 +756,20 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
          AMDGPU::isFlatGlobalAddrSpace(DestAS);
 }
 
+// FIXME: This should likely be driven from tablegen or an ".inc" header.
+constexpr std::pair<unsigned, unsigned> LLVMToDWARFAddrSpaceMapping[] = {
+    {AMDGPUAS::GLOBAL_ADDRESS, 0}, {AMDGPUAS::CONSTANT_ADDRESS, 0},
+    {AMDGPUAS::FLAT_ADDRESS, 1},   {AMDGPUAS::REGION_ADDRESS, 2},
+    {AMDGPUAS::LOCAL_ADDRESS, 3},  {AMDGPUAS::PRIVATE_ADDRESS, 5}};
+
+Optional<unsigned>
+AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
+  for (const auto &I : LLVMToDWARFAddrSpaceMapping)
+    if (I.first == LLVMAddrSpace)
+      return I.second;
+  return None;
+}
+
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
   const auto *LD = dyn_cast<LoadInst>(V);
   if (!LD)

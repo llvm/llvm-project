@@ -969,10 +969,21 @@ void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
 
   uint64_t PointerSizeInBytes = PointerSizeInBits / 8;
 
+  unsigned PointerLLVMAddrSpace = PointerResultType->getAddressSpace();
+  Optional<unsigned> PointerDWARFAddrSpace =
+      AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
+  if (!PointerDWARFAddrSpace) {
+    LLVM_DEBUG(dbgs() << "Failed to lower DIOpDeref of pointer to addrspace("
+                      << PointerLLVMAddrSpace
+                      << "): no corresponding DWARF addrspace.\n");
+    IsImplemented = false;
+    return;
+  }
+
   emitDwarfOp(dwarf::DW_OP_deref_size);
   emitDwarfData1(PointerSizeInBytes);
   emitDwarfOp(dwarf::DW_OP_constu);
-  emitDwarfUnsigned(PointerResultType->getAddressSpace());
+  emitDwarfUnsigned(*PointerDWARFAddrSpace);
   emitDwarfOp(dwarf::DW_OP_LLVM_form_aspace_address);
 
   OpNode->setIsLowered();

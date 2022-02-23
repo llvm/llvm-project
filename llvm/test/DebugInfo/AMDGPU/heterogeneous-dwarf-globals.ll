@@ -29,7 +29,7 @@
 ; DWARF-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x1, DW_OP_LLVM_form_aspace_address)
+; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
 
 ; DWARF: 0x00000044:   DW_TAG_variable
 ; DWARF-NEXT: DW_AT_name [DW_FORM_strp] ("FileVarDeviceShared")
@@ -45,7 +45,7 @@
 ; DWARF-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x4, DW_OP_LLVM_form_aspace_address)
+; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
 
 ; RELOCS: RELOCATION RECORDS FOR [.debug_info]:
 ; RELOCS-NOT: RELOCATION RECORDS FOR
