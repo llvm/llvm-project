@@ -241,10 +241,10 @@ void noNeedForBreaks(int x) {
 int noNeedForBreaksInvalidRets(int x) {
   if (x == 2)
     return; // This omits the 'break'.
-  // But this doesn't (should it?).
+
   else { // CHECK7: "default:" [[@LINE]]
     return "";
-  } // CHECK7: "break;\n" [[@LINE]]
+  }
 }
 
 // RUN: clang-refactor-test perform -action if-switch-conversion -at=%s:196:3 -at=%s:209:3 -at=%s:218:3 -at=%s:231:3 -at=%s:235:3 -at=%s:242:3 %s | FileCheck --check-prefix=CHECK7 %s
