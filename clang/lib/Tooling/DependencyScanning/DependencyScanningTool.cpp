@@ -9,9 +9,9 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
 
-namespace clang{
-namespace tooling{
-namespace dependencies{
+namespace clang {
+namespace tooling {
+namespace dependencies {
 
 std::vector<std::string> FullDependencies::getAdditionalArgs(
     std::function<StringRef(ModuleID)> LookupPCMPath,
