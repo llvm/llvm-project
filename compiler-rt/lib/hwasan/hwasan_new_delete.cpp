@@ -28,11 +28,11 @@
     if (!nothrow && UNLIKELY(!res))          \
       ReportOutOfMemory(size, &stack);       \
     return res
-#  define OPERATOR_NEW_ALIGN_BODY(nothrow)                                    \
-    GET_MALLOC_STACK_TRACE;                                                   \
-    void *res = hwasan_aligned_alloc(static_cast<uptr>(align), size, &stack); \
-    if (!nothrow && UNLIKELY(!res))                                           \
-      ReportOutOfMemory(size, &stack);                                        \
+#  define OPERATOR_NEW_ALIGN_BODY(nothrow)                               \
+    GET_MALLOC_STACK_TRACE;                                              \
+    void *res = hwasan_memalign(static_cast<uptr>(align), size, &stack); \
+    if (!nothrow && UNLIKELY(!res))                                      \
+      ReportOutOfMemory(size, &stack);                                   \
     return res
 
 #  define OPERATOR_DELETE_BODY \
