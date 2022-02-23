@@ -7618,8 +7618,21 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
     LLVM_DEBUG(dbgs() << "SLP:  initialize schedule region to " << *I << "\n");
     return;
   }
-
-  if (I->comesBefore(ScheduleStart)) {
+  // Search up and down at the same time, because we don't know if the new
+  // instruction is above or below the existing scheduling region.
+  BasicBlock::reverse_iterator UpIter =
+      ++ScheduleStart->getIterator().getReverse();
+  BasicBlock::reverse_iterator UpperEnd = BB->rend();
+  BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
+  BasicBlock::iterator LowerEnd = BB->end();
+  while (UpIter != UpperEnd && DownIter != LowerEnd && &*UpIter != I &&
+         &*DownIter != I) {
+    ++UpIter;
+    ++DownIter;
+  }
+  if (DownIter == LowerEnd || (UpIter != UpperEnd && &*UpIter == I)) {
+    assert(I->getParent() == ScheduleStart->getParent() &&
+           "Instruction is in wrong basic block.");
     initScheduleData(I, ScheduleStart, nullptr, FirstLoadStoreInRegion);
     ScheduleStart = I;
     if (isOneOf(S, I) != I)
@@ -7628,14 +7641,17 @@ BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
                       << "\n");
     return;
   }
-
-  auto *NextI = I->getNextNode();
-  assert(NextI && "tried to vectorize a terminator?");
-  assert(ScheduleEnd->comesBefore(NextI) && "must extend?");
-  initScheduleData(ScheduleEnd, NextI, LastLoadStoreInRegion, nullptr);
-  ScheduleEnd = NextI;
+  assert((UpIter == UpperEnd || (DownIter != LowerEnd && &*DownIter == I)) &&
+         "Expected to reach top of the basic block or instruction down the "
+         "lower end.");
+  assert(I->getParent() == ScheduleEnd->getParent() &&
+         "Instruction is in wrong basic block.");
+  initScheduleData(ScheduleEnd, I->getNextNode(), LastLoadStoreInRegion,
+                   nullptr);
+  ScheduleEnd = I->getNextNode();
   if (isOneOf(S, I) != I)
     CheckSheduleForI(I);
+  assert(ScheduleEnd && "tried to vectorize a terminator?");
   LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I << "\n");
   return;
 }
