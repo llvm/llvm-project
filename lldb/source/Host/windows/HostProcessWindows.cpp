@@ -63,36 +63,34 @@ bool HostProcessWindows::IsRunning() const {
   return (code == STILL_ACTIVE);
 }
 
+static lldb::thread_result_t
+MonitorThread(const Host::MonitorChildProcessCallback &callback,
+              HANDLE process_handle) {
+  DWORD exit_code;
+
+  ::WaitForSingleObject(process_handle, INFINITE);
+  ::GetExitCodeProcess(process_handle, &exit_code);
+  callback(::GetProcessId(process_handle), true, 0, exit_code);
+  ::CloseHandle(process_handle);
+  return {};
+}
+
 llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
     const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
-  MonitorInfo *info = new MonitorInfo;
-  info->callback = callback;
+  HANDLE process_handle;
 
   // Since the life of this HostProcessWindows instance and the life of the
   // process may be different, duplicate the handle so that the monitor thread
   // can have ownership over its own copy of the handle.
   if (::DuplicateHandle(GetCurrentProcess(), m_process, GetCurrentProcess(),
-                        &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
-    return ThreadLauncher::LaunchThread("ChildProcessMonitor",
-                                        HostProcessWindows::MonitorThread,
-                                        info);
+                        &process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+    return ThreadLauncher::LaunchThread(
+        "ChildProcessMonitor", [callback, process_handle] {
+          return MonitorThread(callback, process_handle);
+        });
   } else {
     return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
   }
-}
-
-lldb::thread_result_t HostProcessWindows::MonitorThread(void *thread_arg) {
-  DWORD exit_code;
-
-  MonitorInfo *info = static_cast<MonitorInfo *>(thread_arg);
-  if (info) {
-    ::WaitForSingleObject(info->process_handle, INFINITE);
-    ::GetExitCodeProcess(info->process_handle, &exit_code);
-    info->callback(::GetProcessId(info->process_handle), true, 0, exit_code);
-    ::CloseHandle(info->process_handle);
-    delete (info);
-  }
-  return {};
 }
 
 void HostProcessWindows::Close() {
