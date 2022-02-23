@@ -196,7 +196,7 @@ struct MemProfRecord {
   };
 
   // The dynamic calling context for the allocation.
-  std::vector<Frame> CallStack;
+  llvm::SmallVector<Frame> CallStack;
   // The statistics obtained from the runtime for the allocation.
   PortableMemInfoBlock Info;
 

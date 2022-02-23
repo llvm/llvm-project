@@ -132,7 +132,7 @@ CallStackMap readStackInfo(const char *Ptr) {
     const uint64_t StackId = endian::readNext<uint64_t, little, unaligned>(Ptr);
     const uint64_t NumPCs = endian::readNext<uint64_t, little, unaligned>(Ptr);
 
-    SmallVector<uint64_t, 32> CallStack;
+    SmallVector<uint64_t> CallStack;
     for (uint64_t J = 0; J < NumPCs; J++) {
       CallStack.push_back(endian::readNext<uint64_t, little, unaligned>(Ptr));
     }
@@ -273,7 +273,46 @@ Error RawMemProfReader::initialize() {
     return report(SOFOr.takeError(), FileName);
   Symbolizer = std::move(SOFOr.get());
 
-  return readRawProfile();
+  if (Error E = readRawProfile())
+    return E;
+
+  return symbolizeStackFrames();
+}
+
+Error RawMemProfReader::symbolizeStackFrames() {
+  // The specifier to use when symbolization is requested.
+  const DILineInfoSpecifier Specifier(
+      DILineInfoSpecifier::FileLineInfoKind::RawValue,
+      DILineInfoSpecifier::FunctionNameKind::LinkageName);
+
+  for (const auto &Entry : StackMap) {
+    for (const uint64_t VAddr : Entry.getSecond()) {
+      // Check if we have already symbolized and cached the result.
+      if (SymbolizedFrame.count(VAddr) > 0)
+        continue;
+
+      Expected<DIInliningInfo> DIOr = Symbolizer->symbolizeInlinedCode(
+          getModuleOffset(VAddr), Specifier, /*UseSymbolTable=*/false);
+      if (!DIOr)
+        return DIOr.takeError();
+      DIInliningInfo DI = DIOr.get();
+
+      for (size_t I = 0; I < DI.getNumberOfFrames(); I++) {
+        const auto &Frame = DI.getFrame(I);
+        SymbolizedFrame[VAddr].emplace_back(
+            // We use the function guid which we expect to be a uint64_t. At
+            // this time, it is the lower 64 bits of the md5 of the function
+            // name. Any suffix with .llvm. is trimmed since these are added by
+            // thinLTO global promotion. At the time the profile is consumed,
+            // these suffixes will not be present.
+            Function::getGUID(trimSuffix(Frame.FunctionName)),
+            Frame.Line - Frame.StartLine, Frame.Column,
+            // Only the first entry is not an inlined location.
+            I != 0);
+      }
+    }
+  }
+  return Error::success();
 }
 
 Error RawMemProfReader::readRawProfile() {
@@ -347,30 +386,10 @@ RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
 Error RawMemProfReader::fillRecord(const uint64_t Id, const MemInfoBlock &MIB,
                                    MemProfRecord &Record) {
   auto &CallStack = StackMap[Id];
-  DILineInfoSpecifier Specifier(
-      DILineInfoSpecifier::FileLineInfoKind::RawValue,
-      DILineInfoSpecifier::FunctionNameKind::LinkageName);
   for (const uint64_t Address : CallStack) {
-    Expected<DIInliningInfo> DIOr = Symbolizer->symbolizeInlinedCode(
-        getModuleOffset(Address), Specifier, /*UseSymbolTable=*/false);
-
-    if (!DIOr)
-      return DIOr.takeError();
-    DIInliningInfo DI = DIOr.get();
-
-    for (size_t I = 0; I < DI.getNumberOfFrames(); I++) {
-      const auto &Frame = DI.getFrame(I);
-      Record.CallStack.emplace_back(
-          // We use the function guid which we expect to be a uint64_t. At this
-          // time, it is the lower 64 bits of the md5 of the function name. Any
-          // suffix with .llvm. is trimmed since these are added by thinLTO
-          // global promotion. At the time the profile is consumed, these
-          // suffixes will not be present.
-          Function::getGUID(trimSuffix(Frame.FunctionName)),
-          Frame.Line - Frame.StartLine, Frame.Column,
-          // Only the first entry is not an inlined location.
-          I != 0);
-    }
+    assert(SymbolizedFrame.count(Address) &&
+           "Address not found in symbolized frame cache.");
+    Record.CallStack.append(SymbolizedFrame[Address]);
   }
   Record.Info = PortableMemInfoBlock(MIB);
   return Error::success();
