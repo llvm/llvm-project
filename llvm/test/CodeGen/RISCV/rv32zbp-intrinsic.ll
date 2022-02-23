@@ -32,6 +32,51 @@ define i32 @grevi32(i32 %a) nounwind {
  ret i32 %tmp
 }
 
+define i32 @revi32(i32 %a) nounwind {
+; RV32ZBP-LABEL: revi32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    rev a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 31)
+ ret i32 %tmp
+}
+
+define i32 @rev2i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: rev2i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    rev2 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 30)
+ ret i32 %tmp
+}
+
+define i32 @rev4i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: rev4i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    rev4 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 28)
+ ret i32 %tmp
+}
+
+define i32 @rev8i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: rev8i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    rev8 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 24)
+ ret i32 %tmp
+}
+
+define i32 @rev16i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: rev16i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    rev16 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 16)
+ ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.gorc.i32(i32 %a, i32 %b)
 
 define i32 @gorc32(i32 %a, i32 %b) nounwind {
