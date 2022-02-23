@@ -203,7 +203,7 @@ static bool shouldDefineSym(SymbolAssignment *cmd) {
   // If a symbol was in PROVIDE(), we need to define it only
   // when it is a referenced undefined symbol.
   Symbol *b = symtab->find(cmd->name);
-  if (b && !b->isDefined())
+  if (b && !b->isDefined() && !b->isCommon())
     return true;
   return false;
 }
