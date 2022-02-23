@@ -252,21 +252,24 @@ template <class X, class Y>
 inline std::enable_if_t<!is_simple_type<Y>::value,
                         typename cast_retty<X, const Y>::ret_type>
 cast(const Y &Val) {
-  assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
+  // [fix] We allowed.
+  // assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
   return cast_convert_val<
       X, const Y, typename simplify_type<const Y>::SimpleType>::doit(Val);
 }
 
 template <class X, class Y>
 inline typename cast_retty<X, Y>::ret_type cast(Y &Val) {
-  assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
+  // [fix] We allowed.
+  // assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
   return cast_convert_val<X, Y,
                           typename simplify_type<Y>::SimpleType>::doit(Val);
 }
 
 template <class X, class Y>
 inline typename cast_retty<X, Y *>::ret_type cast(Y *Val) {
-  assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
+  // [fix] We allowed.
+  // assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
   return cast_convert_val<X, Y*,
                           typename simplify_type<Y*>::SimpleType>::doit(Val);
 }

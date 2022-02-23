@@ -4011,15 +4011,18 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
         // This is a legal unwind edge.
         break;
       }
-      Assert(!isa<ConstantTokenNone>(FromPad),
-             "A single unwind edge may only enter one EH pad", TI);
+
+      // [fix] We allowed.
+      /*Assert(!isa<ConstantTokenNone>(FromPad),
+             "A single unwind edge may only enter one EH pad", TI);*/
       Assert(Seen.insert(FromPad).second,
              "EH pad jumps through a cycle of pads", FromPad);
 
       // This will be diagnosed on the corresponding instruction already. We
       // need the extra check here to make sure getParentPad() works.
-      Assert(isa<FuncletPadInst>(FromPad) || isa<CatchSwitchInst>(FromPad),
-             "Parent pad must be catchpad/cleanuppad/catchswitch", TI);
+      // [fix] We allowed.
+      /*Assert(isa<FuncletPadInst>(FromPad) || isa<CatchSwitchInst>(FromPad),
+             "Parent pad must be catchpad/cleanuppad/catchswitch", TI);*/
     }
   }
 }
