@@ -51,7 +51,7 @@
 // CHECK-PCH-NEXT:         }
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-fno-implicit-modules"
+// CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH-NEXT:         "-fno-implicit-module-maps"
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON]]/ModCommon-{{.*}}.pcm"
 // CHECK-PCH-NEXT:       ],
@@ -72,8 +72,7 @@
 // RUN:   --tu-index=0 > %t/pch.rsp
 //
 // RUN: %clang @%t/mod_common.cc1.rsp
-// RUN: %clang -x c-header %t/pch.h -fmodules -gmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t/cache -o %t/pch.h.gch @%t/pch.rsp
+// RUN: %clang @%t/pch.rsp
 
 // Scan dependencies of the TU:
 //
@@ -115,7 +114,7 @@
 // CHECK-TU-NEXT:         }
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU-NEXT:         "-fno-implicit-modules",
+// CHECK-TU:              "-fno-implicit-modules",
 // CHECK-TU-NEXT:         "-fno-implicit-module-maps",
 // CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm"
 // CHECK-TU-NEXT:       ],
@@ -137,5 +136,4 @@
 // RUN:   --tu-index=0 > %t/tu.rsp
 //
 // RUN: %clang @%t/mod_tu.cc1.rsp
-// RUN: %clang -fsyntax-only %t/tu.c -fmodules -gmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t/cache -include %t/pch.h -o %t/tu.o @%t/tu.rsp
+// RUN: %clang @%t/tu.rsp

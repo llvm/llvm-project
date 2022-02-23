@@ -12,9 +12,7 @@
 // RUN: %python %S/../../utils/module-deps-to-rsp.py %t.db --tu-index=0 > %t.tu.rsp
 // RUN: %clang @%t.inferred.cc1.rsp -pedantic -Werror
 // RUN: %clang @%t.system.cc1.rsp -pedantic -Werror
-// RUN: %clang -x objective-c -fsyntax-only %t.dir/modules_cdb_input.cpp \
-// RUN:   -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps \
-// RUN:   -pedantic -Werror @%t.tu.rsp
+// RUN: %clang @%t.tu.rsp -pedantic -Werror -Wno-unused-command-line-argument
 
 #include <Inferred/Inferred.h>
 #include <System/System.h>

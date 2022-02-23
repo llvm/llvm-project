@@ -103,7 +103,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
+// CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
 // CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
@@ -123,7 +123,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
+// CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}},
 // CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
@@ -143,7 +143,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
+// CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
 // CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
@@ -163,7 +163,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules"
+// CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
 // CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
