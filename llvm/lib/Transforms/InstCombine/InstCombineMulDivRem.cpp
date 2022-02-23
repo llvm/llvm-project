@@ -972,22 +972,22 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
 // instruction, seeing through select instructions, to determine if we can
 // replace the udiv with something simpler.  If we find that an operand is not
 // able to simplify the udiv, we abort the entire transformation.
-static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
+static size_t visitUDivOperand(Value *Op, const BinaryOperator &I,
                                SmallVectorImpl<UDivFoldAction> &Actions,
                                unsigned Depth = 0) {
   // FIXME: assert that Op1 isn't/doesn't contain undef.
 
   // Check to see if this is an unsigned division with an exact power of 2,
   // if so, convert to a right shift.
-  if (match(Op1, m_Power2())) {
-    Actions.push_back(UDivFoldAction(foldUDivPow2Cst, Op1));
+  if (match(Op, m_Power2())) {
+    Actions.push_back(UDivFoldAction(foldUDivPow2Cst, Op));
     return Actions.size();
   }
 
   // X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
-  if (match(Op1, m_Shl(m_Power2(), m_Value())) ||
-      match(Op1, m_ZExt(m_Shl(m_Power2(), m_Value())))) {
-    Actions.push_back(UDivFoldAction(foldUDivShl, Op1));
+  if (match(Op, m_Shl(m_Power2(), m_Value())) ||
+      match(Op, m_ZExt(m_Shl(m_Power2(), m_Value())))) {
+    Actions.push_back(UDivFoldAction(foldUDivShl, Op));
     return Actions.size();
   }
 
@@ -995,14 +995,13 @@ static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
   if (Depth++ == MaxDepth)
     return 0;
 
-  if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
+  if (SelectInst *SI = dyn_cast<SelectInst>(Op))
     // FIXME: missed optimization: if one of the hands of select is/contains
     //        undef, just directly pick the other one.
     // FIXME: can both hands contain undef?
-    if (size_t LHSIdx =
-            visitUDivOperand(Op0, SI->getOperand(1), I, Actions, Depth))
-      if (visitUDivOperand(Op0, SI->getOperand(2), I, Actions, Depth)) {
-        Actions.push_back(UDivFoldAction(nullptr, Op1, LHSIdx - 1));
+    if (size_t LHSIdx = visitUDivOperand(SI->getOperand(1), I, Actions, Depth))
+      if (visitUDivOperand(SI->getOperand(2), I, Actions, Depth)) {
+        Actions.push_back(UDivFoldAction(nullptr, Op, LHSIdx - 1));
         return Actions.size();
       }
 
@@ -1108,7 +1107,7 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
 
   // (LHS udiv (select (select (...)))) -> (LHS >> (select (select (...))))
   SmallVector<UDivFoldAction, 6> UDivActions;
-  if (visitUDivOperand(Op0, Op1, I, UDivActions))
+  if (visitUDivOperand(Op1, I, UDivActions))
     for (unsigned i = 0, e = UDivActions.size(); i != e; ++i) {
       FoldUDivOperandCb Action = UDivActions[i].FoldAction;
       Value *ActionOp1 = UDivActions[i].OperandToFold;
