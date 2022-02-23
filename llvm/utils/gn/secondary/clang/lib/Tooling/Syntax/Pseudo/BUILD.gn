@@ -10,5 +10,7 @@ static_library("Pseudo") {
     "Grammar.cpp",
     "GrammarBNF.cpp",
     "LRGraph.cpp",
+    "LRTable.cpp",
+    "LRTableBuild.cpp",
   ]
 }
