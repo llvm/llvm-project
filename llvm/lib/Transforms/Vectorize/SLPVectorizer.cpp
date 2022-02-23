@@ -2759,6 +2759,8 @@ private:
         assert(SD && "primary scheduledata must exist in window");
         assert(isInSchedulingRegion(SD) &&
                "primary schedule data not in window?");
+        assert(isInSchedulingRegion(SD->FirstInBundle) &&
+               "entire bundle in window!");
         (void)SD;
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
       }
@@ -7765,8 +7767,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
 
       // Handle def-use chain dependencies.
       if (BundleMember->OpValue != BundleMember->Inst) {
-        ScheduleData *UseSD = getScheduleData(BundleMember->Inst);
-        if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+        if (ScheduleData *UseSD = getScheduleData(BundleMember->Inst)) {
           BundleMember->Dependencies++;
           ScheduleData *DestBundle = UseSD->FirstInBundle;
           if (!DestBundle->IsScheduled)
@@ -7776,10 +7777,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       } else {
         for (User *U : BundleMember->Inst->users()) {
-          assert(isa<Instruction>(U) &&
-                 "user of instruction must be instruction");
-          ScheduleData *UseSD = getScheduleData(U);
-          if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+          if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
             BundleMember->Dependencies++;
             ScheduleData *DestBundle = UseSD->FirstInBundle;
             if (!DestBundle->IsScheduled)
