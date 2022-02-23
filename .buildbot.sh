@@ -2,6 +2,11 @@
 
 set -e
 
+# Buildbot will have done a shallow clone, but the formatting step requires
+# both full git history, and a complete set of upstream llvm release tags.
+git fetch --unshallow
+git fetch --tags https://github.com/llvm/llvm-project
+
 INST_DIR=`pwd`/inst
 
 mkdir -p build
