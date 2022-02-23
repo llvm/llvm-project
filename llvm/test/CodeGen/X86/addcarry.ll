@@ -451,12 +451,9 @@ define { i64, i64, i1 } @addcarry_hidden_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1
 ; CHECK-LABEL: addcarry_hidden_2x64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq %rcx, %rsi
-; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    addq %rdx, %rax
-; CHECK-NEXT:    adcq $0, %rsi
+; CHECK-NEXT:    adcq %rcx, %rsi
 ; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %dil, %cl
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
   %t0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
