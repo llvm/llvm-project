@@ -74,9 +74,9 @@ private:
   AllocatorIdTy MaxAllocatorId = 0;
 
   /// We encode Index and Value into a 64-bit immediate operand value.
-  static int64_t encodeAnnotationImm(unsigned Index, int64_t Value) {
-    assert(Index < 256 && "annotation index max value exceeded");
-    assert((Value == (Value << 8) >> 8) && "annotation value out of range");
+  static int64_t encodeAnnotationImm(uint8_t Index, int64_t Value) {
+    if (LLVM_UNLIKELY(Value != extractAnnotationValue(Value)))
+      report_fatal_error("annotation value out of range");
 
     Value &= 0xff'ffff'ffff'ffff;
     Value |= (int64_t)Index << 56;
@@ -85,14 +85,13 @@ private:
   }
 
   /// Extract annotation index from immediate operand value.
-  static unsigned extractAnnotationIndex(int64_t ImmValue) {
+  static uint8_t extractAnnotationIndex(int64_t ImmValue) {
     return ImmValue >> 56;
   }
 
   /// Extract annotation value from immediate operand value.
   static int64_t extractAnnotationValue(int64_t ImmValue) {
-    ImmValue &= 0xff'ffff'ffff'ffff;
-    return (ImmValue << 8) >> 8;
+    return SignExtend64<56>(ImmValue & 0xff'ffff'ffff'ffffULL);
   }
 
   MCInst *getAnnotationInst(const MCInst &Inst) const {
