@@ -1947,7 +1947,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   llvm::Value *VFunc;
   if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
     VFunc = CGF.EmitVTableTypeCheckedLoad(
-        getObjectWithVPtr(), VTable,
+        getObjectWithVPtr(), VTable, Ty,
         ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
   } else {
     if (CGM.getCodeGenOpts().PrepareForLTO)

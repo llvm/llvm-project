@@ -2829,7 +2829,8 @@ bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
 }
 
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
-    const CXXRecordDecl *RD, llvm::Value *VTable, uint64_t VTableByteOffset) {
+    const CXXRecordDecl *RD, llvm::Value *VTable, llvm::Type *VTableTy,
+    uint64_t VTableByteOffset) {
   SanitizerScope SanScope(this);
 
   EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
@@ -2854,7 +2855,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   }
 
   return Builder.CreateBitCast(Builder.CreateExtractValue(CheckedLoad, 0),
-                               VTable->getType()->getPointerElementType());
+                               VTableTy);
 }
 
 void CodeGenFunction::EmitForwardingCallToLambda(

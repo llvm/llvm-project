@@ -2322,7 +2322,9 @@ public:
   bool ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD);
 
   /// Emit a type checked load from the given vtable.
-  llvm::Value *EmitVTableTypeCheckedLoad(const CXXRecordDecl *RD, llvm::Value *VTable,
+  llvm::Value *EmitVTableTypeCheckedLoad(const CXXRecordDecl *RD,
+                                         llvm::Value *VTable,
+                                         llvm::Type *VTableTy,
                                          uint64_t VTableByteOffset);
 
   /// EnterDtorCleanups - Enter the cleanups necessary to complete the
