@@ -93,6 +93,11 @@ static cl::opt<bool> ExperimentalUnorderedISEL(
              "stores respectively."),
     cl::Hidden);
 
+static cl::opt<bool> YkDisableTailCallCodegen(
+    "yk-disable-tail-call-codegen", cl::init(false),
+    cl::desc("Do not optimise tail calls"),
+    cl::Hidden);
+
 /// Call this when the user attempts to do something unsupported, like
 /// returning a double without SSE2 enabled on x86_64. This is not fatal, unlike
 /// report_fatal_error, so calling code should attempt to recover without
@@ -4291,6 +4296,16 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall                      = CLI.IsTailCall;
   bool isVarArg                         = CLI.IsVarArg;
   const auto *CB                        = CLI.CB;
+
+  // Tail call optimisations interfere with the trace compiler's inlining
+  // stack, as we never see the return for the caller (the caller's frame is
+  // reused, and the callee's return returns from both the caller and the
+  // callee).
+  //
+  // FIXME: https://github.com/ykjit/yk/issues/502
+  // We should find a way to allow tail calls.
+  if (YkDisableTailCallCodegen)
+    isTailCall = false;
 
   MachineFunction &MF = DAG.getMachineFunction();
   bool Is64Bit        = Subtarget.is64Bit();
