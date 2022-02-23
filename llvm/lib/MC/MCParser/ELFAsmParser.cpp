@@ -282,7 +282,8 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
   return false;
 }
 
-static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
+static unsigned parseSectionFlags(const Triple &TT, StringRef flagsStr,
+                                  bool *UseLastGroup) {
   unsigned flags = 0;
 
   // If a valid numerical value is set for the section flag, use it verbatim
@@ -331,7 +332,10 @@ static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
       flags |= ELF::SHF_GROUP;
       break;
     case 'R':
-      flags |= ELF::SHF_GNU_RETAIN;
+      if (TT.isOSSolaris())
+        flags |= ELF::SHF_SUNW_NODISCARD;
+      else
+        flags |= ELF::SHF_GNU_RETAIN;
       break;
     case '?':
       *UseLastGroup = true;
@@ -569,7 +573,8 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
     } else {
       StringRef FlagsStr = getTok().getStringContents();
       Lex();
-      extraFlags = parseSectionFlags(FlagsStr, &UseLastGroup);
+      extraFlags = parseSectionFlags(getContext().getTargetTriple(), FlagsStr,
+                                     &UseLastGroup);
     }
 
     if (extraFlags == -1U)
