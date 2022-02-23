@@ -927,12 +927,14 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     return nullptr;
 
   // log2(zext X) -> zext log2(X)
+  // FIXME: Require one use?
   Value *X, *Y;
   if (match(Op, m_ZExt(m_Value(X))))
     if (Value *LogX = takeLog2(Builder, X, Depth, DoFold))
       return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
 
   // log2(X << Y) -> log2(X) + Y
+  // FIXME: Require one use unless X is 1?
   if (match(Op, m_Shl(m_Value(X), m_Value(Y))))
     if (Value *LogX = takeLog2(Builder, X, Depth, DoFold))
       return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
@@ -941,11 +943,23 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   // FIXME: missed optimization: if one of the hands of select is/contains
   //        undef, just directly pick the other one.
   // FIXME: can both hands contain undef?
+  // FIXME: Require one use?
   if (SelectInst *SI = dyn_cast<SelectInst>(Op))
     if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth, DoFold))
       if (Value *LogY = takeLog2(Builder, SI->getOperand(2), Depth, DoFold))
         return IfFold([&]() {
           return Builder.CreateSelect(SI->getOperand(0), LogX, LogY);
+        });
+
+  // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
+  // log2(umax(X, Y)) -> umax(log2(X), log2(Y))
+  auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op);
+  if (MinMax && MinMax->hasOneUse() && !MinMax->isSigned())
+    if (Value *LogX = takeLog2(Builder, MinMax->getLHS(), Depth, DoFold))
+      if (Value *LogY = takeLog2(Builder, MinMax->getRHS(), Depth, DoFold))
+        return IfFold([&]() {
+          return Builder.CreateBinaryIntrinsic(
+              MinMax->getIntrinsicID(), LogX, LogY);
         });
 
   return nullptr;
