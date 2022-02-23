@@ -564,26 +564,55 @@ let TargetPrefix = "nvvm" in {
 // Min Max
 //
 
-  def int_nvvm_fmin_f : GCCBuiltin<"__nvvm_fmin_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_fmin_ftz_f : GCCBuiltin<"__nvvm_fmin_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem, IntrSpeculatable, Commutative]>;
-
-  def int_nvvm_fmax_f : GCCBuiltin<"__nvvm_fmax_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]
-        , [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_fmax_ftz_f : GCCBuiltin<"__nvvm_fmax_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem, IntrSpeculatable, Commutative]>;
-
-  def int_nvvm_fmin_d : GCCBuiltin<"__nvvm_fmin_d">,
+  foreach operation = ["min", "max"] in {
+    def int_nvvm_f # operation # _d :
+      GCCBuiltin<!strconcat("__nvvm_f", operation, "_d")>,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_fmax_d : GCCBuiltin<"__nvvm_fmax_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
-        [IntrNoMem, IntrSpeculatable, Commutative]>;
+
+    foreach variant = ["_f", "_ftz_f", "_nan_f", "_ftz_nan_f",
+      "_xorsign_abs_f", "_ftz_xorsign_abs_f", "_nan_xorsign_abs_f",
+      "_ftz_nan_xorsign_abs_f"] in {
+      def int_nvvm_f # operation # variant :
+        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
+    }
+
+    foreach variant = ["_f16", "_ftz_f16", "_nan_f16", "_ftz_nan_f16",
+      "_xorsign_abs_f16", "_ftz_xorsign_abs_f16", "_nan_xorsign_abs_f16",
+      "_ftz_nan_xorsign_abs_f16"] in {
+      def int_nvvm_f # operation # variant :
+        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
+    }
+
+    foreach variant = ["_f16x2", "_ftz_f16x2", "_nan_f16x2",
+      "_ftz_nan_f16x2", "_xorsign_abs_f16x2", "_ftz_xorsign_abs_f16x2",
+      "_nan_xorsign_abs_f16x2", "_ftz_nan_xorsign_abs_f16x2"] in {
+      def int_nvvm_f # operation # variant :
+        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
+    }
+
+    foreach variant = ["_bf16", "_nan_bf16", "_xorsign_abs_bf16",
+      "_nan_xorsign_abs_bf16"] in {
+      def int_nvvm_f # operation # variant :
+        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
+    }
+
+    foreach variant = ["_bf16x2", "_nan_bf16x2", "_xorsign_abs_bf16x2",
+      "_nan_xorsign_abs_bf16x2"] in {
+      def int_nvvm_f # operation # variant :
+        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
+    }
+  }
 
 //
 // Multiplication
@@ -739,6 +768,19 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_fabs_d : GCCBuiltin<"__nvvm_fabs_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+
+//
+// Abs, Neg bf16, bf16x2
+//
+
+  foreach unary = ["abs", "neg"] in {
+    def int_nvvm_ # unary # _bf16 :
+      GCCBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty], [IntrNoMem]>;
+    def int_nvvm_ # unary # _bf16x2 :
+      GCCBuiltin<!strconcat("__nvvm_", unary, "_bf16x2")>,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+  }
 
 //
 // Round
