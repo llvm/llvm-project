@@ -138,6 +138,9 @@ bool Environment::equivalentTo(const Environment &Other,
   if (ExprToLoc != Other.ExprToLoc)
     return false;
 
+  if (MemberLocToStruct != Other.MemberLocToStruct)
+    return false;
+
   if (LocToVal.size() != Other.LocToVal.size())
     return false;
 
@@ -174,6 +177,12 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   const unsigned ExprToLocSizeBefore = ExprToLoc.size();
   ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
   if (ExprToLocSizeBefore != ExprToLoc.size())
+    Effect = LatticeJoinEffect::Changed;
+
+  const unsigned MemberLocToStructSizeBefore = MemberLocToStruct.size();
+  MemberLocToStruct =
+      intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
+  if (MemberLocToStructSizeBefore != MemberLocToStruct.size())
     Effect = LatticeJoinEffect::Changed;
 
   // Move `LocToVal` so that `Environment::ValueModel::merge` can safely assign
@@ -285,8 +294,24 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 
     for (const FieldDecl *Field : Type->getAsRecordDecl()->fields()) {
       assert(Field != nullptr);
-      setValue(AggregateLoc.getChild(*Field), StructVal->getChild(*Field));
+      StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
+      MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
+      setValue(FieldLoc, StructVal->getChild(*Field));
     }
+  }
+
+  auto IT = MemberLocToStruct.find(&Loc);
+  if (IT != MemberLocToStruct.end()) {
+    // `Loc` is the location of a struct member so we need to also update the
+    // value of the member in the corresponding `StructValue`.
+
+    assert(IT->second.first != nullptr);
+    StructValue &StructVal = *IT->second.first;
+
+    assert(IT->second.second != nullptr);
+    const ValueDecl &Member = *IT->second.second;
+
+    StructVal.setChild(Member, Val);
   }
 }
 

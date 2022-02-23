@@ -265,6 +265,12 @@ private:
 
   llvm::DenseMap<const StorageLocation *, Value *> LocToVal;
 
+  // Maps locations of struct members to symbolic values of the structs that own
+  // them and the decls of the struct members.
+  llvm::DenseMap<const StorageLocation *,
+                 std::pair<StructValue *, const ValueDecl *>>
+      MemberLocToStruct;
+
   // FIXME: Add flow condition constraints.
 };
 

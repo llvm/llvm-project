@@ -2320,4 +2320,48 @@ TEST_F(TransferTest, StaticMemberRefVarDecl) {
               });
 }
 
+TEST_F(TransferTest, AssignMemberBeforeCopy) {
+  std::string Code = R"(
+    struct A {
+      int Foo;
+    };
+
+    void target() {
+      A A1;
+      A A2;
+      int Bar;
+      A1.Foo = Bar;
+      A2 = A1;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const ValueDecl *A1Decl = findValueDecl(ASTCtx, "A1");
+                ASSERT_THAT(A1Decl, NotNull());
+
+                const ValueDecl *A2Decl = findValueDecl(ASTCtx, "A2");
+                ASSERT_THAT(A2Decl, NotNull());
+
+                const auto *BarVal =
+                    cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
+
+                const auto *A2Val =
+                    cast<StructValue>(Env.getValue(*A2Decl, SkipPast::None));
+                EXPECT_EQ(&A2Val->getChild(*FooDecl), BarVal);
+              });
+}
+
 } // namespace
