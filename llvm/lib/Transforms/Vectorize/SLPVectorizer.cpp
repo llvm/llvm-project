@@ -2543,6 +2543,12 @@ private:
 
     Instruction *Inst = nullptr;
 
+    /// Opcode of the current instruction in the schedule data.
+    Value *OpValue = nullptr;
+
+    /// The TreeEntry that this instruction corresponds to.
+    TreeEntry *TE = nullptr;
+
     /// Points to the head in an instruction bundle (and always to this for
     /// single instructions).
     ScheduleData *FirstInBundle = nullptr;
@@ -2575,18 +2581,12 @@ private:
     /// Note that this is negative as long as Dependencies is not calculated.
     int UnscheduledDeps = InvalidDeps;
 
+    /// The lane of this node in the TreeEntry.
+    int Lane = -1;
+
     /// True if this instruction is scheduled (or considered as scheduled in the
     /// dry-run).
     bool IsScheduled = false;
-
-    /// Opcode of the current instruction in the schedule data.
-    Value *OpValue = nullptr;
-
-    /// The TreeEntry that this instruction corresponds to.
-    TreeEntry *TE = nullptr;
-
-    /// The lane of this node in the TreeEntry.
-    int Lane = -1;
   };
 
 #ifndef NDEBUG
