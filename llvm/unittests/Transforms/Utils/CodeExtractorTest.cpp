@@ -10,6 +10,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
