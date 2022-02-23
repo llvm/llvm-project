@@ -29,8 +29,8 @@
 # CHECK-NEXT:  0000000000202162 g       .bss  0000000000000000 end
 # CHECK-NEXT:  0000000000201159 g       .text 0000000000000000 etext
 
-# RUN: ld.lld -r %t.o -o %t2
-# RUN: llvm-objdump -t %t2 | FileCheck %s --check-prefix=RELOCATABLE
+# RUN: ld.lld -r %t/a.o -o %t/a.ro
+# RUN: llvm-objdump -t %t/a.ro | FileCheck %s --check-prefix=RELOCATABLE
 # RELOCATABLE:       0000000000000000 *UND* 0000000000000000 _edata
 # RELOCATABLE-NEXT:  0000000000000000 *UND* 0000000000000000 _end
 # RELOCATABLE-NEXT:  0000000000000000 *UND* 0000000000000000 _etext
