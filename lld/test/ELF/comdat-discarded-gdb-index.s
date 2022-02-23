@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-# RUN: ld.lld --gdb-index %t.o %t.o -o %t
+# RUN: ld.lld --gdb-index -e 0 %t.o %t.o -o /dev/null 2>&1 | count 0
 
 ## .debug_info has a relocation to .text.foo . The second %t.o is discarded.
 ## Check we don't error on the relocation.
@@ -47,6 +47,7 @@ foo:
   .long   .Lfunc_end0 - .Lfunc_begin0 # DW_AT_high_pc
   .byte   2              # Abbrev [2] DW_TAG_subprogram
   .asciz  "foo"          # DW_AT_name
+  .byte   0
   .byte   0
 .Lcu_end0:
 
