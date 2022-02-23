@@ -624,23 +624,12 @@ define i32 @mm_unsigned_sat_base_32bit(i32 %x) {
 ;
 ; V6-LABEL: mm_unsigned_sat_base_32bit:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    ldr r1, .LCPI15_0
-; V6-NEXT:    cmp r0, r1
-; V6-NEXT:    movlt r1, r0
-; V6-NEXT:    bic r0, r1, r1, asr #31
+; V6-NEXT:    usat r0, #23, r0
 ; V6-NEXT:    bx lr
-; V6-NEXT:    .p2align 2
-; V6-NEXT:  @ %bb.1:
-; V6-NEXT:  .LCPI15_0:
-; V6-NEXT:    .long 8388607 @ 0x7fffff
 ;
 ; V6T2-LABEL: mm_unsigned_sat_base_32bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    movw r1, #65535
-; V6T2-NEXT:    movt r1, #127
-; V6T2-NEXT:    cmp r0, r1
-; V6T2-NEXT:    movlt r1, r0
-; V6T2-NEXT:    bic r0, r1, r1, asr #31
+; V6T2-NEXT:    usat r0, #23, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
@@ -662,21 +651,14 @@ define i16 @mm_unsigned_sat_base_16bit(i16 %x) {
 ;
 ; V6-LABEL: mm_unsigned_sat_base_16bit:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    mov r1, #255
 ; V6-NEXT:    sxth r0, r0
-; V6-NEXT:    orr r1, r1, #1792
-; V6-NEXT:    cmp r0, r1
-; V6-NEXT:    movlt r1, r0
-; V6-NEXT:    bic r0, r1, r1, asr #31
+; V6-NEXT:    usat r0, #11, r0
 ; V6-NEXT:    bx lr
 ;
 ; V6T2-LABEL: mm_unsigned_sat_base_16bit:
 ; V6T2:       @ %bb.0: @ %entry
 ; V6T2-NEXT:    sxth r0, r0
-; V6T2-NEXT:    movw r1, #2047
-; V6T2-NEXT:    cmp r0, r1
-; V6T2-NEXT:    movlt r1, r0
-; V6T2-NEXT:    bic r0, r1, r1, asr #31
+; V6T2-NEXT:    usat r0, #11, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = call i16 @llvm.smin.i16(i16 %x, i16 2047)
@@ -698,17 +680,13 @@ define i8 @mm_unsigned_sat_base_8bit(i8 %x) {
 ; V6-LABEL: mm_unsigned_sat_base_8bit:
 ; V6:       @ %bb.0: @ %entry
 ; V6-NEXT:    sxtb r0, r0
-; V6-NEXT:    cmp r0, #31
-; V6-NEXT:    movge r0, #31
-; V6-NEXT:    bic r0, r0, r0, asr #31
+; V6-NEXT:    usat r0, #5, r0
 ; V6-NEXT:    bx lr
 ;
 ; V6T2-LABEL: mm_unsigned_sat_base_8bit:
 ; V6T2:       @ %bb.0: @ %entry
 ; V6T2-NEXT:    sxtb r0, r0
-; V6T2-NEXT:    cmp r0, #31
-; V6T2-NEXT:    movge r0, #31
-; V6T2-NEXT:    bic r0, r0, r0, asr #31
+; V6T2-NEXT:    usat r0, #5, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = call i8 @llvm.smin.i8(i8 %x, i8 31)
@@ -731,23 +709,12 @@ define i32 @mm_unsigned_sat_lower_upper_1(i32 %x) {
 ;
 ; V6-LABEL: mm_unsigned_sat_lower_upper_1:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    ldr r1, .LCPI18_0
-; V6-NEXT:    cmp r0, r1
-; V6-NEXT:    movlt r1, r0
-; V6-NEXT:    bic r0, r1, r1, asr #31
+; V6-NEXT:    usat r0, #23, r0
 ; V6-NEXT:    bx lr
-; V6-NEXT:    .p2align 2
-; V6-NEXT:  @ %bb.1:
-; V6-NEXT:  .LCPI18_0:
-; V6-NEXT:    .long 8388607 @ 0x7fffff
 ;
 ; V6T2-LABEL: mm_unsigned_sat_lower_upper_1:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    movw r1, #65535
-; V6T2-NEXT:    movt r1, #127
-; V6T2-NEXT:    cmp r0, r1
-; V6T2-NEXT:    movlt r1, r0
-; V6T2-NEXT:    bic r0, r1, r1, asr #31
+; V6T2-NEXT:    usat r0, #23, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
@@ -770,23 +737,12 @@ define i32 @mm_unsigned_sat_lower_upper_2(i32 %x) {
 ;
 ; V6-LABEL: mm_unsigned_sat_lower_upper_2:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    ldr r1, .LCPI19_0
-; V6-NEXT:    cmp r0, r1
-; V6-NEXT:    movlt r1, r0
-; V6-NEXT:    bic r0, r1, r1, asr #31
+; V6-NEXT:    usat r0, #23, r0
 ; V6-NEXT:    bx lr
-; V6-NEXT:    .p2align 2
-; V6-NEXT:  @ %bb.1:
-; V6-NEXT:  .LCPI19_0:
-; V6-NEXT:    .long 8388607 @ 0x7fffff
 ;
 ; V6T2-LABEL: mm_unsigned_sat_lower_upper_2:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    movw r1, #65535
-; V6T2-NEXT:    movt r1, #127
-; V6T2-NEXT:    cmp r0, r1
-; V6T2-NEXT:    movlt r1, r0
-; V6T2-NEXT:    bic r0, r1, r1, asr #31
+; V6T2-NEXT:    usat r0, #23, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
