@@ -464,6 +464,10 @@ N: Ruchira Sasanka
 E: sasanka@uiuc.edu
 D: Graph coloring register allocator for the Sparc64 backend
 
+N: Alina Sbirlea
+E: alina.sbirlea@gmail.com
+D: MemorySSA, BatchAA, misc loop and new pass manager work.
+
 N: Arnold Schwaighofer
 E: arnold.schwaighofer@gmail.com
 D: Tail call optimization for the x86 backend
