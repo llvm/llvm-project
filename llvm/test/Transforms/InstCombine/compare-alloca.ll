@@ -153,26 +153,28 @@ define i1 @offset_single_cmp() {
   ret i1 %cmp
 }
 
-define i1 @neg_consistent_fold1() {
+declare void @witness(i1, i1)
+
+define void @neg_consistent_fold1() {
 ; CHECK-LABEL: @neg_consistent_fold1(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[M1_SUB:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[M1]], i32 0, i32 0
 ; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_inttoptr()
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[M1_SUB]], inttoptr (i64 2048 to i8*)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[M1_SUB]], [[RHS2]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
   %rhs = inttoptr i64 2048 to i8*
   %rhs2 = call i8* @hidden_inttoptr()
   %cmp1 = icmp eq i8* %m, %rhs
   %cmp2 = icmp eq i8* %m, %rhs2
-  %res = or i1 %cmp1, %cmp2
-  ret i1 %res
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
 }
 
-define i1 @neg_consistent_fold2() {
+define void @neg_consistent_fold2() {
 ; CHECK-LABEL: @neg_consistent_fold2(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[N2:%.*]] = alloca [4 x i8], align 1
@@ -182,8 +184,8 @@ define i1 @neg_consistent_fold2() {
 ; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_offset(i8* nonnull [[N2_SUB]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[M1_SUB]], [[RHS]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[M1_SUB]], [[RHS2]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
   %n = alloca i8, i32 4
@@ -191,11 +193,11 @@ define i1 @neg_consistent_fold2() {
   %rhs2 = call i8* @hidden_offset(i8* %n)
   %cmp1 = icmp eq i8* %m, %rhs
   %cmp2 = icmp eq i8* %m, %rhs2
-  %res = or i1 %cmp1, %cmp2
-  ret i1 %res
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
 }
 
-define i1 @neg_consistent_fold3() {
+define void @neg_consistent_fold3() {
 ; CHECK-LABEL: @neg_consistent_fold3(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca i32, align 1
 ; CHECK-NEXT:    [[M1_SUB:%.*]] = bitcast i32* [[M1]] to i8*
@@ -203,8 +205,8 @@ define i1 @neg_consistent_fold3() {
 ; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_inttoptr()
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[M1]], [[LGP]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[RHS2]], [[M1_SUB]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
   %bc = bitcast i8* %m to i32*
@@ -212,21 +214,22 @@ define i1 @neg_consistent_fold3() {
   %rhs2 = call i8* @hidden_inttoptr()
   %cmp1 = icmp eq i32* %bc, %lgp
   %cmp2 = icmp eq i8* %m, %rhs2
-  %res = or i1 %cmp1, %cmp2
-  ret i1 %res
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
 }
 
-define i1 @neg_consistent_fold4() {
+define void @neg_consistent_fold4() {
 ; CHECK-LABEL: @neg_consistent_fold4(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @witness(i1 false, i1 false)
+; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
   %bc = bitcast i8* %m to i32*
   %lgp = load i32*, i32** @gp, align 8
   %cmp1 = icmp eq i32* %bc, %lgp
   %cmp2 = icmp eq i32* %bc, %lgp
-  %res = or i1 %cmp1, %cmp2
-  ret i1 %res
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
 }
 
 ; A nocapture call can't cause a consistent result issue as it is (by
