@@ -108,11 +108,9 @@ define i32 @t6(i32 %x, i32 %z) {
 
 define i8 @udiv_umin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_umin(
-; CHECK-NEXT:    [[Y2:%.*]] = shl i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y2]], i8 [[Z2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
-; CHECK-NEXT:    ret i8 [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[D1:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D1]]
 ;
   %y2 = shl i8 1, %y
   %z2 = shl i8 1, %z
@@ -123,11 +121,9 @@ define i8 @udiv_umin(i8 %x, i8 %y, i8 %z) {
 
 define i8 @udiv_umax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_umax(
-; CHECK-NEXT:    [[Y2:%.*]] = shl i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y2]], i8 [[Z2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
-; CHECK-NEXT:    ret i8 [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[Y:%.*]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[D1:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D1]]
 ;
   %y2 = shl i8 1, %y
   %z2 = shl i8 1, %z
