@@ -117,7 +117,7 @@ llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
   size_t Start = It - States.data(), End = Start;
   while (End < States.size() && States[End] == Src)
     ++End;
-  return llvm::makeArrayRef(&Actions[Start], &Actions[End]);
+  return llvm::makeArrayRef(&Actions[Start], End - Start);
 }
 
 } // namespace pseudo
