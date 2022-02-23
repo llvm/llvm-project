@@ -284,3 +284,17 @@ end
 ! CHECK: fir.store %[[C10]] to %[[D]] : !fir.ref<f80>
 ! CHECK: %[[C16:.*]] = arith.constant 1.600000e+01 : f128
 ! CHECK: fir.store %[[C16]] to %[[E]] : !fir.ref<f128>
+
+subroutine complex_constant()
+  complex(4) :: a
+  a = (0, 1)
+end
+
+! CHECK-LABEL: func @_QPcomplex_constant()
+! CHECK:         %[[A:.*]] = fir.alloca !fir.complex<4> {bindc_name = "a", uniq_name = "_QFcomplex_constantEa"}
+! CHECK:         %[[C0:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK:         %[[C1:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK:         %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
+! CHECK:         %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[C0]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:         %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[C1]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:         fir.store %[[INS1]] to %[[A]] : !fir.ref<!fir.complex<4>>

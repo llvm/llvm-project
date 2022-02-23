@@ -19,6 +19,7 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -277,7 +278,9 @@ public:
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::ComplexConstructor<KIND> &op) {
-    TODO(getLoc(), "genval ComplexConstructor");
+    mlir::Value realPartValue = genunbox(op.left());
+    return fir::factory::Complex{builder, getLoc()}.createComplex(
+        KIND, realPartValue, genunbox(op.right()));
   }
 
   template <int KIND>
@@ -381,7 +384,14 @@ public:
         return genRealConstant<KIND>(builder.getContext(), floatVal);
       }
     } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
-      TODO(getLoc(), "genval complex constant");
+      using TR =
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>;
+      Fortran::evaluate::ComplexConstructor<KIND> ctor(
+          Fortran::evaluate::Expr<TR>{
+              Fortran::evaluate::Constant<TR>{value.REAL()}},
+          Fortran::evaluate::Expr<TR>{
+              Fortran::evaluate::Constant<TR>{value.AIMAG()}});
+      return genunbox(ctor);
     } else /*constexpr*/ {
       llvm_unreachable("unhandled constant");
     }
