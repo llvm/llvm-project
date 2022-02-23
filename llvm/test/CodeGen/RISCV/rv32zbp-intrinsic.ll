@@ -107,6 +107,60 @@ define i32 @gorci32(i32 %a) nounwind {
  ret i32 %tmp
 }
 
+define i32 @orchi32(i32 %a) nounwind {
+; RV32ZBP-LABEL: orchi32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    orc.h a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 15)
+ ret i32 %tmp
+}
+
+define i32 @orc16i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: orc16i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    orc16 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 16)
+ ret i32 %tmp
+}
+
+define i32 @orc8i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: orc8i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    orc8 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 24)
+ ret i32 %tmp
+}
+
+define i32 @orc4i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: orc4i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    orc4 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 28)
+ ret i32 %tmp
+}
+
+define i32 @orc2i32(i32 %a) nounwind {
+; RV32ZBP-LABEL: orc2i32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    orc2 a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 30)
+ ret i32 %tmp
+}
+
+define i32 @orci32(i32 %a) nounwind {
+; RV32ZBP-LABEL: orci32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    orc a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 31)
+ ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.shfl.i32(i32 %a, i32 %b)
 
 define i32 @shfl32(i32 %a, i32 %b) nounwind {
