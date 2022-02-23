@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=x86_64 -data-sections=1 < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64 -no-integrated-as -binutils-version=2.36 < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64 -no-integrated-as -binutils-version=2.35 < %s | FileCheck %s --check-prefix=OLDGAS
+;; Solaris uses the equivalent SHF_SUNW_NODISCARD flag, also represented as "R".
+; RUN: llc -mtriple=x86_64-solaris < %s | FileCheck %s
 
 ; RUN: llc -mtriple=x86_64 -data-sections=1 -unique-section-names=0 < %s | FileCheck %s --check-prefix=NOUNIQUE
 
