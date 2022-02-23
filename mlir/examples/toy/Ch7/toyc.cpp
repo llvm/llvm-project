@@ -237,8 +237,9 @@ int runJit(mlir::ModuleOp module) {
 
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
-  auto maybeEngine = mlir::ExecutionEngine::create(
-      module, /*llvmModuleBuilder=*/nullptr, optPipeline);
+  mlir::ExecutionEngineOptions engineOptions;
+  engineOptions.transformer = optPipeline;
+  auto maybeEngine = mlir::ExecutionEngine::create(module, engineOptions);
   assert(maybeEngine && "failed to construct an execution engine");
   auto &engine = maybeEngine.get();
 

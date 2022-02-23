@@ -207,9 +207,12 @@ static Error compileAndExecute(Options &options, ModuleOp module,
     return symbolMap;
   };
 
-  auto expectedEngine = mlir::ExecutionEngine::create(
-      module, config.llvmModuleBuilder, config.transformer, jitCodeGenOptLevel,
-      executionEngineLibs);
+  mlir::ExecutionEngineOptions engineOptions;
+  engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
+  engineOptions.transformer = config.transformer;
+  engineOptions.jitCodeGenOptLevel = jitCodeGenOptLevel;
+  engineOptions.sharedLibPaths = executionEngineLibs;
+  auto expectedEngine = mlir::ExecutionEngine::create(module, engineOptions);
   if (!expectedEngine)
     return expectedEngine.takeError();
 

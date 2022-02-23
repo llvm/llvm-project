@@ -227,22 +227,16 @@ ExecutionEngine::ExecutionEngine(bool enableObjectCache,
   }
 }
 
-Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
-    ModuleOp m,
-    llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
-                                                     llvm::LLVMContext &)>
-        llvmModuleBuilder,
-    llvm::function_ref<Error(llvm::Module *)> transformer,
-    Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel,
-    ArrayRef<StringRef> sharedLibPaths, bool enableObjectCache,
-    bool enableGDBNotificationListener, bool enablePerfNotificationListener) {
+Expected<std::unique_ptr<ExecutionEngine>>
+ExecutionEngine::create(ModuleOp m, const ExecutionEngineOptions &options) {
   auto engine = std::make_unique<ExecutionEngine>(
-      enableObjectCache, enableGDBNotificationListener,
-      enablePerfNotificationListener);
+      options.enableObjectCache, options.enableGDBNotificationListener,
+      options.enablePerfNotificationListener);
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
-  auto llvmModule = llvmModuleBuilder ? llvmModuleBuilder(m, *ctx)
-                                      : translateModuleToLLVMIR(m, *ctx);
+  auto llvmModule = options.llvmModuleBuilder
+                        ? options.llvmModuleBuilder(m, *ctx)
+                        : translateModuleToLLVMIR(m, *ctx);
   if (!llvmModule)
     return makeStringError("could not convert to LLVM IR");
   // FIXME: the triple should be passed to the translation or dialect conversion
@@ -276,7 +270,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     }
 
     // Resolve symbols from shared libraries.
-    for (auto libPath : sharedLibPaths) {
+    for (auto libPath : options.sharedLibPaths) {
       auto mb = llvm::MemoryBuffer::getFile(libPath);
       if (!mb) {
         errs() << "Failed to create MemoryBuffer for: " << libPath
@@ -302,8 +296,8 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   // LLJITWithObjectCache example.
   auto compileFunctionCreator = [&](JITTargetMachineBuilder jtmb)
       -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
-    if (jitCodeGenOptLevel)
-      jtmb.setCodeGenOptLevel(jitCodeGenOptLevel.getValue());
+    if (options.jitCodeGenOptLevel)
+      jtmb.setCodeGenOptLevel(options.jitCodeGenOptLevel.getValue());
     auto tm = jtmb.createTargetMachine();
     if (!tm)
       return tm.takeError();
@@ -320,9 +314,9 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
 
   // Add a ThreadSafemodule to the engine and return.
   ThreadSafeModule tsm(std::move(llvmModule), std::move(ctx));
-  if (transformer)
+  if (options.transformer)
     cantFail(tsm.withModuleDo(
-        [&](llvm::Module &module) { return transformer(&module); }));
+        [&](llvm::Module &module) { return options.transformer(&module); }));
   cantFail(jit->addIRModule(std::move(tsm)));
   engine->jit = std::move(jit);
 
