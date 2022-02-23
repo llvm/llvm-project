@@ -4,6 +4,39 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
+; // Loop has an array element B[i] (%arrayidx in IR) being used as index to
+; // another array (A), and since the value of B[i] is unknown,
+; // the bound for array A is unknown.
+; void test_unknown_bounds(int n, int* A, int* B) {
+;     for(int i = 0; i < n ; ++i)
+;         A[i] = A[B[i]] + 1;
+; }
+
+; CHECK: remark: source.c:4:16: loop not vectorized: cannot identify array bounds
+
+define void @test_unknown_bounds(i64 %n, i32* nocapture %A, i32* nocapture readonly %B) !dbg !13 {
+entry:
+  %cmp10 = icmp sgt i64 %n, 0
+  br i1 %cmp10, label %for.body, label %for.cond.cleanup
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %idxprom1 = sext i32 %0 to i64, !dbg !35
+  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %idxprom1, !dbg !35
+  %1 = load i32, i32* %arrayidx2, align 4, !dbg !35
+  %add = add nsw i32 %1, 1
+  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  store i32 %add, i32* %arrayidx4, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !dbg !28
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+}
+
 ; // a) Dependence::NoDep
 ; // Loop containing only reads (here of the array A) does not hinder vectorization
 ; void test_nodep(int n, int* A, int* B) {
@@ -260,6 +293,23 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; YAML:      --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            CantIdentifyArrayBounds
+; YAML-NEXT: DebugLoc:        { File: source.c, Line: 4, Column: 16 }
+; YAML-NEXT: Function:        test_unknown_bounds
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          cannot identify array bounds
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            MissedDetails
+; YAML-NEXT: DebugLoc:        { File: source.c, Line: 3, Column: 5 }
+; YAML-NEXT: Function:        test_unknown_bounds
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          loop not vectorized
+; YAML-NEXT: ...
+; YAML:      --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            UnsafeDep
 ; YAML-NEXT: DebugLoc:        { File: source.c, Line: 48, Column: 14 }
 ; YAML-NEXT: Function:        test_backward_dep
@@ -347,6 +397,11 @@ for.body:                                         ; preds = %entry, %for.body
 !1 = !DIFile(filename: "source.c", directory: "")
 !2 = !{}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
+!13 = distinct !DISubprogram(name: "test_unknown_bounds", scope: !1, file: !1, line: 2, type: !45, scopeLine: 2, unit: !0, retainedNodes: !2)
+!23 = distinct !DILexicalBlock(scope: !13, file: !1, line: 3, column: 5)
+!27 = distinct !DILexicalBlock(scope: !23, file: !1, line: 3, column: 5)
+!28 = !DILocation(line: 3, column: 5, scope: !23)
+!35 = !DILocation(line: 4, column: 16, scope: !27)
 !44 = distinct !DISubprogram(name: "test_nodep", scope: !1, file: !1, line: 14, type: !45, scopeLine: 14, unit: !0, retainedNodes: !2)
 !45 = !DISubroutineType(types: !46)
 !46 = !{null, !18, !16, !16}

@@ -37239,9 +37239,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   unsigned NumRootElts = RootVT.getVectorNumElements();
 
   // Canonicalize shuffle input op to the requested type.
-  // TODO: Support cases where Op is smaller than VT.
   auto CanonicalizeShuffleInput = [&](MVT VT, SDValue Op) {
-    if (VT.getSizeInBits() < Op.getValueSizeInBits())
+    if (VT.getSizeInBits() > Op.getValueSizeInBits())
+      Op = widenSubVector(Op, false, Subtarget, DAG, DL, VT.getSizeInBits());
+    else if (VT.getSizeInBits() < Op.getValueSizeInBits())
       Op = extractSubVector(Op, 0, DAG, DL, VT.getSizeInBits());
     return DAG.getBitcast(VT, Op);
   };
@@ -37255,8 +37256,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   MVT VT1 = V1.getSimpleValueType();
   MVT VT2 = V2.getSimpleValueType();
-  assert(VT1.getSizeInBits() == RootSizeInBits &&
-         VT2.getSizeInBits() == RootSizeInBits && "Vector size mismatch");
+  assert((RootSizeInBits % VT1.getSizeInBits()) == 0 &&
+         (RootSizeInBits % VT2.getSizeInBits()) == 0 && "Vector size mismatch");
 
   SDValue Res;
 
@@ -37978,6 +37979,12 @@ static SDValue combineX86ShuffleChainWithExtract(
   unsigned RootSizeInBits = RootVT.getSizeInBits();
   assert((RootSizeInBits % NumMaskElts) == 0 && "Unexpected root shuffle mask");
 
+  // Bail if we have any smaller inputs.
+  if (llvm::any_of(Inputs, [RootSizeInBits](SDValue Input) {
+        return Input.getValueSizeInBits() < RootSizeInBits;
+      }))
+    return SDValue();
+
   SmallVector<SDValue, 4> WideInputs(Inputs.begin(), Inputs.end());
   SmallVector<unsigned, 4> Offsets(NumInputs, 0);
 
@@ -38020,16 +38027,6 @@ static SDValue combineX86ShuffleChainWithExtract(
       }))
     return SDValue();
 
-  for (SDValue &NewInput : WideInputs) {
-    assert((WideSizeInBits % NewInput.getValueSizeInBits()) == 0 &&
-           "Shuffle vector size mismatch");
-    if (WideSizeInBits > NewInput.getValueSizeInBits())
-      NewInput = widenSubVector(NewInput, false, Subtarget, DAG,
-                                SDLoc(NewInput), WideSizeInBits);
-    assert(WideSizeInBits == NewInput.getValueSizeInBits() &&
-           "Unexpected subvector extraction");
-  }
-
   // Create new mask for larger type.
   for (unsigned i = 1; i != NumInputs; ++i)
     Offsets[i] += i * Scale * NumMaskElts;
@@ -38054,7 +38051,10 @@ static SDValue combineX86ShuffleChainWithExtract(
 
   // Attempt to combine wider chain.
   // TODO: Can we use a better Root?
-  SDValue WideRoot = WideInputs[0];
+  SDValue WideRoot = WideInputs.front().getValueSizeInBits() >
+                             WideInputs.back().getValueSizeInBits()
+                         ? WideInputs.front()
+                         : WideInputs.back();
   if (SDValue WideShuffle =
           combineX86ShuffleChain(WideInputs, WideRoot, WideMask, Depth,
                                  HasVariableMask, AllowVariableCrossLaneMask,

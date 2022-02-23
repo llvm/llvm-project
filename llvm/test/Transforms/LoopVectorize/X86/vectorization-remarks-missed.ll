@@ -31,7 +31,7 @@
 ;   for (int i = 0; i < Length; i++)
 ;     A[i] = A[B[i]];
 ; }
-; CHECK: remark: source.cpp:18:8: loop not vectorized: cannot identify array bounds
+; CHECK: remark: source.cpp:19:5: loop not vectorized: cannot identify array bounds
 ; CHECK: remark: source.cpp:18:8: loop not vectorized (Force=true)
 ; CHECK: warning: source.cpp:18:8: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
 
@@ -76,7 +76,7 @@
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            ''
 ; YAML-NEXT: Name:            CantIdentifyArrayBounds
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 18, Column: 8 }
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
 ; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '

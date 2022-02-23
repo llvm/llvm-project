@@ -83,7 +83,7 @@ def AtomicFp64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_ex
 
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
-def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
+def FuncExtKhrSubgroups                  : FunctionExtension<"__opencl_subgroup_builtins">;
 def FuncExtKhrSubgroupExtendedTypes      : FunctionExtension<"cl_khr_subgroup_extended_types">;
 def FuncExtKhrSubgroupNonUniformVote     : FunctionExtension<"cl_khr_subgroup_non_uniform_vote">;
 def FuncExtKhrSubgroupBallot             : FunctionExtension<"cl_khr_subgroup_ballot">;

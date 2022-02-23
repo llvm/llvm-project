@@ -34,8 +34,6 @@ public:
                   bool monitor_signals) override;
 
 private:
-  static lldb::thread_result_t MonitorThread(void *thread_arg);
-
   void Close();
 
   bool m_owns_handle;

@@ -3,18 +3,19 @@
 
 import ctypes
 import os
+import sys
 import tempfile
-
-import mlir.all_passes_registration
 
 from mlir import execution_engine
 from mlir import ir
-from mlir import passmanager
 from mlir import runtime as rt
 
 from mlir.dialects import builtin
 from mlir.dialects import sparse_tensor as st
 
+_SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(_SCRIPT_PATH)
+from tools import sparse_compiler
 
 # TODO: move more into actual IR building.
 def boilerplate(attr: st.EncodingAttr):
@@ -68,18 +69,6 @@ def build_compile_and_run_output(attr: st.EncodingAttr, support_lib: str,
       quit('FAILURE')
 
 
-class SparseCompiler:
-  """Sparse compiler passes."""
-
-  def __init__(self):
-    pipeline = (
-        f'sparse-compiler{{reassociate-fp-reductions=1 enable-index-optimizations=1}}')
-    self.pipeline = pipeline
-
-  def __call__(self, module: ir.Module):
-    passmanager.PassManager.parse(self.pipeline).run(module)
-
-
 def main():
   support_lib = os.getenv('SUPPORT_LIB')
   assert support_lib is not None, 'SUPPORT_LIB is undefined'
@@ -103,7 +92,7 @@ def main():
       for ordering in orderings:
         for bwidth in bitwidths:
           attr = st.EncodingAttr.get(level, ordering, bwidth, bwidth)
-          compiler = SparseCompiler()
+          compiler = sparse_compiler.SparseCompiler(options='')
           build_compile_and_run_output(attr, support_lib, compiler)
           count = count + 1
 

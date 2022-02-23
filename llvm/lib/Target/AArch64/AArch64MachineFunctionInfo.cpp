@@ -15,8 +15,9 @@
 
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
-#include <llvm/IR/Metadata.h>
-#include <llvm/IR/Module.h>
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 

@@ -1,4 +1,4 @@
-//===- Writer.cpp ---------------------------------------------------------===//
+//===- WasmWriter.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Writer.h"
+#include "WasmWriter.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"

@@ -1,4 +1,4 @@
-//===- Writer.cpp ---------------------------------------------------------===//
+//===- COFFWriter.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Writer.h"
-#include "Object.h"
+#include "COFFWriter.h"
+#include "COFFObject.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"

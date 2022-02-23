@@ -219,7 +219,7 @@ Office hours
 A number of experienced LLVM contributors make themselves available for a chat
 on a regular schedule, to anyone who is looking for some guidance. Please find
 the list of who is available when, through which medium, and what their area of
-expertise is. Don't by shy to dial in!
+expertise is. Don't be too shy to dial in!
 
 Of course, people take time off from time to time, so if you dial in and you
 don't find anyone present, chances are they happen to be off that day.
@@ -241,6 +241,21 @@ don't find anyone present, chances are they happen to be off that day.
       `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
     - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
     - English, Flemish, Dutch
+  * - Alina Sbirlea
+    - General questions on how to contribute to LLVM; women in compilers;
+      MemorySSA, BatchAA, various loop passes, new pass manager.
+    - Monthly, 2nd Tuesdays, 10.00am PT/7:00pm CET, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com>`__
+    - `GoogleMeet <https://meet.google.com/hhk-xpdj-gvx>`__
+    - English, Romanian
+  * - Aaron Ballman
+    - Clang internals; clang-tidy; clang-query; AST matchers
+    - Monthly, 2nd Monday of the month at 10:00am Eastern/14:00 UTC, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com>`__
+    - `GoogleMeet <https://meet.google.com/xok-iqne-gmi>`__
+    - English, Norwegian (not fluently)
 
 
 IRC

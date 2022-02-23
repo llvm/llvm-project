@@ -1149,6 +1149,33 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   }
 }
 
+// Called after all ObjFile::parse is called for all ObjFiles. This checks
+// duplicate symbols and may do symbol property merge in the future.
+template <class ELFT> void ObjFile<ELFT>::postParse() {
+  ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    const Elf_Sym &eSym = eSyms[i];
+    const Symbol &sym = *symbols[i];
+    // !sym.file allows a symbol assignment redefines a symbol without an error.
+    if (sym.file == this || !sym.file || !sym.isDefined() ||
+        eSym.st_shndx == SHN_UNDEF || eSym.st_shndx == SHN_COMMON ||
+        eSym.getBinding() == STB_WEAK)
+      continue;
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = cantFail(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
+    if (sections[secIdx] == &InputSection::discarded)
+      continue;
+    // Allow absolute symbols with the same value for GNU ld compatibility.
+    if (!cast<Defined>(sym).section && !sections[secIdx] &&
+        cast<Defined>(sym).value == eSym.st_value)
+      continue;
+    reportDuplicate(sym, this, sections[secIdx], eSym.st_value);
+  }
+}
+
 // The handling of tentative definitions (COMMON symbols) in archives is murky.
 // A tentative definition will be promoted to a global definition if there are
 // no non-tentative definitions to dominate it. When we hold a tentative
@@ -1617,7 +1644,6 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
 }
 
 template <class ELFT> void BitcodeFile::parse() {
-  std::vector<bool> keptComdats;
   for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable()) {
     keptComdats.push_back(
         s.second == Comdat::NoDeduplicate ||
@@ -1646,6 +1672,20 @@ void BitcodeFile::parseLazy() {
     }
 }
 
+void BitcodeFile::postParse() {
+  for (auto it : llvm::enumerate(obj->symbols())) {
+    const Symbol &sym = *symbols[it.index()];
+    const auto &objSym = it.value();
+    if (sym.file == this || !sym.isDefined() || objSym.isUndefined() ||
+        objSym.isCommon() || objSym.isWeak())
+      continue;
+    int c = objSym.getComdatIndex();
+    if (c != -1 && !keptComdats[c])
+      continue;
+    reportDuplicate(sym, this, nullptr, 0);
+  }
+}
+
 void BinaryFile::parse() {
   ArrayRef<uint8_t> data = arrayRefFromStringRef(mb.getBuffer());
   auto *section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
@@ -1663,12 +1703,15 @@ void BinaryFile::parse() {
 
   llvm::StringSaver &saver = lld::saver();
 
-  symtab->addSymbol(Defined{nullptr, saver.save(s + "_start"), STB_GLOBAL,
-                            STV_DEFAULT, STT_OBJECT, 0, 0, section});
-  symtab->addSymbol(Defined{nullptr, saver.save(s + "_end"), STB_GLOBAL,
-                            STV_DEFAULT, STT_OBJECT, data.size(), 0, section});
-  symtab->addSymbol(Defined{nullptr, saver.save(s + "_size"), STB_GLOBAL,
-                            STV_DEFAULT, STT_OBJECT, data.size(), 0, nullptr});
+  symtab->addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_start"),
+                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT, 0,
+                                       0, section});
+  symtab->addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_end"),
+                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                       data.size(), 0, section});
+  symtab->addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_size"),
+                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                       data.size(), 0, nullptr});
 }
 
 InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,

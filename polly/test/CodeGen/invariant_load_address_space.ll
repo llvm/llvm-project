@@ -2,7 +2,7 @@
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK-NEXT:    %polly.access.B = getelementptr i32, i32 addrspace(1)* %B, i64 0
-; CHECK-NOT:     addrspacecast 
+; CHECK-NOT:     addrspacecast
 ; CHECK-NEXT:    %polly.access.B.load = load i32, i32 addrspace(1)* %polly.access.B
 ;
 ; CHECK-LABEL: polly.stmt.bb2:

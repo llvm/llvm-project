@@ -784,14 +784,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     //   OuterFunction(InnerFunctionCall( // break
     //       ParameterToInnerFunction))   // break
     //       .SecondInnerFunctionCall();
-    bool HasTrailingCall = false;
     if (Previous.MatchingParen) {
       const FormatToken *Next = Previous.MatchingParen->getNextNonComment();
-      HasTrailingCall = Next && Next->isMemberAccess();
+      if (Next && Next->isMemberAccess() && State.Stack.size() > 1 &&
+          State.Stack[State.Stack.size() - 2].CallContinuation == 0)
+        CurrentState.LastSpace = State.Column;
     }
-    if (HasTrailingCall && State.Stack.size() > 1 &&
-        State.Stack[State.Stack.size() - 2].CallContinuation == 0)
-      CurrentState.LastSpace = State.Column;
   }
 }
 

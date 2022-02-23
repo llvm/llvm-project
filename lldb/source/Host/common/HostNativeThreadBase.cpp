@@ -52,16 +52,12 @@ lldb::thread_t HostNativeThreadBase::Release() {
 
 lldb::thread_result_t
 HostNativeThreadBase::ThreadCreateTrampoline(lldb::thread_arg_t arg) {
-  ThreadLauncher::HostThreadCreateInfo *info =
-      (ThreadLauncher::HostThreadCreateInfo *)arg;
-  llvm::set_thread_name(info->thread_name);
-
-  thread_func_t thread_fptr = info->thread_fptr;
-  thread_arg_t thread_arg = info->thread_arg;
+  std::unique_ptr<ThreadLauncher::HostThreadCreateInfo> info_up(
+      (ThreadLauncher::HostThreadCreateInfo *)arg);
+  llvm::set_thread_name(info_up->thread_name);
 
   Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "thread created");
 
-  delete info;
-  return thread_fptr(thread_arg);
+  return info_up->impl();
 }

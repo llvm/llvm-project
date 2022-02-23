@@ -12,6 +12,8 @@
 #include "PrettyBuiltinDumper.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"

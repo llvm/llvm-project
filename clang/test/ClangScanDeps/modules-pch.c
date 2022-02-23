@@ -91,7 +91,7 @@
 // CHECK-PCH-NEXT:         }
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-fno-implicit-modules",
+// CHECK-PCH:              "-fno-implicit-modules",
 // CHECK-PCH-NEXT:         "-fno-implicit-module-maps",
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_1]]/ModCommon1-{{.*}}.pcm",
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_2]]/ModCommon2-{{.*}}.pcm",
@@ -120,8 +120,7 @@
 // RUN: %clang @%t/mod_common_1.cc1.rsp
 // RUN: %clang @%t/mod_common_2.cc1.rsp
 // RUN: %clang @%t/mod_pch.cc1.rsp
-// RUN: %clang -x c-header %t/pch.h -fmodules -gmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t/cache -o %t/pch.h.gch @%t/pch.rsp
+// RUN: %clang @%t/pch.rsp
 
 // Scan dependencies of the TU:
 //
@@ -161,7 +160,7 @@
 // CHECK-TU-NEXT:         }
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU-NEXT:         "-fno-implicit-modules",
+// CHECK-TU:              "-fno-implicit-modules",
 // CHECK-TU-NEXT:         "-fno-implicit-module-maps",
 // CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU]]/ModTU-{{.*}}.pcm"
 // CHECK-TU-NEXT:       ],
@@ -183,8 +182,7 @@
 // RUN:   --tu-index=0 > %t/tu.rsp
 //
 // RUN: %clang @%t/mod_tu.cc1.rsp
-// RUN: %clang -fsyntax-only %t/tu.c -fmodules -gmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t/cache -include %t/pch.h -o %t/tu.o @%t/tu.rsp
+// RUN: %clang @%t/tu.rsp
 
 // Scan dependencies of the TU that has common modules with the PCH:
 //
@@ -225,7 +223,7 @@
 // CHECK-TU-WITH-COMMON-NEXT:         }
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "command-line": [
-// CHECK-TU-WITH-COMMON-NEXT:         "-fno-implicit-modules",
+// CHECK-TU-WITH-COMMON:              "-fno-implicit-modules",
 // CHECK-TU-WITH-COMMON-NEXT:         "-fno-implicit-module-maps",
 // CHECK-TU-WITH-COMMON-NEXT:         "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon2-{{.*}}.pcm",
 // CHECK-TU-WITH-COMMON-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU_WITH_COMMON]]/ModTUWithCommon-{{.*}}.pcm"
@@ -248,5 +246,4 @@
 // RUN:   --tu-index=0 > %t/tu_with_common.rsp
 //
 // RUN: %clang @%t/mod_tu_with_common.cc1.rsp
-// RUN: %clang -fsyntax-only %t/tu_with_common.c -fmodules -gmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t/cache -include %t/pch.h -o %t/tu_with_common.o @%t/tu_with_common.rsp
+// RUN: %clang @%t/tu_with_common.rsp

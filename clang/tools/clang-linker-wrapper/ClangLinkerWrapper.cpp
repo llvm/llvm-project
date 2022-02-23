@@ -142,9 +142,6 @@ static SmallVector<std::string, 16> TempFiles;
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
 
-/// Static buffer to hold StringRef values.
-static BumpPtrAllocator Alloc;
-
 /// Magic section string that marks the existence of offloading data. The
 /// section string will be formatted as `.llvm.offloading.<triple>.<arch>`.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading."
@@ -517,7 +514,7 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
     return extractFromArchive(*LibFile->get(), DeviceFiles);
   }
   default:
-    return errorCodeToError(object_error::invalid_file_type);
+    return None;
   }
 }
 
@@ -866,6 +863,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   SmallVector<std::string, 4> NewInputFiles;
   DenseSet<StringRef> UsedInRegularObj;
   DenseSet<StringRef> UsedInSharedLib;
+  BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
   // Search for bitcode files in the input and create an LTO input file. If it
@@ -1227,8 +1225,7 @@ int main(int argc, const char **argv) {
     if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths))
       Filename = *Library;
 
-    if ((sys::path::extension(Filename) == ".o" ||
-         sys::path::extension(Filename) == ".a")) {
+    if (sys::fs::exists(Filename) && !sys::fs::is_directory(Filename)) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
           MemoryBuffer::getFileOrSTDIN(Filename);
       if (std::error_code EC = BufferOrErr.getError())

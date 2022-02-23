@@ -528,6 +528,9 @@
 # CHECK-LE: xxeval 32, 1, 2, 3, 2                 # encoding: [0x02,0x00,0x00,0x05,
 # CHECK-LE-SAME:                                               0xd1,0x10,0x01,0x88]
             xxeval 32, 1, 2, 3, 2
+# CHECK-BE: lxvkq 63, 31                          # encoding: [0xf3,0xff,0xfa,0xd1]
+# CHECK-LE: lxvkq 63, 31                          # encoding: [0xd1,0xfa,0xff,0xf3]
+            lxvkq 63, 31
 # CHECK-BE: vclzdm 1, 2, 3                        # encoding: [0x10,0x22,0x1f,0x84]
 # CHECK-LE: vclzdm 1, 2, 3                        # encoding: [0x84,0x1f,0x22,0x10]
             vclzdm 1, 2, 3

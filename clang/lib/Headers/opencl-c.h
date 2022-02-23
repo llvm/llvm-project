@@ -50,6 +50,15 @@
 #define __opencl_c_images 1
 #endif
 
+ #if !defined(__opencl_c_generic_address_space)
+ // Internal feature macro to provide named (global, local, private) address
+ // space overloads for builtin functions that take a pointer argument.
+ #define __opencl_c_named_address_space_builtins 1
+ #endif // !defined(__opencl_c_generic_address_space)
+ #if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
+ // Internal feature macro to provide subgroup builtins.
+ #define __opencl_subgroup_builtins 1
+ #endif
 // built-in scalar data types:
 
 /**
@@ -17005,7 +17014,7 @@ queue_t __ovld get_default_queue(void);
 
 // OpenCL Extension v2.0 s9.17 - Sub-groups
 
-#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
+#if defined(__opencl_subgroup_builtins)
 // Shared Sub Group Functions
 uint    __ovld get_sub_group_size(void);
 uint    __ovld get_max_sub_group_size(void);
@@ -17104,7 +17113,7 @@ double  __ovld __conv sub_group_scan_inclusive_min(double x);
 double  __ovld __conv sub_group_scan_inclusive_max(double x);
 #endif //cl_khr_fp64
 
-#endif //cl_khr_subgroups cl_intel_subgroups __opencl_c_subgroups
+#endif // __opencl_subgroup_builtins
 
 #if defined(cl_khr_subgroup_extended_types)
 char __ovld __conv sub_group_broadcast( char value, uint index );

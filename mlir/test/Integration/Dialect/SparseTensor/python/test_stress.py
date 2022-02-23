@@ -6,20 +6,22 @@ import errno
 import itertools
 import os
 import sys
+
 from typing import List, Callable
 
 import numpy as np
 
-import mlir.all_passes_registration
-
 from mlir import ir
 from mlir import runtime as rt
 from mlir.execution_engine import ExecutionEngine
-from mlir.passmanager import PassManager
 
 from mlir.dialects import builtin
 from mlir.dialects import std
 from mlir.dialects import sparse_tensor as st
+
+_SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(_SCRIPT_PATH)
+from tools import sparse_compiler
 
 # ===----------------------------------------------------------------------=== #
 
@@ -137,13 +139,15 @@ class StressTest:
       f.write(str(self._module))
     return self
 
-  def compile(self, compiler: Callable[[ir.Module], ExecutionEngine]):
+  def compile(self, compiler, support_lib: str):
     """Compile the ir.Module."""
     assert self._module is not None, \
         'StressTest: must call build() before compile()'
     assert self._engine is None, \
         'StressTest: must not call compile() repeatedly'
-    self._engine = compiler(self._module)
+    compiler(self._module)
+    self._engine = ExecutionEngine(
+        self._module, opt_level=0, shared_libs=[support_lib])
     return self
 
   def run(self, np_arg0: np.ndarray) -> np.ndarray:
@@ -160,24 +164,6 @@ class StressTest:
     mem_out = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(np_out)))
     self._engine.invoke('main', mem_out, mem_arg0)
     return rt.ranked_memref_to_numpy(mem_out[0])
-
-# ===----------------------------------------------------------------------=== #
-
-# TODO: move this boilerplate to its own module, so it can be used by
-# other tests and programs.
-class SparseCompiler:
-  """Sparse compiler passes."""
-
-  def __init__(self, sparsification_options: str, support_lib: str):
-    self._support_lib = support_lib
-    self._pipeline = (
-        f'sparse-compiler{{{sparsification_options} reassociate-fp-reductions=1 enable-index-optimizations=1}}')
-    # Must be in the scope of a `with ir.Context():`
-    self._passmanager = PassManager.parse(self._pipeline)
-
-  def __call__(self, module: ir.Module) -> ExecutionEngine:
-    self._passmanager.run(module)
-    return ExecutionEngine(module, opt_level=0, shared_libs=[self._support_lib])
 
 # ===----------------------------------------------------------------------=== #
 
@@ -208,7 +194,7 @@ def main():
         f'vectorization-strategy={vec} '
         f'vl={vl} '
         f'enable-simd-index32={e}')
-    compiler = SparseCompiler(sparsification_options, support_lib)
+    compiler = sparse_compiler.SparseCompiler(options=sparsification_options)
     f64 = ir.F64Type.get()
     # Be careful about increasing this because
     #     len(types) = 1 + 2^rank * rank! * len(bitwidths)^2
@@ -243,12 +229,10 @@ def main():
       size *= d
     np_arg0 = np.arange(size, dtype=tyconv.irtype_to_dtype(f64)).reshape(*shape)
     np_out = (
-        StressTest(tyconv)
-        .build(types)
-        .writeTo(sys.argv[1] if len(sys.argv) > 1 else None)
-        .compile(compiler)
-        .writeTo(sys.argv[2] if len(sys.argv) > 2 else None)
-        .run(np_arg0))
+        StressTest(tyconv).build(types).writeTo(
+            sys.argv[1] if len(sys.argv) > 1 else None).compile(
+                compiler, support_lib).writeTo(
+                    sys.argv[2] if len(sys.argv) > 2 else None).run(np_arg0))
     # CHECK: Passed
     if np.allclose(np_out, np_arg0):
       print('Passed')

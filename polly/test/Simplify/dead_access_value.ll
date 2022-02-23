@@ -7,7 +7,7 @@
 ; for (int j = 0; j < n; j += 1) {
 ; body:
 ;   double val = 12.5 + 12.5;
-; 
+;
 ; body_succ:
 ;   double unused = val + 21.0;
 ;   A[0] = 42.0;
@@ -25,7 +25,7 @@ for:
     body:
       %val = fadd double 12.5, 12.5
       br label %body_succ
-      
+
     body_succ:
       %unused = fadd double %val, 21.0
       store double 42.0, double* %A

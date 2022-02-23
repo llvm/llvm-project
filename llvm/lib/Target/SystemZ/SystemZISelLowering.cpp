@@ -3505,6 +3505,32 @@ SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
 
 SDValue SystemZTargetLowering::lowerVASTART(SDValue Op,
                                             SelectionDAG &DAG) const {
+
+  if (Subtarget.isTargetXPLINK64())
+    return lowerVASTART_XPLINK(Op, DAG);
+  else
+    return lowerVASTART_ELF(Op, DAG);
+}
+
+SDValue SystemZTargetLowering::lowerVASTART_XPLINK(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SystemZMachineFunctionInfo *FuncInfo =
+      MF.getInfo<SystemZMachineFunctionInfo>();
+
+  SDLoc DL(Op);
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FR, Op.getOperand(1),
+                      MachinePointerInfo(SV));
+}
+
+SDValue SystemZTargetLowering::lowerVASTART_ELF(SDValue Op,
+                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SystemZMachineFunctionInfo *FuncInfo =
     MF.getInfo<SystemZMachineFunctionInfo>();
@@ -3548,7 +3574,9 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
   SDLoc DL(Op);
 
-  return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(32, DL),
+  uint32_t Sz =
+      Subtarget.isTargetXPLINK64() ? getTargetMachine().getPointerSize(0) : 32;
+  return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(Sz, DL),
                        Align(8), /*isVolatile*/ false, /*AlwaysInline*/ false,
                        /*isTailCall*/ false, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));

@@ -4,7 +4,9 @@ add_clang_library(clangToolingSyntaxPseudo
   Grammar.cpp
   GrammarBNF.cpp
   LRGraph.cpp
-  
+  LRTable.cpp
+  LRTableBuild.cpp
+
   LINK_LIBS
   clangBasic
   clangLex
