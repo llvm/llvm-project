@@ -65,16 +65,12 @@ bool GlobList::contains(StringRef S) const {
 }
 
 bool CachedGlobList::contains(StringRef S) const {
-  switch (auto &Result = Cache[S]) {
-  case Yes:
-    return true;
-  case No:
-    return false;
-  case None:
-    Result = GlobList::contains(S) ? Yes : No;
-    return Result == Yes;
-  }
-  llvm_unreachable("invalid enum");
+  auto Entry = Cache.try_emplace(S);
+  bool &Value = Entry.first->getValue();
+  // If the entry was just inserted, determine its required value.
+  if (Entry.second)
+    Value = GlobList::contains(S);
+  return Value;
 }
 
 } // namespace tidy
