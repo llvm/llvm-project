@@ -2291,7 +2291,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
                   "at most once.\n");
     return;
   }
-  LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.");
+  LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
 
   SymbolicStrides[Ptr] = Stride;
   StrideSet.insert(Stride);
