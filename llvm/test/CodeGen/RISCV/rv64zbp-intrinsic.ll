@@ -342,6 +342,114 @@ define i64 @grevi64(i64 %a) nounwind {
  ret i64 %tmp
 }
 
+define i64 @revhwi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: revhwi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev.h a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 15)
+ ret i64 %tmp
+}
+
+define i64 @rev16wi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev16wi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev16.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 16)
+ ret i64 %tmp
+}
+
+define i64 @rev8wi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev8wi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev8.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 24)
+ ret i64 %tmp
+}
+
+define i64 @rev4wi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev4wi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev4.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 28)
+ ret i64 %tmp
+}
+
+define i64 @rev2wi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev2wi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev2.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 30)
+ ret i64 %tmp
+}
+
+define i64 @revwi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: revwi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 31)
+ ret i64 %tmp
+}
+
+define i64 @rev32i64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev32i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev32 a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 32)
+ ret i64 %tmp
+}
+
+define i64 @rev16i64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev16i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev16 a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 48)
+ ret i64 %tmp
+}
+
+define i64 @rev8i64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev8i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev8 a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 56)
+ ret i64 %tmp
+}
+
+define i64 @rev4i64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev4i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev4 a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 60)
+ ret i64 %tmp
+}
+
+define i64 @rev2i64(i64 %a) nounwind {
+; RV64ZBP-LABEL: rev2i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev2 a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 62)
+ ret i64 %tmp
+}
+
+define i64 @revi64(i64 %a) nounwind {
+; RV64ZBP-LABEL: revi64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    rev a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 63)
+ ret i64 %tmp
+}
+
 declare i64 @llvm.riscv.gorc.i64(i64 %a, i64 %b)
 
 define i64 @gorc64(i64 %a, i64 %b) nounwind {
