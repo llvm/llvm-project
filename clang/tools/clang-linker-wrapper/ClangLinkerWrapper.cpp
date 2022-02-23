@@ -142,9 +142,6 @@ static SmallVector<std::string, 16> TempFiles;
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
 
-/// Static buffer to hold StringRef values.
-static BumpPtrAllocator Alloc;
-
 /// Magic section string that marks the existence of offloading data. The
 /// section string will be formatted as `.llvm.offloading.<triple>.<arch>`.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading."
@@ -866,6 +863,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   SmallVector<std::string, 4> NewInputFiles;
   DenseSet<StringRef> UsedInRegularObj;
   DenseSet<StringRef> UsedInSharedLib;
+  BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
   // Search for bitcode files in the input and create an LTO input file. If it
