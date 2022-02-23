@@ -50,9 +50,11 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   auto llvmOptLevel = static_cast<llvm::CodeGenOpt::Level>(optLevel);
   auto transformer = mlir::makeLLVMPassesTransformer(
       /*passes=*/{}, llvmOptLevel, /*targetMachine=*/tmOrError->get());
-  auto jitOrError =
-      ExecutionEngine::create(unwrap(op), /*llvmModuleBuilder=*/{}, transformer,
-                              llvmOptLevel, libPaths);
+  ExecutionEngineOptions jitOptions;
+  jitOptions.transformer = transformer;
+  jitOptions.jitCodeGenOptLevel = llvmOptLevel;
+  jitOptions.sharedLibPaths = libPaths;
+  auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions);
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
     return MlirExecutionEngine{nullptr};
