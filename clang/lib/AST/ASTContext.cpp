@@ -6798,41 +6798,6 @@ static FloatingRank getFloatingRank(QualType T) {
   }
 }
 
-/// getFloatingTypeOfSizeWithinDomain - Returns a real floating
-/// point or a complex type (based on typeDomain/typeSize).
-/// 'typeDomain' is a real floating point or complex type.
-/// 'typeSize' is a real floating point or complex type.
-QualType ASTContext::getFloatingTypeOfSizeWithinDomain(QualType Size,
-                                                       QualType Domain) const {
-  FloatingRank EltRank = getFloatingRank(Size);
-  if (Domain->isComplexType()) {
-    switch (EltRank) {
-    case BFloat16Rank: llvm_unreachable("Complex bfloat16 is not supported");
-    case Float16Rank:
-    case HalfRank: llvm_unreachable("Complex half is not supported");
-    case Ibm128Rank:     return getComplexType(Ibm128Ty);
-    case FloatRank:      return getComplexType(FloatTy);
-    case DoubleRank:     return getComplexType(DoubleTy);
-    case LongDoubleRank: return getComplexType(LongDoubleTy);
-    case Float128Rank:   return getComplexType(Float128Ty);
-    }
-  }
-
-  assert(Domain->isRealFloatingType() && "Unknown domain!");
-  switch (EltRank) {
-  case Float16Rank:    return HalfTy;
-  case BFloat16Rank:   return BFloat16Ty;
-  case HalfRank:       return HalfTy;
-  case FloatRank:      return FloatTy;
-  case DoubleRank:     return DoubleTy;
-  case LongDoubleRank: return LongDoubleTy;
-  case Float128Rank:   return Float128Ty;
-  case Ibm128Rank:
-    return Ibm128Ty;
-  }
-  llvm_unreachable("getFloatingRank(): illegal value for rank");
-}
-
 /// getFloatingTypeOrder - Compare the rank of the two specified floating
 /// point types, ignoring the domain of the type (i.e. 'double' ==
 /// '_Complex double').  If LHS > RHS, return 1.  If LHS == RHS, return 0. If
