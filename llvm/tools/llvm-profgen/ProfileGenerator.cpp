@@ -9,6 +9,7 @@
 #include "ProfileGenerator.h"
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include <float.h>
 #include <unordered_set>
