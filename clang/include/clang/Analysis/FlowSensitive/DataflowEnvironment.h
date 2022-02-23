@@ -49,11 +49,6 @@ enum class SkipPast {
 };
 
 /// Holds the state of the program (store and heap) at a given program point.
-///
-/// WARNING: Symbolic values that are created by the environment for static
-/// local and global variables are not currently invalidated on function calls.
-/// This is unsound and should be taken into account when designing dataflow
-/// analyses.
 class Environment {
 public:
   /// Supplements `Environment` with non-standard comparison and join
