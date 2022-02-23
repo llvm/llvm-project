@@ -241,6 +241,14 @@ don't find anyone present, chances are they happen to be off that day.
       `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
     - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
     - English, Flemish, Dutch
+  * - Alina Sbirlea
+    - General questions on how to contribute to LLVM; women in compilers;
+      MemorySSA, BatchAA, various loop passes, new pass manager.
+    - Monthly, 2nd Tuesdays, 10.00am PT/7:00pm CET, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com>`__
+    - `GoogleMeet <https://meet.google.com/hhk-xpdj-gvx>`__
+    - English, Romanian
 
 
 IRC
