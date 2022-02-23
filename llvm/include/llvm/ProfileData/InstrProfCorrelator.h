@@ -13,16 +13,17 @@
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
 namespace llvm {
+class DWARFContext;
+class DWARFDie;
+namespace object {
+class ObjectFile;
+}
 
 /// InstrProfCorrelator - A base class used to create raw instrumentation data
 /// to their functions.

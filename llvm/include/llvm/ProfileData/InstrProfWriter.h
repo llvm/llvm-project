@@ -20,7 +20,6 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>
 #include <memory>
 
@@ -29,6 +28,7 @@ namespace llvm {
 /// Writer for instrumentation based profile data.
 class InstrProfRecordWriterTrait;
 class ProfOStream;
+class MemoryBuffer;
 class raw_fd_ostream;
 
 class InstrProfWriter {
