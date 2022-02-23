@@ -1882,7 +1882,6 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
     Reader->Remapper = std::move(ReaderOrErr.get());
   }
 
-  FunctionSamples::Format = Reader->getFormat();
   if (std::error_code EC = Reader->readHeader()) {
     return EC;
   }
