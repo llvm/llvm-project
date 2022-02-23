@@ -10,6 +10,9 @@
       "name": "allow-pcm-with-compiler-errors"
     },
     {
+      "name": "vfs-redirecting-with"
+    },
+    {
       "name": "deployment-target-environment-variables",
       "value": [
         "MACOSX_DEPLOYMENT_TARGET",
