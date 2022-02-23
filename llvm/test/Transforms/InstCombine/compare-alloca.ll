@@ -118,3 +118,169 @@ define i1 @alloca_call_compare() {
   %cmp = icmp eq i64* %p, %q
   ret i1 %cmp
 }
+
+
+; The next block of tests demonstrate a very subtle correctness requirement.
+; We can generally assume any *single* stack layout we chose for the result of
+; an alloca, but we can't simultanious assume two different ones.  As a
+; result, we must make sure that we only fold conditions if we can ensure that
+; we fold *all* potentially address capturing compares the same.
+
+; These two functions represents either a) forging a pointer via inttoptr or
+; b) indexing off an adjacent allocation.  In either case, the operation is
+; obscured by an uninlined helper and not visible to instcombine.
+declare i8* @hidden_inttoptr()
+declare i8* @hidden_offset(i8* %other)
+
+define i1 @ptrtoint_single_cmp() {
+; CHECK-LABEL: @ptrtoint_single_cmp(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = alloca i8, i32 4
+  %rhs = inttoptr i64 2048 to i8*
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @offset_single_cmp() {
+; CHECK-LABEL: @offset_single_cmp(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = alloca i8, i32 4
+  %n = alloca i8, i32 4
+  %rhs = getelementptr i8, i8* %n, i32 4
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @neg_consistent_fold1() {
+; CHECK-LABEL: @neg_consistent_fold1(
+; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[M1_SUB:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[M1]], i32 0, i32 0
+; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_inttoptr()
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[M1_SUB]], inttoptr (i64 2048 to i8*)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[M1_SUB]], [[RHS2]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %m = alloca i8, i32 4
+  %rhs = inttoptr i64 2048 to i8*
+  %rhs2 = call i8* @hidden_inttoptr()
+  %cmp1 = icmp eq i8* %m, %rhs
+  %cmp2 = icmp eq i8* %m, %rhs2
+  %res = or i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @neg_consistent_fold2() {
+; CHECK-LABEL: @neg_consistent_fold2(
+; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[N2:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[N2_SUB:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[N2]], i32 0, i32 0
+; CHECK-NEXT:    [[M1_SUB:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[M1]], i32 0, i32 0
+; CHECK-NEXT:    [[RHS:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[N2]], i32 0, i32 4
+; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_offset(i8* nonnull [[N2_SUB]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8* [[M1_SUB]], [[RHS]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[M1_SUB]], [[RHS2]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %m = alloca i8, i32 4
+  %n = alloca i8, i32 4
+  %rhs = getelementptr i8, i8* %n, i32 4
+  %rhs2 = call i8* @hidden_offset(i8* %n)
+  %cmp1 = icmp eq i8* %m, %rhs
+  %cmp2 = icmp eq i8* %m, %rhs2
+  %res = or i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @neg_consistent_fold3() {
+; CHECK-LABEL: @neg_consistent_fold3(
+; CHECK-NEXT:    [[M1:%.*]] = alloca i32, align 1
+; CHECK-NEXT:    [[M1_SUB:%.*]] = bitcast i32* [[M1]] to i8*
+; CHECK-NEXT:    [[LGP:%.*]] = load i32*, i32** @gp, align 8
+; CHECK-NEXT:    [[RHS2:%.*]] = call i8* @hidden_inttoptr()
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[M1]], [[LGP]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8* [[RHS2]], [[M1_SUB]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %m = alloca i8, i32 4
+  %bc = bitcast i8* %m to i32*
+  %lgp = load i32*, i32** @gp, align 8
+  %rhs2 = call i8* @hidden_inttoptr()
+  %cmp1 = icmp eq i32* %bc, %lgp
+  %cmp2 = icmp eq i8* %m, %rhs2
+  %res = or i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @neg_consistent_fold4() {
+; CHECK-LABEL: @neg_consistent_fold4(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = alloca i8, i32 4
+  %bc = bitcast i8* %m to i32*
+  %lgp = load i32*, i32** @gp, align 8
+  %cmp1 = icmp eq i32* %bc, %lgp
+  %cmp2 = icmp eq i32* %bc, %lgp
+  %res = or i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; A nocapture call can't cause a consistent result issue as it is (by
+; assumption) not able to contain a comparison which might capture the
+; address.
+
+declare void @unknown(i8*)
+
+; TODO: Missing optimization
+define i1 @consistent_nocapture_inttoptr() {
+; CHECK-LABEL: @consistent_nocapture_inttoptr(
+; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[M1_SUB:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[M1]], i32 0, i32 0
+; CHECK-NEXT:    call void @unknown(i8* nocapture nonnull [[M1_SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[M1_SUB]], inttoptr (i64 2048 to i8*)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %m = alloca i8, i32 4
+  call void @unknown(i8* nocapture %m)
+  %rhs = inttoptr i64 2048 to i8*
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+define i1 @consistent_nocapture_offset() {
+; CHECK-LABEL: @consistent_nocapture_offset(
+; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[M1_SUB:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[M1]], i32 0, i32 0
+; CHECK-NEXT:    call void @unknown(i8* nocapture nonnull [[M1_SUB]])
+; CHECK-NEXT:    ret i1 false
+;
+  %m = alloca i8, i32 4
+  call void @unknown(i8* nocapture %m)
+  %n = alloca i8, i32 4
+  %rhs = getelementptr i8, i8* %n, i32 4
+  %cmp = icmp eq i8* %m, %rhs
+  ret i1 %cmp
+}
+
+@gp = global i32* null, align 8
+; TODO: Missing optimization
+define i1 @consistent_nocapture_through_global() {
+; CHECK-LABEL: @consistent_nocapture_through_global(
+; CHECK-NEXT:    [[M1:%.*]] = alloca i32, align 1
+; CHECK-NEXT:    [[M1_SUB:%.*]] = bitcast i32* [[M1]] to i8*
+; CHECK-NEXT:    call void @unknown(i8* nocapture nonnull [[M1_SUB]])
+; CHECK-NEXT:    [[LGP:%.*]] = load i32*, i32** @gp, align 8, !nonnull !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[M1]], [[LGP]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %m = alloca i8, i32 4
+  call void @unknown(i8* nocapture %m)
+  %bc = bitcast i8* %m to i32*
+  %lgp = load i32*, i32** @gp, align 8, !nonnull !{}
+  %cmp = icmp eq i32* %bc, %lgp
+  ret i1 %cmp
+}
