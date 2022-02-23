@@ -158,7 +158,7 @@ class SDDbgDef : public SDDbgDefKill {
   unsigned ReferrerOrder;
   int FrameIndex = 0;
   Register Reg;
-  const SDValue *SDVal;
+  Optional<SDValue> SDVal;
 
 public:
   SDDbgDef(DILifetime *LT, unsigned O, const Value *Ref, DebugLoc DLoc)
@@ -170,8 +170,8 @@ public:
   void SaveReg(Register R) { Reg = R; }
   int getFI() { return FrameIndex; }
   Register getReg() { return Reg; }
-  void setSDValue(const SDValue *SDV) { SDVal = SDV; }
-  const SDValue *getSDValue() { return SDVal; }
+  void setSDValue(Optional<SDValue> SDV) { SDVal = SDV; }
+  Optional<SDValue> getSDValue() { return SDVal; }
   static bool classof(const SDDbgDefKill *DK) {
     return DK->getKind() == DK_KIND_DEF;
   }
