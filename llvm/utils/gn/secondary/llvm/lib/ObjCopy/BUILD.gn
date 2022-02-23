@@ -1,29 +1,29 @@
 static_library("ObjCopy") {
   output_name = "LLVMObjCopy"
   deps = [
-    "//llvm/lib/Object",
     "//llvm/lib/MC",
+    "//llvm/lib/Object",
     "//llvm/lib/Support",
   ]
   include_dirs = [ "." ]
   sources = [
     "Archive.cpp",
-    "ObjCopy.cpp",
-    "ConfigManager.cpp",
     "COFF/COFFObjcopy.cpp",
-    "COFF/Object.cpp",
-    "COFF/Reader.cpp",
-    "COFF/Writer.cpp",
+    "COFF/COFFObject.cpp",
+    "COFF/COFFReader.cpp",
+    "COFF/COFFWriter.cpp",
+    "ConfigManager.cpp",
     "ELF/ELFObjcopy.cpp",
-    "ELF/Object.cpp",
+    "ELF/ELFObject.cpp",
+    "MachO/MachOLayoutBuilder.cpp",
     "MachO/MachOObjcopy.cpp",
+    "MachO/MachOObject.cpp",
     "MachO/MachOReader.cpp",
     "MachO/MachOWriter.cpp",
-    "MachO/MachOLayoutBuilder.cpp",
-    "MachO/Object.cpp",
-    "wasm/Object.cpp",
-    "wasm/Reader.cpp",
-    "wasm/Writer.cpp",
+    "ObjCopy.cpp",
     "wasm/WasmObjcopy.cpp",
+    "wasm/WasmObject.cpp",
+    "wasm/WasmReader.cpp",
+    "wasm/WasmWriter.cpp",
   ]
 }
