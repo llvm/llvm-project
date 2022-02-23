@@ -2637,6 +2637,9 @@ private:
     }
 
     ScheduleData *getScheduleData(Instruction *I) {
+      if (BB != I->getParent())
+        // Avoid lookup if can't possibly be in map.
+        return nullptr;
       ScheduleData *SD = ScheduleDataMap[I];
       if (SD && isInSchedulingRegion(SD))
         return SD;
