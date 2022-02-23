@@ -517,7 +517,7 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
     return extractFromArchive(*LibFile->get(), DeviceFiles);
   }
   default:
-    return errorCodeToError(object_error::invalid_file_type);
+    return None;
   }
 }
 
@@ -1227,8 +1227,7 @@ int main(int argc, const char **argv) {
     if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths))
       Filename = *Library;
 
-    if ((sys::path::extension(Filename) == ".o" ||
-         sys::path::extension(Filename) == ".a")) {
+    if (sys::fs::exists(Filename) && !sys::fs::is_directory(Filename)) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
           MemoryBuffer::getFileOrSTDIN(Filename);
       if (std::error_code EC = BufferOrErr.getError())
