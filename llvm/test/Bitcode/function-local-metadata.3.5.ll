@@ -1,4 +1,5 @@
-; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis -opaque-pointers=0 < %s.bc | FileCheck %s
+; RUN: llvm-dis -opaque-pointers=1 < %s.bc | FileCheck %s
 
 ; Check that function-local metadata is dropped correctly when it's not a
 ; direct argument to a call instruction.
