@@ -14,6 +14,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -139,6 +140,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
   if (blockDirective.v == llvm::omp::OMPD_parallel) {
 
@@ -152,14 +154,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
               std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
         auto &expr =
             std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
-        ifClauseOperand = fir::getBase(
-            converter.genExprValue(*Fortran::semantics::GetExpr(expr)));
+        ifClauseOperand = fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(expr), stmtCtx));
       } else if (const auto &numThreadsClause =
                      std::get_if<Fortran::parser::OmpClause::NumThreads>(
                          &clause.u)) {
         // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
         numThreadsClauseOperand = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(numThreadsClause->v)));
+            *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
       }
       // TODO: Handle private, firstprivate, shared and copyin
     }

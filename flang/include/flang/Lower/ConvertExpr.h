@@ -34,6 +34,7 @@ struct SomeType;
 namespace Fortran::lower {
 
 class AbstractConverter;
+class StatementContext;
 class SymMap;
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 
@@ -41,13 +42,24 @@ using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
                                                 AbstractConverter &converter,
                                                 const SomeExpr &expr,
-                                                SymMap &symMap);
+                                                SymMap &symMap,
+                                                StatementContext &stmtCtx);
 
 /// Create an extended expression address.
 fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
                                              AbstractConverter &converter,
                                              const SomeExpr &expr,
-                                             SymMap &symMap);
+                                             SymMap &symMap,
+                                             StatementContext &stmtCtx);
+
+/// Lower a subroutine call. This handles both elemental and non elemental
+/// subroutines. \p isUserDefAssignment must be set if this is called in the
+/// context of a user defined assignment. For subroutines with alternate
+/// returns, the returned value indicates which label the code should jump to.
+/// The returned value is null otherwise.
+mlir::Value createSubroutineCall(AbstractConverter &converter,
+                                 const evaluate::ProcedureRef &call,
+                                 SymMap &symMap, StatementContext &stmtCtx);
 
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to

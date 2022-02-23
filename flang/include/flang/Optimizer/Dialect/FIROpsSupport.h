@@ -77,6 +77,11 @@ static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
 /// Attribute to keep track of Fortran scoping information for a symbol.
 static constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
 
+/// Attribute to mark a function that takes a host associations argument.
+static constexpr llvm::StringRef getHostAssocAttrName() {
+  return "fir.host_assoc";
+}
+
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
 ///   - or, the result of fir.alloca/fir.allocamem op that has attribute \p
@@ -86,6 +91,11 @@ static constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
 ///   - or, a fir.box loaded from a fir.ref<fir.box> that matches one of the
 ///     previous cases.
 bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
+
+/// Scan the arguments of a FuncOp to determine if any arguments have the
+/// attribute `attr` placed on them. This can be used to determine if the
+/// function has any host associations, for example.
+bool anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr);
 
 } // namespace fir
 
