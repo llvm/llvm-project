@@ -10358,9 +10358,8 @@ void CGOpenMPRuntime::emitTargetCall(
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
   // Generate code for the host fallback function.
-  auto &&FallbackGen = [this, OutlinedFn, OutlinedFnID, &D, &CapturedVars,
-                        RequiresOuterTask, &CS,
-                        OffloadingMandatory](CodeGenFunction &CGF) {
+  auto &&FallbackGen = [this, OutlinedFn, &D, &CapturedVars, RequiresOuterTask,
+                        &CS, OffloadingMandatory](CodeGenFunction &CGF) {
     if (OffloadingMandatory) {
       CGF.Builder.CreateUnreachable();
     } else {
