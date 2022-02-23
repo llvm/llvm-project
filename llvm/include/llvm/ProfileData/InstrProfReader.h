@@ -213,15 +213,16 @@ public:
   static bool hasFormat(const MemoryBuffer &Buffer);
 
   bool isIRLevelProfile() const override {
-    return static_cast<bool>(ProfileKind & InstrProfKind::IR);
+    return static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation);
   }
 
   bool hasCSIRLevelProfile() const override {
-    return static_cast<bool>(ProfileKind & InstrProfKind::CS);
+    return static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive);
   }
 
   bool instrEntryBBEnabled() const override {
-    return static_cast<bool>(ProfileKind & InstrProfKind::BB);
+    return static_cast<bool>(ProfileKind &
+                             InstrProfKind::FunctionEntryInstrumentation);
   }
 
   bool hasSingleByteCoverage() const override {
