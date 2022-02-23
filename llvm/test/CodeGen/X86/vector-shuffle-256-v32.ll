@@ -5048,14 +5048,12 @@ define <4 x i64> @PR28136(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; XOPAVX1-LABEL: PR28136:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; XOPAVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; XOPAVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm1[u,8,u,10,u,12,u,14,u,9,u,11,u,13,u,15]
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm2 = xmm0[8],xmm2[1],xmm0[10],xmm2[3],xmm0[12],xmm2[5],xmm0[14],xmm2[7],xmm0[9],xmm2[9],xmm0[11],xmm2[11],xmm0[13],xmm2[13],xmm0[15],xmm2[15]
-; XOPAVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,0,u,2,u,4,u,6,u,1,u,3,u,5,u,7]
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7],xmm0[1],xmm1[9],xmm0[3],xmm1[11],xmm0[5],xmm1[13],xmm0[7],xmm1[15]
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; XOPAVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm2 = xmm0[8],xmm1[8],xmm0[10],xmm1[10],xmm0[12],xmm1[12],xmm0[14],xmm1[14],xmm0[9],xmm1[9],xmm0[11],xmm1[11],xmm0[13],xmm1[13],xmm0[15],xmm1[15]
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2],xmm1[2],xmm0[4],xmm1[4],xmm0[6],xmm1[6],xmm0[1],xmm1[1],xmm0[3],xmm1[3],xmm0[5],xmm1[5],xmm0[7],xmm1[7]
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;

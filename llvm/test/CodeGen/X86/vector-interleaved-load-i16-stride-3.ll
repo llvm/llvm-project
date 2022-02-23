@@ -850,7 +850,7 @@ define void @vf32(<96 x i16>* %in.vec, <32 x i16>* %out.vec0, <32 x i16>* %out.v
 ; AVX1-NEXT:    vpshufb %xmm15, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm4[5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm11[0],xmm9[1],xmm11[2,3],xmm9[4],xmm11[5,6],xmm9[7]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,2,3,0,1,6,7,12,13,2,3,8,9,14,15]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,u,u,0,1,6,7,12,13,2,3,8,9,14,15>
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm7 = xmm13[2,1,2,3]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm7 = xmm7[2,1,2,3,4,5,6,7]
