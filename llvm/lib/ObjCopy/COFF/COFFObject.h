@@ -1,4 +1,4 @@
-//===- Object.h -------------------------------------------------*- C++ -*-===//
+//===- COFFObject.h ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_COFF_OBJECT_H
-#define LLVM_LIB_OBJCOPY_COFF_OBJECT_H
+#ifndef LLVM_LIB_OBJCOPY_COFF_COFFOBJECT_H
+#define LLVM_LIB_OBJCOPY_COFF_COFFOBJECT_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -209,4 +209,4 @@ void copyPeHeader(PeHeader1Ty &Dest, const PeHeader2Ty &Src) {
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_COFF_OBJECT_H
+#endif // LLVM_LIB_OBJCOPY_COFF_COFFOBJECT_H

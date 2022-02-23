@@ -226,6 +226,19 @@ function(get_target_flags_for_arch arch out_var)
   endif()
 endfunction()
 
+# Returns a list of architecture specific target ldflags in @out_var list.
+function(get_target_link_flags_for_arch arch out_var)
+  list(FIND COMPILER_RT_SUPPORTED_ARCH ${arch} ARCH_INDEX)
+  if(ARCH_INDEX EQUAL -1)
+    message(FATAL_ERROR "Unsupported architecture: ${arch}")
+  else()
+    # Workaround for direct calls to __tls_get_addr on Solaris/amd64.
+    if(OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)
+      set(${out_var} "-Wl,-z,relax=transtls" PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
 # Returns a compiler and CFLAGS that should be used to run tests for the
 # specific architecture.  When cross-compiling, this is controled via
 # COMPILER_RT_TEST_COMPILER and COMPILER_RT_TEST_COMPILER_CFLAGS.

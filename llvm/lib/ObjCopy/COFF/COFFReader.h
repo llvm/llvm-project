@@ -1,4 +1,4 @@
-//===- Reader.h -------------------------------------------------*- C++ -*-===//
+//===- COFFReader.h ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_COFF_READER_H
-#define LLVM_LIB_OBJCOPY_COFF_READER_H
+#ifndef LLVM_LIB_OBJCOPY_COFF_COFFREADER_H
+#define LLVM_LIB_OBJCOPY_COFF_COFFREADER_H
 
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -38,4 +38,4 @@ public:
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_COFF_READER_H
+#endif // LLVM_LIB_OBJCOPY_COFF_COFFREADER_H

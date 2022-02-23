@@ -154,6 +154,8 @@ macro(add_sanitizer_tests_for_arch arch)
     list(APPEND extra_flags "-D_FILE_OFFSET_BITS=64")
   endif()
   get_sanitizer_common_lib_for_arch(${arch} SANITIZER_COMMON_LIB)
+  set(TARGET_LINK_FLAGS)
+  get_target_link_flags_for_arch(${arch} TARGET_LINK_FLAGS)
 
   set(SANITIZER_TEST_OBJECTS)
   generate_compiler_rt_tests(SANITIZER_TEST_OBJECTS SanitizerUnitTests
@@ -163,7 +165,7 @@ macro(add_sanitizer_tests_for_arch arch)
     COMPILE_DEPS ${SANITIZER_TEST_HEADERS}
     DEPS gtest
     CFLAGS  ${SANITIZER_TEST_CFLAGS_COMMON} ${extra_flags}
-    LINK_FLAGS ${SANITIZER_TEST_LINK_FLAGS_COMMON} ${extra_flags})
+    LINK_FLAGS ${SANITIZER_TEST_LINK_FLAGS_COMMON} ${TARGET_LINK_FLAGS} ${extra_flags})
 
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND "${arch}" STREQUAL "x86_64")
     # Test that the libc-independent part of sanitizer_common is indeed

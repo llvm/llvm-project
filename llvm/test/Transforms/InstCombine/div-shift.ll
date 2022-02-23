@@ -6,8 +6,8 @@ define i32 @t1(i16 zeroext %x, i32 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[CONV]], [[TMP0]]
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[CONV]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
 entry:
   %conv = zext i16 %x to i32
@@ -21,8 +21,8 @@ define <2 x i32> @t1vec(<2 x i16> %x, <2 x i32> %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[Y:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[D:%.*]] = lshr <2 x i32> [[CONV]], [[TMP0]]
-; CHECK-NEXT:    ret <2 x i32> [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = lshr <2 x i32> [[CONV]], [[TMP0]]
+; CHECK-NEXT:    ret <2 x i32> [[D1]]
 ;
 entry:
   %conv = zext <2 x i16> %x to <2 x i32>
@@ -61,9 +61,9 @@ define i64 @t3(i64 %x, i32 %y) {
 define i32 @t4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[Y:%.*]], 5
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 5
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X:%.*]], [[DOTV]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 5
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[X:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %1 = shl i32 1, %y
   %2 = icmp ult i32 %1, 32
@@ -74,10 +74,10 @@ define i32 @t4(i32 %x, i32 %y) {
 
 define i32 @t5(i1 %x, i1 %y, i32 %V) {
 ; CHECK-LABEL: @t5(
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[X:%.*]], i32 5, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[V:%.*]], [[DOTV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[Y:%.*]], i32 [[TMP1]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i32 5, i32 6
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[Y:%.*]], i32 [[TMP1]], i32 [[V:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[V]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %1 = shl i32 1, %V
   %2 = select i1 %x, i32 32, i32 64

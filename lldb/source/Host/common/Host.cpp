@@ -92,29 +92,22 @@ using namespace lldb;
 using namespace lldb_private;
 
 #if !defined(__APPLE__) && !defined(_WIN32)
-struct MonitorInfo {
-  lldb::pid_t pid; // The process ID to monitor
-  Host::MonitorChildProcessCallback
-      callback; // The callback function to call when "pid" exits or signals
-  bool monitor_signals; // If true, call the callback when "pid" gets signaled.
-};
-
-static thread_result_t MonitorChildProcessThreadFunction(void *arg);
+static thread_result_t
+MonitorChildProcessThreadFunction(::pid_t pid,
+                                  Host::MonitorChildProcessCallback callback,
+                                  bool monitor_signals);
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
     const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
     bool monitor_signals) {
-  MonitorInfo *info_ptr = new MonitorInfo();
-
-  info_ptr->pid = pid;
-  info_ptr->callback = callback;
-  info_ptr->monitor_signals = monitor_signals;
-
   char thread_name[256];
   ::snprintf(thread_name, sizeof(thread_name),
              "<lldb.host.wait4(pid=%" PRIu64 ")>", pid);
-  return ThreadLauncher::LaunchThread(
-      thread_name, MonitorChildProcessThreadFunction, info_ptr, 0);
+  assert(pid <= UINT32_MAX);
+  return ThreadLauncher::LaunchThread(thread_name, [pid, callback,
+                                                    monitor_signals] {
+    return MonitorChildProcessThreadFunction(pid, callback, monitor_signals);
+  });
 }
 
 #ifndef __linux__
@@ -163,20 +156,14 @@ static bool CheckForMonitorCancellation() {
   return false;
 }
 
-static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
+static thread_result_t
+MonitorChildProcessThreadFunction(::pid_t pid,
+                                  Host::MonitorChildProcessCallback callback,
+                                  bool monitor_signals) {
   Log *log = GetLog(LLDBLog::Process);
-  const char *function = __FUNCTION__;
-  LLDB_LOGF(log, "%s (arg = %p) thread starting...", function, arg);
+  LLDB_LOG(log, "pid = {0}, monitor_signals = {1}", pid, monitor_signals);
 
-  MonitorInfo *info = (MonitorInfo *)arg;
-
-  const Host::MonitorChildProcessCallback callback = info->callback;
-  const bool monitor_signals = info->monitor_signals;
-
-  assert(info->pid <= UINT32_MAX);
-  const ::pid_t pid = monitor_signals ? -1 * getpgid(info->pid) : info->pid;
-
-  delete info;
+  pid = monitor_signals ? -1 * getpgid(pid) : pid;
 
   int status = -1;
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__)
@@ -194,8 +181,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
 
   while (true) {
     log = GetLog(LLDBLog::Process);
-    LLDB_LOGF(log, "%s ::waitpid (pid = %" PRIi32 ", &status, options = %i)...",
-              function, pid, options);
+    LLDB_LOG(log, "::waitpid({0}, &status, {1})...", pid, options);
 
     if (CheckForMonitorCancellation())
       break;
@@ -211,8 +197,8 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
         continue;
       else {
         LLDB_LOG(log,
-                 "arg = {0}, thread exiting because waitpid failed ({1})...",
-                 arg, llvm::sys::StrError());
+                 "pid = {0}, thread exiting because waitpid failed ({1})...",
+                 pid, llvm::sys::StrError());
         break;
       }
     } else if (wait_pid > 0) {
@@ -245,12 +231,11 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
 #endif
 
         log = GetLog(LLDBLog::Process);
-        LLDB_LOGF(log,
-                  "%s ::waitpid (pid = %" PRIi32
-                  ", &status, options = %i) => pid = %" PRIi32
-                  ", status = 0x%8.8x (%s), signal = %i, exit_state = %i",
-                  function, pid, options, wait_pid, status, status_cstr, signal,
-                  exit_status);
+        LLDB_LOG(log,
+                 "::waitpid({0}, &status, {1}) => pid = {2}, status = {3:x} "
+                 "({4}), signal = {5}, exit_state = {6}",
+                 pid, options, wait_pid, status, status_cstr, signal,
+                 exit_status);
 
         if (exited || (signal != 0 && monitor_signals)) {
           bool callback_return = false;
@@ -259,18 +244,18 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
 
           // If our process exited, then this thread should exit
           if (exited && wait_pid == abs(pid)) {
-            LLDB_LOGF(log,
-                      "%s (arg = %p) thread exiting because pid received "
-                      "exit signal...",
-                      __FUNCTION__, arg);
+            LLDB_LOG(
+                log,
+                "pid = {0} thread exiting because pid received exit signal...",
+                pid);
             break;
           }
           // If the callback returns true, it means this process should exit
           if (callback_return) {
-            LLDB_LOGF(log,
-                      "%s (arg = %p) thread exiting because callback "
-                      "returned true...",
-                      __FUNCTION__, arg);
+            LLDB_LOG(
+                log,
+                "pid = {0} thread exiting because callback returned true...",
+                pid);
             break;
           }
         }
@@ -278,9 +263,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
     }
   }
 
-  log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log, "%s (arg = %p) thread exiting...", __FUNCTION__, arg);
-
+  LLDB_LOG(GetLog(LLDBLog::Process), "pid = {0} thread exiting...", pid);
   return nullptr;
 }
 

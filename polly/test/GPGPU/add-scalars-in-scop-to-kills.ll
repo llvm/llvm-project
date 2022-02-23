@@ -22,15 +22,15 @@
 ; #pragma scop
 ;     for(int i = 0; i < 1000; i++) {
 ; XLoopInit:        x = 0;
-; 
+;
 ;         if (control1 > 2)
 ;             C1Add: x += 10;
 ;         if (control2 > 3)
 ;             C2Add: x += A[i];
-; 
+;
 ; BLoopAccumX:        B[i] += x;
 ;     }
-; 
+;
 ; #pragma endscop
 ; }
 ; ModuleID = 'test.ll'

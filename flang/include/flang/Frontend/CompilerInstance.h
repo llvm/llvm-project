@@ -13,6 +13,7 @@
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -46,6 +47,8 @@ class CompilerInstance {
   std::shared_ptr<Fortran::parser::Parsing> parsing_;
 
   std::unique_ptr<Fortran::semantics::Semantics> semantics_;
+
+  std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> rtTyTables_;
 
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream_ = &llvm::errs();
@@ -127,6 +130,16 @@ public:
 
   void SetSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
     semantics_ = std::move(semantics);
+  }
+
+  void setRtTyTables(
+      std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> tables) {
+    rtTyTables_ = std::move(tables);
+  }
+
+  Fortran::semantics::RuntimeDerivedTypeTables &getRtTyTables() {
+    assert(rtTyTables_ && "Missing runtime derived type tables!");
+    return *rtTyTables_;
   }
 
   /// }

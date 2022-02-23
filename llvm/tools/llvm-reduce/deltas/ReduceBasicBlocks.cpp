@@ -14,6 +14,7 @@
 #include "ReduceBasicBlocks.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"

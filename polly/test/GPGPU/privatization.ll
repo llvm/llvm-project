@@ -12,7 +12,7 @@
 ; the declare would not be generated unless a call to a kernel exists.
 ; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
 
-; 
+;
 ;
 ;    void checkPrivatization(int A[], int B[], int C[], int control) {
 ;      int x;

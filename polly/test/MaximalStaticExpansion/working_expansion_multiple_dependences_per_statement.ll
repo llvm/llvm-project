@@ -12,10 +12,10 @@
 ;   for (j = 0; j < Ni; j++) {
 ;     for (int i = 0; i<Nj; i++)
 ;       B[i] = i;
-; 
+;
 ;     for (int i = 0; i<Nj; i++)
 ;       D[i] = i;
-; 
+;
 ;     A[j] = B[j];
 ;     C[j] = D[j];
 ;   }

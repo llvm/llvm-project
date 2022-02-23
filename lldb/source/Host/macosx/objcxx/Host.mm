@@ -136,8 +136,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
 
 #if TARGET_OS_OSX
 
-static void *AcceptPIDFromInferior(void *arg) {
-  const char *connect_url = (const char *)arg;
+static void *AcceptPIDFromInferior(const char *connect_url) {
   ConnectionFileDescriptor file_conn;
   Status error;
   if (file_conn.Connect(connect_url, &error) == eConnectionStatusSuccess) {
@@ -286,7 +285,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   // to the process that we wanted to launch. So when our process actually
   // gets launched, we will handshake with it and get the process ID for it.
   llvm::Expected<HostThread> accept_thread = ThreadLauncher::LaunchThread(
-      unix_socket_name, AcceptPIDFromInferior, connect_url);
+      unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
   if (!accept_thread)
     return Status(accept_thread.takeError());

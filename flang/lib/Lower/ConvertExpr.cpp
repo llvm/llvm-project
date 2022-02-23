@@ -15,6 +15,7 @@
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
@@ -136,6 +137,14 @@ public:
   /// Generate a logical/boolean constant of `value`
   mlir::Value genBoolConstant(bool value) {
     return builder.createBool(getLoc(), value);
+  }
+
+  /// Generate a real constant with a value `value`.
+  template <int KIND>
+  mlir::Value genRealConstant(mlir::MLIRContext *context,
+                              const llvm::APFloat &value) {
+    mlir::Type fltTy = Fortran::lower::convertReal(context, KIND);
+    return builder.createRealConstant(getLoc(), fltTy, value);
   }
 
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
@@ -350,7 +359,27 @@ public:
     } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
       return genBoolConstant(value.IsTrue());
     } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
-      TODO(getLoc(), "genval real constant");
+      std::string str = value.DumpHexadecimal();
+      if constexpr (KIND == 2) {
+        llvm::APFloat floatVal{llvm::APFloatBase::IEEEhalf(), str};
+        return genRealConstant<KIND>(builder.getContext(), floatVal);
+      } else if constexpr (KIND == 3) {
+        llvm::APFloat floatVal{llvm::APFloatBase::BFloat(), str};
+        return genRealConstant<KIND>(builder.getContext(), floatVal);
+      } else if constexpr (KIND == 4) {
+        llvm::APFloat floatVal{llvm::APFloatBase::IEEEsingle(), str};
+        return genRealConstant<KIND>(builder.getContext(), floatVal);
+      } else if constexpr (KIND == 10) {
+        llvm::APFloat floatVal{llvm::APFloatBase::x87DoubleExtended(), str};
+        return genRealConstant<KIND>(builder.getContext(), floatVal);
+      } else if constexpr (KIND == 16) {
+        llvm::APFloat floatVal{llvm::APFloatBase::IEEEquad(), str};
+        return genRealConstant<KIND>(builder.getContext(), floatVal);
+      } else {
+        // convert everything else to double
+        llvm::APFloat floatVal{llvm::APFloatBase::IEEEdouble(), str};
+        return genRealConstant<KIND>(builder.getContext(), floatVal);
+      }
     } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
       TODO(getLoc(), "genval complex constant");
     } else /*constexpr*/ {

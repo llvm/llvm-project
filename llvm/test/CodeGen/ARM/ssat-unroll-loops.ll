@@ -125,63 +125,43 @@ while.end:                                        ; preds = %while.body, %while.
 define void @ssat_unroll_minmax(i16* nocapture readonly %pSrcA, i16* nocapture readonly %pSrcB, i16* nocapture writeonly %pDst, i32 %blockSize) {
 ; CHECK-LABEL: ssat_unroll_minmax:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r11, lr}
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB1_6
+; CHECK-NEXT:    beq .LBB1_5
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    movw r12, #32768
-; CHECK-NEXT:    sub lr, r3, #1
+; CHECK-NEXT:    sub r12, r3, #1
 ; CHECK-NEXT:    tst r3, #1
-; CHECK-NEXT:    movt r12, #65535
 ; CHECK-NEXT:    beq .LBB1_3
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.prol.preheader
-; CHECK-NEXT:    ldrsh r3, [r0], #2
-; CHECK-NEXT:    ldrsh r4, [r1], #2
-; CHECK-NEXT:    smulbb r3, r4, r3
-; CHECK-NEXT:    asr r4, r3, #14
-; CHECK-NEXT:    cmn r4, #32768
-; CHECK-NEXT:    mov r4, r12
-; CHECK-NEXT:    asrgt r4, r3, #14
-; CHECK-NEXT:    movw r3, #32767
-; CHECK-NEXT:    cmp r4, r3
-; CHECK-NEXT:    movge r4, r3
-; CHECK-NEXT:    mov r3, lr
-; CHECK-NEXT:    strh r4, [r2], #2
+; CHECK-NEXT:    ldrsh lr, [r0], #2
+; CHECK-NEXT:    ldrsh r3, [r1], #2
+; CHECK-NEXT:    smulbb r3, r3, lr
+; CHECK-NEXT:    ssat r3, #16, r3, asr #14
+; CHECK-NEXT:    strh r3, [r2], #2
+; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:  .LBB1_3: @ %while.body.prol.loopexit
-; CHECK-NEXT:    cmp lr, #0
-; CHECK-NEXT:    beq .LBB1_6
-; CHECK-NEXT:  @ %bb.4: @ %while.body.preheader1
-; CHECK-NEXT:    movw lr, #32767
-; CHECK-NEXT:  .LBB1_5: @ %while.body
+; CHECK-NEXT:    cmp r12, #0
+; CHECK-NEXT:    popeq {r11, pc}
+; CHECK-NEXT:  .LBB1_4: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrsh r4, [r0]
-; CHECK-NEXT:    ldrsh r5, [r1]
-; CHECK-NEXT:    smulbb r4, r5, r4
-; CHECK-NEXT:    asr r5, r4, #14
-; CHECK-NEXT:    cmn r5, #32768
-; CHECK-NEXT:    mov r5, r12
-; CHECK-NEXT:    asrgt r5, r4, #14
-; CHECK-NEXT:    cmp r5, lr
-; CHECK-NEXT:    movge r5, lr
-; CHECK-NEXT:    strh r5, [r2]
-; CHECK-NEXT:    ldrsh r4, [r0, #2]
-; CHECK-NEXT:    add r0, r0, #4
-; CHECK-NEXT:    ldrsh r5, [r1, #2]
-; CHECK-NEXT:    add r1, r1, #4
-; CHECK-NEXT:    smulbb r4, r5, r4
-; CHECK-NEXT:    asr r5, r4, #14
-; CHECK-NEXT:    cmn r5, #32768
-; CHECK-NEXT:    mov r5, r12
-; CHECK-NEXT:    asrgt r5, r4, #14
-; CHECK-NEXT:    cmp r5, lr
-; CHECK-NEXT:    movge r5, lr
+; CHECK-NEXT:    ldrsh r12, [r0]
 ; CHECK-NEXT:    subs r3, r3, #2
-; CHECK-NEXT:    strh r5, [r2, #2]
+; CHECK-NEXT:    ldrsh lr, [r1]
+; CHECK-NEXT:    smulbb r12, lr, r12
+; CHECK-NEXT:    ssat r12, #16, r12, asr #14
+; CHECK-NEXT:    strh r12, [r2]
+; CHECK-NEXT:    ldrsh r12, [r0, #2]
+; CHECK-NEXT:    add r0, r0, #4
+; CHECK-NEXT:    ldrsh lr, [r1, #2]
+; CHECK-NEXT:    add r1, r1, #4
+; CHECK-NEXT:    smulbb r12, lr, r12
+; CHECK-NEXT:    ssat r12, #16, r12, asr #14
+; CHECK-NEXT:    strh r12, [r2, #2]
 ; CHECK-NEXT:    add r2, r2, #4
-; CHECK-NEXT:    bne .LBB1_5
-; CHECK-NEXT:  .LBB1_6: @ %while.end
-; CHECK-NEXT:    pop {r4, r5, r11, pc}
+; CHECK-NEXT:    bne .LBB1_4
+; CHECK-NEXT:  .LBB1_5: @ %while.end
+; CHECK-NEXT:    pop {r11, pc}
 entry:
   %cmp.not7 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not7, label %while.end, label %while.body.preheader

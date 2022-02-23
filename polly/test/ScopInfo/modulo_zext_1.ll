@@ -14,7 +14,7 @@
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:                [N] -> { Stmt_for_body[i0] -> MemRef_A[1] : (1 + i0) mod 2 = 0; Stmt_for_body[i0] -> MemRef_A[0] : (i0) mod 2 = 0 }
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:               [N] -> { Stmt_for_body[i0] -> MemRef_A[1] : (1 + i0) mod 2 = 0; Stmt_for_body[i0] -> MemRef_A[0] : (i0) mod 2 = 0 }; 
+; CHECK-NEXT:               [N] -> { Stmt_for_body[i0] -> MemRef_A[1] : (1 + i0) mod 2 = 0; Stmt_for_body[i0] -> MemRef_A[0] : (i0) mod 2 = 0 };
 ; CHECK-NEXT:    }
 ;
 ;    void f(int *A, int N) {
