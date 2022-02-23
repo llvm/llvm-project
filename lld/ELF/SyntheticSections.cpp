@@ -1230,6 +1230,7 @@ StringTableSection::StringTableSection(StringRef name, bool dynamic)
       dynamic(dynamic) {
   // ELF string tables start with a NUL byte.
   strings.push_back("");
+  stringMap.try_emplace(CachedHashStringRef(""), 0);
   size = 1;
 }
 
@@ -2156,9 +2157,7 @@ void SymbolTableBaseSection::sortSymTabSymbols() {
 void SymbolTableBaseSection::addSymbol(Symbol *b) {
   // Adding a local symbol to a .dynsym is a bug.
   assert(this->type != SHT_DYNSYM || !b->isLocal());
-
-  bool hashIt = b->isLocal() && config->optimize >= 2;
-  symbols.push_back({b, strTabSec.addString(b->getName(), hashIt)});
+  symbols.push_back({b, strTabSec.addString(b->getName(), false)});
 }
 
 size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {

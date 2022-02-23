@@ -62,6 +62,21 @@ else:
     import queue as queue
 
 
+def strtobool(val):
+  """Convert a string representation of truth to a bool following LLVM's CLI argument parsing."""
+
+  val = val.lower()
+  if val in ['', 'true', '1']:
+    return True
+  elif val in ['false', '0']:
+    return False
+
+  # Return ArgumentTypeError so that argparse does not substitute its own error message
+  raise argparse.ArgumentTypeError(
+    "'{}' is invalid value for boolean argument! Try 0 or 1.".format(val)
+  )
+
+
 def find_compilation_database(path):
   """Adjusts the directory until a compilation database is found."""
   result = './'
@@ -82,15 +97,20 @@ def make_absolute(f, directory):
 def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
                         header_filter, allow_enabling_alpha_checkers,
                         extra_arg, extra_arg_before, quiet, config,
-                        line_filter):
+                        line_filter, use_color):
   """Gets a command line for clang-tidy."""
-  start = [clang_tidy_binary, '--use-color']
+  start = [clang_tidy_binary]
   if allow_enabling_alpha_checkers:
     start.append('-allow-enabling-analyzer-alpha-checkers')
   if header_filter is not None:
     start.append('-header-filter=' + header_filter)
   if line_filter is not None:
     start.append('-line-filter=' + line_filter)
+  if use_color is not None:
+    if use_color:
+      start.append('--use-color')
+    else:
+      start.append('--use-color=false')
   if checks:
     start.append('-checks=' + checks)
   if tmpdir is not None:
@@ -168,7 +188,8 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
                                      tmpdir, build_path, args.header_filter,
                                      args.allow_enabling_alpha_checkers,
                                      args.extra_arg, args.extra_arg_before,
-                                     args.quiet, args.config, args.line_filter)
+                                     args.quiet, args.config, args.line_filter,
+                                     args.use_color)
 
     proc = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = proc.communicate()
@@ -231,6 +252,10 @@ def main():
                       'after applying fixes')
   parser.add_argument('-style', default='file', help='The style of reformat '
                       'code after applying fixes')
+  parser.add_argument('-use-color', type=strtobool, nargs='?', const=True,
+                      help='Use colors in diagnostics, overriding clang-tidy\'s'
+                      ' default behavior. This option overrides the \'UseColor'
+                      '\' option in .clang-tidy file, if any.')
   parser.add_argument('-p', dest='build_path',
                       help='Path used to read a compile command database.')
   parser.add_argument('-extra-arg', dest='extra_arg',
@@ -258,7 +283,8 @@ def main():
                                      None, build_path, args.header_filter,
                                      args.allow_enabling_alpha_checkers,
                                      args.extra_arg, args.extra_arg_before,
-                                     args.quiet, args.config, args.line_filter)
+                                     args.quiet, args.config, args.line_filter,
+                                     args.use_color)
     invocation.append('-list-checks')
     invocation.append('-')
     if args.quiet:

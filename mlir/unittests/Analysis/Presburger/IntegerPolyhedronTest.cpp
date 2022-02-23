@@ -16,7 +16,7 @@
 #include <numeric>
 
 namespace mlir {
-
+using namespace presburger_utils;
 using testing::ElementsAre;
 
 enum class TestFunction { Sample, Empty };
@@ -158,7 +158,7 @@ TEST(IntegerPolyhedronTest, removeIdRange) {
   EXPECT_THAT(set.getInequality(0),
               testing::ElementsAre(10, 11, 12, 20, 30, 40));
 
-  set.removeIdRange(IntegerPolyhedron::IdKind::Dimension, 0, 2);
+  set.removeIdRange(IntegerPolyhedron::IdKind::SetDim, 0, 2);
   EXPECT_THAT(set.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
 
   set.removeIdRange(IntegerPolyhedron::IdKind::Local, 1, 1);
@@ -1057,12 +1057,14 @@ TEST(IntegerPolyhedronTest, negativeDividends) {
 void expectRationalLexMin(const IntegerPolyhedron &poly,
                           ArrayRef<Fraction> min) {
   auto lexMin = poly.getRationalLexMin();
-  ASSERT_TRUE(lexMin.hasValue());
+  ASSERT_TRUE(lexMin.isBounded());
   EXPECT_EQ(ArrayRef<Fraction>(*lexMin), min);
 }
 
-void expectNoRationalLexMin(const IntegerPolyhedron &poly) {
-  EXPECT_FALSE(poly.getRationalLexMin().hasValue());
+void expectNoRationalLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
+  ASSERT_NE(kind, OptimumKind::Bounded)
+      << "Use expectRationalLexMin for bounded min";
+  EXPECT_EQ(poly.getRationalLexMin().getKind(), kind);
 }
 
 TEST(IntegerPolyhedronTest, getRationalLexMin) {
@@ -1118,6 +1120,7 @@ TEST(IntegerPolyhedronTest, getRationalLexMin) {
 
   // Same as above with one constraint removed, making the lexmin unbounded.
   expectNoRationalLexMin(
+      OptimumKind::Unbounded,
       parsePoly("(x, y, z, w) : (3*x + 2*y + 10 >= 0, -4*x + 7*y + 10 >= 0,"
                 "-3*y + 10 >= 0, 3*z + 2*w - 9*x - 12*y >= 0,"
                 "-4*z + 7*w + - 9*x - 9*y - 10>= 0)",
@@ -1125,12 +1128,14 @@ TEST(IntegerPolyhedronTest, getRationalLexMin) {
 
   // Again, the lexmin is unbounded.
   expectNoRationalLexMin(
+      OptimumKind::Unbounded,
       parsePoly("(x, y, z) : (2*x + 5*y + 8*z - 10 >= 0,"
                 "2*x + 10*y + 8*z - 10 >= 0, 2*x + 5*y + 10*z - 10 >= 0)",
                 &context));
 
   // The set is empty.
-  expectNoRationalLexMin(parsePoly("(x) : (2*x >= 0, -x - 1 >= 0)", &context));
+  expectNoRationalLexMin(OptimumKind::Empty,
+                         parsePoly("(x) : (2*x >= 0, -x - 1 >= 0)", &context));
 }
 
 static void

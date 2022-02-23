@@ -23784,7 +23784,7 @@ TEST_F(FormatTest, Concepts) {
                "concept C = [] && requires(T t) { typename T::size_type; };");
 }
 
-TEST_F(FormatTest, RequiresClauses) {
+TEST_F(FormatTest, RequiresClausesPositions) {
   auto Style = getLLVMStyle();
   EXPECT_EQ(Style.RequiresClausePosition, FormatStyle::RCPS_OwnLine);
   EXPECT_EQ(Style.IndentRequiresClause, true);
@@ -24005,6 +24005,16 @@ TEST_F(FormatTest, RequiresClauses) {
                "requires Foo<AAAAAAAAAAAAAAAA>\n"
                "Bar(T) -> Bar<T>;",
                ColumnStyle);
+}
+
+TEST_F(FormatTest, RequiresClauses) {
+  verifyFormat("struct [[nodiscard]] zero_t {\n"
+               "  template <class T>\n"
+               "    requires requires { number_zero_v<T>; }\n"
+               "  [[nodiscard]] constexpr operator T() const {\n"
+               "    return number_zero_v<T>;\n"
+               "  }\n"
+               "};");
 }
 
 TEST_F(FormatTest, StatementAttributeLikeMacros) {

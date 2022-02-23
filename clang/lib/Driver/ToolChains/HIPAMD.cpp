@@ -121,6 +121,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
 
+  // Look for archive of bundled bitcode in arguments, and add temporary files
+  // for the extracted archive of bitcode to inputs.
+  auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LldArgs, "amdgcn",
+                             TargetID,
+                             /*IsBitCodeSDL=*/true,
+                             /*PostClangLink=*/false);
+
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Lld, LldArgs, Inputs, Output));

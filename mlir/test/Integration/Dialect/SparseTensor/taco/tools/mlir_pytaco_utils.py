@@ -55,15 +55,15 @@ def _get_c_shared_lib() -> ctypes.CDLL:
   c_lib = ctypes.CDLL(_get_support_lib_name())
 
   try:
-    c_lib.convertToMLIRSparseTensor.restype = ctypes.c_void_p
+    c_lib.convertToMLIRSparseTensorF64.restype = ctypes.c_void_p
   except Exception as e:
-    raise ValueError("Missing function convertToMLIRSparseTensor from "
+    raise ValueError("Missing function convertToMLIRSparseTensorF64 from "
                      f"the supporting C shared library: {e} ") from e
 
   try:
-    c_lib.convertFromMLIRSparseTensor.restype = ctypes.c_void_p
+    c_lib.convertFromMLIRSparseTensorF64.restype = ctypes.c_void_p
   except Exception as e:
-    raise ValueError("Missing function convertFromMLIRSparseTensor from "
+    raise ValueError("Missing function convertFromMLIRSparseTensorF64 from "
                      f"the C shared library: {e} ") from e
 
   return c_lib
@@ -100,9 +100,10 @@ def sparse_tensor_to_coo_tensor(
   shape = ctypes.POINTER(ctypes.c_ulonglong)()
   values = ctypes.POINTER(np.ctypeslib.as_ctypes_type(dtype))()
   indices = ctypes.POINTER(ctypes.c_ulonglong)()
-  c_lib.convertFromMLIRSparseTensor(sparse_tensor, ctypes.byref(rank),
-                                    ctypes.byref(nse), ctypes.byref(shape),
-                                    ctypes.byref(values), ctypes.byref(indices))
+  c_lib.convertFromMLIRSparseTensorF64(sparse_tensor, ctypes.byref(rank),
+                                       ctypes.byref(nse), ctypes.byref(shape),
+                                       ctypes.byref(values),
+                                       ctypes.byref(indices))
 
   # Convert the returned values to the corresponding numpy types.
   shape = np.ctypeslib.as_array(shape, shape=[rank.value])
@@ -138,8 +139,8 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
   indices = np_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
 
   c_lib = _get_c_shared_lib()
-  ptr = c_lib.convertToMLIRSparseTensor(rank, nse, shape, values, indices)
-  assert ptr is not None, "Problem with calling convertToMLIRSparseTensor"
+  ptr = c_lib.convertToMLIRSparseTensorF64(rank, nse, shape, values, indices)
+  assert ptr is not None, "Problem with calling convertToMLIRSparseTensorF64"
   return ptr
 
 
