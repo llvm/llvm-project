@@ -12,5 +12,8 @@ static_library("Pseudo") {
     "LRGraph.cpp",
     "LRTable.cpp",
     "LRTableBuild.cpp",
+    "Lex.cpp",
+    "Preprocess.cpp",
+    "Token.cpp",
   ]
 }
