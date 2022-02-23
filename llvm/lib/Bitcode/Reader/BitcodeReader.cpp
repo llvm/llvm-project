@@ -488,7 +488,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   /// types of a Type*. This is used during upgrades of typed pointer IR in
   /// opaque pointer mode.
   DenseMap<unsigned, SmallVector<unsigned, 1>> ContainedTypeIDs;
-  DenseMap<Function *, FunctionType *> FunctionTypes;
+  DenseMap<Function *, unsigned> FunctionTypeIDs;
   BitcodeReaderValueList ValueList;
   Optional<MetadataLoader> MDLoader;
   std::vector<Comdat *> ComdatList;
@@ -3503,7 +3503,7 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
 
   assert(Func->getFunctionType() == FTy &&
          "Incorrect fully specified type provided for function");
-  FunctionTypes[Func] = cast<FunctionType>(FTy);
+  FunctionTypeIDs[Func] = FTyID;
 
   Func->setCallingConv(CC);
   bool isProto = Record[2];
@@ -4092,14 +4092,14 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
   unsigned ModuleMDLoaderSize = MDLoader->size();
 
   // Add all the function arguments to the value table.
-#ifndef NDEBUG
   unsigned ArgNo = 0;
-  FunctionType *FTy = FunctionTypes[F];
-#endif
+  unsigned FTyID = FunctionTypeIDs[F];
   for (Argument &I : F->args()) {
-    assert(I.getType() == FTy->getParamType(ArgNo++) &&
+    unsigned ArgTyID = getContainedTypeID(FTyID, ArgNo + 1);
+    assert(I.getType() == getTypeByID(ArgTyID) &&
            "Incorrect fully specified type for Function Argument");
-    ValueList.push_back(&I, TODOTypeID);
+    ValueList.push_back(&I, ArgTyID);
+    ++ArgNo;
   }
   unsigned NextValueNo = ValueList.size();
   BasicBlock *CurBB = nullptr;
