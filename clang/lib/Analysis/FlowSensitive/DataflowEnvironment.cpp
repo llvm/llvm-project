@@ -29,6 +29,12 @@
 namespace clang {
 namespace dataflow {
 
+// FIXME: convert these to parameters of the analysis or environment. Current
+// settings have been experimentaly validated, but only for a particular
+// analysis.
+static constexpr int MaxCompositeValueDepth = 3;
+static constexpr int MaxCompositeValueSize = 1000;
+
 /// Returns a map consisting of key-value entries that are present in both maps.
 template <typename K, typename V>
 llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
@@ -336,25 +342,40 @@ Value *Environment::getValue(const Expr &E, SkipPast SP) const {
 
 Value *Environment::createValue(QualType Type) {
   llvm::DenseSet<QualType> Visited;
-  return createValueUnlessSelfReferential(Type, Visited);
+  int CreatedValuesCount = 0;
+  Value *Val = createValueUnlessSelfReferential(Type, Visited, /*Depth=*/0,
+                                                CreatedValuesCount);
+  if (CreatedValuesCount > MaxCompositeValueSize) {
+    llvm::errs() << "Attempting to initialize a huge value of type: "
+                 << Type.getAsString() << "\n";
+  }
+  return Val;
 }
 
 Value *Environment::createValueUnlessSelfReferential(
-    QualType Type, llvm::DenseSet<QualType> &Visited) {
+    QualType Type, llvm::DenseSet<QualType> &Visited, int Depth,
+    int &CreatedValuesCount) {
   assert(!Type.isNull());
 
+  // Allow unlimited fields at depth 1; only cap at deeper nesting levels.
+  if ((Depth > 1 && CreatedValuesCount > MaxCompositeValueSize) ||
+      Depth > MaxCompositeValueDepth)
+    return nullptr;
+
   if (Type->isIntegerType()) {
+    CreatedValuesCount++;
     return &takeOwnership(std::make_unique<IntegerValue>());
   }
 
   if (Type->isReferenceType()) {
+    CreatedValuesCount++;
     QualType PointeeType = Type->getAs<ReferenceType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
       Visited.insert(PointeeType.getCanonicalType());
-      Value *PointeeVal =
-          createValueUnlessSelfReferential(PointeeType, Visited);
+      Value *PointeeVal = createValueUnlessSelfReferential(
+          PointeeType, Visited, Depth, CreatedValuesCount);
       Visited.erase(PointeeType.getCanonicalType());
 
       if (PointeeVal != nullptr)
@@ -365,13 +386,14 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   if (Type->isPointerType()) {
+    CreatedValuesCount++;
     QualType PointeeType = Type->getAs<PointerType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
       Visited.insert(PointeeType.getCanonicalType());
-      Value *PointeeVal =
-          createValueUnlessSelfReferential(PointeeType, Visited);
+      Value *PointeeVal = createValueUnlessSelfReferential(
+          PointeeType, Visited, Depth, CreatedValuesCount);
       Visited.erase(PointeeType.getCanonicalType());
 
       if (PointeeVal != nullptr)
@@ -382,6 +404,7 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   if (Type->isStructureOrClassType()) {
+    CreatedValuesCount++;
     // FIXME: Initialize only fields that are accessed in the context that is
     // being analyzed.
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
@@ -394,7 +417,8 @@ Value *Environment::createValueUnlessSelfReferential(
 
       Visited.insert(FieldType.getCanonicalType());
       FieldValues.insert(
-          {Field, createValueUnlessSelfReferential(FieldType, Visited)});
+          {Field, createValueUnlessSelfReferential(
+                      FieldType, Visited, Depth + 1, CreatedValuesCount)});
       Visited.erase(FieldType.getCanonicalType());
     }
 
