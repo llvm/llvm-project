@@ -5,7 +5,13 @@
 // RUN: %clang_cc1 -x hip -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefixes=HIP-OLD,CHECK
 // RUN: %clang_cc1 -fhip-new-launch-api -x hip -emit-llvm %s -o - \
-// RUN: | FileCheck %s --check-prefixes=HIP-NEW,CHECK
+// RUN: | FileCheck %s --check-prefixes=HIP-NEW,LEGACY,CHECK
+// RUN: %clang_cc1 -fhip-new-launch-api -x hip -emit-llvm %s -o - \
+// RUN:   -fgpu-default-stream=legacy \
+// RUN:   | FileCheck %s --check-prefixes=HIP-NEW,LEGACY,CHECK
+// RUN: %clang_cc1 -fhip-new-launch-api -x hip -emit-llvm %s -o - \
+// RUN:   -fgpu-default-stream=per-thread -DHIP_API_PER_THREAD_DEFAULT_STREAM \
+// RUN:   | FileCheck %s --check-prefixes=HIP-NEW,PTH,CHECK
 
 #include "Inputs/cuda.h"
 
@@ -13,7 +19,8 @@
 // HIP-OLD: call{{.*}}hipSetupArgument
 // HIP-OLD: call{{.*}}hipLaunchByPtr
 // HIP-NEW: call{{.*}}__hipPopCallConfiguration
-// HIP-NEW: call{{.*}}hipLaunchKernel
+// LEGACY: call{{.*}}hipLaunchKernel
+// PTH: call{{.*}}hipLaunchKernel_spt
 // CUDA-OLD: call{{.*}}cudaSetupArgument
 // CUDA-OLD: call{{.*}}cudaLaunch
 // CUDA-NEW: call{{.*}}__cudaPopCallConfiguration

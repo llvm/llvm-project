@@ -24,7 +24,6 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -252,7 +251,9 @@ ExecutionEngine::create(ModuleOp m, const ExecutionEngineOptions &options) {
   auto objectLinkingLayerCreator = [&](ExecutionSession &session,
                                        const Triple &tt) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, []() { return std::make_unique<SectionMemoryManager>(); });
+        session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
+          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
+        });
 
     // Register JIT event listeners if they are enabled.
     if (engine->gdbListener)

@@ -123,14 +123,11 @@ public:
     };
 
 
-    %apply uint64_t& INOUT { uint64_t& progress_id };
-    %apply uint64_t& INOUT { uint64_t& completed };
-    %apply uint64_t& INOUT { uint64_t& total };
-    %apply bool& INOUT { bool& is_debugger_specific };
     static const char *GetProgressFromEvent(const lldb::SBEvent &event,
-                                        uint64_t &progress_id,
-                                        uint64_t &completed, uint64_t &total,
-                                        bool &is_debugger_specific);
+                                        uint64_t &OUTPUT,
+                                        uint64_t &OUTPUT,
+                                        uint64_t &OUTPUT,
+                                        bool &OUTPUT);
 
     SBBroadcaster GetBroadcaster();
 

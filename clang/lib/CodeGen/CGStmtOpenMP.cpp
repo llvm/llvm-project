@@ -6380,6 +6380,13 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   if (CGM.getLangOpts().OMPTargetTriples.empty())
     IsOffloadEntry = false;
 
+  if (CGM.getLangOpts().OpenMPOffloadMandatory && !IsOffloadEntry) {
+    unsigned DiagID = CGM.getDiags().getCustomDiagID(
+        DiagnosticsEngine::Error,
+        "No offloading entry generated while offloading is mandatory.");
+    CGM.getDiags().Report(DiagID);
+  }
+
   assert(CGF.CurFuncDecl && "No parent declaration for target region!");
   StringRef ParentName;
   // In case we have Ctors/Dtors we use the complete type variant to produce

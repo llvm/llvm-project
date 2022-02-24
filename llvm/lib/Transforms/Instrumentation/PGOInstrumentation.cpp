@@ -940,7 +940,7 @@ static void instrumentOneFunc(
     bool IsCS) {
   // Split indirectbr critical edges here before computing the MST rather than
   // later in getInstrBB() to avoid invalidating it.
-  SplitIndirectBrCriticalEdges(F, BPI, BFI);
+  SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI, BFI);
 
   FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(
       F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry);
@@ -1929,7 +1929,7 @@ static bool annotateAllFunctions(
     auto *BFI = LookupBFI(F);
     // Split indirectbr critical edges here before computing the MST rather than
     // later in getInstrBB() to avoid invalidating it.
-    SplitIndirectBrCriticalEdges(F, BPI, BFI);
+    SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI, BFI);
     PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
                     InstrumentFuncEntry);
     // When AllMinusOnes is true, it means the profile for the function

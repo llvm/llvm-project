@@ -46,7 +46,7 @@ uptr StackTrace::GetNextInstructionPc(uptr pc) {
   }
   // bail-out if could not figure out the instruction size
   return 0;
-#elif SANITIZER_I386 || SANITIZER_X32 || SANITIZER_X64
+#elif SANITIZER_S390 || SANITIZER_I386 || SANITIZER_X32 || SANITIZER_X64
   return pc + 1;
 #else
   return pc + 4;

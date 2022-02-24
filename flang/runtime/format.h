@@ -111,7 +111,9 @@ private:
   };
 
   void SkipBlanks() {
-    while (offset_ < formatLength_ && format_[offset_] == ' ') {
+    while (offset_ < formatLength_ &&
+        (format_[offset_] == ' ' || format_[offset_] == '\t' ||
+            format_[offset_] == '\v')) {
       ++offset_;
     }
   }

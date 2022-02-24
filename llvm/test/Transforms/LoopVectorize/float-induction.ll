@@ -1384,12 +1384,11 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ; VEC4_INTERL1-LABEL: @non_primary_iv_float_scalar(
 ; VEC4_INTERL1-NEXT:  entry:
-; VEC4_INTERL1-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; VEC4_INTERL1-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; VEC4_INTERL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
+; VEC4_INTERL1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; VEC4_INTERL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; VEC4_INTERL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC4_INTERL1:       vector.ph:
-; VEC4_INTERL1-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
+; VEC4_INTERL1-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 9223372036854775804
 ; VEC4_INTERL1-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC4_INTERL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL1:       vector.body:
@@ -1437,7 +1436,7 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ; VEC4_INTERL1-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VEC4_INTERL1:       middle.block:
-; VEC4_INTERL1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
+; VEC4_INTERL1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; VEC4_INTERL1-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VEC4_INTERL1:       scalar.ph:
 ; VEC4_INTERL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1463,12 +1462,11 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ;
 ; VEC4_INTERL2-LABEL: @non_primary_iv_float_scalar(
 ; VEC4_INTERL2-NEXT:  entry:
-; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; VEC4_INTERL2-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; VEC4_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 8
+; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; VEC4_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; VEC4_INTERL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC4_INTERL2:       vector.ph:
-; VEC4_INTERL2-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775800
+; VEC4_INTERL2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 9223372036854775800
 ; VEC4_INTERL2-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC4_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL2:       vector.body:
@@ -1556,7 +1554,7 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VEC4_INTERL2:       middle.block:
-; VEC4_INTERL2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
+; VEC4_INTERL2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; VEC4_INTERL2-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VEC4_INTERL2:       scalar.ph:
 ; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1582,12 +1580,11 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ;
 ; VEC1_INTERL2-LABEL: @non_primary_iv_float_scalar(
 ; VEC1_INTERL2-NEXT:  entry:
-; VEC1_INTERL2-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; VEC1_INTERL2-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; VEC1_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; VEC1_INTERL2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; VEC1_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; VEC1_INTERL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC1_INTERL2:       vector.ph:
-; VEC1_INTERL2-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
+; VEC1_INTERL2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 9223372036854775806
 ; VEC1_INTERL2-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
@@ -1615,7 +1612,7 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VEC1_INTERL2:       middle.block:
-; VEC1_INTERL2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
+; VEC1_INTERL2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VEC1_INTERL2:       scalar.ph:
 ; VEC1_INTERL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1641,12 +1638,11 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ;
 ; VEC2_INTERL1_PRED_STORE-LABEL: @non_primary_iv_float_scalar(
 ; VEC2_INTERL1_PRED_STORE-NEXT:  entry:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC2_INTERL1_PRED_STORE:       vector.ph:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 9223372036854775806
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC2_INTERL1_PRED_STORE:       vector.body:
@@ -1676,7 +1672,7 @@ define void @non_primary_iv_float_scalar(float* %A, i64 %N) {
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VEC2_INTERL1_PRED_STORE:       middle.block:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; VEC2_INTERL1_PRED_STORE:       for.body:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]

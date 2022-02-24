@@ -1024,6 +1024,15 @@ def : EOR3_pattern<v8i16>;
 def : EOR3_pattern<v4i32>;
 def : EOR3_pattern<v2i64>;
 
+class BCAX_pattern<ValueType VecTy>
+  : Pat<(xor (VecTy V128:$Vn), (and (VecTy V128:$Vm), (vnot (VecTy V128:$Va)))),
+        (BCAX (VecTy V128:$Vn), (VecTy V128:$Vm), (VecTy V128:$Va))>;
+
+def : BCAX_pattern<v16i8>;
+def : BCAX_pattern<v8i16>;
+def : BCAX_pattern<v4i32>;
+def : BCAX_pattern<v2i64>;
+
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v16i8>;
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v8i16>;
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v4i32>;

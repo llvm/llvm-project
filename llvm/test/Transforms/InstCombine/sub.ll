@@ -1226,9 +1226,8 @@ define <2 x i32> @test63vec(<2 x i32> %A) {
 
 define i32 @test64(i32 %x) {
 ; CHECK-LABEL: @test64(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 255
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 255
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[DOTNEG]]
 ;
   %1 = xor i32 %x, -1
@@ -1240,9 +1239,8 @@ define i32 @test64(i32 %x) {
 
 define i32 @test65(i32 %x) {
 ; CHECK-LABEL: @test65(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], -256
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 -256
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 -256)
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[DOTNEG]]
 ;
   %1 = xor i32 %x, -1
@@ -1254,9 +1252,8 @@ define i32 @test65(i32 %x) {
 
 define i32 @test66(i32 %x) {
 ; CHECK-LABEL: @test66(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], -101
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 -101
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add nuw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 -101)
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[DOTNEG]]
 ;
   %1 = xor i32 %x, -1
@@ -1268,9 +1265,8 @@ define i32 @test66(i32 %x) {
 
 define i32 @test67(i32 %x) {
 ; CHECK-LABEL: @test67(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X:%.*]], 100
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 100
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 100)
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[DOTNEG]]
 ;
   %1 = xor i32 %x, -1
@@ -1283,9 +1279,8 @@ define i32 @test67(i32 %x) {
 ; Check splat vectors too
 define <2 x i32> @test68(<2 x i32> %x) {
 ; CHECK-LABEL: @test68(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 255, i32 255>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> <i32 255, i32 255>
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 255, i32 255>)
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[DOTNEG]]
 ;
   %1 = xor <2 x i32> %x, <i32 -1, i32 -1>
@@ -1298,9 +1293,8 @@ define <2 x i32> @test68(<2 x i32> %x) {
 ; And non-splat constant vectors.
 define <2 x i32> @test69(<2 x i32> %x) {
 ; CHECK-LABEL: @test69(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 255, i32 127>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> <i32 255, i32 127>
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add <2 x i32> [[TMP2]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 255, i32 127>)
+; CHECK-NEXT:    [[DOTNEG:%.*]] = add <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[DOTNEG]]
 ;
   %1 = xor <2 x i32> %x, <i32 -1, i32 -1>

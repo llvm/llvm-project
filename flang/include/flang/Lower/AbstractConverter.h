@@ -57,6 +57,7 @@ struct Variable;
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
+class StatementContext;
 
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
@@ -79,25 +80,32 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Generate the address of the location holding the expression, someExpr.
-  virtual fir::ExtendedValue genExprAddr(const SomeExpr &,
+  virtual fir::ExtendedValue genExprAddr(const SomeExpr &, StatementContext &,
                                          mlir::Location *loc = nullptr) = 0;
   /// Generate the address of the location holding the expression, someExpr
-  fir::ExtendedValue genExprAddr(const SomeExpr *someExpr, mlir::Location loc) {
-    return genExprAddr(*someExpr, &loc);
+  fir::ExtendedValue genExprAddr(const SomeExpr *someExpr,
+                                 StatementContext &stmtCtx,
+                                 mlir::Location loc) {
+    return genExprAddr(*someExpr, stmtCtx, &loc);
   }
 
   /// Generate the computations of the expression to produce a value
-  virtual fir::ExtendedValue genExprValue(const SomeExpr &,
+  virtual fir::ExtendedValue genExprValue(const SomeExpr &, StatementContext &,
                                           mlir::Location *loc = nullptr) = 0;
   /// Generate the computations of the expression, someExpr, to produce a value
   fir::ExtendedValue genExprValue(const SomeExpr *someExpr,
+                                  StatementContext &stmtCtx,
                                   mlir::Location loc) {
-    return genExprValue(*someExpr, &loc);
+    return genExprValue(*someExpr, stmtCtx, &loc);
   }
 
   /// Get FoldingContext that is required for some expression
   /// analysis.
   virtual Fortran::evaluate::FoldingContext &getFoldingContext() = 0;
+
+  /// Host associated variables are grouped as a tuple. This returns that value,
+  /// which is itself a reference. Use bindTuple() to set this value.
+  virtual mlir::Value hostAssocTupleValue() = 0;
 
   //===--------------------------------------------------------------------===//
   // Types

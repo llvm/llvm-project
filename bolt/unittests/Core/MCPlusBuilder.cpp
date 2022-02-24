@@ -110,3 +110,29 @@ TEST_P(MCPlusBuilderTester, AliasSmallerAX) {
 }
 
 #endif // X86_AVAILABLE
+
+TEST_P(MCPlusBuilderTester, Annotation) {
+  MCInst Inst;
+  bool Success = BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
+                                         BC->Ctx.get());
+  ASSERT_TRUE(Success);
+  MCSymbol *LPSymbol = BC->Ctx->createNamedTempSymbol("LP");
+  uint64_t Value = INT32_MIN;
+  // Test encodeAnnotationImm using this indirect way
+  BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value));
+  // Round-trip encoding-decoding check for negative values
+  Optional<MCPlus::MCLandingPad> EHInfo = BC->MIB->getEHInfo(Inst);
+  ASSERT_TRUE(EHInfo.hasValue());
+  MCPlus::MCLandingPad LP = EHInfo.getValue();
+  uint64_t DecodedValue = LP.second;
+  ASSERT_EQ(Value, DecodedValue);
+
+  // Large int64 should trigger an out of range assertion
+  Value = 0x1FF'FFFF'FFFF'FFFFULL;
+  Inst.clear();
+  Success = BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
+                                    BC->Ctx.get());
+  ASSERT_TRUE(Success);
+  ASSERT_DEATH(BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value)),
+               "annotation value out of range");
+}

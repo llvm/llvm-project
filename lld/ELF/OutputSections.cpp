@@ -8,6 +8,7 @@
 
 #include "OutputSections.h"
 #include "Config.h"
+#include "InputFiles.h"
 #include "LinkerScript.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"

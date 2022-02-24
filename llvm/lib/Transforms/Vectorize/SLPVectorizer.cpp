@@ -2555,6 +2555,12 @@ private:
 
     Instruction *Inst = nullptr;
 
+    /// Opcode of the current instruction in the schedule data.
+    Value *OpValue = nullptr;
+
+    /// The TreeEntry that this instruction corresponds to.
+    TreeEntry *TE = nullptr;
+
     /// Points to the head in an instruction bundle (and always to this for
     /// single instructions).
     ScheduleData *FirstInBundle = nullptr;
@@ -2575,9 +2581,6 @@ private:
     /// the current SchedulingRegionID of BlockScheduling.
     int SchedulingRegionID = 0;
 
-    /// Used for getting a "good" final ordering of instructions.
-    int SchedulingPriority = 0;
-
     /// The number of dependencies. Constitutes of the number of users of the
     /// instruction plus the number of dependent memory instructions (if any).
     /// This value is calculated on demand.
@@ -2590,18 +2593,12 @@ private:
     /// Note that this is negative as long as Dependencies is not calculated.
     int UnscheduledDeps = InvalidDeps;
 
+    /// The lane of this node in the TreeEntry.
+    int Lane = -1;
+
     /// True if this instruction is scheduled (or considered as scheduled in the
     /// dry-run).
     bool IsScheduled = false;
-
-    /// Opcode of the current instruction in the schedule data.
-    Value *OpValue = nullptr;
-
-    /// The TreeEntry that this instruction corresponds to.
-    TreeEntry *TE = nullptr;
-
-    /// The lane of this node in the TreeEntry.
-    int Lane = -1;
   };
 
 #ifndef NDEBUG
@@ -2639,10 +2636,19 @@ private:
       ++SchedulingRegionID;
     }
 
-    ScheduleData *getScheduleData(Value *V) {
-      ScheduleData *SD = ScheduleDataMap[V];
+    ScheduleData *getScheduleData(Instruction *I) {
+      if (BB != I->getParent())
+        // Avoid lookup if can't possibly be in map.
+        return nullptr;
+      ScheduleData *SD = ScheduleDataMap[I];
       if (SD && isInSchedulingRegion(SD))
         return SD;
+      return nullptr;
+    }
+
+    ScheduleData *getScheduleData(Value *V) {
+      if (auto *I = dyn_cast<Instruction>(V))
+        return getScheduleData(I);
       return nullptr;
     }
 
@@ -2756,6 +2762,8 @@ private:
         assert(SD && "primary scheduledata must exist in window");
         assert(isInSchedulingRegion(SD) &&
                "primary schedule data not in window?");
+        assert(isInSchedulingRegion(SD->FirstInBundle) &&
+               "entire bundle in window!");
         (void)SD;
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
       }
@@ -2845,7 +2853,7 @@ private:
     /// Attaches ScheduleData to Instruction.
     /// Note that the mapping survives during all vectorization iterations, i.e.
     /// ScheduleData structures are recycled.
-    DenseMap<Value *, ScheduleData *> ScheduleDataMap;
+    DenseMap<Instruction *, ScheduleData *> ScheduleDataMap;
 
     /// Attaches ScheduleData to Instruction with the leading key.
     DenseMap<Value *, SmallDenseMap<Value *, ScheduleData *>>
@@ -7762,8 +7770,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
 
       // Handle def-use chain dependencies.
       if (BundleMember->OpValue != BundleMember->Inst) {
-        ScheduleData *UseSD = getScheduleData(BundleMember->Inst);
-        if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+        if (ScheduleData *UseSD = getScheduleData(BundleMember->Inst)) {
           BundleMember->Dependencies++;
           ScheduleData *DestBundle = UseSD->FirstInBundle;
           if (!DestBundle->IsScheduled)
@@ -7773,10 +7780,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       } else {
         for (User *U : BundleMember->Inst->users()) {
-          assert(isa<Instruction>(U) &&
-                 "user of instruction must be instruction");
-          ScheduleData *UseSD = getScheduleData(U);
-          if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+          if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
             BundleMember->Dependencies++;
             ScheduleData *DestBundle = UseSD->FirstInBundle;
             if (!DestBundle->IsScheduled)
@@ -7886,23 +7890,23 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   // For the real scheduling we use a more sophisticated ready-list: it is
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
-  struct ScheduleDataCompare {
-    bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
-      return SD2->SchedulingPriority < SD1->SchedulingPriority;
-    }
+  DenseMap<ScheduleData *, unsigned> OriginalOrder;
+  auto ScheduleDataCompare = [&](ScheduleData *SD1, ScheduleData *SD2) {
+    return OriginalOrder[SD2] < OriginalOrder[SD1];
   };
-  std::set<ScheduleData *, ScheduleDataCompare> ReadyInsts;
+  std::set<ScheduleData *, decltype(ScheduleDataCompare)>
+    ReadyInsts(ScheduleDataCompare);
 
   // Ensure that all dependency data is updated (for nodes in the sub-graph)
   // and fill the ready-list with initial instructions.
   int Idx = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, BS](ScheduleData *SD) {
+    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() == (getTreeEntry(SD->Inst) != nullptr)) &&
              "scheduler and vectorizer bundle mismatch");
-      SD->FirstInBundle->SchedulingPriority = Idx++;
+      OriginalOrder[SD->FirstInBundle] = Idx++;
 
       if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
