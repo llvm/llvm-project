@@ -301,13 +301,13 @@ void Fortran::lower::mapSymbolAttributes(
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::ScalarStaticChar &x) {
-        TODO(loc, "mapSymbolAttributes ScalarStaticChar");
+        TODO(loc, "ScalarStaticChar variable lowering");
       },
 
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::ScalarDynamicChar &x) {
-        TODO(loc, "mapSymbolAttributes ScalarDynamicChar");
+        TODO(loc, "ScalarDynamicChar variable lowering");
       },
 
       //===--------------------------------------------------------------===//
@@ -346,31 +346,31 @@ void Fortran::lower::mapSymbolAttributes(
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::DynamicArray &x) {
-        TODO(loc, "mapSymbolAttributes DynamicArray");
+        TODO(loc, "DynamicArray variable lowering");
       },
 
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::StaticArrayStaticChar &x) {
-        TODO(loc, "mapSymbolAttributes StaticArrayStaticChar");
+        TODO(loc, "StaticArrayStaticChar variable lowering");
       },
 
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::StaticArrayDynamicChar &x) {
-        TODO(loc, "mapSymbolAttributes StaticArrayDynamicChar");
+        TODO(loc, "StaticArrayDynamicChar variable lowering");
       },
 
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::DynamicArrayStaticChar &x) {
-        TODO(loc, "mapSymbolAttributes DynamicArrayStaticChar");
+        TODO(loc, "DynamicArrayStaticChar variable lowering");
       },
 
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::DynamicArrayDynamicChar &x) {
-        TODO(loc, "mapSymbolAttributes DynamicArrayDynamicChar");
+        TODO(loc, "DynamicArrayDynamicChar variable lowering");
       },
 
       //===--------------------------------------------------------------===//
