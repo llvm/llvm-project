@@ -189,11 +189,20 @@ def testFloatAttr():
 @run
 def testIntegerAttr():
   with Context() as ctx:
-    iattr = IntegerAttr(Attribute.parse("42"))
-    # CHECK: iattr value: 42
-    print("iattr value:", iattr.value)
-    # CHECK: iattr type: i64
-    print("iattr type:", iattr.type)
+    i_attr = IntegerAttr(Attribute.parse("42"))
+    # CHECK: i_attr value: 42
+    print("i_attr value:", i_attr.value)
+    # CHECK: i_attr type: i64
+    print("i_attr type:", i_attr.type)
+    si_attr = IntegerAttr(Attribute.parse("-1 : si8"))
+    # CHECK: si_attr value: -1
+    print("si_attr value:", si_attr.value)
+    ui_attr = IntegerAttr(Attribute.parse("255 : ui8"))
+    # CHECK: ui_attr value: 255
+    print("ui_attr value:", ui_attr.value)
+    idx_attr = IntegerAttr(Attribute.parse("-1 : index"))
+    # CHECK: idx_attr value: -1
+    print("idx_attr value:", idx_attr.value)
 
     # Test factory methods.
     # CHECK: default_get: 42 : i32
