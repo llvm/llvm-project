@@ -1074,3 +1074,100 @@ recommended to use an idiom such as:
 ```
 
 Refer to the documentation for `build_generic` for more information.
+
+## Providing Python bindings for a dialect
+
+Python bindings are designed to support MLIR’s open dialect ecosystem. A dialect
+can be exposed to Python as a submodule of `mlir.dialects` and interoperate with
+the rest of the bindings. For dialects containing only operations, it is
+sufficient to provide Python APIs for those operations. Note that the majority
+of boilerplate APIs can be generated from ODS. For dialects containing
+attributes and types, it is necessary to thread those through the C API since
+there is no generic mechanism to create attributes and types. Passes need to be
+registered with the context in order to be usable in a text-specified pass
+manager, which may be done at Python module load time. Other functionality can
+be provided, similar to attributes and types, by exposing the relevant C API and
+building Python API on top.
+
+
+### Operations
+
+Dialect operations are provided in Python by wrapping the generic
+`mlir.ir.Operation` class with operation-specific builder functions and
+properties. Therefore, there is no need to implement a separate C API for them.
+For operations defined in ODS, `mlir-tblgen -gen-python-op-bindings
+-bind-dialect=<dialect-namespace>` generates the Python API from the declarative
+description. If the build API uses specific attribute types, such as
+`::mlir::IntegerAttr` or `::mlir::DenseIntElementsAttr`, for its arguments, the
+mapping to the corresponding Python types should be provided in ODS definition.
+For built-in attribute types, this mapping is available in
+[`include/mlir/Bindings/Python/Attributes.td`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/Attributes.td);
+it is sufficient to create a new `.td` file that includes this file and the
+original ODS definition and use it as source for the `mlir-tblgen` call. Such
+`.td` files reside in
+[`python/mlir/dialects/`](https://github.com/llvm/llvm-project/tree/main/mlir/python/mlir/dialects).
+The results of `mlir-tblgen` are expected to produce a file named
+`_<dialect-namespace>_ops_gen.py` by convention. The generated operation classes
+can be extended as described above. MLIR provides [CMake
+functions](https://github.com/llvm/llvm-project/blob/main/mlir/cmake/modules/AddMLIRPython.cmake)
+to automate the production of such files. Finally, a
+`python/mlir/dialects/<dialect-namespace>.py` or a
+`python/mlir/dialects/<dialect-namespace>/__init__.py` file must be created and
+filled with `import`s from the generated files to enable `import
+mlir.dialects.<dialect-namespace>` in Python.
+
+
+### Attributes and Types
+
+Dialect attributes and types are provided in Python as subclasses of the
+`mlir.ir.Attribute` and `mlir.ir.Type` classes, respectively. Python APIs for
+attributes and types must connect to the relevant C APIs for building and
+inspection, which must be provided first. Bindings for `Attribute` and `Type`
+subclasses can be defined using
+[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)
+utilities that mimic pybind11 API for defining functions and properties. These
+bindings are to be included in a separate pybind11 module. The utilities also
+provide automatic casting between C API handles `MlirAttribute` and `MlirType`
+and their Python counterparts so that the C API handles can be used directly in
+binding implementations. The methods and properties provided by the bindings
+should follow the principles discussed above.
+
+The attribute and type bindings for a dialect can be located in
+`lib/Bindings/Python/Dialect<Name>.cpp` and should be compiled into a separate
+“Python extension” library placed in `python/mlir/_mlir_libs` that will be
+loaded by Python at runtime. MLIR provides [CMake
+functions](https://github.com/llvm/llvm-project/blob/main/mlir/cmake/modules/AddMLIRPython.cmake)
+to automate the production of such libraries. This library should be `import`ed
+from the main dialect file, i.e. `python/mlir/dialects/<dialect-namespace>.py`
+or `python/mlir/dialects/<dialect-namespace>/__init__.py`, to ensure the types
+are available when the dialect is loaded from Python.
+
+
+### Passes
+
+Dialect-specific passes can be made available to the pass manager in Python by
+registering them with the context and relying on the API for pass pipeline
+parsing from string descriptions. This can be achieved by creating a new
+pybind11 module, defined in `lib/Bindings/Python/<Dialect>Passes.cpp`, that
+calls the registration C API, which must be provided first. For passes defined
+declaratively using Tablegen, `mlir-tblgen -gen-pass-capi-header` and
+`-mlir-tblgen -gen-pass-capi-impl` automate the generation of C API. The
+pybind11 module must be compiled into a separate “Python extension” library,
+which can be `import`ed  from the main dialect file, i.e.
+`python/mlir/dialects/<dialect-namespace>.py` or
+`python/mlir/dialects/<dialect-namespace>/__init__.py`, or from a separate
+`passes` submodule to be put in
+`python/mlir/dialects/<dialect-namespace>/passes.py` if it is undesirable to
+make the passes available along with the dialect.
+
+
+### Other functionality
+
+Dialect functionality other than IR objects or passes, such as helper functions,
+can be exposed to Python similarly to attributes and types. C API is expected to
+exist for this functionality, which can then be wrapped using pybind11 and
+`[include/mlir/Bindings/Python/PybindAdaptors.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)`
+utilities to connect to the rest of Python API. The bindings can be located in a
+separate pybind11 module or in the same module as attributes and types, and
+loaded along with the dialect.
+
