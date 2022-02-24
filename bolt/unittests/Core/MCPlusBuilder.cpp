@@ -6,6 +6,8 @@
 #include "X86Subtarget.h"
 #endif // X86_AVAILABLE
 
+#include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -107,6 +109,23 @@ TEST_P(MCPlusBuilderTester, AliasSmallerAX) {
   uint64_t AliasesAX[] = {X86::AX, X86::AL, X86::AH};
   size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
   testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount, true);
+}
+
+TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock(0);
+  MCInst Inst; // cmpl    %eax, %ebx
+  Inst.setOpcode(X86::CMP32rr);
+  Inst.addOperand(MCOperand::createReg(X86::EAX));
+  Inst.addOperand(MCOperand::createReg(X86::EBX));
+  auto II = BB->addInstruction(Inst);
+  bool Replaced = BC->MIB->replaceRegWithImm(*II, X86::EBX, 1);
+  ASSERT_TRUE(Replaced);
+  ASSERT_EQ(II->getOpcode(), X86::CMP32ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 1);
 }
 
 #endif // X86_AVAILABLE
