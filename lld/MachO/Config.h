@@ -182,6 +182,7 @@ struct Configuration {
 
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
+  SymbolPatterns whyLive;
 
   bool zeroModTime = false;
 

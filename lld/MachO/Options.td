@@ -549,7 +549,6 @@ def whyload : Flag<["-"], "whyload">,
 def why_live : Separate<["-"], "why_live">,
     MetaVarName<"<symbol>">,
     HelpText<"Log a chain of references to <symbol>, for use with -dead_strip">,
-    Flags<[HelpHidden]>,
     Group<grp_introspect>;
 def print_statistics : Flag<["-"], "print_statistics">,
     HelpText<"Log the linker's memory and CPU usage">,
