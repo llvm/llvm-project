@@ -35,12 +35,10 @@ public:
   void foo();
 };
 
-// CK34-DAG: [[SIZE_TO:@.+]] = private {{.*}}global [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | IMPLICIT | TO = 0x1000000000201
 // CK34-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000201]]]
-// CK34-DAG: [[SIZE_FROM:@.+]] = private {{.*}}global [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | FROM = 0x1000000000002
 // MEMBER_OF_1 | IMPLICIT | FROM = 0x1000000000202
@@ -49,15 +47,17 @@ public:
 void default_mapper() {
   S s;
 
-  // CK34-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 4, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[SIZE_TO]]{{.+}}, {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[MTYPE_TO]]{{.+}}, i8** null, i8** [[GEPMF:%.+]])
+  // CK34-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 4, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[MTYPE_TO]]{{.+}}, i8** null, i8** [[GEPMF:%.+]])
   // CK34-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK34-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK34-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
   // CK34-DAG: [[GEPMF]] = bitcast [4 x i8*]* [[MF:%.+]] to i8**
 
   // pass TARGET_PARAM {&s, &s, ((void*)(&s+1)-(void*)&s)}
 
   // CK34-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK34-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK34-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK34-DAG: [[MF0:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 0
 
   // CK34-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to %class.S**
@@ -65,7 +65,7 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR:%.+]], %class.S** [[BPC0]],
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[PC0]],
-  // CK34-DAG: store i64 [[S_SIZE:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[SIZE_TO]], i32 0, i32 0),
+  // CK34-DAG: store i64 [[S_SIZE:%.+]], i64* [[S0]],
   // CK34-DAG: store i8* null, i8** [[MF0]],
 
   // CK34-DAG: [[S_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
@@ -80,6 +80,7 @@ void default_mapper() {
 
   // CK34-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK34-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK34-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK34-DAG: [[MF1:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 1
 
   // CK34-DAG: [[BPC1:%.+]] = bitcast i8** [[BP1]] to %class.S**
@@ -87,7 +88,7 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC1]],
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[PC1]],
-  // CK34-DAG: store i64 [[A_SIZE:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[SIZE_TO]], i32 0, i32 1),
+  // CK34-DAG: store i64 [[A_SIZE:%.+]], i64* [[S1]],
   // CK34-DAG: store i8* null, i8** [[MF1]],
 
   // CK34-DAG: [[A_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
@@ -103,6 +104,7 @@ void default_mapper() {
 
   // CK34-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK34-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
+  // CK34-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
   // CK34-DAG: [[MF2:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 2
 
   // CK34-DAG: [[BPC2:%.+]] = bitcast i8** [[BP2]] to %class.S**
@@ -110,7 +112,7 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC2]],
   // CK34-DAG: store %class.C* [[C_END:%.+]], %class.C** [[PC2]],
-  // CK34-DAG: store i64 [[B_SIZE:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[SIZE_TO]], i32 0, i32 2),
+  // CK34-DAG: store i64 [[B_SIZE:%.+]], i64* [[S2]],
   // CK34-DAG: store i8* null, i8** [[MF2]],
 
   // CK34-DAG: [[C_END]] = getelementptr %class.C, %class.C* [[C_ADDR]], i{{.+}} 1
@@ -129,6 +131,7 @@ void default_mapper() {
 
   // CK34-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
+  // CK34-DAG: [[S3:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[MF3:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 3
 
   // CK34-DAG: [[BPC3:%.+]] = bitcast i8** [[BP3]] to %class.S**
@@ -136,6 +139,8 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC3]],
   // CK34-DAG: store %class.C* [[C_ADDR:%.+]], %class.C** [[PC3]],
+  // CK34-64-DAG: store i64 16, i64* [[S3]],
+  // CK34-32-DAG: store i64 8, i64* [[S3]],
   // CK34-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[C_DEFAULT_MAPPER:@.+]] to i8*), i8** [[MF3]],
 
   // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, %class.S* [[S_ADDR]], i32 0, i32 2
@@ -146,15 +151,17 @@ void default_mapper() {
 
   // CK34 : call void
 
-  // CK34-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 4, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[SIZE_FROM]]{{.+}}, {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[MTYPE_FROM]]{{.+}}, i8** null, i8** [[GEPMF:%.+]])
+  // CK34-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 4, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[MTYPE_FROM]]{{.+}}, i8** null, i8** [[GEPMF:%.+]])
   // CK34-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK34-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK34-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
   // CK34-DAG: [[GEPMF]] = bitcast [4 x i8*]* [[MF:%.+]] to i8**
 
   // pass TARGET_PARAM {&s, &s, ((void*)(&s+1)-(void*)&s)}
 
   // CK34-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK34-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK34-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK34-DAG: [[MF0:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 0
 
   // CK34-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to %class.S**
@@ -162,7 +169,7 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC0]],
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[PC0]],
-  // CK34-DAG: store i64 [[S_SIZE:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[SIZE_FROM]], i32 0, i32 0),
+  // CK34-DAG: store i64 [[S_SIZE:%.+]], i64* [[S0]],
   // CK34-DAG: store i8* null, i8** [[MF0]],
 
   // CK34-DAG: [[S_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
@@ -177,6 +184,7 @@ void default_mapper() {
 
   // CK34-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK34-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+  // CK34-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK34-DAG: [[MF1:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 1
 
   // CK34-DAG: [[BPC1:%.+]] = bitcast i8** [[BP1]] to %class.S**
@@ -184,7 +192,7 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC1]],
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[PC1]],
-  // CK34-DAG: store i64 [[A_SIZE:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[SIZE_FROM]], i32 0, i32 1),
+  // CK34-DAG: store i64 [[A_SIZE:%.+]], i64* [[S1]],
   // CK34-DAG: store i8* null, i8** [[MF1]],
 
   // CK34-DAG: [[A_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
@@ -200,6 +208,7 @@ void default_mapper() {
 
   // CK34-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK34-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
+  // CK34-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
   // CK34-DAG: [[MF2:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 2
 
   // CK34-DAG: [[BPC2:%.+]] = bitcast i8** [[BP2]] to %class.S**
@@ -207,7 +216,7 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC2]],
   // CK34-DAG: store %class.C* [[C_END:%.+]], %class.C** [[PC2]],
-  // CK34-DAG: store i64 [[B_SIZE:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[SIZE_FROM]], i32 0, i32 2),
+  // CK34-DAG: store i64 [[B_SIZE:%.+]], i64* [[S2]],
   // CK34-DAG: store i8* null, i8** [[MF2]],
 
   // CK34-DAG: [[C_END]] = getelementptr %class.C, %class.C* [[C_ADDR]], i{{.+}} 1
@@ -226,6 +235,7 @@ void default_mapper() {
 
   // CK34-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
+  // CK34-DAG: [[S3:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[MF3:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 3
 
   // CK34-DAG: [[BPC3:%.+]] = bitcast i8** [[BP3]] to %class.S**
@@ -233,6 +243,8 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC3]],
   // CK34-DAG: store %class.C* [[C_ADDR:%.+]], %class.C** [[PC3]],
+  // CK34-64-DAG: store i64 16, i64* [[S3]],
+  // CK34-32-DAG: store i64 8, i64* [[S3]],
   // CK34-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[C_DEFAULT_MAPPER]] to i8*), i8** [[MF3]],
 
   // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, %class.S* [[S_ADDR]], i32 0, i32 2
