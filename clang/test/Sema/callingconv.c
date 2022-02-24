@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -triple i386-unknown-unknown -verify
-// RUN: %clang_cc1 %s -fsyntax-only -triple i386-unknown-unknown -fms-compatibility -DWIN -verify
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-strict-prototypes -triple i386-unknown-unknown -verify
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-strict-prototypes -triple i386-unknown-unknown -fms-compatibility -DWIN -verify
 
 void __attribute__((fastcall)) foo(float *a) {
 }

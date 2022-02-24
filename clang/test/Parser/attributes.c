@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -pedantic -std=c99
+// RUN: %clang_cc1 -fsyntax-only -verify %s -pedantic -std=c99 -Wno-strict-prototypes
 
 int __attribute__(()) x;
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -Wno-strict-prototypes -emit-llvm -o - %s | FileCheck %s
 // CHECK: ModuleID
 // CHECK: target triple = "
 // CHECK-NOT: opaque
@@ -12,4 +12,4 @@ enum teste1 { TEST1 };
 struct tests2 { int x,y,z,a,b,c,d,e,f,g; };
 struct tests3 { float x; };
 
-void f0() {}
+void f0(void) {}

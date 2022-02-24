@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fexceptions -fblocks | FileCheck %s
-// RUN: %clang_cc1 -triple armv7-apple-unknown -emit-llvm -o - %s -fexceptions -exception-model=sjlj -fblocks | FileCheck %s -check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Wno-strict-prototypes -emit-llvm -o - %s -fexceptions -fblocks | FileCheck %s
+// RUN: %clang_cc1 -triple armv7-apple-unknown -Wno-strict-prototypes -emit-llvm -o - %s -fexceptions -exception-model=sjlj -fblocks | FileCheck %s -check-prefix=CHECK-ARM
 
 // rdar://problem/8621849
 void test1(void) {

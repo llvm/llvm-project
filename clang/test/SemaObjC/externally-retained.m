@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-runtime=macosx-10.13.0 -fblocks -fobjc-arc %s -verify
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-runtime=macosx-10.13.0 -fblocks -fobjc-arc -Wno-strict-prototypes %s -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-runtime=macosx-10.13.0 -fblocks -fobjc-arc -xobjective-c++ %s -verify
 
 #define EXT_RET __attribute__((objc_externally_retained))
