@@ -15,8 +15,8 @@ from tools import testing_utils as utils
 i, j, k = pt.get_index_vars(3)
 
 # Set up dense matrices.
-A = pt.from_array(np.full((8, 8), 2.0))
-B = pt.from_array(np.full((8, 8), 3.0))
+A = pt.from_array(np.full((8, 8), 2.0, dtype=np.float32))
+B = pt.from_array(np.full((8, 8), 3.0, dtype=np.float32))
 
 # Set up sparse matrices.
 S = pt.tensor([8, 8], pt.format([pt.compressed, pt.compressed]))
