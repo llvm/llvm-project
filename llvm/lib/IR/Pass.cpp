@@ -164,6 +164,7 @@ static std::string getDescription(const Function &F) {
 bool FunctionPass::skipFunction(const Function &F) const {
   // [seh] We do not opt functions include seh/cxx eh on Windows OS
   for (auto &BB : F) {
+    bool Find = false;
     for (auto &I : BB) {
       auto InvokeIst = dyn_cast<InvokeInst>(&I);
       if (!InvokeIst) {
@@ -182,8 +183,13 @@ bool FunctionPass::skipFunction(const Function &F) const {
         FF->addFnAttr(llvm::Attribute::NoInline);
         FF->removeFnAttr(llvm::Attribute::AlwaysInline);
         FF->addFnAttr(llvm::Attribute::OptimizeNone);
+        Find = true;
         break;
       }
+    }
+
+    if (Find) {
+      break;
     }
   }
 
