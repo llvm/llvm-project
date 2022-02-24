@@ -39,6 +39,8 @@
 namespace llvm {
 namespace symbolize {
 
+LLVMSymbolizer::LLVMSymbolizer() = default;
+
 LLVMSymbolizer::LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
 
 LLVMSymbolizer::~LLVMSymbolizer() = default;
