@@ -97,6 +97,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     opt.fullyDynamicLayoutMaps = fullyDynamicLayoutMaps;
     opt.printConflicts = printConflicts;
     opt.testAnalysisOnly = testAnalysisOnly;
+    opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
     if (initTensorElimination) {
       opt.addPostAnalysisStep(insertSliceAnchoredInitTensorEliminationStep);
     }

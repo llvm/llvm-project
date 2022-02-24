@@ -49,6 +49,10 @@ def LinalgComprehensiveModuleBufferize :
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
+    Option<"alwaysAliasingWithDest", "always-aliasing-with-dest", "bool",
+            /*default=*/"true",
+            "Tensor OpResult cannot bufferize inplace OpOperands other than "
+            "out or dest OpOperands (if the op has a notion of such operands)">,
     Option<"useAlloca", "use-alloca", "bool",
            /*default=*/"false",
            "Use stack allocations for memrefs (for testing purposes only)">,

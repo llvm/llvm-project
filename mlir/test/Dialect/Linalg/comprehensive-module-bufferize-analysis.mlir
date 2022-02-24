@@ -990,13 +990,13 @@ func @ip(%t: tensor<10x20xf32> {linalg.inplaceable = true},
 // CHECK-LABEL: func @linalg_op_same_out_tensors(
 func @linalg_op_same_out_tensors(
     %t1: tensor<?xf32> {linalg.inplaceable = true},
-// CHECK-SAME:          bufferization.access = "read-write"
+// CHECK-SAME:          bufferization.access = "read"
     %t2: tensor<?xf32> {linalg.inplaceable = true})
 // CHECK-SAME:          bufferization.access = "write"
   -> (tensor<?xf32>, tensor<?xf32>){
 
   //      CHECK: linalg.generic
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "true"]
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "false"]
   %o:2 = linalg.generic #trait ins(%t1 : tensor<?xf32>)
                                outs (%t2, %t2 : tensor<?xf32>, tensor<?xf32>) {
       ^bb(%0: f32, %1: f32, %2 : f32) :
@@ -1004,7 +1004,7 @@ func @linalg_op_same_out_tensors(
     } -> (tensor<?xf32>, tensor<?xf32>)
 
   //      CHECK: return
-  // CHECK-SAME: __equivalent_func_args__ = [0, 1]
+  // CHECK-SAME: __equivalent_func_args__ = [1, -1]
   return %o#0, %o#1 : tensor<?xf32>, tensor<?xf32>
 }
 
@@ -1024,13 +1024,13 @@ func @linalg_op_same_out_tensors(
 // CHECK-LABEL: func @linalg_op_same_out_tensors_2(
 func @linalg_op_same_out_tensors_2(
     %t1: tensor<?xf32> {linalg.inplaceable = true},
-// CHECK-SAME:          bufferization.access = "read-write"
+// CHECK-SAME:          bufferization.access = "read"
     %t2: tensor<?xf32> {linalg.inplaceable = true})
 // CHECK-SAME:          bufferization.access = "write"
         -> (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>){
 
   //      CHECK: linalg.generic
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "true", "false"]
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "false", "false"]
   %o:3 = linalg.generic #trait
           ins(%t1 : tensor<?xf32>)
           outs (%t2, %t2, %t2 : tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) {
@@ -1039,7 +1039,7 @@ func @linalg_op_same_out_tensors_2(
     } -> (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 
   //      CHECK: return
-  // CHECK-SAME: __equivalent_func_args__ = [0, 1, -1]
+  // CHECK-SAME: __equivalent_func_args__ = [1, -1, -1]
   return %o#0, %o#1, %o#2 : tensor<?xf32>, tensor<?xf32>, tensor<?xf32>
 }
 

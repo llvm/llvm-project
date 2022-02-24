@@ -164,8 +164,7 @@ struct LinalgOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
-    // Operand is written to if it has an aliasing OpResult. For more details,
-    // see `computeAliasingPairs`.
+    // Operand is written to if it has an aliasing OpResult.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
   }
@@ -175,6 +174,12 @@ struct LinalgOpInterface
                        const BufferizationState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
 
+    // By default, the i-th OpResult may alias with the i-th "out" tensor.
+    if (state.getOptions().alwaysAliasingWithDest)
+      return {genericOp.getOutputOperand(opResult.getResultNumber())};
+
+    // We can try to be smart and alias in-place with an "in" tensor if the
+    // corresponding "out" tensor is not used in the computation.
     // Aliasing OpOperand/OpResult pairs are computed by `computeAliasingPairs`.
     DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
     for (OpOperand *opOperand : genericOp.getInputAndOutputOperands())
@@ -188,6 +193,14 @@ struct LinalgOpInterface
                       const BufferizationState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
 
+    // By default, the i-th "out" tensor may alias with the i-th OpResult.
+    if (state.getOptions().alwaysAliasingWithDest) {
+      if (genericOp.isOutputTensor(&opOperand))
+        return {genericOp.getTiedOpResult(&opOperand)};
+      return {};
+    }
+
+    // We can try to be smart. See comment in `getAliasingOpOperand`.
     // Aliasing OpOperand/OpResult pairs are computed by `computeAliasingPairs`.
     DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
     if (!pairs.count(&opOperand))
