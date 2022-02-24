@@ -33,8 +33,9 @@ X[i, j] = S[i, j] * A[i, k] * B[k, j]
 
 # Alternative way to define SDDMM kernel. Since this performs the reduction as
 #   sum(k, A[i, k] * B[k, j]) * S[i, j]
-# the MLIR lowering results in two separate tensor index expressions that
-# need to be fused properly to guarantee proper asymptotic complexity.
+# the MLIR lowering results in two separate tensor index expressions that are
+# fused prior to running the sparse compiler in order to guarantee proper
+# asymptotic complexity.
 Y[i, j] = A[i, k] * B[k, j] * S[i, j]
 
 expected = """; extended FROSTT format
