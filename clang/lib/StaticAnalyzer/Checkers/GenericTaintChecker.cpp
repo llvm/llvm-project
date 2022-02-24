@@ -793,6 +793,7 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
           LLVM_DEBUG(llvm::dbgs() << "PreCall<"; Call.dump(llvm::dbgs());
                      llvm::dbgs()
                      << "> prepares tainting arg index: " << I << '\n';);
+          (void)Call;
           Result = F.add(Result, I);
         }
 
