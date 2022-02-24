@@ -11984,23 +11984,23 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
   case Intrinsic::aarch64_ldaxr:
   case Intrinsic::aarch64_ldxr: {
-    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(0)->getType());
+    Type *ValTy = I.getParamElementType(0);
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(PtrTy->getPointerElementType());
+    Info.memVT = MVT::getVT(ValTy);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = DL.getABITypeAlign(PtrTy->getPointerElementType());
+    Info.align = DL.getABITypeAlign(ValTy);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::aarch64_stlxr:
   case Intrinsic::aarch64_stxr: {
-    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(1)->getType());
+    Type *ValTy = I.getParamElementType(1);
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(PtrTy->getPointerElementType());
+    Info.memVT = MVT::getVT(ValTy);
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
-    Info.align = DL.getABITypeAlign(PtrTy->getPointerElementType());
+    Info.align = DL.getABITypeAlign(ValTy);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
   }
@@ -19265,7 +19265,10 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
   const DataLayout &DL = M->getDataLayout();
   IntegerType *IntEltTy = Builder.getIntNTy(DL.getTypeSizeInBits(ValueTy));
-  Value *Trunc = Builder.CreateTrunc(Builder.CreateCall(Ldxr, Addr), IntEltTy);
+  CallInst *CI = Builder.CreateCall(Ldxr, Addr);
+  CI->addParamAttr(
+      0, Attribute::get(Builder.getContext(), Attribute::ElementType, ValueTy));
+  Value *Trunc = Builder.CreateTrunc(CI, IntEltTy);
 
   return Builder.CreateBitCast(Trunc, ValueTy);
 }
@@ -19306,10 +19309,13 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   IntegerType *IntValTy = Builder.getIntNTy(DL.getTypeSizeInBits(Val->getType()));
   Val = Builder.CreateBitCast(Val, IntValTy);
 
-  return Builder.CreateCall(Stxr,
-                            {Builder.CreateZExtOrBitCast(
-                                 Val, Stxr->getFunctionType()->getParamType(0)),
-                             Addr});
+  CallInst *CI = Builder.CreateCall(
+      Stxr, {Builder.CreateZExtOrBitCast(
+                 Val, Stxr->getFunctionType()->getParamType(0)),
+             Addr});
+  CI->addParamAttr(1, Attribute::get(Builder.getContext(),
+                                     Attribute::ElementType, Val->getType()));
+  return CI;
 }
 
 bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(
