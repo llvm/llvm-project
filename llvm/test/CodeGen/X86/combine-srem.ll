@@ -74,7 +74,7 @@ define <4 x i32> @combine_vec_srem_by_minsigned(<4 x i32> %x) {
 ; SSE-NEXT:    psrld $1, %xmm1
 ; SSE-NEXT:    paddd %xmm0, %xmm1
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_srem_by_minsigned:
@@ -83,7 +83,7 @@ define <4 x i32> @combine_vec_srem_by_minsigned(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrld $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_srem_by_minsigned:
@@ -93,7 +93,7 @@ define <4 x i32> @combine_vec_srem_by_minsigned(<4 x i32> %x) {
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   ret <4 x i32> %1

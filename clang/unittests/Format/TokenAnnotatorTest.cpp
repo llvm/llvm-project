@@ -232,6 +232,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
                     "Namespace::Outer<T>::Inner::Constant) {}");
   ASSERT_EQ(Tokens.size(), 24u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("struct [[nodiscard]] zero_t {\n"
+                    "  template<class T>\n"
+                    "    requires requires { number_zero_v<T>; }\n"
+                    "  [[nodiscard]] constexpr operator T() const { "
+                    "return number_zero_v<T>; }\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 44u);
+  EXPECT_TOKEN(Tokens[13], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[14], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[21], tok::r_brace, TT_Unknown);
+  EXPECT_EQ(Tokens[21]->MatchingParen, Tokens[15]);
+  EXPECT_TRUE(Tokens[21]->ClosesRequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -506,6 +520,35 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
   NumberOfBaseTokens = 19u;
   NumberOfAdditionalRequiresClauseTokens = 14u;
   NumberOfTokensBeforeRequires = 5u;
+
+  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
+  ASSERT_EQ(ConstrainedTokens.size(),
+            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
+      << ConstrainedTokens;
+
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
+    if (I < NumberOfTokensBeforeRequires)
+      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
+    else
+      EXPECT_EQ(*BaseTokens[I],
+                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
+          << I;
+
+  BaseTokens = annotate("struct [[nodiscard]] zero_t {\n"
+                        "  template<class T>\n"
+                        "  [[nodiscard]] constexpr operator T() const { "
+                        "return number_zero_v<T>; }\n"
+                        "};");
+
+  ConstrainedTokens = annotate("struct [[nodiscard]] zero_t {\n"
+                               "  template<class T>\n"
+                               "    requires requires { number_zero_v<T>; }\n"
+                               "  [[nodiscard]] constexpr operator T() const { "
+                               "return number_zero_v<T>; }\n"
+                               "};");
+  NumberOfBaseTokens = 35u;
+  NumberOfAdditionalRequiresClauseTokens = 9u;
+  NumberOfTokensBeforeRequires = 13u;
 
   ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
   ASSERT_EQ(ConstrainedTokens.size(),

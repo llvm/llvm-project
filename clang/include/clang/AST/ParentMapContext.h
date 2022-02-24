@@ -90,29 +90,27 @@ public:
 /// Container for either a single DynTypedNode or for an ArrayRef to
 /// DynTypedNode. For use with ParentMap.
 class DynTypedNodeList {
-  llvm::AlignedCharArrayUnion<DynTypedNode, ArrayRef<DynTypedNode>> Storage;
+  union {
+    DynTypedNode SingleNode;
+    ArrayRef<DynTypedNode> Nodes;
+  };
   bool IsSingleNode;
 
 public:
   DynTypedNodeList(const DynTypedNode &N) : IsSingleNode(true) {
-    new (&Storage) DynTypedNode(N);
+    new (&SingleNode) DynTypedNode(N);
   }
 
   DynTypedNodeList(ArrayRef<DynTypedNode> A) : IsSingleNode(false) {
-    new (&Storage) ArrayRef<DynTypedNode>(A);
+    new (&Nodes) ArrayRef<DynTypedNode>(A);
   }
 
   const DynTypedNode *begin() const {
-    if (!IsSingleNode)
-      return reinterpret_cast<const ArrayRef<DynTypedNode> *>(&Storage)
-          ->begin();
-    return reinterpret_cast<const DynTypedNode *>(&Storage);
+    return !IsSingleNode ? Nodes.begin() : &SingleNode;
   }
 
   const DynTypedNode *end() const {
-    if (!IsSingleNode)
-      return reinterpret_cast<const ArrayRef<DynTypedNode> *>(&Storage)->end();
-    return reinterpret_cast<const DynTypedNode *>(&Storage) + 1;
+    return !IsSingleNode ? Nodes.end() : &SingleNode + 1;
   }
 
   size_t size() const { return end() - begin(); }

@@ -1,4 +1,4 @@
-//===- InlineAlways.cpp - Code to inline always_inline functions ----------===//
+//===- AlwaysInliner.cpp - Code to inline always_inline functions ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -60,8 +60,9 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
       for (User *U : F.users())
         if (auto *CB = dyn_cast<CallBase>(U))
           if (CB->getCalledFunction() == &F &&
-              CB->hasFnAttr(Attribute::AlwaysInline))
-            Calls.insert(CB);
+                CB->hasFnAttr(Attribute::AlwaysInline) &&
+                !CB->getAttributes().hasFnAttr(Attribute::NoInline))
+              Calls.insert(CB);
 
       for (CallBase *CB : Calls) {
         Function *Caller = CB->getCaller();
@@ -209,6 +210,9 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallBase &CB) {
 
   if (!CB.hasFnAttr(Attribute::AlwaysInline))
     return InlineCost::getNever("no alwaysinline attribute");
+
+  if (Callee->hasFnAttribute(Attribute::AlwaysInline) && CB.isNoInline())
+    return InlineCost::getNever("noinline call site attribute");
 
   auto IsViable = isInlineViable(*Callee);
   if (!IsViable.isSuccess())

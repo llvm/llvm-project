@@ -72,14 +72,14 @@ bool IntegerPolyhedron::isSubsetOf(const IntegerPolyhedron &other) const {
   return PresburgerSet(*this).isSubsetOf(PresburgerSet(other));
 }
 
-Optional<SmallVector<Fraction, 8>>
+MaybeOptimum<SmallVector<Fraction, 8>>
 IntegerPolyhedron::getRationalLexMin() const {
   assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
-  Optional<SmallVector<Fraction, 8>> maybeLexMin =
+  MaybeOptimum<SmallVector<Fraction, 8>> maybeLexMin =
       LexSimplex(*this).getRationalLexMin();
 
-  if (!maybeLexMin)
-    return {};
+  if (!maybeLexMin.isBounded())
+    return maybeLexMin;
 
   // The Simplex returns the lexmin over all the variables including locals. But
   // locals are not actually part of the space and should not be returned in the
@@ -93,7 +93,7 @@ IntegerPolyhedron::getRationalLexMin() const {
 }
 
 unsigned IntegerPolyhedron::insertDimId(unsigned pos, unsigned num) {
-  return insertId(IdKind::Dimension, pos, num);
+  return insertId(IdKind::SetDim, pos, num);
 }
 
 unsigned IntegerPolyhedron::insertSymbolId(unsigned pos, unsigned num) {
@@ -107,16 +107,15 @@ unsigned IntegerPolyhedron::insertLocalId(unsigned pos, unsigned num) {
 unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
-  unsigned absolutePos = getIdKindOffset(kind) + pos;
-  inequalities.insertColumns(absolutePos, num);
-  equalities.insertColumns(absolutePos, num);
-
-  return PresburgerLocalSpace::insertId(kind, pos, num);
+  unsigned insertPos = PresburgerLocalSpace::insertId(kind, pos, num);
+  inequalities.insertColumns(insertPos, num);
+  equalities.insertColumns(insertPos, num);
+  return insertPos;
 }
 
 unsigned IntegerPolyhedron::appendDimId(unsigned num) {
   unsigned pos = getNumDimIds();
-  insertId(IdKind::Dimension, pos, num);
+  insertId(IdKind::SetDim, pos, num);
   return pos;
 }
 
@@ -1033,20 +1032,23 @@ Optional<uint64_t> IntegerPolyhedron::computeVolume() const {
   bool hasUnboundedId = false;
   for (unsigned i = 0, e = getNumDimAndSymbolIds(); i < e; ++i) {
     dim[i] = 1;
-    Optional<int64_t> min, max;
+    MaybeOptimum<int64_t> min, max;
     std::tie(min, max) = simplex.computeIntegerBounds(dim);
     dim[i] = 0;
 
+    assert((!min.isEmpty() && !max.isEmpty()) &&
+           "Polytope should be rationally non-empty!");
+
     // One of the dimensions is unbounded. Note this fact. We will return
     // unbounded if none of the other dimensions makes the volume zero.
-    if (!min || !max) {
+    if (min.isUnbounded() || max.isUnbounded()) {
       hasUnboundedId = true;
       continue;
     }
 
     // In this case there are no valid integer points and the volume is
     // definitely zero.
-    if (*min > *max)
+    if (min.getBoundedOptimum() > max.getBoundedOptimum())
       return 0;
 
     count *= (*max - *min + 1);

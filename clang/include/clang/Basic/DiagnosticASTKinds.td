@@ -439,8 +439,6 @@ def note_odr_tag_kind_here: Note<
 def note_odr_field : Note<"field %0 has type %1 here">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
-def note_odr_bit_field : Note<"bit-field %0 with type %1 and length %2 here">;
-def note_odr_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_base : Note<"class has base type %0">;
 def note_odr_virtual_base : Note<
   "%select{non-virtual|virtual}0 derivation here">;

@@ -3499,23 +3499,6 @@ multiclass VPatBinaryMaskOut<string intrinsic,
                          GPR:$vl, sew)>;
 }
 
-multiclass VPatConversion<string intrinsic,
-                          string inst,
-                          string kind,
-                          ValueType result_type,
-                          ValueType op1_type,
-                          ValueType mask_type,
-                          int sew,
-                          LMULInfo vlmul,
-                          VReg result_reg_class,
-                          VReg op1_reg_class>
-{
-  def : VPatUnaryNoMask<intrinsic, inst, kind, result_type, op1_type,
-                        sew, vlmul, op1_reg_class>;
-  def : VPatUnaryMask<intrinsic, inst, kind, result_type, op1_type,
-                      mask_type, sew, vlmul, result_reg_class, op1_reg_class>;
-}
-
 multiclass VPatConversionTA<string intrinsic,
                             string inst,
                             string kind,

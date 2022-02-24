@@ -6,7 +6,7 @@
 @g = common global i32 0, align 4
 
 define i32 @bar() {
-; CHECK-LABEL: define {{[^@]+}}@bar()
+; CHECK-LABEL: define {{[^@]+}}@bar() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32* @g)
 ; CHECK-NEXT:    ret i32 [[CALL]]
@@ -18,7 +18,7 @@ entry:
 
 define internal i32 @foo(i32*) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32* [[TMP0:%.*]])
+; CHECK-SAME: (i32* [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void asm sideeffect "ldr r0, [r0] \0Abx lr \0A", ""()

@@ -330,6 +330,9 @@ template <>
 DynTypedNode createDynTypedNode(const NestedNameSpecifierLoc &Node) {
   return DynTypedNode::create(Node);
 }
+template <> DynTypedNode createDynTypedNode(const ObjCProtocolLoc &Node) {
+  return DynTypedNode::create(Node);
+}
 /// @}
 
 /// A \c RecursiveASTVisitor that builds a map from nodes to their
@@ -398,11 +401,14 @@ private:
     }
   }
 
+  template <typename T> static bool isNull(T Node) { return !Node; }
+  static bool isNull(ObjCProtocolLoc Node) { return false; }
+
   template <typename T, typename MapNodeTy, typename BaseTraverseFn,
             typename MapTy>
   bool TraverseNode(T Node, MapNodeTy MapNode, BaseTraverseFn BaseTraverse,
                     MapTy *Parents) {
-    if (!Node)
+    if (isNull(Node))
       return true;
     addParent(MapNode, Parents);
     ParentStack.push_back(createDynTypedNode(Node));
@@ -432,6 +438,12 @@ private:
     return TraverseNode(
         AttrNode, AttrNode, [&] { return VisitorBase::TraverseAttr(AttrNode); },
         &Map.PointerParents);
+  }
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLocNode) {
+    return TraverseNode(
+        ProtocolLocNode, DynTypedNode::create(ProtocolLocNode),
+        [&] { return VisitorBase::TraverseObjCProtocolLoc(ProtocolLocNode); },
+        &Map.OtherParents);
   }
 
   // Using generic TraverseNode for Stmt would prevent data-recursion.
