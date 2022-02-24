@@ -153,6 +153,9 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_emit_obj:
       opts.programAction = EmitObj;
       break;
+    case clang::driver::options::OPT_S:
+      opts.programAction = EmitAssembly;
+      break;
     case clang::driver::options::OPT_fdebug_unparse:
       opts.programAction = DebugUnparse;
       break;

@@ -27,6 +27,8 @@ add_flang_library(flangFrontend
   FortranLower
   clangBasic
   clangDriver
+  LLVMAnalysis
+  LLVMTarget
   FIRDialect
   FIRSupport
   FIRBuilder

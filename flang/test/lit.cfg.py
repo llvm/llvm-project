@@ -39,6 +39,11 @@ llvm_config.use_default_substitutions()
 llvm_config.feature_config(
     [('--assertion-mode', {'ON': 'asserts'})])
 
+# Targets
+config.targets = frozenset(config.targets_to_build.split())
+for arch in config.targets_to_build.split():
+    config.available_features.add(arch.lower() + '-registered-target')
+
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.

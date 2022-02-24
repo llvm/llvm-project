@@ -20,6 +20,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/TargetSelect.h"
 
 #include <cstdio>
 
@@ -47,6 +48,11 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
   bool success =
       CompilerInvocation::CreateFromArgs(flang->invocation(), argv, diags);
+
+  // Initialize targets first, so that --version shows registered targets.
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
 
   diagsBuffer->FlushDiagnostics(flang->diagnostics());
 
