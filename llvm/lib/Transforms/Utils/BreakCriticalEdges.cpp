@@ -317,18 +317,11 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 // predecessors of BB.
 static BasicBlock *
 findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
-  // If the block doesn't have any PHIs, we don't care about it, since there's
-  // no point in splitting it.
-  PHINode *PN = dyn_cast<PHINode>(BB->begin());
-  if (!PN)
-    return nullptr;
-
   // Verify we have exactly one IBR predecessor.
   // Conservatively bail out if one of the other predecessors is not a "regular"
   // terminator (that is, not a switch or a br).
   BasicBlock *IBB = nullptr;
-  for (unsigned Pred = 0, E = PN->getNumIncomingValues(); Pred != E; ++Pred) {
-    BasicBlock *PredBB = PN->getIncomingBlock(Pred);
+  for (BasicBlock *PredBB : predecessors(BB)) {
     Instruction *PredTerm = PredBB->getTerminator();
     switch (PredTerm->getOpcode()) {
     case Instruction::IndirectBr:
@@ -349,6 +342,7 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
 }
 
 bool llvm::SplitIndirectBrCriticalEdges(Function &F,
+                                        bool IgnoreBlocksWithoutPHI,
                                         BranchProbabilityInfo *BPI,
                                         BlockFrequencyInfo *BFI) {
   // Check whether the function has any indirectbrs, and collect which blocks
@@ -370,6 +364,9 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   bool ShouldUpdateAnalysis = BPI && BFI;
   bool Changed = false;
   for (BasicBlock *Target : Targets) {
+    if (IgnoreBlocksWithoutPHI && Target->phis().empty())
+      continue;
+
     SmallVector<BasicBlock *, 16> OtherPreds;
     BasicBlock *IBRPred = findIBRPredecessor(Target, OtherPreds);
     // If we did not found an indirectbr, or the indirectbr is the only
