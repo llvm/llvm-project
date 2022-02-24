@@ -484,19 +484,19 @@
 // CHECK041: {{hexagon-link|ld}}
 // CHECK041:      "-G0"
 
-// RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as \
+// RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -G=8 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK042 %s
-// RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as \
+// RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -G 8 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK042 %s
-// RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as \
+// RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -msmall-data-threshold=8 \
