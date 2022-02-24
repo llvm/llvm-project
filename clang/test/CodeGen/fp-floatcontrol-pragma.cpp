@@ -1,7 +1,53 @@
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -DEXCEPT=1 -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NS %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-FENV %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple %itanium_abi_triple -O3 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-O3 %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -DEXCEPT=1 \
+// RUN: -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm -o - %s \
+// RUN: | FileCheck -check-prefix=CHECK-NS %s
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s \
+// RUN: -check-prefixes=CHECK-DEFAULT,CHECK-CONST-ARGS
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -DFENV_ON=1 \
+// RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s \
+// RUN: | FileCheck -check-prefix=CHECK-FENV %s
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -DNF128 \
+// RUN: -triple %itanium_abi_triple -O3 -emit-llvm -o - %s \
+// RUN: | FileCheck -check-prefix=CHECK-O3 %s
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s -ffp-eval-method=source \
+// RUN: | FileCheck %s -check-prefixes=CHECK-SOURCE,CHECK-CONST-ARGS
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s -ffp-eval-method=double \
+// RUN: | FileCheck %s -check-prefixes=CHECK-DOUBLE,CHECK-CONST-ARGS
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s -ffp-eval-method=extended \
+// RUN: -mlong-double-80 | FileCheck %s \
+// RUN: -check-prefixes=CHECK-EXTENDED,CHECK-CONST-ARGS
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: -triple i386-linux-gnu -emit-llvm -o - %s -ffp-eval-method=source \
+// RUN: | FileCheck %s -check-prefix=CHECK-SOURCE
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple i386-linux-gnu \
+// RUN: -emit-llvm -o - %s -ffp-eval-method=double | FileCheck %s \
+// RUN: -check-prefix=CHECK-DOUBLE
+
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple i386-linux-gnu \
+// RUN: -emit-llvm -o - %s -ffp-eval-method=extended -mlong-double-80 \
+// RUN: | FileCheck %s -check-prefix=CHECK-EXTENDED
+
+// RUN: %clang_cc1 -triple powerpc-unknown-aix -DNF128 -emit-llvm -o - %s \
+// RUN: | FileCheck %s -check-prefix=CHECK-AIX
+
+bool f() {
+  // CHECK: define {{.*}}f{{.*}}
+  return __FLT_EVAL_METHOD__ < 0 &&
+         __FLT_EVAL_METHOD__ == -1;
+  // CHECK: ret {{.*}} true
+}
 
 // Verify float_control(precise, off) enables fast math flags on fp operations.
 float fp_precise_1(float a, float b, float c) {
@@ -228,4 +274,116 @@ float try_lam(float x, unsigned n) {
   (1.0f,2.0f);
   result = x + t;
   return result;
+}
+
+float mySub(float x, float y) {
+  // CHECK: define {{.*}}float {{.*}}mySub{{.*}}
+  // CHECK-NS: fsub float
+  // CHECK-SOURCE: fsub float
+  // CHECK-DOUBLE: fpext float
+  // CHECK-DOUBLE: fpext float
+  // CHECK-DOUBLE: fsub double
+  // CHECK-DOUBLE: fptrunc double {{.*}} to float
+  // CHECK-EXTENDED: fpext float
+  // CHECK-EXTENDED: fpext float
+  // CHECK-EXTENDED: fsub double
+  // CHECK-EXTENDED: fptrunc double {{.*}} to float
+  return x - y;
+}
+
+float mySubSource(float x, float y) {
+// CHECK: define {{.*}}float {{.*}}mySubSource{{.*}}
+#pragma clang fp eval_method(source)
+  return x - y;
+  // CHECK: fsub float
+}
+
+float mySubExtended(float x, float y) {
+// CHECK: define {{.*}}float {{.*}}mySubExtended{{.*}}
+#pragma clang fp eval_method(extended)
+  return x - y;
+  // CHECK: fpext float
+  // CHECK: fpext float
+  // CHECK: fsub x86_fp80
+  // CHECK: fptrunc x86_fp80 {{.*}} to float
+  // CHECK-AIX: fsub double
+  // CHECK-AIX: fptrunc double
+}
+
+float mySubDouble(float x, float y) {
+// CHECK: define {{.*}}float {{.*}}mySubDouble{{.*}}
+#pragma clang fp eval_method(double)
+  return x - y;
+  // CHECK: fpext float
+  // CHECK: fpext float
+  // CHECK: fsub double
+  // CHECK: fptrunc double {{.*}} to float
+}
+
+#ifndef NF128
+__float128 mySub128(__float128 x, __float128 y) {
+  // CHECK: define {{.*}}mySub128{{.*}}
+  // Expect no fpext since fp128 is already widest
+  // CHECK: load fp128
+  // CHECK-NEXT: load fp128
+  // CHECK-NEXT: fsub fp128
+  // CHECK-NEXT: ret fp128
+  return x - y;
+}
+#endif
+
+void mySubfp16(__fp16 *res, __fp16 *x, __fp16 *y) {
+  // CHECK: define {{.*}}mySubfp16{{.*}}
+  *res = *x - *y;
+  // CHECK: load half
+  // CHECK-NEXT: load half
+  // CHECK-NEXT: fpext half{{.*}}
+  // CHECK-NEXT: load half
+  // CHECK-NEXT: load half
+  // CHECK-NS: fpext half{{.*}} to float
+  // CHECK-DEFAULT: fpext half{{.*}} to float
+  // CHECK-DOUBLE: fpext half{{.*}} to float
+  // CHECK-EXTENDED: fpext half{{.*}} to float
+  // CHECK-NEXT: fsub
+  // CHECK-NEXT: fptrunc {{.*}}to half
+  // CHECK-NS: fptrunc float {{.*}} to half
+  // CHECK-DOUBLE: fptrunc float {{.*}} to half
+  // CHECK-EXTENDED: fptrunc float {{.*}} to half
+}
+
+float Div(float x, float y, float z) {
+  // CHECK: define{{.*}}float {{.*}}Div{{.*}}
+  // CHECK-CONST-ARGS: fdiv float
+  return x / (y / z);
+}
+
+float DivExtended(float x, float y, float z) {
+// CHECK: define{{.*}}float {{.*}}DivExtended{{.*}}
+#pragma clang fp eval_method(extended)
+  // CHECK-CONST-ARGS: fdiv x86_fp80
+  // CHECK-CONST-ARGS: fptrunc x86_fp80
+  return x / (y / z);
+}
+
+float DivDouble(float x, float y, float z) {
+// CHECK: define{{.*}}float {{.*}}DivDouble{{.*}}
+#pragma clang fp eval_method(double)
+  // CHECK-CONST-ARGS: fdiv double
+  // CHECK-CONST-ARGS: fptrunc double
+  return x / (y / z);
+}
+
+float DivSource(float x, float y, float z) {
+// CHECK: define{{.*}}float {{.*}}DivSource{{.*}}
+#pragma clang fp eval_method(source)
+  // CHECK-CONST-ARGS: fdiv float
+  return x / (y / z);
+}
+
+int main() {
+  float f = Div(4.2f, 1.0f, 3.0f);
+  float fextended = DivExtended(4.2f, 1.0f, 3.0f);
+  float fdouble = DivDouble(4.2f, 1.0f, 3.0f);
+  float fsource = DivSource(4.2f, 1.0f, 3.0f);
+  // CHECK: store float
 }
