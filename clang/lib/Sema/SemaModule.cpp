@@ -484,6 +484,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   } else if (getLangOpts().isCompilingModule()) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, ExportLoc, false, false);
+    (void)ThisModule;
     assert(ThisModule && "was expecting a module if building one");
   }
 
@@ -526,6 +527,7 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   if (getLangOpts().isCompilingModule()) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, DirectiveLoc, false, false);
+    (void)ThisModule;
     assert(ThisModule && "was expecting a module if building one");
   }
 }
