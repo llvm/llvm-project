@@ -1,0 +1,28 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+
+---
+name: aligned_memoperands
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: aligned_memoperands
+    ; CHECK: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef`)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef`, align 2)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef`)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef`, align 8)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef` + 12, align 2)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef` + 12)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef` + 12, align 2)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef` + 12)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef` + 12, basealign 8)
+    %0:_(p0) = IMPLICIT_DEF
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef`)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef`, align 2)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef`, align 4) ; redundant
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef`, align 8)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef` + 12, align 2)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef` + 12, align 4) ; redundant
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef` + 12, basealign 2) ; printed as "align"
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef` + 12, basealign 4) ; redundant
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef` + 12, basealign 8)
+...

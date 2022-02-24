@@ -410,7 +410,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef` + 4, align 8, addrspace 1)
+    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef` + 4, basealign 8, addrspace 1)
     %2:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32) from `float addrspace(1)* undef`, align 4, addrspace 1)
     S_NOP 0, implicit %1, implicit %2
 ...
