@@ -1156,6 +1156,16 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     const Symbol &sym = *symbols[i];
+
+    // st_value of STT_TLS represents the assigned offset, not the actual
+    // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
+    // only be referenced by special TLS relocations. It is usually an error if
+    // a STT_TLS symbol is replaced by a non-STT_TLS symbol, vice versa.
+    if (LLVM_UNLIKELY(sym.isTls()) && eSym.getType() != STT_TLS &&
+        eSym.getType() != STT_NOTYPE)
+      errorOrWarn("TLS attribute mismatch: " + toString(sym) + "\n>>> in " +
+                  toString(sym.file) + "\n>>> in " + toString(this));
+
     // !sym.file allows a symbol assignment redefines a symbol without an error.
     if (sym.file == this || !sym.file || !sym.isDefined() ||
         eSym.st_shndx == SHN_UNDEF || eSym.st_shndx == SHN_COMMON ||
