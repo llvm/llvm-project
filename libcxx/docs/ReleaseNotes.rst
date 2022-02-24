@@ -57,6 +57,7 @@ API Changes
   If, after updating libc++, you see compiler errors related to missing declarations in
   namespace ``std``, it might be because one of your source files now needs to
   ``#include <algorithm>`` and/or ``#include <chrono>``.
+
 ABI Changes
 -----------
 
