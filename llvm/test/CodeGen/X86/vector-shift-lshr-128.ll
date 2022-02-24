@@ -918,8 +918,6 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; SSE2-LABEL: splatvar_modulo_shift_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE2-NEXT:    psrlw %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    psrlw %xmm1, %xmm2
@@ -1023,8 +1021,6 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; X86-SSE-LABEL: splatvar_modulo_shift_v16i8:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; X86-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm0
 ; X86-SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm2

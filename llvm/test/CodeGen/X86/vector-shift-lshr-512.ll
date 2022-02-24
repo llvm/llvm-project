@@ -153,8 +153,8 @@ define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind 
 define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-LABEL: splatvar_shift_v64i8:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512DQ-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
@@ -237,8 +237,8 @@ define <32 x i16> @splatvar_modulo_shift_v32i16(<32 x i16> %a, <32 x i16> %b) no
 define <64 x i8> @splatvar_modulo_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-LABEL: splatvar_modulo_shift_v64i8:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
@@ -253,7 +253,6 @@ define <64 x i8> @splatvar_modulo_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwi
 ; AVX512BW-LABEL: splatvar_modulo_shift_v64i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512BW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512BW-NEXT:    vpsrlw %xmm1, %xmm2, %xmm1
