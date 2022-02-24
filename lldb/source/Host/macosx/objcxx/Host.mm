@@ -1474,7 +1474,6 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
           callback_copy(pid, signal, exit_status);
 
         ::dispatch_source_cancel(source);
-        }
       }
     });
 
