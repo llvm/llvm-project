@@ -66,7 +66,6 @@ def sub_vrm1_5 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_1>;
 def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
-def sub_32_hi  : SubRegIndex<32, 32>;
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -534,35 +533,6 @@ defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
 def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
   let Size = 64;
 }
-
-let RegInfos = XLenRI in {
-def GPRF16  : RegisterClass<"RISCV", [f16], 16, (add GPR)>;
-def GPRF32  : RegisterClass<"RISCV", [f32], 32, (add GPR)>;
-def GPRF64  : RegisterClass<"RISCV", [f64], 64, (add GPR)>;
-} // RegInfos = XLenRI
-
-let RegAltNameIndices = [ABIRegAltName] in {
-  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                   24, 26, 28, 30] in {
-    defvar Reg = !cast<Register>("X"#Index);
-    def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
-                                          [!cast<Register>("X"#Index),
-                                           !cast<Register>("X"#!add(Index, 1))],
-                                           Reg.AltNames> {
-      let SubRegIndices = [sub_32, sub_32_hi];
-    }
-  }
-}
-
-let RegInfos = RegInfoByHwMode<[RV64], [RegInfo<64, 64, 64>]> in
-def GPRPF64 : RegisterClass<"RISCV", [f64], 64, (add
-    X10_PD, X12_PD, X14_PD, X16_PD,
-    X6_PD,
-    X28_PD, X30_PD,
-    X8_PD,
-    X18_PD, X20_PD, X22_PD, X24_PD, X26_PD,
-    X0_PD, X2_PD, X4_PD
-)>;
 
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs,

@@ -171,7 +171,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseVTypeI(OperandVector &Operands);
   OperandMatchResultTy parseMaskReg(OperandVector &Operands);
   OperandMatchResultTy parseInsnDirectiveOpcode(OperandVector &Operands);
-  OperandMatchResultTy parseGPRAsFPR(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -275,8 +274,6 @@ struct RISCVOperand : public MCParsedAsmOperand {
 
   bool IsRV64;
 
-  bool IsGPRAsFPR;
-
   struct RegOp {
     MCRegister RegNum;
   };
@@ -345,14 +342,6 @@ public:
   bool isGPR() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum);
-  }
-
-  bool isGPRAsFPR() const { return isGPR() && IsGPRAsFPR; }
-
-  bool isGPRF64AsFPR() const { return isGPR() && IsGPRAsFPR && IsRV64; }
-
-  bool isGPRPF64AsFPR() const {
-    return isGPR() && IsGPRAsFPR && !IsRV64 && !((Reg.RegNum - RISCV::X0) & 1);
   }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
@@ -851,14 +840,12 @@ public:
   }
 
   static std::unique_ptr<RISCVOperand> createReg(unsigned RegNo, SMLoc S,
-                                                 SMLoc E, bool IsRV64,
-                                                 bool IsGPRAsFPR = false) {
+                                                 SMLoc E, bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
     Op->Reg.RegNum = RegNo;
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsRV64 = IsRV64;
-    Op->IsGPRAsFPR = IsGPRAsFPR;
     return Op;
   }
 
@@ -1809,26 +1796,6 @@ OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
     Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
   }
 
-  return MatchOperand_Success;
-}
-
-OperandMatchResultTy RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
-  switch (getLexer().getKind()) {
-  default:
-    return MatchOperand_NoMatch;
-  case AsmToken::Identifier:
-    StringRef Name = getLexer().getTok().getIdentifier();
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRV32E(), RegNo, Name);
-
-    if (RegNo == RISCV::NoRegister)
-      return MatchOperand_NoMatch;
-    SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
-    getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(
-        RegNo, S, E, isRV64(), !getSTI().hasFeature(RISCV::FeatureStdExtF)));
-  }
   return MatchOperand_Success;
 }
 
