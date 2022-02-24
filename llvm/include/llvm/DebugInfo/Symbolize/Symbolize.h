@@ -61,9 +61,9 @@ public:
   };
 
   LLVMSymbolizer() = default;
-  LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
+  LLVMSymbolizer(const Options &Opts);
 
-  ~LLVMSymbolizer() { flush(); }
+  ~LLVMSymbolizer();
 
   // Overloads accepting ObjectFile does not support COFF currently
   Expected<DILineInfo> symbolizeCode(const ObjectFile &Obj,

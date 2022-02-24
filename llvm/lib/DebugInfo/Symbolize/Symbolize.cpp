@@ -39,6 +39,10 @@
 namespace llvm {
 namespace symbolize {
 
+LLVMSymbolizer::LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
+
+LLVMSymbolizer::~LLVMSymbolizer() = default;
+
 template <typename T>
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
