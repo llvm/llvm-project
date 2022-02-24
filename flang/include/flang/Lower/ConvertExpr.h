@@ -52,6 +52,12 @@ fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
                                              SymMap &symMap,
                                              StatementContext &stmtCtx);
 
+/// Create the address of the box.
+/// \p expr must be the designator of an allocatable/pointer entity.
+fir::MutableBoxValue createMutableBox(mlir::Location loc,
+                                      AbstractConverter &converter,
+                                      const SomeExpr &expr, SymMap &symMap);
+
 /// Lower a subroutine call. This handles both elemental and non elemental
 /// subroutines. \p isUserDefAssignment must be set if this is called in the
 /// context of a user defined assignment. For subroutines with alternate

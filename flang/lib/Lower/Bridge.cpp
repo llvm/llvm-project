@@ -22,6 +22,8 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -89,6 +91,11 @@ public:
                mlir::Location *loc = nullptr) override final {
     return createSomeExtendedExpression(loc ? *loc : toLocation(), *this, expr,
                                         localSymbols, context);
+  }
+  fir::MutableBoxValue
+  genExprMutableBox(mlir::Location loc,
+                    const Fortran::lower::SomeExpr &expr) override final {
+    return Fortran::lower::createMutableBox(loc, *this, expr, localSymbols);
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -520,14 +527,32 @@ private:
               fir::ExtendedValue rhs = isNumericScalar
                                            ? genExprValue(assign.rhs, stmtCtx)
                                            : genExprAddr(assign.rhs, stmtCtx);
+              bool lhsIsWholeAllocatable = isWholeAllocatable(assign.lhs);
+              llvm::Optional<fir::factory::MutableBoxReallocation> lhsRealloc;
+              llvm::Optional<fir::MutableBoxValue> lhsMutableBox;
+              auto lhs = [&]() -> fir::ExtendedValue {
+                if (lhsIsWholeAllocatable) {
+                  lhsMutableBox = genExprMutableBox(loc, assign.lhs);
+                  llvm::SmallVector<mlir::Value> lengthParams;
+                  if (const fir::CharBoxValue *charBox = rhs.getCharBox())
+                    lengthParams.push_back(charBox->getLen());
+                  else if (fir::isDerivedWithLengthParameters(rhs))
+                    TODO(loc, "assignment to derived type allocatable with "
+                              "length parameters");
+                  lhsRealloc = fir::factory::genReallocIfNeeded(
+                      *builder, loc, *lhsMutableBox,
+                      /*shape=*/llvm::None, lengthParams);
+                  return lhsRealloc->newValue;
+                }
+                return genExprAddr(assign.lhs, stmtCtx);
+              }();
 
               if (isNumericScalar) {
                 // Fortran 2018 10.2.1.3 p8 and p9
                 // Conversions should have been inserted by semantic analysis,
                 // but they can be incorrect between the rhs and lhs. Correct
                 // that here.
-                mlir::Value addr =
-                    fir::getBase(genExprAddr(assign.lhs, stmtCtx));
+                mlir::Value addr = fir::getBase(lhs);
                 mlir::Value val = fir::getBase(rhs);
                 // A function with multiple entry points returning different
                 // types tags all result variables with one of the largest
@@ -550,6 +575,11 @@ private:
               } else {
                 llvm_unreachable("unknown category");
               }
+              if (lhsIsWholeAllocatable)
+                fir::factory::finalizeRealloc(
+                    *builder, loc, lhsMutableBox.getValue(),
+                    /*lbounds=*/llvm::None, /*takeLboundsIfRealloc=*/false,
+                    lhsRealloc.getValue());
             },
 
             // [2] User defined assignment. If the context is a scalar
