@@ -30,7 +30,7 @@
 # LLVM-NEXT:         CanFallThrough: No
 # LLVM-NEXT:       }
 # LLVM-NEXT:       {
-# LLVM-NEXT:         Offset: 0x4
+# LLVM-NEXT:         Offset: 0x3
 # LLVM-NEXT:         Size: 0x4
 # LLVM-NEXT:         HasReturn: Yes
 # LLVM-NEXT:         HasTailCall: No

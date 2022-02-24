@@ -60,7 +60,7 @@
 // Basic Block Labels
 // ==================
 //
-// With -fbasic-block-sections=labels, we encode the offsets of BB addresses of
+// With -fbasic-block-sections=labels, we emit the offsets of BB addresses of
 // every function into the .llvm_bb_addr_map section. Along with the function
 // symbols, this allows for mapping of virtual addresses in PMU profiles back to
 // the corresponding basic blocks. This logic is implemented in AsmPrinter. This

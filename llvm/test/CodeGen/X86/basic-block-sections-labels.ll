@@ -51,12 +51,12 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:	.uleb128 .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_0-.Lfunc_begin0
 ; CHECK-NEXT:	.byte	8
-; CHECK-NEXT:	.uleb128 .LBB0_1-.LBB_END0_0
+; CHECK-NEXT:	.uleb128 .LBB0_1-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_1-.LBB0_1
 ; CHECK-NEXT:	.byte	8
-; CHECK-NEXT:	.uleb128 .LBB0_2-.LBB_END0_1
+; CHECK-NEXT:	.uleb128 .LBB0_2-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_2-.LBB0_2
 ; CHECK-NEXT:	.byte	1
-; CHECK-NEXT:	.uleb128 .LBB0_3-.LBB_END0_2
+; CHECK-NEXT:	.uleb128 .LBB0_3-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_3-.LBB0_3
 ; CHECK-NEXT:	.byte	5
