@@ -238,12 +238,11 @@ protected:
       : file(file), nameData(name.data()), nameSize(name.size()),
         binding(binding), type(type), stOther(stOther), symbolKind(k),
         visibility(stOther & 3), isPreemptible(false),
-        isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
-        used(false), exportDynamic(false), inDynamicList(false),
-        referenced(false), traced(false), hasVersionSuffix(false),
-        isInIplt(false), gotInIgot(false), folded(false),
-        needsTocRestore(false), scriptDefined(false), needsCopy(false),
-        needsGot(false), needsPlt(false), needsTlsDesc(false),
+        isUsedInRegularObj(false), used(false), exportDynamic(false),
+        inDynamicList(false), referenced(false), traced(false),
+        hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
+        folded(false), needsTocRestore(false), scriptDefined(false),
+        needsCopy(false), needsGot(false), needsPlt(false), needsTlsDesc(false),
         needsTlsGd(false), needsTlsGdToIe(false), needsGotDtprel(false),
         needsTlsIe(false), hasDirectReloc(false) {}
 
@@ -427,9 +426,7 @@ class LazyObject : public Symbol {
 public:
   LazyObject(InputFile &file)
       : Symbol(LazyObjectKind, &file, {}, llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {
-    isUsedInRegularObj = false;
-  }
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
