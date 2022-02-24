@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -emit-llvm -o - -verify | FileCheck %s
+// RUN: %clang_cc1 %s -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm -o - -verify | FileCheck %s
 
 int g();
 
@@ -19,7 +19,7 @@ void test3(T f) {
 int a(int);
 int a() {return 1;}
 
-void f0() {}
+void f0(void) {}
 // CHECK-LABEL: define{{.*}} void @f0()
 
 void f1();
@@ -31,13 +31,13 @@ void f2(void) {
 void f1() {}
 
 // CHECK: define {{.*}} @f3{{\(\)|\(.*sret.*\)}}
-struct foo { int X, Y, Z; } f3() {
+struct foo { int X, Y, Z; } f3(void) {
   while (1) {}
 }
 
 // PR4423 - This shouldn't crash in codegen
 void f4() {}
-void f5() { f4(42); } //expected-warning {{too many arguments}}
+void f5(void) { f4(42); } //expected-warning {{too many arguments}}
 
 // Qualifiers on parameter types shouldn't make a difference.
 static void f6(const float f, const float g) {
@@ -52,7 +52,7 @@ void f7(float f, float g) {
 struct Incomplete;
 void f8_callback(struct Incomplete);
 void f8_user(void (*callback)(struct Incomplete));
-void f8_test() {
+void f8_test(void) {
   f8_user(&f8_callback);
 // CHECK-LABEL: define{{.*}} void @f8_test()
 // CHECK: call void @f8_user({{.*}}* noundef bitcast (void ()* @f8_callback to {{.*}}*))
@@ -62,6 +62,6 @@ void f8_test() {
 
 // PR10204: don't crash
 static void test9_helper(void) {}
-void test9() {
+void test9(void) {
   (void) test9_helper;
 }

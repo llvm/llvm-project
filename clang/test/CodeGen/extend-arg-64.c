@@ -1,24 +1,24 @@
 // RUN: %clang_cc1 -DD128 -triple x86_64-apple-darwin -fextend-arguments=64  \
-// RUN:            %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECKEXT
+// RUN:            -Wno-strict-prototypes %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECKEXT
 
 // When the option isn't selected, no effect
 // RUN: %clang_cc1 -DD128 -triple x86_64-apple-darwin  \
-// RUN:                     %s -emit-llvm -o - | FileCheck %s \
+// RUN:            -Wno-strict-prototypes %s -emit-llvm -o - | FileCheck %s \
 // RUN:    --implicit-check-not "ext {{.*}}to i64"
 
 // The option isn't supported on x86, no effect
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -fextend-arguments=64 \
-// RUN:                     %s -emit-llvm -o - | FileCheck %s \
+// RUN:            -Wno-strict-prototypes %s -emit-llvm -o - | FileCheck %s \
 // RUN:    --implicit-check-not "ext {{.*}}to i64"
 
 // The option isn't supported on ppc, no effect
 // RUN: %clang_cc1 -triple ppc64le -fextend-arguments=64 \
-// RUN:                     %s -emit-llvm -o - | FileCheck %s \
+// RUN:            -Wno-strict-prototypes %s -emit-llvm -o - | FileCheck %s \
 // RUN:    --implicit-check-not "ext {{.*}}to i64"
 
 // The option isn't supported on ppc, no effect
 // RUN: %clang_cc1 -DD128 -triple powerpc64-ibm-aix-xcoff -fextend-arguments=64 \
-// RUN:                     %s -emit-llvm -o - | FileCheck %s \
+// RUN:            -Wno-strict-prototypes %s -emit-llvm -o - | FileCheck %s \
 // RUN:    --implicit-check-not "ext {{.*}}to i64"
 
 

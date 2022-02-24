@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -fsyntax-only -verify -Wno-strict-prototypes
 int f(int a) { return 0; } // expected-note {{previous definition is here}}
 int f(int);
 int f(int a) { return 0; } // expected-error {{redefinition of 'f'}}

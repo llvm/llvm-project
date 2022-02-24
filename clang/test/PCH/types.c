@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -fblocks -include %S/types.h -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fblocks -include %S/types.h -fsyntax-only -verify -Wno-strict-prototypes %s
 
 // Test with pch.
-// RUN: %clang_cc1 -emit-pch -fblocks -o %t %S/types.h
-// RUN: %clang_cc1 -fblocks -include-pch %t -fsyntax-only -verify %s -ast-print
+// RUN: %clang_cc1 -emit-pch -fblocks -Wno-strict-prototypes -o %t %S/types.h
+// RUN: %clang_cc1 -fblocks -include-pch %t -fsyntax-only -verify -Wno-strict-prototypes %s -ast-print
 
 typedef int INT;
 INT int_value;

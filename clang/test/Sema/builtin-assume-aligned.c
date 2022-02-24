@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DSIZE_T_64 -fsyntax-only -triple x86_64-linux -verify %s
-// RUN: %clang_cc1 -fsyntax-only -triple i386-freebsd -verify %s
+// RUN: %clang_cc1 -DSIZE_T_64 -fsyntax-only -Wno-strict-prototypes -triple x86_64-linux -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -triple i386-freebsd -verify %s
 
 // __builtin_assume_aligned's second parameter is size_t, which may be 32 bits,
 // so test differently when size_t is 32 bits and when it is 64 bits.

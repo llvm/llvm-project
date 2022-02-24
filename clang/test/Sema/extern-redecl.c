@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-strict-prototypes %s
 
 // rdar: // 8125274
 static int a16[];  // expected-warning {{tentative array definition assumed to have one element}}
@@ -24,17 +24,17 @@ static int test1_a[]; // expected-warning {{tentative array definition assumed t
 extern int test1_a[];
 
 // rdar://13535367
-void test2declarer() { extern int test2_array[100]; }
+void test2declarer(void) { extern int test2_array[100]; }
 extern int test2_array[];
 int test2v = sizeof(test2_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 
-void test3declarer() {
+void test3declarer(void) {
   { extern int test3_array[100]; }
   extern int test3_array[];
   int x = sizeof(test3_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
-void test4() {
+void test4(void) {
   extern int test4_array[];
   {
     extern int test4_array[100];
@@ -46,24 +46,24 @@ void test4() {
 // Test that invalid local extern declarations of library
 // builtins behave reasonably.
 extern void abort(void); // expected-note 2 {{previous declaration is here}}
-extern float *calloc(); // expected-warning {{incompatible redeclaration of library function}} expected-note {{is a builtin}} expected-note 2 {{previous declaration is here}}
-void test5a() {
-  int abort(); // expected-error {{conflicting types}}
-  float *malloc(); // expected-warning {{incompatible redeclaration of library function}} expected-note 2 {{is a builtin}}
-  int *calloc(); // expected-error {{conflicting types}}
+extern float *calloc(void); // expected-warning {{incompatible redeclaration of library function}} expected-note {{is a builtin}} expected-note 2 {{previous declaration is here}}
+void test5a(void) {
+  int abort(void); // expected-error {{conflicting types}}
+  float *malloc(void); // expected-warning {{incompatible redeclaration of library function}} expected-note 2 {{is a builtin}}
+  int *calloc(void); // expected-error {{conflicting types}}
 }
-void test5b() {
-  int abort(); // expected-error {{conflicting types}}
-  float *malloc(); // expected-warning {{incompatible redeclaration of library function}}
-  int *calloc(); // expected-error {{conflicting types}}
+void test5b(void) {
+  int abort(void); // expected-error {{conflicting types}}
+  float *malloc(void); // expected-warning {{incompatible redeclaration of library function}}
+  int *calloc(void); // expected-error {{conflicting types}}
 }
-void test5c() {
+void test5c(void) {
   void (*_abort)(void) = &abort;
   void *(*_malloc)() = &malloc;
   float *(*_calloc)() = &calloc;
 }
 
-void test6() {
+void test6(void) {
   extern int test6_array1[100];
   extern int test6_array2[100];
   void test6_fn1(int*);

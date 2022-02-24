@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O1 -fno-experimental-new-pass-manager -std=gnu89 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-GNU89 %s
-// RUN: %clang_cc1 -O1 -fno-experimental-new-pass-manager -std=c99 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-C99 %s
+// RUN: %clang_cc1 -Wno-strict-prototypes -O1 -fno-experimental-new-pass-manager -std=gnu89 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-GNU89 %s
+// RUN: %clang_cc1 -Wno-strict-prototypes -O1 -fno-experimental-new-pass-manager -std=c99 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-C99 %s
 
 // CHECK-GNU89-LABEL: define{{.*}} i32 @f0()
 // CHECK-C99-LABEL: define{{.*}} i32 @f0()
@@ -61,7 +61,7 @@ extern inline int f9(void) { return 0; }
 
 // CHECK-C99-LABEL: define{{.*}} i32 @fB()
 
-int test_all() { 
+int test_all(void) { 
   return f0() + f1() + f2() + f3() + f4() + f5() + f6() + f7() + f8() + f9() 
     + fA() + fB();
 }

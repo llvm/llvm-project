@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu  -fsyntax-only -verify %s -Wnonnull
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -Wno-strict-prototypes -fsyntax-only -verify %s -Wnonnull
 
 void __attribute__((cpu_specific(ivybridge))) no_default(void);
 void __attribute__((cpu_specific(sandybridge)))  no_default(void);
