@@ -8037,6 +8037,7 @@ cc_library(
         ":ArithmeticTransforms",
         ":IR",
         ":InferTypeOpInterface",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":Pass",
