@@ -313,8 +313,8 @@ def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
 def AArch64bic_node : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
 
 def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
-                          [(and node:$op1, (xor node:$op2, (AArch64dup (i32 -1)))),
-                           (and node:$op1, (xor node:$op2, (AArch64dup (i64 -1)))),
+                          [(and node:$op1, (xor node:$op2, (splat_vector (i32 -1)))),
+                           (and node:$op1, (xor node:$op2, (splat_vector (i64 -1)))),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
@@ -636,7 +636,7 @@ let Predicates = [HasSVEorSME] in {
   defm FCPY_ZPmI : sve_int_dup_fpimm_pred<"fcpy">;
 
   // Splat scalar register (unpredicated, GPR or vector + element index)
-  defm DUP_ZR  : sve_int_perm_dup_r<"dup", AArch64dup>;
+  defm DUP_ZR  : sve_int_perm_dup_r<"dup", splat_vector>;
   defm DUP_ZZI : sve_int_perm_dup_i<"dup">;
 
   // Splat scalar register (predicated)
@@ -644,67 +644,67 @@ let Predicates = [HasSVEorSME] in {
   defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy", AArch64dup_mt>;
 
   // Duplicate FP scalar into all vector elements
-  def : Pat<(nxv8f16 (AArch64dup (f16 FPR16:$src))),
+  def : Pat<(nxv8f16 (splat_vector (f16 FPR16:$src))),
             (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
-  def : Pat<(nxv4f16 (AArch64dup (f16 FPR16:$src))),
+  def : Pat<(nxv4f16 (splat_vector (f16 FPR16:$src))),
             (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
-  def : Pat<(nxv2f16 (AArch64dup (f16 FPR16:$src))),
+  def : Pat<(nxv2f16 (splat_vector (f16 FPR16:$src))),
             (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
-  def : Pat<(nxv4f32 (AArch64dup (f32 FPR32:$src))),
+  def : Pat<(nxv4f32 (splat_vector (f32 FPR32:$src))),
             (DUP_ZZI_S (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$src, ssub), 0)>;
-  def : Pat<(nxv2f32 (AArch64dup (f32 FPR32:$src))),
+  def : Pat<(nxv2f32 (splat_vector (f32 FPR32:$src))),
             (DUP_ZZI_S (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$src, ssub), 0)>;
-  def : Pat<(nxv2f64 (AArch64dup (f64 FPR64:$src))),
+  def : Pat<(nxv2f64 (splat_vector (f64 FPR64:$src))),
             (DUP_ZZI_D (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$src, dsub), 0)>;
-  def : Pat<(nxv8bf16 (AArch64dup (bf16 FPR16:$src))),
+  def : Pat<(nxv8bf16 (splat_vector (bf16 FPR16:$src))),
             (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
-  def : Pat<(nxv4bf16 (AArch64dup (bf16 FPR16:$src))),
+  def : Pat<(nxv4bf16 (splat_vector (bf16 FPR16:$src))),
             (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
-  def : Pat<(nxv2bf16 (AArch64dup (bf16 FPR16:$src))),
+  def : Pat<(nxv2bf16 (splat_vector (bf16 FPR16:$src))),
             (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
 
   // Duplicate +0.0 into all vector elements
-  def : Pat<(nxv8f16 (AArch64dup (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
-  def : Pat<(nxv4f16 (AArch64dup (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
-  def : Pat<(nxv2f16 (AArch64dup (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
-  def : Pat<(nxv4f32 (AArch64dup (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
-  def : Pat<(nxv2f32 (AArch64dup (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
-  def : Pat<(nxv2f64 (AArch64dup (f64 fpimm0))), (DUP_ZI_D 0, 0)>;
-  def : Pat<(nxv8bf16 (AArch64dup (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
-  def : Pat<(nxv4bf16 (AArch64dup (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
-  def : Pat<(nxv2bf16 (AArch64dup (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv8f16 (splat_vector (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv4f16 (splat_vector (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv2f16 (splat_vector (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv4f32 (splat_vector (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
+  def : Pat<(nxv2f32 (splat_vector (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
+  def : Pat<(nxv2f64 (splat_vector (f64 fpimm0))), (DUP_ZI_D 0, 0)>;
+  def : Pat<(nxv8bf16 (splat_vector (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv4bf16 (splat_vector (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv2bf16 (splat_vector (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
 
   // Duplicate Int immediate into all vector elements
-  def : Pat<(nxv16i8 (AArch64dup (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)))),
+  def : Pat<(nxv16i8 (splat_vector (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)))),
             (DUP_ZI_B $a, $b)>;
-  def : Pat<(nxv8i16 (AArch64dup (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)))),
+  def : Pat<(nxv8i16 (splat_vector (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)))),
             (DUP_ZI_H $a, $b)>;
-  def : Pat<(nxv4i32 (AArch64dup (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)))),
+  def : Pat<(nxv4i32 (splat_vector (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)))),
             (DUP_ZI_S $a, $b)>;
-  def : Pat<(nxv2i64 (AArch64dup (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
+  def : Pat<(nxv2i64 (splat_vector (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
 
   // Duplicate immediate FP into all vector elements.
-  def : Pat<(nxv2f32 (AArch64dup (f32 fpimm:$val))),
+  def : Pat<(nxv2f32 (splat_vector (f32 fpimm:$val))),
             (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
-  def : Pat<(nxv4f32 (AArch64dup (f32 fpimm:$val))),
+  def : Pat<(nxv4f32 (splat_vector (f32 fpimm:$val))),
             (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
-  def : Pat<(nxv2f64 (AArch64dup (f64 fpimm:$val))),
+  def : Pat<(nxv2f64 (splat_vector (f64 fpimm:$val))),
             (DUP_ZR_D (MOVi64imm (bitcast_fpimm_to_i64 f64:$val)))>;
 
   // Duplicate FP immediate into all vector elements
   let AddedComplexity = 2 in {
-    def : Pat<(nxv8f16 (AArch64dup fpimm16:$imm8)),
+    def : Pat<(nxv8f16 (splat_vector fpimm16:$imm8)),
               (FDUP_ZI_H fpimm16:$imm8)>;
-    def : Pat<(nxv4f16 (AArch64dup fpimm16:$imm8)),
+    def : Pat<(nxv4f16 (splat_vector fpimm16:$imm8)),
               (FDUP_ZI_H fpimm16:$imm8)>;
-    def : Pat<(nxv2f16 (AArch64dup fpimm16:$imm8)),
+    def : Pat<(nxv2f16 (splat_vector fpimm16:$imm8)),
               (FDUP_ZI_H fpimm16:$imm8)>;
-    def : Pat<(nxv4f32 (AArch64dup fpimm32:$imm8)),
+    def : Pat<(nxv4f32 (splat_vector fpimm32:$imm8)),
               (FDUP_ZI_S fpimm32:$imm8)>;
-    def : Pat<(nxv2f32 (AArch64dup fpimm32:$imm8)),
+    def : Pat<(nxv2f32 (splat_vector fpimm32:$imm8)),
               (FDUP_ZI_S fpimm32:$imm8)>;
-    def : Pat<(nxv2f64 (AArch64dup fpimm64:$imm8)),
+    def : Pat<(nxv2f64 (splat_vector fpimm64:$imm8)),
               (FDUP_ZI_D fpimm64:$imm8)>;
   }
 
@@ -1051,7 +1051,7 @@ let Predicates = [HasSVE] in {
     def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32))),
               (!cast<Instruction>(Inst # _SXTW_SCALED) PPR:$gp, GPR64:$base, ZPR:$offs)>;
     // base + vector of unsigned 32bit scaled offsets
-    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))))),
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))))),
               (!cast<Instruction>(Inst # _UXTW_SCALED) PPR:$gp, GPR64:$base, ZPR:$offs)>;
   }
 
@@ -1066,7 +1066,7 @@ let Predicates = [HasSVE] in {
     def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32))),
               (!cast<Instruction>(Inst # _SXTW) PPR:$gp, GPR64:$base, ZPR:$offs)>;
     // base + vector of unsigned 32bit offsets
-    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))))),
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))))),
               (!cast<Instruction>(Inst # _UXTW) PPR:$gp, GPR64:$base, ZPR:$offs)>;
   }
 
@@ -1227,7 +1227,7 @@ let Predicates = [HasSVE] in {
     def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32)),
               (!cast<Instruction>(Inst # _SXTW_SCALED) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
     // base + vector of unsigned 32bit scaled offsets
-    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF))))),
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (splat_vector (i64 0xFFFFFFFF))))),
               (!cast<Instruction>(Inst # _UXTW_SCALED) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
   }
 
@@ -1242,7 +1242,7 @@ let Predicates = [HasSVE] in {
     def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32)),
               (!cast<Instruction>(Inst # _SXTW) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
     // base + vector of unsigned 32bit offsets
-    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF))))),
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (splat_vector (i64 0xFFFFFFFF))))),
               (!cast<Instruction>(Inst # _UXTW) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
   }
 
@@ -1439,7 +1439,7 @@ let Predicates = [HasSVE] in {
   // Patterns to generate adr instruction.
   // adr z0.d, [z0.d, z0.d, uxtw]
   def : Pat<(add nxv2i64:$Op1,
-                (nxv2i64 (and nxv2i64:$Op2, (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))))),
+                (nxv2i64 (and nxv2i64:$Op2, (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))))),
             (ADR_UXTW_ZZZ_D_0 $Op1, $Op2)>;
   // adr z0.d, [z0.d, z0.d, sxtw]
   def : Pat<(add nxv2i64:$Op1,
@@ -1452,7 +1452,7 @@ let Predicates = [HasSVE] in {
     def : Pat<(add Ty:$Op1,
                   (Ty (AArch64lsl_p (PredTy (SVEAllActive)),
                                     Ty:$Op2,
-                                    (Ty (AArch64dup (ShiftTy ShiftAmt)))))),
+                                    (Ty (splat_vector (ShiftTy ShiftAmt)))))),
               (DestAdrIns $Op1, $Op2)>;
   }
   defm : adrShiftPat<nxv2i64, nxv2i1, i64, ADR_LSL_ZZZ_D_1, 1>;
@@ -1467,14 +1467,14 @@ let Predicates = [HasSVE] in {
   multiclass adrXtwShiftPat<ValueType Ty, ValueType PredTy, int ShiftAmt> {
     def : Pat<(add Ty:$Op1,
                   (Ty (AArch64lsl_p (PredTy (SVEAllActive)),
-                                    (Ty (and Ty:$Op2, (Ty (AArch64dup (i64 0xFFFFFFFF))))),
-                                    (Ty (AArch64dup (i64 ShiftAmt)))))),
+                                    (Ty (and Ty:$Op2, (Ty (splat_vector (i64 0xFFFFFFFF))))),
+                                    (Ty (splat_vector (i64 ShiftAmt)))))),
               (!cast<Instruction>("ADR_UXTW_ZZZ_D_"#ShiftAmt) $Op1, $Op2)>;
 
     def : Pat<(add Ty:$Op1,
                   (Ty (AArch64lsl_p (PredTy (SVEAllActive)),
                                     (Ty (sext_inreg Ty:$Op2, nxv2i32)),
-                                    (Ty (AArch64dup (i64 ShiftAmt)))))),
+                                    (Ty (splat_vector (i64 ShiftAmt)))))),
               (!cast<Instruction>("ADR_SXTW_ZZZ_D_"#ShiftAmt) $Op1, $Op2)>;
   }
   defm : adrXtwShiftPat<nxv2i64, nxv2i1, 1>;
@@ -1902,27 +1902,27 @@ let Predicates = [HasSVEorSME] in {
   // Unsigned integer -> Floating-point
   def : Pat<(nxv2f16 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
-                       (nxv2i64 (AArch64dup (i64 0xFFFF)))), (nxv2f16 ZPR:$Zd))),
+                       (nxv2i64 (splat_vector (i64 0xFFFF)))), (nxv2f16 ZPR:$Zd))),
             (UCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   def : Pat<(nxv2f16 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
-                       (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))), (nxv2f16 ZPR:$Zd))),
+                       (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))), (nxv2f16 ZPR:$Zd))),
             (UCVTF_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   def : Pat<(nxv4f16 (AArch64ucvtf_mt (nxv4i1 (SVEAllActive):$Pg),
                       (and (nxv4i32 ZPR:$Zs),
-                       (nxv4i32 (AArch64dup (i32 0xFFFF)))), (nxv4f16 ZPR:$Zd))),
+                       (nxv4i32 (splat_vector (i32 0xFFFF)))), (nxv4f16 ZPR:$Zd))),
             (UCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   def : Pat<(nxv2f32 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
-                       (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))), (nxv2f32 ZPR:$Zd))),
+                       (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))), (nxv2f32 ZPR:$Zd))),
             (UCVTF_ZPmZ_StoS_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   def : Pat<(nxv2f64 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
-                       (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))), (nxv2f64 ZPR:$Zd))),
+                       (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))), (nxv2f64 ZPR:$Zd))),
             (UCVTF_ZPmZ_StoD_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   defm FRINTN_ZPmZ : sve_fp_2op_p_zd_HSD<0b00000, "frintn", AArch64frintn_mt>;
@@ -2066,7 +2066,7 @@ let Predicates = [HasSVEorSME] in {
   let AddedComplexity = 1 in {
   class LD1RPat<ValueType vt, SDPatternOperator operator,
                 Instruction load, Instruction ptrue, ValueType index_vt, ComplexPattern CP, Operand immtype> :
-        Pat<(vt (AArch64dup (index_vt (operator (CP GPR64:$base, immtype:$offset))))),
+        Pat<(vt (splat_vector (index_vt (operator (CP GPR64:$base, immtype:$offset))))),
             (load (ptrue 31), GPR64:$base, $offset)>;
   }
 
@@ -2154,18 +2154,18 @@ let Predicates = [HasSVEorSME] in {
                                              GPR32:$op, sub_32), $imm),
                                    sub_32))>;
 
-    def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (AArch64dup (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
+    def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
               (INCH_ZPiI ZPR:$op, 31, $imm)>;
-    def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (AArch64dup (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
+    def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
               (INCW_ZPiI ZPR:$op, 31, $imm)>;
-    def : Pat<(nxv2i64 (add ZPR:$op, (nxv2i64 (AArch64dup (i64 (vscale (sve_cntd_imm i32:$imm))))))),
+    def : Pat<(nxv2i64 (add ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm i32:$imm))))))),
               (INCD_ZPiI ZPR:$op, 31, $imm)>;
 
-    def : Pat<(nxv8i16 (sub ZPR:$op, (nxv8i16 (AArch64dup (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
+    def : Pat<(nxv8i16 (sub ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
               (DECH_ZPiI ZPR:$op, 31, $imm)>;
-    def : Pat<(nxv4i32 (sub ZPR:$op, (nxv4i32 (AArch64dup (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
+    def : Pat<(nxv4i32 (sub ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
               (DECW_ZPiI ZPR:$op, 31, $imm)>;
-    def : Pat<(nxv2i64 (sub ZPR:$op, (nxv2i64 (AArch64dup (i64 (vscale (sve_cntd_imm i32:$imm))))))),
+    def : Pat<(nxv2i64 (sub ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm i32:$imm))))))),
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
