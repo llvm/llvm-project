@@ -30,7 +30,7 @@ namespace std {
   template <class T>
     constexpr T bit_floor(T x) noexcept;         // C++20
   template <class T>
-    constexpr T bit_width(T x) noexcept;         // C++20
+    constexpr int bit_width(T x) noexcept;       // C++20
 
   // [bit.rotate], rotating
   template<class T>
@@ -322,7 +322,7 @@ bit_ceil(_Tp __t) noexcept
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
 bit_width(_Tp __t) noexcept
 {
     return __t == 0 ? 0 : __bit_log2(__t) + 1;
