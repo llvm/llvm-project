@@ -12,7 +12,7 @@
 
 #elif MODE == 1
 // expected-no-diagnostics
-module foo;
+module foo; // Implementation, implicitly imports foo.
 #define IMPORTED
 
 #elif MODE == 2
@@ -21,15 +21,15 @@ export module foo; // expected-error {{redefinition of module 'foo'}}
 #define IMPORTED
 
 #elif MODE == 3
-export module bar;
+export module bar; // A different module
 
 #elif MODE == 4
-module foo:bar; // expected-error {{not yet supported}}
-#define IMPORTED // FIXME
+module foo:bar; // Partition implementation
+//#define IMPORTED (we don't import foo here)
 
 #elif MODE == 5
-export module foo:bar; // expected-error {{not yet supported}} expected-error {{redefinition}} expected-note@* {{loaded from}}
-#define IMPORTED // FIXME
+export module foo:bar; // Partition interface
+//#define IMPORTED  (we don't import foo here)
 
 #endif
 
