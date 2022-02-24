@@ -49,7 +49,7 @@ struct Relocation {
   /// Used to validate relocation correctness.
   uint64_t Value;
 
-  /// Return size of the given relocation \p Type.
+  /// Return size in bytes of the given relocation \p Type.
   static size_t getSizeForType(uint64_t Type);
 
   /// Return size of this relocation.

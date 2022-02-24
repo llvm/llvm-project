@@ -1265,51 +1265,6 @@ bool BinaryFunction::disassemble() {
       }
     }
 
-    // Check if there's a relocation associated with this instruction.
-    bool UsedReloc = false;
-    for (auto Itr = Relocations.lower_bound(Offset),
-              ItrE = Relocations.lower_bound(Offset + Size);
-         Itr != ItrE; ++Itr) {
-      const Relocation &Relocation = Itr->second;
-
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: replacing immediate 0x"
-                        << Twine::utohexstr(Relocation.Value)
-                        << " with relocation"
-                           " against "
-                        << Relocation.Symbol << "+" << Relocation.Addend
-                        << " in function " << *this
-                        << " for instruction at offset 0x"
-                        << Twine::utohexstr(Offset) << '\n');
-
-      // Process reference to the primary symbol.
-      if (!Relocation.isPCRelative())
-        BC.handleAddressRef(Relocation.Value - Relocation.Addend, *this,
-                            /*IsPCRel*/ false);
-
-      int64_t Value = Relocation.Value;
-      const bool Result = BC.MIB->replaceImmWithSymbolRef(
-          Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(), Value,
-          Relocation.Type);
-      (void)Result;
-      assert(Result && "cannot replace immediate with relocation");
-
-      // For aarch, if we replaced an immediate with a symbol from a
-      // relocation, we mark it so we do not try to further process a
-      // pc-relative operand. All we need is the symbol.
-      if (BC.isAArch64())
-        UsedReloc = true;
-
-      // Make sure we replaced the correct immediate (instruction
-      // can have multiple immediate operands).
-      if (BC.isX86()) {
-        assert(truncateToSize(static_cast<uint64_t>(Value),
-                              Relocation::getSizeForType(Relocation.Type)) ==
-                   truncateToSize(Relocation.Value, Relocation::getSizeForType(
-                                                        Relocation.Type)) &&
-               "immediate value mismatch in function");
-      }
-    }
-
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
       uint64_t TargetAddress = 0;
       if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
@@ -1394,8 +1349,75 @@ bool BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (MIB->hasPCRelOperand(Instruction) && !UsedReloc) {
-      handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size);
+    } else {
+      // Check if there's a relocation associated with this instruction.
+      bool UsedReloc = false;
+      for (auto Itr = Relocations.lower_bound(Offset),
+                ItrE = Relocations.lower_bound(Offset + Size);
+           Itr != ItrE; ++Itr) {
+        const Relocation &Relocation = Itr->second;
+        uint64_t SymbolValue = Relocation.Value - Relocation.Addend;
+        if (Relocation.isPCRelative())
+          SymbolValue += getAddress() + Relocation.Offset;
+
+        // Process reference to the symbol.
+        if (BC.isX86())
+          BC.handleAddressRef(SymbolValue, *this, Relocation.isPCRelative());
+
+        if (BC.isAArch64() || !Relocation.isPCRelative()) {
+          int64_t Value = Relocation.Value;
+          const bool Result = BC.MIB->replaceImmWithSymbolRef(
+              Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(),
+              Value, Relocation.Type);
+          (void)Result;
+          assert(Result && "cannot replace immediate with relocation");
+
+          if (BC.isX86()) {
+            // Make sure we replaced the correct immediate (instruction
+            // can have multiple immediate operands).
+            assert(
+                truncateToSize(static_cast<uint64_t>(Value),
+                               Relocation::getSizeForType(Relocation.Type)) ==
+                    truncateToSize(Relocation.Value, Relocation::getSizeForType(
+                                                         Relocation.Type)) &&
+                "immediate value mismatch in function");
+          } else if (BC.isAArch64()) {
+            // For aarch, if we replaced an immediate with a symbol from a
+            // relocation, we mark it so we do not try to further process a
+            // pc-relative operand. All we need is the symbol.
+            UsedReloc = true;
+          }
+        } else {
+          // Check if the relocation matches memop's Disp.
+          uint64_t TargetAddress;
+          if (!BC.MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
+                                                AbsoluteInstrAddr, Size)) {
+            errs() << "BOLT-ERROR: PC-relative operand can't be evaluated\n";
+            exit(1);
+          }
+          assert(TargetAddress == Relocation.Value + AbsoluteInstrAddr + Size &&
+                 "Immediate value mismatch detected.");
+
+          const MCExpr *Expr = MCSymbolRefExpr::create(
+              Relocation.Symbol, MCSymbolRefExpr::VK_None, *BC.Ctx);
+          // Real addend for pc-relative targets is adjusted with a delta
+          // from relocation placement to the next instruction.
+          const uint64_t TargetAddend =
+              Relocation.Addend + Offset + Size - Relocation.Offset;
+          if (TargetAddend) {
+            const MCConstantExpr *Offset =
+                MCConstantExpr::create(TargetAddend, *BC.Ctx);
+            Expr = MCBinaryExpr::createAdd(Expr, Offset, *BC.Ctx);
+          }
+          BC.MIB->replaceMemOperandDisp(
+              Instruction, MCOperand::createExpr(BC.MIB->getTargetExprFor(
+                               Instruction, Expr, *BC.Ctx, 0)));
+          UsedReloc = true;
+        }
+      }
+
+      if (MIB->hasPCRelOperand(Instruction) && !UsedReloc)
+        handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size);
     }
 
 add_instruction:
@@ -1565,6 +1587,8 @@ bool BinaryFunction::scanExternalRefs() {
               ItrE = Relocations.lower_bound(Offset + Size);
          Itr != ItrE; ++Itr) {
       Relocation &Relocation = Itr->second;
+      if (Relocation.isPCRelative() && BC.isX86())
+        continue;
       if (ignoreReference(Relocation.Symbol))
         continue;
 

@@ -2302,6 +2302,12 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
       }
     }
 
+    MCSymbol *ReferencedSymbol = nullptr;
+    if (!IsSectionRelocation) {
+      if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
+        ReferencedSymbol = BD->getSymbol();
+    }
+
     // PC-relative relocations from data to code are tricky since the original
     // information is typically lost after linking even with '--emit-relocs'.
     // They are normally used by PIC-style jump tables and reference both
@@ -2310,16 +2316,19 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     // that it references an arbitrary location in the code, possibly even
     // in a different function from that containing the jump table.
     if (!IsAArch64 && Relocation::isPCRelative(RType)) {
-      // Just register the fact that we have PC-relative relocation at a given
-      // address. The actual referenced label/address cannot be determined
-      // from linker data alone.
+      // For relocations against non-code sections, just register the fact that
+      // we have a PC-relative relocation at a given address. The actual
+      // referenced label/address cannot be determined from linker data alone.
       if (!IsFromCode)
         BC->addPCRelativeDataRelocation(Rel.getOffset());
-
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
-                 << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
-                 << "\n");
+      else if (!IsSectionRelocation && ReferencedSymbol)
+        ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
+                                    Addend, ExtractedValue);
+      else
+        LLVM_DEBUG(
+            dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
+                   << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
+                   << "\n");
       continue;
     }
 
@@ -2399,7 +2408,6 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
       }
     }
 
-    MCSymbol *ReferencedSymbol = nullptr;
     if (ForceRelocation) {
       std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
       ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
