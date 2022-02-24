@@ -16,6 +16,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -517,7 +518,7 @@ private:
               if (assign.lhs.Rank() > 0) {
                 // Array assignment
                 // See Fortran 2018 10.2.1.3 p5, p6, and p7
-                TODO(toLocation(), "Array assignment");
+                genArrayAssignment(assign, stmtCtx);
                 return;
               }
 
@@ -835,6 +836,26 @@ private:
     TODO(toLocation(), "LockStmt lowering");
   }
 
+  /// Generate an array assignment.
+  /// This is an assignment expression with rank > 0. The assignment may or may
+  /// not be in a WHERE and/or FORALL context.
+  void genArrayAssignment(const Fortran::evaluate::Assignment &assign,
+                          Fortran::lower::StatementContext &stmtCtx) {
+    if (isWholeAllocatable(assign.lhs)) {
+      // Assignment to allocatables may require the lhs to be
+      // deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
+      Fortran::lower::createAllocatableArrayAssignment(
+          *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
+          localSymbols, stmtCtx);
+      return;
+    }
+
+    // No masks and the iteration space is implied by the array, so create a
+    // simple array assignment.
+    Fortran::lower::createSomeArrayAssignment(*this, assign.lhs, assign.rhs,
+                                              localSymbols, stmtCtx);
+  }
+
   void genFIR(const Fortran::parser::WhereConstruct &c) {
     TODO(toLocation(), "WhereConstruct lowering");
   }
@@ -1047,6 +1068,8 @@ private:
 
   /// Tuple of host assoicated variables.
   mlir::Value hostAssocTuple;
+  Fortran::lower::ImplicitIterSpace implicitIterSpace;
+  Fortran::lower::ExplicitIterSpace explicitIterSpace;
 };
 
 } // namespace

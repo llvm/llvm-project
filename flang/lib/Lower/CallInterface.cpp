@@ -601,20 +601,22 @@ private:
 
   fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
     fir::SequenceType::Shape bounds;
-    for (Fortran::evaluate::MaybeExtentExpr extentExpr : shape) {
-      fir::SequenceType::Extent extent = fir::SequenceType::getUnknownExtent();
-      if (std::optional<std::int64_t> constantExtent =
-              toInt64(std::move(extentExpr)))
-        extent = *constantExtent;
-      bounds.push_back(extent);
+    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent : shape) {
+      fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
+      if (std::optional<std::int64_t> i = toInt64(extent))
+        bound = *i;
+      bounds.emplace_back(bound);
     }
     return bounds;
   }
-
-  template <typename A>
-  std::optional<std::int64_t> toInt64(A &&expr) {
-    return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
-        getConverter().getFoldingContext(), std::move(expr)));
+  std::optional<std::int64_t>
+  toInt64(std::optional<
+          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+              expr) {
+    if (expr)
+      return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
+          getConverter().getFoldingContext(), toEvExpr(*expr)));
+    return std::nullopt;
   }
 
   /// Return a vector with an attribute with the name of the argument if this
