@@ -6710,6 +6710,24 @@ static SDValue visitORCommutative(
       return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(1), N1);
   }
 
+  auto peekThroughZext = [](SDValue V) {
+    if (V->getOpcode() == ISD::ZERO_EXTEND)
+      return V->getOperand(0);
+    return V;
+  };
+
+  // (fshl X, ?, Y) | (shl X, Y) --> fshl X, ?, Y
+  if (N0.getOpcode() == ISD::FSHL && N1.getOpcode() == ISD::SHL &&
+      N0.getOperand(0) == N1.getOperand(0) &&
+      peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1)))
+    return N0;
+
+  // (fshr ?, X, Y) | (srl X, Y) --> fshr ?, X, Y
+  if (N0.getOpcode() == ISD::FSHR && N1.getOpcode() == ISD::SRL &&
+      N0.getOperand(1) == N1.getOperand(0) &&
+      peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1)))
+    return N0;
+
   return SDValue();
 }
 
