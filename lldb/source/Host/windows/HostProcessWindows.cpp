@@ -70,7 +70,7 @@ MonitorThread(const Host::MonitorChildProcessCallback &callback,
 
   ::WaitForSingleObject(process_handle, INFINITE);
   ::GetExitCodeProcess(process_handle, &exit_code);
-  callback(::GetProcessId(process_handle), true, 0, exit_code);
+  callback(::GetProcessId(process_handle), 0, exit_code);
   ::CloseHandle(process_handle);
   return {};
 }
