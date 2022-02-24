@@ -19,7 +19,7 @@
 // above)
 #line 1
 typedef struct { int array[12]; } BigStruct_t;
-BigStruct_t (^a)() = ^(int param) {
+BigStruct_t (^a)(int) = ^(int param) {
     BigStruct_t b;
     return b;
 };

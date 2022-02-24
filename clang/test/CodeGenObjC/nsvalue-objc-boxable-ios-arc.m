@@ -13,7 +13,7 @@
 // CHECK:      [[EDGE_STR:.*]]      = {{.*}}NSEdgeInsets=dddd{{.*}}
 
 // CHECK-LABEL: define{{.*}} void @doRange()
-void doRange() {
+void doRange(void) {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct._NSRange{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct._NSRange{{.*}}
   // CHECK:      [[RECV_PTR:%.*]]   = load {{.*}} [[NSVALUE]]
@@ -32,7 +32,7 @@ void doRange() {
 }
 
 // CHECK-LABEL: define{{.*}} void @doPoint()
-void doPoint() {
+void doPoint(void) {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.CGPoint{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.CGPoint{{.*}}
   // CHECK:      [[RECV_PTR:%.*]]   = load {{.*}} [[NSVALUE]]
@@ -51,7 +51,7 @@ void doPoint() {
 }
 
 // CHECK-LABEL: define{{.*}} void @doSize()
-void doSize() {
+void doSize(void) {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.CGSize{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.CGSize{{.*}}
   // CHECK:      [[RECV_PTR:%.*]]   = load {{.*}} [[NSVALUE]]
@@ -70,7 +70,7 @@ void doSize() {
 }
 
 // CHECK-LABEL: define{{.*}} void @doRect()
-void doRect() {
+void doRect(void) {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.CGRect{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.CGRect{{.*}}
   // CHECK:      [[RECV_PTR:%.*]]   = load {{.*}} [[NSVALUE]]
@@ -91,7 +91,7 @@ void doRect() {
 }
 
 // CHECK-LABEL: define{{.*}} void @doNSEdgeInsets()
-void doNSEdgeInsets() {
+void doNSEdgeInsets(void) {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.NSEdgeInsets{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.NSEdgeInsets{{.*}}
   // CHECK:      [[RECV_PTR:%.*]]   = load {{.*}} [[NSVALUE]]
@@ -110,10 +110,10 @@ void doNSEdgeInsets() {
 }
 
 // CHECK-LABEL: define{{.*}} void @doRangeRValue() 
-void doRangeRValue() {
+void doRangeRValue(void) {
   // CHECK:     [[COERCE:%.*]]          = alloca %struct._NSRange{{.*}}
   // CHECK:     [[RECV_PTR:%.*]]        = load {{.*}} [[NSVALUE]]
-  // CHECK:     call {{.*}} @getRange {{.*}} [[COERCE]]{{.*}}
+  // CHECK:     call {{.*}} @getRange({{.*}} [[COERCE]])
   // CHECK:     [[COERCE_CAST:%.*]]     = bitcast %struct._NSRange* [[COERCE]]{{.*}}
   // CHECK:     [[RECV:%.*]]            = bitcast %struct._class_t* [[RECV_PTR]] to i8*
   // CHECK:     [[SEL:%.*]]             = load i8*, i8** [[VALUE_SEL]]

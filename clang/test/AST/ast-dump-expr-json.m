@@ -51,7 +51,7 @@ typedef signed char BOOL;
 - (void)setObject:(id)object atIndexedSubscript:(int)index;
 @end
 
-void TestObjCEncode() {
+void TestObjCEncode(void) {
   @encode(int);
   @encode(typeof(^{;}));
 }
@@ -61,11 +61,11 @@ void TestObjCMessage(I *Obj) {
   [I method2];
 }
 
-void TestObjCBoxed() {
+void TestObjCBoxed(void) {
   @(1 + 1);
 }
 
-void TestObjCSelector() {
+void TestObjCSelector(void) {
   SEL s = @selector(dealloc);
 }
 
@@ -90,7 +90,7 @@ void TestObjCIVarRef(I *Ptr) {
   Ptr->public = 0;
 }
 
-void TestObjCBoolLiteral() {
+void TestObjCBoolLiteral(void) {
   __objc_yes;
   __objc_no;
 }
@@ -123,7 +123,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:  "name": "TestObjCEncode",
 // CHECK-NEXT:  "mangledName": "TestObjCEncode",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void ()"
+// CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -133,7 +133,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 54,
-// CHECK-NEXT:      "col": 23,
+// CHECK-NEXT:      "col": 27,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
@@ -450,7 +450,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:  "name": "TestObjCBoxed",
 // CHECK-NEXT:  "mangledName": "TestObjCBoxed",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void ()"
+// CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -460,7 +460,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 64,
-// CHECK-NEXT:      "col": 22,
+// CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
@@ -613,7 +613,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:  "name": "TestObjCSelector",
 // CHECK-NEXT:  "mangledName": "TestObjCSelector",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void ()"
+// CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -623,7 +623,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 68,
-// CHECK-NEXT:      "col": 25,
+// CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
@@ -4997,7 +4997,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:  "name": "TestObjCBoolLiteral",
 // CHECK-NEXT:  "mangledName": "TestObjCBoolLiteral",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void ()"
+// CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -5007,7 +5007,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 93,
-// CHECK-NEXT:      "col": 28,
+// CHECK-NEXT:      "col": 32,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
