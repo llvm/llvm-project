@@ -17,6 +17,7 @@
 #include "TableGenBackends.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -292,6 +293,15 @@ protected:
   // corresponding closing #endif, or an empty string if no version #if guard
   // was emitted.
   std::string emitVersionGuard(const Record *Builtin);
+
+  // Emit an #if guard for all type extensions required for the given type
+  // strings.  Return the corresponding closing #endif, or an empty string
+  // if no extension #if guard was emitted.
+  StringRef
+  emitTypeExtensionGuards(const SmallVectorImpl<std::string> &Signature);
+
+  // Map type strings to type extensions (e.g. "half2" -> "cl_khr_fp16").
+  StringMap<StringRef> TypeExtMap;
 
   // Contains OpenCL builtin functions and related information, stored as
   // Record instances. They are coming from the associated TableGen file.
@@ -1057,7 +1067,16 @@ void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
     // Insert the Cartesian product of the types and vector sizes.
     for (const auto &Vector : VectorList) {
       for (const auto &Type : TypeList) {
-        ExpandedArg.push_back(getTypeString(Type, Flags, Vector));
+        std::string FullType = getTypeString(Type, Flags, Vector);
+        ExpandedArg.push_back(FullType);
+
+        // If the type requires an extension, add a TypeExtMap entry mapping
+        // the full type name to the extension.
+        StringRef Ext =
+            Arg->getValueAsDef("Extension")->getValueAsString("ExtName");
+        if (!Ext.empty() && TypeExtMap.find(FullType) == TypeExtMap.end()) {
+          TypeExtMap.insert({FullType, Ext});
+        }
       }
     }
     NumSignatures = std::max<unsigned>(NumSignatures, ExpandedArg.size());
@@ -1141,6 +1160,39 @@ OpenCLBuiltinFileEmitterBase::emitVersionGuard(const Record *Builtin) {
   return OptionalEndif;
 }
 
+StringRef OpenCLBuiltinFileEmitterBase::emitTypeExtensionGuards(
+    const SmallVectorImpl<std::string> &Signature) {
+  SmallSet<StringRef, 2> ExtSet;
+
+  // Iterate over all types to gather the set of required TypeExtensions.
+  for (const auto &Ty : Signature) {
+    StringRef TypeExt = TypeExtMap.lookup(Ty);
+    if (!TypeExt.empty()) {
+      // The TypeExtensions are space-separated in the .td file.
+      SmallVector<StringRef, 2> ExtVec;
+      TypeExt.split(ExtVec, " ");
+      for (const auto Ext : ExtVec) {
+        ExtSet.insert(Ext);
+      }
+    }
+  }
+
+  // Emit the #if only when at least one extension is required.
+  if (ExtSet.empty())
+    return "";
+
+  OS << "#if ";
+  bool isFirst = true;
+  for (const auto Ext : ExtSet) {
+    if (!isFirst)
+      OS << " && ";
+    OS << "defined(" << Ext << ")";
+    isFirst = false;
+  }
+  OS << "\n";
+  return "#endif // TypeExtension\n";
+}
+
 void OpenCLBuiltinTestEmitter::emit() {
   emitSourceFileHeader("OpenCL Builtin exhaustive testing", OS);
 
@@ -1163,6 +1215,8 @@ void OpenCLBuiltinTestEmitter::emit() {
     std::string OptionalVersionEndif = emitVersionGuard(B);
 
     for (const auto &Signature : FTypes) {
+      StringRef OptionalTypeExtEndif = emitTypeExtensionGuards(Signature);
+
       // Emit function declaration.
       OS << Signature[0] << " test" << TestID++ << "_" << Name << "(";
       if (Signature.size() > 1) {
@@ -1189,6 +1243,7 @@ void OpenCLBuiltinTestEmitter::emit() {
 
       // End of function body.
       OS << "}\n";
+      OS << OptionalTypeExtEndif;
     }
 
     OS << OptionalVersionEndif;
