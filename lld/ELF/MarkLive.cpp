@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MarkLive.h"
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "SymbolTable.h"
