@@ -30199,7 +30199,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
   // TODO: Handle vXi16 cases on all targets.
   if (EltSizeInBits == 8 || EltSizeInBits == 32 ||
-      (IsROTL && EltSizeInBits == 16 && !Subtarget.hasAVX())) {
+      (EltSizeInBits == 16 && !Subtarget.hasSSE41())) {
     int BaseRotAmtIdx = -1;
     if (SDValue BaseRotAmt = DAG.getSplatSourceVector(AmtMod, BaseRotAmtIdx)) {
       unsigned ShiftX86Opc = IsROTL ? X86ISD::VSHLI : X86ISD::VSRLI;
