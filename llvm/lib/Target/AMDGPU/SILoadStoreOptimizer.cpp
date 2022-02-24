@@ -82,7 +82,9 @@ enum InstClassEnum {
   GLOBAL_LOAD,
   GLOBAL_LOAD_SADDR,
   GLOBAL_STORE,
-  GLOBAL_STORE_SADDR
+  GLOBAL_STORE_SADDR,
+  FLAT_LOAD,
+  FLAT_STORE
 };
 
 struct AddressRegs {
@@ -244,11 +246,11 @@ private:
   mergeTBufferStorePair(CombineInfo &CI, CombineInfo &Paired,
                         MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
-  mergeGlobalLoadPair(CombineInfo &CI, CombineInfo &Paired,
-                      MachineBasicBlock::iterator InsertBefore);
+  mergeFlatLoadPair(CombineInfo &CI, CombineInfo &Paired,
+                    MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
-  mergeGlobalStorePair(CombineInfo &CI, CombineInfo &Paired,
-                       MachineBasicBlock::iterator InsertBefore);
+  mergeFlatStorePair(CombineInfo &CI, CombineInfo &Paired,
+                     MachineBasicBlock::iterator InsertBefore);
 
   void updateBaseAndOffset(MachineInstr &I, Register NewBase,
                            int32_t NewOffset) const;
@@ -323,23 +325,31 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORD:
   case AMDGPU::GLOBAL_STORE_DWORD_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORD:
+  case AMDGPU::FLAT_STORE_DWORD:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX2:
   case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX2:
+  case AMDGPU::FLAT_STORE_DWORDX2:
     return 2;
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX3:
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX3:
+  case AMDGPU::FLAT_STORE_DWORDX3:
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX4:
+  case AMDGPU::FLAT_STORE_DWORDX4:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return 8;
@@ -444,6 +454,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     return GLOBAL_STORE_SADDR;
+  case AMDGPU::FLAT_LOAD_DWORD:
+  case AMDGPU::FLAT_LOAD_DWORDX2:
+  case AMDGPU::FLAT_LOAD_DWORDX3:
+  case AMDGPU::FLAT_LOAD_DWORDX4:
+    return FLAT_LOAD;
+  case AMDGPU::FLAT_STORE_DWORD:
+  case AMDGPU::FLAT_STORE_DWORDX2:
+  case AMDGPU::FLAT_STORE_DWORDX3:
+  case AMDGPU::FLAT_STORE_DWORDX4:
+    return FLAT_STORE;
   }
 }
 
@@ -497,6 +517,16 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     return AMDGPU::GLOBAL_STORE_DWORD_SADDR;
+  case AMDGPU::FLAT_LOAD_DWORD:
+  case AMDGPU::FLAT_LOAD_DWORDX2:
+  case AMDGPU::FLAT_LOAD_DWORDX3:
+  case AMDGPU::FLAT_LOAD_DWORDX4:
+    return AMDGPU::FLAT_LOAD_DWORD;
+  case AMDGPU::FLAT_STORE_DWORD:
+  case AMDGPU::FLAT_STORE_DWORDX2:
+  case AMDGPU::FLAT_STORE_DWORDX3:
+  case AMDGPU::FLAT_STORE_DWORDX4:
+    return AMDGPU::FLAT_STORE_DWORD;
   }
 }
 
@@ -577,6 +607,14 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX2:
   case AMDGPU::GLOBAL_STORE_DWORDX3:
   case AMDGPU::GLOBAL_STORE_DWORDX4:
+  case AMDGPU::FLAT_LOAD_DWORD:
+  case AMDGPU::FLAT_LOAD_DWORDX2:
+  case AMDGPU::FLAT_LOAD_DWORDX3:
+  case AMDGPU::FLAT_LOAD_DWORDX4:
+  case AMDGPU::FLAT_STORE_DWORD:
+  case AMDGPU::FLAT_STORE_DWORDX2:
+  case AMDGPU::FLAT_STORE_DWORDX3:
+  case AMDGPU::FLAT_STORE_DWORDX4:
     Result.VAddr = true;
     return Result;
   }
@@ -1449,7 +1487,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   return New;
 }
 
-MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalLoadPair(
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
@@ -1492,7 +1530,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalLoadPair(
   return New;
 }
 
-MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalStorePair(
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
@@ -1605,6 +1643,28 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::GLOBAL_STORE_DWORDX3_SADDR;
     case 4:
       return AMDGPU::GLOBAL_STORE_DWORDX4_SADDR;
+    }
+  case FLAT_LOAD:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::FLAT_LOAD_DWORDX2;
+    case 3:
+      return AMDGPU::FLAT_LOAD_DWORDX3;
+    case 4:
+      return AMDGPU::FLAT_LOAD_DWORDX4;
+    }
+  case FLAT_STORE:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::FLAT_STORE_DWORDX2;
+    case 3:
+      return AMDGPU::FLAT_STORE_DWORDX3;
+    case 4:
+      return AMDGPU::FLAT_STORE_DWORDX4;
     }
   case MIMG:
     assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
@@ -2240,14 +2300,16 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       NewMI = mergeTBufferStorePair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
+    case FLAT_LOAD:
     case GLOBAL_LOAD:
     case GLOBAL_LOAD_SADDR:
-      NewMI = mergeGlobalLoadPair(CI, Paired, Where->I);
+      NewMI = mergeFlatLoadPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
+    case FLAT_STORE:
     case GLOBAL_STORE:
     case GLOBAL_STORE_SADDR:
-      NewMI = mergeGlobalStorePair(CI, Paired, Where->I);
+      NewMI = mergeFlatStorePair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     }
