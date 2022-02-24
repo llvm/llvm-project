@@ -10,6 +10,9 @@ declare void @deref_phi_user(i32* %a);
 ; TEST 1
 ; take mininimum of return values
 ;
+;.
+; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
+;.
 define i32* @test1(i32* dereferenceable(4) %0, double* dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@test1
@@ -914,6 +917,32 @@ define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 declare void @unknown_use8(i8*) willreturn nounwind
 declare void @unknown_use32(i32*) willreturn nounwind
 declare void @llvm.assume(i1)
+
+@g = global i64 0
+define void @max_offset(i1 %c) {
+; CHECK: Function Attrs: nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@max_offset
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       f:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8* [ getelementptr (i8, i8* bitcast (i64* @g to i8*), i64 2), [[T]] ], [ bitcast (i64* @g to i8*), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @unknown_use8(i8* noundef align 2 dereferenceable_or_null(6) [[PHI]]) #[[ATTR1]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %bc = bitcast i64* @g to i8*
+  br i1 %c, label %t, label %f
+t:
+  %gep = getelementptr i8, i8* %bc, i64 2
+  br label %f
+f:
+  %phi = phi i8* [%gep, %t], [%bc, %entry]
+  call void @unknown_use8(i8* %phi)
+  ret void
+}
 
 !0 = !{i64 10, i64 100}
 
