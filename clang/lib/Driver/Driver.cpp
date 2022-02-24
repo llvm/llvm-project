@@ -906,6 +906,34 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     // may now contain targetid value. This value
     // may include features that would result in different and potentially
     // multiple offload images.
+
+    bool HasValidOpenMPRuntime =
+        C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                                 options::OPT_fno_openmp, false);
+    if (HasValidOpenMPRuntime) {
+      OpenMPRuntimeKind OpenMPKind = getOpenMPRuntime(C.getInputArgs());
+      HasValidOpenMPRuntime =
+          OpenMPKind == OMPRT_OMP || OpenMPKind == OMPRT_IOMP5;
+    }
+
+    bool HasOpenMPTargets =
+        C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ);
+    if (!HasValidOpenMPRuntime && HasOpenMPTargets) {
+      // We expect that an offload target is always used in conjunction with
+      // option -fopenmp specifying a valid runtime with offloading support,
+      // i.e. libomp or libiomp.
+      Diag(clang::diag::warn_drv_expecting_fopenmp_with_fopenmp_targets);
+      return;
+    } else if (!HasValidOpenMPRuntime && !HasOpenMPTargets) {
+      return;
+    }
+
+    bool HasOffloadArch = C.getInputArgs().hasFlag(
+        options::OPT_offload_arch_EQ, options::OPT_no_offload_arch_EQ, false);
+    if (HasValidOpenMPRuntime && !HasOpenMPTargets && !HasOffloadArch) {
+      return;
+    }
+
     std::set<std::string> OffloadArchs;
 
     if (Arg *OpenMPTargets =
@@ -978,22 +1006,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           C.setContainsError();
           return;
         }
-      }
-
-      // We expect that an offload target is always used in conjunction with
-      // option -fopenmp specifying a valid runtime with offloading support,
-      // i.e. libomp or libiomp.
-      bool HasValidOpenMPRuntime = C.getInputArgs().hasFlag(
-          options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-          options::OPT_fno_openmp, false);
-      if (HasValidOpenMPRuntime) {
-        OpenMPRuntimeKind OpenMPKind = getOpenMPRuntime(C.getInputArgs());
-        HasValidOpenMPRuntime =
-            OpenMPKind == OMPRT_OMP || OpenMPKind == OMPRT_IOMP5;
-      }
-      if (!HasValidOpenMPRuntime) {
-        Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
-        return;
       }
 
       llvm::StringMap<const char *> FoundNormalizedTriples;
