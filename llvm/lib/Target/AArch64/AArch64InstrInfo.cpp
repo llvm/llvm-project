@@ -7427,11 +7427,13 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
           .addReg(AArch64::SP, RegState::InternalRead);
     MI.setMIFlag(MachineInstr::FrameSetup);
 
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameSetup);
+    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo()) {
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameSetup);
+    }
 
     // If v8.3a features are available we can replace a RET instruction by
     // RETAA or RETAB and omit the AUT instructions
@@ -7518,24 +7520,26 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                 .addImm(-16);
     It = MBB.insert(It, STRXpre);
 
-    const TargetSubtargetInfo &STI = MF.getSubtarget();
-    const MCRegisterInfo *MRI = STI.getRegisterInfo();
-    unsigned DwarfReg = MRI->getDwarfRegNum(AArch64::LR, true);
+    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo()) {
+      const TargetSubtargetInfo &STI = MF.getSubtarget();
+      const MCRegisterInfo *MRI = STI.getRegisterInfo();
+      unsigned DwarfReg = MRI->getDwarfRegNum(AArch64::LR, true);
 
-    // Add a CFI saying the stack was moved 16 B down.
-    int64_t StackPosEntry =
-        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 16));
-    BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
-        .addCFIIndex(StackPosEntry)
-        .setMIFlags(MachineInstr::FrameSetup);
+      // Add a CFI saying the stack was moved 16 B down.
+      int64_t StackPosEntry =
+          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 16));
+      BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
+          .addCFIIndex(StackPosEntry)
+          .setMIFlags(MachineInstr::FrameSetup);
 
-    // Add a CFI saying that the LR that we want to find is now 16 B higher than
-    // before.
-    int64_t LRPosEntry =
-        MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, DwarfReg, -16));
-    BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
-        .addCFIIndex(LRPosEntry)
-        .setMIFlags(MachineInstr::FrameSetup);
+      // Add a CFI saying that the LR that we want to find is now 16 B higher
+      // than before.
+      int64_t LRPosEntry = MF.addFrameInst(
+          MCCFIInstruction::createOffset(nullptr, DwarfReg, -16));
+      BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
+          .addCFIIndex(LRPosEntry)
+          .setMIFlags(MachineInstr::FrameSetup);
+    }
 
     // Insert a restore before the terminator for the function.
     MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
