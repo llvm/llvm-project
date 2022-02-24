@@ -55,7 +55,12 @@ if(COMGR_BUILD_SHARED_LIBS)
   add_library(amd_comgr SHARED ${SOURCES})
   # Windows doesn't have a strip utility, so CMAKE_STRIP won't be set.
   if((CMAKE_BUILD_TYPE STREQUAL "Release") AND NOT ("${CMAKE_STRIP}" STREQUAL ""))
-    add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:amd_comgr>)
+    if (APPLE)
+      # Building on Mac fails unless -x is passed to the strip command
+      add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} -x $<TARGET_FILE:amd_comgr>)
+    else()
+      add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:amd_comgr>)
+    endif()
   endif()
 else()
   add_library(amd_comgr STATIC ${SOURCES})
