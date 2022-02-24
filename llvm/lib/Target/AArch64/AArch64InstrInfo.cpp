@@ -1094,7 +1094,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     return true;
   default:;
   }
-  return isSEHInstruction(MI);
+  if (isSEHInstruction(MI))
+    return true;
+  auto Next = std::next(MI.getIterator());
+  return Next != MBB->end() && Next->isCFIInstruction();
 }
 
 /// analyzeCompare - For a comparison instruction, return the source registers
