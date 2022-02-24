@@ -174,6 +174,62 @@ public:
     return genval(expr);
   }
 
+  /// Lower an expression that is a pointer or an allocatable to a
+  /// MutableBoxValue.
+  fir::MutableBoxValue
+  genMutableBoxValue(const Fortran::lower::SomeExpr &expr) {
+    // Pointers and allocatables can only be:
+    //    - a simple designator "x"
+    //    - a component designator "a%b(i,j)%x"
+    //    - a function reference "foo()"
+    //    - result of NULL() or NULL(MOLD) intrinsic.
+    //    NULL() requires some context to be lowered, so it is not handled
+    //    here and must be lowered according to the context where it appears.
+    ExtValue exv = std::visit(
+        [&](const auto &x) { return genMutableBoxValueImpl(x); }, expr.u);
+    const fir::MutableBoxValue *mutableBox =
+        exv.getBoxOf<fir::MutableBoxValue>();
+    if (!mutableBox)
+      fir::emitFatalError(getLoc(), "expr was not lowered to MutableBoxValue");
+    return *mutableBox;
+  }
+
+  template <typename T>
+  ExtValue genMutableBoxValueImpl(const T &) {
+    // NULL() case should not be handled here.
+    fir::emitFatalError(getLoc(), "NULL() must be lowered in its context");
+  }
+
+  template <typename T>
+  ExtValue
+  genMutableBoxValueImpl(const Fortran::evaluate::FunctionRef<T> &funRef) {
+    return genRawProcedureRef(funRef, converter.genType(toEvExpr(funRef)));
+  }
+
+  template <typename T>
+  ExtValue
+  genMutableBoxValueImpl(const Fortran::evaluate::Designator<T> &designator) {
+    return std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::evaluate::SymbolRef &sym) -> ExtValue {
+              return symMap.lookupSymbol(*sym).toExtendedValue();
+            },
+            [&](const Fortran::evaluate::Component &comp) -> ExtValue {
+              TODO(getLoc(), "genMutableBoxValueImpl Component");
+            },
+            [&](const auto &) -> ExtValue {
+              fir::emitFatalError(getLoc(),
+                                  "not an allocatable or pointer designator");
+            }},
+        designator.u);
+  }
+
+  template <typename T>
+  ExtValue genMutableBoxValueImpl(const Fortran::evaluate::Expr<T> &expr) {
+    return std::visit([&](const auto &x) { return genMutableBoxValueImpl(x); },
+                      expr.u);
+  }
+
   mlir::Location getLoc() { return location; }
 
   template <typename A>
@@ -1233,6 +1289,19 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(
     Fortran::lower::StatementContext &stmtCtx) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "address: ") << '\n');
   return ScalarExprLowering{loc, converter, symMap, stmtCtx}.gen(expr);
+}
+
+fir::MutableBoxValue Fortran::lower::createMutableBox(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap) {
+  // MutableBox lowering StatementContext does not need to be propagated
+  // to the caller because the result value is a variable, not a temporary
+  // expression. The StatementContext clean-up can occur before using the
+  // resulting MutableBoxValue. Variables of all other types are handled in the
+  // bridge.
+  Fortran::lower::StatementContext dummyStmtCtx;
+  return ScalarExprLowering{loc, converter, symMap, dummyStmtCtx}
+      .genMutableBoxValue(expr);
 }
 
 mlir::Value Fortran::lower::createSubroutineCall(

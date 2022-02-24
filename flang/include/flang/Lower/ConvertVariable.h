@@ -17,9 +17,12 @@
 #ifndef FORTRAN_LOWER_CONVERT_VARIABLE_H
 #define FORTRAN_LOWER_CONVERT_VARIABLE_H
 
+#include "mlir/IR/Value.h"
+
 namespace Fortran ::lower {
 class AbstractConverter;
 class CallerInterface;
+class StatementContext;
 class SymMap;
 namespace pft {
 struct Variable;
@@ -31,6 +34,13 @@ struct Variable;
 /// instantiation and can be different form \p symMap.
 void instantiateVariable(AbstractConverter &, const pft::Variable &var,
                          SymMap &symMap);
+
+/// Lower a symbol attributes given an optional storage \p and add it to the
+/// provided symbol map. If \preAlloc is not provided, a temporary storage will
+/// be allocated. This is a low level function that should only be used if
+/// instantiateVariable cannot be called.
+void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
+                         StatementContext &, mlir::Value preAlloc = {});
 
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
