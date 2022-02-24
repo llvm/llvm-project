@@ -50,7 +50,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
+// CHECK:              "-fno-implicit-modules",
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
@@ -91,7 +91,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
+// CHECK:              "-fno-implicit-modules",
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [

@@ -12,11 +12,11 @@
 ld1rd   { z0.d }, p0/z, [x0]
 // CHECK-INST: ld1rd   { z0.d }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0xc0,0x85]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 e0 c0 85 <unknown>
 
 ld1rd   { z31.d }, p7/z, [sp, #504]
 // CHECK-INST: ld1rd   { z31.d }, p7/z, [sp, #504]
 // CHECK-ENCODING: [0xff,0xff,0xff,0x85]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ff ff ff 85 <unknown>

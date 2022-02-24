@@ -6,7 +6,7 @@
 # libraries. This test checks such handling.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o %S/Inputs/mips-gp-dips-corrupt-ver.so
+# RUN: ld.lld %t.o %S/Inputs/mips-gp-dips-corrupt-ver.so -o /dev/null
 
   .global __start
   .text

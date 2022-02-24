@@ -10,23 +10,29 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLCACHE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntervalMap.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSourceFile.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 #include <memory>
 #include <vector>
 
 namespace llvm {
+namespace codeview {
+class InlineSiteSym;
+struct FileChecksumEntry;
+} // namespace codeview
 namespace pdb {
+class IPDBSourceFile;
+class NativeSession;
+class PDBSymbol;
+class PDBSymbolCompiland;
 class DbiStream;
-class PDBFile;
 
 class SymbolCache {
   NativeSession &Session;

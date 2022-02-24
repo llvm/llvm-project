@@ -666,9 +666,8 @@ namespace {
     /// of folding (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2).
     /// MulNode is the original multiply, AddNode is (add x, c1),
     /// and ConstNode is c2.
-    bool isMulAddWithConstProfitable(SDNode *MulNode,
-                                     SDValue &AddNode,
-                                     SDValue &ConstNode);
+    bool isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
+                                     SDValue ConstNode);
 
     /// This is a helper function for visitAND and visitZERO_EXTEND.  Returns
     /// true if the (and (load x) c) pattern matches an extload.  ExtVT returns
@@ -3137,21 +3136,26 @@ static SDValue combineADDCARRYDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
 // Our goal is to identify A, B, and CarryIn and produce ADDCARRY/SUBCARRY with
 // a single path for carry/borrow out propagation:
 static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
-                                   SDValue Carry0, SDValue Carry1, SDNode *N) {
-  if (Carry0.getResNo() != 1 || Carry1.getResNo() != 1)
+                                   SDValue N0, SDValue N1, SDNode *N) {
+  SDValue Carry0 = getAsCarry(TLI, N0);
+  if (!Carry0)
     return SDValue();
+  SDValue Carry1 = getAsCarry(TLI, N1);
+  if (!Carry1)
+    return SDValue();
+
   unsigned Opcode = Carry0.getOpcode();
   if (Opcode != Carry1.getOpcode())
     return SDValue();
   if (Opcode != ISD::UADDO && Opcode != ISD::USUBO)
     return SDValue();
 
-  // Canonicalize the add/sub of A and B as Carry0 and the add/sub of the
-  // carry/borrow in as Carry1. (The top and middle uaddo nodes respectively in
-  // the above ASCII art.)
-  if (Carry1.getOperand(0) != Carry0.getValue(0) &&
-      Carry1.getOperand(1) != Carry0.getValue(0))
+  // Canonicalize the add/sub of A and B (the top node in the above ASCII art)
+  // as Carry0 and the add/sub of the carry in as Carry1 (the middle node).
+  if (Carry1.getNode()->isOperandOf(Carry0.getNode()))
     std::swap(Carry0, Carry1);
+
+  // Check if nodes are connected in expected way.
   if (Carry1.getOperand(0) != Carry0.getValue(0) &&
       Carry1.getOperand(1) != Carry0.getValue(0))
     return SDValue();
@@ -9570,20 +9574,20 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
 SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (bswap c1) -> c2
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, N0);
+    return DAG.getNode(ISD::BSWAP, DL, VT, N0);
   // fold (bswap (bswap x)) -> x
   if (N0.getOpcode() == ISD::BSWAP)
-    return N0->getOperand(0);
+    return N0.getOperand(0);
 
   // Canonicalize bswap(bitreverse(x)) -> bitreverse(bswap(x)). If bitreverse
   // isn't supported, it will be expanded to bswap followed by a manual reversal
   // of bits in each byte. By placing bswaps before bitreverse, we can remove
   // the two bswaps if the bitreverse gets expanded.
   if (N0.getOpcode() == ISD::BITREVERSE && N0.hasOneUse()) {
-    SDLoc DL(N);
     SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, N0.getOperand(0));
     return DAG.getNode(ISD::BITREVERSE, DL, VT, BSwap);
   }
@@ -17350,9 +17354,8 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
 //     (A + c1) * c3
 //     (A + c2) * c3
 // We're checking for cases where we have common "c3 * A" expressions.
-bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode,
-                                              SDValue &AddNode,
-                                              SDValue &ConstNode) {
+bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
+                                              SDValue ConstNode) {
   APInt Val;
 
   // If the add only has one use, and the target thinks the folding is

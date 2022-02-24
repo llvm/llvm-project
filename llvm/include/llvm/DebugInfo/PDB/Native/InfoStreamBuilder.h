@@ -12,10 +12,9 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 
-#include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/CodeView/GUID.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 namespace llvm {
 class WritableBinaryStreamRef;
@@ -24,7 +23,6 @@ namespace msf {
 class MSFBuilder;
 }
 namespace pdb {
-class PDBFile;
 class NamedStreamMap;
 
 class InfoStreamBuilder {
@@ -70,7 +68,7 @@ private:
 
   NamedStreamMap &NamedStreams;
 };
-}
+} // namespace pdb
 }
 
 #endif

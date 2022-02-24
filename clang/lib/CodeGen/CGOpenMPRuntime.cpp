@@ -1349,7 +1349,7 @@ static void buildStructValue(ConstantStructBuilder &Fields, CodeGenModule &CGM,
   llvm::StructType *StructTy = RL.getLLVMType();
   unsigned PrevIdx = 0;
   ConstantInitBuilder CIBuilder(CGM);
-  auto DI = Data.begin();
+  const auto *DI = Data.begin();
   for (const FieldDecl *FD : RD->fields()) {
     unsigned Idx = RL.getLLVMFieldNo(FD);
     // Fill the alignment.
@@ -3975,7 +3975,7 @@ static bool checkInitIsRequired(CodeGenFunction &CGF,
       continue;
     const VarDecl *VD = Pair.second.PrivateCopy;
     const Expr *Init = VD->getAnyInitializer();
-    InitRequired = InitRequired || (Init && isa<CXXConstructExpr>(Init) &&
+    InitRequired = InitRequired || (isa_and_nonnull<CXXConstructExpr>(Init) &&
                                     !CGF.isTrivialInitializer(Init));
     if (InitRequired)
       break;
@@ -5476,7 +5476,7 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
   //  *(Type<i>*)lhs[i] = RedOp<i>(*(Type<i>*)lhs[i], *(Type<i>*)rhs[i]);
   //  ...
   CodeGenFunction::OMPPrivateScope Scope(CGF);
-  auto IPriv = Privates.begin();
+  const auto *IPriv = Privates.begin();
   unsigned Idx = 0;
   for (unsigned I = 0, E = ReductionOps.size(); I < E; ++I, ++IPriv, ++Idx) {
     const auto *RHSVar =
@@ -5505,8 +5505,8 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
   }
   Scope.Privatize();
   IPriv = Privates.begin();
-  auto ILHS = LHSExprs.begin();
-  auto IRHS = RHSExprs.begin();
+  const auto *ILHS = LHSExprs.begin();
+  const auto *IRHS = RHSExprs.begin();
   for (const Expr *E : ReductionOps) {
     if ((*IPriv)->getType()->isArrayType()) {
       // Emit reduction for array section.
@@ -5601,9 +5601,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   if (SimpleReduction) {
     CodeGenFunction::RunCleanupsScope Scope(CGF);
-    auto IPriv = Privates.begin();
-    auto ILHS = LHSExprs.begin();
-    auto IRHS = RHSExprs.begin();
+    const auto *IPriv = Privates.begin();
+    const auto *ILHS = LHSExprs.begin();
+    const auto *IRHS = RHSExprs.begin();
     for (const Expr *E : ReductionOps) {
       emitSingleReductionCombiner(CGF, E, *IPriv, cast<DeclRefExpr>(*ILHS),
                                   cast<DeclRefExpr>(*IRHS));
@@ -5628,7 +5628,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                              /*IndexTypeQuals=*/0);
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
-  auto IPriv = Privates.begin();
+  const auto *IPriv = Privates.begin();
   unsigned Idx = 0;
   for (unsigned I = 0, E = RHSExprs.size(); I < E; ++I, ++IPriv, ++Idx) {
     Address Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx);
@@ -5705,9 +5705,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   auto &&CodeGen = [Privates, LHSExprs, RHSExprs, ReductionOps](
                        CodeGenFunction &CGF, PrePostActionTy &Action) {
     CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
-    auto IPriv = Privates.begin();
-    auto ILHS = LHSExprs.begin();
-    auto IRHS = RHSExprs.begin();
+    const auto *IPriv = Privates.begin();
+    const auto *ILHS = LHSExprs.begin();
+    const auto *IRHS = RHSExprs.begin();
     for (const Expr *E : ReductionOps) {
       RT.emitSingleReductionCombiner(CGF, E, *IPriv, cast<DeclRefExpr>(*ILHS),
                                      cast<DeclRefExpr>(*IRHS));
@@ -5739,9 +5739,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   auto &&AtomicCodeGen = [Loc, Privates, LHSExprs, RHSExprs, ReductionOps](
                              CodeGenFunction &CGF, PrePostActionTy &Action) {
-    auto ILHS = LHSExprs.begin();
-    auto IRHS = RHSExprs.begin();
-    auto IPriv = Privates.begin();
+    const auto *ILHS = LHSExprs.begin();
+    const auto *IRHS = RHSExprs.begin();
+    const auto *IPriv = Privates.begin();
     for (const Expr *E : ReductionOps) {
       const Expr *XExpr = nullptr;
       const Expr *EExpr = nullptr;
@@ -6538,6 +6538,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   // mangled name of the function that encloses the target region and BB is the
   // line number of the target region.
 
+  const bool BuildOutlinedFn = CGM.getLangOpts().OpenMPIsDevice ||
+                               !CGM.getLangOpts().OpenMPOffloadMandatory;
   unsigned DeviceID;
   unsigned FileID;
   unsigned Line;
@@ -6556,7 +6558,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
 
-  OutlinedFn = CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
+  if (BuildOutlinedFn)
+    OutlinedFn = CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
 
   // If this target outline function is not an offload entry, we don't need to
   // register it.
@@ -6588,26 +6591,38 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         llvm::Constant::getNullValue(CGM.Int8Ty), Name);
   }
 
+  // If we do not allow host fallback we still need a named address to use.
+  llvm::Constant *TargetRegionEntryAddr = OutlinedFn;
+  if (!BuildOutlinedFn) {
+    assert(!CGM.getModule().getGlobalVariable(EntryFnName, true) &&
+           "Named kernel already exists?");
+    TargetRegionEntryAddr = new llvm::GlobalVariable(
+        CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
+        llvm::GlobalValue::InternalLinkage,
+        llvm::Constant::getNullValue(CGM.Int8Ty), EntryFnName);
+  }
+
   // Register the information for the entry associated with this target region.
   OffloadEntriesInfoManager.registerTargetRegionEntryInfo(
-      DeviceID, FileID, ParentName, Line, OutlinedFn, OutlinedFnID,
+      DeviceID, FileID, ParentName, Line, TargetRegionEntryAddr, OutlinedFnID,
       OffloadEntriesInfoManagerTy::OMPTargetRegionEntryTargetRegion);
 
   // Add NumTeams and ThreadLimit attributes to the outlined GPU function
   int32_t DefaultValTeams = -1;
   getNumTeamsExprForTargetDirective(CGF, D, DefaultValTeams);
-  if (DefaultValTeams > 0) {
+  if (DefaultValTeams > 0 && OutlinedFn) {
     OutlinedFn->addFnAttr("omp_target_num_teams",
                           std::to_string(DefaultValTeams));
   }
   int32_t DefaultValThreads = -1;
   getNumThreadsExprForTargetDirective(CGF, D, DefaultValThreads);
-  if (DefaultValThreads > 0) {
+  if (DefaultValThreads > 0 && OutlinedFn) {
     OutlinedFn->addFnAttr("omp_target_thread_limit",
                           std::to_string(DefaultValThreads));
   }
 
-  CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
+  if (BuildOutlinedFn)
+    CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
@@ -8337,7 +8352,7 @@ private:
     }
 
     // Skip the dummy dimension since we have already have its information.
-    auto DI = DimSizes.begin() + 1;
+    auto *DI = DimSizes.begin() + 1;
     // Product of dimension.
     llvm::Value *DimProd =
         llvm::ConstantInt::get(CGF.CGM.Int64Ty, ElementTypeSize);
@@ -10324,7 +10339,10 @@ void CGOpenMPRuntime::emitTargetCall(
   if (!CGF.HaveInsertPoint())
     return;
 
-  assert(OutlinedFn && "Invalid outlined function!");
+  const bool OffloadingMandatory = !CGM.getLangOpts().OpenMPIsDevice &&
+                                   CGM.getLangOpts().OpenMPOffloadMandatory;
+
+  assert((OffloadingMandatory || OutlinedFn) && "Invalid outlined function!");
 
   const bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
                                  D.hasClausesOfKind<OMPNowaitClause>();
@@ -10339,18 +10357,26 @@ void CGOpenMPRuntime::emitTargetCall(
   CodeGenFunction::OMPTargetDataInfo InputInfo;
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
-  // Fill up the pointer arrays and transfer execution to the device.
-  auto &&ThenGen = [this, Device, OutlinedFn, OutlinedFnID, &D, &InputInfo,
-                    &MapTypesArray, &MapNamesArray, &CS, RequiresOuterTask,
-                    &CapturedVars,
-                    SizeEmitter](CodeGenFunction &CGF, PrePostActionTy &) {
-    if (Device.getInt() == OMPC_DEVICE_ancestor) {
-      // Reverse offloading is not supported, so just execute on the host.
+  // Generate code for the host fallback function.
+  auto &&FallbackGen = [this, OutlinedFn, &D, &CapturedVars, RequiresOuterTask,
+                        &CS, OffloadingMandatory](CodeGenFunction &CGF) {
+    if (OffloadingMandatory) {
+      CGF.Builder.CreateUnreachable();
+    } else {
       if (RequiresOuterTask) {
         CapturedVars.clear();
         CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
       }
       emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
+    }
+  };
+  // Fill up the pointer arrays and transfer execution to the device.
+  auto &&ThenGen = [this, Device, OutlinedFnID, &D, &InputInfo, &MapTypesArray,
+                    &MapNamesArray, SizeEmitter,
+                    FallbackGen](CodeGenFunction &CGF, PrePostActionTy &) {
+    if (Device.getInt() == OMPC_DEVICE_ancestor) {
+      // Reverse offloading is not supported, so just execute on the host.
+      FallbackGen(CGF);
       return;
     }
 
@@ -10365,6 +10391,7 @@ void CGOpenMPRuntime::emitTargetCall(
 
     // From this point on, we need to have an ID of the target region defined.
     assert(OutlinedFnID && "Invalid outlined function ID!");
+    (void)OutlinedFnID;
 
     // Emit device ID if any.
     llvm::Value *DeviceID;
@@ -10494,25 +10521,16 @@ void CGOpenMPRuntime::emitTargetCall(
     CGF.Builder.CreateCondBr(Failed, OffloadFailedBlock, OffloadContBlock);
 
     CGF.EmitBlock(OffloadFailedBlock);
-    if (RequiresOuterTask) {
-      CapturedVars.clear();
-      CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
-    }
-    emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
+    FallbackGen(CGF);
+
     CGF.EmitBranch(OffloadContBlock);
 
     CGF.EmitBlock(OffloadContBlock, /*IsFinished=*/true);
   };
 
   // Notify that the host version must be executed.
-  auto &&ElseGen = [this, &D, OutlinedFn, &CS, &CapturedVars,
-                    RequiresOuterTask](CodeGenFunction &CGF,
-                                       PrePostActionTy &) {
-    if (RequiresOuterTask) {
-      CapturedVars.clear();
-      CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
-    }
-    emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
+  auto &&ElseGen = [FallbackGen](CodeGenFunction &CGF, PrePostActionTy &) {
+    FallbackGen(CGF);
   };
 
   auto &&TargetThenGen = [this, &ThenGen, &D, &InputInfo, &MapTypesArray,
@@ -11977,7 +11995,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ParamAttrs[Pos].Kind = Uniform;
       }
       // Get alignment info.
-      auto NI = Attr->alignments_begin();
+      auto *NI = Attr->alignments_begin();
       for (const Expr *E : Attr->aligneds()) {
         E = E->IgnoreParenImpCasts();
         unsigned Pos;
@@ -12000,8 +12018,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ++NI;
       }
       // Mark linear parameters.
-      auto SI = Attr->steps_begin();
-      auto MI = Attr->modifiers_begin();
+      auto *SI = Attr->steps_begin();
+      auto *MI = Attr->modifiers_begin();
       for (const Expr *E : Attr->linears()) {
         E = E->IgnoreParenImpCasts();
         unsigned Pos;
@@ -12028,7 +12046,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
           if (!(*SI)->EvaluateAsInt(Result, C, Expr::SE_AllowSideEffects)) {
             if (const auto *DRE =
                     cast<DeclRefExpr>((*SI)->IgnoreParenImpCasts())) {
-              if (const auto *StridePVD = cast<ParmVarDecl>(DRE->getDecl())) {
+              if (const auto *StridePVD =
+                      dyn_cast<ParmVarDecl>(DRE->getDecl())) {
                 ParamAttr.Kind = LinearWithVarStride;
                 ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(
                     ParamPositions[StridePVD->getCanonicalDecl()]);

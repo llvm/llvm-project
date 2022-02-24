@@ -9,8 +9,6 @@
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
@@ -114,6 +112,8 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 #if defined(_CS_GNU_LIBC_VERSION)
     const wchar_t fr_sep = glibc_version_less_than("2.27") ? L' ' : L'\u202F';
+#elif defined(_WIN32)
+    const wchar_t fr_sep = L'\u00A0';
 #else
     const wchar_t fr_sep = L' ';
 #endif
@@ -144,6 +144,8 @@ int main(int, char**)
     // FIXME libc++ specifically works around \u00A0 by translating it into
     // a regular space.
     const wchar_t wsep = glibc_version_less_than("2.27") ? L'\u00A0' : L'\u202F';
+#   elif defined(_WIN32)
+    const wchar_t wsep = L'\u00A0';
 #   else
     const wchar_t wsep = L' ';
 #   endif

@@ -8,7 +8,7 @@
 ;        A[i] += A[0] + A[0];
 ;    }
 ;
-; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds 
+; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds
 ; CHECK:  store float %polly.access.A.load, float* %polly.subfn.storeaddr.polly.access.A.load
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

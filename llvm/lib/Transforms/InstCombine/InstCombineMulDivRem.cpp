@@ -900,113 +900,69 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
 
 static const unsigned MaxDepth = 6;
 
-namespace {
-
-using FoldUDivOperandCb = Instruction *(*)(Value *Op0, Value *Op1,
-                                           const BinaryOperator &I,
-                                           InstCombinerImpl &IC);
-
-/// Used to maintain state for visitUDivOperand().
-struct UDivFoldAction {
-  /// Informs visitUDiv() how to fold this operand.  This can be zero if this
-  /// action joins two actions together.
-  FoldUDivOperandCb FoldAction;
-
-  /// Which operand to fold.
-  Value *OperandToFold;
-
-  union {
-    /// The instruction returned when FoldAction is invoked.
-    Instruction *FoldResult;
-
-    /// Stores the LHS action index if this action joins two actions together.
-    size_t SelectLHSIdx;
+// Take the exact integer log2 of the value. If DoFold is true, create the
+// actual instructions, otherwise return a non-null dummy value. Return nullptr
+// on failure.
+static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
+                       bool DoFold) {
+  auto IfFold = [DoFold](function_ref<Value *()> Fn) {
+    if (!DoFold)
+      return reinterpret_cast<Value *>(-1);
+    return Fn();
   };
 
-  UDivFoldAction(FoldUDivOperandCb FA, Value *InputOperand)
-      : FoldAction(FA), OperandToFold(InputOperand), FoldResult(nullptr) {}
-  UDivFoldAction(FoldUDivOperandCb FA, Value *InputOperand, size_t SLHS)
-      : FoldAction(FA), OperandToFold(InputOperand), SelectLHSIdx(SLHS) {}
-};
-
-} // end anonymous namespace
-
-// X udiv 2^C -> X >> C
-static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
-                                    const BinaryOperator &I,
-                                    InstCombinerImpl &IC) {
-  Constant *C1 = ConstantExpr::getExactLogBase2(cast<Constant>(Op1));
-  if (!C1)
-    llvm_unreachable("Failed to constant fold udiv -> logbase2");
-  BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, C1);
-  if (I.isExact())
-    LShr->setIsExact();
-  return LShr;
-}
-
-// X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
-// X udiv (zext (C1 << N)), where C1 is "1<<C2"  -->  X >> (N+C2)
-static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
-                                InstCombinerImpl &IC) {
-  Value *ShiftLeft;
-  if (!match(Op1, m_ZExt(m_Value(ShiftLeft))))
-    ShiftLeft = Op1;
-
-  Constant *CI;
-  Value *N;
-  if (!match(ShiftLeft, m_Shl(m_Constant(CI), m_Value(N))))
-    llvm_unreachable("match should never fail here!");
-  Constant *Log2Base = ConstantExpr::getExactLogBase2(CI);
-  if (!Log2Base)
-    llvm_unreachable("getLogBase2 should never fail here!");
-  N = IC.Builder.CreateAdd(N, Log2Base);
-  if (Op1 != ShiftLeft)
-    N = IC.Builder.CreateZExt(N, Op1->getType());
-  BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, N);
-  if (I.isExact())
-    LShr->setIsExact();
-  return LShr;
-}
-
-// Recursively visits the possible right hand operands of a udiv
-// instruction, seeing through select instructions, to determine if we can
-// replace the udiv with something simpler.  If we find that an operand is not
-// able to simplify the udiv, we abort the entire transformation.
-static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
-                               SmallVectorImpl<UDivFoldAction> &Actions,
-                               unsigned Depth = 0) {
   // FIXME: assert that Op1 isn't/doesn't contain undef.
 
-  // Check to see if this is an unsigned division with an exact power of 2,
-  // if so, convert to a right shift.
-  if (match(Op1, m_Power2())) {
-    Actions.push_back(UDivFoldAction(foldUDivPow2Cst, Op1));
-    return Actions.size();
-  }
-
-  // X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
-  if (match(Op1, m_Shl(m_Power2(), m_Value())) ||
-      match(Op1, m_ZExt(m_Shl(m_Power2(), m_Value())))) {
-    Actions.push_back(UDivFoldAction(foldUDivShl, Op1));
-    return Actions.size();
-  }
+  // log2(2^C) -> C
+  if (match(Op, m_Power2()))
+    return IfFold([&]() {
+      Constant *C = ConstantExpr::getExactLogBase2(cast<Constant>(Op));
+      if (!C)
+        llvm_unreachable("Failed to constant fold udiv -> logbase2");
+      return C;
+    });
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
   if (Depth++ == MaxDepth)
-    return 0;
+    return nullptr;
 
-  if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
-    // FIXME: missed optimization: if one of the hands of select is/contains
-    //        undef, just directly pick the other one.
-    // FIXME: can both hands contain undef?
-    if (size_t LHSIdx =
-            visitUDivOperand(Op0, SI->getOperand(1), I, Actions, Depth))
-      if (visitUDivOperand(Op0, SI->getOperand(2), I, Actions, Depth)) {
-        Actions.push_back(UDivFoldAction(nullptr, Op1, LHSIdx - 1));
-        return Actions.size();
-      }
+  // log2(zext X) -> zext log2(X)
+  // FIXME: Require one use?
+  Value *X, *Y;
+  if (match(Op, m_ZExt(m_Value(X))))
+    if (Value *LogX = takeLog2(Builder, X, Depth, DoFold))
+      return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
 
-  return 0;
+  // log2(X << Y) -> log2(X) + Y
+  // FIXME: Require one use unless X is 1?
+  if (match(Op, m_Shl(m_Value(X), m_Value(Y))))
+    if (Value *LogX = takeLog2(Builder, X, Depth, DoFold))
+      return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
+
+  // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
+  // FIXME: missed optimization: if one of the hands of select is/contains
+  //        undef, just directly pick the other one.
+  // FIXME: can both hands contain undef?
+  // FIXME: Require one use?
+  if (SelectInst *SI = dyn_cast<SelectInst>(Op))
+    if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth, DoFold))
+      if (Value *LogY = takeLog2(Builder, SI->getOperand(2), Depth, DoFold))
+        return IfFold([&]() {
+          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY);
+        });
+
+  // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
+  // log2(umax(X, Y)) -> umax(log2(X), log2(Y))
+  auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op);
+  if (MinMax && MinMax->hasOneUse() && !MinMax->isSigned())
+    if (Value *LogX = takeLog2(Builder, MinMax->getLHS(), Depth, DoFold))
+      if (Value *LogY = takeLog2(Builder, MinMax->getRHS(), Depth, DoFold))
+        return IfFold([&]() {
+          return Builder.CreateBinaryIntrinsic(
+              MinMax->getIntrinsicID(), LogX, LogY);
+        });
+
+  return nullptr;
 }
 
 /// If we have zero-extended operands of an unsigned div or rem, we may be able
@@ -1106,36 +1062,12 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
       return BinaryOperator::CreateUDiv(A, X);
   }
 
-  // (LHS udiv (select (select (...)))) -> (LHS >> (select (select (...))))
-  SmallVector<UDivFoldAction, 6> UDivActions;
-  if (visitUDivOperand(Op0, Op1, I, UDivActions))
-    for (unsigned i = 0, e = UDivActions.size(); i != e; ++i) {
-      FoldUDivOperandCb Action = UDivActions[i].FoldAction;
-      Value *ActionOp1 = UDivActions[i].OperandToFold;
-      Instruction *Inst;
-      if (Action)
-        Inst = Action(Op0, ActionOp1, I, *this);
-      else {
-        // This action joins two actions together.  The RHS of this action is
-        // simply the last action we processed, we saved the LHS action index in
-        // the joining action.
-        size_t SelectRHSIdx = i - 1;
-        Value *SelectRHS = UDivActions[SelectRHSIdx].FoldResult;
-        size_t SelectLHSIdx = UDivActions[i].SelectLHSIdx;
-        Value *SelectLHS = UDivActions[SelectLHSIdx].FoldResult;
-        Inst = SelectInst::Create(cast<SelectInst>(ActionOp1)->getCondition(),
-                                  SelectLHS, SelectRHS);
-      }
-
-      // If this is the last action to process, return it to the InstCombiner.
-      // Otherwise, we insert it before the UDiv and record it so that we may
-      // use it as part of a joining action (i.e., a SelectInst).
-      if (e - i != 1) {
-        Inst->insertBefore(&I);
-        UDivActions[i].FoldResult = Inst;
-      } else
-        return Inst;
-    }
+  // Op1 udiv Op2 -> Op1 lshr log2(Op2), if log2() folds away.
+  if (takeLog2(Builder, Op1, /*Depth*/0, /*DoFold*/false)) {
+    Value *Res = takeLog2(Builder, Op1, /*Depth*/0, /*DoFold*/true);
+    return replaceInstUsesWith(
+        I, Builder.CreateLShr(Op0, Res, I.getName(), I.isExact()));
+  }
 
   return nullptr;
 }
@@ -1242,8 +1174,10 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     if (match(Op1, m_NegatedPower2())) {
       // X sdiv (-(1 << C)) -> -(X sdiv (1 << C)) ->
       //                    -> -(X udiv (1 << C)) -> -(X u>> C)
-      return BinaryOperator::CreateNeg(Builder.Insert(foldUDivPow2Cst(
-          Op0, ConstantExpr::getNeg(cast<Constant>(Op1)), I, *this)));
+      Constant *CNegLog2 = ConstantExpr::getExactLogBase2(
+          ConstantExpr::getNeg(cast<Constant>(Op1)));
+      Value *Shr = Builder.CreateLShr(Op0, CNegLog2, I.getName(), I.isExact());
+      return BinaryOperator::CreateNeg(Shr);
     }
 
     if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {

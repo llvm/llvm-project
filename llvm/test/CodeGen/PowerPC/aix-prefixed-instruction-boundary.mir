@@ -43,7 +43,7 @@ body:             |
 ...
 
 # DIS:      Disassembly of section .text:
-# DIS:      00000000 <.text>:
+# DIS:      00000000 <.aix-prefixed-instruction-boundary>:
 # DIS-NEXT:   0: 38 60 00 02  	          li 3, 2
 # DIS-NEXT:   4: 06 00 00 00 38 63 00 0d  paddi 3, 3, 13, 0
 # DIS-NEXT:   c: 06 00 00 00 38 63 00 0d  paddi 3, 3, 13, 0

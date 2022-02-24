@@ -254,7 +254,9 @@ uint64_t adjustValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
 
 uint64_t extractValueX86(uint64_t Type, uint64_t Contents, uint64_t PC) {
   if (Type == ELF::R_X86_64_32S)
-    return SignExtend64<32>(Contents & 0xffffffff);
+    return SignExtend64<32>(Contents);
+  if (Relocation::isPCRelative(Type))
+    return SignExtend64(Contents, 8 * Relocation::getSizeForType(Type));
   return Contents;
 }
 
@@ -442,6 +444,8 @@ bool isPCRelativeX86(uint64_t Type) {
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_GOTPCREL:
   case ELF::R_X86_64_PLT32:
+  case ELF::R_X86_64_GOTOFF64:
+  case ELF::R_X86_64_GOTPC32:
   case ELF::R_X86_64_GOTTPOFF:
   case ELF::R_X86_64_GOTPCRELX:
   case ELF::R_X86_64_REX_GOTPCRELX:

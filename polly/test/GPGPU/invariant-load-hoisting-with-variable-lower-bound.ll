@@ -21,7 +21,7 @@
 ; This declaration would not have been generated unless a kernel launch exists.
 ; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
 
-; 
+;
 ; void f(int *begin, int *arr) {
 ;     for (int i = *begin; i < 100; i++) {
 ;         arr[i] = 0;

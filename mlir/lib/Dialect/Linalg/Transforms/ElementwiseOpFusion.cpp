@@ -49,7 +49,7 @@ static AffineMap getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
   AffineMap invProducerResultIndexMap =
       inversePermutation(producerResultIndexMap);
   assert(invProducerResultIndexMap &&
-         "expected producer result indexig map to be invertible");
+         "expected producer result indexing map to be invertible");
 
   LinalgOp producer = cast<LinalgOp>(producerOpOperand->getOwner());
   // argMap is a map from producer loop -> producer arg tensor index.
@@ -2264,6 +2264,7 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
                FoldConstantTranspose>(context,
                                       options.controlElementwiseOpsFusionFn);
   patterns.add<RemoveOutsDependency>(context);
+  populateSparseTensorRewriting(patterns);
   populateFoldReshapeOpsByExpansionPatterns(patterns,
                                             options.controlFoldingReshapesFn);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);

@@ -2758,14 +2758,6 @@ public:
   /// long double and double on AArch64 will return 0).
   int getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const;
 
-  /// Return a real floating point or a complex type (based on
-  /// \p typeDomain/\p typeSize).
-  ///
-  /// \param typeDomain a real floating point or complex type.
-  /// \param typeSize a real floating point or complex type.
-  QualType getFloatingTypeOfSizeWithinDomain(QualType typeSize,
-                                             QualType typeDomain) const;
-
   unsigned getTargetAddressSpace(QualType T) const;
 
   unsigned getTargetAddressSpace(Qualifiers Q) const;

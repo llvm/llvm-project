@@ -2555,6 +2555,12 @@ private:
 
     Instruction *Inst = nullptr;
 
+    /// Opcode of the current instruction in the schedule data.
+    Value *OpValue = nullptr;
+
+    /// The TreeEntry that this instruction corresponds to.
+    TreeEntry *TE = nullptr;
+
     /// Points to the head in an instruction bundle (and always to this for
     /// single instructions).
     ScheduleData *FirstInBundle = nullptr;
@@ -2575,9 +2581,6 @@ private:
     /// the current SchedulingRegionID of BlockScheduling.
     int SchedulingRegionID = 0;
 
-    /// Used for getting a "good" final ordering of instructions.
-    int SchedulingPriority = 0;
-
     /// The number of dependencies. Constitutes of the number of users of the
     /// instruction plus the number of dependent memory instructions (if any).
     /// This value is calculated on demand.
@@ -2590,18 +2593,12 @@ private:
     /// Note that this is negative as long as Dependencies is not calculated.
     int UnscheduledDeps = InvalidDeps;
 
+    /// The lane of this node in the TreeEntry.
+    int Lane = -1;
+
     /// True if this instruction is scheduled (or considered as scheduled in the
     /// dry-run).
     bool IsScheduled = false;
-
-    /// Opcode of the current instruction in the schedule data.
-    Value *OpValue = nullptr;
-
-    /// The TreeEntry that this instruction corresponds to.
-    TreeEntry *TE = nullptr;
-
-    /// The lane of this node in the TreeEntry.
-    int Lane = -1;
   };
 
 #ifndef NDEBUG
@@ -2639,10 +2636,19 @@ private:
       ++SchedulingRegionID;
     }
 
-    ScheduleData *getScheduleData(Value *V) {
-      ScheduleData *SD = ScheduleDataMap[V];
-      if (SD && SD->SchedulingRegionID == SchedulingRegionID)
+    ScheduleData *getScheduleData(Instruction *I) {
+      if (BB != I->getParent())
+        // Avoid lookup if can't possibly be in map.
+        return nullptr;
+      ScheduleData *SD = ScheduleDataMap[I];
+      if (SD && isInSchedulingRegion(SD))
         return SD;
+      return nullptr;
+    }
+
+    ScheduleData *getScheduleData(Value *V) {
+      if (auto *I = dyn_cast<Instruction>(V))
+        return getScheduleData(I);
       return nullptr;
     }
 
@@ -2652,7 +2658,7 @@ private:
       auto I = ExtraScheduleDataMap.find(V);
       if (I != ExtraScheduleDataMap.end()) {
         ScheduleData *SD = I->second[Key];
-        if (SD && SD->SchedulingRegionID == SchedulingRegionID)
+        if (SD && isInSchedulingRegion(SD))
           return SD;
       }
       return nullptr;
@@ -2727,7 +2733,8 @@ private:
         }
         // Handle the memory dependencies.
         for (ScheduleData *MemoryDepSD : BundleMember->MemoryDependencies) {
-          if (MemoryDepSD->incrementUnscheduledDeps(-1) == 0) {
+          if (MemoryDepSD->hasValidDependencies() &&
+              MemoryDepSD->incrementUnscheduledDeps(-1) == 0) {
             // There are no more unscheduled dependencies after decrementing,
             // so we can put the dependent instruction into the ready list.
             ScheduleData *DepBundle = MemoryDepSD->FirstInBundle;
@@ -2755,6 +2762,8 @@ private:
         assert(SD && "primary scheduledata must exist in window");
         assert(isInSchedulingRegion(SD) &&
                "primary schedule data not in window?");
+        assert(isInSchedulingRegion(SD->FirstInBundle) &&
+               "entire bundle in window!");
         (void)SD;
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
       }
@@ -2773,7 +2782,7 @@ private:
       auto I = ExtraScheduleDataMap.find(V);
       if (I != ExtraScheduleDataMap.end())
         for (auto &P : I->second)
-          if (P.second->SchedulingRegionID == SchedulingRegionID)
+          if (isInSchedulingRegion(P.second))
             Action(P.second);
     }
 
@@ -2782,7 +2791,8 @@ private:
     void initialFillReadyList(ReadyListType &ReadyList) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
         doForAllOpcodes(I, [&](ScheduleData *SD) {
-          if (SD->isSchedulingEntity() && SD->isReady()) {
+          if (SD->isSchedulingEntity() && SD->hasValidDependencies() &&
+              SD->isReady()) {
             ReadyList.insert(SD);
             LLVM_DEBUG(dbgs()
                        << "SLP:    initially in ready list: " << *SD << "\n");
@@ -2843,7 +2853,7 @@ private:
     /// Attaches ScheduleData to Instruction.
     /// Note that the mapping survives during all vectorization iterations, i.e.
     /// ScheduleData structures are recycled.
-    DenseMap<Value *, ScheduleData *> ScheduleDataMap;
+    DenseMap<Instruction *, ScheduleData *> ScheduleDataMap;
 
     /// Attaches ScheduleData to Instruction with the leading key.
     DenseMap<Value *, SmallDenseMap<Value *, ScheduleData *>>
@@ -2874,8 +2884,8 @@ private:
 
     /// The ID of the scheduling region. For a new vectorization iteration this
     /// is incremented which "removes" all ScheduleData from the region.
-    // Make sure that the initial SchedulingRegionID is greater than the
-    // initial SchedulingRegionID in ScheduleData (which is 0).
+    /// Make sure that the initial SchedulingRegionID is greater than the
+    /// initial SchedulingRegionID in ScheduleData (which is 0).
     int SchedulingRegionID = 1;
   };
 
@@ -5917,39 +5927,41 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     // to detect it as a final shuffled/identity match.
     if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User)) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
-        unsigned InsertIdx = *getInsertIndex(VU);
-        auto *It = find_if(FirstUsers, [VU](Value *V) {
-          return areTwoInsertFromSameBuildVector(VU,
-                                                 cast<InsertElementInst>(V));
-        });
-        int VecId = -1;
-        if (It == FirstUsers.end()) {
-          VF.push_back(FTy->getNumElements());
-          ShuffleMask.emplace_back(VF.back(), UndefMaskElem);
-          // Find the insertvector, vectorized in tree, if any.
-          Value *Base = VU;
-          while (isa<InsertElementInst>(Base)) {
-            // Build the mask for the vectorized insertelement instructions.
-            if (const TreeEntry *E = getTreeEntry(Base)) {
-              VU = cast<InsertElementInst>(Base);
-              do {
-                int Idx = E->findLaneForValue(Base);
-                ShuffleMask.back()[Idx] = Idx;
-                Base = cast<InsertElementInst>(Base)->getOperand(0);
-              } while (E == getTreeEntry(Base));
-              break;
+        Optional<unsigned> InsertIdx = getInsertIndex(VU);
+        if (InsertIdx) {
+          auto *It = find_if(FirstUsers, [VU](Value *V) {
+            return areTwoInsertFromSameBuildVector(VU,
+                                                   cast<InsertElementInst>(V));
+          });
+          int VecId = -1;
+          if (It == FirstUsers.end()) {
+            VF.push_back(FTy->getNumElements());
+            ShuffleMask.emplace_back(VF.back(), UndefMaskElem);
+            // Find the insertvector, vectorized in tree, if any.
+            Value *Base = VU;
+            while (isa<InsertElementInst>(Base)) {
+              // Build the mask for the vectorized insertelement instructions.
+              if (const TreeEntry *E = getTreeEntry(Base)) {
+                VU = cast<InsertElementInst>(Base);
+                do {
+                  int Idx = E->findLaneForValue(Base);
+                  ShuffleMask.back()[Idx] = Idx;
+                  Base = cast<InsertElementInst>(Base)->getOperand(0);
+                } while (E == getTreeEntry(Base));
+                break;
+              }
+              Base = cast<InsertElementInst>(Base)->getOperand(0);
             }
-            Base = cast<InsertElementInst>(Base)->getOperand(0);
+            FirstUsers.push_back(VU);
+            DemandedElts.push_back(APInt::getZero(VF.back()));
+            VecId = FirstUsers.size() - 1;
+          } else {
+            VecId = std::distance(FirstUsers.begin(), It);
           }
-          FirstUsers.push_back(VU);
-          DemandedElts.push_back(APInt::getZero(VF.back()));
-          VecId = FirstUsers.size() - 1;
-        } else {
-          VecId = std::distance(FirstUsers.begin(), It);
+          ShuffleMask[VecId][*InsertIdx] = EU.Lane;
+          DemandedElts[VecId].setBit(*InsertIdx);
+          continue;
         }
-        ShuffleMask[VecId][InsertIdx] = EU.Lane;
-        DemandedElts[VecId].setBit(InsertIdx);
-        continue;
       }
     }
 
@@ -7758,8 +7770,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
 
       // Handle def-use chain dependencies.
       if (BundleMember->OpValue != BundleMember->Inst) {
-        ScheduleData *UseSD = getScheduleData(BundleMember->Inst);
-        if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+        if (ScheduleData *UseSD = getScheduleData(BundleMember->Inst)) {
           BundleMember->Dependencies++;
           ScheduleData *DestBundle = UseSD->FirstInBundle;
           if (!DestBundle->IsScheduled)
@@ -7769,10 +7780,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       } else {
         for (User *U : BundleMember->Inst->users()) {
-          assert(isa<Instruction>(U) &&
-                 "user of instruction must be instruction");
-          ScheduleData *UseSD = getScheduleData(U);
-          if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+          if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
             BundleMember->Dependencies++;
             ScheduleData *DestBundle = UseSD->FirstInBundle;
             if (!DestBundle->IsScheduled)
@@ -7872,33 +7880,36 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
   LLVM_DEBUG(dbgs() << "SLP: schedule block " << BS->BB->getName() << "\n");
 
+  // A key point - if we got here, pre-scheduling was able to find a valid
+  // scheduling of the sub-graph of the scheduling window which consists
+  // of all vector bundles and their transitive users.  As such, we do not
+  // need to reschedule anything *outside of* that subgraph.
+
   BS->resetSchedule();
 
   // For the real scheduling we use a more sophisticated ready-list: it is
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
-  struct ScheduleDataCompare {
-    bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
-      return SD2->SchedulingPriority < SD1->SchedulingPriority;
-    }
+  DenseMap<ScheduleData *, unsigned> OriginalOrder;
+  auto ScheduleDataCompare = [&](ScheduleData *SD1, ScheduleData *SD2) {
+    return OriginalOrder[SD2] < OriginalOrder[SD1];
   };
-  std::set<ScheduleData *, ScheduleDataCompare> ReadyInsts;
+  std::set<ScheduleData *, decltype(ScheduleDataCompare)>
+    ReadyInsts(ScheduleDataCompare);
 
-  // Ensure that all dependency data is updated and fill the ready-list with
-  // initial instructions.
+  // Ensure that all dependency data is updated (for nodes in the sub-graph)
+  // and fill the ready-list with initial instructions.
   int Idx = 0;
-  int NumToSchedule = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, &NumToSchedule, BS](ScheduleData *SD) {
+    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() == (getTreeEntry(SD->Inst) != nullptr)) &&
              "scheduler and vectorizer bundle mismatch");
-      SD->FirstInBundle->SchedulingPriority = Idx++;
-      if (SD->isSchedulingEntity()) {
+      OriginalOrder[SD->FirstInBundle] = Idx++;
+
+      if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
-        NumToSchedule++;
-      }
     });
   }
   BS->initialFillReadyList(ReadyInsts);
@@ -7921,9 +7932,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     }
 
     BS->schedule(picked, ReadyInsts);
-    NumToSchedule--;
   }
-  assert(NumToSchedule == 0 && "could not schedule all instructions");
 
   // Check that we didn't break any of our invariants.
 #ifdef EXPENSIVE_CHECKS

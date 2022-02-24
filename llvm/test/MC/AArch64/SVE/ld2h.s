@@ -12,29 +12,29 @@
 ld2h    { z0.h, z1.h }, p0/z, [x0, x0, lsl #1]
 // CHECK-INST: ld2h    { z0.h, z1.h }, p0/z, [x0, x0, lsl #1]
 // CHECK-ENCODING: [0x00,0xc0,0xa0,0xa4]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 c0 a0 a4 <unknown>
 
 ld2h    { z5.h, z6.h }, p3/z, [x17, x16, lsl #1]
 // CHECK-INST: ld2h    { z5.h, z6.h }, p3/z, [x17, x16, lsl #1]
 // CHECK-ENCODING: [0x25,0xce,0xb0,0xa4]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 25 ce b0 a4 <unknown>
 
 ld2h    { z0.h, z1.h }, p0/z, [x0]
 // CHECK-INST: ld2h    { z0.h, z1.h }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0xa0,0xa4]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 e0 a0 a4 <unknown>
 
 ld2h    { z23.h, z24.h }, p3/z, [x13, #-16, mul vl]
 // CHECK-INST: ld2h    { z23.h, z24.h }, p3/z, [x13, #-16, mul vl]
 // CHECK-ENCODING: [0xb7,0xed,0xa8,0xa4]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: b7 ed a8 a4 <unknown>
 
 ld2h    { z21.h, z22.h }, p5/z, [x10, #10, mul vl]
 // CHECK-INST: ld2h    { z21.h, z22.h }, p5/z, [x10, #10, mul vl]
 // CHECK-ENCODING: [0x55,0xf5,0xa5,0xa4]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 55 f5 a5 a4 <unknown>

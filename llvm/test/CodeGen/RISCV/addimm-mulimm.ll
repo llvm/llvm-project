@@ -872,3 +872,16 @@ define i64 @mulneg3000_sub8990_c(i64 %x) {
   %tmp1 = add i64 %tmp0, -8990
   ret i64 %tmp1
 }
+
+; This test case previously caused an infinite loop between transformations
+; performed in RISCVISelLowering;:transformAddImmMulImm and
+; DAGCombiner::visitMUL.
+define i1 @pr53831(i32 %x) {
+  %tmp0 = add i32 %x, 1
+  %tmp1 = mul i32 %tmp0, 24
+  %tmp2 = add i32 %tmp1, 1
+  %tmp3 = mul i32 %x, 24
+  %tmp4 = add i32 %tmp3, 2048
+  %tmp5 = icmp eq i32 %tmp4, %tmp2
+	ret i1 %tmp5
+}

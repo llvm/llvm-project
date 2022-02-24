@@ -2329,6 +2329,31 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     }
   }
 
+  // A funnel shift (rotate) can be decomposed into simpler shifts. See if we
+  // are mixing in another shift that is redundant with the funnel shift.
+
+  // (fshl X, ?, Y) | (shl X, Y) --> fshl X, ?, Y
+  // (shl X, Y) | (fshl X, ?, Y) --> fshl X, ?, Y
+  if (match(Op0,
+            m_Intrinsic<Intrinsic::fshl>(m_Value(X), m_Value(), m_Value(Y))) &&
+      match(Op1, m_Shl(m_Specific(X), m_Specific(Y))))
+    return Op0;
+  if (match(Op1,
+            m_Intrinsic<Intrinsic::fshl>(m_Value(X), m_Value(), m_Value(Y))) &&
+      match(Op0, m_Shl(m_Specific(X), m_Specific(Y))))
+    return Op1;
+
+  // (fshr ?, X, Y) | (lshr X, Y) --> fshr ?, X, Y
+  // (lshr X, Y) | (fshr ?, X, Y) --> fshr ?, X, Y
+  if (match(Op0,
+            m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X), m_Value(Y))) &&
+      match(Op1, m_LShr(m_Specific(X), m_Specific(Y))))
+    return Op0;
+  if (match(Op1,
+            m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X), m_Value(Y))) &&
+      match(Op0, m_LShr(m_Specific(X), m_Specific(Y))))
+    return Op1;
+
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, false))
     return V;
 

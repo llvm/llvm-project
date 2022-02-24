@@ -43,7 +43,6 @@ cl::opt<bool> GenerateMergedBaseProfiles(
 
 namespace llvm {
 namespace sampleprof {
-SampleProfileFormat FunctionSamples::Format;
 bool FunctionSamples::ProfileIsProbeBased = false;
 bool FunctionSamples::ProfileIsCSFlat = false;
 bool FunctionSamples::ProfileIsCSNested = false;

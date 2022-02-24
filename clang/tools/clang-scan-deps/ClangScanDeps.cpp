@@ -296,14 +296,13 @@ public:
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    ID.AdditionalCommandLine =
-        GenerateModulesPathArgs
-            ? FD.getAdditionalArgs(
-                  [&](ModuleID MID) { return lookupPCMPath(MID); },
-                  [&](ModuleID MID) -> const ModuleDeps & {
-                    return lookupModuleDeps(MID);
-                  })
-            : FD.getAdditionalArgsWithoutModulePaths();
+    ID.CommandLine = GenerateModulesPathArgs
+                         ? FD.getCommandLine(
+                               [&](ModuleID MID) { return lookupPCMPath(MID); },
+                               [&](ModuleID MID) -> const ModuleDeps & {
+                                 return lookupModuleDeps(MID);
+                               })
+                         : FD.getCommandLineWithoutModulePaths();
 
     Inputs.push_back(std::move(ID));
   }
@@ -353,7 +352,7 @@ public:
           {"clang-context-hash", I.ContextHash},
           {"file-deps", I.FileDeps},
           {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
-          {"command-line", I.AdditionalCommandLine},
+          {"command-line", I.CommandLine},
       };
       TUs.push_back(std::move(O));
     }
@@ -415,7 +414,7 @@ private:
     std::string ContextHash;
     std::vector<std::string> FileDeps;
     std::vector<ModuleID> ModuleDeps;
-    std::vector<std::string> AdditionalCommandLine;
+    std::vector<std::string> CommandLine;
   };
 
   std::mutex Lock;

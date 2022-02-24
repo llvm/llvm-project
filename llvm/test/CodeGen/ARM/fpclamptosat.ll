@@ -2718,28 +2718,14 @@ define i16 @stest_f64i16_mm(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2iz
-; VFP2-NEXT:    movw r1, #32767
-; VFP2-NEXT:    cmp r0, r1
-; VFP2-NEXT:    it ge
-; VFP2-NEXT:    movge r0, r1
-; VFP2-NEXT:    movw r1, #32768
-; VFP2-NEXT:    movt r1, #65535
-; VFP2-NEXT:    cmn.w r0, #32768
-; VFP2-NEXT:    it le
-; VFP2-NEXT:    movle r0, r1
+; VFP2-NEXT:    ssat r0, #16, r0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: stest_f64i16_mm:
 ; FULL:       @ %bb.0: @ %entry
 ; FULL-NEXT:    vcvt.s32.f64 s0, d0
-; FULL-NEXT:    movw r1, #32767
 ; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    cmp r0, r1
-; FULL-NEXT:    csel r0, r0, r1, lt
-; FULL-NEXT:    movw r1, #32768
-; FULL-NEXT:    movt r1, #65535
-; FULL-NEXT:    cmn.w r0, #32768
-; FULL-NEXT:    csel r0, r0, r1, gt
+; FULL-NEXT:    ssat r0, #16, r0
 ; FULL-NEXT:    bx lr
 entry:
   %conv = fptosi double %x to i32
@@ -2820,21 +2806,14 @@ define i16 @ustest_f64i16_mm(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2iz
-; VFP2-NEXT:    movw r1, #65535
-; VFP2-NEXT:    cmp r0, r1
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r1, r0
-; VFP2-NEXT:    bic.w r0, r1, r1, asr #31
+; VFP2-NEXT:    usat r0, #16, r0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: ustest_f64i16_mm:
 ; FULL:       @ %bb.0: @ %entry
 ; FULL-NEXT:    vcvt.s32.f64 s0, d0
-; FULL-NEXT:    movw r1, #65535
 ; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    cmp r0, r1
-; FULL-NEXT:    csel r0, r0, r1, lt
-; FULL-NEXT:    bic.w r0, r0, r0, asr #31
+; FULL-NEXT:    usat r0, #16, r0
 ; FULL-NEXT:    bx lr
 entry:
   %conv = fptosi double %x to i32
@@ -2870,33 +2849,12 @@ define i16 @stest_f32i16_mm(float %x) {
 ; SOFT-NEXT:  .LCPI39_1:
 ; SOFT-NEXT:    .long 4294934528 @ 0xffff8000
 ;
-; VFP2-LABEL: stest_f32i16_mm:
-; VFP2:       @ %bb.0: @ %entry
-; VFP2-NEXT:    vcvt.s32.f32 s0, s0
-; VFP2-NEXT:    movw r1, #32767
-; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    cmp r0, r1
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r1, r0
-; VFP2-NEXT:    movw r0, #32768
-; VFP2-NEXT:    cmn.w r1, #32768
-; VFP2-NEXT:    movt r0, #65535
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt r0, r1
-; VFP2-NEXT:    bx lr
-;
-; FULL-LABEL: stest_f32i16_mm:
-; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    vcvt.s32.f32 s0, s0
-; FULL-NEXT:    movw r1, #32767
-; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    cmp r0, r1
-; FULL-NEXT:    csel r0, r0, r1, lt
-; FULL-NEXT:    movw r1, #32768
-; FULL-NEXT:    movt r1, #65535
-; FULL-NEXT:    cmn.w r0, #32768
-; FULL-NEXT:    csel r0, r0, r1, gt
-; FULL-NEXT:    bx lr
+; VFP-LABEL: stest_f32i16_mm:
+; VFP:       @ %bb.0: @ %entry
+; VFP-NEXT:    vcvt.s32.f32 s0, s0
+; VFP-NEXT:    vmov r0, s0
+; VFP-NEXT:    ssat r0, #16, r0
+; VFP-NEXT:    bx lr
 entry:
   %conv = fptosi float %x to i32
   %spec.store.select = call i32 @llvm.smin.i32(i32 %conv, i32 32767)
@@ -2968,26 +2926,12 @@ define i16 @ustest_f32i16_mm(float %x) {
 ; SOFT-NEXT:  .LCPI41_0:
 ; SOFT-NEXT:    .long 65535 @ 0xffff
 ;
-; VFP2-LABEL: ustest_f32i16_mm:
-; VFP2:       @ %bb.0: @ %entry
-; VFP2-NEXT:    vcvt.s32.f32 s0, s0
-; VFP2-NEXT:    movw r1, #65535
-; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    cmp r0, r1
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r1, r0
-; VFP2-NEXT:    bic.w r0, r1, r1, asr #31
-; VFP2-NEXT:    bx lr
-;
-; FULL-LABEL: ustest_f32i16_mm:
-; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    vcvt.s32.f32 s0, s0
-; FULL-NEXT:    movw r1, #65535
-; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    cmp r0, r1
-; FULL-NEXT:    csel r0, r0, r1, lt
-; FULL-NEXT:    bic.w r0, r0, r0, asr #31
-; FULL-NEXT:    bx lr
+; VFP-LABEL: ustest_f32i16_mm:
+; VFP:       @ %bb.0: @ %entry
+; VFP-NEXT:    vcvt.s32.f32 s0, s0
+; VFP-NEXT:    vmov r0, s0
+; VFP-NEXT:    usat r0, #16, r0
+; VFP-NEXT:    bx lr
 entry:
   %conv = fptosi float %x to i32
   %spec.store.select = call i32 @llvm.smin.i32(i32 %conv, i32 65535)
@@ -3031,30 +2975,16 @@ define i16 @stest_f16i16_mm(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    movw r1, #32767
 ; VFP2-NEXT:    vcvt.s32.f32 s0, s0
 ; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    cmp r0, r1
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r1, r0
-; VFP2-NEXT:    movw r0, #32768
-; VFP2-NEXT:    cmn.w r1, #32768
-; VFP2-NEXT:    movt r0, #65535
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt r0, r1
+; VFP2-NEXT:    ssat r0, #16, r0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: stest_f16i16_mm:
 ; FULL:       @ %bb.0: @ %entry
 ; FULL-NEXT:    vcvt.s32.f16 s0, s0
-; FULL-NEXT:    movw r1, #32767
 ; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    cmp r0, r1
-; FULL-NEXT:    csel r0, r0, r1, lt
-; FULL-NEXT:    movw r1, #32768
-; FULL-NEXT:    movt r1, #65535
-; FULL-NEXT:    cmn.w r0, #32768
-; FULL-NEXT:    csel r0, r0, r1, gt
+; FULL-NEXT:    ssat r0, #16, r0
 ; FULL-NEXT:    bx lr
 entry:
   %conv = fptosi half %x to i32
@@ -3143,23 +3073,16 @@ define i16 @ustest_f16i16_mm(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    movw r1, #65535
 ; VFP2-NEXT:    vcvt.s32.f32 s0, s0
 ; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    cmp r0, r1
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r1, r0
-; VFP2-NEXT:    bic.w r0, r1, r1, asr #31
+; VFP2-NEXT:    usat r0, #16, r0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: ustest_f16i16_mm:
 ; FULL:       @ %bb.0: @ %entry
 ; FULL-NEXT:    vcvt.s32.f16 s0, s0
-; FULL-NEXT:    movw r1, #65535
 ; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    cmp r0, r1
-; FULL-NEXT:    csel r0, r0, r1, lt
-; FULL-NEXT:    bic.w r0, r0, r0, asr #31
+; FULL-NEXT:    usat r0, #16, r0
 ; FULL-NEXT:    bx lr
 entry:
   %conv = fptosi half %x to i32

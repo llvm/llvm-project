@@ -112,3 +112,39 @@ class Mask_Binary<ValueType MaskVT, SDPatternOperator MaskOp, string InstName> :
 def: Mask_Binary<v256i1, and, "ANDM">;
 def: Mask_Binary<v256i1, or,  "ORM">;
 def: Mask_Binary<v256i1, xor, "XORM">;
+
+///// Packing support /////
+
+// v256i1 <> v512i1
+def : Pat<(v256i1 (vec_unpack_lo v512i1:$vm, (i32 srcvalue))),
+          (EXTRACT_SUBREG $vm, sub_vm_odd)>;
+def : Pat<(v256i1 (vec_unpack_hi v512i1:$vm, (i32 srcvalue))),
+          (EXTRACT_SUBREG $vm, sub_vm_even)>;
+def : Pat<(v512i1 (vec_pack v256i1:$vlo, v256i1:$vhi, (i32 srcvalue))),
+          (INSERT_SUBREG (INSERT_SUBREG
+                         (v512i1 (IMPLICIT_DEF)),
+                         $vlo, sub_vm_odd),
+                         $vhi, sub_vm_even)>;
+
+// v256.32 <> v512.32
+multiclass Packing<ValueType PackVT> {
+  // no-op unpacks
+  def : Pat<(v256i32 (vec_unpack_lo PackVT:$vp, (i32 srcvalue))),
+            (COPY_TO_REGCLASS $vp, V64)>;
+  def : Pat<(v256f32 (vec_unpack_hi PackVT:$vp, (i32 srcvalue))),
+            (COPY_TO_REGCLASS $vp, V64)>;
+
+  // shuffle unpacks
+  def : Pat<(v256f32 (vec_unpack_lo PackVT:$vp, i32:$avl)),
+            (VSHFvvil $vp, $vp, 4, $avl)>; // always pick lo
+  def : Pat<(v256i32 (vec_unpack_hi PackVT:$vp, i32:$avl)),
+            (VSHFvvil $vp, $vp, 0, $avl)>; // always pick hi
+}
+
+defm : Packing<v512i32>;
+defm : Packing<v512f32>;
+
+def : Pat<(v512i32 (vec_pack v256i32:$vlo, v256i32:$vhi, i32:$avl)),
+          (VSHFvvil $vlo, $vhi, 13, $avl)>;
+def : Pat<(v512f32 (vec_pack v256f32:$vlo, v256f32:$vhi, i32:$avl)),
+          (VSHFvvil $vlo, $vhi, 8, $avl)>;

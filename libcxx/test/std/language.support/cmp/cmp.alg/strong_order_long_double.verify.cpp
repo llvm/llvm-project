@@ -10,7 +10,8 @@
 // UNSUPPORTED: libcpp-no-concepts
 
 // The following platforms have sizeof(long double) == sizeof(double), so this test doesn't apply to them.
-// UNSUPPORTED: target={{arm64|armv8|armv7|armv7m|powerpc|powerpc64}}-{{.+}}
+// This test does apply to aarch64 where Arm's AAPCS64 is followed. There they are different sizes.
+// UNSUPPORTED: target={{arm64|armv(7|8)(l|m)?|powerpc|powerpc64}}-{{.+}}
 // UNSUPPORTED: target=x86_64-pc-windows-{{.+}}
 
 // <compare>

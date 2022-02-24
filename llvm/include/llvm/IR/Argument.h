@@ -14,7 +14,6 @@
 #define LLVM_IR_ARGUMENT_H
 
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Value.h"
 

@@ -15,6 +15,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/xxhash.h"
 
 #include <atomic>
 
@@ -361,7 +362,8 @@ void macho::foldIdenticalSections() {
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
     bool isHashable = (isCodeSection(isec) || isCfStringSection(isec)) &&
-                      !isec->shouldOmitFromOutput() && isec->isHashableForICF();
+                      !isec->shouldOmitFromOutput() &&
+                      sectionType(isec->getFlags()) == MachO::S_REGULAR;
     if (isHashable) {
       hashable.push_back(isec);
       for (Defined *d : isec->symbols)
@@ -371,8 +373,12 @@ void macho::foldIdenticalSections() {
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
-  parallelForEach(hashable,
-                  [](ConcatInputSection *isec) { isec->hashForICF(); });
+  parallelForEach(hashable, [](ConcatInputSection *isec) {
+    assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
+    // Turn-on the top bit to guarantee that valid hashes have no collisions
+    // with the small-integer unique IDs for ICF-ineligible sections
+    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 63);
+  });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.
   ICF(hashable).run();

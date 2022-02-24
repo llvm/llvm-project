@@ -38,8 +38,14 @@ enum NodeType : unsigned {
   MEMBARRIER,             // Compiler barrier only; generate a no-op.
   RET_FLAG,               // Return with a flag operand.
   TS1AM,                  // A TS1AM instruction used for 1/2 bytes swap.
-  VEC_BROADCAST,          // A vector broadcast instruction.
-                          //   0: scalar value, 1: VL
+  VEC_UNPACK_LO,          // unpack the lo v256 slice of a packed v512 vector.
+  VEC_UNPACK_HI,          // unpack the hi v256 slice of a packed v512 vector.
+                          //    0: v512 vector, 1: AVL
+  VEC_PACK,               // pack a lo and a hi vector into one v512 vector
+                          //    0: v256 lo vector, 1: v256 hi vector, 2: AVL
+
+  VEC_BROADCAST, // A vector broadcast instruction.
+                 //   0: scalar value, 1: VL
   REPL_I32,
   REPL_F32, // Replicate subregister to other half.
 
@@ -181,7 +187,9 @@ public:
   /// VVP Lowering {
   SDValue lowerToVVP(SDValue Op, SelectionDAG &DAG) const;
   SDValue legalizeInternalVectorOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue splitVectorOp(SDValue Op, VECustomDAG &CDAG) const;
   SDValue legalizePackedAVL(SDValue Op, VECustomDAG &CDAG) const;
+  SDValue splitMaskArithmetic(SDValue Op, SelectionDAG &DAG) const;
   /// } VVPLowering
 
   /// Custom DAGCombine {

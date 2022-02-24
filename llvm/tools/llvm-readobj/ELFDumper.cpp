@@ -1242,8 +1242,15 @@ const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_GROUP,            "G"),
   ENUM_ENT(SHF_TLS,              "T"),
   ENUM_ENT(SHF_COMPRESSED,       "C"),
-  ENUM_ENT(SHF_GNU_RETAIN,       "R"),
   ENUM_ENT(SHF_EXCLUDE,          "E"),
+};
+
+const EnumEntry<unsigned> ElfGNUSectionFlags[] = {
+  ENUM_ENT(SHF_GNU_RETAIN, "R")
+};
+
+const EnumEntry<unsigned> ElfSolarisSectionFlags[] = {
+  ENUM_ENT(SHF_SUNW_NODISCARD, "R")
 };
 
 const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
@@ -1275,9 +1282,19 @@ const EnumEntry<unsigned> ElfX86_64SectionFlags[] = {
 };
 
 static std::vector<EnumEntry<unsigned>>
-getSectionFlagsForTarget(unsigned EMachine) {
+getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
   std::vector<EnumEntry<unsigned>> Ret(std::begin(ElfSectionFlags),
                                        std::end(ElfSectionFlags));
+  switch (EOSAbi) {
+  case ELFOSABI_SOLARIS:
+    Ret.insert(Ret.end(), std::begin(ElfSolarisSectionFlags),
+               std::end(ElfSolarisSectionFlags));
+    break;
+  default:
+    Ret.insert(Ret.end(), std::begin(ElfGNUSectionFlags),
+               std::end(ElfGNUSectionFlags));
+    break;
+  }
   switch (EMachine) {
   case EM_ARM:
     Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
@@ -1305,7 +1322,8 @@ getSectionFlagsForTarget(unsigned EMachine) {
   return Ret;
 }
 
-static std::string getGNUFlags(unsigned EMachine, uint64_t Flags) {
+static std::string getGNUFlags(unsigned EOSAbi, unsigned EMachine,
+                               uint64_t Flags) {
   // Here we are trying to build the flags string in the same way as GNU does.
   // It is not that straightforward. Imagine we have sh_flags == 0x90000000.
   // SHF_EXCLUDE ("E") has a value of 0x80000000 and SHF_MASKPROC is 0xf0000000.
@@ -1316,7 +1334,7 @@ static std::string getGNUFlags(unsigned EMachine, uint64_t Flags) {
   bool HasOSFlag = false;
   bool HasProcFlag = false;
   std::vector<EnumEntry<unsigned>> FlagsList =
-      getSectionFlagsForTarget(EMachine);
+      getSectionFlagsForTarget(EOSAbi, EMachine);
   while (Flags) {
     // Take the least significant bit as a flag.
     uint64_t Flag = Flags & -Flags;
@@ -2266,6 +2284,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     case DT_MIPS_PLTGOT:
     case DT_MIPS_RWPLT:
     case DT_MIPS_RLD_MAP_REL:
+    case DT_MIPS_XHASH:
       return FormatHexValue(Value);
     case DT_MIPS_FLAGS:
       return FormatFlags(Value, makeArrayRef(ElfDynamicDTMipsFlags));
@@ -3681,7 +3700,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionHeaders() {
     Fields[4].Str = to_string(format_hex_no_prefix(Sec.sh_offset, 6));
     Fields[5].Str = to_string(format_hex_no_prefix(Sec.sh_size, 6));
     Fields[6].Str = to_string(format_hex_no_prefix(Sec.sh_entsize, 2));
-    Fields[7].Str = getGNUFlags(this->Obj.getHeader().e_machine, Sec.sh_flags);
+    Fields[7].Str = getGNUFlags(this->Obj.getHeader().e_ident[ELF::EI_OSABI],
+                                this->Obj.getHeader().e_machine, Sec.sh_flags);
     Fields[8].Str = to_string(Sec.sh_link);
     Fields[9].Str = to_string(Sec.sh_info);
     Fields[10].Str = to_string(Sec.sh_addralign);
@@ -6502,7 +6522,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printSectionHeaders() {
 
   int SectionIndex = -1;
   std::vector<EnumEntry<unsigned>> FlagsList =
-      getSectionFlagsForTarget(this->Obj.getHeader().e_machine);
+      getSectionFlagsForTarget(this->Obj.getHeader().e_ident[ELF::EI_OSABI],
+                               this->Obj.getHeader().e_machine);
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
     DictScope SectionD(W, "Section");
     W.printNumber("Index", ++SectionIndex);
@@ -6962,10 +6983,13 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
       W.printString("Name", FuncName);
 
       ListScope L(W, "BB entries");
+      uint32_t FunctionRelativeAddress = 0;
       for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
         DictScope L(W);
-        W.printHex("Offset", BBE.Offset);
+        FunctionRelativeAddress += BBE.Offset;
+        W.printHex("Offset", FunctionRelativeAddress);
         W.printHex("Size", BBE.Size);
+        FunctionRelativeAddress += BBE.Size;
         W.printBoolean("HasReturn", BBE.HasReturn);
         W.printBoolean("HasTailCall", BBE.HasTailCall);
         W.printBoolean("IsEHPad", BBE.IsEHPad);

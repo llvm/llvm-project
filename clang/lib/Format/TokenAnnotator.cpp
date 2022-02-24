@@ -114,7 +114,7 @@ private:
     // If there's a template keyword before the opening angle bracket, this is a
     // template parameter, not an argument.
     Contexts.back().InTemplateArgument =
-        Left->Previous && Left->Previous->Tok.isNot(tok::kw_template);
+        Left->Previous && Left->Previous->isNot(tok::kw_template);
 
     if (Style.Language == FormatStyle::LK_Java &&
         CurrentToken->is(tok::question))
@@ -1266,7 +1266,7 @@ private:
       return LT_ImportStatement;
     }
 
-    if (CurrentToken->Tok.is(tok::numeric_constant)) {
+    if (CurrentToken->is(tok::numeric_constant)) {
       CurrentToken->SpacesRequiredBefore = 1;
       return Type;
     }
@@ -1743,7 +1743,7 @@ private:
                                  tok::coloncolon))
         if (FormatToken *AfterParen = Current.MatchingParen->Next) {
           // Make sure this isn't the return type of an Obj-C block declaration
-          if (AfterParen->Tok.isNot(tok::caret)) {
+          if (AfterParen->isNot(tok::caret)) {
             if (FormatToken *BeforeParen = Current.MatchingParen->Previous)
               if (BeforeParen->is(tok::identifier) &&
                   !BeforeParen->is(TT_TypenameMacro) &&
@@ -3564,7 +3564,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          // (e.g. as "const x of y" in a for loop), or after a destructuring
          // operation (const [x, y] of z, const {a, b} of c).
          (Left.is(Keywords.kw_of) && Left.Previous &&
-          (Left.Previous->Tok.is(tok::identifier) ||
+          (Left.Previous->is(tok::identifier) ||
            Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;
@@ -3963,7 +3963,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
     return Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes;
   }
-  if (Left.ClosesRequiresClause) {
+  if (Left.ClosesRequiresClause && Right.isNot(tok::semi)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithPreceding:

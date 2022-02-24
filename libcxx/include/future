@@ -363,18 +363,21 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 
 #include <__assert>
 #include <__availability>
+#include <__chrono/duration.h>
+#include <__chrono/time_point.h>
 #include <__config>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
-#include <chrono>
 #include <exception>
 #include <memory>
 #include <mutex>
 #include <system_error>
 #include <thread>
 #include <version>
+
+#include <chrono> // TODO: Remove unused header
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

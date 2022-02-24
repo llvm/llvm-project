@@ -299,6 +299,9 @@ void VETargetLowering::initVPUActions() {
   for (MVT LegalMaskVT : AllMaskVTs)
     setOperationAction(ISD::BUILD_VECTOR, LegalMaskVT, Custom);
 
+  for (unsigned Opc : {ISD::AND, ISD::OR, ISD::XOR})
+    setOperationAction(Opc, MVT::v512i1, Custom);
+
   for (MVT LegalVecVT : AllVectorVTs) {
     setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, LegalVecVT, Legal);
@@ -903,6 +906,9 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(MEMBARRIER)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(TS1AM)
+    TARGET_NODE_CASE(VEC_UNPACK_LO)
+    TARGET_NODE_CASE(VEC_UNPACK_HI)
+    TARGET_NODE_CASE(VEC_PACK)
     TARGET_NODE_CASE(VEC_BROADCAST)
     TARGET_NODE_CASE(REPL_I32)
     TARGET_NODE_CASE(REPL_F32)
@@ -1675,6 +1681,15 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 TargetLowering::LegalizeAction
 VETargetLowering::getCustomOperationAction(SDNode &Op) const {
+  // Custom legalization on VVP_* and VEC_* opcodes is required to pack-legalize
+  // these operations (transform nodes such that their AVL parameter refers to
+  // packs of 64bit, instead of number of elements.
+
+  // Packing opcodes are created with a pack-legal AVL (LEGALAVL). No need to
+  // re-visit them.
+  if (isPackingSupportOpcode(Op.getOpcode()))
+    return Legal;
+
   // Custom lower to legalize AVL for packed mode.
   if (isVVPOrVEC(Op.getOpcode()))
     return Custom;
@@ -1746,6 +1761,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     // Translate into a VEC_*/VVP_* layer operation.
 #define ADD_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
 #include "VVPNodes.def"
+    if (isMaskArithmetic(Op) && isPackedVectorType(Op.getValueType()))
+      return splitMaskArithmetic(Op, DAG);
     return lowerToVVP(Op, DAG);
   }
 }
@@ -2688,61 +2705,6 @@ bool VETargetLowering::hasAndNot(SDValue Y) const {
 
   // It's ok for generic registers.
   return true;
-}
-
-SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
-  // Can we represent this as a VVP node.
-  const unsigned Opcode = Op->getOpcode();
-  auto VVPOpcodeOpt = getVVPOpcode(Opcode);
-  if (!VVPOpcodeOpt.hasValue())
-    return SDValue();
-  unsigned VVPOpcode = VVPOpcodeOpt.getValue();
-  const bool FromVP = ISD::isVPOpcode(Opcode);
-
-  // The representative and legalized vector type of this operation.
-  VECustomDAG CDAG(DAG, Op);
-  EVT OpVecVT = Op.getValueType();
-  EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
-  auto Packing = getTypePacking(LegalVecVT.getSimpleVT());
-
-  SDValue AVL;
-  SDValue Mask;
-
-  if (FromVP) {
-    // All upstream VP SDNodes always have a mask and avl.
-    auto MaskIdx = ISD::getVPMaskIdx(Opcode);
-    auto AVLIdx = ISD::getVPExplicitVectorLengthIdx(Opcode);
-    if (MaskIdx)
-      Mask = Op->getOperand(*MaskIdx);
-    if (AVLIdx)
-      AVL = Op->getOperand(*AVLIdx);
-
-  }
-
-  // Materialize default mask and avl.
-  if (!AVL)
-    AVL = CDAG.getConstant(OpVecVT.getVectorNumElements(), MVT::i32);
-  if (!Mask)
-    Mask = CDAG.getConstantMask(Packing, true);
-
-  if (isVVPBinaryOp(VVPOpcode)) {
-    assert(LegalVecVT.isSimple());
-    return CDAG.getNode(VVPOpcode, LegalVecVT,
-                        {Op->getOperand(0), Op->getOperand(1), Mask, AVL});
-  }
-  if (VVPOpcode == VEISD::VVP_SELECT) {
-    auto Mask = Op->getOperand(0);
-    auto OnTrue = Op->getOperand(1);
-    auto OnFalse = Op->getOperand(2);
-    return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
-  }
-  if (VVPOpcode == VEISD::VVP_SETCC) {
-    auto LHS = Op->getOperand(0);
-    auto RHS = Op->getOperand(1);
-    auto Pred = Op->getOperand(2);
-    return CDAG.getNode(VVPOpcode, LegalVecVT, {LHS, RHS, Pred, Mask, AVL});
-  }
-  llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }
 
 SDValue VETargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,

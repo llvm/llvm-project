@@ -170,11 +170,11 @@ class SymbolRef : public BasicSymbolRef {
 public:
   enum Type {
     ST_Unknown, // Type not specified
+    ST_Other,
     ST_Data,
     ST_Debug,
     ST_File,
     ST_Function,
-    ST_Other
   };
 
   SymbolRef() = default;

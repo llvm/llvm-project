@@ -1,0 +1,24 @@
+_ := expr
+expr := IDENTIFIER
+
+# RUN: clang-pseudo -grammar %s -print-graph | FileCheck %s --check-prefix=GRAPH
+#      GRAPH: States:
+# GRPAH-NEXT: State 0
+# GRPAH-NEXT:     _ :=  • expr
+# GRPAH-NEXT:     expr :=  • IDENTIFIER
+# GRPAH-NEXT: State 1
+# GRPAH-NEXT:     _ := expr • 
+# GRPAH-NEXT: State 2
+# GRPAH-NEXT:     expr := IDENTIFIER • 
+# GRPAH-NEXT: 0 ->[expr] 1
+# GRPAH-NEXT: 0 ->[IDENTIFIER] 2
+
+# RUN: clang-pseudo -grammar %s -print-table | FileCheck %s --check-prefix=TABLE
+#      TABLE: LRTable:
+# TABLE-NEXT: State 0
+# TABLE-NEXT:     'IDENTIFIER': shift state 2
+# TABLE-NEXT:     'expr': go to state 1
+# TABLE-NEXT: State 1
+# TABLE-NEXT:     'EOF': accept
+# TABLE-NEXT: State 2
+# TABLE-NEXT:     'EOF': reduce by rule 1 'expr := IDENTIFIER'

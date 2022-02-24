@@ -45,8 +45,7 @@ public:
   std::string title() const override;
 
 private:
-  /// Cache the AutoTypeLoc, so that we do not need to search twice.
-  llvm::Optional<clang::AutoTypeLoc> CachedLocation;
+  SourceRange AutoRange;
 };
 
 REGISTER_TWEAK(ExpandAutoType)
@@ -91,27 +90,35 @@ bool isTemplateParam(const SelectionTree::Node *Node) {
   return false;
 }
 
-bool ExpandAutoType::prepare(const Selection& Inputs) {
-  CachedLocation = llvm::None;
+bool ExpandAutoType::prepare(const Selection &Inputs) {
   if (auto *Node = Inputs.ASTSelection.commonAncestor()) {
     if (auto *TypeNode = Node->ASTNode.get<TypeLoc>()) {
       if (const AutoTypeLoc Result = TypeNode->getAs<AutoTypeLoc>()) {
         if (!isStructuredBindingType(Node) &&
             !isDeducedAsLambda(Node, Result.getBeginLoc()) &&
             !isTemplateParam(Node))
-          CachedLocation = Result;
+          AutoRange = Result.getSourceRange();
+      }
+      if (auto TTPAuto = TypeNode->getAs<TemplateTypeParmTypeLoc>()) {
+        // We exclude concept constraints for now, as the SourceRange is wrong.
+        // void foo(C auto x) {};
+        //            ^^^^
+        // TTPAuto->getSourceRange only covers "auto", not "C auto".
+        if (TTPAuto.getDecl()->isImplicit() &&
+            !TTPAuto.getDecl()->hasTypeConstraint())
+          AutoRange = TTPAuto.getSourceRange();
       }
     }
   }
 
-  return (bool) CachedLocation;
+  return AutoRange.isValid();
 }
 
 Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
   auto &SrcMgr = Inputs.AST->getSourceManager();
 
-  llvm::Optional<clang::QualType> DeducedType = getDeducedType(
-      Inputs.AST->getASTContext(), CachedLocation->getBeginLoc());
+  llvm::Optional<clang::QualType> DeducedType =
+      getDeducedType(Inputs.AST->getASTContext(), AutoRange.getBegin());
 
   // if we can't resolve the type, return an error message
   if (DeducedType == llvm::None || (*DeducedType)->isUndeducedAutoType())
@@ -133,9 +140,8 @@ Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
   std::string PrettyTypeName = printType(*DeducedType,
       Inputs.ASTSelection.commonAncestor()->getDeclContext());
 
-  tooling::Replacement
-      Expansion(SrcMgr, CharSourceRange(CachedLocation->getSourceRange(), true),
-                PrettyTypeName);
+  tooling::Replacement Expansion(SrcMgr, CharSourceRange(AutoRange, true),
+                                 PrettyTypeName);
 
   return Effect::mainFileEdit(SrcMgr, tooling::Replacements(Expansion));
 }

@@ -49,31 +49,6 @@ Status HostProcessPosix::Signal(lldb::process_t process, int signo) {
 
 Status HostProcessPosix::Terminate() { return Signal(SIGKILL); }
 
-Status HostProcessPosix::GetMainModule(FileSpec &file_spec) const {
-  Status error;
-
-  // Use special code here because proc/[pid]/exe is a symbolic link.
-  char link_path[PATH_MAX];
-  if (snprintf(link_path, PATH_MAX, "/proc/%" PRIu64 "/exe", m_process) != 1) {
-    error.SetErrorString("Unable to build /proc/<pid>/exe string");
-    return error;
-  }
-
-  error = FileSystem::Instance().Readlink(FileSpec(link_path), file_spec);
-  if (!error.Success())
-    return error;
-
-  // If the binary has been deleted, the link name has " (deleted)" appended.
-  // Remove if there.
-  if (file_spec.GetFilename().GetStringRef().endswith(" (deleted)")) {
-    const char *filename = file_spec.GetFilename().GetCString();
-    static const size_t deleted_len = strlen(" (deleted)");
-    const size_t len = file_spec.GetFilename().GetLength();
-    file_spec.GetFilename().SetCStringWithLength(filename, len - deleted_len);
-  }
-  return error;
-}
-
 lldb::pid_t HostProcessPosix::GetProcessId() const { return m_process; }
 
 bool HostProcessPosix::IsRunning() const {

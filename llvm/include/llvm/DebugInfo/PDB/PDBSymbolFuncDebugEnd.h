@@ -14,8 +14,6 @@
 
 namespace llvm {
 
-class raw_ostream;
-
 namespace pdb {
 
 class PDBSymbolFuncDebugEnd : public PDBSymbol {

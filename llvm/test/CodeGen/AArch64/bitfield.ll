@@ -230,3 +230,16 @@ define dso_local i64 @test_sbfx64(i64* %addr) {
    %extended = ashr i64 %shifted, 1
    ret i64 %extended
 }
+
+define i32 @test_ubfx_mask(i32 %lhs, i32 %rhs) {
+; CHECK-LABEL: test_ubfx_mask:
+; CHECK: lsr w0, w1, #20
+  %mask = and i32 %lhs, 20
+  %i7 = add i32 %mask, 1
+  %i8 = xor i32 %lhs, 20
+  %i9 = xor i32 %i8, %i7
+  %i10 = and i32 %i9, 20
+  %shift = lshr i32 %rhs, %i10
+  %shift.masked = and i32 %shift, 65535
+  ret i32 %shift.masked
+}

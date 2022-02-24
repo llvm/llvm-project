@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   Support
   MC
+  BinaryFormat
   )
 
 set(LLVM_TARGET_DEFINITIONS ObjcopyOpts.td)

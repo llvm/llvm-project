@@ -80,8 +80,18 @@ TEST_F(ExpandAutoTypeTest, Test) {
   EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
               StartsWith("fail: Could not deduce type for 'auto' type"));
 
-  ExtraArgs.push_back("-std=c++17");
+  ExtraArgs.push_back("-std=c++20");
   EXPECT_UNAVAILABLE("template <au^to X> class Y;");
+
+  EXPECT_THAT(apply("auto X = [](^auto){};"),
+              StartsWith("fail: Could not deduce"));
+  EXPECT_EQ(apply("auto X = [](^auto){return 0;}; int Y = X(42);"),
+            "auto X = [](int){return 0;}; int Y = X(42);");
+  EXPECT_THAT(apply("auto X = [](^auto){return 0;}; int Y = X(42) + X('c');"),
+              StartsWith("fail: Could not deduce"));
+  // FIXME: should work on constrained auto params, once SourceRange is fixed.
+  EXPECT_UNAVAILABLE("template<class> concept C = true;"
+                     "auto X = [](C ^auto *){return 0;};");
 }
 
 } // namespace

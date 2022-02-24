@@ -1299,10 +1299,11 @@ public:
     case ELF::R_X86_64_32:
     case ELF::R_X86_64_32S:
     case ELF::R_X86_64_64:
+    case ELF::R_X86_64_PC8:
+    case ELF::R_X86_64_PC32:
+    case ELF::R_X86_64_PC64:
       Relocations[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
       return;
-    case ELF::R_X86_64_PC32:
-    case ELF::R_X86_64_PC8:
     case ELF::R_X86_64_PLT32:
     case ELF::R_X86_64_GOTPCRELX:
     case ELF::R_X86_64_REX_GOTPCRELX:
