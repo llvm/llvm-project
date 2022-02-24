@@ -2406,7 +2406,8 @@ struct RemoveLoopInvariantArgsFromBeforeBlock
     ValueRange yieldOpArgs = yieldOp->getOperands();
 
     bool canSimplify = false;
-    for (auto it : llvm::enumerate(llvm::zip(op.getOperands(), yieldOpArgs))) {
+    for (const auto &it :
+         llvm::enumerate(llvm::zip(op.getOperands(), yieldOpArgs))) {
       auto index = static_cast<unsigned>(it.index());
       Value initVal, yieldOpArg;
       std::tie(initVal, yieldOpArg) = it.value();
@@ -2437,7 +2438,8 @@ struct RemoveLoopInvariantArgsFromBeforeBlock
     SmallVector<Value> newInitArgs, newYieldOpArgs;
     DenseMap<unsigned, Value> beforeBlockInitValMap;
     SmallVector<Location> newBeforeBlockArgLocs;
-    for (auto it : llvm::enumerate(llvm::zip(op.getOperands(), yieldOpArgs))) {
+    for (const auto &it :
+         llvm::enumerate(llvm::zip(op.getOperands(), yieldOpArgs))) {
       auto index = static_cast<unsigned>(it.index());
       Value initVal, yieldOpArg;
       std::tie(initVal, yieldOpArg) = it.value();
@@ -2574,7 +2576,7 @@ struct RemoveLoopInvariantValueYielded : public OpRewritePattern<WhileOp> {
     SmallVector<Type> newAfterBlockType;
     DenseMap<unsigned, Value> condOpInitValMap;
     SmallVector<Location> newAfterBlockArgLocs;
-    for (auto it : llvm::enumerate(condOpArgs)) {
+    for (const auto &it : llvm::enumerate(condOpArgs)) {
       auto index = static_cast<unsigned>(it.index());
       Value condOpArg = it.value();
       // Those values not defined within `before` block will be considered as
