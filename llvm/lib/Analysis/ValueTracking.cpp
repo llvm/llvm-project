@@ -7097,59 +7097,17 @@ getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
 
 Optional<int64_t> llvm::isPointerOffset(const Value *Ptr1, const Value *Ptr2,
                                         const DataLayout &DL) {
-  Ptr1 = Ptr1->stripPointerCasts();
-  Ptr2 = Ptr2->stripPointerCasts();
+  APInt Offset1(DL.getIndexTypeSizeInBits(Ptr1->getType()), 0);
+  APInt Offset2(DL.getIndexTypeSizeInBits(Ptr2->getType()), 0);
+  Ptr1 = Ptr1->stripAndAccumulateConstantOffsets(DL, Offset1, true);
+  Ptr2 = Ptr2->stripAndAccumulateConstantOffsets(DL, Offset2, true);
 
   // Handle the trivial case first.
-  if (Ptr1 == Ptr2) {
-    return 0;
-  }
+  if (Ptr1 == Ptr2)
+    return Offset2.getSExtValue() - Offset1.getSExtValue();
 
   const GEPOperator *GEP1 = dyn_cast<GEPOperator>(Ptr1);
   const GEPOperator *GEP2 = dyn_cast<GEPOperator>(Ptr2);
-
-  // If one pointer is a GEP see if the GEP is a constant offset from the base,
-  // as in "P" and "gep P, 1".
-  // Also do this iteratively to handle the the following case:
-  //   Ptr_t1 = GEP Ptr1, c1
-  //   Ptr_t2 = GEP Ptr_t1, c2
-  //   Ptr2 = GEP Ptr_t2, c3
-  // where we will return c1+c2+c3.
-  // TODO: Handle the case when both Ptr1 and Ptr2 are GEPs of some common base
-  // -- replace getOffsetFromBase with getOffsetAndBase, check that the bases
-  // are the same, and return the difference between offsets.
-  auto getOffsetFromBase = [&DL](const GEPOperator *GEP,
-                                 const Value *Ptr) -> Optional<int64_t> {
-    const GEPOperator *GEP_T = GEP;
-    int64_t OffsetVal = 0;
-    bool HasSameBase = false;
-    while (GEP_T) {
-      auto Offset = getOffsetFromIndex(GEP_T, 1, DL);
-      if (!Offset)
-        return None;
-      OffsetVal += *Offset;
-      auto Op0 = GEP_T->getOperand(0)->stripPointerCasts();
-      if (Op0 == Ptr) {
-        HasSameBase = true;
-        break;
-      }
-      GEP_T = dyn_cast<GEPOperator>(Op0);
-    }
-    if (!HasSameBase)
-      return None;
-    return OffsetVal;
-  };
-
-  if (GEP1) {
-    auto Offset = getOffsetFromBase(GEP1, Ptr2);
-    if (Offset)
-      return -*Offset;
-  }
-  if (GEP2) {
-    auto Offset = getOffsetFromBase(GEP2, Ptr1);
-    if (Offset)
-      return Offset;
-  }
 
   // Right now we handle the case when Ptr1/Ptr2 are both GEPs with an identical
   // base.  After that base, they may have some number of common (and
@@ -7166,9 +7124,10 @@ Optional<int64_t> llvm::isPointerOffset(const Value *Ptr1, const Value *Ptr2,
     if (GEP1->getOperand(Idx) != GEP2->getOperand(Idx))
       break;
 
-  auto Offset1 = getOffsetFromIndex(GEP1, Idx, DL);
-  auto Offset2 = getOffsetFromIndex(GEP2, Idx, DL);
-  if (!Offset1 || !Offset2)
+  auto IOffset1 = getOffsetFromIndex(GEP1, Idx, DL);
+  auto IOffset2 = getOffsetFromIndex(GEP2, Idx, DL);
+  if (!IOffset1 || !IOffset2)
     return None;
-  return *Offset2 - *Offset1;
+  return *IOffset2 - *IOffset1 + Offset2.getSExtValue() -
+         Offset1.getSExtValue();
 }

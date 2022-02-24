@@ -22,10 +22,9 @@ define void @test_memset_memcpy(ptr %src, i64 %src_size, ptr noalias %dst, i64 %
 define void @test_different_gep_source_elements(ptr %src) {
 ; CHECK-LABEL: @test_different_gep_source_elements(
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr [[B:%.*]], ptr [[SRC:%.*]], i64 0, i32 1
-; CHECK-NEXT:    store i64 0, ptr [[PB]], align 4
 ; CHECK-NEXT:    [[PA:%.*]] = getelementptr [[A:%.*]], ptr [[SRC]], i64 0, i32 1
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr [[A]], ptr [[SRC]], i64 0, i32 2
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[PA]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[PB]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %pb = getelementptr %b, ptr %src, i64 0, i32 1
@@ -34,6 +33,24 @@ define void @test_different_gep_source_elements(ptr %src) {
   store i64 0, ptr %pa
   %pa2 = getelementptr %a, ptr %src, i64 0, i32 2
   store i64 0, ptr %pa2
+  ret void
+}
+
+define void @test_gep_of_vscale_non_const_gep(ptr %p, i64 %idx) {
+; CHECK-LABEL: @test_gep_of_vscale_non_const_gep(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P:%.*]], i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P]], i64 [[IDX]], i32 5
+; CHECK-NEXT:    [[H1:%.*]] = getelementptr i8, ptr [[G1]], i64 2
+; CHECK-NEXT:    [[H2:%.*]] = getelementptr i8, ptr [[G2]], i64 6
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[H1]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %g1 = getelementptr <vscale x 16 x i8>, ptr %p, i64 %idx, i32 1
+  %g2 = getelementptr <vscale x 16 x i8>, ptr %p, i64 %idx, i32 5
+  %h1 = getelementptr i8, ptr %g1, i64 2
+  %h2 = getelementptr i8, ptr %g2, i64 6
+  store i64 0, ptr %h1
+  store i64 0, ptr %h2
   ret void
 }
 
