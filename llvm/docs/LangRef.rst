@@ -1392,6 +1392,13 @@ Currently, only the following parameter attributes are defined:
     alignments are permitted for the allocalign parameter, so long as the returned pointer
     is null. This attribute may only be applied to integer parameters.
 
+``allocptr``
+    The function parameter marked with this attribute is the pointer
+    that will be manipulated by the allocator. For a realloc-like
+    function the pointer will be invalidated upon success (but the
+    same address may be returned), for a free-like function the
+    pointer will always be invalidated.
+
 .. _gc:
 
 Garbage Collector Strategy Names

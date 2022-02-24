@@ -199,6 +199,7 @@ enum Kind {
   kw_inreg,
   kw_jumptable,
   kw_minsize,
+  kw_allocptr,
   kw_naked,
   kw_nest,
   kw_noalias,
