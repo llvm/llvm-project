@@ -13,10 +13,9 @@ define void @store_i32(i32* nocapture %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP5]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i32> [[TMP7]], <i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <4 x i32> [[TMP8]], <i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP8]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP10]], <4 x i32>* [[TMP11]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[TMP8]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP10]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
   %4 = load i32, i32* %0, align 4, !tbaa !2
@@ -58,11 +57,10 @@ define void @store_i8(i8* nocapture %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[SHUFFLE]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <4 x i32> [[TMP9]], <i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP9]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP12:%.*]] = trunc <4 x i32> [[TMP11]] to <4 x i8>
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i8* [[TMP0]] to <4 x i8>*
-; CHECK-NEXT:    store <4 x i8> [[TMP12]], <4 x i8>* [[TMP13]], align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[TMP9]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i32> [[TMP10]] to <4 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i8* [[TMP0]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[TMP11]], <4 x i8>* [[TMP12]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    ret void
 ;
   %4 = load i8, i8* %0, align 1, !tbaa !6
