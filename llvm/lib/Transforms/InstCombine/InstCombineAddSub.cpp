@@ -2301,7 +2301,8 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     auto propagateSelectFMF = [&](SelectInst *S) {
       S->copyFastMathFlags(&I);
       if (auto *OldSel = dyn_cast<SelectInst>(Op))
-        if (!OldSel->hasNoSignedZeros())
+        if (!OldSel->hasNoSignedZeros() &&
+            !isGuaranteedNotToBeUndefOrPoison(OldSel->getCondition()))
           S->setHasNoSignedZeros(false);
     };
     // -(Cond ? -P : Y) --> Cond ? P : -Y
