@@ -4302,7 +4302,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // reused, and the callee's return returns from both the caller and the
   // callee).
   //
-  // FIXME: https://github.com/ykjit/yk/issues/502
+  // YKFIXME: https://github.com/ykjit/yk/issues/502
   // We should find a way to allow tail calls.
   if (YkDisableTailCallCodegen)
     isTailCall = false;
