@@ -52,7 +52,8 @@ extern "C" int LLVMFuzzerTestOneInput(const char *Data, size_t Size) {
     return 0;
   }
   RewriteInstance &RI = *RIOrErr.get();
-  RI.run();
+  if (Error E = RI.run())
+    consumeError(std::move(E));
   return 0;
 }
 

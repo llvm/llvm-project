@@ -56,7 +56,7 @@ public:
   Error setProfile(StringRef Filename);
 
   /// Run all the necessary steps to read, optimize and rewrite the binary.
-  void run();
+  Error run();
 
   /// Diff this instance against another one. Non-const since we may run passes
   /// to fold identical functions.
@@ -218,7 +218,7 @@ private:
 
   /// Detect addresses and offsets available in the binary for allocating
   /// new sections.
-  void discoverStorage();
+  Error discoverStorage();
 
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
