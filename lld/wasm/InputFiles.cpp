@@ -106,7 +106,7 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &reloc) const {
 
 // Relocations can contain addend for combined sections. This function takes a
 // relocation and returns updated addend by offset in the output section.
-uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
+int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_LEB64:
