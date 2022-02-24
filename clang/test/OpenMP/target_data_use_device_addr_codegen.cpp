@@ -14,7 +14,6 @@
 // CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [5 x i64] zeroinitializer
 // 64 = 0x40 = OMP_MAP_RETURN_PARAM
 // CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [5 x i64] [i64 64, i64 64, i64 64, i64 64, i64 64]
-// CHECK-DAG: [[SIZES2:@.+]] = private unnamed_addr global [5 x i64] zeroinitializer
 // 0 = OMP_MAP_NONE
 // 281474976710720 = 0x1000000000040 = OMP_MAP_MEMBER_OF | OMP_MAP_RETURN_PARAM
 // CHECK-DAG: [[MAPTYPES2:@.+]] = private unnamed_addr constant [5 x i64] [i64 0, i64 281474976710720, i64 281474976710720, i64 281474976710720, i64 281474976710720]
@@ -120,6 +119,7 @@ int main() {
 // %this.addr = alloca %struct.S*, align 8
 // CHECK: [[BPTRS:%.+]] = alloca [5 x i8*],
 // CHECK: [[PTRS:%.+]] = alloca [5 x i8*],
+// CHECK: [[SIZES:%.+]] = alloca [5 x i64],
 // %tmp = alloca i32*, align 8
 // %tmp6 = alloca i32**, align 8
 // %tmp7 = alloca i32*, align 8
@@ -150,34 +150,44 @@ int main() {
 // CHECK: [[PTR0:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
 // CHECK: [[PTR0_BEGIN:%.+]] = bitcast i8** [[PTR0]] to i32**
 // CHECK: store i32* [[A_ADDR]], i32** [[PTR0_BEGIN]],
-// CHECK: store i64 [[SZ]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES2]], i32 0, i32 0),
+// CHECK: [[SIZE0:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 0
+// CHECK: store i64 [[SZ]], i64* [[SIZE0]],
 // CHECK: [[BPTR1:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 1
 // CHECK: [[BPTR1_A_ADDR:%.+]] = bitcast i8** [[BPTR1]] to i32**
 // CHECK: store i32* [[A_ADDR2]], i32** [[BPTR1_A_ADDR]],
 // CHECK: [[PTR1:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 1
 // CHECK: [[PTR1_A_ADDR:%.+]] = bitcast i8** [[PTR1]] to i32**
 // CHECK: store i32* [[A_ADDR2]], i32** [[PTR1_A_ADDR]],
+// CHECK: [[SIZE1:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 1
+// CHECK: store i64 0, i64* [[SIZE1]],
 // CHECK: [[BPTR2:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 2
 // CHECK: [[BPTR2_PTR_ADDR:%.+]] = bitcast i8** [[BPTR2]] to i32***
 // CHECK: store i32** [[PTR_ADDR]], i32*** [[BPTR2_PTR_ADDR]],
 // CHECK: [[PTR2:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 2
 // CHECK: [[PTR2_PTR_ADDR:%.+]] = bitcast i8** [[PTR2]] to i32***
 // CHECK: store i32** [[PTR_ADDR]], i32*** [[PTR2_PTR_ADDR]],
+// CHECK: [[SIZE2:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 2
+// CHECK: store i64 0, i64* [[SIZE2]],
 // CHECK: [[BPTR3:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 3
 // CHECK: [[BPTR3_REF_PTR:%.+]] = bitcast i8** [[BPTR3]] to i32**
 // CHECK: store i32* [[REF_PTR]], i32** [[BPTR3_REF_PTR]],
 // CHECK: [[PTR3:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 3
 // CHECK: [[PTR3_REF_PTR:%.+]] = bitcast i8** [[PTR3]] to i32**
 // CHECK: store i32* [[REF_PTR]], i32** [[PTR3_REF_PTR]],
+// CHECK: [[SIZE3:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 3
+// CHECK: store i64 0, i64* [[SIZE3]],
 // CHECK: [[BPTR4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 4
 // CHECK: [[BPTR4_ARR_ADDR:%.+]] = bitcast i8** [[BPTR4]] to [4 x i32]**
 // CHECK: store [4 x i32]* [[ARR_ADDR2]], [4 x i32]** [[BPTR4_ARR_ADDR]],
 // CHECK: [[PTR4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 4
 // CHECK: [[PTR4_ARR_ADDR:%.+]] = bitcast i8** [[PTR4]] to [4 x i32]**
 // CHECK: store [4 x i32]* [[ARR_ADDR2]], [4 x i32]** [[PTR4_ARR_ADDR]],
+// CHECK: [[SIZE4:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 4
+// CHECK: store i64 0, i64* [[SIZE4]],
 // CHECK: [[BPTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 0
 // CHECK: [[PTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES2]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null, i8** null)
+// CHECK: [[SIZE:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 0
+// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null, i8** null)
 // CHECK: [[A_ADDR:%.+]] = load i32*, i32** [[BPTR1_A_ADDR]],
 // CHECK: store i32* [[A_ADDR]], i32** [[A_REF:%.+]],
 // CHECK: [[PTR_ADDR:%.+]] = load i32**, i32*** [[BPTR2_PTR_ADDR]],
@@ -208,6 +218,7 @@ int main() {
 // CHECK: store i32 [[INC]], i32* [[ARR0_ADDR]],
 // CHECK: [[BPTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 0
 // CHECK: [[PTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES2]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null, i8** null)
+// CHECK: [[SIZE:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 0
+// CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null, i8** null)
 
 #endif
