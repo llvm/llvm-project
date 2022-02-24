@@ -13,6 +13,7 @@
 #ifndef LLD_ELF_SYMBOLS_H
 #define LLD_ELF_SYMBOLS_H
 
+#include "Config.h"
 #include "InputFiles.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
@@ -21,6 +22,9 @@
 #include <tuple>
 
 namespace lld {
+namespace elf {
+class Symbol;
+}
 // Returns a string representation for a symbol for diagnostics.
 std::string toString(const elf::Symbol &);
 
@@ -29,9 +33,11 @@ class CommonSymbol;
 class Defined;
 class OutputSection;
 class SectionBase;
+class InputSectionBase;
 class SharedSymbol;
 class Symbol;
 class Undefined;
+class InputFile;
 
 // Some index properties of a symbol are stored separately in this auxiliary
 // struct to decrease sizeof(SymbolUnion) in the majority of cases.
