@@ -5,9 +5,11 @@
 #ifndef HEADER
 #define HEADER
 
+// CHECK: [[SIZE_ENTER:@.+]] = private unnamed_addr global [2 x i64] [i64 0, i64 24]
 // 0 = OMP_MAP_NONE
 // 281474976710656 = 0x1000000000000 = OMP_MAP_MEMBER_OF of 1-st element
 // CHECK: [[MAP_ENTER:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710656]
+// CHECK: [[SIZE_EXIT:@.+]] = private unnamed_addr global [2 x i64] [i64 0, i64 24]
 // 281474976710664 = 0x1000000000008 = OMP_MAP_MEMBER_OF of 1-st element | OMP_MAP_DELETE
 // CHECK: [[MAP_EXIT:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710664]
 template <typename T>
@@ -22,7 +24,6 @@ struct maptest {
   maptest() {
     // CHECK: [[BPTRS:%.+]] = alloca [2 x i8*],
     // CHECK: [[PTRS:%.+]] = alloca [2 x i8*],
-    // CHECK: [[SIZES:%.+]] = alloca [2 x i64],
     // CHECK: getelementptr inbounds
     // CHECK: [[S_ADDR:%.+]] = getelementptr inbounds %struct.maptest, %struct.maptest* [[THIS:%.+]], i32 0, i32 0
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds %struct.S, %struct.S* [[S_ADDR]], i32 0, i32 0
@@ -47,27 +48,22 @@ struct maptest {
     // CHECK: [[PTR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
     // CHECK: [[PTR0_DATA:%.+]] = bitcast i8** [[PTR0]] to float**
     // CHECK: store float* [[S_DATA_0_ADDR]], float** [[PTR0_DATA]],
-    // CHECK: [[SIZE0:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
-    // CHECK: store i64 [[SZ]], i64* [[SIZE0]],
+    // CHECK: store i64 [[SZ]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZE_ENTER]], i32 0, i32 0),
     // CHECK: [[BPTR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 1
     // CHECK: [[BPTR1_THIS:%.+]] = bitcast i8** [[BPTR1]] to %struct.maptest**
     // CHECK: store %struct.maptest* [[THIS]], %struct.maptest** [[BPTR1_THIS]],
     // CHECK: [[PTR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 1
     // CHECK: [[PTR1_DATA:%.+]] = bitcast i8** [[PTR1]] to float**
     // CHECK: store float* [[S_DATA_0_ADDR]], float** [[PTR1_DATA]],
-    // CHECK: [[SIZE1:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 1
-    // CHECK: store i64 24, i64* [[SIZE1]],
     // CHECK: [[BPTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 0
     // CHECK: [[PTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
-    // CHECK: [[SIZE:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
-    // CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_ENTER]], i32 0, i32 0), i8** null, i8** null)
+    // CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZE_ENTER]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_ENTER]], i32 0, i32 0), i8** null, i8** null)
 #pragma omp target enter data map(alloc : s.data[:6])
   }
 
   ~maptest() {
     // CHECK: [[BPTRS:%.+]] = alloca [2 x i8*],
     // CHECK: [[PTRS:%.+]] = alloca [2 x i8*],
-    // CHECK: [[SIZE:%.+]] = alloca [2 x i64],
     // CHECK: [[S_ADDR:%.+]] = getelementptr inbounds %struct.maptest, %struct.maptest* [[THIS:%.+]], i32 0, i32 0
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds %struct.S, %struct.S* [[S_ADDR]], i32 0, i32 0
     // CHECK: [[S_DATA_0_ADDR:%.+]] = getelementptr inbounds [6 x float], [6 x float]* [[S_DATA_ADDR]], i64 0, i64 0
@@ -91,20 +87,16 @@ struct maptest {
     // CHECK: [[PTR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
     // CHECK: [[PTR0_DATA:%.+]] = bitcast i8** [[PTR0]] to float**
     // CHECK: store float* [[S_DATA_0_ADDR]], float** [[PTR0_DATA]],
-    // CHECK: [[SIZE0:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
-    // CHECK: store i64 [[SZ]], i64* [[SIZE0]],
+    // CHECK: store i64 [[SZ]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZE_EXIT]], i32 0, i32 0),
     // CHECK: [[BPTR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 1
     // CHECK: [[BPTR1_THIS:%.+]] = bitcast i8** [[BPTR1]] to %struct.maptest**
     // CHECK: store %struct.maptest* [[THIS]], %struct.maptest** [[BPTR1_THIS]],
     // CHECK: [[PTR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 1
     // CHECK: [[PTR1_DATA:%.+]] = bitcast i8** [[PTR1]] to float**
     // CHECK: store float* [[S_DATA_0_ADDR]], float** [[PTR1_DATA]],
-    // CHECK: [[SIZE1:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 1
-    // CHECK: store i64 24, i64* [[SIZE1]],
     // CHECK: [[BPTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 0
     // CHECK: [[PTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
-    // CHECK: [[SIZE:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
-    // CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_EXIT]], i32 0, i32 0), i8** null, i8** null)
+    // CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZE_EXIT]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_EXIT]], i32 0, i32 0), i8** null, i8** null)
 #pragma omp target exit data map(delete : s.data[:6])
   }
 };
