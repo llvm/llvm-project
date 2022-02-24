@@ -318,7 +318,7 @@ public:
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = config->shared || config->exportDynamic;
+    exportDynamic = config->exportDynamic;
   }
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
@@ -355,7 +355,7 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = config->shared || config->exportDynamic;
+    exportDynamic = config->exportDynamic;
   }
 
   static bool classof(const Symbol *s) { return s->isCommon(); }

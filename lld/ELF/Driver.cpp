@@ -1016,7 +1016,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->executeOnly =
       args.hasFlag(OPT_execute_only, OPT_no_execute_only, false);
   config->exportDynamic =
-      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
+      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false) ||
+      args.hasArg(OPT_shared);
   config->filterList = args::getStrings(args, OPT_filter);
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419) &&
