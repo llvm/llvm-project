@@ -1832,7 +1832,7 @@ static void demoteSharedAndLazySymbols() {
   llvm::TimeTraceScope timeScope("Demote shared and lazy symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !s->getFile().isNeeded) && !sym->isLazy())
+    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
       continue;
 
     bool used = sym->used;
