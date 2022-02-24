@@ -25,8 +25,6 @@ define signext i32 @grev32_demandedbits(i32 signext %a, i32 signext %b, i32 sign
   ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.grevi.i32(i32 %a)
-
 define signext i32 @grevi32(i32 signext %a) nounwind {
 ; RV64ZBP-LABEL: grevi32:
 ; RV64ZBP:       # %bb.0:
@@ -470,8 +468,6 @@ define i64 @gorc64_demandedbits(i64 %a, i64 %b) nounwind {
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 %c)
   ret i64 %tmp
 }
-
-declare i64 @llvm.riscv.gorci.i64(i64 %a)
 
 define i64 @gorci64(i64 %a) nounwind {
 ; RV64ZBP-LABEL: gorci64:
