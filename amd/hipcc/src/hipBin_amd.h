@@ -1093,7 +1093,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
                                   + deviceLibPath + "\"";
       HIPCXXFLAGS += hip_device_lib_str;
     }
-    HIPCXXFLAGS += " -fhip-new-launch-api";
   }
   if (os != windows) {
     HIPLDFLAGS += " -lgcc_s -lgcc -lpthread -lm -lrt";
