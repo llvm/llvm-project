@@ -814,12 +814,14 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
     OS << "  // Sequence " << Idx << "\n";
     Idx += Sequence.size() + 1;
   }
+  auto *IntType = getMinimalTypeForRange(*std::max_element(
+      SubReg2SequenceIndexMap.begin(), SubReg2SequenceIndexMap.end()));
   OS << "  };\n"
-        "  static const MaskRolOp *const CompositeSequences[] = {\n";
+        "  static const "
+     << IntType << " CompositeSequences[] = {\n";
   for (size_t i = 0, e = SubRegIndices.size(); i != e; ++i) {
     OS << "    ";
-    unsigned Idx = SubReg2SequenceIndexMap[i];
-    OS << format("&LaneMaskComposeSequences[%u]", Idx);
+    OS << SubReg2SequenceIndexMap[i];
     if (i+1 != e)
       OS << ",";
     OS << " // to " << SubRegIndices[i].getName() << "\n";
@@ -832,7 +834,9 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
         "  --IdxA; assert(IdxA < " << SubRegIndices.size()
      << " && \"Subregister index out of bounds\");\n"
         "  LaneBitmask Result;\n"
-        "  for (const MaskRolOp *Ops = CompositeSequences[IdxA]; Ops->Mask.any(); ++Ops) {\n"
+        "  for (const MaskRolOp *Ops =\n"
+        "       &LaneMaskComposeSequences[CompositeSequences[IdxA]];\n"
+        "       Ops->Mask.any(); ++Ops) {\n"
         "    LaneBitmask::Type M = LaneMask.getAsInteger() & Ops->Mask.getAsInteger();\n"
         "    if (unsigned S = Ops->RotateLeft)\n"
         "      Result |= LaneBitmask((M << S) | (M >> (LaneBitmask::BitWidth - S)));\n"
@@ -849,7 +853,9 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
         "  --IdxA; assert(IdxA < " << SubRegIndices.size()
      << " && \"Subregister index out of bounds\");\n"
         "  LaneBitmask Result;\n"
-        "  for (const MaskRolOp *Ops = CompositeSequences[IdxA]; Ops->Mask.any(); ++Ops) {\n"
+        "  for (const MaskRolOp *Ops =\n"
+        "       &LaneMaskComposeSequences[CompositeSequences[IdxA]];\n"
+        "       Ops->Mask.any(); ++Ops) {\n"
         "    LaneBitmask::Type M = LaneMask.getAsInteger();\n"
         "    if (unsigned S = Ops->RotateLeft)\n"
         "      Result |= LaneBitmask((M >> S) | (M << (LaneBitmask::BitWidth - S)));\n"
