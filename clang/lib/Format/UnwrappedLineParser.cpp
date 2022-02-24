@@ -2336,10 +2336,9 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     assert(!Line->InPPDirective);
     Tok = nullptr;
     for (const auto &L : llvm::reverse(*CurrentLines)) {
-      if (!L.InPPDirective) {
-        Tok = getLastNonComment(L);
-        if (Tok)
-          break;
+      if (!L.InPPDirective && getLastNonComment(L)) {
+        Tok = L.Tokens.back().Tok;
+        break;
       }
     }
     assert(Tok);

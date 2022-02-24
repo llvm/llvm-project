@@ -1855,7 +1855,7 @@ private:
           assert(Token->BraceCount == -1);
           Brace = '{';
         } else {
-          Brace = std::string(Token->BraceCount, '}');
+          Brace = '\n' + std::string(Token->BraceCount, '}');
         }
         Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
