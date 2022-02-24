@@ -4,7 +4,7 @@
 // The synthetic global made by the CFE for big initializer should be marked
 // constant.
 
-void bar();
+void bar(char *);
 void foo(void) {
   // CHECK: private unnamed_addr constant
   char Blah[] = "asdlfkajsdlfkajsd;lfkajds;lfkjasd;flkajsd;lkfja;sdlkfjasd";
