@@ -26,7 +26,7 @@
 # RUN: llvm-objcopy --update-section __TEXT,__text=%t.diff %t - | obj2yaml | FileCheck %s --check-prefix=FULL-SECNAME
 # FULL-SECNAME: content: '41414142'
 
-# RUN: not llvm-objcopy --update-section __text=%t.dff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NON-CANONICAL-SECNAME
+# RUN: not llvm-objcopy --update-section __text=%t.diff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NON-CANONICAL-SECNAME
 # NON-CANONICAL-SECNAME: error: {{.*}}invalid section name '__text' (should be formatted as '<segment name>,<section name>')
 
 --- !mach-o

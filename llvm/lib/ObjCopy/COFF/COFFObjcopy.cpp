@@ -230,56 +230,41 @@ static Error handleArgs(const CommonConfig &Config,
             It->second.NewFlags, Sec.Header.Characteristics);
     }
 
-  for (const auto &Flag : Config.AddSection) {
-    StringRef SecName, FileName;
-    std::tie(SecName, FileName) = Flag.split("=");
-
-    auto BufOrErr = MemoryBuffer::getFile(FileName);
-    if (!BufOrErr)
-      return createFileError(FileName, errorCodeToError(BufOrErr.getError()));
-    auto Buf = std::move(*BufOrErr);
-
+  for (const NewSectionInfo &NewSection : Config.AddSection) {
     uint32_t Characteristics;
-    const auto It = Config.SetSectionFlags.find(SecName);
+    const auto It = Config.SetSectionFlags.find(NewSection.SectionName);
     if (It != Config.SetSectionFlags.end())
       Characteristics = flagsToCharacteristics(It->second.NewFlags, 0);
     else
       Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_1BYTES;
 
-    addSection(
-        Obj, SecName,
-        makeArrayRef(reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
-                     Buf->getBufferSize()),
-        Characteristics);
+    addSection(Obj, NewSection.SectionName,
+               makeArrayRef(reinterpret_cast<const uint8_t *>(
+                                NewSection.SectionData->getBufferStart()),
+                            NewSection.SectionData->getBufferSize()),
+               Characteristics);
   }
 
-  for (StringRef Flag : Config.UpdateSection) {
-    StringRef SecName, FileName;
-    std::tie(SecName, FileName) = Flag.split('=');
-
-    auto BufOrErr = MemoryBuffer::getFile(FileName);
-    if (!BufOrErr)
-      return createFileError(FileName, errorCodeToError(BufOrErr.getError()));
-    auto Buf = std::move(*BufOrErr);
-
-    auto It = llvm::find_if(Obj.getMutableSections(), [SecName](auto &Sec) {
-      return Sec.Name == SecName;
+  for (const NewSectionInfo &NewSection : Config.UpdateSection) {
+    auto It = llvm::find_if(Obj.getMutableSections(), [&](auto &Sec) {
+      return Sec.Name == NewSection.SectionName;
     });
     if (It == Obj.getMutableSections().end())
       return createStringError(errc::invalid_argument,
                                "could not find section with name '%s'",
-                               SecName.str().c_str());
+                               NewSection.SectionName.str().c_str());
     size_t ContentSize = It->getContents().size();
     if (!ContentSize)
       return createStringError(
           errc::invalid_argument,
           "section '%s' cannot be updated because it does not have contents",
-          SecName.str().c_str());
-    if (ContentSize < Buf->getBufferSize())
+          NewSection.SectionName.str().c_str());
+    if (ContentSize < NewSection.SectionData->getBufferSize())
       return createStringError(
           errc::invalid_argument,
           "new section cannot be larger than previous section");
-    It->setOwnedContents({Buf->getBufferStart(), Buf->getBufferEnd()});
+    It->setOwnedContents({NewSection.SectionData->getBufferStart(),
+                          NewSection.SectionData->getBufferEnd()});
   }
 
   if (!Config.AddGnuDebugLink.empty())

@@ -558,6 +558,32 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   return SI;
 }
 
+// Parse input option \p ArgValue and load section data. This function
+// extracts section name and name of the file keeping section data from
+// ArgValue, loads data from the file, and stores section name and data
+// into the vector of new sections \p NewSections.
+static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
+                                std::vector<NewSectionInfo> &NewSections) {
+  if (!ArgValue.contains('='))
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName + ": missing '='");
+
+  std::pair<StringRef, StringRef> SecPair = ArgValue.split("=");
+  if (SecPair.second.empty())
+    return createStringError(errc::invalid_argument, "bad format for " +
+                                                         OptionName +
+                                                         ": missing file name");
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFile(SecPair.second);
+  if (!BufOrErr)
+    return createFileError(SecPair.second,
+                           errorCodeToError(BufOrErr.getError()));
+
+  NewSections.push_back({SecPair.first, std::move(*BufOrErr)});
+  return Error::success();
+}
+
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -848,26 +874,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section)) {
-    StringRef ArgValue(Arg->getValue());
-    if (!ArgValue.contains('='))
-      return createStringError(errc::invalid_argument,
-                               "bad format for --add-section: missing '='");
-    if (ArgValue.split("=").second.empty())
-      return createStringError(
-          errc::invalid_argument,
-          "bad format for --add-section: missing file name");
-    Config.AddSection.push_back(ArgValue);
+    if (Error Err = loadNewSectionData(Arg->getValue(), "--add-section",
+                                       Config.AddSection))
+      return std::move(Err);
   }
   for (auto Arg : InputArgs.filtered(OBJCOPY_update_section)) {
-    StringRef ArgValue(Arg->getValue());
-    if (!ArgValue.contains('='))
-      return createStringError(errc::invalid_argument,
-                               "bad format for --update-section: missing '='");
-    if (ArgValue.split("=").second.empty())
-      return createStringError(
-          errc::invalid_argument,
-          "bad format for --update-section: missing file name");
-    Config.UpdateSection.push_back(ArgValue);
+    if (Error Err = loadNewSectionData(Arg->getValue(), "--update-section",
+                                       Config.UpdateSection))
+      return std::move(Err);
   }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_dump_section)) {
     StringRef Value(Arg->getValue());

@@ -586,19 +586,12 @@ static void addSymbol(Object &Obj, const NewSymbolInfo &SymInfo,
 }
 
 static Error
-handleUserSection(StringRef Flag,
+handleUserSection(const NewSectionInfo &NewSection,
                   function_ref<Error(StringRef, ArrayRef<uint8_t>)> F) {
-  std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-  StringRef SecName = SecPair.first;
-  StringRef File = SecPair.second;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = MemoryBuffer::getFile(File);
-  if (!BufOrErr)
-    return createFileError(File, errorCodeToError(BufOrErr.getError()));
-  std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
-  ArrayRef<uint8_t> Data(
-      reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
-      Buf->getBufferSize());
-  return F(SecName, Data);
+  ArrayRef<uint8_t> Data(reinterpret_cast<const uint8_t *>(
+                             NewSection.SectionData->getBufferStart()),
+                         NewSection.SectionData->getBufferSize());
+  return F(NewSection.SectionName, Data);
 }
 
 // This function handles the high level operations of GNU objcopy including
@@ -717,7 +710,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
         Sec.Type = SHT_NOBITS;
 
-  for (const auto &Flag : Config.AddSection) {
+  for (const NewSectionInfo &AddedSection : Config.AddSection) {
     auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
       OwnedDataSection &NewSection =
           Obj.addSection<OwnedDataSection>(Name, Data);
@@ -725,15 +718,15 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         NewSection.Type = SHT_NOTE;
       return Error::success();
     };
-    if (Error E = handleUserSection(Flag, AddSection))
+    if (Error E = handleUserSection(AddedSection, AddSection))
       return E;
   }
 
-  for (StringRef Flag : Config.UpdateSection) {
+  for (const NewSectionInfo &NewSection : Config.UpdateSection) {
     auto UpdateSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
       return Obj.updateSection(Name, Data);
     };
-    if (Error E = handleUserSection(Flag, UpdateSection))
+    if (Error E = handleUserSection(NewSection, UpdateSection))
       return E;
   }
 
