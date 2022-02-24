@@ -9919,6 +9919,11 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
   verifyFormat("void operator new(void *foo) ATTRIB;");
   verifyFormat("void operator delete[](void *foo) ATTRIB;");
   verifyFormat("void operator delete(void *ptr) noexcept;");
+
+  EXPECT_EQ("void new(link p);\n"
+            "void delete(link p);\n",
+            format("void new (link p);\n"
+                   "void delete (link p);\n"));
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
