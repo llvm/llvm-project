@@ -24,7 +24,7 @@ define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    callq l
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    jne .LBB0_10
+; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    cmpl $0, e(%rip)
@@ -44,21 +44,19 @@ define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    callq i
 ; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    orl %r14d, %ebp
-; CHECK-NEXT:    testl %r13d, %r13d
-; CHECK-NEXT:    je .LBB0_6
-; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    andl $4, %ebx
-; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_6: # %if.end12
+; CHECK-NEXT:    testl %r13d, %r13d
+; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:  # %bb.5: # %if.end12
 ; CHECK-NEXT:    testl %ebp, %ebp
-; CHECK-NEXT:    je .LBB0_9
-; CHECK-NEXT:  # %bb.7: # %if.then14
+; CHECK-NEXT:    je .LBB0_8
+; CHECK-NEXT:  # %bb.6: # %if.then14
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jmp .LBB0_10
+; CHECK-NEXT:    jmp .LBB0_9
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  # %bb.8: # %if.then20.critedge
+; CHECK-NEXT:  # %bb.7: # %if.then20.critedge
 ; CHECK-NEXT:    movl j(%rip), %edi
 ; CHECK-NEXT:    movslq %eax, %rcx
 ; CHECK-NEXT:    movl $1, %esi
@@ -71,9 +69,9 @@ define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    jmp k # TAILCALL
-; CHECK-NEXT:  .LBB0_9: # %if.else
+; CHECK-NEXT:  .LBB0_8: # %if.else
 ; CHECK-NEXT:    incq 0
-; CHECK-NEXT:  .LBB0_10: # %cleanup
+; CHECK-NEXT:  .LBB0_9: # %cleanup
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12

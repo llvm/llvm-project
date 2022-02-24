@@ -7,18 +7,15 @@ define void @test(i1 %c, i64* %p, i64* noalias %p2) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rdx, %rbx
-; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:    movl %edi, %r15d
+; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    movq (%rsi), %rbp
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rax,8)
 ; CHECK-NEXT:  .LBB0_1: # %split.3
-; CHECK-NEXT:    movq (%r14), %rbp
-; CHECK-NEXT:    testb $1, %r15b
+; CHECK-NEXT:    testb $1, %r14b
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %clobber
 ; CHECK-NEXT:    callq clobber@PLT

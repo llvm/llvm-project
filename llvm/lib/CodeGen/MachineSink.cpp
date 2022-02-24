@@ -18,12 +18,14 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -428,6 +430,16 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   RegClassInfo.runOnMachineFunction(MF);
+
+  // MachineSink currently uses MachineLoopInfo, which only recognizes natural
+  // loops. As such, we could sink instructions into irreducible cycles, which
+  // would be non-profitable.
+  // WARNING: The current implementation of hasStoreBetween() is incorrect for
+  // sinking into irreducible cycles (PR53990), this bailout is currently
+  // necessary for correctness, not just profitability.
+  ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
+  if (containsIrreducibleCFG<MachineBasicBlock *>(RPOT, *LI))
+    return false;
 
   bool EverMadeChange = false;
 
