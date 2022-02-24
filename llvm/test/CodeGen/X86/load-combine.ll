@@ -1209,20 +1209,33 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 ; i8* p;
 ; (i32) p[1] | ((i32) p[0] << 8)
 define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
-; CHECK-LABEL: zext_load_i32_by_i8_bswap:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzwl (%eax), %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    retl
+; BSWAP-LABEL: zext_load_i32_by_i8_bswap:
+; BSWAP:       # %bb.0:
+; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BSWAP-NEXT:    movzwl (%eax), %eax
+; BSWAP-NEXT:    rolw $8, %ax
+; BSWAP-NEXT:    movzwl %ax, %eax
+; BSWAP-NEXT:    retl
 ;
-; CHECK64-LABEL: zext_load_i32_by_i8_bswap:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl (%rdi), %eax
-; CHECK64-NEXT:    shll $16, %eax
-; CHECK64-NEXT:    bswapl %eax
-; CHECK64-NEXT:    retq
+; MOVBE-LABEL: zext_load_i32_by_i8_bswap:
+; MOVBE:       # %bb.0:
+; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; MOVBE-NEXT:    movbew (%eax), %ax
+; MOVBE-NEXT:    movzwl %ax, %eax
+; MOVBE-NEXT:    retl
+;
+; BSWAP64-LABEL: zext_load_i32_by_i8_bswap:
+; BSWAP64:       # %bb.0:
+; BSWAP64-NEXT:    movzwl (%rdi), %eax
+; BSWAP64-NEXT:    rolw $8, %ax
+; BSWAP64-NEXT:    movzwl %ax, %eax
+; BSWAP64-NEXT:    retq
+;
+; MOVBE64-LABEL: zext_load_i32_by_i8_bswap:
+; MOVBE64:       # %bb.0:
+; MOVBE64-NEXT:    movbew (%rdi), %ax
+; MOVBE64-NEXT:    movzwl %ax, %eax
+; MOVBE64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
   %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 1
   %tmp2 = load i8, i8* %tmp1, align 1
