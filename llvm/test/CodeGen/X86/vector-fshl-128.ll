@@ -1193,20 +1193,32 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: splatvar_funnnel_v8i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
-; AVX-NEXT:    vpandn %xmm3, %xmm2, %xmm4
-; AVX-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
-; AVX-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: splatvar_funnnel_v8i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [15,15]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vandnps %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: splatvar_funnnel_v8i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,15]
+; AVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm4
+; AVX2-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: splatvar_funnnel_v8i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,15]
 ; AVX512F-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX512F-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
@@ -1217,7 +1229,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %
 ;
 ; AVX512VL-LABEL: splatvar_funnnel_v8i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,15]
 ; AVX512VL-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX512VL-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
@@ -1228,7 +1240,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %
 ;
 ; AVX512BW-LABEL: splatvar_funnnel_v8i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,15]
 ; AVX512BW-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX512BW-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
@@ -1249,7 +1261,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %
 ;
 ; AVX512VLBW-LABEL: splatvar_funnnel_v8i16:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
+; AVX512VLBW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,15]
 ; AVX512VLBW-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
@@ -1264,16 +1276,28 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %
 ; AVX512VLVBMI2-NEXT:    vpshldvw %xmm2, %xmm1, %xmm0
 ; AVX512VLVBMI2-NEXT:    retq
 ;
-; XOP-LABEL: splatvar_funnnel_v8i16:
-; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
-; XOP-NEXT:    vpandn %xmm3, %xmm2, %xmm4
-; XOP-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; XOP-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
-; XOP-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; XOP-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
-; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; XOP-NEXT:    retq
+; XOPAVX1-LABEL: splatvar_funnnel_v8i16:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [15,15]
+; XOPAVX1-NEXT:    # xmm3 = mem[0,0]
+; XOPAVX1-NEXT:    vandnps %xmm3, %xmm2, %xmm4
+; XOPAVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: splatvar_funnnel_v8i16:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,15]
+; XOPAVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm4
+; XOPAVX2-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOPAVX2-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: splatvar_funnnel_v8i16:
 ; X86-SSE2:       # %bb.0:
