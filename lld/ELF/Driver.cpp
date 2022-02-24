@@ -1958,16 +1958,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   sym->partition = newPart.getNumber();
 }
 
-static Symbol *addUndefined(StringRef name) {
-  return symtab->addSymbol(
-      Undefined{nullptr, name, STB_GLOBAL, STV_DEFAULT, 0});
-}
-
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  Undefined sym{nullptr, name, binding, STV_DEFAULT, 0};
-  sym.isUsedInRegularObj = false;
-  return symtab->addSymbol(sym);
+  return symtab->addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2319,7 +2312,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
   for (StringRef name : script->referencedSymbols)
-    addUndefined(name);
+    addUnusedUndefined(name)->isUsedInRegularObj = true;
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
