@@ -46,3 +46,10 @@ end
 
 ! CHECK-LABEL: func @_QPfct3(
 ! CHECK-SAME:    %{{.*}}: !fir.ref<!fir.array<2xf32>> {fir.bindc_name = "i"}) -> f32
+
+subroutine allocatable_real(x)
+  real, allocatable  :: x
+end
+
+! CHECK-LABEL: func @_QPallocatable_real(
+! CHECK-SAME:    %{{.*}}: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "x"}) {

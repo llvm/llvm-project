@@ -508,6 +508,35 @@ public:
       addFirResult(mlir::IndexType::get(&mlirContext),
                    FirPlaceHolder::resultEntityPosition, Property::Value);
     }
+    bool isBindC = procedure.IsBindC();
+    // Handle arguments
+    const auto &argumentEntities =
+        getEntityContainer(interface.side().getCallDescription());
+    for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
+      const Fortran::evaluate::characteristics::DummyArgument
+          &argCharacteristics = std::get<0>(pair);
+      std::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::evaluate::characteristics::DummyDataObject
+                      &dummy) {
+                const auto &entity = getDataObjectEntity(std::get<1>(pair));
+                if (dummy.CanBePassedViaImplicitInterface())
+                  handleImplicitDummy(&argCharacteristics, dummy, entity);
+                else
+                  handleExplicitDummy(&argCharacteristics, dummy, entity,
+                                      isBindC);
+              },
+              [&](const Fortran::evaluate::characteristics::DummyProcedure
+                      &dummy) {
+                const auto &entity = getDataObjectEntity(std::get<1>(pair));
+                handleImplicitDummy(&argCharacteristics, dummy, entity);
+              },
+              [&](const Fortran::evaluate::characteristics::AlternateReturn &) {
+                // nothing to do
+              },
+          },
+          argCharacteristics.u);
+    }
   }
 
 private:
@@ -607,6 +636,133 @@ private:
       }
     }
     return {};
+  }
+
+  // Define when an explicit argument must be passed in a fir.box.
+  bool dummyRequiresBox(
+      const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+    using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attrs;
+    constexpr ShapeAttrs shapeRequiringBox = {
+        ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
+        ShapeAttr::AssumedRank, ShapeAttr::Coarray};
+    if ((obj.type.attrs() & shapeRequiringBox).any())
+      // Need to pass shape/coshape info in fir.box.
+      return true;
+    if (obj.type.type().IsPolymorphic())
+      // Need to pass dynamic type info in fir.box.
+      return true;
+    if (const Fortran::semantics::DerivedTypeSpec *derived =
+            Fortran::evaluate::GetDerivedTypeSpec(obj.type.type()))
+      // Need to pass type parameters in fir.box if any.
+      return derived->parameters().empty();
+    return false;
+  }
+
+  mlir::Type
+  translateDynamicType(const Fortran::evaluate::DynamicType &dynamicType) {
+    Fortran::common::TypeCategory cat = dynamicType.category();
+    // DERIVED
+    if (cat == Fortran::common::TypeCategory::Derived) {
+      TODO(interface.converter.getCurrentLocation(),
+           "[translateDynamicType] Derived");
+    }
+    // CHARACTER with compile time constant length.
+    if (cat == Fortran::common::TypeCategory::Character)
+      TODO(interface.converter.getCurrentLocation(),
+           "[translateDynamicType] Character");
+    // INTEGER, REAL, LOGICAL, COMPLEX, and CHARACTER with dynamic length.
+    return getConverter().genType(cat, dynamicType.kind());
+  }
+
+  void handleExplicitDummy(
+      const DummyCharacteristics *characteristics,
+      const Fortran::evaluate::characteristics::DummyDataObject &obj,
+      const FortranEntity &entity, bool isBindC) {
+    using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+
+    bool isValueAttr = false;
+    [[maybe_unused]] mlir::Location loc =
+        interface.converter.getCurrentLocation();
+    llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+    auto addMLIRAttr = [&](llvm::StringRef attr) {
+      attrs.emplace_back(mlir::StringAttr::get(&mlirContext, attr),
+                         mlir::UnitAttr::get(&mlirContext));
+    };
+    if (obj.attrs.test(Attrs::Optional))
+      addMLIRAttr(fir::getOptionalAttrName());
+    if (obj.attrs.test(Attrs::Asynchronous))
+      TODO(loc, "Asynchronous in procedure interface");
+    if (obj.attrs.test(Attrs::Contiguous))
+      addMLIRAttr(fir::getContiguousAttrName());
+    if (obj.attrs.test(Attrs::Value))
+      isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
+    if (obj.attrs.test(Attrs::Volatile))
+      TODO(loc, "Volatile in procedure interface");
+    if (obj.attrs.test(Attrs::Target))
+      addMLIRAttr(fir::getTargetAttrName());
+
+    // TODO: intents that require special care (e.g finalization)
+
+    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+    const Fortran::evaluate::characteristics::TypeAndShape::Attrs &shapeAttrs =
+        obj.type.attrs();
+    if (shapeAttrs.test(ShapeAttr::AssumedRank))
+      TODO(loc, "Assumed Rank in procedure interface");
+    if (shapeAttrs.test(ShapeAttr::Coarray))
+      TODO(loc, "Coarray in procedure interface");
+
+    // So far assume that if the argument cannot be passed by implicit interface
+    // it must be by box. That may no be always true (e.g for simple optionals)
+
+    Fortran::evaluate::DynamicType dynamicType = obj.type.type();
+    mlir::Type type = translateDynamicType(dynamicType);
+    fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
+    if (!bounds.empty())
+      type = fir::SequenceType::get(bounds, type);
+    if (obj.attrs.test(Attrs::Allocatable))
+      type = fir::HeapType::get(type);
+    if (obj.attrs.test(Attrs::Pointer))
+      type = fir::PointerType::get(type);
+    mlir::Type boxType = fir::BoxType::get(type);
+
+    if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
+      // Pass as fir.ref<fir.box>
+      mlir::Type boxRefType = fir::ReferenceType::get(boxType);
+      addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
+                    attrs);
+      addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
+    } else if (dummyRequiresBox(obj)) {
+      // Pass as fir.box
+      addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
+      addPassedArg(PassEntityBy::Box, entity, characteristics);
+    } else if (dynamicType.category() ==
+               Fortran::common::TypeCategory::Character) {
+      // Pass as fir.box_char
+      mlir::Type boxCharTy =
+          fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+      addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
+                    attrs);
+      addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
+                               : PassEntityBy::BoxChar,
+                   entity, characteristics);
+    } else {
+      // Pass as fir.ref unless it's by VALUE and BIND(C)
+      mlir::Type passType = fir::ReferenceType::get(type);
+      PassEntityBy passBy = PassEntityBy::BaseAddress;
+      Property prop = Property::BaseAddress;
+      if (isValueAttr) {
+        if (isBindC) {
+          passBy = PassEntityBy::Value;
+          prop = Property::Value;
+          passType = type;
+        } else {
+          passBy = PassEntityBy::BaseAddressValueAttribute;
+        }
+      }
+      addFirOperand(passType, nextPassedArgPosition(), prop, attrs);
+      addPassedArg(passBy, entity, characteristics);
+    }
   }
 
   void handleImplicitDummy(
