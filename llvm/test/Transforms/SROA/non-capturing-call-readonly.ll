@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=sroa -S | FileCheck %s --check-prefix=CHECK
 ; RUN: opt < %s -passes=sroa -opaque-pointers -S | FileCheck %s --check-prefix=CHECK-OPAQUE
 
-define i32 @alloca_used_in_call(i32* nocapture nonnull readonly %data, i64 %n) {
+define i32 @alloca_used_in_call(i32* %data, i64 %n) {
 ; CHECK-LABEL: @alloca_used_in_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -19,7 +19,7 @@ define i32 @alloca_used_in_call(i32* nocapture nonnull readonly %data, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
 ;
@@ -39,7 +39,7 @@ define i32 @alloca_used_in_call(i32* nocapture nonnull readonly %data, i64 %n) {
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
 ;
@@ -60,12 +60,12 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @user_of_alloca(i32* nocapture nonnull %retval)
+  %i0 = call i32 @user_of_alloca(i32* %retval)
   %i1 = load i32, i32* %retval, align 4
   ret i32 %i1
 }
 
-define i32 @alloca_captured_in_call(i32* nocapture nonnull readonly %data, i64 %n) {
+define i32 @alloca_captured_in_call(i32* %data, i64 %n) {
 ; CHECK-LABEL: @alloca_captured_in_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -82,7 +82,7 @@ define i32 @alloca_captured_in_call(i32* nocapture nonnull readonly %data, i64 %
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(i32* nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(i32* [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
 ;
@@ -102,7 +102,7 @@ define i32 @alloca_captured_in_call(i32* nocapture nonnull readonly %data, i64 %
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
 ;
@@ -123,12 +123,264 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @capture_of_alloca(i32* nonnull %retval)
+  %i0 = call i32 @capture_of_alloca(i32* %retval)
   %i1 = load i32, i32* %retval, align 4
   ret i32 %i1
 }
 
-define i32 @alloca_with_gep_used_in_call(i32* nocapture nonnull readonly %data, i64 %n) {
+define i32 @alloca_not_captured_as_per_operand_attr(i32* %data, i64 %n) {
+; CHECK-LABEL: @alloca_not_captured_as_per_operand_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[RDX:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    store i32 [[RDX_INC]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(i32* nocapture [[RETVAL]])
+; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    ret i32 [[I1]]
+;
+; CHECK-OPAQUE-LABEL: @alloca_not_captured_as_per_operand_attr(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    br label [[LOOP:%.*]]
+; CHECK-OPAQUE:       loop:
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-OPAQUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-OPAQUE-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-OPAQUE:       exit:
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
+;
+entry:
+  %retval = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  br label %loop
+
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv
+  %ld = load i32, i32* %arrayidx, align 4
+  %rdx = load i32, i32* %retval, align 4
+  %rdx.inc = add nsw i32 %rdx, %ld
+  store i32 %rdx.inc, i32* %retval, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %i0 = call i32 @capture_of_alloca(i32* nocapture %retval)
+  %i1 = load i32, i32* %retval, align 4
+  ret i32 %i1
+}
+
+define i32 @alloca_not_captured_and_readonly_as_per_operand_attr(i32* %data, i64 %n) {
+; CHECK-LABEL: @alloca_not_captured_and_readonly_as_per_operand_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[RDX:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    store i32 [[RDX_INC]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(i32* nocapture readonly [[RETVAL]])
+; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    ret i32 [[I1]]
+;
+; CHECK-OPAQUE-LABEL: @alloca_not_captured_and_readonly_as_per_operand_attr(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    br label [[LOOP:%.*]]
+; CHECK-OPAQUE:       loop:
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-OPAQUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-OPAQUE-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-OPAQUE:       exit:
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture readonly [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
+;
+entry:
+  %retval = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  br label %loop
+
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv
+  %ld = load i32, i32* %arrayidx, align 4
+  %rdx = load i32, i32* %retval, align 4
+  %rdx.inc = add nsw i32 %rdx, %ld
+  store i32 %rdx.inc, i32* %retval, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %i0 = call i32 @capture_of_alloca(i32* nocapture readonly %retval)
+  %i1 = load i32, i32* %retval, align 4
+  ret i32 %i1
+}
+
+define i32 @alloca_not_captured_as_per_operand_attr_and_readonly_as_per_callbase_attr(i32* %data, i64 %n) {
+; CHECK-LABEL: @alloca_not_captured_as_per_operand_attr_and_readonly_as_per_callbase_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[RDX:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    store i32 [[RDX_INC]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(i32* nocapture [[RETVAL]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    ret i32 [[I1]]
+;
+; CHECK-OPAQUE-LABEL: @alloca_not_captured_as_per_operand_attr_and_readonly_as_per_callbase_attr(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    br label [[LOOP:%.*]]
+; CHECK-OPAQUE:       loop:
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-OPAQUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-OPAQUE-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-OPAQUE:       exit:
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture [[RETVAL]]) #[[ATTR2:[0-9]+]]
+; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
+;
+entry:
+  %retval = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  br label %loop
+
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv
+  %ld = load i32, i32* %arrayidx, align 4
+  %rdx = load i32, i32* %retval, align 4
+  %rdx.inc = add nsw i32 %rdx, %ld
+  store i32 %rdx.inc, i32* %retval, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %i0 = call i32 @capture_of_alloca(i32* nocapture %retval) readonly
+  %i1 = load i32, i32* %retval, align 4
+  ret i32 %i1
+}
+
+define i32 @alloca_not_readonly_as_per_operand_attr(i32* %data, i64 %n) {
+; CHECK-LABEL: @alloca_not_readonly_as_per_operand_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[RDX:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    store i32 [[RDX_INC]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(i32* readonly [[RETVAL]])
+; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    ret i32 [[I1]]
+;
+; CHECK-OPAQUE-LABEL: @alloca_not_readonly_as_per_operand_attr(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    br label [[LOOP:%.*]]
+; CHECK-OPAQUE:       loop:
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-OPAQUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-OPAQUE-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-OPAQUE:       exit:
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr readonly [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
+;
+entry:
+  %retval = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  br label %loop
+
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv
+  %ld = load i32, i32* %arrayidx, align 4
+  %rdx = load i32, i32* %retval, align 4
+  %rdx.inc = add nsw i32 %rdx, %ld
+  store i32 %rdx.inc, i32* %retval, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %i0 = call i32 @capture_of_alloca(i32* readonly %retval)
+  %i1 = load i32, i32* %retval, align 4
+  ret i32 %i1
+}
+
+define i32 @alloca_with_gep_used_in_call(i32* %data, i64 %n) {
 ; CHECK-LABEL: @alloca_with_gep_used_in_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -146,7 +398,7 @@ define i32 @alloca_with_gep_used_in_call(i32* nocapture nonnull readonly %data, 
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[RETVAL]], i32 0
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* nocapture nonnull [[GEP]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* [[GEP]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
 ;
@@ -167,7 +419,7 @@ define i32 @alloca_with_gep_used_in_call(i32* nocapture nonnull readonly %data, 
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
 ; CHECK-OPAQUE-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[RETVAL]], i32 0
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr nocapture nonnull [[GEP]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[GEP]])
 ; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
 ;
@@ -189,12 +441,12 @@ loop:
 
 exit:
   %gep = getelementptr i32, i32* %retval, i32 0
-  %i0 = call i32 @user_of_alloca(i32* nocapture nonnull %gep)
+  %i0 = call i32 @user_of_alloca(i32* %gep)
   %i1 = load i32, i32* %retval, align 4
   ret i32 %i1
 }
 
-define i32 @alloca_captured_second_arg(i32* nocapture nonnull readonly %data, i64 %n) {
+define i32 @alloca_captured_second_arg(i32* %data, i64 %n) {
 ; CHECK-LABEL: @alloca_captured_second_arg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -211,7 +463,7 @@ define i32 @alloca_captured_second_arg(i32* nocapture nonnull readonly %data, i6
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_with_multiple_args(i32* nocapture nonnull [[RETVAL]], i32* nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_with_multiple_args(i32* [[RETVAL]], i32* [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
 ;
@@ -231,7 +483,7 @@ define i32 @alloca_captured_second_arg(i32* nocapture nonnull readonly %data, i6
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_with_multiple_args(ptr nocapture nonnull [[RETVAL]], ptr nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @capture_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-OPAQUE-NEXT:    ret i32 [[I1]]
 ;
@@ -252,12 +504,12 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @capture_with_multiple_args(i32* nocapture nonnull %retval, i32* nonnull %retval)
+  %i0 = call i32 @capture_with_multiple_args(i32* %retval, i32* %retval)
   %i1 = load i32, i32* %retval, align 4
   ret i32 %i1
 }
 
-define i32 @alloca_used_in_maybe_throwing_call(i32* nocapture nonnull readonly %data, i64 %n) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)  {
+define i32 @alloca_used_in_maybe_throwing_call(i32* %data, i64 %n) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)  {
 ; CHECK-LABEL: @alloca_used_in_maybe_throwing_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -274,7 +526,7 @@ define i32 @alloca_used_in_maybe_throwing_call(i32* nocapture nonnull readonly %
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(i32* [[RETVAL]])
 ; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[UW:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[END:%.*]]
@@ -302,7 +554,7 @@ define i32 @alloca_used_in_maybe_throwing_call(i32* nocapture nonnull readonly %
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    to label [[CONT:%.*]] unwind label [[UW:%.*]]
 ; CHECK-OPAQUE:       cont:
 ; CHECK-OPAQUE-NEXT:    br label [[END:%.*]]
@@ -331,7 +583,7 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = invoke i32 @user_of_alloca(i32* nocapture nonnull %retval) to label %cont unwind label %uw
+  %i0 = invoke i32 @user_of_alloca(i32* %retval) to label %cont unwind label %uw
 
 cont:
   br label %end
@@ -345,7 +597,7 @@ end:
   ret i32 %i2
 }
 
-define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(i32* nocapture nonnull readonly %data, i64 %n) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)  {
+define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(i32* %data, i64 %n) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)  {
 ; CHECK-LABEL: @alloca_used_in_maybe_throwing_call_with_same_dests(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -362,7 +614,7 @@ define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(i32* nocapture no
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(i32* [[RETVAL]])
 ; CHECK-NEXT:    to label [[END:%.*]] unwind label [[UW:%.*]]
 ; CHECK:       uw:
 ; CHECK-NEXT:    [[I1:%.*]] = landingpad { i8*, i32 }
@@ -388,7 +640,7 @@ define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(i32* nocapture no
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    to label [[END:%.*]] unwind label [[UW:%.*]]
 ; CHECK-OPAQUE:       uw:
 ; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = landingpad { ptr, i32 }
@@ -415,7 +667,7 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = invoke i32 @user_of_alloca(i32* nocapture nonnull %retval) to label %end unwind label %uw
+  %i0 = invoke i32 @user_of_alloca(i32* %retval) to label %end unwind label %uw
 
 uw:
   %i1 = landingpad { i8*, i32 } catch i8* null
@@ -426,7 +678,7 @@ end:
   ret i32 %i2
 }
 
-define [2 x i32] @part_of_alloca_used_in_call(i32* nocapture nonnull readonly %data, i64 %n) {
+define [2 x i32] @part_of_alloca_used_in_call(i32* %data, i64 %n) {
 ; CHECK-LABEL: @part_of_alloca_used_in_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
@@ -447,7 +699,7 @@ define [2 x i32] @part_of_alloca_used_in_call(i32* nocapture nonnull readonly %d
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* [[RETVAL]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, i32* [[I1_FCA_0_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
@@ -476,7 +728,7 @@ define [2 x i32] @part_of_alloca_used_in_call(i32* nocapture nonnull readonly %d
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
@@ -503,12 +755,12 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @user_of_alloca(i32* nocapture nonnull %retval)
+  %i0 = call i32 @user_of_alloca(i32* %retval)
   %i1 = load [2 x i32], [2 x i32]* %retval.full, align 4
   ret [2 x i32] %i1
 }
 
-define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(i32* nocapture nonnull readonly %data, i64 %n) {
+define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(i32* %data, i64 %n) {
 ; CHECK-LABEL: @all_parts_of_alloca_used_in_call_with_multiple_args(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
@@ -530,7 +782,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(i32* nocap
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull [[RETVAL]], i32* nocapture nonnull [[RETVAL_BASE]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* [[RETVAL]], i32* [[RETVAL_BASE]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, i32* [[I1_FCA_0_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
@@ -560,7 +812,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(i32* nocap
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr nocapture nonnull [[RETVAL]], ptr nocapture nonnull [[RETVAL_BASE]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_BASE]])
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
@@ -588,12 +840,188 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull %retval, i32* nocapture nonnull %retval.base)
+  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* %retval, i32* %retval.base)
   %i1 = load [2 x i32], [2 x i32]* %retval.full, align 4
   ret [2 x i32] %i1
 }
 
-define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(i32* nocapture nonnull readonly %data, i64 %n) {
+define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcpy_before_call(i32* %data, i64 %n) {
+; CHECK-LABEL: @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcpy_before_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[RETVAL_BASE:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i64 0, i64 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i64 0, i64 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[RDX:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    store i32 [[RDX_INC]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @llvm.memcpy.p0i32.p0i32.i32(i32* [[RETVAL_BASE]], i32* [[RETVAL]], i32 4, i1 false)
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* [[RETVAL]], i32* [[RETVAL_BASE]])
+; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, i32* [[I1_FCA_0_GEP]], align 4
+; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, i32* [[I1_FCA_1_GEP]], align 4
+; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
+; CHECK-OPAQUE-LABEL: @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcpy_before_call(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
+; CHECK-OPAQUE-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[RETVAL_BASE:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 0
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
+; CHECK-OPAQUE-NEXT:    br label [[LOOP:%.*]]
+; CHECK-OPAQUE:       loop:
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-OPAQUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-OPAQUE-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-OPAQUE:       exit:
+; CHECK-OPAQUE-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[RETVAL_BASE]], ptr [[RETVAL]], i32 4, i1 false)
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_BASE]])
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-OPAQUE-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
+entry:
+  %retval.full = alloca [2 x i32], align 4
+  store [2 x i32] zeroinitializer, [2 x i32]* %retval.full, align 4
+  %retval.base = getelementptr inbounds [2 x i32], [2 x i32]* %retval.full, i64 0, i64 0
+  %retval = getelementptr inbounds [2 x i32], [2 x i32]* %retval.full, i64 0, i64 1
+  br label %loop
+
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv
+  %ld = load i32, i32* %arrayidx, align 4
+  %rdx = load i32, i32* %retval, align 4
+  %rdx.inc = add nsw i32 %rdx, %ld
+  store i32 %rdx.inc, i32* %retval, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  call void @llvm.memcpy.p0i32.p0i32.i32(i32* %retval.base, i32* %retval, i32 4, i1 false)
+  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* %retval, i32* %retval.base)
+  %i1 = load [2 x i32], [2 x i32]* %retval.full, align 4
+  ret [2 x i32] %i1
+}
+
+define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcpy_after_call(i32* %data, i64 %n) {
+; CHECK-LABEL: @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcpy_after_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[RETVAL_BASE:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i64 0, i64 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i64 0, i64 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[RDX:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    store i32 [[RDX_INC]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* [[RETVAL]], i32* [[RETVAL_BASE]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i32.p0i32.i32(i32* [[RETVAL_BASE]], i32* [[RETVAL]], i32 4, i1 false)
+; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, i32* [[I1_FCA_0_GEP]], align 4
+; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, i32* [[I1_FCA_1_GEP]], align 4
+; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
+; CHECK-OPAQUE-LABEL: @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcpy_after_call(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
+; CHECK-OPAQUE-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[RETVAL_BASE:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 0
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
+; CHECK-OPAQUE-NEXT:    br label [[LOOP:%.*]]
+; CHECK-OPAQUE:       loop:
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-OPAQUE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-OPAQUE-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
+; CHECK-OPAQUE-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
+; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-OPAQUE:       exit:
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_BASE]])
+; CHECK-OPAQUE-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[RETVAL_BASE]], ptr [[RETVAL]], i32 4, i1 false)
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-OPAQUE-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
+entry:
+  %retval.full = alloca [2 x i32], align 4
+  store [2 x i32] zeroinitializer, [2 x i32]* %retval.full, align 4
+  %retval.base = getelementptr inbounds [2 x i32], [2 x i32]* %retval.full, i64 0, i64 0
+  %retval = getelementptr inbounds [2 x i32], [2 x i32]* %retval.full, i64 0, i64 1
+  br label %loop
+
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv
+  %ld = load i32, i32* %arrayidx, align 4
+  %rdx = load i32, i32* %retval, align 4
+  %rdx.inc = add nsw i32 %rdx, %ld
+  store i32 %rdx.inc, i32* %retval, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* %retval, i32* %retval.base)
+  call void @llvm.memcpy.p0i32.p0i32.i32(i32* %retval.base, i32* %retval, i32 4, i1 false)
+  %i1 = load [2 x i32], [2 x i32]* %retval.full, align 4
+  ret [2 x i32] %i1
+}
+
+define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(i32* %data, i64 %n) {
 ; CHECK-LABEL: @part_of_alloca_used_in_call_with_multiple_args(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
@@ -614,7 +1042,7 @@ define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(i32* nocapture 
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull [[RETVAL]], i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* [[RETVAL]], i32* [[RETVAL]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, i32* [[I1_FCA_0_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
@@ -643,7 +1071,7 @@ define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(i32* nocapture 
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr nocapture nonnull [[RETVAL]], ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
 ; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
@@ -670,12 +1098,12 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull %retval, i32* nocapture nonnull %retval)
+  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* %retval, i32* %retval)
   %i1 = load [2 x i32], [2 x i32]* %retval.full, align 4
   ret [2 x i32] %i1
 }
 
-define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(i32* nocapture nonnull readonly %data, i64 %n) {
+define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(i32* %data, i64 %n) {
 ; CHECK-LABEL: @all_parts_of_alloca_used_in_calls_with_multiple_args(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
@@ -699,8 +1127,8 @@ define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(i32* noca
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull [[RETVAL]], i32* nocapture nonnull [[RETVAL_BASE]])
-; CHECK-NEXT:    [[I1:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull [[RETVAL_BASE]], i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* [[RETVAL]], i32* [[RETVAL_BASE]])
+; CHECK-NEXT:    [[I1:%.*]] = call i32 @user_of_alloca_with_multiple_args(i32* [[RETVAL_BASE]], i32* [[RETVAL]])
 ; CHECK-NEXT:    [[I2:%.*]] = call i32 @capture_of_alloca(i32* [[SOME_ANOTHER_ALLOCA]])
 ; CHECK-NEXT:    [[I3_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-NEXT:    [[I3_FCA_0_LOAD:%.*]] = load i32, i32* [[I3_FCA_0_GEP]], align 4
@@ -733,8 +1161,8 @@ define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(i32* noca
 ; CHECK-OPAQUE-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-OPAQUE-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-OPAQUE:       exit:
-; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr nocapture nonnull [[RETVAL]], ptr nocapture nonnull [[RETVAL_BASE]])
-; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr nocapture nonnull [[RETVAL_BASE]], ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_BASE]])
+; CHECK-OPAQUE-NEXT:    [[I1:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL_BASE]], ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    [[I2:%.*]] = call i32 @capture_of_alloca(ptr [[SOME_ANOTHER_ALLOCA]])
 ; CHECK-OPAQUE-NEXT:    [[I3_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-OPAQUE-NEXT:    [[I3_FCA_0_LOAD:%.*]] = load i32, ptr [[I3_FCA_0_GEP]], align 4
@@ -765,36 +1193,36 @@ loop:
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull %retval, i32* nocapture nonnull %retval.base)
-  %i1 = call i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull %retval.base, i32* nocapture nonnull %retval)
+  %i0 = call i32 @user_of_alloca_with_multiple_args(i32* %retval, i32* %retval.base)
+  %i1 = call i32 @user_of_alloca_with_multiple_args(i32* %retval.base, i32* %retval)
   %i2 = call i32 @capture_of_alloca(i32* %some.another.alloca)
   %i3 = load [2 x i32], [2 x i32]* %retval.full, align 4
   ret [2 x i32] %i3
 }
 
-define i32 @all_uses_of_alloca_are_calls(i32* nocapture nonnull readonly %data, i64 %n) {
+define i32 @all_uses_of_alloca_are_calls(i32* %data, i64 %n) {
 ; CHECK-LABEL: @all_uses_of_alloca_are_calls(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(i32* nocapture nonnull [[RETVAL]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(i32* nocapture nonnull [[RETVAL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(i32* [[RETVAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(i32* [[RETVAL]])
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CHECK-OPAQUE-LABEL: @all_uses_of_alloca_are_calls(
 ; CHECK-OPAQUE-NEXT:  entry:
 ; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-; CHECK-OPAQUE-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(ptr nocapture nonnull [[RETVAL]])
-; CHECK-OPAQUE-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(ptr nocapture nonnull [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
+; CHECK-OPAQUE-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-OPAQUE-NEXT:    ret i32 0
 ;
 entry:
   %retval = alloca i32, align 4
-  call i32 @user_of_alloca(i32* nocapture nonnull %retval)
-  call i32 @user_of_alloca(i32* nocapture nonnull %retval)
+  call i32 @user_of_alloca(i32* %retval)
+  call i32 @user_of_alloca(i32* %retval)
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8*)
 
 define i64 @do_schedule_instrs_for_dce_after_fixups() {
 ; CHECK-LABEL: @do_schedule_instrs_for_dce_after_fixups(
@@ -907,11 +1335,13 @@ entry:
   ret i8 %r
 }
 
-declare dso_local i32 @user_of_alloca(i32* nocapture nonnull)
-declare dso_local i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull, i32* nocapture nonnull)
-declare dso_local i32 @capture_of_alloca(i32 *nonnull)
-declare dso_local i32 @capture_with_multiple_args(i32* nocapture nonnull, i32* nonnull)
+declare dso_local i32 @user_of_alloca(i32* nocapture readonly)
+declare dso_local i32 @user_of_alloca_with_multiple_args(i32* nocapture readonly, i32* nocapture readonly)
+declare dso_local i32 @capture_of_alloca(i32 *)
+declare dso_local i32 @capture_with_multiple_args(i32* nocapture readonly, i32*)
 
-declare dso_local void @byte_user_of_alloca(i8* nocapture nonnull)
+declare dso_local void @byte_user_of_alloca(i8* nocapture readonly)
 
 declare dso_local i32 @__gxx_personality_v0(...)
+
+declare void @llvm.memcpy.p0i32.p0i32.i32(i32*, i32*, i32, i1)
