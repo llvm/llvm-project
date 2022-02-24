@@ -258,8 +258,13 @@ public:
         "Gets an uniqued integer attribute associated to a type");
     c.def_property_readonly(
         "value",
-        [](PyIntegerAttribute &self) {
-          return mlirIntegerAttrGetValueInt(self);
+        [](PyIntegerAttribute &self) -> py::int_ {
+          MlirType type = mlirAttributeGetType(self);
+          if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
+            return mlirIntegerAttrGetValueInt(self);
+          if (mlirIntegerTypeIsSigned(type))
+            return mlirIntegerAttrGetValueSInt(self);
+          return mlirIntegerAttrGetValueUInt(self);
         },
         "Returns the value of the integer attribute");
   }
