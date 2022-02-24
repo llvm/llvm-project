@@ -1250,3 +1250,11 @@ func @gep_out_of_bounds(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx
   llvm.getelementptr %ptr[%idx, 1, 3] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
   return
 }
+
+// -----
+
+func @non_splat_shuffle_on_scalable_vector(%arg0: vector<[4]xf32>) {
+  // expected-error@+1 {{expected a splat operation for scalable vectors}}
+  %0 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 1 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  return
+}
