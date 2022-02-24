@@ -650,20 +650,15 @@ void Symbol::resolveDefined(const Defined &other) {
     replace(other);
 }
 
-template <class LazyT>
-static void replaceCommon(Symbol &oldSym, const LazyT &newSym) {
-  backwardReferences.erase(&oldSym);
-  oldSym.replace(newSym);
-  newSym.extract();
-}
-
-template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
+void Symbol::resolveLazy(const LazyObject &other) {
   // For common objects, we want to look for global or weak definitions that
   // should be extracted as the canonical definition instead.
   if (isCommon() && elf::config->fortranCommon) {
     if (auto *loSym = dyn_cast<LazyObject>(&other)) {
       if (loSym->file->shouldExtractForCommon(getName())) {
-        replaceCommon(*this, other);
+        backwardReferences.erase(this);
+        replace(other);
+        other.extract();
         return;
       }
     }
