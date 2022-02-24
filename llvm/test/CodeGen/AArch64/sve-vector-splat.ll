@@ -276,6 +276,28 @@ define <vscale x 8 x bfloat> @splat_nxv8bf16(bfloat %val) #0 {
   ret <vscale x 8 x bfloat> %2
 }
 
+define <vscale x 4 x bfloat> @splat_nxv4bf16(bfloat %val) #0 {
+; CHECK-LABEL: splat_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    ret
+  %1 = insertelement <vscale x 4 x bfloat> undef, bfloat %val, i32 0
+  %2 = shufflevector <vscale x 4 x bfloat> %1, <vscale x 4 x bfloat> undef, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x bfloat> %2
+}
+
+define <vscale x 2 x bfloat> @splat_nxv2bf16(bfloat %val) #0 {
+; CHECK-LABEL: splat_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    ret
+  %1 = insertelement <vscale x 2 x bfloat> undef, bfloat %val, i32 0
+  %2 = shufflevector <vscale x 2 x bfloat> %1, <vscale x 2 x bfloat> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x bfloat> %2
+}
+
 define <vscale x 8 x half> @splat_nxv8f16(half %val) {
 ; CHECK-LABEL: splat_nxv8f16:
 ; CHECK:       // %bb.0:
@@ -342,20 +364,36 @@ define <vscale x 2 x double> @splat_nxv2f64(double %val) {
   ret <vscale x 2 x double> %2
 }
 
-define <vscale x 8 x half> @splat_nxv8f16_zero() {
-; CHECK-LABEL: splat_nxv8f16_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    ret
-  ret <vscale x 8 x half> zeroinitializer
-}
-
 define <vscale x 8 x bfloat> @splat_nxv8bf16_zero() #0 {
 ; CHECK-LABEL: splat_nxv8bf16_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    ret
   ret <vscale x 8 x bfloat> zeroinitializer
+}
+
+define <vscale x 4 x bfloat> @splat_nxv4bf16_zero() #0 {
+; CHECK-LABEL: splat_nxv4bf16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> zeroinitializer
+}
+
+define <vscale x 2 x bfloat> @splat_nxv2bf16_zero() #0 {
+; CHECK-LABEL: splat_nxv2bf16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> zeroinitializer
+}
+
+define <vscale x 8 x half> @splat_nxv8f16_zero() {
+; CHECK-LABEL: splat_nxv8f16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x half> zeroinitializer
 }
 
 define <vscale x 4 x half> @splat_nxv4f16_zero() {
@@ -539,9 +577,9 @@ define <vscale x 4 x float> @splat_nxv4f32_imm_out_of_range() {
 define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI51_0
+; CHECK-NEXT:    adrp x8, .LCPI55_0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI51_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI55_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 2 x double> undef, double 3.33, i32 0
