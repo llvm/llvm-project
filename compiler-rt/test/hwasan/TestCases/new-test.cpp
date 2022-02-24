@@ -18,7 +18,7 @@ int main() {
   assert(__sanitizer_get_allocated_size(a1) == 0);
   delete[] a1;
 
-#ifdef __cpp_aligned_new
+#if defined(__cpp_aligned_new) && (!defined(_GLIBCXX_RELEASE) || _GLIBCXX_RELEASE >= 7)
   // Aligned new/delete
   constexpr auto kAlign = std::align_val_t{8};
   void *a2 = ::operator new(4, kAlign);
