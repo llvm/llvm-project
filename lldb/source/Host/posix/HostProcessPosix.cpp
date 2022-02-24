@@ -61,7 +61,6 @@ bool HostProcessPosix::IsRunning() const {
 }
 
 llvm::Expected<HostThread> HostProcessPosix::StartMonitoring(
-    const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
-  return Host::StartMonitoringChildProcess(callback, m_process,
-                                           monitor_signals);
+    const Host::MonitorChildProcessCallback &callback) {
+  return Host::StartMonitoringChildProcess(callback, m_process);
 }
