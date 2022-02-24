@@ -9610,6 +9610,26 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
     return DAG.getNode(ISD::BITREVERSE, DL, VT, BSwap);
   }
 
+  // fold (bswap shl(x,c)) -> (zext(bswap(trunc(shl(x,sub(c,bw/2))))))
+  // iff x >= bw/2 (i.e. lower half is known zero)
+  unsigned BW = VT.getScalarSizeInBits();
+  if (BW >= 32 && N0.getOpcode() == ISD::SHL && N0.hasOneUse()) {
+    auto *ShAmt = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+    EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), BW / 2);
+    if (ShAmt && ShAmt->getAPIntValue().ult(BW) &&
+        ShAmt->getZExtValue() >= (BW / 2) &&
+        (ShAmt->getZExtValue() % 16) == 0 && TLI.isTruncateFree(VT, HalfVT) &&
+        (!LegalOperations || hasOperation(ISD::BSWAP, HalfVT))) {
+      SDValue Res = N0.getOperand(0);
+      if (uint64_t NewShAmt = (ShAmt->getZExtValue() - (BW / 2)))
+        Res = DAG.getNode(ISD::SHL, DL, VT, Res,
+                          DAG.getConstant(NewShAmt, DL, getShiftAmountTy(VT)));
+      Res = DAG.getZExtOrTrunc(Res, DL, HalfVT);
+      Res = DAG.getNode(ISD::BSWAP, DL, HalfVT, Res);
+      return DAG.getZExtOrTrunc(Res, DL, VT);
+    }
+  }
+
   return SDValue();
 }
 
