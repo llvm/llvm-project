@@ -80,7 +80,9 @@ enum InstClassEnum {
   TBUFFER_LOAD,
   TBUFFER_STORE,
   GLOBAL_LOAD,
-  GLOBAL_LOAD_SADDR
+  GLOBAL_LOAD_SADDR,
+  GLOBAL_STORE,
+  GLOBAL_STORE_SADDR
 };
 
 struct AddressRegs {
@@ -244,6 +246,9 @@ private:
   MachineBasicBlock::iterator
   mergeGlobalLoadPair(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore);
+  MachineBasicBlock::iterator
+  mergeGlobalStorePair(CombineInfo &CI, CombineInfo &Paired,
+                       MachineBasicBlock::iterator InsertBefore);
 
   void updateBaseAndOffset(MachineInstr &I, Register NewBase,
                            int32_t NewOffset) const;
@@ -316,17 +321,25 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORD:
+  case AMDGPU::GLOBAL_STORE_DWORD_SADDR:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX2:
+  case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
     return 2;
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX3:
+  case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX4:
+  case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return 8;
@@ -421,6 +434,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
     return GLOBAL_LOAD_SADDR;
+  case AMDGPU::GLOBAL_STORE_DWORD:
+  case AMDGPU::GLOBAL_STORE_DWORDX2:
+  case AMDGPU::GLOBAL_STORE_DWORDX3:
+  case AMDGPU::GLOBAL_STORE_DWORDX4:
+    return GLOBAL_STORE;
+  case AMDGPU::GLOBAL_STORE_DWORD_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
+    return GLOBAL_STORE_SADDR;
   }
 }
 
@@ -464,6 +487,16 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
     return AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
+  case AMDGPU::GLOBAL_STORE_DWORD:
+  case AMDGPU::GLOBAL_STORE_DWORDX2:
+  case AMDGPU::GLOBAL_STORE_DWORDX3:
+  case AMDGPU::GLOBAL_STORE_DWORDX4:
+    return AMDGPU::GLOBAL_STORE_DWORD;
+  case AMDGPU::GLOBAL_STORE_DWORD_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
+    return AMDGPU::GLOBAL_STORE_DWORD_SADDR;
   }
 }
 
@@ -530,12 +563,20 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORD_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     Result.SAddr = true;
     LLVM_FALLTHROUGH;
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
+  case AMDGPU::GLOBAL_STORE_DWORD:
+  case AMDGPU::GLOBAL_STORE_DWORDX2:
+  case AMDGPU::GLOBAL_STORE_DWORDX3:
+  case AMDGPU::GLOBAL_STORE_DWORDX4:
     Result.VAddr = true;
     return Result;
   }
@@ -1451,6 +1492,48 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalLoadPair(
   return New;
 }
 
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalStorePair(
+    CombineInfo &CI, CombineInfo &Paired,
+    MachineBasicBlock::iterator InsertBefore) {
+  MachineBasicBlock *MBB = CI.I->getParent();
+  DebugLoc DL = CI.I->getDebugLoc();
+
+  const unsigned Opcode = getNewOpcode(CI, Paired);
+
+  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
+  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
+  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+
+  // Copy to the new source register.
+  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
+  Register SrcReg = MRI->createVirtualRegister(SuperRC);
+
+  const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
+  const auto *Src1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
+
+  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+      .add(*Src0)
+      .addImm(SubRegIdx0)
+      .add(*Src1)
+      .addImm(SubRegIdx1);
+
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
+                 .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr))
+                 .addReg(SrcReg, RegState::Kill);
+
+  if (auto *SAddr = TII->getNamedOperand(*CI.I, AMDGPU::OpName::saddr))
+    MIB.add(*SAddr);
+
+  MachineInstr *New =
+    MIB.addImm(std::min(CI.Offset, Paired.Offset))
+       .addImm(CI.CPol)
+       .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
+
+  CI.I->eraseFromParent();
+  Paired.I->eraseFromParent();
+  return New;
+}
+
 unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
                                             const CombineInfo &Paired) {
   const unsigned Width = CI.Width + Paired.Width;
@@ -1500,6 +1583,28 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR;
     case 4:
       return AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
+    }
+  case GLOBAL_STORE:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::GLOBAL_STORE_DWORDX2;
+    case 3:
+      return AMDGPU::GLOBAL_STORE_DWORDX3;
+    case 4:
+      return AMDGPU::GLOBAL_STORE_DWORDX4;
+    }
+  case GLOBAL_STORE_SADDR:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::GLOBAL_STORE_DWORDX2_SADDR;
+    case 3:
+      return AMDGPU::GLOBAL_STORE_DWORDX3_SADDR;
+    case 4:
+      return AMDGPU::GLOBAL_STORE_DWORDX4_SADDR;
     }
   case MIMG:
     assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
@@ -2138,6 +2243,11 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
     case GLOBAL_LOAD:
     case GLOBAL_LOAD_SADDR:
       NewMI = mergeGlobalLoadPair(CI, Paired, Where->I);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
+      break;
+    case GLOBAL_STORE:
+    case GLOBAL_STORE_SADDR:
+      NewMI = mergeGlobalStorePair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     }
