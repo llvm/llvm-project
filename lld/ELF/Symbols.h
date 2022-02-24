@@ -14,7 +14,6 @@
 #define LLD_ELF_SYMBOLS_H
 
 #include "Config.h"
-#include "InputFiles.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseMap.h"
