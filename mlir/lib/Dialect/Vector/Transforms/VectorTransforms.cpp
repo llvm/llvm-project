@@ -2259,22 +2259,21 @@ public:
     Location loc = xferOp->getLoc();
     VectorType vtp = xferOp.getVectorType();
 
-    // * Create a vector with linear indices [ 0 .. vector_length - 1 ].
-    // * Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-    // * Let dim the memref dimension, compute the vector comparison mask
-    //   (in-bounds mask):
-    //   [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
+    // Create the in-bounds mask with all elements between [0 .. dim - offset)
+    // set and [dim - offset .. vector_length) unset.
     //
     // TODO: when the leaf transfer rank is k > 1, we need the last `k`
     //       dimensions here.
-    unsigned vecWidth = vtp.getNumElements();
     unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
     Value off = xferOp.indices()[lastIndex];
     Value dim =
         vector::createOrFoldDimOp(rewriter, loc, xferOp.source(), lastIndex);
-    Value mask = buildVectorComparison(rewriter, xferOp, indexOptimizations,
-                                       vecWidth, dim, &off);
-
+    Value b = rewriter.create<arith::SubIOp>(loc, dim.getType(), dim, off);
+    Value mask = rewriter.create<vector::CreateMaskOp>(
+        loc,
+        VectorType::get(vtp.getShape(), rewriter.getI1Type(),
+                        vtp.getNumScalableDims()),
+        b);
     if (xferOp.mask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.
       mask = rewriter.create<arith::AndIOp>(loc, mask, xferOp.mask());
