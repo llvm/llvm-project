@@ -1031,6 +1031,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ROTL);
   setTargetDAGCombine(ISD::ROTR);
   setTargetDAGCombine(ISD::ANY_EXTEND);
+  if (Subtarget.hasStdExtZfh())
+    setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   if (Subtarget.hasStdExtF()) {
     setTargetDAGCombine(ISD::ZERO_EXTEND);
     setTargetDAGCombine(ISD::FP_TO_SINT);
@@ -7518,6 +7520,18 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
+static SDValue performSIGN_EXTEND_INREG(SDNode *N, SelectionDAG &DAG) {
+  SDValue Src = N->getOperand(0);
+
+  // Fold (sext_inreg (fmv_x_anyexth X), i16) -> (fmv_x_signexth X)
+  if (Src.getOpcode() == RISCVISD::FMV_X_ANYEXTH &&
+      cast<VTSDNode>(N->getOperand(1))->getVT().bitsGE(MVT::i16))
+    return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, SDLoc(N), N->getValueType(0),
+                       Src.getOperand(0));
+
+  return SDValue();
+}
+
 // Attempt to turn ANY_EXTEND into SIGN_EXTEND if the input to the ANY_EXTEND
 // has users that require SIGN_EXTEND and the SIGN_EXTEND can be done for free
 // by an instruction like ADDW/SUBW/MULW. Without this the ANY_EXTEND would be
@@ -8124,6 +8138,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DAG, Subtarget);
   case ISD::XOR:
     return performXORCombine(N, DAG);
+  case ISD::SIGN_EXTEND_INREG:
+    return performSIGN_EXTEND_INREG(N, DAG);
   case ISD::ANY_EXTEND:
     return performANY_EXTENDCombine(N, DCI, Subtarget);
   case ISD::ZERO_EXTEND:
@@ -10540,6 +10556,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FSR)
   NODE_NAME_CASE(FMV_H_X)
   NODE_NAME_CASE(FMV_X_ANYEXTH)
+  NODE_NAME_CASE(FMV_X_SIGNEXTH)
   NODE_NAME_CASE(FMV_W_X_RV64)
   NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
   NODE_NAME_CASE(FCVT_X)
