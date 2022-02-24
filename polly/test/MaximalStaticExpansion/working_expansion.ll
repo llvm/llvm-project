@@ -6,7 +6,7 @@
 ;
 ; #define Ni 2000
 ; #define Nj 3000
-; 
+;
 ; double mse(double A[Ni], double B[Nj]) {
 ;   int i;
 ;   double tmp = 6;
@@ -14,7 +14,7 @@
 ;     for (int j = 0; j<Nj; j++) {
 ;       B[j] = j;
 ;     }
-;     A[i] = B[i]; 
+;     A[i] = B[i];
 ;   }
 ;   return tmp;
 ; }

@@ -53,7 +53,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --dynamic-table %t.mips \
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU-MIPS
 
-#      LLVM-MIPS:DynamicSection [ (47 entries)
+#      LLVM-MIPS:DynamicSection [ (48 entries)
 # LLVM-MIPS-NEXT:  Tag                Type                       Name/Value
 # LLVM-MIPS-NEXT:  0x0000000000000004 HASH                       0x1000
 # LLVM-MIPS-NEXT:  0x0000000070000001 MIPS_RLD_VERSION           305419896
@@ -101,10 +101,11 @@ ProgramHeaders:
 # LLVM-MIPS-NEXT:  0x0000000070000032 MIPS_PLTGOT                0x1000
 # LLVM-MIPS-NEXT:  0x0000000070000034 MIPS_RWPLT                 0x1000
 # LLVM-MIPS-NEXT:  0x0000000070000035 MIPS_RLD_MAP_REL           0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000036 MIPS_XHASH                 0x2000
 # LLVM-MIPS-NEXT:  0x0000000000000000 NULL                       0x0
 # LLVM-MIPS-NEXT:]
 
-#      GNU-MIPS:Dynamic section at offset {{.*}} contains 47 entries:
+#      GNU-MIPS:Dynamic section at offset {{.*}} contains 48 entries:
 # GNU-MIPS-NEXT:  Tag                Type                         Name/Value
 # GNU-MIPS-NEXT:  0x0000000000000004 (HASH)                       0x1000
 # GNU-MIPS-NEXT:  0x0000000070000001 (MIPS_RLD_VERSION)           305419896
@@ -152,6 +153,7 @@ ProgramHeaders:
 # GNU-MIPS-NEXT:  0x0000000070000032 (MIPS_PLTGOT)                0x1000
 # GNU-MIPS-NEXT:  0x0000000070000034 (MIPS_RWPLT)                 0x1000
 # GNU-MIPS-NEXT:  0x0000000070000035 (MIPS_RLD_MAP_REL)           0x1000
+# GNU-MIPS-NEXT:  0x0000000070000036 (MIPS_XHASH)                 0x2000
 # GNU-MIPS-NEXT:  0x0000000000000000 (NULL)                       0x0
 
 --- !ELF
@@ -256,6 +258,8 @@ Sections:
         Value: 0x1000
       - Tag:   DT_MIPS_RLD_MAP_REL
         Value: 0x1000
+      - Tag:   DT_MIPS_XHASH
+        Value: 0x2000
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:

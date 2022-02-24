@@ -13,19 +13,19 @@
 uabalt z0.h, z1.b, z31.b
 // CHECK-INST: uabalt	z0.h, z1.b, z31.b
 // CHECK-ENCODING: [0x20,0xcc,0x5f,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 cc 5f 45 <unknown>
 
 uabalt z0.s, z1.h, z31.h
 // CHECK-INST: uabalt	z0.s, z1.h, z31.h
 // CHECK-ENCODING: [0x20,0xcc,0x9f,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 cc 9f 45 <unknown>
 
 uabalt z0.d, z1.s, z31.s
 // CHECK-INST: uabalt	z0.d, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0xcc,0xdf,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 cc df 45 <unknown>
 
 
@@ -35,11 +35,11 @@ uabalt z0.d, z1.s, z31.s
 movprfx z21, z28
 // CHECK-INST: movprfx	z21, z28
 // CHECK-ENCODING: [0x95,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 95 bf 20 04 <unknown>
 
 uabalt z21.d, z1.s, z31.s
 // CHECK-INST: uabalt	z21.d, z1.s, z31.s
 // CHECK-ENCODING: [0x35,0xcc,0xdf,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 35 cc df 45 <unknown>

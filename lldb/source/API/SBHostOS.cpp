@@ -102,7 +102,9 @@ lldb::thread_t SBHostOS::ThreadCreate(const char *name,
                                       void *thread_arg, SBError *error_ptr) {
   LLDB_INSTRUMENT_VA(name, thread_function, thread_arg, error_ptr);
   llvm::Expected<HostThread> thread =
-      ThreadLauncher::LaunchThread(name, thread_function, thread_arg);
+      ThreadLauncher::LaunchThread(name, [thread_function, thread_arg] {
+        return thread_function(thread_arg);
+      });
   if (!thread) {
     if (error_ptr)
       error_ptr->SetError(Status(thread.takeError()));

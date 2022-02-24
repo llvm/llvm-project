@@ -12,19 +12,19 @@
 fminp z0.h, p0/m, z0.h, z1.h
 // CHECK-INST: fminp z0.h, p0/m, z0.h, z1.h
 // CHECK-ENCODING: [0x20,0x80,0x57,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 80 57 64 <unknown>
 
 fminp z29.s, p3/m, z29.s, z30.s
 // CHECK-INST: fminp z29.s, p3/m, z29.s, z30.s
 // CHECK-ENCODING: [0xdd,0x8f,0x97,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: dd 8f 97 64 <unknown>
 
 fminp z31.d, p7/m, z31.d, z30.d
 // CHECK-INST: fminp z31.d, p7/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x9f,0xd7,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: df 9f d7 64 <unknown>
 
 // --------------------------------------------------------------------------//
@@ -33,23 +33,23 @@ fminp z31.d, p7/m, z31.d, z30.d
 movprfx z31.d, p0/z, z6.d
 // CHECK-INST: movprfx z31.d, p0/z, z6.d
 // CHECK-ENCODING: [0xdf,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: df 20 d0 04 <unknown>
 
 fminp z31.d, p0/m, z31.d, z30.d
 // CHECK-INST: fminp z31.d, p0/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x83,0xd7,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: df 83 d7 64 <unknown>
 
 movprfx z31, z6
 // CHECK-INST: movprfx z31, z6
 // CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: df bc 20 04 <unknown>
 
 fminp z31.d, p7/m, z31.d, z30.d
 // CHECK-INST: fminp z31.d, p7/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x9f,0xd7,0x64]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: df 9f d7 64 <unknown>

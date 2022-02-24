@@ -19474,6 +19474,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
+  CHECK_PARSE_BOOL(InsertBraces);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
@@ -22723,6 +22724,13 @@ TEST_F(FormatTest, FileAndCode) {
   EXPECT_EQ(
       FormatStyle::LK_Cpp,
       guessLanguage("foo.h", "#define FOO(...) auto bar = [] __VA_ARGS__;"));
+  // Only one of the two preprocessor regions has ObjC-like code.
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "#if A\n"
+                                   "#define B() C\n"
+                                   "#else\n"
+                                   "#define B() [NSString a:@\"\"]\n"
+                                   "#endif\n"));
 }
 
 TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {
@@ -23853,6 +23861,11 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "}",
                Style);
 
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "  requires F<T>;",
+               Style);
+
   Style.IndentRequiresClause = false;
   verifyFormat("template <typename T>\n"
                "requires F<T>\n"
@@ -23873,6 +23886,7 @@ TEST_F(FormatTest, RequiresClausesPositions) {
   verifyFormat("template <typename T> requires Foo<T> struct Bar {};\n"
                "template <typename T> requires Foo<T> void bar() {}\n"
                "template <typename T> void bar() requires Foo<T> {}\n"
+               "template <typename T> void bar() requires Foo<T>;\n"
                "template <typename T> requires Foo<T> Bar(T) -> Bar<T>;",
                Style);
 
@@ -23924,6 +23938,9 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "template <typename T>\n"
                "void bar()\n"
                "requires Foo<T> {}\n"
+               "template <typename T>\n"
+               "void bar()\n"
+               "requires Foo<T>;\n"
                "template <typename T>\n"
                "requires Foo<T> Bar(T) -> Bar<T>;",
                Style);
@@ -23984,6 +24001,7 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "template <typename T>\n"
                "void bar() requires Foo<T>\n"
                "{}\n"
+               "template <typename T> void bar() requires Foo<T>;\n"
                "template <typename T> requires Foo<T>\n"
                "Bar(T) -> Bar<T>;",
                Style);
@@ -24298,6 +24316,202 @@ TEST_F(FormatTest, ShortTemplatedArgumentLists) {
 
   verifyFormat("struct Z : X<decltype([] { return 0; }){}> {};", Style);
   verifyFormat("template <int N> struct Foo<char[N]> {};", Style);
+}
+
+TEST_F(FormatTest, InsertBraces) {
+  FormatStyle Style = getLLVMStyle();
+  Style.InsertBraces = true;
+
+  verifyFormat("// clang-format off\n"
+               "// comment\n"
+               "if (a) f();\n"
+               "// clang-format on\n"
+               "if (b) {\n"
+               "  g();\n"
+               "}",
+               "// clang-format off\n"
+               "// comment\n"
+               "if (a) f();\n"
+               "// clang-format on\n"
+               "if (b) g();",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  switch (b) {\n"
+               "  case 1:\n"
+               "    c = 0;\n"
+               "    break;\n"
+               "  default:\n"
+               "    c = 1;\n"
+               "  }\n"
+               "}",
+               "if (a)\n"
+               "  switch (b) {\n"
+               "  case 1:\n"
+               "    c = 0;\n"
+               "    break;\n"
+               "  default:\n"
+               "    c = 1;\n"
+               "  }",
+               Style);
+
+  verifyFormat("for (auto node : nodes) {\n"
+               "  if (node) {\n"
+               "    break;\n"
+               "  }\n"
+               "}",
+               "for (auto node : nodes)\n"
+               "  if (node)\n"
+               "    break;",
+               Style);
+
+  verifyFormat("for (auto node : nodes) {\n"
+               "  if (node)\n"
+               "}",
+               "for (auto node : nodes)\n"
+               "  if (node)",
+               Style);
+
+  verifyFormat("do {\n"
+               "  --a;\n"
+               "} while (a);",
+               "do\n"
+               "  --a;\n"
+               "while (a);",
+               Style);
+
+  verifyFormat("if (i) {\n"
+               "  ++i;\n"
+               "} else {\n"
+               "  --i;\n"
+               "}",
+               "if (i)\n"
+               "  ++i;\n"
+               "else {\n"
+               "  --i;\n"
+               "}",
+               Style);
+
+  verifyFormat("void f() {\n"
+               "  while (j--) {\n"
+               "    while (i) {\n"
+               "      --i;\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               "void f() {\n"
+               "  while (j--)\n"
+               "    while (i)\n"
+               "      --i;\n"
+               "}",
+               Style);
+
+  verifyFormat("f({\n"
+               "  if (a) {\n"
+               "    g();\n"
+               "  }\n"
+               "});",
+               "f({\n"
+               "  if (a)\n"
+               "    g();\n"
+               "});",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  f();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  h();\n"
+               "}",
+               "if (a)\n"
+               "  f();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  h();",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  f();\n"
+               "}\n"
+               "// comment\n"
+               "/* comment */",
+               "if (a)\n"
+               "  f();\n"
+               "// comment\n"
+               "/* comment */",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  // foo\n"
+               "  // bar\n"
+               "  f();\n"
+               "}",
+               "if (a)\n"
+               "  // foo\n"
+               "  // bar\n"
+               "  f();",
+               Style);
+
+  verifyFormat("if (a) { // comment\n"
+               "  // comment\n"
+               "  f();\n"
+               "}",
+               "if (a) // comment\n"
+               "  // comment\n"
+               "  f();",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  f();\n"
+               "}\n"
+               "#undef A\n"
+               "#undef B",
+               "if (a)\n"
+               "  f();\n"
+               "#undef A\n"
+               "#undef B",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "#ifdef A\n"
+               "  f();\n"
+               "#else\n"
+               "  g();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("#if 0\n"
+               "#elif 1\n"
+               "#endif\n"
+               "void f() {\n"
+               "  if (a) {\n"
+               "    g();\n"
+               "  }\n"
+               "}",
+               "#if 0\n"
+               "#elif 1\n"
+               "#endif\n"
+               "void f() {\n"
+               "  if (a) g();\n"
+               "}",
+               Style);
+
+  Style.ColumnLimit = 15;
+
+  verifyFormat("#define A     \\\n"
+               "  if (a)      \\\n"
+               "    f();",
+               Style);
+
+  verifyFormat("if (a + b >\n"
+               "    c) {\n"
+               "  f();\n"
+               "}",
+               "if (a + b > c)\n"
+               "  f();",
+               Style);
 }
 
 TEST_F(FormatTest, RemoveBraces) {

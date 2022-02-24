@@ -68,6 +68,9 @@ const char *getPunctuatorSpelling(TokenKind Kind) LLVM_READNONE;
 /// tokens like 'int' and 'dynamic_cast'. Returns NULL for other token kinds.
 const char *getKeywordSpelling(TokenKind Kind) LLVM_READNONE;
 
+/// Returns the spelling of preprocessor keywords, such as "else".
+const char *getPPKeywordSpelling(PPKeywordKind Kind) LLVM_READNONE;
+
 /// Return true if this is a raw identifier or an identifier kind.
 inline bool isAnyIdentifier(TokenKind K) {
   return (K == tok::identifier) || (K == tok::raw_identifier);

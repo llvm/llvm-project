@@ -603,9 +603,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   stw     30,128(3)
   stw     31,132(3)
 
+#if defined(__ALTIVEC__)
   // save VRSave register
   mfspr   0, 256
   stw     0, 156(3)
+#endif
   // save CR registers
   mfcr    0
   stw     0, 136(3)

@@ -1353,6 +1353,76 @@ define signext i64 @vpreduce_add_nxv1i64(i64 signext %s, <vscale x 1 x i64> %v, 
   ret i64 %r
 }
 
+define signext i64 @vpwreduce_add_nxv1i32(i64 signext %s, <vscale x 1 x i32> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpwreduce_add_nxv1i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vsetvli zero, a2, e32, mf2, tu, mu
+; RV32-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsrl.vx v8, v9, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpwreduce_add_nxv1i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vmv.s.x v9, a0
+; RV64-NEXT:    vsetvli zero, a1, e32, mf2, tu, mu
+; RV64-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    ret
+  %e = sext <vscale x 1 x i32> %v to <vscale x 1 x i64>
+  %r = call i64 @llvm.vp.reduce.add.nxv1i64(i64 %s, <vscale x 1 x i64> %e, <vscale x 1 x i1> %m, i32 %evl)
+  ret i64 %r
+}
+
+define signext i64 @vpwreduce_uadd_nxv1i32(i64 signext %s, <vscale x 1 x i32> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpwreduce_uadd_nxv1i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vsetvli zero, a2, e32, mf2, tu, mu
+; RV32-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsrl.vx v8, v9, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpwreduce_uadd_nxv1i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vmv.s.x v9, a0
+; RV64-NEXT:    vsetvli zero, a1, e32, mf2, tu, mu
+; RV64-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    ret
+  %e = sext <vscale x 1 x i32> %v to <vscale x 1 x i64>
+  %r = call i64 @llvm.vp.reduce.add.nxv1i64(i64 %s, <vscale x 1 x i64> %e, <vscale x 1 x i1> %m, i32 %evl)
+  ret i64 %r
+}
+
 declare i64 @llvm.vp.reduce.umax.nxv1i64(i64, <vscale x 1 x i64>, <vscale x 1 x i1>, i32)
 
 define signext i64 @vpreduce_umax_nxv1i64(i64 signext %s, <vscale x 1 x i64> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
@@ -1625,6 +1695,76 @@ define signext i64 @vpreduce_add_nxv2i64(i64 signext %s, <vscale x 2 x i64> %v, 
   ret i64 %r
 }
 
+define signext i64 @vwpreduce_add_nxv2i32(i64 signext %s, <vscale x 2 x i32> %v, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vwpreduce_add_nxv2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, mu
+; RV32-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV32-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsrl.vx v8, v9, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwpreduce_add_nxv2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vmv.s.x v9, a0
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
+; RV64-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    ret
+  %e = sext <vscale x 2 x i32> %v to <vscale x 2 x i64>
+  %r = call i64 @llvm.vp.reduce.add.nxv2i64(i64 %s, <vscale x 2 x i64> %e, <vscale x 2 x i1> %m, i32 %evl)
+  ret i64 %r
+}
+
+define signext i64 @vwpreduce_uadd_nxv2i32(i64 signext %s, <vscale x 2 x i32> %v, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vwpreduce_uadd_nxv2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, mu
+; RV32-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV32-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsrl.vx v8, v9, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwpreduce_uadd_nxv2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vmv.s.x v9, a0
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
+; RV64-NEXT:    vwredsum.vs v9, v8, v9, v0.t
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    ret
+  %e = sext <vscale x 2 x i32> %v to <vscale x 2 x i64>
+  %r = call i64 @llvm.vp.reduce.add.nxv2i64(i64 %s, <vscale x 2 x i64> %e, <vscale x 2 x i1> %m, i32 %evl)
+  ret i64 %r
+}
+
 declare i64 @llvm.vp.reduce.umax.nxv2i64(i64, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)
 
 define signext i64 @vpreduce_umax_nxv2i64(i64 signext %s, <vscale x 2 x i64> %v, <vscale x 2 x i1> %m, i32 zeroext %evl) {
@@ -1894,6 +2034,76 @@ define signext i64 @vpreduce_add_nxv4i64(i64 signext %s, <vscale x 4 x i64> %v, 
 ; RV64-NEXT:    vmv.x.s a0, v12
 ; RV64-NEXT:    ret
   %r = call i64 @llvm.vp.reduce.add.nxv4i64(i64 %s, <vscale x 4 x i64> %v, <vscale x 4 x i1> %m, i32 %evl)
+  ret i64 %r
+}
+
+define signext i64 @vpwreduce_add_nxv4i32(i64 signext %s, <vscale x 4 x i32> %v, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpwreduce_add_nxv4i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v10, (a0), zero
+; RV32-NEXT:    vsetvli zero, a2, e32, m2, tu, mu
+; RV32-NEXT:    vwredsum.vs v10, v8, v10, v0.t
+; RV32-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsrl.vx v8, v10, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpwreduce_add_nxv4i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vmv.s.x v10, a0
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, tu, mu
+; RV64-NEXT:    vwredsum.vs v10, v8, v10, v0.t
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    ret
+  %e = sext <vscale x 4 x i32> %v to <vscale x 4 x i64>
+  %r = call i64 @llvm.vp.reduce.add.nxv4i64(i64 %s, <vscale x 4 x i64> %e, <vscale x 4 x i1> %m, i32 %evl)
+  ret i64 %r
+}
+
+define signext i64 @vpwreduce_uadd_nxv4i32(i64 signext %s, <vscale x 4 x i32> %v, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpwreduce_uadd_nxv4i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v10, (a0), zero
+; RV32-NEXT:    vsetvli zero, a2, e32, m2, tu, mu
+; RV32-NEXT:    vwredsumu.vs v10, v8, v10, v0.t
+; RV32-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsrl.vx v8, v10, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpwreduce_uadd_nxv4i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vmv.s.x v10, a0
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, tu, mu
+; RV64-NEXT:    vwredsumu.vs v10, v8, v10, v0.t
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    ret
+  %e = zext <vscale x 4 x i32> %v to <vscale x 4 x i64>
+  %r = call i64 @llvm.vp.reduce.add.nxv4i64(i64 %s, <vscale x 4 x i64> %e, <vscale x 4 x i1> %m, i32 %evl)
   ret i64 %r
 }
 

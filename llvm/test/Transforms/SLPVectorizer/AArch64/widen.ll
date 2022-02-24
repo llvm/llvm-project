@@ -25,14 +25,6 @@ define void @PR50256(i8* %a, i16* %b, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 13
 ; CHECK-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 14
 ; CHECK-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 15
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A]] to <8 x i8>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[ARRAYIDX_8]] to <8 x i8>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i16>
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw <8 x i16> [[TMP5]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw <8 x i16> [[TMP6]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds i16, i16* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds i16, i16* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds i16, i16* [[B]], i64 3
@@ -48,10 +40,18 @@ define void @PR50256(i8* %a, i16* %b, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX3_13:%.*]] = getelementptr inbounds i16, i16* [[B]], i64 13
 ; CHECK-NEXT:    [[ARRAYIDX3_14:%.*]] = getelementptr inbounds i16, i16* [[B]], i64 14
 ; CHECK-NEXT:    [[ARRAYIDX3_15:%.*]] = getelementptr inbounds i16, i16* [[B]], i64 15
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[B]] to <8 x i16>*
-; CHECK-NEXT:    store <8 x i16> [[TMP7]], <8 x i16>* [[TMP9]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A]] to <8 x i8>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw <8 x i16> [[TMP3]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[B]] to <8 x i16>*
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[ARRAYIDX_8]] to <8 x i8>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i8>, <8 x i8>* [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i8> [[TMP7]] to <8 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw <8 x i16> [[TMP8]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+; CHECK-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16* [[ARRAYIDX3_8]] to <8 x i16>*
-; CHECK-NEXT:    store <8 x i16> [[TMP8]], <8 x i16>* [[TMP10]], align 2
+; CHECK-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* [[TMP10]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx.1 = getelementptr inbounds i8, i8* %a, i64 1

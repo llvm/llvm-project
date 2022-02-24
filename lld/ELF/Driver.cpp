@@ -1832,7 +1832,7 @@ static void demoteSharedAndLazySymbols() {
   llvm::TimeTraceScope timeScope("Demote shared and lazy symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !s->getFile().isNeeded) && !sym->isLazy())
+    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
       continue;
 
     bool used = sym->used;
@@ -1923,7 +1923,7 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
-  StringRef partName = reinterpret_cast<const char *>(s->data().data());
+  StringRef partName = reinterpret_cast<const char *>(s->rawData.data());
   for (Partition &part : partitions) {
     if (part.name == partName) {
       sym->partition = part.getNumber();
@@ -1958,16 +1958,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   sym->partition = newPart.getNumber();
 }
 
-static Symbol *addUndefined(StringRef name) {
-  return symtab->addSymbol(
-      Undefined{nullptr, name, STB_GLOBAL, STV_DEFAULT, 0});
-}
-
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  Undefined sym{nullptr, name, binding, STV_DEFAULT, 0};
-  sym.isUsedInRegularObj = false;
-  return symtab->addSymbol(sym);
+  return symtab->addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2118,6 +2111,8 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
       map.try_emplace(sym, sym2);
       // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
       // definition error.
+      if (sym->isDefined())
+        sym2->checkDuplicate(cast<Defined>(*sym));
       sym2->resolve(*sym);
       // Eliminate foo@v1 from the symbol table.
       sym->symbolKind = Symbol::PlaceholderKind;
@@ -2223,6 +2218,25 @@ static uint32_t getAndFeatures() {
   return ret;
 }
 
+static void postParseObjectFile(ELFFileBase *file) {
+  switch (config->ekind) {
+  case ELF32LEKind:
+    cast<ObjFile<ELF32LE>>(file)->postParse();
+    break;
+  case ELF32BEKind:
+    cast<ObjFile<ELF32BE>>(file)->postParse();
+    break;
+  case ELF64LEKind:
+    cast<ObjFile<ELF64LE>>(file)->postParse();
+    break;
+  case ELF64BEKind:
+    cast<ObjFile<ELF64BE>>(file)->postParse();
+    break;
+  default:
+    llvm_unreachable("");
+  }
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 void LinkerDriver::link(opt::InputArgList &args) {
@@ -2298,7 +2312,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
   for (StringRef name : script->referencedSymbols)
-    addUndefined(name);
+    addUnusedUndefined(name)->isUsedInRegularObj = true;
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
@@ -2339,6 +2353,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
   if (!bitcodeFiles.empty())
     for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
+
+  // No more lazy bitcode can be extracted at this point. Do post parse work
+  // like checking duplicate symbols.
+  parallelForEach(objectFiles, postParseObjectFile);
+  parallelForEach(bitcodeFiles, [](BitcodeFile *file) { file->postParse(); });
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -2393,6 +2412,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   //
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
+  const size_t numObjsBeforeLTO = objectFiles.size();
   invokeELFT(compileBitcodeFiles, skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems.
@@ -2403,6 +2423,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Bail out if normal linked output is skipped due to LTO.
   if (skipLinkedOutput)
     return;
+
+  // compileBitcodeFiles may have produced lto.tmp object files. After this, no
+  // more file will be added.
+  auto newObjectFiles = makeArrayRef(objectFiles).slice(numObjsBeforeLTO);
+  parallelForEach(newObjectFiles, postParseObjectFile);
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override

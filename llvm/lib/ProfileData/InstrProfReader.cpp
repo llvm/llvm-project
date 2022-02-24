@@ -45,13 +45,13 @@ using namespace llvm;
 static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
   if (Version & VARIANT_MASK_IR_PROF) {
-    ProfileKind |= InstrProfKind::IR;
+    ProfileKind |= InstrProfKind::IRInstrumentation;
   }
   if (Version & VARIANT_MASK_CSIR_PROF) {
-    ProfileKind |= InstrProfKind::CS;
+    ProfileKind |= InstrProfKind::ContextSensitive;
   }
   if (Version & VARIANT_MASK_INSTR_ENTRY) {
-    ProfileKind |= InstrProfKind::BB;
+    ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
   }
   if (Version & VARIANT_MASK_BYTE_COVERAGE) {
     ProfileKind |= InstrProfKind::SingleByteCoverage;
@@ -177,16 +177,16 @@ Error TextInstrProfReader::readHeader() {
   while (Line->startswith(":")) {
     StringRef Str = Line->substr(1);
     if (Str.equals_insensitive("ir"))
-      ProfileKind |= InstrProfKind::IR;
+      ProfileKind |= InstrProfKind::IRInstrumentation;
     else if (Str.equals_insensitive("fe"))
-      ProfileKind |= InstrProfKind::FE;
+      ProfileKind |= InstrProfKind::FrontendInstrumentation;
     else if (Str.equals_insensitive("csir")) {
-      ProfileKind |= InstrProfKind::IR;
-      ProfileKind |= InstrProfKind::CS;
+      ProfileKind |= InstrProfKind::IRInstrumentation;
+      ProfileKind |= InstrProfKind::ContextSensitive;
     } else if (Str.equals_insensitive("entry_first"))
-      ProfileKind |= InstrProfKind::BB;
+      ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
-      ProfileKind &= ~InstrProfKind::BB;
+      ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
     else
       return error(instrprof_error::bad_header);
     ++Line;

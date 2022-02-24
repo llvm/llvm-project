@@ -788,3 +788,86 @@ func @constant_UItoFP() -> f32 {
   %res = arith.sitofp %c0 : i32 to f32
   return %res : f32
 }
+
+// -----
+
+// Tests rewritten from https://github.com/llvm/llvm-project/blob/main/llvm/test/Transforms/InstCombine/2008-11-08-FCmp.ll
+// When inst combining an FCMP with the LHS coming from a arith.uitofp instruction, we
+// can lower it to signed ICMP instructions.
+
+// CHECK-LABEL: @test1(
+// CHECK-SAME: %[[arg0:.+]]:
+func @test1(%arg0: i32) -> i1 {
+  %cst = arith.constant 0.000000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf ole, %1, %cst : f64
+  // CHECK: %[[c0:.+]] = arith.constant 0 : i32
+  // CHECK: arith.cmpi ule, %[[arg0]], %[[c0]] : i32
+  return %2 : i1
+}
+
+// CHECK-LABEL: @test2(
+// CHECK-SAME: %[[arg0:.+]]:
+func @test2(%arg0: i32) -> i1 {
+  %cst = arith.constant 0.000000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf olt, %1, %cst : f64
+  return %2 : i1
+  // CHECK: %[[c0:.+]] = arith.constant 0 : i32
+  // CHECK: arith.cmpi ult, %[[arg0]], %[[c0]] : i32
+}
+
+// CHECK-LABEL: @test3(
+// CHECK-SAME: %[[arg0:.+]]:
+func @test3(%arg0: i32) -> i1 {
+  %cst = arith.constant 0.000000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf oge, %1, %cst : f64
+  return %2 : i1
+  // CHECK: %[[c0:.+]] = arith.constant 0 : i32
+  // CHECK: arith.cmpi uge, %[[arg0]], %[[c0]] : i32
+}
+
+// CHECK-LABEL: @test4(
+// CHECK-SAME: %[[arg0:.+]]:
+func @test4(%arg0: i32) -> i1 {
+  %cst = arith.constant 0.000000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf ogt, %1, %cst : f64
+  // CHECK: %[[c0:.+]] = arith.constant 0 : i32
+  // CHECK: arith.cmpi ugt, %[[arg0]], %[[c0]] : i32
+  return %2 : i1
+}
+
+// CHECK-LABEL: @test5(
+func @test5(%arg0: i32) -> i1 {
+  %cst = arith.constant -4.400000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf ogt, %1, %cst : f64
+  return %2 : i1
+  // CHECK: %[[true:.+]] = arith.constant true
+  // CHECK: return %[[true]] : i1
+}
+
+// CHECK-LABEL: @test6(
+func @test6(%arg0: i32) -> i1 {
+  %cst = arith.constant -4.400000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf olt, %1, %cst : f64
+  return %2 : i1
+  // CHECK: %[[false:.+]] = arith.constant false
+  // CHECK: return %[[false]] : i1
+}
+
+// Check that optimizing unsigned >= comparisons correctly distinguishes
+// positive and negative constants.
+// CHECK-LABEL: @test7(
+// CHECK-SAME: %[[arg0:.+]]:
+func @test7(%arg0: i32) -> i1 {
+  %cst = arith.constant 3.200000e+00 : f64
+  %1 = arith.uitofp %arg0: i32 to f64
+  %2 = arith.cmpf oge, %1, %cst : f64
+  return %2 : i1
+  // CHECK: %[[c3:.+]] = arith.constant 3 : i32
+  // CHECK: arith.cmpi ugt, %[[arg0]], %[[c3]] : i32
+}

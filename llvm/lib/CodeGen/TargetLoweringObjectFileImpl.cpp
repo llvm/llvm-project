@@ -446,7 +446,8 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covfun, Triple::ELF,
                                       /*AddSegmentInfo=*/false) ||
-      Name == ".llvmbc" || Name == ".llvmcmd")
+      Name == ".llvmbc" || Name == ".llvmcmd" ||
+      Name.startswith(".llvm.offloading."))
     return SectionKind::getMetadata();
 
   if (Name.empty() || Name[0] != '.') return K;
@@ -681,9 +682,10 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   }
 
   if (Retain) {
-    if ((Ctx.getAsmInfo()->useIntegratedAssembler() ||
-         Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) &&
-        !TM.getTargetTriple().isOSSolaris())
+    if (TM.getTargetTriple().isOSSolaris())
+      Flags |= ELF::SHF_SUNW_NODISCARD;
+    else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
+             Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))
       Flags |= ELF::SHF_GNU_RETAIN;
     return NextUniqueID++;
   }
@@ -860,12 +862,15 @@ static MCSection *selectELFSectionForGlobal(
     EmitUniqueSection = true;
     Flags |= ELF::SHF_LINK_ORDER;
   }
-  if (Retain &&
-      (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-       Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) &&
-      !TM.getTargetTriple().isOSSolaris()) {
-    EmitUniqueSection = true;
-    Flags |= ELF::SHF_GNU_RETAIN;
+  if (Retain) {
+    if (TM.getTargetTriple().isOSSolaris()) {
+      EmitUniqueSection = true;
+      Flags |= ELF::SHF_SUNW_NODISCARD;
+    } else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
+               Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) {
+      EmitUniqueSection = true;
+      Flags |= ELF::SHF_GNU_RETAIN;
+    }
   }
 
   MCSectionELF *Section = selectELFSectionForGlobal(

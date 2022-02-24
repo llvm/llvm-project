@@ -687,17 +687,20 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
   return Result;
 }
 
+// Ported from
+// compiler-rt/lib/sanitizer_common/sanitizer_stacktrace.h:GetPreviousInstructionPc
+// GetPreviousInstructionPc.
 static uint64_t getPreviousInstructionPc(uint64_t PC,
                                          Triple TheTriple) {
-  if (TheTriple.isARM()) {
+  if (TheTriple.isARM())
     return (PC - 3) & (~1);
-  } else if (TheTriple.isAArch64()) {
-    return PC - 4;
-  } else if (TheTriple.isMIPS()) {
+  if (TheTriple.isMIPS())
     return PC - 8;
-  } else {
+  if (TheTriple.isRISCV())
+    return PC - 2;
+  if (TheTriple.isX86() || TheTriple.isSystemZ())
     return PC - 1;
-  }
+  return PC - 4;
 }
 
 // Locate addresses of all coverage points in a file. Coverage point

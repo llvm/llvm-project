@@ -133,13 +133,14 @@ inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
   // so we return (pc-2) in that case in order to be safe.
   // For A32 mode we return (pc-4) because all instructions are 32 bit long.
   return (PC - 3) & (~1);
-#elif defined(__powerpc__) || defined(__powerpc64__) || defined(__aarch64__)
-  // PCs are always 4 byte aligned.
-  return PC - 4;
 #elif defined(__sparc__) || defined(__mips__)
   return PC - 8;
-#else
+#elif defined(__riscv__)
+  return PC - 2;
+#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
   return PC - 1;
+#else
+  return PC - 4;
 #endif
 }
 

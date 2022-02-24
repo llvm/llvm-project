@@ -14,12 +14,12 @@ define void @foo1 ({ i32*, i32* }* noalias %x, { i32*, i32* }* noalias %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds { i32*, i32* }, { i32*, i32* }* [[Y:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds { i32*, i32* }, { i32*, i32* }* [[X:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds { i32*, i32* }, { i32*, i32* }* [[Y]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32** [[TMP1]] to <2 x i32*>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32*>, <2 x i32*>* [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, <2 x i32*> [[TMP5]], <2 x i64> <i64 16, i64 16>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i32*, i32* }, { i32*, i32* }* [[X]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds { i32*, i32* }, { i32*, i32* }* [[X]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32** [[TMP1]] to <2 x i32*>*
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32*>, <2 x i32*>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, <2 x i32*> [[TMP6]], <2 x i64> <i64 16, i64 16>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32** [[TMP2]] to <2 x i32*>*
-; CHECK-NEXT:    store <2 x i32*> [[TMP6]], <2 x i32*>* [[TMP8]], align 8
+; CHECK-NEXT:    store <2 x i32*> [[TMP7]], <2 x i32*>* [[TMP8]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds { i32*, i32* }, { i32*, i32* }* %y, i64 0, i32 0

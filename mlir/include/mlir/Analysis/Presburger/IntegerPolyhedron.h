@@ -21,37 +21,86 @@
 
 namespace mlir {
 
-/// An integer polyhedron is the set of solutions to a list of affine
-/// constraints over n integer-valued variables/identifiers. Affine constraints
-/// can be inequalities or equalities in the form:
+/// An IntegerRelation is a PresburgerLocalSpace subject to affine constraints.
+/// Affine constraints can be inequalities or equalities in the form:
 ///
 /// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
 /// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
 ///
-/// where c_0, c_1, ..., c_n are integers.
+/// where c_0, c_1, ..., c_n are integers and n is the total number of
+/// identifiers in the space.
 ///
-/// Such a set corresponds to the set of integer points lying in a convex
-/// polyhedron. For example, consider the set: (x, y) : (1 <= x <= 7, x = 2y).
-/// This set contains the points (2, 1), (4, 2), and (6, 3).
+/// Such a relation corresponds to the set of integer points lying in a convex
+/// polyhedron. For example, consider the relation:
+///         (x) -> (y) : (1 <= x <= 7, x = 2y)
+/// These can be thought of as points in the polyhedron:
+///         (x, y) : (1 <= x <= 7, x = 2y)
+/// This relation contains the pairs (2, 1), (4, 2), and (6, 3).
 ///
-/// The integer-valued variables are distinguished into 3 types of:
+/// Since IntegerRelation makes a distinction between dimensions, IdKind::Range
+/// and IdKind::Domain should be used to refer to dimension identifiers.
+class IntegerRelation : public PresburgerLocalSpace {
+public:
+  /// Constructs a relation reserving memory for the specified number
+  /// of constraints and identifiers.
+  IntegerRelation(unsigned numReservedInequalities,
+                  unsigned numReservedEqualities, unsigned numReservedCols,
+                  unsigned numDomain, unsigned numRange, unsigned numSymbols,
+                  unsigned numLocals)
+      : PresburgerLocalSpace(numDomain, numRange, numSymbols, numLocals),
+        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
+        inequalities(0, getNumIds() + 1, numReservedInequalities,
+                     numReservedCols) {
+    assert(numReservedCols >= getNumIds() + 1);
+  }
+
+  /// Constructs a relation with the specified number of dimensions and symbols.
+  IntegerRelation(unsigned numDomain = 0, unsigned numRange = 0,
+                  unsigned numSymbols = 0, unsigned numLocals = 0)
+      : IntegerRelation(/*numReservedInequalities=*/0,
+                        /*numReservedEqualities=*/0,
+                        /*numReservedCols=*/numDomain + numRange + numSymbols +
+                            numLocals + 1,
+                        numDomain, numRange, numSymbols, numLocals) {}
+
+protected:
+  /// Constructs a set reserving memory for the specified number
+  /// of constraints and identifiers.  This constructor should not be used
+  /// directly to create a relation and should only be used to create Sets.
+  IntegerRelation(unsigned numReservedInequalities,
+                  unsigned numReservedEqualities, unsigned numReservedCols,
+                  unsigned numDims, unsigned numSymbols, unsigned numLocals)
+      : PresburgerLocalSpace(numDims, numSymbols, numLocals),
+        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
+        inequalities(0, getNumIds() + 1, numReservedInequalities,
+                     numReservedCols) {
+    assert(numReservedCols >= getNumIds() + 1);
+  }
+
+  /// Coefficients of affine equalities (in == 0 form).
+  Matrix equalities;
+
+  /// Coefficients of affine inequalities (in >= 0 form).
+  Matrix inequalities;
+};
+
+/// An IntegerPolyhedron is a PresburgerLocalSpace subject to affine
+/// constraints. Affine constraints can be inequalities or equalities in the
+/// form:
 ///
-/// Dimension: Ordinary variables over which the set is represented.
+/// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
+/// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
 ///
-/// Symbol: Symbol variables correspond to fixed but unknown values.
-/// Mathematically, an integer polyhedron with symbolic variables is like a
-/// family of integer polyhedra indexed by the symbolic variables.
+/// where c_0, c_1, ..., c_n are integers and n is the total number of
+/// identifiers in the space.
 ///
-/// Local: Local variables correspond to existentially quantified variables. For
-/// example, consider the set: (x) : (exists q : 1 <= x <= 7, x = 2q). An
-/// assignment to symbolic and dimension variables is valid if there exists some
-/// assignment to the local variable `q` satisfying these constraints. For this
-/// example, the set is equivalent to {2, 4, 6}. Mathematically, existential
-/// quantification can be thought of as the result of projection. In this
-/// example, `q` is existentially quantified. This can be thought of as the
-/// result of projecting out `q` from the previous example, i.e. we obtained {2,
-/// 4, 6} by projecting out the second dimension from {(2, 1), (4, 2), (6, 2)}.
-class IntegerPolyhedron : public PresburgerLocalSpace {
+/// An IntegerPolyhedron is similar to a IntegerRelation but it does not make a
+/// distinction between Domain and Range identifiers. Internally,
+/// IntegerPolyhedron is implemented as a IntegerRelation with zero domain ids.
+///
+/// Since IntegerPolyhedron does not make a distinction between dimensions,
+/// IdKind::SetDim should be used to refer to dimension identifiers.
+class IntegerPolyhedron : public IntegerRelation {
 public:
   /// All derived classes of IntegerPolyhedron.
   enum class Kind {
@@ -66,12 +115,8 @@ public:
   IntegerPolyhedron(unsigned numReservedInequalities,
                     unsigned numReservedEqualities, unsigned numReservedCols,
                     unsigned numDims, unsigned numSymbols, unsigned numLocals)
-      : PresburgerLocalSpace(numDims, numSymbols, numLocals),
-        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
-        inequalities(0, getNumIds() + 1, numReservedInequalities,
-                     numReservedCols) {
-    assert(numReservedCols >= getNumIds() + 1);
-  }
+      : IntegerRelation(numReservedInequalities, numReservedEqualities,
+                        numReservedCols, numDims, numSymbols, numLocals) {}
 
   /// Constructs a constraint system with the specified number of
   /// dimensions and symbols.
@@ -210,7 +255,14 @@ public:
   /// the lexmin is unbounded. Symbols are not supported and will result in
   /// assert-failure.
   presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>>
-  getRationalLexMin() const;
+  findRationalLexMin() const;
+
+  /// Same as above, but returns lexicographically minimal integer point.
+  /// Note: this should be used only when the lexmin is really required.
+  /// For a generic integer sampling operation, findIntegerSample is more
+  /// robust and should be preferred.
+  presburger_utils::MaybeOptimum<SmallVector<int64_t, 8>>
+  findIntegerLexMin() const;
 
   /// Swap the posA^th identifier with the posB^th identifier.
   virtual void swapId(unsigned posA, unsigned posB);
@@ -509,12 +561,6 @@ protected:
   // don't expect an identifier to have more than 32 lower/upper/equality
   // constraints. This is conservatively set low and can be raised if needed.
   constexpr static unsigned kExplosionFactor = 32;
-
-  /// Coefficients of affine equalities (in == 0 form).
-  Matrix equalities;
-
-  /// Coefficients of affine inequalities (in >= 0 form).
-  Matrix inequalities;
 };
 
 } // namespace mlir

@@ -14,9 +14,9 @@
 #define MLIR_DIALECT_PDL_IR_PDLOPS
 
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // PDL Ops
@@ -122,7 +122,7 @@ def PDL_ApplyNativeRewriteOp
 // pdl::AttributeOp
 //===----------------------------------------------------------------------===//
 
-def PDL_AttributeOp : PDL_Op<"attribute", [NoSideEffect]> {
+def PDL_AttributeOp : PDL_Op<"attribute"> {
   let summary = "Define an input attribute in a pattern";
   let description = [{
     `pdl.attribute` operations capture named attribute edges into an operation.
@@ -191,7 +191,7 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
 //===----------------------------------------------------------------------===//
 
 def PDL_OperandOp
-    : PDL_Op<"operand", [HasParent<"pdl::PatternOp">, NoSideEffect]> {
+    : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
   let summary = "Define an external input operand in a pattern";
   let description = [{
     `pdl.operand` operations capture external operand edges into an operation
@@ -230,7 +230,7 @@ def PDL_OperandOp
 //===----------------------------------------------------------------------===//
 
 def PDL_OperandsOp
-    : PDL_Op<"operands", [HasParent<"pdl::PatternOp">, NoSideEffect]> {
+    : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
   let summary = "Define a range of input operands in a pattern";
   let description = [{
     `pdl.operands` operations capture external operand range edges into an
@@ -639,7 +639,7 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
 // pdl::TypeOp
 //===----------------------------------------------------------------------===//
 
-def PDL_TypeOp : PDL_Op<"type", [NoSideEffect]> {
+def PDL_TypeOp : PDL_Op<"type"> {
   let summary = "Define a type handle within a pattern";
   let description = [{
     `pdl.type` operations capture result type constraints of `Attributes`,
@@ -668,7 +668,7 @@ def PDL_TypeOp : PDL_Op<"type", [NoSideEffect]> {
 // pdl::TypesOp
 //===----------------------------------------------------------------------===//
 
-def PDL_TypesOp : PDL_Op<"types", [NoSideEffect]> {
+def PDL_TypesOp : PDL_Op<"types"> {
   let summary = "Define a range of type handles within a pattern";
   let description = [{
     `pdl.types` operations capture result type constraints of `Value`s, and

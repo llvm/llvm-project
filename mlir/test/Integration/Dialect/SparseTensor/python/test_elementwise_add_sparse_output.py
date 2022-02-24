@@ -5,12 +5,9 @@ import numpy as np
 import os
 import sys
 
-import mlir.all_passes_registration
-
 from mlir import ir
 from mlir import runtime as rt
 from mlir import execution_engine
-from mlir import passmanager
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
 from mlir.dialects.linalg.opdsl import lang as dsl
@@ -18,6 +15,7 @@ from mlir.dialects.linalg.opdsl import lang as dsl
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
 from tools import np_to_sparse_tensor as test_tools
+from tools import sparse_compiler
 
 # TODO: Use linalg_structured_op to generate the kernel after making it to
 # handle sparse tensor outputs.
@@ -61,21 +59,10 @@ func @main(%ad: tensor<3x4xf64>, %bd: tensor<3x4xf64>) -> tensor<3x4xf64, #DCSR>
 """
 
 
-class _SparseCompiler:
-  """Sparse compiler passes."""
-
-  def __init__(self):
-    self.pipeline = (
-        f'sparse-compiler{{reassociate-fp-reductions=1 enable-index-optimizations=1}}')
-
-  def __call__(self, module: ir.Module):
-    passmanager.PassManager.parse(self.pipeline).run(module)
-
-
 def _run_test(support_lib, kernel):
   """Compiles, runs and checks results."""
   module = ir.Module.parse(kernel)
-  _SparseCompiler()(module)
+  sparse_compiler.SparseCompiler(options='')(module)
   engine = execution_engine.ExecutionEngine(
       module, opt_level=0, shared_libs=[support_lib])
 

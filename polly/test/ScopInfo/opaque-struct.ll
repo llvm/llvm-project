@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -disable-output < %s 
+; RUN: opt %loadPolly -polly-scops -disable-output < %s
 ;
 ; Check that we do not crash with unsized (opaque) types.
 ;

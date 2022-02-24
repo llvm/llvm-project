@@ -80,6 +80,11 @@
 #define __opencl_c_named_address_space_builtins 1
 #endif // !defined(__opencl_c_generic_address_space)
 
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
+// Internal feature macro to provide subgroup builtins.
+#define __opencl_subgroup_builtins 1
+#endif
+
 // built-in scalar data types:
 
 /**

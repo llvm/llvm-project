@@ -1244,28 +1244,28 @@ define amdgpu_kernel void @ds_read_diff_base_interleaving(
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 4, v1
-; CI-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, s4, v1
-; CI-NEXT:    v_add_i32_e32 v3, vcc, s5, v4
-; CI-NEXT:    v_add_i32_e32 v5, vcc, s6, v1
+; CI-NEXT:    v_add_i32_e32 v3, vcc, s5, v0
+; CI-NEXT:    v_add_i32_e32 v4, vcc, s6, v1
+; CI-NEXT:    v_add_i32_e32 v6, vcc, s7, v0
 ; CI-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
 ; CI-NEXT:    ds_read2_b32 v[2:3], v3 offset1:4
-; CI-NEXT:    v_add_i32_e32 v6, vcc, s7, v4
-; CI-NEXT:    ds_read2_b32 v[4:5], v5 offset1:1
+; CI-NEXT:    ds_read2_b32 v[4:5], v4 offset1:1
 ; CI-NEXT:    ds_read2_b32 v[6:7], v6 offset1:4
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
+; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(2)
 ; CI-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; CI-NEXT:    v_add_f32_e32 v0, 2.0, v0
-; CI-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mul_f32_e32 v2, v4, v6
 ; CI-NEXT:    v_sub_f32_e32 v0, v0, v2
+; CI-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; CI-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; CI-NEXT:    v_mul_f32_e32 v1, v5, v7
-; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:40
 ; CI-NEXT:    s_endpgm

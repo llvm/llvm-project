@@ -111,15 +111,13 @@ struct ModuleDeps {
   ///                      be located.
   /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
-  ///                         compilation and fill in "-fmodule-map-file="
-  ///                         arguments.
+  ///                         compilation.
   std::vector<std::string> getCanonicalCommandLine(
       std::function<StringRef(ModuleID)> LookupPCMPath,
       std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
 
   /// Gets the canonical command line suitable for passing to clang, excluding
-  /// arguments containing modules-related paths: "-fmodule-file=", "-o",
-  /// "-fmodule-map-file=".
+  /// "-fmodule-file=" and "-o" arguments.
   std::vector<std::string> getCanonicalCommandLineWithoutModulePaths() const;
 };
 

@@ -558,7 +558,7 @@ public:
   /// (i.e. the pointers have computable bounds).
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
                        Loop *TheLoop, const ValueToValueMap &Strides,
-                       bool ShouldCheckWrap = false);
+                       Value *&UncomputablePtr, bool ShouldCheckWrap = false);
 
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
@@ -732,7 +732,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                      ScalarEvolution *SE, Loop *TheLoop,
                                      const ValueToValueMap &StridesMap,
-                                     bool ShouldCheckWrap) {
+                                     Value *&UncomputablePtr, bool ShouldCheckWrap) {
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRT = true;
@@ -824,6 +824,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                     DepSetId, TheLoop, RunningDepId, ASId,
                                     ShouldCheckWrap, /*Assume=*/true)) {
             CanDoAliasSetRT = false;
+            UncomputablePtr = Access.getPointer();
             break;
           }
         }
@@ -2080,10 +2081,14 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
 
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
-  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(),
-                                                  TheLoop, SymbolicStrides);
+  Value *UncomputablePtr = nullptr;
+  bool CanDoRTIfNeeded =
+      Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(), TheLoop,
+                               SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
-    recordAnalysis("CantIdentifyArrayBounds") << "cannot identify array bounds";
+    auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
+    recordAnalysis("CantIdentifyArrayBounds", I) 
+        << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
     CanVecMem = false;
@@ -2110,12 +2115,14 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       PtrRtChecking->Need = true;
 
       auto *SE = PSE->getSE();
-      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, SE, TheLoop,
-                                                 SymbolicStrides, true);
+      UncomputablePtr = nullptr;
+      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
+          *PtrRtChecking, SE, TheLoop, SymbolicStrides, UncomputablePtr, true);
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
-        recordAnalysis("CantCheckMemDepsAtRunTime")
+        auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
+        recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
         CanVecMem = false;
@@ -2291,7 +2298,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
                   "at most once.\n");
     return;
   }
-  LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.");
+  LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
 
   SymbolicStrides[Ptr] = Stride;
   StrideSet.insert(Stride);

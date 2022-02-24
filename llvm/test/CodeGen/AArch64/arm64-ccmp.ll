@@ -603,6 +603,28 @@ define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
   ret i64 %sel
 }
 
+define float @select_or_float(i32 %w0, i32 %w1, float %x2, float %x3) {
+; CHECK-LABEL: select_or_float:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp w1, #5
+; CHECK-NEXT:    ccmp w0, w1, #8, eq
+; CHECK-NEXT:    fcsel s0, s0, s1, lt
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: select_or_float:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    mov w8, #5
+; GISEL-NEXT:    cmp w8, w1
+; GISEL-NEXT:    ccmp w0, w1, #8, eq
+; GISEL-NEXT:    fcsel s0, s0, s1, lt
+; GISEL-NEXT:    ret
+  %1 = icmp slt i32 %w0, %w1
+  %2 = icmp ne i32 5, %w1
+  %3 = or i1 %1, %2
+  %sel = select i1 %3, float %x2,float %x3
+  ret float %sel
+}
+
 define i64 @gccbug(i64 %x0, i64 %x1) {
 ; CHECK-LABEL: gccbug:
 ; CHECK:       ; %bb.0:
@@ -617,11 +639,10 @@ define i64 @gccbug(i64 %x0, i64 %x1) {
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    mov w8, #2
 ; GISEL-NEXT:    mov w9, #4
-; GISEL-NEXT:    mov w10, #1
 ; GISEL-NEXT:    cmp x0, #2
 ; GISEL-NEXT:    ccmp x0, x9, #4, ne
 ; GISEL-NEXT:    ccmp x1, xzr, #0, eq
-; GISEL-NEXT:    csel x0, x8, x10, eq
+; GISEL-NEXT:    csinc x0, x8, xzr, eq
 ; GISEL-NEXT:    ret
   %cmp0 = icmp eq i64 %x1, 0
   %cmp1 = icmp eq i64 %x0, 2

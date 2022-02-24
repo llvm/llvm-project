@@ -48,7 +48,7 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirInferTypeOpInterfaceTypeID();
 /// transferring ownership to the caller. The first argument is the number of
 /// consecutive elements pointed to by the second argument. The third argument
 /// is an opaque pointer forwarded to the callback by the caller.
-using MlirTypesCallback = void (*)(intptr_t, MlirType *, void *);
+typedef void (*MlirTypesCallback)(intptr_t, MlirType *, void *);
 
 /// Infers the return types of the operation identified by its canonical given
 /// the arguments that will be supplied to its generic builder. Calls `callback`

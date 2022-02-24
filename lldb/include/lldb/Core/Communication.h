@@ -277,7 +277,7 @@ public:
   ///     \b True if the read thread is running, \b false otherwise.
   bool ReadThreadIsRunning();
 
-  /// The static read thread function. This function will call the "DoRead"
+  /// The read thread function. This function will call the "DoRead"
   /// function continuously and wait for data to become available. When data
   /// is received it will append the available data to the internal cache and
   /// broadcast a \b eBroadcastBitReadThreadGotBytes event.
@@ -289,7 +289,7 @@ public:
   ///     \b NULL.
   ///
   /// \see void Communication::ReadThreadGotBytes (const uint8_t *, size_t);
-  static lldb::thread_result_t ReadThread(lldb::thread_arg_t comm_ptr);
+  lldb::thread_result_t ReadThread();
 
   void SetReadThreadBytesReceivedCallback(ReadThreadBytesReceived callback,
                                           void *callback_baton);

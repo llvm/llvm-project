@@ -133,7 +133,12 @@ class PluginParseTreeAction : public PrescanAndSemaAction {
 // PrescanAndSemaDebug Actions
 //
 // These actions will parse the input, run the semantic checks and execute
-// their actions regardless of whether any semantic errors are found.
+// their actions _regardless of_ whether any semantic errors have been found.
+// This can be useful when adding new languge feature and when you wish to
+// investigate compiler output (e.g. the parse tree) despite any semantic
+// errors.
+//
+// NOTE: Use with care and for development only!
 //===----------------------------------------------------------------------===//
 class PrescanAndSemaDebugAction : public FrontendAction {
 
