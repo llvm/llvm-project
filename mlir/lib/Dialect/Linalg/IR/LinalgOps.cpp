@@ -991,7 +991,7 @@ struct InferStaticShapeOfOperands : public OpRewritePattern<GenericOp> {
       Type oldType = oldResult.getType();
       replacements.push_back(
           (newType != oldType)
-              ? rewriter.create<tensor::CastOp>(loc, newType, newResult)
+              ? rewriter.create<tensor::CastOp>(loc, oldType, newResult)
               : newResult);
     }
     rewriter.replaceOp(genericOp, replacements);
