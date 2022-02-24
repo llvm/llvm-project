@@ -318,6 +318,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, XLenVT, Custom);
   }
 
+  static constexpr ISD::NodeType FPLegalNodeTypes[] = {
+      ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
+      ISD::LLRINT,         ISD::LROUND,        ISD::LLROUND,
+      ISD::STRICT_LRINT,   ISD::STRICT_LLRINT, ISD::STRICT_LROUND,
+      ISD::STRICT_LLROUND, ISD::STRICT_FMA,    ISD::STRICT_FADD,
+      ISD::STRICT_FSUB,    ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
+      ISD::STRICT_FSQRT,   ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
+
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE, ISD::SETGT,
@@ -331,26 +339,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   if (Subtarget.hasStdExtZfh()) {
-    setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
-    setOperationAction(ISD::LRINT, MVT::f16, Legal);
-    setOperationAction(ISD::LLRINT, MVT::f16, Legal);
-    setOperationAction(ISD::LROUND, MVT::f16, Legal);
-    setOperationAction(ISD::LLROUND, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_LLROUND, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FADD, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FMA, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FSUB, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FMUL, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FDIV, MVT::f16, Legal);
+    for (auto NT : FPLegalNodeTypes)
+      setOperationAction(NT, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FSETCC, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
@@ -385,24 +377,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtF()) {
-    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-    setOperationAction(ISD::LRINT, MVT::f32, Legal);
-    setOperationAction(ISD::LLRINT, MVT::f32, Legal);
-    setOperationAction(ISD::LROUND, MVT::f32, Legal);
-    setOperationAction(ISD::LLROUND, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_LRINT, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_LLRINT, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_LROUND, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_LLROUND, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
+    for (auto NT : FPLegalNodeTypes)
+      setOperationAction(NT, MVT::f32, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -418,26 +394,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtD()) {
-    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
-    setOperationAction(ISD::LRINT, MVT::f64, Legal);
-    setOperationAction(ISD::LLRINT, MVT::f64, Legal);
-    setOperationAction(ISD::LROUND, MVT::f64, Legal);
-    setOperationAction(ISD::LLROUND, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_LRINT, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_LLRINT, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_LROUND, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_LLROUND, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
+    for (auto NT : FPLegalNodeTypes)
+      setOperationAction(NT, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
