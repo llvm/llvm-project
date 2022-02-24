@@ -254,6 +254,13 @@ bool DummyDataObject::operator==(const DummyDataObject &that) const {
       coshape == that.coshape;
 }
 
+bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual) const {
+  return type.shape() == actual.type.shape() &&
+      type.type().IsTkCompatibleWith(actual.type.type()) &&
+      attrs == actual.attrs && intent == actual.intent &&
+      coshape == actual.coshape;
+}
+
 static common::Intent GetIntent(const semantics::Attrs &attrs) {
   if (attrs.test(semantics::Attr::INTENT_IN)) {
     return common::Intent::In;
@@ -334,6 +341,11 @@ DummyProcedure::DummyProcedure(Procedure &&p)
 bool DummyProcedure::operator==(const DummyProcedure &that) const {
   return attrs == that.attrs && intent == that.intent &&
       procedure.value() == that.procedure.value();
+}
+
+bool DummyProcedure::IsCompatibleWith(const DummyProcedure &actual) const {
+  return attrs == actual.attrs && intent == actual.intent &&
+      procedure.value().IsCompatibleWith(actual.procedure.value());
 }
 
 static std::string GetSeenProcs(
@@ -533,6 +545,19 @@ DummyArgument::~DummyArgument() {}
 
 bool DummyArgument::operator==(const DummyArgument &that) const {
   return u == that.u; // name and passed-object usage are not characteristics
+}
+
+bool DummyArgument::IsCompatibleWith(const DummyArgument &actual) const {
+  if (const auto *ifaceData{std::get_if<DummyDataObject>(&u)}) {
+    const auto *actualData{std::get_if<DummyDataObject>(&actual.u)};
+    return actualData && ifaceData->IsCompatibleWith(*actualData);
+  } else if (const auto *ifaceProc{std::get_if<DummyProcedure>(&u)}) {
+    const auto *actualProc{std::get_if<DummyProcedure>(&actual.u)};
+    return actualProc && ifaceProc->IsCompatibleWith(*actualProc);
+  } else {
+    return std::holds_alternative<AlternateReturn>(u) &&
+        std::holds_alternative<AlternateReturn>(actual.u);
+  }
 }
 
 static std::optional<DummyArgument> CharacterizeDummyArgument(
@@ -744,6 +769,33 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
   }
 }
 
+bool FunctionResult::IsCompatibleWith(const FunctionResult &actual) const {
+  Attrs actualAttrs{actual.attrs};
+  actualAttrs.reset(Attr::Contiguous);
+  if (attrs != actualAttrs) {
+    return false;
+  } else if (const auto *ifaceTypeShape{std::get_if<TypeAndShape>(&u)}) {
+    if (const auto *actualTypeShape{std::get_if<TypeAndShape>(&actual.u)}) {
+      if (ifaceTypeShape->shape() != actualTypeShape->shape()) {
+        return false;
+      } else {
+        return ifaceTypeShape->type().IsTkCompatibleWith(
+            actualTypeShape->type());
+      }
+    } else {
+      return false;
+    }
+  } else {
+    const auto *ifaceProc{std::get_if<CopyableIndirection<Procedure>>(&u)};
+    if (const auto *actualProc{
+            std::get_if<CopyableIndirection<Procedure>>(&actual.u)}) {
+      return ifaceProc->value().IsCompatibleWith(actualProc->value());
+    } else {
+      return false;
+    }
+  }
+}
+
 llvm::raw_ostream &FunctionResult::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
   std::visit(common::visitors{
@@ -766,6 +818,31 @@ Procedure::~Procedure() {}
 bool Procedure::operator==(const Procedure &that) const {
   return attrs == that.attrs && functionResult == that.functionResult &&
       dummyArguments == that.dummyArguments;
+}
+
+bool Procedure::IsCompatibleWith(const Procedure &actual) const {
+  // 15.5.2.9(1): if dummy is not pure, actual need not be.
+  Attrs actualAttrs{actual.attrs};
+  if (!attrs.test(Attr::Pure)) {
+    actualAttrs.reset(Attr::Pure);
+  }
+  if (attrs != actualAttrs) {
+    return false;
+  } else if (IsFunction() != actual.IsFunction()) {
+    return false;
+  } else if (IsFunction() &&
+      !functionResult->IsCompatibleWith(*actual.functionResult)) {
+    return false;
+  } else if (dummyArguments.size() != actual.dummyArguments.size()) {
+    return false;
+  } else {
+    for (std::size_t j{0}; j < dummyArguments.size(); ++j) {
+      if (!dummyArguments[j].IsCompatibleWith(actual.dummyArguments[j])) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 int Procedure::FindPassIndex(std::optional<parser::CharBlock> name) const {
