@@ -14,12 +14,12 @@ f1:
 
   # Call functions at `a` and `b` indirectly.
   i32.const 0
-  i32.load  a
+  i32.load  a - 10
   call_indirect  () -> (i64)
   drop
 
   i32.const 0
-  i32.load  b
+  i32.load  b + 20
   call_indirect  () -> (i32)
   drop
 
@@ -49,7 +49,7 @@ b:
 # CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 # CHECK-NEXT:       Offset: 0x7
 # CHECK-NEXT:       Symbol: a
-# CHECK-NEXT:       Addend: 0
+# CHECK-NEXT:       Addend: -10
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Relocation {
 # CHECK-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
@@ -60,7 +60,7 @@ b:
 # CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 # CHECK-NEXT:       Offset: 0x18
 # CHECK-NEXT:       Symbol: b
-# CHECK-NEXT:       Addend: 0
+# CHECK-NEXT:       Addend: 20
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Relocation {
 # CHECK-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
@@ -87,7 +87,7 @@ b:
 # REF-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 # REF-NEXT:       Offset: 0x7
 # REF-NEXT:       Symbol: a
-# REF-NEXT:       Addend: 0
+# REF-NEXT:       Addend: -10
 # REF-NEXT:     }
 # REF-NEXT:     Relocation {
 # REF-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
@@ -103,7 +103,7 @@ b:
 # REF-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 # REF-NEXT:       Offset: 0x1C
 # REF-NEXT:       Symbol: b
-# REF-NEXT:       Addend: 0
+# REF-NEXT:       Addend: 20
 # REF-NEXT:     }
 # REF-NEXT:     Relocation {
 # REF-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
