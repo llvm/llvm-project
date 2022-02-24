@@ -871,6 +871,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECTOR_SPLICE);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   setTargetDAGCombine(ISD::CONCAT_VECTORS);
+  setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
   setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
   setTargetDAGCombine(ISD::STORE);
   if (Subtarget->supportsAddressTopByteIgnored())
@@ -14473,6 +14474,29 @@ static SDValue performConcatVectorsCombine(SDNode *N,
 }
 
 static SDValue
+performExtractSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  SDValue V = N->getOperand(0);
+
+  // NOTE: This combine exists in DAGCombiner, but that version's legality check
+  // blocks this combine because the non-const case requires custom lowering.
+  //
+  // ty1 extract_vector(ty2 splat(const))) -> ty1 splat(const)
+  if (V.getOpcode() == ISD::SPLAT_VECTOR)
+    if (isa<ConstantSDNode>(V.getOperand(0)))
+      return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V.getOperand(0));
+
+  return SDValue();
+}
+
+static SDValue
 performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               SelectionDAG &DAG) {
   SDLoc DL(N);
@@ -18181,6 +18205,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performSignExtendInRegCombine(N, DCI, DAG);
   case ISD::CONCAT_VECTORS:
     return performConcatVectorsCombine(N, DCI, DAG);
+  case ISD::EXTRACT_SUBVECTOR:
+    return performExtractSubvectorCombine(N, DCI, DAG);
   case ISD::INSERT_SUBVECTOR:
     return performInsertSubvectorCombine(N, DCI, DAG);
   case ISD::SELECT:
