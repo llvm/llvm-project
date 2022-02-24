@@ -4414,6 +4414,14 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   if (Left.is(TT_TemplateCloser) && Right.is(TT_TemplateOpener))
     return true;
+  if ((Left.is(tok::greater) && Right.is(tok::greater)) ||
+      (Left.is(tok::less) && Right.is(tok::less)))
+    return false;
+  if (Right.is(TT_BinaryOperator) &&
+      Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None &&
+      (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_All ||
+       Right.getPrecedence() != prec::Assignment))
+    return true;
   if (Left.isOneOf(TT_TemplateCloser, TT_UnaryOperator) ||
       Left.is(tok::kw_operator))
     return false;
@@ -4486,14 +4494,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   if (Right.is(TT_InheritanceComma) &&
       Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma)
-    return true;
-  if ((Left.is(tok::greater) && Right.is(tok::greater)) ||
-      (Left.is(tok::less) && Right.is(tok::less)))
-    return false;
-  if (Right.is(TT_BinaryOperator) &&
-      Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None &&
-      (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_All ||
-       Right.getPrecedence() != prec::Assignment))
     return true;
   if (Left.is(TT_ArrayInitializerLSquare))
     return true;
