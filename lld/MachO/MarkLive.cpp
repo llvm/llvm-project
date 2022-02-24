@@ -160,7 +160,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
     // Mark things reachable from GC roots as live.
     while (!worklist.empty()) {
       WorklistEntry *entry = worklist.pop_back_val();
-      assert(getInputSection(entry)->live &&
+      assert(cast<ConcatInputSection>(getInputSection(entry))->live &&
              "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
