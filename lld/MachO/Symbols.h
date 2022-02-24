@@ -109,7 +109,7 @@ public:
   // True if this symbol was referenced by a regular (non-bitcode) object.
   bool isUsedInRegularObj : 1;
 
-  // True if an undefined or dylib symbol is used from a live section.
+  // True if this symbol is used from a live section.
   bool used : 1;
 };
 
