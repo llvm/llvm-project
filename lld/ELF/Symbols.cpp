@@ -529,48 +529,27 @@ void Symbol::resolveUndefined(const Undefined &other) {
 
 // Compare two symbols. Return 1 if the new symbol should win, -1 if
 // the new symbol should lose, or 0 if there is a conflict.
-int Symbol::compare(const Symbol *other) const {
-  assert(other->isDefined() || other->isCommon());
-
-  if (!isDefined() && !isCommon())
-    return 1;
+bool Symbol::compare(const Defined &other) const {
+  if (LLVM_UNLIKELY(isCommon())) {
+    if (config->warnCommon)
+      warn("common " + getName() + " is overridden");
+    return !other.isWeak();
+  }
+  if (!isDefined())
+    return true;
 
   // .symver foo,foo@@VER unfortunately creates two defined symbols: foo and
   // foo@@VER. In GNU ld, if foo and foo@@VER are in the same file, foo is
   // ignored. In our implementation, when this is foo, this->getName() may still
-  // contain @@, return 1 in this case as well.
-  if (file == other->file) {
-    if (other->getName().contains("@@"))
-      return 1;
+  // contain @@, return true in this case as well.
+  if (LLVM_UNLIKELY(file == other.file)) {
+    if (other.getName().contains("@@"))
+      return true;
     if (getName().contains("@@"))
-      return -1;
+      return false;
   }
 
-  if (other->isWeak())
-    return -1;
-
-  if (isWeak())
-    return 1;
-
-  if (isCommon() && other->isCommon()) {
-    if (config->warnCommon)
-      warn("multiple common of " + getName());
-    return 0;
-  }
-
-  if (isCommon()) {
-    if (config->warnCommon)
-      warn("common " + getName() + " is overridden");
-    return 1;
-  }
-
-  if (other->isCommon()) {
-    if (config->warnCommon)
-      warn("common " + getName() + " is overridden");
-    return -1;
-  }
-
-  return 0;
+  return isWeak() && !other.isWeak();
 }
 
 void elf::reportDuplicate(const Symbol &sym, InputFile *newFile,
@@ -608,45 +587,46 @@ void elf::reportDuplicate(const Symbol &sym, InputFile *newFile,
 }
 
 void Symbol::checkDuplicate(const Defined &other) const {
-  if (compare(&other) == 0)
+  if (isDefined() && !isWeak() && !other.isWeak())
     reportDuplicate(*this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);
 }
 
 void Symbol::resolveCommon(const CommonSymbol &other) {
-  int cmp = compare(&other);
-  if (cmp < 0)
+  if (isDefined() && !isWeak()) {
+    if (config->warnCommon)
+      warn("common " + getName() + " is overridden");
     return;
+  }
 
-  if (cmp > 0) {
-    if (auto *s = dyn_cast<SharedSymbol>(this)) {
-      // Increase st_size if the shared symbol has a larger st_size. The shared
-      // symbol may be created from common symbols. The fact that some object
-      // files were linked into a shared object first should not change the
-      // regular rule that picks the largest st_size.
-      uint64_t size = s->size;
-      replace(other);
-      if (size > cast<CommonSymbol>(this)->size)
-        cast<CommonSymbol>(this)->size = size;
-    } else {
-      replace(other);
+  if (CommonSymbol *oldSym = dyn_cast<CommonSymbol>(this)) {
+    if (config->warnCommon)
+      warn("multiple common of " + getName());
+    oldSym->alignment = std::max(oldSym->alignment, other.alignment);
+    if (oldSym->size < other.size) {
+      oldSym->file = other.file;
+      oldSym->size = other.size;
     }
     return;
   }
 
-  CommonSymbol *oldSym = cast<CommonSymbol>(this);
-
-  oldSym->alignment = std::max(oldSym->alignment, other.alignment);
-  if (oldSym->size < other.size) {
-    oldSym->file = other.file;
-    oldSym->size = other.size;
+  if (auto *s = dyn_cast<SharedSymbol>(this)) {
+    // Increase st_size if the shared symbol has a larger st_size. The shared
+    // symbol may be created from common symbols. The fact that some object
+    // files were linked into a shared object first should not change the
+    // regular rule that picks the largest st_size.
+    uint64_t size = s->size;
+    replace(other);
+    if (size > cast<CommonSymbol>(this)->size)
+      cast<CommonSymbol>(this)->size = size;
+  } else {
+    replace(other);
   }
 }
 
 void Symbol::resolveDefined(const Defined &other) {
-  int cmp = compare(&other);
-  if (cmp > 0)
+  if (compare(other))
     replace(other);
 }
 
