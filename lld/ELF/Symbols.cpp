@@ -653,15 +653,12 @@ void Symbol::resolveDefined(const Defined &other) {
 void Symbol::resolveLazy(const LazyObject &other) {
   // For common objects, we want to look for global or weak definitions that
   // should be extracted as the canonical definition instead.
-  if (isCommon() && elf::config->fortranCommon) {
-    if (auto *loSym = dyn_cast<LazyObject>(&other)) {
-      if (loSym->file->shouldExtractForCommon(getName())) {
-        backwardReferences.erase(this);
-        replace(other);
-        other.extract();
-        return;
-      }
-    }
+  if (LLVM_UNLIKELY(isCommon()) && elf::config->fortranCommon &&
+      other.file->shouldExtractForCommon(getName())) {
+    backwardReferences.erase(this);
+    replace(other);
+    other.extract();
+    return;
   }
 
   if (!isUndefined()) {
