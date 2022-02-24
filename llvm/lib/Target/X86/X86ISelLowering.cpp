@@ -29304,6 +29304,7 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
   unsigned X86OpcI = getTargetVShiftUniformOpcode(Opcode, false);
   unsigned X86OpcV = getTargetVShiftUniformOpcode(Opcode, true);
 
+  // TODO: Use getSplatSourceVector.
   if (SDValue BaseShAmt = DAG.getSplatValue(Amt)) {
     if (supportedVectorShiftWithBaseAmnt(VT, Subtarget, Opcode)) {
       MVT EltVT = VT.getVectorElementType();
@@ -29315,7 +29316,10 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
 
       return getTargetVShiftNode(X86OpcI, dl, VT, R, BaseShAmt, Subtarget, DAG);
     }
+  }
 
+  int BaseShAmtIdx = -1;
+  if (SDValue BaseShAmt = DAG.getSplatSourceVector(Amt, BaseShAmtIdx)) {
     // vXi8 shifts - shift as v8i16 + mask result.
     if (((VT == MVT::v16i8 && !Subtarget.canExtendTo512DQ()) ||
          (VT == MVT::v32i8 && !Subtarget.canExtendTo512BW()) ||
@@ -29326,13 +29330,12 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
       if (supportedVectorShiftWithBaseAmnt(ExtVT, Subtarget, Opcode)) {
         unsigned LogicalOp = (Opcode == ISD::SHL ? ISD::SHL : ISD::SRL);
         unsigned LogicalX86Op = getTargetVShiftUniformOpcode(LogicalOp, false);
-        BaseShAmt = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, BaseShAmt);
 
         // Create the mask using vXi16 shifts. For shift-rights we need to move
         // the upper byte down before splatting the vXi8 mask.
         SDValue BitMask = DAG.getConstant(-1, dl, ExtVT);
         BitMask = getTargetVShiftNode(LogicalX86Op, dl, ExtVT, BitMask,
-                                      BaseShAmt, Subtarget, DAG);
+                                      BaseShAmt, BaseShAmtIdx, Subtarget, DAG);
         if (Opcode != ISD::SHL)
           BitMask = getTargetVShiftByConstNode(LogicalX86Op, dl, ExtVT, BitMask,
                                                8, DAG);
@@ -29342,7 +29345,7 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
 
         SDValue Res = getTargetVShiftNode(LogicalX86Op, dl, ExtVT,
                                           DAG.getBitcast(ExtVT, R), BaseShAmt,
-                                          Subtarget, DAG);
+                                          BaseShAmtIdx, Subtarget, DAG);
         Res = DAG.getBitcast(VT, Res);
         Res = DAG.getNode(ISD::AND, dl, VT, Res, BitMask);
 
@@ -29350,8 +29353,9 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
           // ashr(R, Amt) === sub(xor(lshr(R, Amt), SignMask), SignMask)
           // SignMask = lshr(SignBit, Amt) - safe to do this with PSRLW.
           SDValue SignMask = DAG.getConstant(0x8080, dl, ExtVT);
-          SignMask = getTargetVShiftNode(LogicalX86Op, dl, ExtVT, SignMask,
-                                         BaseShAmt, Subtarget, DAG);
+          SignMask =
+              getTargetVShiftNode(LogicalX86Op, dl, ExtVT, SignMask, BaseShAmt,
+                                  BaseShAmtIdx, Subtarget, DAG);
           SignMask = DAG.getBitcast(VT, SignMask);
           Res = DAG.getNode(ISD::XOR, dl, VT, Res, SignMask);
           Res = DAG.getNode(ISD::SUB, dl, VT, Res, SignMask);
