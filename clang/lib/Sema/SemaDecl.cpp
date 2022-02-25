@@ -2016,6 +2016,12 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD) {
   if (VD->hasAttr<BlocksAttr>() && Ty->isObjCObjectPointerType())
     return;
 
+  // Don't warn about Objective-C pointer variables with precise lifetime
+  // semantics; they can be used to ensure ARC releases the object at a known
+  // time, which may mean assignment but no other references.
+  if (VD->hasAttr<ObjCPreciseLifetimeAttr>() && Ty->isObjCObjectPointerType())
+    return;
+
   auto iter = RefsMinusAssignments.find(VD);
   if (iter == RefsMinusAssignments.end())
     return;
