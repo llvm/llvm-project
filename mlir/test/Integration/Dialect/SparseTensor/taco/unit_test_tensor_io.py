@@ -49,7 +49,7 @@ def test_read_mtx_matrix_general():
   a.unpack()
   passed += (a.is_unpacked())
   coords, values = a.get_coordinates_and_values()
-  passed += np.allclose(coords, [[0, 1], [2, 0], [2, 1]])
+  passed += np.array_equal(coords, [[0, 1], [2, 0], [2, 1]])
   passed += np.allclose(values, [2.0, 3.0, 4.0])
   # CHECK: 4
   print(passed)
@@ -71,8 +71,8 @@ def test_read_mtx_matrix_symmetry():
   coords, values = a.get_coordinates_and_values()
   print(coords)
   print(values)
-  passed += np.allclose(coords,
-                        [[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1]])
+  passed += np.array_equal(coords,
+                           [[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1]])
   passed += np.allclose(values, [2.0, 3.0, 2.0, 4.0, 3.0, 4.0])
   # CHECK: 4
   print(passed)
@@ -100,7 +100,7 @@ def test_read_tns():
   a.unpack()
   passed += (a.is_unpacked())
   coords, values = a.get_coordinates_and_values()
-  passed += np.allclose(coords, [[0, 1], [2, 0], [2, 1]])
+  passed += np.array_equal(coords, [[0, 1], [2, 0], [2, 1]])
   passed += np.allclose(values, [2.0, 3.0, 4.0])
   # CHECK: 4
   print(passed)
