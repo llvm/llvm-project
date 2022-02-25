@@ -25,17 +25,15 @@ S.insert([1, 1, 1], 3.0)
 S.insert([4, 4, 4], 4.0)
 S.insert([7, 7, 7], 5.0)
 
-# TODO: make this work:
-# X[i, j, k] = alpha[0] * S[i, j, k]
-X[i, j, k] = S[i, j, k]
+X[i, j, k] = alpha[0] * S[i, j, k]
 
 expected = """; extended FROSTT format
 3 4
 8 8 8
-1 1 1 2
-2 2 2 3
-5 5 5 4
-8 8 8 5
+1 1 1 84
+2 2 2 126
+5 5 5 168
+8 8 8 210
 """
 
 # Force evaluation of the kernel by writing out X.
