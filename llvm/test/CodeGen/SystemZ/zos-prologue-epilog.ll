@@ -312,6 +312,22 @@ define i64 @func5(i64 %n) {
   ret i64 %call
 }
 
+; CHECK-LABEL: large_stack
+; CHECK64: agfi  4, -1048768
+; CHECK64-NEXT: llgt  3, 1208
+; CHECK64-NEXT: cg  4, 64(3)
+; CHECK64-NEXT: jhe
+; CHECK64: * %bb.1:
+; CHECK64: lg  3, 72(3)
+; CHECK64: basr  3, 3
+; CHECK64: stmg  6, 7, 2064(4)
+define void @large_stack() {
+  %arr = alloca [131072 x i64], align 8
+  %ptr = bitcast [131072 x i64]* %arr to i8*
+  call i64 (i8*) @fun1(i8* %ptr)
+  ret void
+}
+
 declare i64 @fun(i64 %arg0)
 declare i64 @fun1(i8* %ptr)
 declare i64 @fun2(i64 %n, i64* %arr0, i64* %arr1)

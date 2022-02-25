@@ -42,6 +42,10 @@ let Defs = [R1D, R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
     hasSideEffects = 1 in
   def PROBED_STACKALLOC : Pseudo<(outs), (ins i64imm:$stacksize), []>;
 
+let Defs = [R3D, CC], Uses = [R3D, R4D], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in
+  def XPLINK_STACKALLOC : Pseudo<(outs), (ins), []>;
+
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//
@@ -284,6 +288,10 @@ let Predicates = [IsTargetXPLINK64] in {
                           [(z_call pcrel32:$I2)]>;
     def CallBASR_XPLINK64  : Alias<4, (outs), (ins ADDR64:$R2, variable_ops),
                           [(z_call ADDR64:$R2)]>;
+  }
+
+  let isCall = 1, Defs = [R3D, CC], Uses = [FPC] in {
+    def CallBASR_STACKEXT  : Alias<4, (outs), (ins ADDR64:$R2), []>;
   }
 }
 

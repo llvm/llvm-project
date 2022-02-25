@@ -1153,12 +1153,6 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
   MFFrame.setStackSize(MFFrame.getStackSize() + Regs.getCallFrameSize());
   uint64_t StackSize = MFFrame.getStackSize();
 
-  // FIXME: Implement support for large stack sizes, when the stack extension
-  // routine needs to be called.
-  if (StackSize > 1024 * 1024) {
-    llvm_unreachable("Huge Stack Frame not yet supported on z/OS");
-  }
-
   if (ZFI->getSpillGPRRegs().LowGPR) {
     // Skip over the GPR saves.
     if ((MBBI != MBB.end()) && ((MBBI->getOpcode() == SystemZ::STMG))) {
@@ -1201,6 +1195,18 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
 
     emitIncrement(MBB, InsertPt, DL, Regs.getStackPointerRegister(), Delta,
                   ZII);
+
+    // If the requested stack size is larger than the guard page, then we need
+    // to check if we need to call the stack extender. This requires adding a
+    // conditional branch, but splitting the prologue block is not possible at
+    // this point since it would invalidate the SaveBlocks / RestoreBlocks sets
+    // of PEI in the single block function case. Build a pseudo to be handled
+    // later by inlineStackProbe().
+    const uint64_t GuardPageSize = 1024 * 1024;
+    if (StackSize > GuardPageSize) {
+      assert(StoreInstr && "Wrong insertion point");
+      BuildMI(MBB, InsertPt, DL, ZII->get(SystemZ::XPLINK_STACKALLOC));
+    }
   }
 
   if (HasFP) {
@@ -1237,6 +1243,74 @@ void SystemZXPLINKFrameLowering::emitEpilogue(MachineFunction &MF,
       emitIncrement(MBB, MBBI, DL, SPReg, StackSize, ZII);
     }
   }
+}
+
+// Emit a compare of the stack pointer against the stack floor, and a call to
+// the LE stack extender if needed.
+void SystemZXPLINKFrameLowering::inlineStackProbe(
+    MachineFunction &MF, MachineBasicBlock &PrologMBB) const {
+  auto *ZII =
+      static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  MachineInstr *StackAllocMI = nullptr;
+  for (MachineInstr &MI : PrologMBB)
+    if (MI.getOpcode() == SystemZ::XPLINK_STACKALLOC) {
+      StackAllocMI = &MI;
+      break;
+    }
+  if (StackAllocMI == nullptr)
+    return;
+
+  MachineBasicBlock &MBB = PrologMBB;
+  const DebugLoc DL = StackAllocMI->getDebugLoc();
+
+  // The 2nd half of block MBB after split.
+  MachineBasicBlock *NextMBB;
+
+  // Add new basic block for the call to the stack overflow function.
+  MachineBasicBlock *StackExtMBB =
+      MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+  MF.push_back(StackExtMBB);
+
+  // LG r3,72(,r3)
+  BuildMI(StackExtMBB, DL, ZII->get(SystemZ::LG), SystemZ::R3D)
+      .addReg(SystemZ::R3D)
+      .addImm(72)
+      .addReg(0);
+  // BASR r3,r3
+  BuildMI(StackExtMBB, DL, ZII->get(SystemZ::CallBASR_STACKEXT))
+      .addReg(SystemZ::R3D);
+
+  // LLGT r3,1208
+  BuildMI(MBB, StackAllocMI, DL, ZII->get(SystemZ::LLGT), SystemZ::R3D)
+      .addReg(0)
+      .addImm(1208)
+      .addReg(0);
+  // CG r4,64(,r3)
+  BuildMI(MBB, StackAllocMI, DL, ZII->get(SystemZ::CG))
+      .addReg(SystemZ::R4D)
+      .addReg(SystemZ::R3D)
+      .addImm(64)
+      .addReg(0);
+  // JLL b'0100',F'37'
+  BuildMI(MBB, StackAllocMI, DL, ZII->get(SystemZ::BRC))
+      .addImm(SystemZ::CCMASK_ICMP)
+      .addImm(SystemZ::CCMASK_CMP_LT)
+      .addMBB(StackExtMBB);
+
+  NextMBB = SystemZ::splitBlockBefore(StackAllocMI, &MBB);
+  MBB.addSuccessor(NextMBB);
+  MBB.addSuccessor(StackExtMBB);
+
+  // Add jump back from stack extension BB.
+  BuildMI(StackExtMBB, DL, ZII->get(SystemZ::J)).addMBB(NextMBB);
+  StackExtMBB->addSuccessor(NextMBB);
+
+  StackAllocMI->eraseFromParent();
+
+  // Compute the live-in lists for the new blocks.
+  recomputeLiveIns(*NextMBB);
+  recomputeLiveIns(*StackExtMBB);
 }
 
 bool SystemZXPLINKFrameLowering::hasFP(const MachineFunction &MF) const {
