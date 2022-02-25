@@ -142,6 +142,9 @@ STATISTIC(NumTripCountsNotComputed,
 STATISTIC(NumBruteForceTripCountsComputed,
           "Number of loops with trip counts computed by force");
 
+// FIXME: Enable this with EXPENSIVE_CHECKS when the test suite is clean.
+bool llvm::VerifySCEV = false;
+
 static cl::opt<unsigned>
 MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
                         cl::ZeroOrMore,
@@ -150,9 +153,8 @@ MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
                                  "derived loop"),
                         cl::init(100));
 
-// FIXME: Enable this with EXPENSIVE_CHECKS when the test suite is clean.
-static cl::opt<bool> VerifySCEV(
-    "verify-scev", cl::Hidden,
+static cl::opt<bool, true> VerifySCEVOpt(
+    "verify-scev", cl::Hidden, cl::location(VerifySCEV),
     cl::desc("Verify ScalarEvolution's backedge taken counts (slow)"));
 static cl::opt<bool> VerifySCEVStrict(
     "verify-scev-strict", cl::Hidden,
@@ -13359,8 +13361,14 @@ void ScalarEvolution::verify() const {
     if (!ReachableBlocks.contains(L->getHeader()))
       continue;
 
-    auto *CurBECount = SCM.visit(
-        const_cast<ScalarEvolution *>(this)->getBackedgeTakenCount(L));
+    // Only verify cached BECounts. Computing new BECounts may change the
+    // results of subsequent SCEV uses.
+    auto It = BackedgeTakenCounts.find(L);
+    if (It == BackedgeTakenCounts.end())
+      continue;
+
+    auto *CurBECount =
+        SCM.visit(It->second.getExact(L, const_cast<ScalarEvolution *>(this)));
     auto *NewBECount = SE2.getBackedgeTakenCount(L);
 
     if (CurBECount == SE2.getCouldNotCompute() ||
