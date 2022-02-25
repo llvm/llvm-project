@@ -190,6 +190,44 @@ def SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
 def SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
 def SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
 
+multiclass SDBufferAtomicRetNoRet {
+  def "_ret" : PatFrag<
+    (ops node:$vdata_in, node:$rsrc, node:$vindex, node:$voffset, node:$soffset,
+      node:$offset, node:$cachepolicy, node:$idxen),
+    (!cast<SDNode>(NAME) node:$vdata_in, node:$rsrc, node:$vindex,
+      node:$voffset, node:$soffset, node:$offset, node:$cachepolicy,
+      node:$idxen)> {
+    let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }];
+    let GISelPredicateCode = [{ return true; }];
+  }
+
+  def "_noret" : PatFrag<
+    (ops node:$vdata_in, node:$rsrc, node:$vindex, node:$voffset, node:$soffset,
+      node:$offset, node:$cachepolicy, node:$idxen),
+    (!cast<SDNode>(NAME) node:$vdata_in, node:$rsrc, node:$vindex,
+      node:$voffset, node:$soffset, node:$offset, node:$cachepolicy,
+      node:$idxen)> {
+    let PredicateCode = [{ return SDValue(N, 0).use_empty(); }];
+    let GISelPredicateCode = [{ return false; }];
+  }
+}
+
+defm SIbuffer_atomic_swap : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_add : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_sub : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_smin : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_umin : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_smax : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_umax : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_and : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_or : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_xor : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_inc : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_dec : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_fadd : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_fmin : SDBufferAtomicRetNoRet;
+defm SIbuffer_atomic_fmax : SDBufferAtomicRetNoRet;
+
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
     [SDTCisVT<0, i32>,   // dst
@@ -204,6 +242,26 @@ def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
      SDTCisVT<9, i1>]>,  // idxen(imm)
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
+
+def SIbuffer_atomic_cmpswap_ret : PatFrag<
+  (ops node:$src, node:$cmp, node:$rsrc, node:$vindex, node:$voffset,
+    node:$soffset, node:$offset, node:$cachepolicy, node:$idxen),
+  (SIbuffer_atomic_cmpswap node:$src, node:$cmp, node:$rsrc, node:$vindex,
+    node:$voffset, node:$soffset, node:$offset, node:$cachepolicy,
+    node:$idxen)> {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }];
+  let GISelPredicateCode = [{ return true; }];
+}
+
+def SIbuffer_atomic_cmpswap_noret : PatFrag<
+  (ops node:$src, node:$cmp, node:$rsrc, node:$vindex, node:$voffset,
+    node:$soffset, node:$offset, node:$cachepolicy, node:$idxen),
+  (SIbuffer_atomic_cmpswap node:$src, node:$cmp, node:$rsrc, node:$vindex,
+    node:$voffset, node:$soffset, node:$offset, node:$cachepolicy,
+    node:$idxen)> {
+  let PredicateCode = [{ return SDValue(N, 0).use_empty(); }];
+  let GISelPredicateCode = [{ return false; }];
+}
 
 class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
   SDTypeProfile<0, 2,
