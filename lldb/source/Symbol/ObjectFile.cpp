@@ -556,6 +556,13 @@ size_t ObjectFile::ReadSectionData(Section *section,
                   section_data);
 }
 
+const char *
+ObjectFile::GetCStrFromSection(Section *section,
+                               lldb::offset_t section_offset) const {
+  offset_t offset = section->GetOffset() + section_offset;
+  return m_data.GetCStr(&offset);
+}
+
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
                                             FileSpec &archive_file,
                                             ConstString &archive_object,

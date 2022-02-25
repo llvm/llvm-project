@@ -688,9 +688,11 @@ bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
   }();
 
   llvm::Optional<llvm::StringRef> maybe_segment_name;
+  llvm::Optional<llvm::StringRef> maybe_secondary_segment_name;
   ObjectFile *object_file;
   if (should_register_with_symbol_obj_file) {
     maybe_segment_name = obj_file_format->getSymbolRichSegmentName();
+    maybe_secondary_segment_name = obj_file_format->getSegmentName();
     object_file = module->GetSymbolFile()->GetObjectFile();
   } else {
     maybe_segment_name = obj_file_format->getSegmentName();
@@ -720,41 +722,60 @@ bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     return false;
 
   auto *segment = segment_iter->get();
+  Section *maybe_secondary_segment = nullptr;
+  if (maybe_secondary_segment_name) {
+    auto secondary_segment_name = *maybe_secondary_segment_name;
+    auto segment_iter = llvm::find_if(*section_list, [&](auto segment) {
+      return segment->GetName() == secondary_segment_name.begin();
+    });
 
+    if (segment_iter != section_list->end())
+      maybe_secondary_segment = segment_iter->get();
+  }
+  auto find_section_with_kind = [&](Section *segment,
+                                    swift::ReflectionSectionKind section_kind)
+      -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
+    if (!segment)
+      return {};
+
+    auto section_name = obj_file_format->getSectionName(section_kind);
+    for (auto section : segment->GetChildren()) {
+      // Iterate over the sections until we find the reflection section we
+      // need.
+      if (section->GetName().AsCString() == section_name) {
+        DataExtractor extractor;
+        auto size = section->GetSectionData(extractor);
+        auto data = extractor.GetData();
+        size = section->GetFileSize();
+        if (!data.begin())
+          return {};
+
+        // Alloc a buffer and copy over the reflection section's contents.
+        // This buffer will be owned by reflection context.
+        auto *Buf = malloc(size);
+        std::memcpy(Buf, data.begin(), size);
+
+        // The section's address is the start address for this image
+        // added with the section's virtual address. We need to use the
+        // virtual address instead of the file offset because the offsets
+        // encoded in the reflection section are calculated in the virtual
+        // address space.
+        auto address = start_address + section->GetFileAddress();
+        assert(address <= end_address && "Address outside of range!");
+
+        swift::remote::RemoteRef<void> remote_ref(address, Buf);
+        return {remote_ref, size};
+      }
+    }
+    return {};
+  };
   return m_reflection_ctx->addImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
-        auto section_name = obj_file_format->getSectionName(section_kind);
-        for (auto section : segment->GetChildren()) {
-          // Iterate over the sections until we find the reflection section we
-          // need.
-          if (section->GetName().AsCString() == section_name) {
-            DataExtractor extractor;
-            auto size = section->GetSectionData(extractor);
-            auto data = extractor.GetData();
-            size = section->GetFileSize();
-            if (!data.begin())
-              return {};
-
-            // Alloc a buffer and copy over the reflection section's contents.
-            // This buffer will be owned by reflection context.
-            auto *Buf = malloc(size);
-            std::memcpy(Buf, data.begin(), size);
-
-            // The section's address is the start address for this image
-            // added with the section's virtual address. We need to use the
-            // virtual address instead of the file offset because the offsets
-            // encoded in the reflection section are calculated in the virtual
-            // address space.
-            auto address = start_address + section->GetFileAddress();
-            assert(address <= end_address && "Address outside of range!");
-
-            swift::remote::RemoteRef<void> remote_ref(address, Buf);
-            return {remote_ref, size};
-            ;
-          }
-        }
-        return {};
+        auto pair = find_section_with_kind(segment, section_kind);
+        if (pair.first)
+          return pair;
+        return find_section_with_kind(maybe_secondary_segment, section_kind);
       });
 }
 
