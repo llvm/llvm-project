@@ -117,7 +117,7 @@ elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
 
   setup_abi_lib(
     "-DLIBCXX_BUILDING_LIBCXXABI"
-    "${shared}" "${static}" "cxxabi.h;__cxxabi_config.h" "")
+    "${shared}" "${static}" "cxxabi.h;__cxxabi_config.h;threading_support.h" "")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
   if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")

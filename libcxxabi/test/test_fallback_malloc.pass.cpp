@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <deque>
 
-#include <__threading_support>
+#include "threading_support.h"
 
 typedef std::deque<void *> container;
 

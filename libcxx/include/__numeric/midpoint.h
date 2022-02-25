@@ -16,6 +16,7 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#  pragma clang include_instead(<numeric>)
 #endif
 
 _LIBCPP_PUSH_MACROS

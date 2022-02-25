@@ -14,6 +14,7 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#  pragma clang include_instead(<coroutine>)
 #endif
 
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX20_COROUTINES)
@@ -66,7 +67,7 @@ private:
     friend coroutine_handle<noop_coroutine_promise> noop_coroutine() noexcept;
 
 #if __has_builtin(__builtin_coro_noop)
-    _LIBCPP_HIDE_FROM_ABI coroutine_handle() noexcept { 
+    _LIBCPP_HIDE_FROM_ABI coroutine_handle() noexcept {
         this->__handle_ = __builtin_coro_noop();
     }
 

@@ -16,6 +16,8 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#  pragma clang include_instead(<tuple>)
+#  pragma clang include_instead(<utility>)
 #endif
 
 
