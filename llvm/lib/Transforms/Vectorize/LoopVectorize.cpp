@@ -8593,13 +8593,30 @@ VPRecipeOrVPValueTy VPRecipeBuilder::tryToBlend(PHINode *Phi,
     return Operands[0];
   }
 
+  unsigned NumIncoming = Phi->getNumIncomingValues();
+  // For in-loop reductions, we do not need to create an additional select.
+  VPValue *InLoopVal = nullptr;
+  for (unsigned In = 0; In < NumIncoming; In++) {
+    PHINode *PhiOp =
+        dyn_cast_or_null<PHINode>(Operands[In]->getUnderlyingValue());
+    if (PhiOp && CM.isInLoopReduction(PhiOp)) {
+      assert(!InLoopVal && "Found more than one in-loop reduction!");
+      InLoopVal = Operands[In];
+    }
+  }
+
+  assert((!InLoopVal || NumIncoming == 2) &&
+         "Found an in-loop reduction for PHI with unexpected number of "
+         "incoming values");
+  if (InLoopVal)
+    return Operands[Operands[0] == InLoopVal ? 1 : 0];
+
   // We know that all PHIs in non-header blocks are converted into selects, so
   // we don't have to worry about the insertion order and we can just use the
   // builder. At this point we generate the predication tree. There may be
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
   SmallVector<VPValue *, 2> OperandsWithMask;
-  unsigned NumIncoming = Phi->getNumIncomingValues();
 
   for (unsigned In = 0; In < NumIncoming; In++) {
     VPValue *EdgeMask =
@@ -9423,7 +9440,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           R->getOperand(FirstOpId) == Chain ? FirstOpId + 1 : FirstOpId;
       VPValue *VecOp = Plan->getVPValue(R->getOperand(VecOpId));
 
-      auto *CondOp = CM.foldTailByMasking()
+      auto *CondOp = CM.blockNeedsPredicationForAnyReason(R->getParent())
                          ? RecipeBuilder.createBlockInMask(R->getParent(), Plan)
                          : nullptr;
 

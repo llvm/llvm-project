@@ -143,23 +143,23 @@ def HasSMEF64        : Predicate<"Subtarget->hasSMEF64()">,
 def HasSMEI64        : Predicate<"Subtarget->hasSMEI64()">,
                                  AssemblerPredicate<(all_of FeatureSMEI64), "sme-i64">;
 def HasStreamingSVE  : Predicate<"Subtarget->hasStreamingSVE()">,
-                                 AssemblerPredicate<(all_of FeatureStreamingSVE), "streaming-sve">;
+                                 AssemblerPredicate<(all_of FeatureStreamingSVE), "sme">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorStreamingSVE
     : Predicate<"Subtarget->hasSVE() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureSVE, FeatureStreamingSVE),
-                "streaming-sve or sve">;
+                "sve or sme">;
 def HasSVE2orStreamingSVE
     : Predicate<"Subtarget->hasSVE2() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureSVE2, FeatureStreamingSVE),
-                "streaming-sve or sve2">;
+                "sve2 or sme">;
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorStreamingSVE
     : Predicate<"Subtarget->hasNEON() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureNEON, FeatureStreamingSVE),
-                "streaming-sve or neon">;
+                "neon or sme">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicate<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -1023,6 +1023,15 @@ def : EOR3_pattern<v16i8>;
 def : EOR3_pattern<v8i16>;
 def : EOR3_pattern<v4i32>;
 def : EOR3_pattern<v2i64>;
+
+class BCAX_pattern<ValueType VecTy>
+  : Pat<(xor (VecTy V128:$Vn), (and (VecTy V128:$Vm), (vnot (VecTy V128:$Va)))),
+        (BCAX (VecTy V128:$Vn), (VecTy V128:$Vm), (VecTy V128:$Va))>;
+
+def : BCAX_pattern<v16i8>;
+def : BCAX_pattern<v8i16>;
+def : BCAX_pattern<v4i32>;
+def : BCAX_pattern<v2i64>;
 
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v16i8>;
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v8i16>;

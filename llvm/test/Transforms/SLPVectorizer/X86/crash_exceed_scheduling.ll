@@ -4,20 +4,12 @@
 define void @exceed(double %0, double %1) {
 ; CHECK-LABEL: @exceed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x double> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
-; CHECK-NEXT:    [[IX:%.*]] = fmul double [[TMP7]], undef
 ; CHECK-NEXT:    [[IXX0:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX1:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX2:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX3:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX4:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX5:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[IX1:%.*]] = fmul double [[TMP7]], undef
 ; CHECK-NEXT:    [[IXX10:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX11:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX12:%.*]] = fsub double undef, undef
@@ -27,13 +19,21 @@ define void @exceed(double %0, double %1) {
 ; CHECK-NEXT:    [[IXX20:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX21:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX22:%.*]] = fsub double undef, undef
+; CHECK-NEXT:    [[IXX101:%.*]] = fsub double undef, undef
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x double> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
+; CHECK-NEXT:    [[IX:%.*]] = fmul double [[TMP7]], undef
+; CHECK-NEXT:    [[IX1:%.*]] = fmul double [[TMP7]], undef
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[IX2:%.*]] = fmul double [[TMP8]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[IXX101:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP14]], undef

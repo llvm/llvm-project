@@ -138,7 +138,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 
   if (config::isDebugMode(config::DebugKind::CommonIssues))
     PRINT("Shared memory stack full, fallback to dynamic allocation of global "
-          "memory will negatively impact performance.");
+          "memory will negatively impact performance.\n");
   void *GlobalMemory = memory::allocGlobal(
       AlignedBytes, "Slow path shared memory allocation, insufficient "
                     "shared memory stack memory!");

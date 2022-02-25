@@ -58,9 +58,11 @@ extern FILE *stdin;
 
 #define bool _Bool
 
+char *getenv(const char *name);
 int fscanf(FILE *restrict stream, const char *restrict format, ...);
 int sprintf(char *str, const char *format, ...);
 void setproctitle(const char *fmt, ...);
+void setproctitle_init(int argc, char *argv[], char *envp[]);
 typedef __typeof(sizeof(int)) size_t;
 
 // Define string functions. Use builtin for some of them. They all default to
@@ -403,4 +405,21 @@ void testConfigurationSinks(void) {
 
 void testUnknownFunction(void (*foo)(void)) {
   foo(); // no-crash
+}
+
+void testProctitleFalseNegative(void) {
+  char flag[80];
+  fscanf(stdin, "%79s", flag);
+  char *argv[] = {"myapp", flag};
+  // FIXME: We should have a warning below: Untrusted data passed to sink.
+  setproctitle_init(1, argv, 0);
+}
+
+void testProctitle2(char *real_argv[]) {
+  char *app = getenv("APP_NAME");
+  if (!app)
+    return;
+  char *argv[] = {app, "--foobar"};
+  setproctitle_init(1, argv, 0);         // expected-warning {{Untrusted data is passed to a user-defined sink}}
+  setproctitle_init(1, real_argv, argv); // expected-warning {{Untrusted data is passed to a user-defined sink}}
 }

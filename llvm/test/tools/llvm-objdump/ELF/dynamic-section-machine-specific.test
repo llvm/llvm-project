@@ -86,6 +86,7 @@ ProgramHeaders:
 # MIPS-NEXT:  MIPS_PLTGOT                0x0000000000001000
 # MIPS-NEXT:  MIPS_RWPLT                 0x0000000000001000
 # MIPS-NEXT:  MIPS_RLD_MAP_REL           0x0000000000001000
+# MIPS-NEXT:  MIPS_XHASH                 0x0000000000002000
 
 --- !ELF
 FileHeader:
@@ -187,6 +188,8 @@ Sections:
         Value: 0x1000
       - Tag:   DT_MIPS_RLD_MAP_REL
         Value: 0x1000
+      - Tag:   DT_MIPS_XHASH
+        Value: 0x2000
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:

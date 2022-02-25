@@ -11,6 +11,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -24,6 +25,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -806,7 +808,26 @@ bool DumpModuleInfoAction::BeginInvocation(CompilerInstance &CI) {
   return true;
 }
 
+static StringRef ModuleKindName(Module::ModuleKind MK) {
+  switch (MK) {
+  case Module::ModuleMapModule:
+    return "Module Map Module";
+  case Module::ModuleInterfaceUnit:
+    return "Interface Unit";
+  case Module::ModulePartitionInterface:
+    return "Partition Interface";
+  case Module::ModulePartitionImplementation:
+    return "Partition Implementation";
+  case Module::GlobalModuleFragment:
+    return "Global Module Fragment";
+  case Module::PrivateModuleFragment:
+    return "Private Module Fragment";
+  }
+  llvm_unreachable("unknown module kind!");
+}
+
 void DumpModuleInfoAction::ExecuteAction() {
+  assert(isCurrentFileAST() && "dumping non-AST?");
   // Set up the output file.
   std::unique_ptr<llvm::raw_fd_ostream> OutFile;
   StringRef OutputFileName = getCompilerInstance().getFrontendOpts().OutputFile;
@@ -827,8 +848,87 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts =
-      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // The FrontendAction::BeginSourceFile () method loads the AST so that much
+  // of the information is already available and modules should have been
+  // loaded.
+
+  const LangOptions &LO = getCurrentASTUnit().getLangOpts();
+  if (LO.CPlusPlusModules && !LO.CurrentModule.empty()) {
+
+    ASTReader *R = getCurrentASTUnit().getASTReader().get();
+    unsigned SubModuleCount = R->getTotalNumSubmodules();
+    serialization::ModuleFile &MF = R->getModuleManager().getPrimaryModule();
+    Out << "  ====== C++20 Module structure ======\n";
+
+    if (MF.ModuleName != LO.CurrentModule)
+      Out << "  Mismatched module names : " << MF.ModuleName << " and "
+          << LO.CurrentModule << "\n";
+
+    struct SubModInfo {
+      unsigned Idx;
+      Module *Mod;
+      Module::ModuleKind Kind;
+      std::string &Name;
+      bool Seen;
+    };
+    std::map<std::string, SubModInfo> SubModMap;
+    auto PrintSubMapEntry = [&](std::string Name, Module::ModuleKind Kind) {
+      Out << "    " << ModuleKindName(Kind) << " '" << Name << "'";
+      auto I = SubModMap.find(Name);
+      if (I == SubModMap.end())
+        Out << " was not found in the sub modules!\n";
+      else {
+        I->second.Seen = true;
+        Out << " is at index #" << I->second.Idx << "\n";
+      }
+    };
+    Module *Primary = nullptr;
+    for (unsigned Idx = 0; Idx <= SubModuleCount; ++Idx) {
+      Module *M = R->getModule(Idx);
+      if (!M)
+        continue;
+      if (M->Name == LO.CurrentModule) {
+        Primary = M;
+        Out << "  " << ModuleKindName(M->Kind) << " '" << LO.CurrentModule
+            << "' is the Primary Module at index #" << Idx << "\n";
+        SubModMap.insert({M->Name, {Idx, M, M->Kind, M->Name, true}});
+      } else
+        SubModMap.insert({M->Name, {Idx, M, M->Kind, M->Name, false}});
+    }
+    if (Primary) {
+      if (!Primary->submodules().empty())
+        Out << "   Sub Modules:\n";
+      for (auto MI : Primary->submodules()) {
+        PrintSubMapEntry(MI->Name, MI->Kind);
+      }
+      if (!Primary->Imports.empty())
+        Out << "   Imports:\n";
+      for (auto IMP : Primary->Imports) {
+        PrintSubMapEntry(IMP->Name, IMP->Kind);
+      }
+      if (!Primary->Exports.empty())
+        Out << "   Exports:\n";
+      for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
+        if (Module *M = Primary->Exports[MN].getPointer()) {
+          PrintSubMapEntry(M->Name, M->Kind);
+        }
+      }
+    }
+    // Now let's print out any modules we did not see as part of the Primary.
+    for (auto SM : SubModMap) {
+      if (!SM.second.Seen && SM.second.Mod) {
+        Out << "  " << ModuleKindName(SM.second.Kind) << " '" << SM.first
+            << "' at index #" << SM.second.Idx
+            << " has no direct reference in the Primary\n";
+      }
+    }
+    Out << "  ====== ======\n";
+  }
+
+  // The reminder of the output is produced from the listener as the AST
+  // FileCcontrolBlock is (re-)parsed.
   ASTReader::readASTFileControlBlock(
       getCurrentFile(), FileMgr, getCompilerInstance().getPCHContainerReader(),
       /*FindModuleFileExtensions=*/true, Listener,

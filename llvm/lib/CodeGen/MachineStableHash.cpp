@@ -64,7 +64,10 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_Register:
     if (Register::isVirtualRegister(MO.getReg())) {
       const MachineRegisterInfo &MRI = MO.getParent()->getMF()->getRegInfo();
-      return MRI.getVRegDef(MO.getReg())->getOpcode();
+      SmallVector<unsigned> DefOpcodes;
+      for (auto &Def : MRI.def_instructions(MO.getReg()))
+        DefOpcodes.push_back(Def.getOpcode());
+      return hash_combine_range(DefOpcodes.begin(), DefOpcodes.end());
     }
 
     // Register operands don't have target flags.
@@ -189,6 +192,24 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
     HashComponents.push_back(static_cast<unsigned>(Op->getFailureOrdering()));
   }
 
+  return stable_hash_combine_range(HashComponents.begin(),
+                                   HashComponents.end());
+}
+
+stable_hash llvm::stableHashValue(const MachineBasicBlock &MBB) {
+  SmallVector<stable_hash> HashComponents;
+  // TODO: Hash more stuff like block alignment and branch probabilities.
+  for (auto &MI : MBB)
+    HashComponents.push_back(stableHashValue(MI));
+  return stable_hash_combine_range(HashComponents.begin(),
+                                   HashComponents.end());
+}
+
+stable_hash llvm::stableHashValue(const MachineFunction &MF) {
+  SmallVector<stable_hash> HashComponents;
+  // TODO: Hash lots more stuff like function alignment and stack objects.
+  for (auto &MBB : MF)
+    HashComponents.push_back(stableHashValue(MBB));
   return stable_hash_combine_range(HashComponents.begin(),
                                    HashComponents.end());
 }

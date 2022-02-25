@@ -47,12 +47,18 @@ bool PrescanAndParseAction::BeginSourceFileAction() {
 }
 
 bool PrescanAndSemaAction::BeginSourceFileAction() {
-  return RunPrescan() && RunParse() && RunSemanticChecks();
+  return RunPrescan() && RunParse() && RunSemanticChecks() &&
+      GenerateRtTypeTables();
 }
 
 bool PrescanAndSemaDebugAction::BeginSourceFileAction() {
-  // Semantic checks are made to succeed unconditionally.
-  return RunPrescan() && RunParse() && (RunSemanticChecks() || true);
+  // This is a "debug" action for development purposes. To facilitate this, the
+  // semantic checks are made to succeed unconditionally to prevent this action
+  // from exiting early (i.e. in the presence of semantic errors). We should
+  // never do this in actions intended for end-users or otherwise regular
+  // compiler workflows!
+  return RunPrescan() && RunParse() && (RunSemanticChecks() || true) &&
+      (GenerateRtTypeTables() || true);
 }
 
 bool CodeGenAction::BeginSourceFileAction() {
@@ -218,25 +224,18 @@ void DebugUnparseWithSymbolsAction::ExecuteAction() {
 
 void DebugDumpSymbolsAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
-  auto &semantics = ci.semantics();
 
-  auto tables{Fortran::semantics::BuildRuntimeDerivedTypeTables(
-      instance().invocation().semanticsContext())};
-  // The runtime derived type information table builder may find and report
-  // semantic errors. So it is important that we report them _after_
-  // BuildRuntimeDerivedTypeTables is run.
-  reportFatalSemanticErrors();
-
-  if (!tables.schemata) {
+  if (!ci.getRtTyTables().schemata) {
     unsigned DiagID =
         ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
             "could not find module file for __fortran_type_info");
     ci.diagnostics().Report(DiagID);
     llvm::errs() << "\n";
+    return;
   }
 
   // Dump symbols
-  semantics.DumpSymbols(llvm::outs());
+  ci.semantics().DumpSymbols(llvm::outs());
 }
 
 void DebugDumpAllAction::ExecuteAction() {
@@ -250,27 +249,20 @@ void DebugDumpAllAction::ExecuteAction() {
   Fortran::parser::DumpTree(
       llvm::outs(), parseTree, &ci.invocation().asFortran());
 
-  auto &semantics = ci.semantics();
-  auto tables{Fortran::semantics::BuildRuntimeDerivedTypeTables(
-      instance().invocation().semanticsContext())};
-  // The runtime derived type information table builder may find and report
-  // semantic errors. So it is important that we report them _after_
-  // BuildRuntimeDerivedTypeTables is run.
-  reportFatalSemanticErrors();
-
-  if (!tables.schemata) {
+  if (!ci.getRtTyTables().schemata) {
     unsigned DiagID =
         ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
             "could not find module file for __fortran_type_info");
     ci.diagnostics().Report(DiagID);
     llvm::errs() << "\n";
+    return;
   }
 
   // Dump symbols
   llvm::outs() << "=====================";
   llvm::outs() << " Flang: symbols dump ";
   llvm::outs() << "=====================\n";
-  semantics.DumpSymbols(llvm::outs());
+  ci.semantics().DumpSymbols(llvm::outs());
 }
 
 void DebugDumpParseTreeNoSemaAction::ExecuteAction() {

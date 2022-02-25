@@ -22,7 +22,7 @@ How to report a security issue?
 
 To report a security issue in the LLVM Project, please `open a new issue`_ in the LLVM project page, on the chromium issue tracker.  Be sure to use the "Security bug report" template.
 
-We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by sending a message to the `llvm-dev mailing list`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
+We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by posting on the `Discourse forums`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
 
 
 Group Composition
@@ -177,7 +177,7 @@ We also occasionally need to discuss logistics of the LLVM Security Group itself
 * Propose member removal.
 * Suggest policy changes.
 
-We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on public LLVM mailing lists.  For internal or confidential discussions, we also use a private mailing list.
+We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on the Discourse forums.  For internal or confidential discussions, we also use a private mailing list.
 
 Process
 =======
@@ -230,6 +230,6 @@ The parts of the LLVM Project which are currently treated as non-security sensit
 .. _open a new issue: https://bugs.chromium.org/p/llvm/issues/entry
 .. _chromium issue tracker: https://crbug.com
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
-.. _llvm-dev mailing list: https://lists.llvm.org/mailman/listinfo/llvm-dev
+.. _Discourse forums: https://discourse.llvm.org
 .. _MITRE: https://cve.mitre.org
 .. _example nomination is available here: https://reviews.llvm.org/D99232

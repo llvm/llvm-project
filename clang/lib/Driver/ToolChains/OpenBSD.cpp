@@ -123,6 +123,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+
   if (ToolChain.getArch() == llvm::Triple::mips64)
     CmdArgs.push_back("-EB");
   else if (ToolChain.getArch() == llvm::Triple::mips64el)

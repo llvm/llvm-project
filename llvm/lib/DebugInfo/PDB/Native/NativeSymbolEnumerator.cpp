@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeSymbolEnumerator.h"
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 

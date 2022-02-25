@@ -239,6 +239,11 @@ static cl::opt<unsigned> MaxPhiSCCAnalysisSize(
              "Phi strongly connected components"),
     cl::init(8));
 
+static cl::opt<bool>
+    EnableFiniteLoopControl("scalar-evolution-finite-loop", cl::Hidden,
+                            cl::desc("Handle <= and >= in finite loops"),
+                            cl::init(true));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -8068,7 +8073,6 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     if (LoopUsersItr != LoopUsers.end()) {
       ToForget.insert(ToForget.end(), LoopUsersItr->second.begin(),
                 LoopUsersItr->second.end());
-      LoopUsers.erase(LoopUsersItr);
     }
 
     // Drop information about expressions based on loop-header PHIs.
@@ -8661,7 +8665,8 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
       ControlsExit && loopHasNoAbnormalExits(L) && loopIsFiniteByAssumption(L);
   // Simplify the operands before analyzing them.
   (void)SimplifyICmpOperands(Pred, LHS, RHS, /*Depth=*/0,
-                             ControllingFiniteLoop);
+                             (EnableFiniteLoopControl ? ControllingFiniteLoop
+                                                     : false));
 
   // If we have a comparison of a chrec against a constant, try to use value
   // ranges to answer this query.
@@ -13527,10 +13532,8 @@ void ScalarEvolution::verify() const {
   SmallVector<Loop *, 32> Worklist(LI.begin(), LI.end());
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
-    if (ValidLoops.contains(L))
-      continue;
-    ValidLoops.insert(L);
-    Worklist.append(L->begin(), L->end());
+    if (ValidLoops.insert(L).second)
+      Worklist.append(L->begin(), L->end());
   }
   for (auto &KV : ValueExprMap) {
 #ifndef NDEBUG

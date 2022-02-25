@@ -31,7 +31,8 @@ _MTX_FILENAME_SUFFIX = ".mtx"
 _TNS_FILENAME_SUFFIX = ".tns"
 
 
-def read(filename: str, fmt: Format) -> Tensor:
+def read(filename: str, fmt: Format,
+         dtype: DType = DType(Type.FLOAT32)) -> Tensor:
   """Inputs a tensor from a given file.
 
   The name suffix of the file specifies the format of the input tensor. We
@@ -40,6 +41,7 @@ def read(filename: str, fmt: Format) -> Tensor:
   Args:
     filename: A string input filename.
     fmt: The storage format of the tensor.
+    dtype: The data type, default to float32.
 
   Raises:
     ValueError: If filename doesn't end with .mtx or .tns, or fmt is not an
@@ -52,7 +54,7 @@ def read(filename: str, fmt: Format) -> Tensor:
                      f"{_MTX_FILENAME_SUFFIX} or {_TNS_FILENAME_SUFFIX}: "
                      f"{filename}.")
 
-  return Tensor.from_file(filename, fmt, DType(Type.FLOAT64))
+  return Tensor.from_file(filename, fmt, dtype)
 
 
 def write(filename: str, tensor: Tensor) -> None:

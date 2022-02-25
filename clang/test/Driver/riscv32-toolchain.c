@@ -197,6 +197,20 @@
 // C-RV32-RTLIB-COMPILERRT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins-riscv32.a"
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtend-riscv32.o"
 
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree --sysroot= \
+// RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
+// RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
+// RESOURCE-INC: "-internal-isystem" "{{.*}}/Inputs/resource_dir{{/|\\\\}}include"
+// RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree{{.*}}riscv32-unknown-elf{{/|\\\\}}include"
+
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree --sysroot= \
+// RUN:   -resource-dir=%s/Inputs/resource_dir -nobuiltininc 2>&1 \
+// RUN:   | FileCheck -check-prefix=NO-RESOURCE-INC %s
+// NO-RESOURCE-INC-NOT: "-internal-isystem" "{{.*}}/Inputs/resource_dir{{/|\\\\}}include"
+// NO-RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree/{{.*}}riscv32-unknown-elf{{/|\\\\}}include"
+
 // RUN: %clang -target riscv32 %s -emit-llvm -S -o - | FileCheck %s
 
 typedef __builtin_va_list va_list;

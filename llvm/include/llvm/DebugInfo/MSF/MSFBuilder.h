@@ -11,7 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -21,6 +21,8 @@
 namespace llvm {
 class FileBufferByteStream;
 namespace msf {
+
+struct MSFLayout;
 
 class MSFBuilder {
 public:

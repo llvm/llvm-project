@@ -1625,6 +1625,7 @@ def : InstRW<[P10W_PM_4C, P10W_DISP_ANY, P10PM_Read],
       (instrs
     LVSL,
     LVSR,
+    LXVKQ,
     MFVSRLD,
     MTVSRWS,
     VCLZLSBB,

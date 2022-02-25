@@ -10,35 +10,33 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAMBUILDER_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 
 #include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/BinaryStreamRef.h"
 
 namespace llvm {
+
+class BinaryStreamWriter;
 namespace codeview {
 struct FrameData;
 }
 namespace msf {
 class MSFBuilder;
-}
-namespace object {
-struct coff_section;
-struct FpoData;
+struct MSFLayout;
 }
 namespace pdb {
-class DbiStream;
-struct DbiStreamHeader;
 class DbiModuleDescriptorBuilder;
-class PDBFile;
 
 class DbiStreamBuilder {
 public:
@@ -134,7 +132,7 @@ private:
   std::vector<SecMapEntry> SectionMap;
   std::array<Optional<DebugStream>, (int)DbgHeaderType::Max> DbgStreams;
 };
-}
+} // namespace pdb
 }
 
 #endif

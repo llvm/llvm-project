@@ -1327,10 +1327,10 @@ static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
   }
 }
 
-/// changeFPCCToAArch64CC - Convert an IR fp condition code to an AArch64 CC.
-static void changeFPCCToAArch64CC(CmpInst::Predicate CC,
-                                  AArch64CC::CondCode &CondCode,
-                                  AArch64CC::CondCode &CondCode2) {
+/// changeFPCCToORAArch64CC - Convert an IR fp condition code to an AArch64 CC.
+static void changeFPCCToORAArch64CC(CmpInst::Predicate CC,
+                                    AArch64CC::CondCode &CondCode,
+                                    AArch64CC::CondCode &CondCode2) {
   CondCode2 = AArch64CC::AL;
   switch (CC) {
   default:
@@ -1391,7 +1391,7 @@ static void changeFPCCToANDAArch64CC(CmpInst::Predicate CC,
   CondCode2 = AArch64CC::AL;
   switch (CC) {
   default:
-    changeFPCCToAArch64CC(CC, CondCode, CondCode2);
+    changeFPCCToORAArch64CC(CC, CondCode, CondCode2);
     assert(CondCode2 == AArch64CC::AL);
     break;
   case CmpInst::FCMP_ONE:
@@ -4861,7 +4861,7 @@ static bool canEmitConjunction(Register Val, bool &CanNegate, bool &MustBeFirst,
       if (!CanNegateL && !CanNegateR)
         return false;
       // If we the result of the OR will be negated and we can naturally negate
-      // the leafs, then this sub-tree as a whole negates naturally.
+      // the leaves, then this sub-tree as a whole negates naturally.
       CanNegate = WillNegate && CanNegateL && CanNegateR;
       // If we cannot naturally negate the whole sub-tree, then this must be
       // emitted first.
@@ -4930,7 +4930,6 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
     CmpInst::Predicate CC = Cmp->getCond();
     if (Negate)
       CC = CmpInst::getInversePredicate(CC);
-    // We only handle integer compares for now.
     if (isa<GICmp>(Cmp)) {
       OutCC = changeICMPPredToAArch64CC(CC);
     } else {
@@ -5044,18 +5043,12 @@ MachineInstr *AArch64InstructionSelector::emitConjunction(
 
 bool AArch64InstructionSelector::tryOptSelectConjunction(GSelect &SelI,
                                                          MachineInstr &CondMI) {
-  MachineRegisterInfo &MRI = *MIB.getMRI();
   AArch64CC::CondCode AArch64CC;
   MachineInstr *ConjMI = emitConjunction(SelI.getCondReg(), AArch64CC, MIB);
   if (!ConjMI)
     return false;
-  auto CSel =
-      MIB.buildInstr(MRI.getType(SelI.getReg(0)).getSizeInBits() == 32
-                         ? AArch64::CSELWr
-                         : AArch64::CSELXr,
-                     {SelI.getReg(0)}, {SelI.getTrueReg(), SelI.getFalseReg()})
-          .addImm(AArch64CC);
-  constrainSelectedInstRegOperands(*CSel, TII, TRI, RBI);
+
+  emitSelect(SelI.getReg(0), SelI.getTrueReg(), SelI.getFalseReg(), AArch64CC, MIB);
   SelI.eraseFromParent();
   return true;
 }

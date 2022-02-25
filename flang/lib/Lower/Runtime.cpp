@@ -8,6 +8,7 @@
 
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
@@ -38,13 +39,15 @@ void Fortran::lower::genStopStatement(
     const Fortran::parser::StopStmt &stmt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
   llvm::SmallVector<mlir::Value> operands;
   mlir::FuncOp callee;
   mlir::FunctionType calleeType;
   // First operand is stop code (zero if absent)
   if (const auto &code =
           std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
-    auto expr = converter.genExprValue(*Fortran::semantics::GetExpr(*code));
+    auto expr =
+        converter.genExprValue(*Fortran::semantics::GetExpr(*code), stmtCtx);
     LLVM_DEBUG(llvm::dbgs() << "stop expression: "; expr.dump();
                llvm::dbgs() << '\n');
     expr.match(
@@ -88,7 +91,7 @@ void Fortran::lower::genStopStatement(
           std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(stmt.t)) {
     const SomeExpr *expr = Fortran::semantics::GetExpr(*quiet);
     assert(expr && "failed getting typed expression");
-    mlir::Value q = fir::getBase(converter.genExprValue(*expr));
+    mlir::Value q = fir::getBase(converter.genExprValue(*expr, stmtCtx));
     operands.push_back(
         builder.createConvert(loc, calleeType.getInput(operands.size()), q));
   } else {

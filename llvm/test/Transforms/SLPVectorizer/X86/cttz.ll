@@ -168,10 +168,10 @@ define void @cttz_8i32() #0 {
 ;
 ; SSE42-LABEL: @cttz_8i32(
 ; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP1]], i1 false)
-; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP2]], i1 false)
-; SSE42-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP1]], i1 false)
+; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP3]], i1 false)
 ; SSE42-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
 ; SSE42-NEXT:    ret void
 ;
@@ -245,10 +245,10 @@ define void @cttz_8i16() #0 {
 define void @cttz_16i16() #0 {
 ; SSE-LABEL: @cttz_16i16(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP1]], i1 false)
-; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP2]], i1 false)
-; SSE-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP1]], i1 false)
+; SSE-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP3]], i1 false)
 ; SSE-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8) to <8 x i16>*), align 2
 ; SSE-NEXT:    ret void
 ;
@@ -370,10 +370,10 @@ define void @cttz_16i8() #0 {
 define void @cttz_32i8() #0 {
 ; SSE-LABEL: @cttz_32i8(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP1]], i1 false)
-; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP2]], i1 false)
-; SSE-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP1]], i1 false)
+; SSE-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP3]], i1 false)
 ; SSE-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
 ; SSE-NEXT:    ret void
 ;
@@ -630,10 +630,10 @@ define void @cttz_undef_8i32() #0 {
 ;
 ; SSE42-LABEL: @cttz_undef_8i32(
 ; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP1]], i1 true)
-; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP2]], i1 true)
-; SSE42-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP1]], i1 true)
+; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP3]], i1 true)
 ; SSE42-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
 ; SSE42-NEXT:    ret void
 ;
@@ -707,10 +707,10 @@ define void @cttz_undef_8i16() #0 {
 define void @cttz_undef_16i16() #0 {
 ; SSE-LABEL: @cttz_undef_16i16(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP1]], i1 true)
-; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP2]], i1 true)
-; SSE-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP1]], i1 true)
+; SSE-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP3]], i1 true)
 ; SSE-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8) to <8 x i16>*), align 2
 ; SSE-NEXT:    ret void
 ;
@@ -832,10 +832,10 @@ define void @cttz_undef_16i8() #0 {
 define void @cttz_undef_32i8() #0 {
 ; SSE-LABEL: @cttz_undef_32i8(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP1]], i1 true)
-; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP2]], i1 true)
-; SSE-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP1]], i1 true)
+; SSE-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP3]], i1 true)
 ; SSE-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
 ; SSE-NEXT:    ret void
 ;

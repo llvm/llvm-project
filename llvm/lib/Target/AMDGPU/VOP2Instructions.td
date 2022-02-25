@@ -357,7 +357,6 @@ class VOP2_to_VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> :
 }
 
 class VOP_MADK_Base<ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
-  dag InsVOPDXDeferred = ?;
   string AsmVOPDXDeferred = ?;
 }
 
@@ -367,6 +366,7 @@ class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
                         (ins VSrc_f32_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm),
                         (ins VSrc_f16_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm));
   field dag InsVOPDX = (ins VSrc_f32_Deferred:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
+  // Note that both src0X and imm are deferred
   let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immDeferred);
   field dag InsVOPDY = (ins VSrc_f32_Deferred:$src0Y, VGPR_32:$vsrc1Y, ImmOpType:$imm);
 

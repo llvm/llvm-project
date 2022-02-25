@@ -2456,7 +2456,12 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
                                  HasSDWAOMod, Src0ModSDWA, Src1ModSDWA,
                                  DstVT>.ret;
   field dag InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X);
+  // It is a slight misnomer to use the deferred f32 operand type for non-float
+  // operands, but this operand type will only be used if the other dual
+  // component is FMAAK or FMAMK
+  field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
+  field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;

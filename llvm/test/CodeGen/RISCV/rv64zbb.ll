@@ -947,8 +947,8 @@ define i32 @abs_i32(i32 %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    srai a1, a0, 63
-; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs_i32:
@@ -961,14 +961,13 @@ define i32 @abs_i32(i32 %x) {
   ret i32 %abs
 }
 
-; FIXME: We can remove the sext.w by using addw for RV64I and negw for RV64ZBB.
+; FIXME: We can remove the sext.w on RV64ZBB by using negw.
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a1, a0, 63
-; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs_i32_sext:
@@ -987,8 +986,8 @@ define i64 @abs_i64(i64 %x) {
 ; RV64I-LABEL: abs_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a1, a0, 63
-; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs_i64:

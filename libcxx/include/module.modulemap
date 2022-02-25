@@ -248,6 +248,7 @@ module std [system] {
       module generate                 { private header "__algorithm/generate.h" }
       module generate_n               { private header "__algorithm/generate_n.h" }
       module half_positive            { private header "__algorithm/half_positive.h" }
+      module in_found_result          { private header "__algorithm/in_found_result.h" }
       module in_fun_result            { private header "__algorithm/in_fun_result.h" }
       module in_in_out_result         { private header "__algorithm/in_in_out_result.h" }
       module in_in_result             { private header "__algorithm/in_in_result.h" }
@@ -270,6 +271,7 @@ module std [system] {
       module merge                    { private header "__algorithm/merge.h" }
       module min                      { private header "__algorithm/min.h" }
       module min_element              { private header "__algorithm/min_element.h" }
+      module min_max_result           { private header "__algorithm/min_max_result.h" }
       module minmax                   { private header "__algorithm/minmax.h" }
       module minmax_element           { private header "__algorithm/minmax_element.h" }
       module mismatch                 { private header "__algorithm/mismatch.h" }

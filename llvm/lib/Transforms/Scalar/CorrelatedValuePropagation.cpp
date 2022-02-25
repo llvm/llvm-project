@@ -245,10 +245,19 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // value can never be that constant. In that case replace the incoming
   // value with the other value of the select. This often allows us to
   // remove the select later.
+
+  // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
     if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
         LazyValueInfo::False)
       return SI->getTrueValue();
+
+  // The "true" case,
+  // similar to the select "false" case, but try the select "true" value
+  if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
+    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
+        LazyValueInfo::False)
+      return SI->getFalseValue();
 
   return nullptr;
 }

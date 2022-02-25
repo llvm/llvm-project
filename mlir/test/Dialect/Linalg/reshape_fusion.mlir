@@ -533,27 +533,28 @@ func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
 
 // -----
 
-func @no_fuse_mismatched_dynamism(%arg0: tensor<1x1xi64>, %arg1: tensor<?xi64>) -> tensor<1xi64> {
-  %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<1x1xi64> into tensor<1xi64>
-  %1 = linalg.init_tensor [1] : tensor<1xi64>
+func @no_fuse_mismatched_dynamism(%arg0: tensor<2x1xi64>, %arg1: tensor<?xi64>) -> tensor<2xi64> {
+  %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<2x1xi64> into tensor<2xi64>
+  %1 = linalg.init_tensor [2] : tensor<2xi64>
   %2 = linalg.generic
     {indexing_maps = [affine_map<(d0) -> (d0)>,
                       affine_map<(d0) -> (d0)>,
                       affine_map<(d0) -> (d0)>],
      iterator_types = ["parallel"]}
-    ins(%0, %arg1 : tensor<1xi64>, tensor<?xi64>)
-    outs(%1 : tensor<1xi64>) {
+    ins(%0, %arg1 : tensor<2xi64>, tensor<?xi64>)
+    outs(%1 : tensor<2xi64>) {
   ^bb0(%arg4: i64, %arg5: i64, %arg6: i64):  
     %3 = arith.addi %arg4, %arg5 : i64
     linalg.yield %3 : i64
-  } -> tensor<1xi64>
-  return %2 : tensor<1xi64>
+  } -> tensor<2xi64>
+  return %2 : tensor<2xi64>
 }
 
 //      CHECK: func @no_fuse_mismatched_dynamism
-// CHECK-SAME:     %[[ARG0:.+]]: tensor<1x1xi64>
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<2x1xi64>
 // CHECK-SAME:     %[[ARG1:.+]]: tensor<?xi64>
 //      CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %[[ARG0]]
+//      CHECK:   %[[CAST:.+]] = tensor.cast %[[ARG1]] : tensor<?xi64> to tensor<2xi64>
 //      CHECK:   %[[GENERIC:.+]] = linalg.generic
-// CHECK-SAME:       ins(%[[RESHAPE]], %[[ARG1]] : tensor<1xi64>, tensor<?xi64>)
+// CHECK-SAME:       ins(%[[RESHAPE]], %[[CAST]] : tensor<2xi64>, tensor<2xi64>)
 //      CHECK:   return %[[GENERIC]]

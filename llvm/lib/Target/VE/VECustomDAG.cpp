@@ -25,6 +25,12 @@ bool isPackedVectorType(EVT SomeVT) {
   return SomeVT.getVectorNumElements() > StandardVectorWidth;
 }
 
+MVT splitVectorType(MVT VT) {
+  if (!VT.isVector())
+    return VT;
+  return MVT::getVectorVT(VT.getVectorElementType(), StandardVectorWidth);
+}
+
 MVT getLegalVectorType(Packing P, MVT ElemVT) {
   return MVT::getVectorVT(ElemVT, P == Packing::Normal ? StandardVectorWidth
                                                        : PackedVectorWidth);
@@ -39,6 +45,17 @@ bool isMaskType(EVT SomeVT) {
   if (!SomeVT.isVector())
     return false;
   return SomeVT.getVectorElementType() == MVT::i1;
+}
+
+bool isMaskArithmetic(SDValue Op) {
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return isMaskType(Op.getValueType());
+  }
 }
 
 /// \returns the VVP_* SDNode opcode corresponsing to \p OC.
@@ -70,6 +87,31 @@ bool maySafelyIgnoreMask(SDValue Op) {
   default:
     return true;
   }
+}
+
+bool supportsPackedMode(unsigned Opcode, EVT IdiomVT) {
+  bool IsPackedOp = isPackedVectorType(IdiomVT);
+  bool IsMaskOp = isMaskType(IdiomVT);
+  switch (Opcode) {
+  default:
+    return false;
+
+  case VEISD::VEC_BROADCAST:
+    return true;
+#define REGISTER_PACKED(VVP_NAME) case VEISD::VVP_NAME:
+#include "VVPNodes.def"
+    return IsPackedOp && !IsMaskOp;
+  }
+}
+
+bool isPackingSupportOpcode(unsigned Opc) {
+  switch (Opc) {
+  case VEISD::VEC_PACK:
+  case VEISD::VEC_UNPACK_LO:
+  case VEISD::VEC_UNPACK_HI:
+    return true;
+  }
+  return false;
 }
 
 bool isVVPOrVEC(unsigned Opcode) {
@@ -114,10 +156,34 @@ Optional<int> getAVLPos(unsigned Opc) {
   return None;
 }
 
+Optional<int> getMaskPos(unsigned Opc) {
+  // This is only available for VP SDNodes
+  auto PosOpt = ISD::getVPMaskIdx(Opc);
+  if (PosOpt)
+    return *PosOpt;
+
+  // VVP Opcodes.
+  if (isVVPBinaryOp(Opc))
+    return 2;
+
+  // VM Opcodes.
+  switch (Opc) {
+  case VEISD::VVP_SELECT:
+    return 2;
+  }
+
+  return None;
+}
+
 bool isLegalAVL(SDValue AVL) { return AVL->getOpcode() == VEISD::LEGALAVL; }
 
 SDValue getNodeAVL(SDValue Op) {
   auto PosOpt = getAVLPos(Op->getOpcode());
+  return PosOpt ? Op->getOperand(*PosOpt) : SDValue();
+}
+
+SDValue getNodeMask(SDValue Op) {
+  auto PosOpt = getMaskPos(Op->getOpcode());
   return PosOpt ? Op->getOperand(*PosOpt) : SDValue();
 }
 
@@ -204,6 +270,47 @@ SDValue VECustomDAG::annotateLegalAVL(SDValue AVL) const {
   if (isLegalAVL(AVL))
     return AVL;
   return getNode(VEISD::LEGALAVL, AVL.getValueType(), AVL);
+}
+
+SDValue VECustomDAG::getUnpack(EVT DestVT, SDValue Vec, PackElem Part,
+                               SDValue AVL) const {
+  assert(getAnnotatedNodeAVL(AVL).second && "Expected a pack-legalized AVL");
+
+  // TODO: Peek through VEC_PACK and VEC_BROADCAST(REPL_<sth> ..) operands.
+  unsigned OC =
+      (Part == PackElem::Lo) ? VEISD::VEC_UNPACK_LO : VEISD::VEC_UNPACK_HI;
+  return DAG.getNode(OC, DL, DestVT, Vec, AVL);
+}
+
+SDValue VECustomDAG::getPack(EVT DestVT, SDValue LoVec, SDValue HiVec,
+                             SDValue AVL) const {
+  assert(getAnnotatedNodeAVL(AVL).second && "Expected a pack-legalized AVL");
+
+  // TODO: Peek through VEC_UNPACK_LO|HI operands.
+  return DAG.getNode(VEISD::VEC_PACK, DL, DestVT, LoVec, HiVec, AVL);
+}
+
+VETargetMasks VECustomDAG::getTargetSplitMask(SDValue RawMask, SDValue RawAVL,
+                                              PackElem Part) const {
+  // Adjust AVL for this part
+  SDValue NewAVL;
+  SDValue OneV = getConstant(1, MVT::i32);
+  if (Part == PackElem::Hi)
+    NewAVL = getNode(ISD::ADD, MVT::i32, {RawAVL, OneV});
+  else
+    NewAVL = RawAVL;
+  NewAVL = getNode(ISD::SRL, MVT::i32, {NewAVL, OneV});
+
+  NewAVL = annotateLegalAVL(NewAVL);
+
+  // Legalize Mask (unpack or all-true)
+  SDValue NewMask;
+  if (!RawMask)
+    NewMask = getConstantMask(Packing::Normal, true);
+  else
+    NewMask = getUnpack(MVT::v256i1, RawMask, Part, NewAVL);
+
+  return VETargetMasks(NewMask, NewAVL);
 }
 
 } // namespace llvm

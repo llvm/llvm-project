@@ -2,7 +2,7 @@
 ;
 ; Check that the disable_nonforced metadata is honored; optimization
 ; heuristics/rescheduling must not be applied.
-; 
+;
 define void @func(i32 %n, double* noalias nonnull %A) {
 entry:
   br label %for

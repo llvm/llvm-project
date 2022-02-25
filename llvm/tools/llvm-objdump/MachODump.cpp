@@ -81,6 +81,7 @@ bool objdump::DataInCode;
 bool objdump::FunctionStarts;
 bool objdump::LinkOptHints;
 bool objdump::InfoPlist;
+bool objdump::DyldInfo;
 bool objdump::DylibsUsed;
 bool objdump::DylibId;
 bool objdump::Verbose;
@@ -111,6 +112,7 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   FunctionStarts = InputArgs.hasArg(OBJDUMP_function_starts);
   LinkOptHints = InputArgs.hasArg(OBJDUMP_link_opt_hints);
   InfoPlist = InputArgs.hasArg(OBJDUMP_info_plist);
+  DyldInfo = InputArgs.hasArg(OBJDUMP_dyld_info);
   DylibsUsed = InputArgs.hasArg(OBJDUMP_dylibs_used);
   DylibId = InputArgs.hasArg(OBJDUMP_dylib_id);
   Verbose = !InputArgs.hasArg(OBJDUMP_non_verbose);
@@ -1182,6 +1184,20 @@ static void PrintLinkOptHints(MachOObjectFile *O) {
   }
 }
 
+static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
+  Error Err = Error::success();
+  for (const object::MachOChainedFixupEntry &Entry : Obj->fixupTable(Err)) {
+    (void)Entry;
+  }
+  if (Err)
+    reportError(std::move(Err), Obj->getFileName());
+}
+
+static void PrintDyldInfo(MachOObjectFile *O) {
+  outs() << "dyld information:" << '\n';
+  printMachOChainedFixups(O);
+}
+
 static void PrintDylibs(MachOObjectFile *O, bool JustId) {
   unsigned Index = 0;
   for (const auto &Load : O->load_commands()) {
@@ -1900,8 +1916,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   // UniversalHeaders or ArchiveHeaders.
   if (Disassemble || Relocations || PrivateHeaders || ExportsTrie || Rebase ||
       Bind || SymbolTable || LazyBind || WeakBind || IndirectSymbols ||
-      DataInCode || FunctionStarts || LinkOptHints || DylibsUsed || DylibId ||
-      Rpaths || ObjcMetaData || (!FilterSections.empty())) {
+      DataInCode || FunctionStarts || LinkOptHints || DyldInfo || DylibsUsed ||
+      DylibId || Rpaths || ObjcMetaData || (!FilterSections.empty())) {
     if (LeadingHeaders) {
       outs() << Name;
       if (!ArchiveMemberName.empty())
@@ -1970,6 +1986,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     DumpSectionContents(FileName, MachOOF, Verbose);
   if (InfoPlist)
     DumpInfoPlistSectionContents(FileName, MachOOF);
+  if (DyldInfo)
+    PrintDyldInfo(MachOOF);
   if (DylibsUsed)
     PrintDylibs(MachOOF, false);
   if (DylibId)

@@ -179,11 +179,14 @@ function(add_asan_tests arch test_runtime)
     set("${test_objects}" "${${test_objects}}" PARENT_SCOPE)
   endfunction()
 
+  set(TARGET_LINK_FLAGS)
+  get_target_link_flags_for_arch(${arch} TARGET_LINK_FLAGS)
+
   set(ASAN_INST_TEST_OBJECTS)
   generate_asan_tests(ASAN_INST_TEST_OBJECTS AsanUnitTests
     "Asan-${arch}${TEST_KIND}-Test"
     SUBDIR "${CONFIG_NAME}"
-    LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS}
+    LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS}
     SOURCES ${ASAN_INST_TEST_SOURCES}
     CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${TEST_CFLAGS})
 
@@ -209,7 +212,7 @@ function(add_asan_tests arch test_runtime)
         SUBDIR "${CONFIG_NAME_DYNAMIC}"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
         DEPS asan ${ASAN_INST_TEST_OBJECTS}
-        LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
+        LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS}
         )
     endif()
   endif()
@@ -220,7 +223,7 @@ function(add_asan_tests arch test_runtime)
     AsanUnitTests "Asan-${arch}${TEST_KIND}-Noinst-Test"
     SUBDIR "${CONFIG_NAME}"
     CFLAGS ${ASAN_UNITTEST_COMMON_CFLAGS}
-    LINK_FLAGS ${ASAN_UNITTEST_NOINST_LINK_FLAGS}
+    LINK_FLAGS ${ASAN_UNITTEST_NOINST_LINK_FLAGS} ${TARGET_LINK_FLAGS}
     SOURCES ${ASAN_NOINST_TEST_SOURCES}
     RUNTIME ${test_runtime})
 
@@ -230,7 +233,7 @@ function(add_asan_tests arch test_runtime)
     SUBDIR "${CONFIG_NAME}"
     CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS}
     SOURCES ${ASAN_BENCHMARKS_SOURCES}
-    LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
+    LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS})
 endfunction()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)

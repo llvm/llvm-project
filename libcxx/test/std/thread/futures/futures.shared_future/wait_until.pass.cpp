@@ -17,9 +17,10 @@
 //   future_status
 //   wait_until(const chrono::time_point<Clock, Duration>& abs_time) const;
 
-#include <future>
 #include <atomic>
 #include <cassert>
+#include <chrono>
+#include <future>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

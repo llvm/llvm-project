@@ -281,13 +281,20 @@ bool needsComdatForCounter(const Function &F, const Module &M);
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
   Unknown = 0x0,
-  FE = 0x1, // A frontend clang profile, incompatible with other attrs.
-  IR = 0x2, // An IR-level profile (default when -fprofile-generate is used).
-  BB = 0x4, // A profile with entry basic block instrumentation.
-  CS = 0x8, // A context sensitive IR-level profile.
-  SingleByteCoverage = 0x10, // Use single byte probes for coverage.
-  FunctionEntryOnly = 0x20,  // Only instrument the function entry basic block.
-  MemProf = 0x40, // A memory profile collected using -fprofile=memory.
+  // A frontend clang profile, incompatible with other attrs.
+  FrontendInstrumentation = 0x1,
+  // An IR-level profile (default when -fprofile-generate is used).
+  IRInstrumentation = 0x2,
+  // A profile with entry basic block instrumentation.
+  FunctionEntryInstrumentation = 0x4,
+  // A context sensitive IR-level profile.
+  ContextSensitive = 0x8,
+  // Use single byte probes for coverage.
+  SingleByteCoverage = 0x10,
+  // Only instrument the function entry basic block.
+  FunctionEntryOnly = 0x20,
+  // A memory profile collected using -fprofile=memory.
+  MemProf = 0x40,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/MemProf)
 };
 

@@ -40,26 +40,35 @@ struct SymbolInfoTy {
 
 private:
   bool IsXCOFF;
+  bool HasType;
 
 public:
   SymbolInfoTy(uint64_t Addr, StringRef Name,
                Optional<XCOFF::StorageMappingClass> Smc, Optional<uint32_t> Idx,
                bool Label)
-      : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true) {}
-  SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
-      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(false) {}
+      : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true),
+        HasType(false) {}
+  SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type,
+               bool IsXCOFF = false)
+      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(IsXCOFF), HasType(true) {}
   bool isXCOFF() const { return IsXCOFF; }
 
 private:
   friend bool operator<(const SymbolInfoTy &P1, const SymbolInfoTy &P2) {
-    assert(P1.IsXCOFF == P2.IsXCOFF &&
-           "P1.IsXCOFF should be equal to P2.IsXCOFF.");
+    assert((P1.IsXCOFF == P2.IsXCOFF && P1.HasType == P2.HasType) &&
+           "The value of IsXCOFF and HasType in P1 and P2 should be the same "
+           "respectively.");
+
+    if (P1.IsXCOFF && P1.HasType)
+      return std::tie(P1.Addr, P1.Type, P1.Name) <
+             std::tie(P2.Addr, P2.Type, P2.Name);
+
     if (P1.IsXCOFF)
       return std::tie(P1.Addr, P1.XCOFFSymInfo, P1.Name) <
              std::tie(P2.Addr, P2.XCOFFSymInfo, P2.Name);
 
     return std::tie(P1.Addr, P1.Name, P1.Type) <
-             std::tie(P2.Addr, P2.Name, P2.Type);
+           std::tie(P2.Addr, P2.Name, P2.Type);
   }
 };
 

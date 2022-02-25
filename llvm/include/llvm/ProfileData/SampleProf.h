@@ -1056,8 +1056,6 @@ public:
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
 
-  static SampleProfileFormat Format;
-
   /// Whether the profile uses MD5 to represent string.
   static bool UseMD5;
 

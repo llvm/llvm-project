@@ -1219,14 +1219,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       break;
     }
 
-    Type *Ty = getTypeByID(Record[0]);
+    unsigned TyID = Record[0];
+    Type *Ty = getTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy()) {
       dropRecord();
       break;
     }
 
     MetadataList.assignValue(
-        LocalAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty)),
+        LocalAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty, TyID)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1239,14 +1240,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Size = Record.size();
     SmallVector<Metadata *, 8> Elts;
     for (unsigned i = 0; i != Size; i += 2) {
-      Type *Ty = getTypeByID(Record[i]);
+      unsigned TyID = Record[i];
+      Type *Ty = getTypeByID(TyID);
       if (!Ty)
         return error("Invalid record");
       if (Ty->isMetadataTy())
         Elts.push_back(getMD(Record[i + 1]));
       else if (!Ty->isVoidTy()) {
-        auto *MD =
-            ValueAsMetadata::get(ValueList.getValueFwdRef(Record[i + 1], Ty));
+        auto *MD = ValueAsMetadata::get(
+            ValueList.getValueFwdRef(Record[i + 1], Ty, TyID));
         assert(isa<ConstantAsMetadata>(MD) &&
                "Expected non-function-local metadata");
         Elts.push_back(MD);
@@ -1261,12 +1263,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() != 2)
       return error("Invalid record");
 
-    Type *Ty = getTypeByID(Record[0]);
+    unsigned TyID = Record[0];
+    Type *Ty = getTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
     MetadataList.assignValue(
-        ValueAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty)),
+        ValueAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty, TyID)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

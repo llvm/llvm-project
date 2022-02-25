@@ -21,17 +21,6 @@ namespace {
 static const llvm::StringRef OptSuffix = "_opt";
 static const llvm::StringRef StartSymbol = "_";
 
-void initTerminals(std::vector<std::string> &Out) {
-  Out.clear();
-  Out.reserve(NumTerminals);
-  for (unsigned I = 0; I < NumTerminals; ++I) {
-    tok::TokenKind K = static_cast<tok::TokenKind>(I);
-    if (const auto *Punc = tok::getPunctuatorSpelling(K))
-      Out.push_back(Punc);
-    else
-      Out.push_back(llvm::StringRef(tok::getTokenName(K)).upper());
-  }
-}
 // Builds grammar from BNF files.
 class GrammarBuilder {
 public:
@@ -53,7 +42,6 @@ public:
            "Optional symbols should be eliminated!");
 
     auto T = std::make_unique<GrammarTable>();
-    initTerminals(T->Terminals);
 
     // Assemble the name->ID and ID->nonterminal name maps.
     llvm::DenseSet<llvm::StringRef> UniqueNonterminals;

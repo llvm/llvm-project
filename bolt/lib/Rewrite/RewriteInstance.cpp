@@ -448,7 +448,7 @@ static bool shouldDisassemble(const BinaryFunction &BF) {
   return !BF.isIgnored();
 }
 
-void RewriteInstance::discoverStorage() {
+Error RewriteInstance::discoverStorage() {
   NamedRegionTimer T("discoverStorage", "discover storage", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
 
@@ -465,8 +465,11 @@ void RewriteInstance::discoverStorage() {
 
   NextAvailableAddress = 0;
   uint64_t NextAvailableOffset = 0;
-  ELF64LE::PhdrRange PHs =
-      cantFail(Obj.program_headers(), "program_headers() failed");
+  Expected<ELF64LE::PhdrRange> PHsOrErr = Obj.program_headers();
+  if (Error E = PHsOrErr.takeError())
+    return E;
+
+  ELF64LE::PhdrRange PHs = PHsOrErr.get();
   for (const ELF64LE::Phdr &Phdr : PHs) {
     switch (Phdr.p_type) {
     case ELF::PT_LOAD:
@@ -490,12 +493,18 @@ void RewriteInstance::discoverStorage() {
   }
 
   for (const SectionRef &Section : InputFile->sections()) {
-    StringRef SectionName = cantFail(Section.getName());
+    Expected<StringRef> SectionNameOrErr = Section.getName();
+    if (Error E = SectionNameOrErr.takeError())
+      return E;
+    StringRef SectionName = SectionNameOrErr.get();
     if (SectionName == ".text") {
       BC->OldTextSectionAddress = Section.getAddress();
       BC->OldTextSectionSize = Section.getSize();
 
-      StringRef SectionContents = cantFail(Section.getContents());
+      Expected<StringRef> SectionContentsOrErr = Section.getContents();
+      if (Error E = SectionContentsOrErr.takeError())
+        return E;
+      StringRef SectionContents = SectionContentsOrErr.get();
       BC->OldTextSectionOffset =
           SectionContents.data() - InputFile->getData().data();
     }
@@ -503,15 +512,15 @@ void RewriteInstance::discoverStorage() {
     if (!opts::HeatmapMode &&
         !(opts::AggregateOnly && BAT->enabledFor(InputFile)) &&
         (SectionName.startswith(getOrgSecPrefix()) ||
-         SectionName == getBOLTTextSectionName())) {
-      errs() << "BOLT-ERROR: input file was processed by BOLT. "
-                "Cannot re-optimize.\n";
-      exit(1);
-    }
+         SectionName == getBOLTTextSectionName()))
+      return createStringError(
+          errc::function_not_supported,
+          "BOLT-ERROR: input file was processed by BOLT. Cannot re-optimize");
   }
 
-  assert(NextAvailableAddress && NextAvailableOffset &&
-         "no PT_LOAD pheader seen");
+  if (!NextAvailableAddress || !NextAvailableOffset)
+    return createStringError(errc::executable_format_error,
+                             "no PT_LOAD pheader seen");
 
   outs() << "BOLT-INFO: first alloc address is 0x"
          << Twine::utohexstr(BC->FirstAllocAddress) << '\n';
@@ -566,11 +575,12 @@ void RewriteInstance::discoverStorage() {
 
   // Tools such as objcopy can strip section contents but leave header
   // entries. Check that at least .text is mapped in the file.
-  if (!getFileOffsetForAddress(BC->OldTextSectionAddress)) {
-    errs() << "BOLT-ERROR: input binary is not a valid ELF executable as its "
-              "text section is not mapped to a valid segment\n";
-    exit(1);
-  }
+  if (!getFileOffsetForAddress(BC->OldTextSectionAddress))
+    return createStringError(errc::executable_format_error,
+                             "BOLT-ERROR: input binary is not a valid ELF "
+                             "executable as its text section is not "
+                             "mapped to a valid segment");
+  return Error::success();
 }
 
 void RewriteInstance::parseSDTNotes() {
@@ -744,11 +754,8 @@ void RewriteInstance::patchBuildID() {
   outs() << "BOLT-INFO: patched build-id (flipped last bit)\n";
 }
 
-void RewriteInstance::run() {
-  if (!BC) {
-    errs() << "BOLT-ERROR: failed to create a binary context\n";
-    return;
-  }
+Error RewriteInstance::run() {
+  assert(BC && "failed to create a binary context");
 
   outs() << "BOLT-INFO: Target architecture: "
          << Triple::getArchTypeName(
@@ -756,7 +763,8 @@ void RewriteInstance::run() {
          << "\n";
   outs() << "BOLT-INFO: BOLT version: " << BoltRevision << "\n";
 
-  discoverStorage();
+  if (Error E = discoverStorage())
+    return E;
   readSpecialSections();
   adjustCommandLineOptions();
   discoverFileObjects();
@@ -767,7 +775,7 @@ void RewriteInstance::run() {
   // aggregation job.
   if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
     processProfileData();
-    return;
+    return Error::success();
   }
 
   selectFunctionsToProcess();
@@ -785,7 +793,7 @@ void RewriteInstance::run() {
   postProcessFunctions();
 
   if (opts::DiffOnly)
-    return;
+    return Error::success();
 
   runOptimizationPasses();
 
@@ -795,14 +803,15 @@ void RewriteInstance::run() {
 
   if (opts::LinuxKernelMode) {
     errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
-    return;
+    return Error::success();
   } else if (opts::OutputFilename == "/dev/null") {
     outs() << "BOLT-INFO: skipping writing final binary to disk\n";
-    return;
+    return Error::success();
   }
 
   // Rewrite allocatable contents and copy non-allocatable parts with mods.
   rewriteFile();
+  return Error::success();
 }
 
 void RewriteInstance::discoverFileObjects() {
@@ -2293,6 +2302,12 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
       }
     }
 
+    MCSymbol *ReferencedSymbol = nullptr;
+    if (!IsSectionRelocation) {
+      if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
+        ReferencedSymbol = BD->getSymbol();
+    }
+
     // PC-relative relocations from data to code are tricky since the original
     // information is typically lost after linking even with '--emit-relocs'.
     // They are normally used by PIC-style jump tables and reference both
@@ -2301,16 +2316,19 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     // that it references an arbitrary location in the code, possibly even
     // in a different function from that containing the jump table.
     if (!IsAArch64 && Relocation::isPCRelative(RType)) {
-      // Just register the fact that we have PC-relative relocation at a given
-      // address. The actual referenced label/address cannot be determined
-      // from linker data alone.
+      // For relocations against non-code sections, just register the fact that
+      // we have a PC-relative relocation at a given address. The actual
+      // referenced label/address cannot be determined from linker data alone.
       if (!IsFromCode)
         BC->addPCRelativeDataRelocation(Rel.getOffset());
-
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
-                 << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
-                 << "\n");
+      else if (!IsSectionRelocation && ReferencedSymbol)
+        ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
+                                    Addend, ExtractedValue);
+      else
+        LLVM_DEBUG(
+            dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
+                   << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
+                   << "\n");
       continue;
     }
 
@@ -2390,7 +2408,6 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
       }
     }
 
-    MCSymbol *ReferencedSymbol = nullptr;
     if (ForceRelocation) {
       std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
       ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);

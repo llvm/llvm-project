@@ -2,7 +2,7 @@
 ;
 ;    int f(int *A, int *B) {
 ;      // Possible aliasing between A and B but if not then *B would be
-;      // invariant. We assume this and hoist *B but need to use a merged 
+;      // invariant. We assume this and hoist *B but need to use a merged
 ;      // version in the return.
 ;      int i = 0;
 ;      int x = 0;

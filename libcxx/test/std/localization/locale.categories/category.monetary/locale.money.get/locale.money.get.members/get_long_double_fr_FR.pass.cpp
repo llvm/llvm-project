@@ -11,7 +11,6 @@
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
 // XFAIL: LIBCXX-AIX-FIXME
 
 // REQUIRES: locale.fr_FR.UTF-8
@@ -53,11 +52,12 @@ public:
         : Fw(refs) {}
 };
 
-// GLIBC 2.27 and newer use U2027 (narrow non-breaking space) as a thousands sep.
-// this function converts the spaces in string inputs to that character if need
-// be. FreeBSD's locale data also uses U2027 since 2018.
+// GLIBC 2.27 and newer use U+202F NARROW NO-BREAK SPACE as a thousands separator.
+// This function converts the spaces in string inputs to U+202F if need
+// be. FreeBSD's locale data also uses U+202F, since 2018.
+// Windows uses U+00A0 NO-BREAK SPACE.
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-#if defined(_CS_GNU_LIBC_VERSION) || defined(__FreeBSD__)
+#if defined(_CS_GNU_LIBC_VERSION) || defined(__FreeBSD__) || defined(_WIN32)
 #if defined(_CS_GNU_LIBC_VERSION)
   if (glibc_version_less_than("2.27"))
     return in;
@@ -72,7 +72,11 @@ static std::wstring convert_thousands_sep(std::wstring const& in) {
       continue;
     }
     assert(in[I] == L' ');
+#if defined(_WIN32)
+    out.push_back(L'\u00A0');
+#else
     out.push_back(L'\u202F');
+#endif
   }
   return out;
 #else

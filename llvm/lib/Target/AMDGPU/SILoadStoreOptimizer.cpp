@@ -79,6 +79,8 @@ enum InstClassEnum {
   MIMG,
   TBUFFER_LOAD,
   TBUFFER_STORE,
+  GLOBAL_LOAD,
+  GLOBAL_LOAD_SADDR
 };
 
 struct AddressRegs {
@@ -86,6 +88,7 @@ struct AddressRegs {
   bool SBase = false;
   bool SRsrc = false;
   bool SOffset = false;
+  bool SAddr = false;
   bool VAddr = false;
   bool Addr = false;
   bool SSamp = false;
@@ -185,6 +188,9 @@ private:
   AliasAnalysis *AA = nullptr;
   bool OptimizeAgain;
 
+  bool canSwapInstructions(const DenseSet<Register> &ARegDefs,
+                           const DenseSet<Register> &ARegUses,
+                           const MachineInstr &A, const MachineInstr &B) const;
   static bool dmasksCanBeCombined(const CombineInfo &CI,
                                   const SIInstrInfo &TII,
                                   const CombineInfo &Paired);
@@ -199,38 +205,40 @@ private:
                                                     const CombineInfo &Paired);
   const TargetRegisterClass *getDataRegClass(const MachineInstr &MI) const;
 
-  bool checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired,
-                            SmallVectorImpl<MachineInstr *> &InstsToMove);
+  CombineInfo *checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired);
 
   unsigned read2Opcode(unsigned EltSize) const;
   unsigned read2ST64Opcode(unsigned EltSize) const;
-  MachineBasicBlock::iterator mergeRead2Pair(CombineInfo &CI,
-                                             CombineInfo &Paired,
-                  const SmallVectorImpl<MachineInstr *> &InstsToMove);
+  MachineBasicBlock::iterator
+  mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
+                 MachineBasicBlock::iterator InsertBefore);
 
   unsigned write2Opcode(unsigned EltSize) const;
   unsigned write2ST64Opcode(unsigned EltSize) const;
   MachineBasicBlock::iterator
   mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
-                  const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                  MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
-                 const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                 MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeSBufferLoadImmPair(CombineInfo &CI, CombineInfo &Paired,
-                          const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                          MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeBufferLoadPair(CombineInfo &CI, CombineInfo &Paired,
-                      const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                      MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeBufferStorePair(CombineInfo &CI, CombineInfo &Paired,
-                       const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                       MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeTBufferLoadPair(CombineInfo &CI, CombineInfo &Paired,
-                       const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                       MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeTBufferStorePair(CombineInfo &CI, CombineInfo &Paired,
-                        const SmallVectorImpl<MachineInstr *> &InstsToMove);
+                        MachineBasicBlock::iterator InsertBefore);
+  MachineBasicBlock::iterator
+  mergeGlobalLoadPair(CombineInfo &CI, CombineInfo &Paired,
+                      MachineBasicBlock::iterator InsertBefore);
 
   void updateBaseAndOffset(MachineInstr &I, Register NewBase,
                            int32_t NewOffset) const;
@@ -298,10 +306,19 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
 
   switch (Opc) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
+  case AMDGPU::GLOBAL_LOAD_DWORD:
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
     return 2;
+  case AMDGPU::GLOBAL_LOAD_DWORDX3:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+    return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return 8;
@@ -386,6 +403,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B64_gfx9:
     return DS_WRITE;
+  case AMDGPU::GLOBAL_LOAD_DWORD:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4:
+    return GLOBAL_LOAD;
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+    return GLOBAL_LOAD_SADDR;
   }
 }
 
@@ -419,6 +446,16 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
+  case AMDGPU::GLOBAL_LOAD_DWORD:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4:
+    return AMDGPU::GLOBAL_LOAD_DWORD;
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+    return AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
   }
 }
 
@@ -480,6 +517,18 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::DS_WRITE_B32_gfx9:
   case AMDGPU::DS_WRITE_B64_gfx9:
     Result.Addr = true;
+    return Result;
+  case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
+    Result.SAddr = true;
+    LLVM_FALLTHROUGH;
+  case AMDGPU::GLOBAL_LOAD_DWORD:
+  case AMDGPU::GLOBAL_LOAD_DWORDX2:
+  case AMDGPU::GLOBAL_LOAD_DWORDX3:
+  case AMDGPU::GLOBAL_LOAD_DWORDX4:
+    Result.VAddr = true;
     return Result;
   }
 }
@@ -552,6 +601,9 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   if (Regs.SOffset)
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::soffset);
+  if (Regs.SAddr)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
   if (Regs.VAddr)
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
@@ -580,74 +632,31 @@ FunctionPass *llvm::createSILoadStoreOptimizerPass() {
   return new SILoadStoreOptimizer();
 }
 
-static void moveInstsAfter(MachineBasicBlock::iterator I,
-                           ArrayRef<MachineInstr *> InstsToMove) {
-  MachineBasicBlock *MBB = I->getParent();
-  ++I;
-  for (MachineInstr *MI : InstsToMove) {
-    MI->removeFromParent();
-    MBB->insert(I, MI);
-  }
-}
-
 static void addDefsUsesToList(const MachineInstr &MI,
                               DenseSet<Register> &RegDefs,
-                              DenseSet<Register> &PhysRegUses) {
-  for (const MachineOperand &Op : MI.operands()) {
-    if (Op.isReg()) {
-      if (Op.isDef())
-        RegDefs.insert(Op.getReg());
-      else if (Op.readsReg() && Op.getReg().isPhysical())
-        PhysRegUses.insert(Op.getReg());
-    }
-  }
-}
-
-static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
-                                      MachineBasicBlock::iterator B,
-                                      AliasAnalysis *AA) {
-  // RAW or WAR - cannot reorder
-  // WAW - cannot reorder
-  // RAR - safe to reorder
-  return !(A->mayStore() || B->mayStore()) || !A->mayAlias(AA, *B, true);
-}
-
-// Add MI and its defs to the lists if MI reads one of the defs that are
-// already in the list. Returns true in that case.
-static bool addToListsIfDependent(MachineInstr &MI, DenseSet<Register> &RegDefs,
-                                  DenseSet<Register> &PhysRegUses,
-                                  SmallVectorImpl<MachineInstr *> &Insts) {
-  for (MachineOperand &Use : MI.operands()) {
-    // If one of the defs is read, then there is a use of Def between I and the
-    // instruction that I will potentially be merged with. We will need to move
-    // this instruction after the merged instructions.
-    //
-    // Similarly, if there is a def which is read by an instruction that is to
-    // be moved for merging, then we need to move the def-instruction as well.
-    // This can only happen for physical registers such as M0; virtual
-    // registers are in SSA form.
-    if (Use.isReg() && ((Use.readsReg() && RegDefs.count(Use.getReg())) ||
-                        (Use.isDef() && RegDefs.count(Use.getReg())) ||
-                        (Use.isDef() && Use.getReg().isPhysical() &&
-                         PhysRegUses.count(Use.getReg())))) {
-      Insts.push_back(&MI);
-      addDefsUsesToList(MI, RegDefs, PhysRegUses);
-      return true;
-    }
-  }
-
-  return false;
-}
-
-static bool canMoveInstsAcrossMemOp(MachineInstr &MemOp,
-                                    ArrayRef<MachineInstr *> InstsToMove,
-                                    AliasAnalysis *AA) {
-  assert(MemOp.mayLoadOrStore());
-
-  for (MachineInstr *InstToMove : InstsToMove) {
-    if (!InstToMove->mayLoadOrStore())
+                              DenseSet<Register> &RegUses) {
+  for (const auto &Op : MI.operands()) {
+    if (!Op.isReg())
       continue;
-    if (!memAccessesCanBeReordered(MemOp, *InstToMove, AA))
+    if (Op.isDef())
+      RegDefs.insert(Op.getReg());
+    if (Op.readsReg())
+      RegUses.insert(Op.getReg());
+  }
+}
+
+bool SILoadStoreOptimizer::canSwapInstructions(
+    const DenseSet<Register> &ARegDefs, const DenseSet<Register> &ARegUses,
+    const MachineInstr &A, const MachineInstr &B) const {
+  if (A.mayLoadOrStore() && B.mayLoadOrStore() &&
+      (A.mayStore() || B.mayStore()) && A.mayAlias(AA, B, true))
+    return false;
+  for (const auto &BOp : B.operands()) {
+    if (!BOp.isReg())
+      continue;
+    if ((BOp.isDef() || BOp.readsReg()) && ARegDefs.contains(BOp.getReg()))
+      return false;
+    if (BOp.isDef() && ARegUses.contains(BOp.getReg()))
       return false;
   }
   return true;
@@ -788,8 +797,7 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
     return (EltOffset0 + CI.Width == EltOffset1 ||
             EltOffset1 + Paired.Width == EltOffset0) &&
-           CI.CPol == Paired.CPol &&
-           (CI.InstClass == S_BUFFER_LOAD_IMM || CI.CPol == Paired.CPol);
+           CI.CPol == Paired.CPol;
   }
 
   // If the offset in elements doesn't fit in 8-bits, we might be able to use
@@ -890,78 +898,51 @@ SILoadStoreOptimizer::getDataRegClass(const MachineInstr &MI) const {
   return nullptr;
 }
 
-/// This function assumes that CI comes before Paired in a basic block.
-bool SILoadStoreOptimizer::checkAndPrepareMerge(
-    CombineInfo &CI, CombineInfo &Paired,
-    SmallVectorImpl<MachineInstr *> &InstsToMove) {
+/// This function assumes that CI comes before Paired in a basic block. Return
+/// an insertion point for the merged instruction or nullptr on failure.
+SILoadStoreOptimizer::CombineInfo *
+SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
+                                           CombineInfo &Paired) {
   // If another instruction has already been merged into CI, it may now be a
   // type that we can't do any further merging into.
   if (CI.InstClass == UNKNOWN || Paired.InstClass == UNKNOWN)
-    return false;
+    return nullptr;
   assert(CI.InstClass == Paired.InstClass);
 
   if (getInstSubclass(CI.I->getOpcode(), *TII) !=
       getInstSubclass(Paired.I->getOpcode(), *TII))
-    return false;
+    return nullptr;
 
   // Check both offsets (or masks for MIMG) can be combined and fit in the
   // reduced range.
   if (CI.InstClass == MIMG) {
     if (!dmasksCanBeCombined(CI, *TII, Paired))
-      return false;
+      return nullptr;
   } else {
     if (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STM, Paired))
-      return false;
+      return nullptr;
   }
 
-  DenseSet<Register> RegDefsToMove;
-  DenseSet<Register> PhysRegUsesToMove;
-  addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
-
-  MachineBasicBlock::iterator MBBE = CI.I->getParent()->end();
-  for (MachineBasicBlock::iterator MBBI = CI.I; ++MBBI != Paired.I;) {
-    if (MBBI == MBBE) {
-      // CombineInfo::Order is a hint on the instruction ordering within the
-      // basic block. This hint suggests that CI precedes Paired, which is
-      // true most of the time. However, moveInstsAfter() processing a
-      // previous list may have changed this order in a situation when it
-      // moves an instruction which exists in some other merge list.
-      // In this case it must be dependent.
-      return false;
+  DenseSet<Register> RegDefs;
+  DenseSet<Register> RegUses;
+  CombineInfo *Where;
+  if (CI.I->mayLoad()) {
+    // Try to hoist Paired up to CI.
+    addDefsUsesToList(*Paired.I, RegDefs, RegUses);
+    for (MachineBasicBlock::iterator MBBI = Paired.I; --MBBI != CI.I;) {
+      if (!canSwapInstructions(RegDefs, RegUses, *Paired.I, *MBBI))
+        return nullptr;
     }
-
-    // Keep going as long as one of these conditions are met:
-    // 1. It is safe to move I down past MBBI.
-    // 2. It is safe to move MBBI down past the instruction that I will
-    //    be merged into.
-
-    if (MBBI->mayLoadOrStore() &&
-        (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
-         !canMoveInstsAcrossMemOp(*MBBI, InstsToMove, AA))) {
-      // We fail condition #1, but we may still be able to satisfy condition
-      // #2.  Add this instruction to the move list and then we will check
-      // if condition #2 holds once we have selected the matching instruction.
-      InstsToMove.push_back(&*MBBI);
-      addDefsUsesToList(*MBBI, RegDefsToMove, PhysRegUsesToMove);
-      continue;
+    Where = &CI;
+  } else {
+    // Try to sink CI down to Paired.
+    addDefsUsesToList(*CI.I, RegDefs, RegUses);
+    for (MachineBasicBlock::iterator MBBI = CI.I; ++MBBI != Paired.I;) {
+      if (!canSwapInstructions(RegDefs, RegUses, *CI.I, *MBBI))
+        return nullptr;
     }
-
-    // When we match I with another load/store instruction we will be moving I
-    // down to the location of the matched instruction any uses of I will need
-    // to be moved down as well.
-    addToListsIfDependent(*MBBI, RegDefsToMove, PhysRegUsesToMove, InstsToMove);
+    Where = &Paired;
   }
-
-  // If Paired depends on any of the instructions we plan to move, give up.
-  if (addToListsIfDependent(*Paired.I, RegDefsToMove, PhysRegUsesToMove,
-                            InstsToMove))
-    return false;
-
-  // We need to go through the list of instructions that we plan to
-  // move and make sure they are all safe to move down past the merged
-  // instruction.
-  if (!canMoveInstsAcrossMemOp(*Paired.I, InstsToMove, AA))
-    return false;
 
   // Call offsetsCanBeCombined with modify = true so that the offsets are
   // correct for the new instruction.  This should return true, because
@@ -969,7 +950,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
   // have already been confirmed to be mergeable.
   if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
     offsetsCanBeCombined(CI, *STM, Paired, true);
-  return true;
+  return Where;
 }
 
 unsigned SILoadStoreOptimizer::read2Opcode(unsigned EltSize) const {
@@ -988,7 +969,7 @@ unsigned SILoadStoreOptimizer::read2ST64Opcode(unsigned EltSize) const {
 
 MachineBasicBlock::iterator
 SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
-    const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+                                     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
 
   // Be careful, since the addresses could be subregisters themselves in weird
@@ -1027,13 +1008,13 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
     Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, Paired.I, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
+    BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
         .addImm(CI.BaseOff);
 
     BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BaseRegFlags = RegState::Kill;
 
-    TII->getAddNoCarry(*MBB, Paired.I, DL, BaseReg)
+    TII->getAddNoCarry(*MBB, InsertBefore, DL, BaseReg)
         .addReg(ImmReg)
         .addReg(AddrReg->getReg(), 0, BaseSubReg)
         .addImm(0); // clamp bit
@@ -1041,7 +1022,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   }
 
   MachineInstrBuilder Read2 =
-      BuildMI(*MBB, Paired.I, DL, Read2Desc, DestReg)
+      BuildMI(*MBB, InsertBefore, DL, Read2Desc, DestReg)
           .addReg(BaseReg, BaseRegFlags, BaseSubReg) // addr
           .addImm(NewOffset0)                        // offset0
           .addImm(NewOffset1)                        // offset1
@@ -1053,14 +1034,12 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
 
   // Copy to the old destination registers.
-  BuildMI(*MBB, Paired.I, DL, CopyDesc)
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
       .addReg(DestReg, 0, SubRegIdx0);
-  MachineInstr *Copy1 = BuildMI(*MBB, Paired.I, DL, CopyDesc)
-                            .add(*Dest1)
-                            .addReg(DestReg, RegState::Kill, SubRegIdx1);
-
-  moveInstsAfter(Copy1, InstsToMove);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1085,9 +1064,9 @@ unsigned SILoadStoreOptimizer::write2ST64Opcode(unsigned EltSize) const {
                         : AMDGPU::DS_WRITE2ST64_B64_gfx9;
 }
 
-MachineBasicBlock::iterator
-SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
-                                      const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
+    CombineInfo &CI, CombineInfo &Paired,
+    MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
 
   // Be sure to use .addOperand(), and not .addReg() with these. We want to be
@@ -1121,13 +1100,13 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
     Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, Paired.I, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
+    BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
         .addImm(CI.BaseOff);
 
     BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BaseRegFlags = RegState::Kill;
 
-    TII->getAddNoCarry(*MBB, Paired.I, DL, BaseReg)
+    TII->getAddNoCarry(*MBB, InsertBefore, DL, BaseReg)
         .addReg(ImmReg)
         .addReg(AddrReg->getReg(), 0, BaseSubReg)
         .addImm(0); // clamp bit
@@ -1135,7 +1114,7 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
   }
 
   MachineInstrBuilder Write2 =
-      BuildMI(*MBB, Paired.I, DL, Write2Desc)
+      BuildMI(*MBB, InsertBefore, DL, Write2Desc)
           .addReg(BaseReg, BaseRegFlags, BaseSubReg) // addr
           .add(*Data0)                               // data0
           .add(*Data1)                               // data1
@@ -1143,8 +1122,6 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
           .addImm(NewOffset1)                        // offset1
           .addImm(0)                                 // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
-
-  moveInstsAfter(Write2, InstsToMove);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1155,7 +1132,7 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
 
 MachineBasicBlock::iterator
 SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
-                           const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+                                     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
   const unsigned Opcode = getNewOpcode(CI, Paired);
@@ -1167,7 +1144,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
   unsigned DMaskIdx =
       AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), AMDGPU::OpName::dmask);
 
-  auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg);
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg);
   for (unsigned I = 1, E = (*CI.I).getNumOperands(); I != E; ++I) {
     if (I == DMaskIdx)
       MIB.addImm(MergedDMask);
@@ -1193,14 +1170,12 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
-  BuildMI(*MBB, Paired.I, DL, CopyDesc)
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
       .addReg(DestReg, 0, SubRegIdx0);
-  MachineInstr *Copy1 = BuildMI(*MBB, Paired.I, DL, CopyDesc)
-                            .add(*Dest1)
-                            .addReg(DestReg, RegState::Kill, SubRegIdx1);
-
-  moveInstsAfter(Copy1, InstsToMove);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1209,7 +1184,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
     CombineInfo &CI, CombineInfo &Paired,
-    const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+    MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
   const unsigned Opcode = getNewOpcode(CI, Paired);
@@ -1228,11 +1203,12 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
   const MachineMemOperand *MMOb = *Paired.I->memoperands_begin();
 
   MachineInstr *New =
-    BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg)
-        .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase))
-        .addImm(MergedOffset) // offset
-        .addImm(CI.CPol)      // cpol
-        .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
+      BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg)
+          .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase))
+          .addImm(MergedOffset) // offset
+          .addImm(CI.CPol)      // cpol
+          .addMemOperand(
+              combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
   const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
@@ -1243,14 +1219,12 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::sdst);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::sdst);
 
-  BuildMI(*MBB, Paired.I, DL, CopyDesc)
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
       .addReg(DestReg, 0, SubRegIdx0);
-  MachineInstr *Copy1 = BuildMI(*MBB, Paired.I, DL, CopyDesc)
-                            .add(*Dest1)
-                            .addReg(DestReg, RegState::Kill, SubRegIdx1);
-
-  moveInstsAfter(Copy1, InstsToMove);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1259,7 +1233,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
     CombineInfo &CI, CombineInfo &Paired,
-    const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+    MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
 
@@ -1271,7 +1245,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
   Register DestReg = MRI->createVirtualRegister(SuperRC);
   unsigned MergedOffset = std::min(CI.Offset, Paired.Offset);
 
-  auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg);
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg);
 
   AddressRegs Regs = getRegs(Opcode, *TII);
 
@@ -1304,14 +1278,12 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
-  BuildMI(*MBB, Paired.I, DL, CopyDesc)
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
       .addReg(DestReg, 0, SubRegIdx0);
-  MachineInstr *Copy1 = BuildMI(*MBB, Paired.I, DL, CopyDesc)
-                            .add(*Dest1)
-                            .addReg(DestReg, RegState::Kill, SubRegIdx1);
-
-  moveInstsAfter(Copy1, InstsToMove);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1320,7 +1292,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
     CombineInfo &CI, CombineInfo &Paired,
-    const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+    MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
 
@@ -1332,7 +1304,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   Register DestReg = MRI->createVirtualRegister(SuperRC);
   unsigned MergedOffset = std::min(CI.Offset, Paired.Offset);
 
-  auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg);
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg);
 
   AddressRegs Regs = getRegs(Opcode, *TII);
 
@@ -1370,14 +1342,12 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
-  BuildMI(*MBB, Paired.I, DL, CopyDesc)
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
       .addReg(DestReg, 0, SubRegIdx0);
-  MachineInstr *Copy1 = BuildMI(*MBB, Paired.I, DL, CopyDesc)
-                            .add(*Dest1)
-                            .addReg(DestReg, RegState::Kill, SubRegIdx1);
-
-  moveInstsAfter(Copy1, InstsToMove);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1386,7 +1356,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
     CombineInfo &CI, CombineInfo &Paired,
-    const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+    MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
 
@@ -1403,13 +1373,13 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Src1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
-  BuildMI(*MBB, Paired.I, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
       .add(*Src0)
       .addImm(SubRegIdx0)
       .add(*Src1)
       .addImm(SubRegIdx1);
 
-  auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode))
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
 
   AddressRegs Regs = getRegs(Opcode, *TII);
@@ -1439,7 +1409,51 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
           .addMemOperand(
               combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
-  moveInstsAfter(MIB, InstsToMove);
+  CI.I->eraseFromParent();
+  Paired.I->eraseFromParent();
+  return New;
+}
+
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeGlobalLoadPair(
+    CombineInfo &CI, CombineInfo &Paired,
+    MachineBasicBlock::iterator InsertBefore) {
+  MachineBasicBlock *MBB = CI.I->getParent();
+  DebugLoc DL = CI.I->getDebugLoc();
+
+  const unsigned Opcode = getNewOpcode(CI, Paired);
+
+  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
+  Register DestReg = MRI->createVirtualRegister(SuperRC);
+
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg);
+
+  if (auto *SAddr = TII->getNamedOperand(*CI.I, AMDGPU::OpName::saddr))
+    MIB.add(*SAddr);
+
+  const MachineMemOperand *MMOa = *CI.I->memoperands_begin();
+  const MachineMemOperand *MMOb = *Paired.I->memoperands_begin();
+
+  MachineInstr *New =
+    MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr))
+       .addImm(std::min(CI.Offset, Paired.Offset))
+       .addImm(CI.CPol)
+       .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
+
+  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
+  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
+  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+
+  // Copy to the old destination registers.
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
+  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdst);
+  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdst);
+
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest0) // Copy to same destination including flags and sub reg.
+      .addReg(DestReg, 0, SubRegIdx0);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1473,6 +1487,28 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM;
     case 8:
       return AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM;
+    }
+  case GLOBAL_LOAD:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::GLOBAL_LOAD_DWORDX2;
+    case 3:
+      return AMDGPU::GLOBAL_LOAD_DWORDX3;
+    case 4:
+      return AMDGPU::GLOBAL_LOAD_DWORDX4;
+    }
+  case GLOBAL_LOAD_SADDR:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR;
+    case 3:
+      return AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR;
+    case 4:
+      return AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
     }
   case MIMG:
     assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
@@ -1545,7 +1581,7 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
     CombineInfo &CI, CombineInfo &Paired,
-    const SmallVectorImpl<MachineInstr *> &InstsToMove) {
+    MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
 
@@ -1562,13 +1598,13 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
   const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Src1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
-  BuildMI(*MBB, Paired.I, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
       .add(*Src0)
       .addImm(SubRegIdx0)
       .add(*Src1)
       .addImm(SubRegIdx1);
 
-  auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode))
+  auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
 
   AddressRegs Regs = getRegs(Opcode, *TII);
@@ -1593,8 +1629,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
         .addImm(0)            // tfe
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
-
-  moveInstsAfter(MIB, InstsToMove);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -2074,8 +2108,8 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
     CombineInfo &CI = *First;
     CombineInfo &Paired = *Second;
 
-    SmallVector<MachineInstr *, 8> InstsToMove;
-    if (!checkAndPrepareMerge(CI, Paired, InstsToMove)) {
+    CombineInfo *Where = checkAndPrepareMerge(CI, Paired);
+    if (!Where) {
       ++I;
       continue;
     }
@@ -2090,38 +2124,43 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       llvm_unreachable("unknown InstClass");
       break;
     case DS_READ:
-      NewMI = mergeRead2Pair(CI, Paired, InstsToMove);
+      NewMI = mergeRead2Pair(CI, Paired, Where->I);
       break;
     case DS_WRITE:
-      NewMI = mergeWrite2Pair(CI, Paired, InstsToMove);
+      NewMI = mergeWrite2Pair(CI, Paired, Where->I);
       break;
     case S_BUFFER_LOAD_IMM:
-      NewMI = mergeSBufferLoadImmPair(CI, Paired, InstsToMove);
+      NewMI = mergeSBufferLoadImmPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 8;
       break;
     case BUFFER_LOAD:
-      NewMI = mergeBufferLoadPair(CI, Paired, InstsToMove);
+      NewMI = mergeBufferLoadPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case BUFFER_STORE:
-      NewMI = mergeBufferStorePair(CI, Paired, InstsToMove);
+      NewMI = mergeBufferStorePair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case MIMG:
-      NewMI = mergeImagePair(CI, Paired, InstsToMove);
+      NewMI = mergeImagePair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case TBUFFER_LOAD:
-      NewMI = mergeTBufferLoadPair(CI, Paired, InstsToMove);
+      NewMI = mergeTBufferLoadPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case TBUFFER_STORE:
-      NewMI = mergeTBufferStorePair(CI, Paired, InstsToMove);
+      NewMI = mergeTBufferStorePair(CI, Paired, Where->I);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
+      break;
+    case GLOBAL_LOAD:
+    case GLOBAL_LOAD_SADDR:
+      NewMI = mergeGlobalLoadPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     }
     CI.setMI(NewMI, *this);
-    CI.Order = Paired.Order;
+    CI.Order = Where->Order;
     if (I == Second)
       I = Next;
 

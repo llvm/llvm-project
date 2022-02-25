@@ -143,6 +143,66 @@ return:
   ret void
 }
 
+; "false" case for CorrelatedValuePropagation
+define void @loop1(i32* %x, i32* %y) {
+; CHECK-LABEL: @loop1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:  loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32* [[F]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32* [[F]], i32* null
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[SEL]], null
+; CHECK-NEXT:    br i1 [[CMP2]], label [[RETURN:%.*]], label [[LOOP]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+	%phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
+	%f = tail call i32* @f(i32* %phi)
+	%cmp1 = icmp ne i32* %f, %y
+	%sel = select i1 %cmp1, i32* %f, i32* null
+	%cmp2 = icmp eq i32* %sel, null
+	br i1 %cmp2, label %return, label %loop
+
+return:
+  ret void
+}
+
+; "true" case for CorrelatedValuePropagation
+define void @loop2(i32* %x, i32* %y) {
+; CHECK-LABEL: @loop2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[F]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32* null, i32* [[F]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[SEL]], null
+; CHECK-NEXT:    br i1 [[CMP2]], label [[RETURN:%.*]], label [[LOOP]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+	%phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
+	%f = tail call i32* @f(i32* %phi)
+	%cmp1 = icmp eq i32* %f, %y
+	%sel = select i1 %cmp1, i32* null, i32* %f
+	%cmp2 = icmp eq i32* %sel, null
+	br i1 %cmp2, label %return, label %loop
+
+return:
+  ret void
+}
+
 define i32 @switch1(i32 %s) {
 ; CHECK-LABEL: @switch1(
 ; CHECK-NEXT:  entry:

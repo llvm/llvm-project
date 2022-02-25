@@ -14,6 +14,7 @@
 #include "ScriptParser.h"
 #include "Config.h"
 #include "Driver.h"
+#include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "ScriptLexer.h"

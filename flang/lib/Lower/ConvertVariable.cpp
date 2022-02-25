@@ -107,3 +107,50 @@ void Fortran::lower::instantiateVariable(AbstractConverter &converter,
     instantiateLocal(converter, var, symMap);
   }
 }
+
+void Fortran::lower::mapCallInterfaceSymbols(
+    AbstractConverter &converter, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap) {
+  const Fortran::semantics::Symbol &result = caller.getResultSymbol();
+  for (Fortran::lower::pft::Variable var :
+       Fortran::lower::pft::buildFuncResultDependencyList(result)) {
+    if (var.isAggregateStore()) {
+      instantiateVariable(converter, var, symMap);
+    } else {
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      const auto *hostDetails =
+          sym.detailsIf<Fortran::semantics::HostAssocDetails>();
+      if (hostDetails && !var.isModuleVariable()) {
+        // The callee is an internal procedure `A` whose result properties
+        // depend on host variables. The caller may be the host, or another
+        // internal procedure `B` contained in the same host.  In the first
+        // case, the host symbol is obviously mapped, in the second case, it
+        // must also be mapped because
+        // HostAssociations::internalProcedureBindings that was called when
+        // lowering `B` will have mapped all host symbols of captured variables
+        // to the tuple argument containing the composite of all host associated
+        // variables, whether or not the host symbol is actually referred to in
+        // `B`. Hence it is possible to simply lookup the variable associated to
+        // the host symbol without having to go back to the tuple argument.
+        Fortran::lower::SymbolBox hostValue =
+            symMap.lookupSymbol(hostDetails->symbol());
+        assert(hostValue && "callee host symbol must be mapped on caller side");
+        symMap.addSymbol(sym, hostValue.toExtendedValue());
+        // The SymbolBox associated to the host symbols is complete, skip
+        // instantiateVariable that would try to allocate a new storage.
+        continue;
+      }
+      if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner()) {
+        // Get the argument for the dummy argument symbols of the current call.
+        symMap.addSymbol(sym, caller.getArgumentValue(sym));
+        // All the properties of the dummy variable may not come from the actual
+        // argument, let instantiateVariable handle this.
+      }
+      // If this is neither a host associated or dummy symbol, it must be a
+      // module or common block variable to satisfy specification expression
+      // requirements in 10.1.11, instantiateVariable will get its address and
+      // properties.
+      instantiateVariable(converter, var, symMap);
+    }
+  }
+}

@@ -1,6 +1,6 @@
 ; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
 ; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=polly \
-; RUN: -polly-ast -analyze < %s | FileCheck %s 
+; RUN: -polly-ast -analyze < %s | FileCheck %s
 ; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
 ; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine \
 ; RUN: -polly-ast -analyze < %s | FileCheck %s

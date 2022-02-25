@@ -3541,8 +3541,10 @@ bool ProcessGDBRemote::StartAsyncThread() {
     // Create a thread that watches our internal state and controls which
     // events make it to clients (into the DCProcess event queue).
 
-    llvm::Expected<HostThread> async_thread = ThreadLauncher::LaunchThread(
-        "<lldb.process.gdb-remote.async>", ProcessGDBRemote::AsyncThread, this);
+    llvm::Expected<HostThread> async_thread =
+        ThreadLauncher::LaunchThread("<lldb.process.gdb-remote.async>", [this] {
+          return ProcessGDBRemote::AsyncThread();
+        });
     if (!async_thread) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Host), async_thread.takeError(),
                      "failed to launch host thread: {}");
@@ -3580,14 +3582,10 @@ void ProcessGDBRemote::StopAsyncThread() {
         __FUNCTION__);
 }
 
-thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
-  ProcessGDBRemote *process = (ProcessGDBRemote *)arg;
-
+thread_result_t ProcessGDBRemote::AsyncThread() {
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log,
-            "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
-            ") thread starting...",
-            __FUNCTION__, arg, process->GetID());
+  LLDB_LOGF(log, "ProcessGDBRemote::%s(pid = %" PRIu64 ") thread starting...",
+            __FUNCTION__, GetID());
 
   EventSP event_sp;
 
@@ -3603,19 +3601,19 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
   // fetch loop.
 
   bool done = false;
-  while (!done && process->GetPrivateState() != eStateExited) {
+  while (!done && GetPrivateState() != eStateExited) {
     LLDB_LOGF(log,
-              "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+              "ProcessGDBRemote::%s(pid = %" PRIu64
               ") listener.WaitForEvent (NULL, event_sp)...",
-              __FUNCTION__, arg, process->GetID());
+              __FUNCTION__, GetID());
 
-    if (process->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
+    if (m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
-      if (event_sp->BroadcasterIs(&process->m_async_broadcaster)) {
+      if (event_sp->BroadcasterIs(&m_async_broadcaster)) {
         LLDB_LOGF(log,
-                  "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+                  "ProcessGDBRemote::%s(pid = %" PRIu64
                   ") Got an event of type: %d...",
-                  __FUNCTION__, arg, process->GetID(), event_type);
+                  __FUNCTION__, GetID(), event_type);
 
         switch (event_type) {
         case eBroadcastBitAsyncContinue: {
@@ -3627,39 +3625,39 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                 (const char *)continue_packet->GetBytes();
             const size_t continue_cstr_len = continue_packet->GetByteSize();
             LLDB_LOGF(log,
-                      "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+                      "ProcessGDBRemote::%s(pid = %" PRIu64
                       ") got eBroadcastBitAsyncContinue: %s",
-                      __FUNCTION__, arg, process->GetID(), continue_cstr);
+                      __FUNCTION__, GetID(), continue_cstr);
 
             if (::strstr(continue_cstr, "vAttach") == nullptr)
-              process->SetPrivateState(eStateRunning);
+              SetPrivateState(eStateRunning);
             StringExtractorGDBRemote response;
 
             StateType stop_state =
-                process->GetGDBRemote().SendContinuePacketAndWaitForResponse(
-                    *process, *process->GetUnixSignals(),
+                GetGDBRemote().SendContinuePacketAndWaitForResponse(
+                    *this, *GetUnixSignals(),
                     llvm::StringRef(continue_cstr, continue_cstr_len),
-                    process->GetInterruptTimeout(), response);
+                    GetInterruptTimeout(), response);
 
             // We need to immediately clear the thread ID list so we are sure
             // to get a valid list of threads. The thread ID list might be
             // contained within the "response", or the stop reply packet that
             // caused the stop. So clear it now before we give the stop reply
             // packet to the process using the
-            // process->SetLastStopPacket()...
-            process->ClearThreadIDList();
+            // SetLastStopPacket()...
+            ClearThreadIDList();
 
             switch (stop_state) {
             case eStateStopped:
             case eStateCrashed:
             case eStateSuspended:
-              process->SetLastStopPacket(response);
-              process->SetPrivateState(stop_state);
+              SetLastStopPacket(response);
+              SetPrivateState(stop_state);
               break;
 
             case eStateExited: {
-              process->SetLastStopPacket(response);
-              process->ClearThreadIDList();
+              SetLastStopPacket(response);
+              ClearThreadIDList();
               response.SetFilePos(1);
 
               int exit_status = response.GetHexU8();
@@ -3674,7 +3672,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                   extractor.GetHexByteString(desc_string);
                 }
               }
-              process->SetExitStatus(exit_status, desc_string.c_str());
+              SetExitStatus(exit_status, desc_string.c_str());
               done = true;
               break;
             }
@@ -3685,20 +3683,20 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
               // helpful error message about why the attach failed.
               if (::strstr(continue_cstr, "vAttach") != nullptr &&
                   response.GetError() == 0x87) {
-                process->SetExitStatus(-1, "cannot attach to process due to "
-                                           "System Integrity Protection");
+                SetExitStatus(-1, "cannot attach to process due to "
+                                  "System Integrity Protection");
               } else if (::strstr(continue_cstr, "vAttach") != nullptr &&
                          response.GetStatus().Fail()) {
-                process->SetExitStatus(-1, response.GetStatus().AsCString());
+                SetExitStatus(-1, response.GetStatus().AsCString());
               } else {
-                process->SetExitStatus(-1, "lost connection");
+                SetExitStatus(-1, "lost connection");
               }
               done = true;
               break;
             }
 
             default:
-              process->SetPrivateState(stop_state);
+              SetPrivateState(stop_state);
               break;
             }   // switch(stop_state)
           }     // if (continue_packet)
@@ -3707,49 +3705,47 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
 
         case eBroadcastBitAsyncThreadShouldExit:
           LLDB_LOGF(log,
-                    "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+                    "ProcessGDBRemote::%s(pid = %" PRIu64
                     ") got eBroadcastBitAsyncThreadShouldExit...",
-                    __FUNCTION__, arg, process->GetID());
+                    __FUNCTION__, GetID());
           done = true;
           break;
 
         default:
           LLDB_LOGF(log,
-                    "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+                    "ProcessGDBRemote::%s(pid = %" PRIu64
                     ") got unknown event 0x%8.8x",
-                    __FUNCTION__, arg, process->GetID(), event_type);
+                    __FUNCTION__, GetID(), event_type);
           done = true;
           break;
         }
-      } else if (event_sp->BroadcasterIs(&process->m_gdb_comm)) {
+      } else if (event_sp->BroadcasterIs(&m_gdb_comm)) {
         switch (event_type) {
         case Communication::eBroadcastBitReadThreadDidExit:
-          process->SetExitStatus(-1, "lost connection");
+          SetExitStatus(-1, "lost connection");
           done = true;
           break;
 
         default:
           LLDB_LOGF(log,
-                    "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+                    "ProcessGDBRemote::%s(pid = %" PRIu64
                     ") got unknown event 0x%8.8x",
-                    __FUNCTION__, arg, process->GetID(), event_type);
+                    __FUNCTION__, GetID(), event_type);
           done = true;
           break;
         }
       }
     } else {
       LLDB_LOGF(log,
-                "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
+                "ProcessGDBRemote::%s(pid = %" PRIu64
                 ") listener.WaitForEvent (NULL, event_sp) => false",
-                __FUNCTION__, arg, process->GetID());
+                __FUNCTION__, GetID());
       done = true;
     }
   }
 
-  LLDB_LOGF(log,
-            "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
-            ") thread exiting...",
-            __FUNCTION__, arg, process->GetID());
+  LLDB_LOGF(log, "ProcessGDBRemote::%s(pid = %" PRIu64 ") thread exiting...",
+            __FUNCTION__, GetID());
 
   return {};
 }
