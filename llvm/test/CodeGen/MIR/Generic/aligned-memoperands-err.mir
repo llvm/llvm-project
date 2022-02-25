@@ -1,0 +1,10 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name: aligned_memoperands
+body: |
+  bb.0:
+    %0:_(p0) = IMPLICIT_DEF
+    ; CHECK: :[[@LINE+1]]:73: specified alignment is more aligned than offset
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from `i32* undef` + 12, align 8)
+...

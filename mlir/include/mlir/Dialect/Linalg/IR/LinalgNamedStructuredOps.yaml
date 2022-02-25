@@ -15,19 +15,23 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2] -> (s1, s2)>
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
+  - !LinalgOperandDefConfig
+    name: cast
+    kind: type_fn_attr
+    default_fn: cast
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
@@ -41,25 +45,29 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
-                fn_name: cast
+              scalar_fn:
+                kind: type
+                attr_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
             - !ScalarExpression
-              type_fn:
-                fn_name: cast
+              scalar_fn:
+                kind: type
+                attr_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -79,17 +87,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2] -> (s1, s2)>
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -105,24 +113,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast_unsigned
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast_unsigned
                 type_var: U
                 operands:
@@ -143,25 +155,25 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2] -> (s1, s2)>
   - !LinalgOperandDefConfig
     name: AZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: BZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -179,46 +191,54 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: A
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: AZp
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: B
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
@@ -244,17 +264,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: lhs
-    usage: Input
+    kind: input_tensor
     type_var: LhsType
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s2, s3)>
   - !LinalgOperandDefConfig
     name: rhs
-    usage: Input
+    kind: input_tensor
     type_var: RhsType
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4, s1, s5, s3)>
   - !LinalgOperandDefConfig
     name: accum
-    usage: Output
+    kind: output_tensor
     type_var: AccumType
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s4, s2, s5)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -276,24 +296,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: accum
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: accum
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: AccumType
                 operands:
                 - !ScalarExpression
                   scalar_arg: lhs
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: AccumType
                 operands:
@@ -314,17 +338,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s2, s3)>
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -341,24 +365,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -379,25 +407,25 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s2, s3)>
   - !LinalgOperandDefConfig
     name: AZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: BZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -416,46 +444,54 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: A
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: AZp
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: B
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
@@ -476,17 +512,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: y
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1] -> (s1)>
   - !LinalgOperandDefConfig
     name: x
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1] -> (s0)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -501,24 +537,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: x
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: x
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -539,17 +579,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: y
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1] -> (s0)>
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: x
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1] -> (s1)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -564,24 +604,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: x
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: x
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: y
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -602,17 +646,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1, s2)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -628,24 +672,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -666,17 +714,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: A
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0] -> (s0)>
   - !LinalgOperandDefConfig
     name: B
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0] -> (s0)>
   - !LinalgOperandDefConfig
     name: C
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0] -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -690,24 +738,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: C
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -728,17 +780,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1] -> (s0 + s1)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1] -> (s1)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1] -> (s0)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -753,24 +805,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -791,17 +847,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0 + s1, s2 + s3)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s1, s3)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s2)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -818,24 +874,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -856,17 +916,17 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0 + s1, s2 + s3, s4 + s5)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s1, s3, s5)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s2, s4)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -886,24 +946,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -924,31 +988,31 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0, s1 * s2 + s3 * s4,
       s5)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s3, s5, s6)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0, s1, s6)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s2)>
-    default_vals:
+    default_indices:
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s4)>
-    default_vals:
+    default_indices:
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -966,24 +1030,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1008,36 +1076,36 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s3,
       s7, s9, s10)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1, s5, s10)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s2, s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s4, s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1060,24 +1128,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1103,44 +1175,44 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s3,
       s7, s9, s10)>
   - !LinalgOperandDefConfig
     name: IZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: KZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1, s5, s10)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s2, s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s4, s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1167,46 +1239,54 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: IZp
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: K
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
@@ -1231,36 +1311,36 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1, s2 * s3 + s4 * s5, s6 * s7 + s8 * s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s10,
       s1, s4, s8)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s10, s2, s6)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s3, s7)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s5, s9)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1283,24 +1363,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1321,38 +1405,38 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13, s14] -> (s0, s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9 * s10 + s11 * s12,
       s13)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13, s14] -> (s3, s7, s11, s13, s14)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13, s14] -> (s0, s1, s5, s9, s14)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13, s14] -> (s2, s6, s10)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13, s14] -> (s4, s8, s12)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
@@ -1379,24 +1463,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1418,30 +1506,30 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1 * s2 + s3 * s4, s5)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3, s5)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s5)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2)>
-    default_vals:
+    default_indices:
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
-    default_vals:
+    default_indices:
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -1458,24 +1546,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1497,35 +1589,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7, s9)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1547,24 +1639,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1585,43 +1681,43 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7, s9)>
   - !LinalgOperandDefConfig
     name: IZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: KZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1647,46 +1743,54 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: IZp
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: K
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
@@ -1707,36 +1811,36 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s3,
       s7, s9, s10)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1, s5, s9, s10)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s2, s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s4, s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1759,24 +1863,28 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
@@ -1797,44 +1905,44 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s3,
       s7, s9, s10)>
   - !LinalgOperandDefConfig
     name: IZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: KZp
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
       s1, s5, s9, s10)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s2, s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
       (s4, s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1861,46 +1969,54 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: IZp
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: K
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:
@@ -1921,35 +2037,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -1971,13 +2087,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -1998,35 +2116,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2048,13 +2166,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: max
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -2075,35 +2195,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2125,13 +2245,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: max_unsigned
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast_unsigned
             type_var: U
             operands:
@@ -2152,35 +2274,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s2
       * s3 + s4 * s5, s6 * s7 + s8 * s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4, s8)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s2,
       s6)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3,
       s7)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s5,
       s9)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2202,13 +2324,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: max
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -2229,35 +2353,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2279,13 +2403,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: min
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -2306,35 +2432,35 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1 *
       s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3, s7)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s5,
       s9)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
       s6)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
       s8)>
-    default_vals:
+    default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2356,13 +2482,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: min_unsigned
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast_unsigned
             type_var: U
             operands:
@@ -2383,37 +2511,37 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s0, s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9 * s10 + s11 * s12, s13)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s3, s7, s11)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s0, s1, s5, s9, s13)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13] -> (s2, s6, s10)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13] -> (s4, s8, s12)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
@@ -2439,13 +2567,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -2466,37 +2596,37 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s0, s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9 * s10 + s11 * s12, s13)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s3, s7, s11)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s0, s1, s5, s9, s13)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13] -> (s2, s6, s10)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13] -> (s4, s8, s12)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
@@ -2522,13 +2652,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: max
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -2549,37 +2681,37 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s0, s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9 * s10 + s11 * s12, s13)>
   - !LinalgOperandDefConfig
     name: K
-    usage: Input
+    kind: input_tensor
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s3, s7, s11)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12,
       s13] -> (s0, s1, s5, s9, s13)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13] -> (s2, s6, s10)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
       s12, s13] -> (s4, s8, s12)>
-    default_vals:
+    default_indices:
     - 1
     - 1
     - 1
@@ -2605,13 +2737,15 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: binary
         fn_name: min
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
             fn_name: cast
             type_var: U
             operands:
@@ -2631,11 +2765,11 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: value
-    usage: Input
+    kind: scalar
     type_var: T1
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2647,7 +2781,8 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      type_fn:
+      scalar_fn:
+        kind: type
         fn_name: cast
         type_var: U
         operands:
@@ -2671,19 +2806,19 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: min
-    usage: Input
+    kind: scalar
     type_var: F64
   - !LinalgOperandDefConfig
     name: max
-    usage: Input
+    kind: scalar
     type_var: F64
   - !LinalgOperandDefConfig
     name: seed
-    usage: Input
+    kind: scalar
     type_var: I32
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: T
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2699,67 +2834,81 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      type_fn:
+      scalar_fn:
+        kind: type
         fn_name: cast
         type_var: T
         operands:
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: add
             operands:
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: binary
                 fn_name: mul
                 operands:
                 - !ScalarExpression
-                  arith_fn:
+                  scalar_fn:
+                    kind: binary
                     fn_name: add
                     operands:
                     - !ScalarExpression
-                      type_fn:
+                      scalar_fn:
+                        kind: type
                         fn_name: cast
                         type_var: F64
                         operands:
                         - !ScalarExpression
                           scalar_const: '2147483647 : i64'
                     - !ScalarExpression
-                      type_fn:
+                      scalar_fn:
+                        kind: type
                         fn_name: cast
                         type_var: F64
                         operands:
                         - !ScalarExpression
-                          arith_fn:
+                          scalar_fn:
+                            kind: binary
                             fn_name: add
                             operands:
                             - !ScalarExpression
-                              arith_fn:
+                              scalar_fn:
+                                kind: binary
                                 fn_name: mul
                                 operands:
                                 - !ScalarExpression
-                                  arith_fn:
+                                  scalar_fn:
+                                    kind: binary
                                     fn_name: add
                                     operands:
                                     - !ScalarExpression
-                                      type_fn:
+                                      scalar_fn:
+                                        kind: type
                                         fn_name: cast
                                         type_var: I32
                                         operands:
                                         - !ScalarExpression
                                           scalar_index: 1
                                     - !ScalarExpression
-                                      arith_fn:
+                                      scalar_fn:
+                                        kind: binary
                                         fn_name: add
                                         operands:
                                         - !ScalarExpression
-                                          arith_fn:
+                                          scalar_fn:
+                                            kind: binary
                                             fn_name: mul
                                             operands:
                                             - !ScalarExpression
-                                              arith_fn:
+                                              scalar_fn:
+                                                kind: binary
                                                 fn_name: add
                                                 operands:
                                                 - !ScalarExpression
-                                                  type_fn:
+                                                  scalar_fn:
+                                                    kind: type
                                                     fn_name: cast
                                                     type_var: I32
                                                     operands:
@@ -2768,39 +2917,45 @@ structured_op: !LinalgStructuredOpConfig
                                                 - !ScalarExpression
                                                   scalar_arg: seed
                                             - !ScalarExpression
-                                              type_fn:
+                                              scalar_fn:
+                                                kind: type
                                                 fn_name: cast
                                                 type_var: I32
                                                 operands:
                                                 - !ScalarExpression
                                                   scalar_const: '1103515245 : i64'
                                         - !ScalarExpression
-                                          type_fn:
+                                          scalar_fn:
+                                            kind: type
                                             fn_name: cast
                                             type_var: I32
                                             operands:
                                             - !ScalarExpression
                                               scalar_const: '12345 : i64'
                                 - !ScalarExpression
-                                  type_fn:
+                                  scalar_fn:
+                                    kind: type
                                     fn_name: cast
                                     type_var: I32
                                     operands:
                                     - !ScalarExpression
                                       scalar_const: '1103515245 : i64'
                             - !ScalarExpression
-                              type_fn:
+                              scalar_fn:
+                                kind: type
                                 fn_name: cast
                                 type_var: I32
                                 operands:
                                 - !ScalarExpression
                                   scalar_const: '12345 : i64'
                 - !ScalarExpression
-                  arith_fn:
+                  scalar_fn:
+                    kind: binary
                     fn_name: mul
                     operands:
                     - !ScalarExpression
-                      arith_fn:
+                      scalar_fn:
+                        kind: binary
                         fn_name: sub
                         operands:
                         - !ScalarExpression
@@ -2808,7 +2963,8 @@ structured_op: !LinalgStructuredOpConfig
                         - !ScalarExpression
                           scalar_arg: min
                     - !ScalarExpression
-                      type_fn:
+                      scalar_fn:
+                        kind: type
                         fn_name: cast
                         type_var: F64
                         operands:
@@ -2829,12 +2985,12 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -2848,26 +3004,31 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: unary
         fn_name: log
         operands:
         - !ScalarExpression
-          arith_fn:
+          scalar_fn:
+            kind: binary
             fn_name: add
             operands:
             - !ScalarExpression
-              type_fn:
+              scalar_fn:
+                kind: type
                 fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_const: '1.000000e+00 : f64'
             - !ScalarExpression
-              arith_fn:
+              scalar_fn:
+                kind: unary
                 fn_name: exp
                 operands:
                 - !ScalarExpression
-                  type_fn:
+                  scalar_fn:
+                    kind: type
                     fn_name: cast
                     type_var: U
                     operands:

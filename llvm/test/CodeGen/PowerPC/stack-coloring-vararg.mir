@@ -152,11 +152,11 @@ body:             |
   bb.1.if.then6.i.i:
     LIFETIME_START %stack.1.ap2.i.i
     %17:gprc = LWZ 8, $zero :: (load (s32), align 8)
-    STW killed %17, 8, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 8, align 8)
+    STW killed %17, 8, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 8, basealign 8)
     %18:gprc = LWZ 4, $zero :: (load (s32))
-    STW killed %18, 4, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 4, align 8)
+    STW killed %18, 4, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 4, basealign 8)
     %19:gprc = LWZ 0, $zero :: (load (s32), align 8)
-    STW killed %19, 0, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i, align 8)
+    STW killed %19, 0, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i, basealign 8)
     BLR implicit $lr, implicit $rm
 
   bb.2.format_reason_ap.exit.i:

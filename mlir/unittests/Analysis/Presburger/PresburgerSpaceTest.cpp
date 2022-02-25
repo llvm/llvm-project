@@ -11,6 +11,8 @@
 #include <gtest/gtest.h>
 
 using namespace mlir;
+using namespace presburger;
+
 using IdKind = PresburgerSpace::IdKind;
 
 TEST(PresburgerSpaceTest, insertId) {

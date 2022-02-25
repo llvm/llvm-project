@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
 
 namespace mlir {
+namespace presburger {
 
 /// This class represents a multi-affine function whose domain is given by an
 /// IntegerPolyhedron. This can be thought of as an IntegerPolyhedron with a
@@ -186,6 +187,7 @@ private:
   unsigned numOutputs;
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H

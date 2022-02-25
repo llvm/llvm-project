@@ -623,7 +623,6 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[12:13]
 ; GFX908-NEXT:    v_add_co_u32_e64 v14, s[2:3], v14, v6
 ; GFX908-NEXT:    v_addc_co_u32_e64 v15, s[2:3], v15, v7, s[2:3]
-; GFX908-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_1
 ; GFX908-NEXT:  .LBB3_5: ; %bb16
 ; GFX908-NEXT:    ; Parent Loop BB3_2 Depth=1
@@ -751,7 +750,6 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_add_co_u32_e32 v16, vcc, v16, v10
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v17, vcc, v17, v11, vcc
 ; GFX90A-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[14:15]
-; GFX90A-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB3_1
 ; GFX90A-NEXT:  .LBB3_5: ; %bb16
 ; GFX90A-NEXT:    ; Parent Loop BB3_2 Depth=1

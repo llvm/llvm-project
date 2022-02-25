@@ -239,7 +239,7 @@ define dso_local void @NegativeFor64(i32* %ar, i64 %n, i64 %m) #0 {
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[M:%.*]], 4
 ; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[MUL3]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[M]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[CONV]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 4 [[AR1]], i8 0, i32 [[TMP3]], i1 false)

@@ -1290,6 +1290,8 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
 
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
+  if (isManaged(*GVar))
+    O << " .attribute(.managed)";
   if (MaybeAlign A = GVar->getAlign())
     O << " .align " << A->value();
   else

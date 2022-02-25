@@ -1427,11 +1427,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 }
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
-    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
-    bool monitor_signals) {
+    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid) {
   unsigned long mask = DISPATCH_PROC_EXIT;
-  if (monitor_signals)
-    mask |= DISPATCH_PROC_SIGNAL;
 
   Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
 
@@ -1440,11 +1437,8 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
       ::dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
 
   LLDB_LOGF(log,
-            "Host::StartMonitoringChildProcess "
-            "(callback, pid=%i, monitor_signals=%i) "
-            "source = %p\n",
-            static_cast<int>(pid), monitor_signals,
-            static_cast<void *>(source));
+            "Host::StartMonitoringChildProcess(callback, pid=%i) source = %p\n",
+            static_cast<int>(pid), static_cast<void *>(source));
 
   if (source) {
     Host::MonitorChildProcessCallback callback_copy = callback;
@@ -1455,27 +1449,20 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
 
       int status = 0;
       int wait_pid = 0;
-      bool cancel = false;
-      bool exited = false;
       wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &status, 0);
       if (wait_pid >= 0) {
         int signal = 0;
         int exit_status = 0;
         const char *status_cstr = NULL;
-        if (WIFSTOPPED(status)) {
-          signal = WSTOPSIG(status);
-          status_cstr = "STOPPED";
-        } else if (WIFEXITED(status)) {
+        if (WIFEXITED(status)) {
           exit_status = WEXITSTATUS(status);
           status_cstr = "EXITED";
-          exited = true;
         } else if (WIFSIGNALED(status)) {
           signal = WTERMSIG(status);
           status_cstr = "SIGNALED";
-          exited = true;
           exit_status = -1;
         } else {
-          status_cstr = "???";
+          llvm_unreachable("Unknown status");
         }
 
         LLDB_LOGF(log,
@@ -1484,11 +1471,9 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
                   pid, wait_pid, status, status_cstr, signal, exit_status);
 
         if (callback_copy)
-          cancel = callback_copy(pid, exited, signal, exit_status);
+          callback_copy(pid, signal, exit_status);
 
-        if (exited || cancel) {
-          ::dispatch_source_cancel(source);
-        }
+        ::dispatch_source_cancel(source);
       }
     });
 

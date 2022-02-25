@@ -58,7 +58,7 @@
     ret void
   }
 
-  attributes #0 = { nounwind "sign-return-address"="all" "sign-return-address-key"="a_key" noinline noredzone "frame-pointer"="all" }
+  attributes #0 = { nounwind uwtable "sign-return-address"="all" "sign-return-address-key"="a_key" noinline noredzone "frame-pointer"="all" }
 
 ...
 ---

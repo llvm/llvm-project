@@ -490,6 +490,7 @@ public:
     PatchBaseClass,
     PatchValue32,
     PatchValue64to32,
+    PatchValue32GenericSize,
     PatchValue64,
     PatchValueVariable,
     ReferencePatchValue,
@@ -534,6 +535,22 @@ public:
       return Writer->getKind() == DebugPatchKind::PatchValue32;
     }
     uint32_t Value;
+  };
+
+  /// Patch for 4 byte entry, where original entry size is not 4 bytes or 8
+  /// bytes.
+  struct DebugPatch32GenericSize : public Patch {
+    DebugPatch32GenericSize(uint32_t O, uint32_t V, uint32_t OVS)
+        : Patch(O, DebugPatchKind::PatchValue32GenericSize) {
+      Value = V;
+      OldValueSize = OVS;
+    }
+
+    static bool classof(const Patch *Writer) {
+      return Writer->getKind() == DebugPatchKind::PatchValue32GenericSize;
+    }
+    uint32_t Value;
+    uint32_t OldValueSize;
   };
 
   struct DebugPatch64 : public Patch {
@@ -692,6 +709,9 @@ private:
         break;
       case DebugPatchKind::PatchValue64to32:
         delete reinterpret_cast<DebugPatch64to32 *>(P);
+        break;
+      case DebugPatchKind::PatchValue32GenericSize:
+        delete reinterpret_cast<DebugPatch32GenericSize *>(P);
         break;
       case DebugPatchKind::PatchValue64:
         delete reinterpret_cast<DebugPatch64 *>(P);

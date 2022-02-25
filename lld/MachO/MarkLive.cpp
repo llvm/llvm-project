@@ -21,59 +21,157 @@ namespace macho {
 using namespace llvm;
 using namespace llvm::MachO;
 
+struct WhyLiveEntry {
+  InputSection *isec;
+  // Keep track of the entry that caused us to mark `isec` as live.
+  const WhyLiveEntry *prev;
+
+  WhyLiveEntry(InputSection *isec, const WhyLiveEntry *prev)
+      : isec(isec), prev(prev) {}
+};
+
+// Type-erased interface to MarkLiveImpl. Used for adding roots to the liveness
+// graph.
 class MarkLive {
 public:
-  void enqueue(InputSection *isec, uint64_t off);
-  void addSym(Symbol *s);
-  void markTransitively();
+  virtual void enqueue(InputSection *isec, uint64_t off) = 0;
+  virtual void addSym(Symbol *s) = 0;
+  virtual void markTransitively() = 0;
+  virtual ~MarkLive() = default;
+};
+
+template <bool RecordWhyLive> class MarkLiveImpl : public MarkLive {
+public:
+  // -why_live is a rarely used option, so we don't want support for that flag
+  // to slow down the main -dead_strip code path. As such, we employ templates
+  // to avoid the usage of WhyLiveEntry in the main code path. This saves us
+  // from needless allocations and pointer indirections.
+  using WorklistEntry =
+      std::conditional_t<RecordWhyLive, WhyLiveEntry, InputSection>;
+
+  void enqueue(InputSection *isec, uint64_t off) override {
+    enqueue(isec, off, nullptr);
+  }
+  void addSym(Symbol *s) override { addSym(s, nullptr); }
+  void markTransitively() override;
 
 private:
+  void enqueue(InputSection *isec, uint64_t off, const WorklistEntry *prev);
+  void addSym(Symbol *s, const WorklistEntry *prev);
+  void printWhyLive(Symbol *s, const WorklistEntry *prev);
+  const InputSection *getInputSection(const WorklistEntry *) const;
+  WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
+
   // We build up a worklist of sections which have been marked as live. We
   // only push into the worklist when we discover an unmarked section, and we
   // mark as we push, so sections never appear twice in the list. Literal
   // sections cannot contain references to other sections, so we only store
   // ConcatInputSections in our worklist.
-  SmallVector<ConcatInputSection *, 256> worklist;
+  SmallVector<WorklistEntry *, 256> worklist;
 };
 
-void MarkLive::enqueue(InputSection *isec, uint64_t off) {
+template <bool RecordWhyLive>
+void MarkLiveImpl<RecordWhyLive>::enqueue(
+    InputSection *isec, uint64_t off,
+    const typename MarkLiveImpl<RecordWhyLive>::WorklistEntry *prev) {
   if (isec->isLive(off))
     return;
   isec->markLive(off);
   if (auto s = dyn_cast<ConcatInputSection>(isec)) {
     assert(!s->isCoalescedWeak());
-    worklist.push_back(s);
+    worklist.push_back(makeEntry(s, prev));
   }
 }
 
-void MarkLive::addSym(Symbol *s) {
+template <bool RecordWhyLive>
+void MarkLiveImpl<RecordWhyLive>::addSym(
+    Symbol *s,
+    const typename MarkLiveImpl<RecordWhyLive>::WorklistEntry *prev) {
   if (s->used)
     return;
   s->used = true;
+  printWhyLive(s, prev);
   if (auto *d = dyn_cast<Defined>(s)) {
     if (d->isec)
-      enqueue(d->isec, d->value);
+      enqueue(d->isec, d->value, prev);
     if (d->unwindEntry)
-      enqueue(d->unwindEntry, 0);
+      enqueue(d->unwindEntry, 0, prev);
   }
 }
 
-void MarkLive::markTransitively() {
+static void printWhyLiveImpl(const Symbol *s, const WhyLiveEntry *prev) {
+  std::string out = toString(*s) + " from " + toString(s->getFile());
+  int indent = 2;
+  for (const WhyLiveEntry *entry = prev; entry;
+       entry = entry->prev, indent += 2) {
+    const TinyPtrVector<Defined *> &symbols = entry->isec->symbols;
+    // With .subsections_with_symbols set, most isecs will have exactly one
+    // entry in their symbols vector, so we just print the first one.
+    if (!symbols.empty())
+      out += "\n" + std::string(indent, ' ') + toString(*symbols.front()) +
+             " from " + toString(symbols.front()->getFile());
+  }
+  message(out);
+}
+
+// NOTE: if/when `constexpr if` becomes available, we can simplify a lot of
+// the partial template specializations below.
+
+template <>
+void MarkLiveImpl<true>::printWhyLive(Symbol *s, const WhyLiveEntry *prev) {
+  if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
+    printWhyLiveImpl(s, prev);
+}
+
+template <>
+void MarkLiveImpl<false>::printWhyLive(Symbol *s, const InputSection *prev) {}
+
+template <>
+const InputSection *
+MarkLiveImpl<true>::getInputSection(const WhyLiveEntry *entry) const {
+  return entry->isec;
+}
+
+template <>
+const InputSection *
+MarkLiveImpl<false>::getInputSection(const InputSection *isec) const {
+  return isec;
+}
+
+template <>
+typename MarkLiveImpl<true>::WorklistEntry *MarkLiveImpl<true>::makeEntry(
+    InputSection *isec, const MarkLiveImpl<true>::WorklistEntry *prev) const {
+  if (!isec) {
+    assert(!prev);
+    return nullptr;
+  }
+  return make<WhyLiveEntry>(isec, prev);
+}
+
+template <>
+typename MarkLiveImpl<false>::WorklistEntry *MarkLiveImpl<false>::makeEntry(
+    InputSection *isec, const MarkLiveImpl<false>::WorklistEntry *prev) const {
+  return isec;
+}
+
+template <bool RecordWhyLive>
+void MarkLiveImpl<RecordWhyLive>::markTransitively() {
   do {
     // Mark things reachable from GC roots as live.
     while (!worklist.empty()) {
-      ConcatInputSection *s = worklist.pop_back_val();
-      assert(s->live && "We mark as live when pushing onto the worklist!");
+      WorklistEntry *entry = worklist.pop_back_val();
+      assert(cast<ConcatInputSection>(getInputSection(entry))->live &&
+             "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
-      for (const Reloc &r : s->relocs) {
+      for (const Reloc &r : getInputSection(entry)->relocs) {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
-          addSym(s);
+          addSym(s, entry);
         else
-          enqueue(r.referent.get<InputSection *>(), r.addend);
+          enqueue(r.referent.get<InputSection *>(), r.addend, entry);
       }
-      for (Defined *d : s->symbols)
-        addSym(d);
+      for (Defined *d : getInputSection(entry)->symbols)
+        addSym(d, entry);
     }
 
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live
@@ -85,13 +183,18 @@ void MarkLive::markTransitively() {
         continue;
 
       for (const Reloc &r : isec->relocs) {
-        bool referentLive;
-        if (auto *s = r.referent.dyn_cast<Symbol *>())
-          referentLive = s->isLive();
-        else
-          referentLive = r.referent.get<InputSection *>()->isLive(r.addend);
-        if (referentLive)
-          enqueue(isec, 0);
+        if (auto *s = r.referent.dyn_cast<Symbol *>()) {
+          if (s->isLive()) {
+            InputSection *referentIsec = nullptr;
+            if (auto *d = dyn_cast<Defined>(s))
+              referentIsec = d->isec;
+            enqueue(isec, 0, makeEntry(referentIsec, nullptr));
+          }
+        } else {
+          auto *referentIsec = r.referent.get<InputSection *>();
+          if (referentIsec->isLive(r.addend))
+            enqueue(isec, 0, makeEntry(referentIsec, nullptr));
+        }
       }
     }
 
@@ -107,10 +210,14 @@ void MarkLive::markTransitively() {
 // from the final output.
 void markLive() {
   TimeTraceScope timeScope("markLive");
-  MarkLive marker;
+  MarkLive *marker;
+  if (config->whyLive.empty())
+    marker = make<MarkLiveImpl<false>>();
+  else
+    marker = make<MarkLiveImpl<true>>();
   // Add GC roots.
   if (config->entry)
-    marker.addSym(config->entry);
+    marker->addSym(config->entry);
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       // -exported_symbol(s_list)
@@ -121,13 +228,13 @@ void markLive() {
         // explicitUndefineds code below would handle this automatically.
         assert(!defined->privateExtern &&
                "should have been rejected by driver");
-        marker.addSym(defined);
+        marker->addSym(defined);
         continue;
       }
 
       // public symbols explicitly marked .no_dead_strip
       if (defined->referencedDynamically || defined->noDeadStrip) {
-        marker.addSym(defined);
+        marker->addSym(defined);
         continue;
       }
 
@@ -142,40 +249,40 @@ void markLive() {
       bool externsAreRoots =
           config->outputType != MH_EXECUTE || config->exportDynamic;
       if (externsAreRoots && !defined->privateExtern) {
-        marker.addSym(defined);
+        marker->addSym(defined);
         continue;
       }
     }
   }
   // -u symbols
   for (Symbol *sym : config->explicitUndefineds)
-    marker.addSym(sym);
+    marker->addSym(sym);
   // local symbols explicitly marked .no_dead_strip
   for (const InputFile *file : inputFiles)
     if (auto *objFile = dyn_cast<ObjFile>(file))
       for (Symbol *sym : objFile->symbols)
         if (auto *defined = dyn_cast_or_null<Defined>(sym))
           if (!defined->isExternal() && defined->noDeadStrip)
-            marker.addSym(defined);
+            marker->addSym(defined);
   if (auto *stubBinder =
           dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder")))
-    marker.addSym(stubBinder);
+    marker->addSym(stubBinder);
   for (ConcatInputSection *isec : inputSections) {
     // Sections marked no_dead_strip
     if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
-      marker.enqueue(isec, 0);
+      marker->enqueue(isec, 0);
       continue;
     }
 
     // mod_init_funcs, mod_term_funcs sections
     if (sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS ||
         sectionType(isec->getFlags()) == S_MOD_TERM_FUNC_POINTERS) {
-      marker.enqueue(isec, 0);
+      marker->enqueue(isec, 0);
       continue;
     }
   }
 
-  marker.markTransitively();
+  marker->markTransitively();
 }
 
 } // namespace macho

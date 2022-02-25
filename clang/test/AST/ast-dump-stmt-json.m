@@ -11,7 +11,7 @@ void TestExprWithCleanup(int x) {
 @interface A
 @end
 
-void TestObjCAtCatchStmt() {
+void TestObjCAtCatchStmt(void) {
   @try {
   } @catch(A *a) {
   } @catch(...) {
@@ -513,7 +513,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:  "name": "TestObjCAtCatchStmt",
 // CHECK-NEXT:  "mangledName": "TestObjCAtCatchStmt",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void ()"
+// CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -523,7 +523,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 14,
-// CHECK-NEXT:      "col": 28,
+// CHECK-NEXT:      "col": 32,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {

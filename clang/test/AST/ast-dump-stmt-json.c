@@ -3,7 +3,7 @@
 int TestLocation = 0;
 int TestIndent = 1 + (1);
 
-void TestDeclStmt() {
+void TestDeclStmt(void) {
   int x = 0;
   int y, z;
 }
@@ -332,7 +332,7 @@ void TestVLA(int n) {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "line": 6,
-// CHECK-NEXT:    "col": 21,
+// CHECK-NEXT:    "col": 25,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {

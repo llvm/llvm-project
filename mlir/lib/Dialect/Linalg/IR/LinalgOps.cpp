@@ -36,8 +36,6 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-#include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.cpp.inc"
-
 /// Forward declarations.
 
 /// Generic entry point to create the block for the region of a LinalgOp.
@@ -149,13 +147,14 @@ static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
 // Region builder helper.
 // TODO: Move this to a utility library.
 // The public methods on this class are referenced directly from generated code
-// and bind by name to math and type conversion functions in the DSL as:
-//   `arithfn__{fnName}`
-//   `typefn__{fnName}`
+// and bind by name to math functions in the DSL as:
+//   `unary__{fnName}`
+//   `binary__{fnName}`
 // Examples:
-//   `arithfn__add`
-//   `arithfn__mul`
-//   `typefn__cast`
+//   `binary__add`
+//   `binary__mul`
+//   `unary__exp`
+//   `unary__log`
 // The naming convention is intentional in order to match snake-cased DSL names.
 // See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
 //
@@ -232,18 +231,18 @@ public:
     return operand;
   }
 
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value typefn__cast(Type toType, Value operand) {
-    return cast(toType, operand, false);
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+    switch (typeFn) {
+    case TypeFn::cast:
+      return cast(toType, operand, false);
+    case TypeFn::cast_unsigned:
+      return cast(toType, operand, true);
+    }
+    llvm_unreachable("unsupported type conversion function");
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value typefn__cast_unsigned(Type toType, Value operand) {
-    return cast(toType, operand, true);
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__add(Value lhs, Value rhs) {
+  Value binary__add(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::AddFOp>(lhs.getLoc(), lhs, rhs);
@@ -253,7 +252,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__exp(Value x) {
+  Value unary__exp(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
       return builder.create<math::ExpOp>(x.getLoc(), x);
@@ -261,7 +260,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__log(Value x) {
+  Value unary__log(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
       return builder.create<math::LogOp>(x.getLoc(), x);
@@ -269,7 +268,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__sub(Value lhs, Value rhs) {
+  Value binary__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::SubFOp>(lhs.getLoc(), lhs, rhs);
@@ -279,7 +278,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__mul(Value lhs, Value rhs) {
+  Value binary__mul(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MulFOp>(lhs.getLoc(), lhs, rhs);
@@ -289,7 +288,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__max(Value lhs, Value rhs) {
+  Value binary__max(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
@@ -299,7 +298,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__max_unsigned(Value lhs, Value rhs) {
+  Value binary__max_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
@@ -309,7 +308,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__min(Value lhs, Value rhs) {
+  Value binary__min(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
@@ -319,7 +318,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value arithfn__min_unsigned(Value lhs, Value rhs) {
+  Value binary__min_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
@@ -991,7 +990,7 @@ struct InferStaticShapeOfOperands : public OpRewritePattern<GenericOp> {
       Type oldType = oldResult.getType();
       replacements.push_back(
           (newType != oldType)
-              ? rewriter.create<tensor::CastOp>(loc, newType, newResult)
+              ? rewriter.create<tensor::CastOp>(loc, oldType, newResult)
               : newResult);
     }
     rewriter.replaceOp(genericOp, replacements);

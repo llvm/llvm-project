@@ -11,9 +11,9 @@
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/Optional.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
-using namespace presburger_utils;
 using Direction = Simplex::Direction;
 
 const int nullIndex = std::numeric_limits<int>::max();
@@ -1146,7 +1146,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::getSamplePointIfIntegral() const {
 /// also supports rolling back this addition, by maintaining a snapshot stack
 /// that contains a snapshot of the Simplex's state for each equality, just
 /// before that equality was added.
-class GBRSimplex {
+class presburger::GBRSimplex {
   using Orientation = Simplex::Orientation;
 
 public:
@@ -1719,5 +1719,3 @@ bool Simplex::isRedundantEquality(ArrayRef<int64_t> coeffs) {
   return minimum.isBounded() && maximum.isBounded() &&
          *maximum == Fraction(0, 1) && *minimum == Fraction(0, 1);
 }
-
-} // namespace mlir

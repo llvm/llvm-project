@@ -129,7 +129,8 @@ def linalg_structured_op(dsl_func=None,
   sig = inspect.signature(dsl_func)
   for param_name, param in sig.parameters.items():
     param_default = param.default
-    if isinstance(param_default, (TensorDef, ScalarDef, IndexAttrDef)):
+    if isinstance(param_default,
+                  (TensorDef, ScalarDef, IndexAttrDef, TypeFnAttrDef)):
       op_def.add_operand(param_name, param_default.operand_def)
     else:
       raise ValueError(

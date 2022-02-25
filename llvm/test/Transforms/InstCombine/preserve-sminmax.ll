@@ -10,9 +10,8 @@
 define i32 @foo(i32 %h) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[H:%.*]], 2
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i32 [[SD]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[SD]], i32 1
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[SD]], i32 1)
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %sd = sdiv i32 %h, 2
   %t = icmp slt i32 %sd, 1
@@ -23,9 +22,8 @@ define i32 @foo(i32 %h) {
 define i32 @bar(i32 %h) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[H:%.*]], 2
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i32 [[SD]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[SD]], i32 1
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[SD]], i32 1)
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %sd = sdiv i32 %h, 2
   %t = icmp sgt i32 %sd, 1

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -Wno-strict-prototypes -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i32, i32 }
 

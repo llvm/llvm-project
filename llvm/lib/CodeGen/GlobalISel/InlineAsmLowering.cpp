@@ -310,7 +310,7 @@ bool InlineAsmLowering::lowerInlineAsm(
       // If this is an indirect operand, the operand is a pointer to the
       // accessed type.
       if (OpInfo.isIndirect) {
-        OpTy = Call.getAttributes().getParamElementType(ArgNo);
+        OpTy = Call.getParamElementType(ArgNo);
         assert(OpTy && "Indirect operand must have elementtype attribute");
       }
 
