@@ -1872,28 +1872,29 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
 
 Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
                                              const Instruction *InsertPt) {
-  ArrayRef<Value *> Set = SE.getSCEVValues(S);
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
-  if (CanonicalMode || !SE.containsAddRecurrence(S)) {
-    // If S is scConstant, it may be worse to reuse an existing Value.
-    if (S->getSCEVType() != scConstant) {
-      // Choose a Value from the set which dominates the InsertPt.
-      // InsertPt should be inside the Value's parent loop so as not to break
-      // the LCSSA form.
-      for (Value *V : Set) {
-        Instruction *EntInst = dyn_cast<Instruction>(V);
-        if (!EntInst)
-          continue;
+  if (!CanonicalMode && SE.containsAddRecurrence(S))
+    return nullptr;
 
-        assert(EntInst->getFunction() == InsertPt->getFunction());
-        if (S->getType() == V->getType() &&
-            SE.DT.dominates(EntInst, InsertPt) &&
-            (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
-          return V;
-      }
-    }
+  // If S is a constant, it may be worse to reuse an existing Value.
+  if (isa<SCEVConstant>(S))
+    return nullptr;
+
+  // Choose a Value from the set which dominates the InsertPt.
+  // InsertPt should be inside the Value's parent loop so as not to break
+  // the LCSSA form.
+  for (Value *V : SE.getSCEVValues(S)) {
+    Instruction *EntInst = dyn_cast<Instruction>(V);
+    if (!EntInst)
+      continue;
+
+    assert(EntInst->getFunction() == InsertPt->getFunction());
+    if (S->getType() == V->getType() &&
+        SE.DT.dominates(EntInst, InsertPt) &&
+        (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
+         SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
+      return V;
   }
   return nullptr;
 }
