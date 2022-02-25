@@ -4241,7 +4241,7 @@ bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftCreateModuleContextsInParallel, true);
+        nullptr, ePropertySwiftReadMetadataFromFileCache, true);
 
   return true;
 }
