@@ -9,8 +9,8 @@ func @const_attribute_return_type_1() {
 // -----
 
 func @const_attribute_return_type_2() {
-    // expected-error @+1 {{'emitc.constant' op requires attribute's type ('!emitc.opaque<"int32_t*">') to match op's return type ('!emitc.opaque<"int32_t">')}}
-    %c0 = "emitc.constant"(){value = "nullptr" : !emitc.opaque<"int32_t*">} : () -> !emitc.opaque<"int32_t">
+    // expected-error @+1 {{'emitc.constant' op requires attribute's type ('!emitc.opaque<"char">') to match op's return type ('!emitc.opaque<"mychar">')}}
+    %c0 = "emitc.constant"(){value = "CHAR_MIN" : !emitc.opaque<"char">} : () -> !emitc.opaque<"mychar">
     return
 }
 
@@ -75,5 +75,21 @@ func @empty_operator(%arg : i32) {
 func @illegal_operator(%arg : i32) {
     // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
     %2 = emitc.apply "+"(%arg) : (i32) -> !emitc.opaque<"int32_t*">
+    return
+}
+
+// -----
+
+func @var_attribute_return_type_1() {
+    // expected-error @+1 {{'emitc.variable' op requires attribute's type ('i64') to match op's return type ('i32')}}
+    %c0 = "emitc.variable"(){value = 42: i64} : () -> i32
+    return
+}
+
+// -----
+
+func @var_attribute_return_type_2() {
+    // expected-error @+1 {{'emitc.variable' op requires attribute's type ('!emitc.opaque<"int32_t*">') to match op's return type ('!emitc.opaque<"int32_t">')}}
+    %c0 = "emitc.variable"(){value = "nullptr" : !emitc.opaque<"int32_t*">} : () -> !emitc.opaque<"int32_t">
     return
 }

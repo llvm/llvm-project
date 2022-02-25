@@ -787,8 +787,7 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   auto &F = State->getStateManager().get_context<ArgIdxFactory>();
   ImmutableSet<ArgIdxTy> Result = F.getEmptySet();
   ForEachCallArg(
-      [this, WouldEscape, &Call, &Result, &F](ArgIdxTy I, const Expr *E,
-                                              SVal V) {
+      [&](ArgIdxTy I, const Expr *E, SVal V) {
         if (PropDstArgs.contains(I)) {
           LLVM_DEBUG(llvm::dbgs() << "PreCall<"; Call.dump(llvm::dbgs());
                      llvm::dbgs()

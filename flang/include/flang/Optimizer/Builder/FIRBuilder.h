@@ -286,6 +286,11 @@ public:
   /// this may create a `fir.shift` op.
   mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);
 
+  /// Create a slice op extended value. The value to be sliced, `exv`, must be
+  /// an array.
+  mlir::Value createSlice(mlir::Location loc, const fir::ExtendedValue &exv,
+                          mlir::ValueRange triples, mlir::ValueRange path);
+
   /// Create a boxed value (Fortran descriptor) to be passed to the runtime.
   /// \p exv is an extended value holding a memory reference to the object that
   /// must be boxed. This function will crash if provided something that is not
@@ -389,6 +394,13 @@ mlir::Value readCharLen(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value readExtent(fir::FirOpBuilder &builder, mlir::Location loc,
                        const fir::ExtendedValue &box, unsigned dim);
 
+/// Read or get the lower bound in dimension \p dim of the array described by
+/// \p box. If the lower bound is left default in the ExtendedValue,
+/// \p defaultValue will be returned.
+mlir::Value readLowerBound(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const fir::ExtendedValue &box, unsigned dim,
+                           mlir::Value defaultValue);
+
 /// Read extents from \p box.
 llvm::SmallVector<mlir::Value> readExtents(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
@@ -446,6 +458,35 @@ mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
+
+//===--------------------------------------------------------------------===//
+// ExtendedValue helpers
+//===--------------------------------------------------------------------===//
+
+/// Return the extended value for a component of a derived type instance given
+/// the address of the component.
+fir::ExtendedValue componentToExtendedValue(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Value component);
+
+/// Given the address of an array element and the ExtendedValue describing the
+/// array, returns the ExtendedValue describing the array element. The purpose
+/// is to propagate the length parameters of the array to the element.
+/// This can be used for elements of `array` or `array(i:j:k)`. If \p element
+/// belongs to an array section `array%x` whose base is \p array,
+/// arraySectionElementToExtendedValue must be used instead.
+fir::ExtendedValue arrayElementToExtendedValue(fir::FirOpBuilder &builder,
+                                               mlir::Location loc,
+                                               const fir::ExtendedValue &array,
+                                               mlir::Value element);
+
+/// Build the ExtendedValue for \p element that is an element of an array or
+/// array section with \p array base (`array` or `array(i:j:k)%x%y`).
+/// If it is an array section, \p slice must be provided and be a fir::SliceOp
+/// that describes the section.
+fir::ExtendedValue arraySectionElementToExtendedValue(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &array, mlir::Value element, mlir::Value slice);
 
 } // namespace fir::factory
 

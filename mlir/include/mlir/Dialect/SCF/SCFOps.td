@@ -110,7 +110,8 @@ def ExecuteRegionOp : SCF_Op<"execute_region"> {
 }
 
 def ForOp : SCF_Op<"for",
-      [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+      [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
+       ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep"]>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
        RecursiveSideEffects]> {

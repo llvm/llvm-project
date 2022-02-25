@@ -48,6 +48,7 @@ jobs:
                 to: "llvm-bugs@lists.llvm.org",
                 subject: `[Bug ${issue.data.number}] ${issue.data.title}`,
                 template: "new-github-issue",
+                'o:tracking-clicks': 'no',
                 'h:X-Mailgun-Variables': JSON.stringify(payload)
               };
 

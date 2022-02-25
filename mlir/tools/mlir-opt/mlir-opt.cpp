@@ -74,6 +74,7 @@ void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
 void registerTestComposeSubView();
+void registerTestMultiBuffering();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
@@ -164,6 +165,7 @@ void registerTestPasses() {
   mlir::test::registerTestDynamicPipelinePass();
   mlir::test::registerTestExpandTanhPass();
   mlir::test::registerTestComposeSubView();
+  mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestGpuParallelLoopMappingPass();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();

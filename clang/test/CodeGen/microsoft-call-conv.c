@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple i386-pc-linux -emit-llvm < %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-pc-linux -emit-llvm -mrtd < %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-pc-linux -emit-llvm -fms-compatibility < %s
+// RUN: %clang_cc1 -triple i386-pc-linux -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux -Wno-strict-prototypes -emit-llvm -mrtd < %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux -Wno-strict-prototypes -emit-llvm -fms-compatibility < %s
 
 void __fastcall f1(void);
 void __stdcall f2(void);

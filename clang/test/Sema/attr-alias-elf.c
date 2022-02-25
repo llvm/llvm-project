@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux  -fsyntax-only -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -Wno-strict-prototypes -fsyntax-only -verify -emit-llvm-only %s
 
 void f1(void) __attribute__((alias("g1")));
 void g1(void) {

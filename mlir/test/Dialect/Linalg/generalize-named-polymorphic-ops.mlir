@@ -36,6 +36,20 @@ func @generalize_matmul_tensor_i16i64i32(%A : tensor<16x8xi16>, %B: tensor<8x32x
 // CHECK-NEXT:   linalg.yield %[[ADD]] : i32
 // CHECK-NEXT: -> tensor<16x32xi32>
 
+
+// -----
+
+// Verifies that cast attributes control the cast operations used.
+func @generalize_matmul_tensor_i16i64i32_unsigned(%A : tensor<16x8xi16>, %B: tensor<8x32xi64>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+                     ins(%A, %B: tensor<16x8xi16>, tensor<8x32xi64>)
+                          outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
+  return %0: tensor<16x32xi32>
+}
+
+// CHECK-LABEL: @generalize_matmul_tensor_i16i64i32_unsigned
+// CHECK:        = arith.extui
+
 // -----
 
 func @generalize_matmul_tensor_i16i64f32(%A : tensor<16x8xi16>, %B: tensor<8x32xi64>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {

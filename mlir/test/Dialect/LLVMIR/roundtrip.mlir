@@ -281,6 +281,19 @@ func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
   return
 }
 
+// CHECK-LABEL: @scalable_vect
+func @scalable_vect(%arg0: vector<[4]xf32>, %arg1: i32, %arg2: f32) {
+// CHECK:  = llvm.extractelement {{.*}} : vector<[4]xf32>
+  %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<[4]xf32>
+// CHECK:  = llvm.insertelement {{.*}} : vector<[4]xf32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<[4]xf32>
+// CHECK:  = llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
+// CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  %3 = llvm.mlir.constant(dense<1.0> : vector<[4]xf32>) : vector<[4]xf32>
+  return
+}
+
 // CHECK-LABEL: @alloca
 func @alloca(%size : i64) {
   // CHECK: llvm.alloca %{{.*}} x i32 : (i64) -> !llvm.ptr<i32>

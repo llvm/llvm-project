@@ -54,21 +54,17 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
   const auto &TC = getToolChain();
-  // TODO: Once code-generation is available, this will need to be commented
-  // out.
-  // const llvm::Triple &Triple = TC.getEffectiveTriple();
-  // const std::string &TripleStr = Triple.getTriple();
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+  const std::string &TripleStr = Triple.getTriple();
 
   ArgStringList CmdArgs;
 
   // Invoke ourselves in -fc1 mode.
   CmdArgs.push_back("-fc1");
 
-  // TODO: Once code-generation is available, this will need to be commented
-  // out.
   // Add the "effective" target triple.
-  // CmdArgs.push_back("-triple");
-  // CmdArgs.push_back(Args.MakeArgString(TripleStr));
+  CmdArgs.push_back("-triple");
+  CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
       CmdArgs.push_back("-E");

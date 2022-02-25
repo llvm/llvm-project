@@ -813,11 +813,21 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: f64
 
   MlirAttribute integer = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 42);
+  MlirAttribute signedInteger =
+      mlirIntegerAttrGet(mlirIntegerTypeSignedGet(ctx, 8), -1);
+  MlirAttribute unsignedInteger =
+      mlirIntegerAttrGet(mlirIntegerTypeUnsignedGet(ctx, 8), 255);
   if (!mlirAttributeIsAInteger(integer) ||
-      mlirIntegerAttrGetValueInt(integer) != 42)
+      mlirIntegerAttrGetValueInt(integer) != 42 ||
+      mlirIntegerAttrGetValueSInt(signedInteger) != -1 ||
+      mlirIntegerAttrGetValueUInt(unsignedInteger) != 255)
     return 2;
   mlirAttributeDump(integer);
+  mlirAttributeDump(signedInteger);
+  mlirAttributeDump(unsignedInteger);
   // CHECK: 42 : i32
+  // CHECK: -1 : si8
+  // CHECK: 255 : ui8
 
   MlirAttribute boolean = mlirBoolAttrGet(ctx, 1);
   if (!mlirAttributeIsABool(boolean) || !mlirBoolAttrGetValue(boolean))

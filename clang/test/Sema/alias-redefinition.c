@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -Wno-strict-prototypes -fsyntax-only -verify %s
 
 void f0() {}
 void fun0(void) __attribute((alias("f0")));

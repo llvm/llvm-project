@@ -87,17 +87,16 @@ define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
 define i64 @test_bswap64_shift48_zext(i16 %a0) {
 ; X86-LABEL: test_bswap64_shift48_zext:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    bswapl %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap64_shift48_zext:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shlq $48, %rax
-; X64-NEXT:    bswapq %rax
+; X64-NEXT:    rolw $8, %di
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
   %z = zext i16 %a0 to i64
   %s = shl i64 %z, 48
@@ -109,16 +108,15 @@ define i64 @test_bswap64_shift48(i64 %a0) {
 ; X86-LABEL: test_bswap64_shift48:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    bswapl %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap64_shift48:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shlq $48, %rax
-; X64-NEXT:    bswapq %rax
+; X64-NEXT:    rolw $8, %di
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
   %s = shl i64 %a0, 48
   %b = call i64 @llvm.bswap.i64(i64 %s)

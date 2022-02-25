@@ -1168,6 +1168,26 @@ llvm.func @vect_i64idx(%arg0: vector<4xf32>, %arg1: i64, %arg2: f32) {
   llvm.return
 }
 
+// CHECK-LABEL: @scalable_vect
+llvm.func @scalable_vect(%arg0: vector<[4]xf32>, %arg1: i32, %arg2: f32) {
+  // CHECK-NEXT: extractelement <vscale x 4 x float> {{.*}}, i32
+  // CHECK-NEXT: insertelement <vscale x 4 x float> {{.*}}, float %2, i32
+  // CHECK-NEXT: shufflevector <vscale x 4 x float> %0, <vscale x 4 x float> %0, <vscale x 4 x i32> zeroinitializer
+  %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<[4]xf32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<[4]xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @scalable_vect_i64idx
+llvm.func @scalable_vect_i64idx(%arg0: vector<[4]xf32>, %arg1: i64, %arg2: f32) {
+  // CHECK-NEXT: extractelement <vscale x 4 x float> {{.*}}, i64
+  // CHECK-NEXT: insertelement <vscale x 4 x float> {{.*}}, float %2, i64
+  %0 = llvm.extractelement %arg0[%arg1 : i64] : vector<[4]xf32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i64] : vector<[4]xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @alloca
 llvm.func @alloca(%size : i64) {
   // Alignment automatically set by the LLVM IR builder when alignment attribute

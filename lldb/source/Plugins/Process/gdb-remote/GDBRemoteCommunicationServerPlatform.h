@@ -131,7 +131,7 @@ protected:
 private:
   bool KillSpawnedProcess(lldb::pid_t pid);
 
-  bool DebugserverProcessReaped(lldb::pid_t pid);
+  void DebugserverProcessReaped(lldb::pid_t pid);
 
   static const FileSpec &GetDomainSocketDir();
 

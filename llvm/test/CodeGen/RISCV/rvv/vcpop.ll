@@ -24,8 +24,7 @@ entry:
 define iXLen @intrinsic_vcpop_m_nxv1i1_zero(<vscale x 1 x i1> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vcpop_m_nxv1i1_zero:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 0, e8, mf8, ta, mu
-; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %a = call iXLen @llvm.riscv.vcpop.iXLen.nxv1i1(
@@ -60,10 +59,7 @@ entry:
 define iXLen @intrinsic_vcpop_mask_m_nxv1i1_zero(<vscale x 1 x i1> %0, <vscale x 1 x i1> %1) nounwind {
 ; CHECK-LABEL: intrinsic_vcpop_mask_m_nxv1i1_zero:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetivli zero, 0, e8, mf8, ta, mu
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vcpop.m a0, v9, v0.t
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %a = call iXLen @llvm.riscv.vcpop.mask.iXLen.nxv1i1(

@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_cc1 -emit-llvm -Wno-strict-prototypes -fcf-protection=branch -triple i386-linux-gnu %s -o - | FileCheck %s
 
 // CHECK: @t5 = weak{{.*}} global i32 2
 int t5 __attribute__((weak)) = 2;
@@ -79,9 +78,6 @@ void __attribute__((section("xSECT"))) t11(void) {}
 // CHECK: define{{.*}} i32 @t19() [[NUW]] {
 extern int t19(void) __attribute__((weak_import));
 int t19(void) {
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
   return 10;
 }
 

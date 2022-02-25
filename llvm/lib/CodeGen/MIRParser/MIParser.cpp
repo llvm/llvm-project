@@ -3281,11 +3281,21 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   MDNode *Range = nullptr;
   while (consumeIfPresent(MIToken::comma)) {
     switch (Token.kind()) {
-    case MIToken::kw_align:
+    case MIToken::kw_align: {
       // align is printed if it is different than size.
-      if (parseAlignment(BaseAlignment))
+      uint64_t Alignment;
+      if (parseAlignment(Alignment))
         return true;
+      if (Ptr.Offset & (Alignment - 1)) {
+        // MachineMemOperand::getAlign never returns a value greater than the
+        // alignment of offset, so this just guards against hand-written MIR
+        // that specifies a large "align" value when it should probably use
+        // "basealign" instead.
+        return error("specified alignment is more aligned than offset");
+      }
+      BaseAlignment = Alignment;
       break;
+    }
     case MIToken::kw_basealign:
       // basealign is printed if it is different than align.
       if (parseAlignment(BaseAlignment))
