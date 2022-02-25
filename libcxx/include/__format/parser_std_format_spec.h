@@ -1271,7 +1271,7 @@ __estimate_column_width(const _CharT* __first, const _CharT* __last,
   size_t __result = 0;
 
   while (__first != __last) {
-    wchar_t __c = *__first;
+    uint32_t __c = *__first;
     __result += __column_width(__c);
 
     if (__result > __maximum)
