@@ -2069,10 +2069,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Type *Ty = getTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
-	// shamelessly stolen from BitcodeReader.cp
-	static constexpr unsigned InvalidTypeID = ~0u;
-	static constexpr unsigned TODOTypeID = InvalidTypeID - 1;
-        Constant *V = ValueList.getConstantFwdRef(Elems[1], Ty, TODOTypeID);
+        Constant *V = ValueList.getConstantFwdRef(Elems[1], Ty, Elems[0]);
         if (!V || !isa<ConstantData>(V))
           return error("Invalid record");
         Builder.append<DIOp::Constant>(cast<ConstantData>(V));
