@@ -130,6 +130,33 @@ translateRelational(Fortran::common::RelationalOperator rop) {
   llvm_unreachable("unhandled INTEGER relational operator");
 }
 
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+static mlir::arith::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpFPredicate::OLT;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpFPredicate::OLE;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpFPredicate::OEQ;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpFPredicate::UNE;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpFPredicate::OGT;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}
+
 /// Place \p exv in memory if it is not already a memory reference. If
 /// \p forceValueType is provided, the value is first casted to the provided
 /// type before being stored (this is mainly intended for logicals whose value
@@ -373,6 +400,20 @@ public:
     return createCompareOp<OpTy>(pred, left, genval(ex.right()));
   }
 
+  template <typename OpTy>
+  mlir::Value createFltCmpOp(mlir::arith::CmpFPredicate pred,
+                             const ExtValue &left, const ExtValue &right) {
+    if (const fir::UnboxedValue *lhs = left.getUnboxed())
+      if (const fir::UnboxedValue *rhs = right.getUnboxed())
+        return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
+    fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
+  }
+  template <typename OpTy, typename A>
+  mlir::Value createFltCmpOp(const A &ex, mlir::arith::CmpFPredicate pred) {
+    ExtValue left = genval(ex.left());
+    return createFltCmpOp<OpTy>(pred, left, genval(ex.right()));
+  }
+
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   ExtValue gen(Fortran::semantics::SymbolRef sym) {
@@ -535,7 +576,8 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Real, KIND>> &op) {
-    TODO(getLoc(), "genval real comparison");
+    return createFltCmpOp<mlir::arith::CmpFOp>(
+        op, translateFloatRelational(op.opr));
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
