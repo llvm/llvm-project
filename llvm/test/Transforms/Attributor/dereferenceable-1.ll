@@ -319,7 +319,7 @@ define void @deref_or_null_and_nonnull(i32* dereferenceable_or_null(100) %0) {
 define void @test8(i8* %ptr) #0 {
 ; IS________OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind writeonly
 ; IS________OPM-LABEL: define {{[^@]+}}@test8
-; IS________OPM-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; IS________OPM-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; IS________OPM-NEXT:    br label [[TMP1:%.*]]
 ; IS________OPM:       1:
 ; IS________OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 20, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[TMP5:%.*]] ]
