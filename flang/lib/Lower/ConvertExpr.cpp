@@ -612,12 +612,36 @@ public:
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Not<KIND> &op) {
-    TODO(getLoc(), "genval Not<KIND>");
+    mlir::Value logical = genunbox(op.left());
+    mlir::Value one = genBoolConstant(true);
+    mlir::Value val =
+        builder.createConvert(getLoc(), builder.getI1Type(), logical);
+    return builder.create<mlir::arith::XOrIOp>(getLoc(), val, one);
   }
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::LogicalOperation<KIND> &op) {
-    TODO(getLoc(), "genval LogicalOperation<KIND>");
+    mlir::IntegerType i1Type = builder.getI1Type();
+    mlir::Value slhs = genunbox(op.left());
+    mlir::Value srhs = genunbox(op.right());
+    mlir::Value lhs = builder.createConvert(getLoc(), i1Type, slhs);
+    mlir::Value rhs = builder.createConvert(getLoc(), i1Type, srhs);
+    switch (op.logicalOperator) {
+    case Fortran::evaluate::LogicalOperator::And:
+      return createBinaryOp<mlir::arith::AndIOp>(lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Or:
+      return createBinaryOp<mlir::arith::OrIOp>(lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Eqv:
+      return createCompareOp<mlir::arith::CmpIOp>(
+          mlir::arith::CmpIPredicate::eq, lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Neqv:
+      return createCompareOp<mlir::arith::CmpIOp>(
+          mlir::arith::CmpIPredicate::ne, lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Not:
+      // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
+      llvm_unreachable(".NOT. is not a binary operator");
+    }
+    llvm_unreachable("unhandled logical operation");
   }
 
   /// Convert a scalar literal constant to IR.
