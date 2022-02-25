@@ -4054,7 +4054,7 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
       if (!CI.hasArg())
         continue;
 
-      if (CI.isIndirect && !CB->getAttributes().getParamElementType(ArgNo)) {
+      if (CI.isIndirect && !CB->getParamElementType(ArgNo)) {
         Type *ElemTy = ArgsTys[ArgNo]->getPointerElementType();
         CB->addParamAttr(
             ArgNo, Attribute::get(Context, Attribute::ElementType, ElemTy));
@@ -4067,7 +4067,7 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
   switch (CB->getIntrinsicID()) {
   case Intrinsic::preserve_array_access_index:
   case Intrinsic::preserve_struct_access_index:
-    if (!CB->getAttributes().getParamElementType(0)) {
+    if (!CB->getParamElementType(0)) {
       Type *ElTy = ArgsTys[0]->getPointerElementType();
       Attribute NewAttr = Attribute::get(Context, Attribute::ElementType, ElTy);
       CB->addParamAttr(0, NewAttr);
