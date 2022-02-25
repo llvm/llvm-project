@@ -447,7 +447,7 @@ LogicalResult coalescePair(unsigned i, unsigned j,
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
 
-  /// Check that all equalities are redundant in a (and in b).
+  // Check that all equalities are redundant in a (and in b).
   bool onlyRedundantEqsA = true;
   for (unsigned k = 0, e = a.getNumEqualities(); k < e; ++k)
     if (!simpB.isRedundantEquality(a.getEquality(k))) {
@@ -462,17 +462,17 @@ LogicalResult coalescePair(unsigned i, unsigned j,
       break;
     }
 
-  /// If there are non-redundant equalities for both, exit early.
+  // If there are non-redundant equalities for both, exit early.
   if (!onlyRedundantEqsB && !onlyRedundantEqsA)
     return failure();
 
   SmallVector<ArrayRef<int64_t>, 2> redundantIneqsA;
   SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsA;
 
-  /// Organize all inequalities of `a` according to their type for `b` into
-  /// `redundantIneqsA` and `cuttingIneqsA` (and vice versa for all inequalities
-  /// of `b` according to their type in `a`). If a separate inequality is
-  /// encountered during typing, the two IntegerPolyhedrons cannot be coalesced.
+  // Organize all inequalities of `a` according to their type for `b` into
+  // `redundantIneqsA` and `cuttingIneqsA` (and vice versa for all inequalities
+  // of `b` according to their type in `a`). If a separate inequality is
+  // encountered during typing, the two IntegerPolyhedrons cannot be coalesced.
   if (typeInequalities(a, simpB, redundantIneqsA, cuttingIneqsA).failed())
     return failure();
 
@@ -482,15 +482,15 @@ LogicalResult coalescePair(unsigned i, unsigned j,
   if (typeInequalities(b, simpA, redundantIneqsB, cuttingIneqsB).failed())
     return failure();
 
-  /// If there are no cutting inequalities of `a` and all equalities of `a` are
-  /// redundant, then all constraints of `a` are redundant making `b` contained
-  /// within a (and vice versa for `b`).
-  if (cuttingIneqsA.size() == 0 && onlyRedundantEqsA) {
+  // If there are no cutting inequalities of `a` and all equalities of `a` are
+  // redundant, then all constraints of `a` are redundant making `b` contained
+  // within a (and vice versa for `b`).
+  if (cuttingIneqsA.empty() && onlyRedundantEqsA) {
     erasePolyhedron(j, polyhedrons, simplices);
     return success();
   }
 
-  if (cuttingIneqsB.size() == 0 && onlyRedundantEqsB) {
+  if (cuttingIneqsB.empty() && onlyRedundantEqsB) {
     erasePolyhedron(i, polyhedrons, simplices);
     return success();
   }
@@ -505,6 +505,7 @@ PresburgerSet PresburgerSet::coalesce() const {
   SmallVector<Simplex, 2> simplices;
 
   simplices.reserve(getNumPolys());
+  // Note that polyhedrons.size() changes during the loop.
   for (unsigned i = 0; i < polyhedrons.size();) {
     Simplex simp(polyhedrons[i]);
     if (simp.isEmpty()) {
@@ -512,18 +513,18 @@ PresburgerSet PresburgerSet::coalesce() const {
       polyhedrons.pop_back();
       continue;
     }
-    i++;
+    ++i;
     simplices.push_back(simp);
   }
 
-  /// For all tuples of IntegerPolyhedrons, check whether they can be coalesced.
-  /// When coalescing is successful, the contained IntegerPolyhedron is swapped
-  /// with the last element of `polyhedrons` and subsequently erased and
-  /// similarly for simplices.
+  // For all tuples of IntegerPolyhedrons, check whether they can be coalesced.
+  // When coalescing is successful, the contained IntegerPolyhedron is swapped
+  // with the last element of `polyhedrons` and subsequently erased and
+  // similarly for simplices.
   for (unsigned i = 0; i < polyhedrons.size(); ++i) {
 
-    /// TODO: This does some comparisons two times (index 0 with 1 and index 1
-    /// with 0).
+    // TODO: This does some comparisons two times (index 0 with 1 and index 1
+    // with 0).
     bool broken = false;
     for (unsigned j = 0, e = polyhedrons.size(); j < e; ++j) {
       if (i == j)
@@ -534,9 +535,9 @@ PresburgerSet PresburgerSet::coalesce() const {
       }
     }
 
-    /// Only if the inner loop was not broken, i is incremented. This is
-    /// required as otherwise, if a coalescing occurs, the IntegerPolyhedron
-    /// now at position i is not compared.
+    // Only if the inner loop was not broken, i is incremented. This is
+    // required as otherwise, if a coalescing occurs, the IntegerPolyhedron
+    // now at position i is not compared.
     if (!broken)
       ++i;
   }
