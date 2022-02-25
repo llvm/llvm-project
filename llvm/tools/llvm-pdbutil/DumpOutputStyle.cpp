@@ -389,7 +389,7 @@ Error DumpOutputStyle::dumpStreamSummary() {
   uint32_t StreamCount = getPdb().getNumStreams();
   uint32_t MaxStreamSize = getPdb().getMaxStreamSize();
 
-  for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
+  for (uint32_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     P.formatLine(
         "Stream {0} ({1} bytes): [{2}]",
         fmt_align(StreamIdx, AlignStyle::Right, NumDigits(StreamCount)),

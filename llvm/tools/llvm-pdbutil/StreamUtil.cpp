@@ -95,7 +95,7 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
   }
 
   Streams.resize(StreamCount);
-  for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
+  for (uint32_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     if (StreamIdx == OldMSFDirectory)
       Streams[StreamIdx] =
           stream(StreamPurpose::Other, "Old MSF Directory", StreamIdx);
