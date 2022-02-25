@@ -250,8 +250,11 @@ public:
     auto loc = op.getLoc();
 
     // Check if the source vector type is supported. AVX2 patterns can only be
-    // applied if the vector type has two dimensions greater than one.
+    // applied to f32 vector types with two dimensions greater than one.
     VectorType srcType = op.getVectorType();
+    if (!srcType.getElementType().isF32())
+      return rewriter.notifyMatchFailure(op, "Unsupported vector element type");
+
     SmallVector<int64_t> srcGtOneDims;
     for (auto &en : llvm::enumerate(srcType.getShape()))
       if (en.value() > 1)
