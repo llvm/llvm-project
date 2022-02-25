@@ -34,17 +34,15 @@ body:             |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     ; GFX10-LABEL: name: test_waitcnt_preexisting_vscnt_needs_vscnt
-    ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
-    ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
-    ; GFX10-NEXT: S_BARRIER
-    ; GFX10-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX10-NEXT: S_WAITCNT 112
-    ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX10-NEXT: S_ENDPGM 0
+    ; GFX10: S_WAITCNT 0
+    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 0
+    ; GFX10: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 1
+    ; GFX10: S_BARRIER
+    ; GFX10: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX10: S_WAITCNT 112
+    ; GFX10: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX10: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     S_WAITCNT_VSCNT undef $sgpr_null, 1
     S_BARRIER
@@ -116,18 +114,16 @@ body:             |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     ; GFX10-LABEL: name: test_waitcnt_preexisting_vscnt_combined_both_types
-    ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
-    ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
-    ; GFX10-NEXT: S_BARRIER
-    ; GFX10-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX10-NEXT: S_WAITCNT 112
-    ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX10-NEXT: S_ENDPGM 0
+    ; GFX10: S_WAITCNT 0
+    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 0
+    ; GFX10: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    ; GFX10: S_WAITCNT 0
+    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 1
+    ; GFX10: S_BARRIER
+    ; GFX10: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX10: S_WAITCNT 112
+    ; GFX10: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX10: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     S_WAITCNT 0
     S_WAITCNT_VSCNT undef $sgpr_null, 1
