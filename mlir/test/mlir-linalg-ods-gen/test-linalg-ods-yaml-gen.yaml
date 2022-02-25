@@ -39,23 +39,26 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      arith_fn:
+      scalar_fn:
+        kind: arith
         fn_name: add
         operands:
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
+            attr_name: cast
             type_var: T
             operands:
             - !ScalarExpression
               scalar_const: '42 : i64'
-            attr_name: cast
         - !ScalarExpression
-          type_fn:
+          scalar_fn:
+            kind: type
+            attr_name: cast
             type_var: T
             operands:
             - !ScalarExpression
               scalar_index: 1
-            attr_name: cast
 
 # ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
 
@@ -236,7 +239,8 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      type_fn:
+      scalar_fn:
+        kind: type
         fn_name: cast
         type_var: U
         operands:
