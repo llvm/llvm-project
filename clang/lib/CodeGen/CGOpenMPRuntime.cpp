@@ -29,6 +29,7 @@
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
@@ -9602,12 +9603,6 @@ static void emitOffloadingArrays(
   if (Info.NumberOfPtrs) {
     // Detect if we have any capture size requiring runtime evaluation of the
     // size so that a constant array could be eventually used.
-    bool hasRuntimeEvaluationCaptureSize = false;
-    for (llvm::Value *S : CombinedInfo.Sizes)
-      if (!isa<llvm::Constant>(S)) {
-        hasRuntimeEvaluationCaptureSize = true;
-        break;
-      }
 
     llvm::APInt PointerNumAP(32, Info.NumberOfPtrs, /*isSigned=*/true);
     QualType PointerArrayType = Ctx.getConstantArrayType(
@@ -9627,35 +9622,56 @@ static void emitOffloadingArrays(
     // need to fill up the arrays as we do for the pointers.
     QualType Int64Ty =
         Ctx.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
-    if (hasRuntimeEvaluationCaptureSize) {
+    SmallVector<llvm::Constant *> ConstSizes(
+        CombinedInfo.Sizes.size(), llvm::ConstantInt::get(CGF.Int64Ty, 0));
+    llvm::SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
+    for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
+      if (auto *CI = dyn_cast<llvm::Constant>(CombinedInfo.Sizes[I])) {
+        if (!isa<llvm::ConstantExpr>(CI) && !isa<llvm::GlobalValue>(CI)) {
+          if (IsNonContiguous && (CombinedInfo.Types[I] &
+                                  MappableExprsHandler::OMP_MAP_NON_CONTIG))
+            ConstSizes[I] = llvm::ConstantInt::get(
+                CGF.Int64Ty, CombinedInfo.NonContigInfo.Dims[I]);
+          else
+            ConstSizes[I] = CI;
+          continue;
+        }
+      }
+      RuntimeSizes.set(I);
+    }
+
+    if (RuntimeSizes.all()) {
       QualType SizeArrayType = Ctx.getConstantArrayType(
           Int64Ty, PointerNumAP, nullptr, ArrayType::Normal,
           /*IndexTypeQuals=*/0);
       Info.SizesArray =
           CGF.CreateMemTemp(SizeArrayType, ".offload_sizes").getPointer();
     } else {
-      // We expect all the sizes to be constant, so we collect them to create
-      // a constant array.
-      SmallVector<llvm::Constant *, 16> ConstSizes;
-      for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
-        if (IsNonContiguous &&
-            (CombinedInfo.Types[I] & MappableExprsHandler::OMP_MAP_NON_CONTIG)) {
-          ConstSizes.push_back(llvm::ConstantInt::get(
-              CGF.Int64Ty, CombinedInfo.NonContigInfo.Dims[I]));
-        } else {
-          ConstSizes.push_back(cast<llvm::Constant>(CombinedInfo.Sizes[I]));
-        }
-      }
-
       auto *SizesArrayInit = llvm::ConstantArray::get(
           llvm::ArrayType::get(CGM.Int64Ty, ConstSizes.size()), ConstSizes);
       std::string Name = CGM.getOpenMPRuntime().getName({"offload_sizes"});
       auto *SizesArrayGbl = new llvm::GlobalVariable(
-          CGM.getModule(), SizesArrayInit->getType(),
-          /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-          SizesArrayInit, Name);
+          CGM.getModule(), SizesArrayInit->getType(), /*isConstant=*/true,
+          llvm::GlobalValue::PrivateLinkage, SizesArrayInit, Name);
       SizesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      Info.SizesArray = SizesArrayGbl;
+      if (RuntimeSizes.any()) {
+        QualType SizeArrayType = Ctx.getConstantArrayType(
+            Int64Ty, PointerNumAP, nullptr, ArrayType::Normal,
+            /*IndexTypeQuals=*/0);
+        Address Buffer = CGF.CreateMemTemp(SizeArrayType, ".offload_sizes");
+        llvm::Value *GblConstPtr =
+            CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                SizesArrayGbl, CGM.Int64Ty->getPointerTo());
+        CGF.Builder.CreateMemCpy(
+            Buffer,
+            Address(GblConstPtr, CGM.Int64Ty,
+                    CGM.getNaturalTypeAlignment(Ctx.getIntTypeForBitwidth(
+                        /*DestWidth=*/64, /*Signed=*/false))),
+            CGF.getTypeSize(SizeArrayType));
+        Info.SizesArray = Buffer.getPointer();
+      } else {
+        Info.SizesArray = SizesArrayGbl;
+      }
     }
 
     // The map types are always constant so we don't need to generate code to
@@ -9729,7 +9745,7 @@ static void emitOffloadingArrays(
           Address::deprecated(P, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
       CGF.Builder.CreateStore(PVal, PAddr);
 
-      if (hasRuntimeEvaluationCaptureSize) {
+      if (RuntimeSizes.test(I)) {
         llvm::Value *S = CGF.Builder.CreateConstInBoundsGEP2_32(
             llvm::ArrayType::get(CGM.Int64Ty, Info.NumberOfPtrs),
             Info.SizesArray,

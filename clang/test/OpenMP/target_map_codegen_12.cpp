@@ -35,7 +35,7 @@
 
 // CK13-LABEL: @.__omp_offloading_{{.*}}implicit_maps_variable_length_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// We don't have a constant map size for VLAs.
+// CK13-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 0]
 // Map types:
 //  - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM + OMP_MAP_IMPLICIT = 800 (vla size)
 //  - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM + OMP_MAP_IMPLICIT = 800 (vla size)
@@ -53,21 +53,17 @@ void implicit_maps_variable_length_array (int a){
 
   // CK13-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
   // CK13-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK13-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[SS]], i32 0, i32 0
   // CK13-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[sz:64|32]]*
   // CK13-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[sz]]*
   // CK13-DAG: store i[[sz]] 2, i[[sz]]* [[CBP0]]
   // CK13-DAG: store i[[sz]] 2, i[[sz]]* [[CP0]]
-  // CK13-DAG: store i64 {{8|4}}, i64* [[S0]],
 
   // CK13-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 1
   // CK13-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 1
-  // CK13-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[SS]], i32 0, i32 1
   // CK13-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[sz]]*
   // CK13-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[sz]]*
   // CK13-DAG: store i[[sz]] [[VAL:%.+]], i[[sz]]* [[CBP1]]
   // CK13-DAG: store i[[sz]] [[VAL]], i[[sz]]* [[CP1]]
-  // CK13-DAG: store i64 {{8|4}}, i64* [[S1]],
 
   // CK13-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 2
   // CK13-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 2

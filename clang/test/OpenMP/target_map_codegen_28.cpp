@@ -37,12 +37,15 @@
 // CK29: [[SSB:%.+]]  = type { [[SSA]]*, [[SSA]]** }
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK29: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 80]
 // CK29: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710675]
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK29: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 {{8|4}}, i64 80]
 // CK29: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710672, i64 19]
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK29: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 80]
 // CK29: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710675]
 
 struct SSA{
@@ -79,12 +82,10 @@ struct SSB{
 
     // CK29-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
     // CK29-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK29-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
     // CK29-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to double****
     // CK29-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to double**
     // CK29-DAG: store double*** [[VAR1:%.+]], double**** [[CBP2]]
     // CK29-DAG: store double* [[VAR2:%.+]], double** [[CP2]]
-    // CK29-DAG: store i64 80, i64* [[S2]]
     // CK29-DAG: [[VAR1]] = getelementptr inbounds [[SSA]], [[SSA]]* %{{.+}}, i32 0, i32 1
     // CK29-DAG: [[VAR2]] = getelementptr inbounds double, double* [[VAR22:%.+]], i{{.+}} 0
     // CK29-DAG: [[VAR22]] = load double*, double** %{{.+}},
@@ -114,22 +115,18 @@ struct SSB{
 
     // CK29-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
     // CK29-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK29-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
     // CK29-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[SSA]]****
     // CK29-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double***
     // CK29-DAG: store [[SSA]]*** [[VAR000]], [[SSA]]**** [[CBP1]]
     // CK29-DAG: store double** [[VAR1:%.+]], double*** [[CP1]]
-    // CK29-DAG: store i64 {{8|4}}, i64* [[S1]]
     // CK29-DAG: [[VAR1]] = getelementptr inbounds [[SSA]], [[SSA]]* %{{.+}}, i32 0, i32 0
 
     // CK29-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
     // CK29-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-    // CK29-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
     // CK29-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to double***
     // CK29-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to double**
     // CK29-DAG: store double** [[VAR1]], double*** [[CBP2]]
     // CK29-DAG: store double* [[VAR2:%.+]], double** [[CP2]]
-    // CK29-DAG: store i64 80, i64* [[S2]]
     // CK29-DAG: [[VAR2]] = getelementptr inbounds double, double* [[VAR22:%.+]], i{{.+}} 0
     // CK29-DAG: [[VAR22]] = load double*, double** %{{.+}},
 
@@ -158,12 +155,10 @@ struct SSB{
 
     // CK29-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
     // CK29-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK29-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
     // CK29-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to double****
     // CK29-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to double**
     // CK29-DAG: store double*** [[VAR1:%.+]], double**** [[CBP2]]
     // CK29-DAG: store double* [[VAR2:%.+]], double** [[CP2]]
-    // CK29-DAG: store i64 80, i64* [[S2]]
     // CK29-DAG: [[VAR1]] = getelementptr inbounds [[SSA]], [[SSA]]* %{{.+}}, i32 0, i32 1
     // CK29-DAG: [[VAR2]] = getelementptr inbounds double, double* [[VAR22:%.+]], i{{.+}} 0
     // CK29-DAG: [[VAR22]] = load double*, double** %{{.+}},

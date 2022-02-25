@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -test-vector-transpose-lowering=eltwise=1 | FileCheck %s --check-prefix=ELTWISE
-// RUN: mlir-opt %s -test-vector-transpose-lowering=shuffle=1 | FileCheck %s --check-prefix=SHUFFLE
-// RUN: mlir-opt %s -test-vector-transpose-lowering=flat=1 | FileCheck %s --check-prefix=FLAT
-// RUN: mlir-opt %s -test-vector-transpose-lowering=avx2=1 | FileCheck %s --check-prefix=AVX2
+// RUN: mlir-opt %s -test-vector-transpose-lowering=eltwise=1 -split-input-file | FileCheck %s --check-prefix=ELTWISE
+// RUN: mlir-opt %s -test-vector-transpose-lowering=shuffle=1 -split-input-file | FileCheck %s --check-prefix=SHUFFLE
+// RUN: mlir-opt %s -test-vector-transpose-lowering=flat=1 -split-input-file | FileCheck %s --check-prefix=FLAT
+// RUN: mlir-opt %s -test-vector-transpose-lowering=avx2=1 -split-input-file | FileCheck %s --check-prefix=AVX2
 
 // ELTWISE-LABEL: func @transpose23
 // ELTWISE-SAME: %[[A:.*]]: vector<2x3xf32>
@@ -24,6 +24,8 @@ func @transpose23(%arg0: vector<2x3xf32>) -> vector<3x2xf32> {
   return %0 : vector<3x2xf32>
 }
 
+// -----
+
 // SHUFFLE-LABEL: func @transpose
 // FLAT-LABEL: func @transpose(
 func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
@@ -41,6 +43,8 @@ func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
   %0 = vector.transpose %arg0, [1, 0] : vector<2x4xf32> to vector<4x2xf32>
   return %0 : vector<4x2xf32>
 }
+
+// -----
 
 // AVX2-LABEL: func @transpose4x8
 func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
@@ -70,9 +74,49 @@ func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
   return %0 : vector<8x4xf32>
 }
 
+// -----
+
+// AVX2-LABEL: func @transpose021_1x4x8
+func @transpose021_1x4x8xf32(%arg0: vector<1x4x8xf32>) -> vector<1x8x4xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 1]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 2]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 3]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 1, 8, 9, 4, 5, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 3, 10, 11, 6, 7, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 1, 8, 9, 4, 5, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 3, 10, 11, 6, 7, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.shape_cast {{.*}} vector<4x8xf32> to vector<32xf32>
+  // AVX2-NEXT: vector.shape_cast {{.*}} vector<32xf32> to vector<1x8x4xf32>
+  %0 = vector.transpose %arg0, [0, 2, 1] : vector<1x4x8xf32> to vector<1x8x4xf32>
+  return %0 : vector<1x8x4xf32>
+}
+
+// -----
+
 // AVX2-LABEL: func @transpose8x8
 func @transpose8x8xf32(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
-  //      AVX2: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  //      AVX2: vector.extract {{.*}}[0]
+  // AVX2-NEXT: vector.extract {{.*}}[1]
+  // AVX2-NEXT: vector.extract {{.*}}[2]
+  // AVX2-NEXT: vector.extract {{.*}}[3]
+  // AVX2-NEXT: vector.extract {{.*}}[4]
+  // AVX2-NEXT: vector.extract {{.*}}[5]
+  // AVX2-NEXT: vector.extract {{.*}}[6]
+  // AVX2-NEXT: vector.extract {{.*}}[7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
   // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
   // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
   // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
@@ -91,6 +135,484 @@ func @transpose8x8xf32(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
   // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
   // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
   %0 = vector.transpose %arg0, [1, 0] : vector<8x8xf32> to vector<8x8xf32>
   return %0 : vector<8x8xf32>
 }
+
+// -----
+
+// AVX2-LABEL: func @transpose021_1x8x8
+func @transpose021_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<1x8x8xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 1]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 2]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 3]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 4]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 5]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 6]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<1x8x8xf32>
+  %0 = vector.transpose %arg0, [0, 2, 1] : vector<1x8x8xf32> to vector<1x8x8xf32>
+  return %0 : vector<1x8x8xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose120_8x1x8
+func @transpose120_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[1, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[2, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[3, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[4, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[5, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[6, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[7, 0]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<1x8x8xf32>
+  %0 = vector.transpose %arg0, [1, 2, 0] : vector<8x1x8xf32> to vector<1x8x8xf32>
+  return %0 : vector<1x8x8xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose120_8x8x1
+func @transpose120_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
+  //      AVX2: vector.shape_cast %{{.*}} : vector<8x8x1xf32> to vector<8x8xf32>
+  // AVX2-NEXT: vector.extract {{.*}}[0]
+  // AVX2-NEXT: vector.extract {{.*}}[1]
+  // AVX2-NEXT: vector.extract {{.*}}[2]
+  // AVX2-NEXT: vector.extract {{.*}}[3]
+  // AVX2-NEXT: vector.extract {{.*}}[4]
+  // AVX2-NEXT: vector.extract {{.*}}[5]
+  // AVX2-NEXT: vector.extract {{.*}}[6]
+  // AVX2-NEXT: vector.extract {{.*}}[7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<8x1x8xf32>
+  %0 = vector.transpose %arg0, [1, 2, 0] : vector<8x8x1xf32> to vector<8x1x8xf32>
+  return %0 : vector<8x1x8xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose102_8x8x1
+func @transpose102_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x8x1xf32> {
+  //      AVX2: vector.shape_cast %{{.*}} : vector<8x8x1xf32> to vector<8x8xf32>
+  // AVX2-NEXT: vector.extract {{.*}}[0]
+  // AVX2-NEXT: vector.extract {{.*}}[1]
+  // AVX2-NEXT: vector.extract {{.*}}[2]
+  // AVX2-NEXT: vector.extract {{.*}}[3]
+  // AVX2-NEXT: vector.extract {{.*}}[4]
+  // AVX2-NEXT: vector.extract {{.*}}[5]
+  // AVX2-NEXT: vector.extract {{.*}}[6]
+  // AVX2-NEXT: vector.extract {{.*}}[7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<8x8x1xf32>
+  %0 = vector.transpose %arg0, [1, 0, 2] : vector<8x8x1xf32> to vector<8x8x1xf32>
+  return %0 : vector<8x8x1xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose201_8x1x8
+func @transpose201_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[1, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[2, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[3, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[4, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[5, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[6, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[7, 0]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<8x8x1xf32>
+  %0 = vector.transpose %arg0, [2, 0, 1] : vector<8x1x8xf32> to vector<8x8x1xf32>
+  return %0 : vector<8x8x1xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose201_1x8x8
+func @transpose201_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 1]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 2]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 3]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 4]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 5]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 6]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<8x1x8xf32>
+  %0 = vector.transpose %arg0, [2, 0, 1] : vector<1x8x8xf32> to vector<8x1x8xf32>
+  return %0 : vector<8x1x8xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose210_8x1x8
+func @transpose210_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x1x8xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[1, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[2, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[3, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[4, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[5, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[6, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[7, 0]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<8x1x8xf32>
+  %0 = vector.transpose %arg0, [2, 1, 0] : vector<8x1x8xf32> to vector<8x1x8xf32>
+  return %0 : vector<8x1x8xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose210_8x8x1
+func @transpose210_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
+  //      AVX2: vector.shape_cast %{{.*}} : vector<8x8x1xf32> to vector<8x8xf32>
+  // AVX2-NEXT: vector.extract {{.*}}[0]
+  // AVX2-NEXT: vector.extract {{.*}}[1]
+  // AVX2-NEXT: vector.extract {{.*}}[2]
+  // AVX2-NEXT: vector.extract {{.*}}[3]
+  // AVX2-NEXT: vector.extract {{.*}}[4]
+  // AVX2-NEXT: vector.extract {{.*}}[5]
+  // AVX2-NEXT: vector.extract {{.*}}[6]
+  // AVX2-NEXT: vector.extract {{.*}}[7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<1x8x8xf32>
+  %0 = vector.transpose %arg0, [2, 1, 0] : vector<8x8x1xf32> to vector<1x8x8xf32>
+  return %0 : vector<1x8x8xf32>
+}
+
+// -----
+
+// AVX2-LABEL: func @transpose210_1x8x8
+func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
+  //      AVX2: vector.extract {{.*}}[0, 0]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 1]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 2]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 3]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 4]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 5]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 6]
+  // AVX2-NEXT: vector.extract {{.*}}[0, 7]
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [0, 8, 1, 9, 4, 12, 5, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.shuffle {{.*}} [2, 10, 3, 11, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [2, 3, 8, 9, 6, 7, 12, 13] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0xcc", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-NEXT: llvm.inline_asm asm_dialect = intel "vblendps $0, $1, $2, 0x33", "=x,x,x" {{.*}} : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [0, 1, 2, 3, 8, 9, 10, 11] : vector<8xf32>, vector<8xf32>
+  // AVX2-COUNT-4: vector.shuffle {{.*}} [4, 5, 6, 7, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
+  // AVX2-NEXT: vector.insert {{.*}}[0]
+  // AVX2-NEXT: vector.insert {{.*}}[1]
+  // AVX2-NEXT: vector.insert {{.*}}[2]
+  // AVX2-NEXT: vector.insert {{.*}}[3]
+  // AVX2-NEXT: vector.insert {{.*}}[4]
+  // AVX2-NEXT: vector.insert {{.*}}[5]
+  // AVX2-NEXT: vector.insert {{.*}}[6]
+  // AVX2-NEXT: vector.insert {{.*}}[7]
+  // AVX2-NEXT: vector.shape_cast %{{.*}} : vector<8x8xf32> to vector<8x8x1xf32>
+  %0 = vector.transpose %arg0, [2, 1, 0] : vector<1x8x8xf32> to vector<8x8x1xf32>
+  return %0 : vector<8x8x1xf32>
+}
+
+// -----
+
+func @do_not_lower_nonf32_to_avx2(%arg0: vector<4x8xi32>) -> vector<8x4xi32> {
+  %0 = vector.transpose %arg0, [1, 0] : vector<4x8xi32> to vector<8x4xi32>
+  return %0 : vector<8x4xi32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// AVX2-LABEL: func @transpose021_8x1x8
+func @transpose021_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
+  %0 = vector.transpose %arg0, [0, 2, 1] : vector<8x1x8xf32> to vector<8x8x1xf32>
+  return %0 : vector<8x8x1xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// AVX2-LABEL: func @transpose021_8x8x1
+func @transpose021_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
+  %0 = vector.transpose %arg0, [0, 2, 1] : vector<8x8x1xf32> to vector<8x1x8xf32>
+  return %0 : vector<8x1x8xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// AVX2-LABEL: func @transpose102_1x8x8
+func @transpose102_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
+  %0 = vector.transpose %arg0, [1, 0, 2] : vector<1x8x8xf32> to vector<8x1x8xf32>
+  return %0 : vector<8x1x8xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// AVX2-LABEL: func @transpose102_8x1x8
+func @transpose102_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
+  %0 = vector.transpose %arg0, [1, 0, 2] : vector<8x1x8xf32> to vector<1x8x8xf32>
+  return %0 : vector<1x8x8xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// AVX2-LABEL: func @transpose120_1x8x8
+func @transpose120_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
+
+  %0 = vector.transpose %arg0, [1, 2, 0] : vector<1x8x8xf32> to vector<8x8x1xf32>
+  return %0 : vector<8x8x1xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// AVX2-LABEL: func @transpose201_8x8x1
+func @transpose201_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
+  %0 = vector.transpose %arg0, [2, 0, 1] : vector<8x8x1xf32> to vector<1x8x8xf32>
+  return %0 : vector<1x8x8xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+

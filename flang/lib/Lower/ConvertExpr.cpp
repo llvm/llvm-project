@@ -109,6 +109,54 @@ enum class ConstituentSemantics {
   RefOpaque
 };
 
+/// Convert parser's INTEGER relational operators to MLIR.  TODO: using
+/// unordered, but we may want to cons ordered in certain situation.
+static mlir::arith::CmpIPredicate
+translateRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::slt;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::sle;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::sgt;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+static mlir::arith::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpFPredicate::OLT;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpFPredicate::OLE;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpFPredicate::OEQ;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpFPredicate::UNE;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpFPredicate::OGT;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}
+
 /// Place \p exv in memory if it is not already a memory reference. If
 /// \p forceValueType is provided, the value is first casted to the provided
 /// type before being stored (this is mainly intended for logicals whose value
@@ -338,6 +386,34 @@ public:
     return builder.createRealConstant(getLoc(), fltTy, value);
   }
 
+  template <typename OpTy>
+  mlir::Value createCompareOp(mlir::arith::CmpIPredicate pred,
+                              const ExtValue &left, const ExtValue &right) {
+    if (const fir::UnboxedValue *lhs = left.getUnboxed())
+      if (const fir::UnboxedValue *rhs = right.getUnboxed())
+        return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
+    fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
+  }
+  template <typename OpTy, typename A>
+  mlir::Value createCompareOp(const A &ex, mlir::arith::CmpIPredicate pred) {
+    ExtValue left = genval(ex.left());
+    return createCompareOp<OpTy>(pred, left, genval(ex.right()));
+  }
+
+  template <typename OpTy>
+  mlir::Value createFltCmpOp(mlir::arith::CmpFPredicate pred,
+                             const ExtValue &left, const ExtValue &right) {
+    if (const fir::UnboxedValue *lhs = left.getUnboxed())
+      if (const fir::UnboxedValue *rhs = right.getUnboxed())
+        return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
+    fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
+  }
+  template <typename OpTy, typename A>
+  mlir::Value createFltCmpOp(const A &ex, mlir::arith::CmpFPredicate pred) {
+    ExtValue left = genval(ex.left());
+    return createFltCmpOp<OpTy>(pred, left, genval(ex.right()));
+  }
+
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   ExtValue gen(Fortran::semantics::SymbolRef sym) {
@@ -494,12 +570,14 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Integer, KIND>> &op) {
-    TODO(getLoc(), "genval integer comparison");
+    return createCompareOp<mlir::arith::CmpIOp>(op,
+                                                translateRelational(op.opr));
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Real, KIND>> &op) {
-    TODO(getLoc(), "genval real comparison");
+    return createFltCmpOp<mlir::arith::CmpFOp>(
+        op, translateFloatRelational(op.opr));
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
@@ -514,7 +592,7 @@ public:
 
   ExtValue
   genval(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &op) {
-    TODO(getLoc(), "genval comparison");
+    return std::visit([&](const auto &x) { return genval(x); }, op.u);
   }
 
   template <Fortran::common::TypeCategory TC1, int KIND,
@@ -534,12 +612,36 @@ public:
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Not<KIND> &op) {
-    TODO(getLoc(), "genval Not<KIND>");
+    mlir::Value logical = genunbox(op.left());
+    mlir::Value one = genBoolConstant(true);
+    mlir::Value val =
+        builder.createConvert(getLoc(), builder.getI1Type(), logical);
+    return builder.create<mlir::arith::XOrIOp>(getLoc(), val, one);
   }
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::LogicalOperation<KIND> &op) {
-    TODO(getLoc(), "genval LogicalOperation<KIND>");
+    mlir::IntegerType i1Type = builder.getI1Type();
+    mlir::Value slhs = genunbox(op.left());
+    mlir::Value srhs = genunbox(op.right());
+    mlir::Value lhs = builder.createConvert(getLoc(), i1Type, slhs);
+    mlir::Value rhs = builder.createConvert(getLoc(), i1Type, srhs);
+    switch (op.logicalOperator) {
+    case Fortran::evaluate::LogicalOperator::And:
+      return createBinaryOp<mlir::arith::AndIOp>(lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Or:
+      return createBinaryOp<mlir::arith::OrIOp>(lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Eqv:
+      return createCompareOp<mlir::arith::CmpIOp>(
+          mlir::arith::CmpIPredicate::eq, lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Neqv:
+      return createCompareOp<mlir::arith::CmpIOp>(
+          mlir::arith::CmpIPredicate::ne, lhs, rhs);
+    case Fortran::evaluate::LogicalOperator::Not:
+      // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
+      llvm_unreachable(".NOT. is not a binary operator");
+    }
+    llvm_unreachable("unhandled logical operation");
   }
 
   /// Convert a scalar literal constant to IR.

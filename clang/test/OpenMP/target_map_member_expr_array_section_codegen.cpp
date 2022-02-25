@@ -5,9 +5,11 @@
 #ifndef HEADER
 #define HEADER
 
+// CHECK: [[SIZE_ENTER:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 24]
 // 0 = OMP_MAP_NONE
 // 281474976710656 = 0x1000000000000 = OMP_MAP_MEMBER_OF of 1-st element
 // CHECK: [[MAP_ENTER:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710656]
+// CHECK: [[SIZE_EXIT:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 24]
 // 281474976710664 = 0x1000000000008 = OMP_MAP_MEMBER_OF of 1-st element | OMP_MAP_DELETE
 // CHECK: [[MAP_EXIT:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710664]
 template <typename T>
@@ -55,8 +57,6 @@ struct maptest {
     // CHECK: [[PTR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 1
     // CHECK: [[PTR1_DATA:%.+]] = bitcast i8** [[PTR1]] to float**
     // CHECK: store float* [[S_DATA_0_ADDR]], float** [[PTR1_DATA]],
-    // CHECK: [[SIZE1:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 1
-    // CHECK: store i64 24, i64* [[SIZE1]],
     // CHECK: [[BPTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 0
     // CHECK: [[PTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
     // CHECK: [[SIZE:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
@@ -99,8 +99,6 @@ struct maptest {
     // CHECK: [[PTR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 1
     // CHECK: [[PTR1_DATA:%.+]] = bitcast i8** [[PTR1]] to float**
     // CHECK: store float* [[S_DATA_0_ADDR]], float** [[PTR1_DATA]],
-    // CHECK: [[SIZE1:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 1
-    // CHECK: store i64 24, i64* [[SIZE1]],
     // CHECK: [[BPTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 0
     // CHECK: [[PTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
     // CHECK: [[SIZE:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
