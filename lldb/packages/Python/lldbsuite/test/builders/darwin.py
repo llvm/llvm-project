@@ -125,13 +125,14 @@ class BuilderDarwin(Builder):
         if not arch:
             arch = configuration.arch
         if not arch:
-            return ""
+            return []
         vendor, os, version, env = get_triple()
         if vendor is None or os is None or version is None or env is None:
-            return ""
-        flags = 'TARGET_SWIFTFLAGS=-target {}-{}-{}{}{}'.format(
-            arch, vendor, os, version, (("-"+env) if env else ""))
-        return flags
+            return []
+        return [
+            'TARGET_SWIFTFLAGS=-target {}-{}-{}{}{}'.format(
+                arch, vendor, os, version, (("-" + env) if env else ""))
+        ]
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info == "dsym":

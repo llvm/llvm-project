@@ -38,7 +38,7 @@ class Builder:
 
     def getSwiftTargetFlags(self, architecture):
         """Returns TARGET_SWIFTFLAGS for the make system."""
-        return ""
+        return []
 
     def getMake(self, test_subdir, test_name):
         """Returns the invocation for GNU make.
@@ -111,9 +111,8 @@ class Builder:
         compiler used for the make system.
         """
         if configuration.swiftCompiler:
-            return "SWIFTC=\"{}\"".format(configuration.swiftCompiler)
-        else:
-            return ""
+            return ["SWIFTC=\"{}\"".format(configuration.swiftCompiler)]
+        return []
 
     def getSDKRootSpec(self):
         """
