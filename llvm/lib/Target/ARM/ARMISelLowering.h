@@ -713,8 +713,8 @@ class VectorType;
                                       Align Alignment,
                                       const DataLayout &DL) const;
 
-    bool isMulAddWithConstProfitable(const SDValue &AddNode,
-                                     const SDValue &ConstNode) const override;
+    bool isMulAddWithConstProfitable(SDValue AddNode,
+                                     SDValue ConstNode) const override;
 
     bool alignLoopsWithOptSize() const override;
 

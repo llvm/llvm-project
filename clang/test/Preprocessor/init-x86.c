@@ -24,7 +24,6 @@
 // I386:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // I386:#define __FLT_DIG__ 6
 // I386:#define __FLT_EPSILON__ 1.19209290e-7F
-// I386:#define __FLT_EVAL_METHOD__ 2
 // I386:#define __FLT_HAS_DENORM__ 1
 // I386:#define __FLT_HAS_INFINITY__ 1
 // I386:#define __FLT_HAS_QUIET_NAN__ 1
@@ -213,7 +212,6 @@
 // I386-LINUX:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // I386-LINUX:#define __FLT_DIG__ 6
 // I386-LINUX:#define __FLT_EPSILON__ 1.19209290e-7F
-// I386-LINUX:#define __FLT_EVAL_METHOD__ 0
 // I386-LINUX:#define __FLT_HAS_DENORM__ 1
 // I386-LINUX:#define __FLT_HAS_INFINITY__ 1
 // I386-LINUX:#define __FLT_HAS_QUIET_NAN__ 1
@@ -416,7 +414,6 @@
 // I386-NETBSD:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // I386-NETBSD:#define __FLT_DIG__ 6
 // I386-NETBSD:#define __FLT_EPSILON__ 1.19209290e-7F
-// I386-NETBSD:#define __FLT_EVAL_METHOD__ 2
 // I386-NETBSD:#define __FLT_HAS_DENORM__ 1
 // I386-NETBSD:#define __FLT_HAS_INFINITY__ 1
 // I386-NETBSD:#define __FLT_HAS_QUIET_NAN__ 1
@@ -590,13 +587,6 @@
 // I386-NETBSD:#define __i386__ 1
 // I386-NETBSD:#define i386 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd -target-feature +sse2 < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD-SSE %s
-// I386-NETBSD-SSE:#define __FLT_EVAL_METHOD__ 0
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd6  < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD6 %s
-// I386-NETBSD6:#define __FLT_EVAL_METHOD__ 1
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd6 -target-feature +sse2 < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD6-SSE %s
-// I386-NETBSD6-SSE:#define __FLT_EVAL_METHOD__ 1
-
 // RUN: %clang_cc1 -E -dM -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
 // RUN: %clang_cc1 -E -dM -fms-extensions -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
 // RUN: %clang_cc1 -E -dM -triple=i686-unknown-cygwin < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
@@ -631,7 +621,6 @@
 // X86_64:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // X86_64:#define __FLT_DIG__ 6
 // X86_64:#define __FLT_EPSILON__ 1.19209290e-7F
-// X86_64:#define __FLT_EVAL_METHOD__ 0
 // X86_64:#define __FLT_HAS_DENORM__ 1
 // X86_64:#define __FLT_HAS_INFINITY__ 1
 // X86_64:#define __FLT_HAS_QUIET_NAN__ 1
@@ -839,7 +828,6 @@
 // X32:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // X32:#define __FLT_DIG__ 6
 // X32:#define __FLT_EPSILON__ 1.19209290e-7F
-// X32:#define __FLT_EVAL_METHOD__ 0
 // X32:#define __FLT_HAS_DENORM__ 1
 // X32:#define __FLT_HAS_INFINITY__ 1
 // X32:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1046,7 +1034,6 @@
 // X86_64-CLOUDABI:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // X86_64-CLOUDABI:#define __FLT_DIG__ 6
 // X86_64-CLOUDABI:#define __FLT_EPSILON__ 1.19209290e-7F
-// X86_64-CLOUDABI:#define __FLT_EVAL_METHOD__ 0
 // X86_64-CLOUDABI:#define __FLT_HAS_DENORM__ 1
 // X86_64-CLOUDABI:#define __FLT_HAS_INFINITY__ 1
 // X86_64-CLOUDABI:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1341,7 +1328,6 @@
 // X86_64-LINUX:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // X86_64-LINUX:#define __FLT_DIG__ 6
 // X86_64-LINUX:#define __FLT_EPSILON__ 1.19209290e-7F
-// X86_64-LINUX:#define __FLT_EVAL_METHOD__ 0
 // X86_64-LINUX:#define __FLT_HAS_DENORM__ 1
 // X86_64-LINUX:#define __FLT_HAS_INFINITY__ 1
 // X86_64-LINUX:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1554,7 +1540,6 @@
 // X86_64-NETBSD:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // X86_64-NETBSD:#define __FLT_DIG__ 6
 // X86_64-NETBSD:#define __FLT_EPSILON__ 1.19209290e-7F
-// X86_64-NETBSD:#define __FLT_EVAL_METHOD__ 0
 // X86_64-NETBSD:#define __FLT_HAS_DENORM__ 1
 // X86_64-NETBSD:#define __FLT_HAS_INFINITY__ 1
 // X86_64-NETBSD:#define __FLT_HAS_QUIET_NAN__ 1

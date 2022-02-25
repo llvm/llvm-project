@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   BOLTRewrite
   DebugInfoDWARF
   Object
+  MC
   ${LLVM_TARGETS_TO_BUILD}
   )
 

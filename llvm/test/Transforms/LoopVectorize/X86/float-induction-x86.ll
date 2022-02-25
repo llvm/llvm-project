@@ -291,12 +291,11 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_with_fast_math(
 ; AUTO_VEC-NEXT:  entry:
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 16
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
-; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
+; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 9223372036854775792
 ; AUTO_VEC-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to double
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = fmul fast double [[CAST_CRD]], 3.000000e+00
 ; AUTO_VEC-NEXT:    [[TMP2:%.*]] = add nsw i64 [[N_VEC]], -16
@@ -413,7 +412,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
 ; AUTO_VEC-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY_EPIL]], !llvm.loop [[LOOP8:![0-9]+]]
 ; AUTO_VEC:       middle.block:
-; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
+; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; AUTO_VEC-NEXT:    [[TMP46:%.*]] = add nsw i64 [[N_VEC]], -1
 ; AUTO_VEC-NEXT:    [[CAST_CMO:%.*]] = sitofp i64 [[TMP46]] to double
 ; AUTO_VEC-NEXT:    [[TMP47:%.*]] = fmul fast double [[CAST_CMO]], 3.000000e+00
@@ -425,7 +424,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    store double [[J]], double* [[T0]], align 8
 ; AUTO_VEC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; AUTO_VEC-NEXT:    [[J_NEXT]] = fadd fast double [[J]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I_NEXT]], [[SMAX]]
+; AUTO_VEC-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I_NEXT]], [[TMP0]]
 ; AUTO_VEC-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AUTO_VEC:       for.end:
 ; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[TMP47]], [[MIDDLE_BLOCK]] ], [ [[J]], [[FOR_BODY]] ]
@@ -452,14 +451,13 @@ for.end:
 define double @external_use_without_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_without_fast_math(
 ; AUTO_VEC-NEXT:  entry:
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
-; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[SMAX]], 7
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
+; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
 ; AUTO_VEC-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
 ; AUTO_VEC-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; AUTO_VEC:       entry.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[SMAX]], 9223372036854775800
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP0]], 9223372036854775800
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[I_NEXT_7:%.*]], [[FOR_BODY]] ]

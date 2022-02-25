@@ -14,14 +14,12 @@ define void @foo(i8 addrspace(1)* align 8 dereferenceable_or_null(16), i8 addrsp
 ; CHECK-NEXT:    [[DOT11:%.*]] = bitcast i8 addrspace(1)* [[DOT10]] to i8 addrspace(1)* addrspace(1)*
 ; CHECK-NEXT:    [[DOT12:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[TMP1:%.*]], i64 16
 ; CHECK-NEXT:    [[DOT13:%.*]] = bitcast i8 addrspace(1)* [[DOT12]] to i8 addrspace(1)* addrspace(1)*
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2:%.*]], 1
-; CHECK-NEXT:    [[UMAX2:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX2]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2:%.*]], i64 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP2]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP4]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[UMAX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 16
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(1)* [[TMP0]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, i8 addrspace(1)* [[TMP1]], i64 [[TMP6]]
@@ -30,7 +28,7 @@ define void @foo(i8 addrspace(1)* align 8 dereferenceable_or_null(16), i8 addrsp
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[UMAX2]], -16
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -62,7 +60,7 @@ define void @foo(i8 addrspace(1)* align 8 dereferenceable_or_null(16), i8 addrsp
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX2]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]

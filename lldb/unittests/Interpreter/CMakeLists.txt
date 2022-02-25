@@ -4,6 +4,7 @@ add_lldb_unittest(InterpreterTests
   TestOptionArgParser.cpp
   TestOptionValue.cpp
   TestOptionValueFileColonLine.cpp
+  TestRegexCommand.cpp
 
   LINK_LIBS
       lldbCore
@@ -14,4 +15,5 @@ add_lldb_unittest(InterpreterTests
       lldbUtilityHelpers
       lldbInterpreter
       lldbPluginPlatformMacOSX
+      LLVMTestingSupport
 )

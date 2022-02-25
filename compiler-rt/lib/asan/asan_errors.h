@@ -377,7 +377,7 @@ struct ErrorGenericBase : ErrorBase {
 struct ErrorGeneric : ErrorGenericBase {
   uptr pc, bp, sp;
   ErrorGeneric() = default;  // (*)
-  ErrorGeneric(u32 tid, uptr addr, uptr pc_, uptr bp_, uptr sp_, bool is_write_,
+  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr, bool is_write_,
                uptr access_size_);
   void Print();
 };

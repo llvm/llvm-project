@@ -15,6 +15,7 @@
 
 #include "SymbolTable.h"
 #include "Config.h"
+#include "InputFiles.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -109,6 +110,7 @@ Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
   if (sym->isDefined())
     sym->checkDuplicate(newSym);
   sym->resolve(newSym);
+  sym->isUsedInRegularObj = true;
   return sym;
 }
 

@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
 add_clang_unittest(ClangPseudoTests
   GrammarTest.cpp
   LRTableTest.cpp
+  PreprocessTest.cpp
+  TokenTest.cpp
 )
 
 clang_target_link_libraries(ClangPseudoTests

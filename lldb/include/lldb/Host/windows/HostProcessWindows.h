@@ -30,8 +30,7 @@ public:
   bool IsRunning() const override;
 
   virtual llvm::Expected<HostThread>
-  StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                  bool monitor_signals) override;
+  StartMonitoring(const Host::MonitorChildProcessCallback &callback) override;
 
 private:
   void Close();

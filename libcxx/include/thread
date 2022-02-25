@@ -89,7 +89,6 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__thread/timed_backoff_policy.h>
 #include <__threading_support>
 #include <__utility/forward.h>
-#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <iosfwd>
