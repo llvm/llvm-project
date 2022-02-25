@@ -79,8 +79,9 @@ Status TargetList::CreateTargetInternal(
     const OptionGroupPlatform *platform_options, TargetSP &target_sp) {
   Status error;
 
+  PlatformList &platform_list = debugger.GetPlatformList();
   // Let's start by looking at the selected platform.
-  PlatformSP platform_sp = debugger.GetPlatformList().GetSelectedPlatform();
+  PlatformSP platform_sp = platform_list.GetSelectedPlatform();
 
   // This variable corresponds to the architecture specified by the triple
   // string. If that string was empty the currently selected platform will
@@ -176,8 +177,7 @@ Status TargetList::CreateTargetInternal(
         for (const ModuleSpec &spec : module_specs.ModuleSpecs())
           archs.push_back(spec.GetArchitecture());
         if (PlatformSP platform_for_archs_sp =
-                Platform::GetPlatformForArchitectures(archs, {}, platform_sp,
-                                                      candidates)) {
+                platform_list.GetOrCreate(archs, {}, candidates)) {
           platform_sp = platform_for_archs_sp;
         } else if (candidates.empty()) {
           error.SetErrorString("no matching platforms found for this file");
@@ -209,21 +209,19 @@ Status TargetList::CreateTargetInternal(
   // compatible with that architecture.
   if (!prefer_platform_arch && arch.IsValid()) {
     if (!platform_sp->IsCompatibleArchitecture(arch, {}, false, nullptr)) {
-      platform_sp =
-          Platform::GetPlatformForArchitecture(arch, {}, &platform_arch);
+      platform_sp = platform_list.GetOrCreate(arch, {}, &platform_arch);
       if (platform_sp)
-        debugger.GetPlatformList().SetSelectedPlatform(platform_sp);
+        platform_list.SetSelectedPlatform(platform_sp);
     }
   } else if (platform_arch.IsValid()) {
     // If "arch" isn't valid, yet "platform_arch" is, it means we have an
     // executable file with a single architecture which should be used.
     ArchSpec fixed_platform_arch;
-    if (!platform_sp->IsCompatibleArchitecture(platform_arch, {}, false,
-                                               nullptr)) {
-      platform_sp = Platform::GetPlatformForArchitecture(platform_arch, {},
-                                                         &fixed_platform_arch);
+    if (!platform_sp->IsCompatibleArchitecture(platform_arch, {}, false, nullptr)) {
+      platform_sp =
+          platform_list.GetOrCreate(platform_arch, {}, &fixed_platform_arch);
       if (platform_sp)
-        debugger.GetPlatformList().SetSelectedPlatform(platform_sp);
+        platform_list.SetSelectedPlatform(platform_sp);
     }
   }
 
@@ -253,7 +251,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     if (!platform_sp ||
         !platform_sp->IsCompatibleArchitecture(arch, {}, false, nullptr))
       platform_sp =
-          Platform::GetPlatformForArchitecture(specified_arch, {}, &arch);
+          debugger.GetPlatformList().GetOrCreate(specified_arch, {}, &arch);
   }
 
   if (!platform_sp)

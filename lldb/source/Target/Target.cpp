@@ -1485,9 +1485,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
       if (!platform_sp ||
           !platform_sp->IsCompatibleArchitecture(other, {}, false, nullptr)) {
         ArchSpec platform_arch;
-        auto arch_platform_sp =
-            Platform::GetPlatformForArchitecture(other, {}, &platform_arch);
-        if (arch_platform_sp) {
+        if (PlatformSP arch_platform_sp =
+                GetDebugger().GetPlatformList().GetOrCreate(other, {},
+                                                            &platform_arch)) {
           SetPlatform(arch_platform_sp);
           if (platform_arch.IsValid())
             other = platform_arch;
