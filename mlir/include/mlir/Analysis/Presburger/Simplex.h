@@ -308,7 +308,7 @@ protected:
   unsigned getNumFixedCols() const { return usingBigM ? 3u : 2u; }
 
   /// Stores whether or not a big M column is present in the tableau.
-  const bool usingBigM;
+  bool usingBigM;
 
   /// The number of rows in the tableau.
   unsigned nRow;
