@@ -764,8 +764,7 @@ class SymbolicRegion : public SubRegion {
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
-    assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg) ||
-           isa<GlobalSystemSpaceRegion>(sreg));
+    assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg));
   }
 
 public:
@@ -1376,9 +1375,7 @@ public:
                                         const LocationContext *LC);
 
   /// Retrieve or create a "symbolic" memory region.
-  /// If no memory space is specified, `UnknownSpaceRegion` will be used.
-  const SymbolicRegion *
-  getSymbolicRegion(SymbolRef Sym, const MemSpaceRegion *MemSpace = nullptr);
+  const SymbolicRegion* getSymbolicRegion(SymbolRef Sym);
 
   /// Return a unique symbolic region belonging to heap memory space.
   const SymbolicRegion *getSymbolicHeapRegion(SymbolRef sym);
