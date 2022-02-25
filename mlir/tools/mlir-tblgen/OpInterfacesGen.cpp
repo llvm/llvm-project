@@ -413,9 +413,12 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
 
     tblgen::FmtContext verifyCtx;
     verifyCtx.withOp("op");
-    os << "    static ::mlir::LogicalResult verifyTrait(::mlir::Operation *op) "
-          "{\n      "
-       << tblgen::tgfmt(verify->trim(), &verifyCtx) << "\n    }\n";
+    os << llvm::formatv(
+              "    static ::mlir::LogicalResult {0}(::mlir::Operation *op) ",
+              (interface.verifyWithRegions() ? "verifyRegionTrait"
+                                             : "verifyTrait"))
+       << "{\n      " << tblgen::tgfmt(verify->trim(), &verifyCtx)
+       << "\n    }\n";
   }
   if (auto extraTraitDecls = interface.getExtraTraitClassDeclaration())
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";

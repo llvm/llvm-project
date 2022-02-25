@@ -59,7 +59,7 @@ func @bit_field_u_extract_vec(%base: vector<3xi32>, %offset: i8, %count: i8) -> 
 // -----
 
 func @bit_field_u_extract_invalid_result_type(%base: vector<3xi32>, %offset: i32, %count: i16) -> vector<4xi32> {
-  // expected-error @+1 {{inferred type(s) 'vector<3xi32>' are incompatible with return type(s) of operation 'vector<4xi32>'}}
+  // expected-error @+1 {{failed to verify that all of {base, result} have same type}}
   %0 = "spv.BitFieldUExtract" (%base, %offset, %count) : (vector<3xi32>, i32, i16) -> vector<4xi32>
   spv.ReturnValue %0 : vector<4xi32>
 }
@@ -181,7 +181,7 @@ func @shift_left_logical(%arg0: i32, %arg1 : i16) -> i32 {
 // -----
 
 func @shift_left_logical_invalid_result_type(%arg0: i32, %arg1 : i16) -> i16 {
-  // expected-error @+1 {{op inferred type(s) 'i32' are incompatible with return type(s) of operation 'i16'}}
+  // expected-error @+1 {{op failed to verify that all of {operand1, result} have same type}}
   %0 = "spv.ShiftLeftLogical" (%arg0, %arg1) : (i32, i16) -> (i16)
   spv.ReturnValue %0 : i16
 }

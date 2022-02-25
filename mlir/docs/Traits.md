@@ -36,9 +36,12 @@ class MyTrait : public TraitBase<ConcreteType, MyTrait> {
 };
 ```
 
-Operation traits may also provide a `verifyTrait` hook, that is called when
-verifying the concrete operation. The trait verifiers will currently always be
-invoked before the main `Op::verify`.
+Operation traits may also provide a `verifyTrait` or `verifyRegionTrait` hook
+that is called when verifying the concrete operation. The difference between
+these two is that whether the verifier needs to access the regions, if so, the
+operations in the regions will be verified before the verification of this
+trait. The [verification order](OpDefinitions.md/#verification-ordering)
+determines when a verifier will be invoked.
 
 ```c++
 template <typename ConcreteType>
@@ -53,8 +56,9 @@ public:
 ```
 
 Note: It is generally good practice to define the implementation of the
-`verifyTrait` hook out-of-line as a free function when possible to avoid
-instantiating the implementation for every concrete operation type.
+`verifyTrait` or `verifyRegionTrait` hook out-of-line as a free function when
+possible to avoid instantiating the implementation for every concrete operation
+type.
 
 Operation traits may also provide a `foldTrait` hook that is called when folding
 the concrete operation. The trait folders will only be invoked if the concrete

@@ -65,6 +65,9 @@ public:
   // Returns the trait corresponding to a C++ trait class.
   std::string getFullyQualifiedTraitName() const;
 
+  // Returns if this is a structural op trait.
+  bool isStructuralOpTrait() const;
+
   static bool classof(const Trait *t) { return t->getKind() == Kind::Native; }
 };
 
