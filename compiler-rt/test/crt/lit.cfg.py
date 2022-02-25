@@ -93,3 +93,6 @@ config.suffixes = ['.c', '.cpp']
 
 if config.host_os not in ['Linux']:
     config.unsupported = True
+# FIXME https://github.com/llvm/llvm-project/issues/54084
+if config.host_arch in ['ppc64', 'ppc64le']:
+    config.unsupported = True
