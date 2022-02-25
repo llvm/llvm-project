@@ -116,8 +116,12 @@ public:
     ContextHash = std::move(Hash);
   }
 
-  FullDependenciesResult getFullDependencies() const {
+  FullDependenciesResult
+  getFullDependencies(ArrayRef<std::string> OriginalCommandLine) const {
     FullDependencies FD;
+
+    FD.OriginalCommandLine =
+        ArrayRef<std::string>(OriginalCommandLine).slice(1);
 
     FD.ID.ContextHash = std::move(ContextHash);
 
@@ -155,13 +159,16 @@ private:
 };
 } // namespace
 
-using BuildArgsFn =
+using FileBuildArgsFn =
+    llvm::function_ref<std::vector<std::string>(const FullDependencies &)>;
+using ModuleBuildArgsFn =
     llvm::function_ref<std::vector<std::string>(const ModuleDeps &)>;
 
 static CXFileDependencies *getFullDependencies(
     DependencyScanningWorker *Worker, ArrayRef<std::string> Compilation,
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error, BuildArgsFn GetBuildArgs,
+    void *Context, CXString *error, FileBuildArgsFn GetFileBuildArgs,
+    ModuleBuildArgsFn GetModuleBuildArgs,
     llvm::Optional<StringRef> ModuleName = None) {
   FullDependencyConsumer Consumer(Worker->AlreadySeen);
   llvm::Error Result = Worker->computeDependencies(
@@ -176,7 +183,7 @@ static CXFileDependencies *getFullDependencies(
     return nullptr;
   }
 
-  FullDependenciesResult FDR = Consumer.getFullDependencies();
+  FullDependenciesResult FDR = Consumer.getFullDependencies(Compilation);
 
   if (!FDR.DiscoveredModules.empty()) {
     CXModuleDependencySet *MDS = new CXModuleDependencySet;
@@ -193,7 +200,7 @@ static CXFileDependencies *getFullDependencies(
       for (const ModuleID &MID : MD.ClangModuleDeps)
         Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
       M.ModuleDeps = cxstring::createSet(Modules);
-      M.BuildArguments = cxstring::createSet(GetBuildArgs(MD));
+      M.BuildArguments = cxstring::createSet(GetModuleBuildArgs(MD));
     }
     MDC(Context, MDS);
   }
@@ -206,8 +213,7 @@ static CXFileDependencies *getFullDependencies(
   for (const ModuleID &MID : FD.ClangModuleDeps)
     Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
   FDeps->ModuleDeps = cxstring::createSet(Modules);
-  FDeps->AdditionalArguments =
-    cxstring::createSet(FD.getAdditionalArgsWithoutModulePaths());
+  FDeps->BuildArguments = cxstring::createSet(GetFileBuildArgs(FD));
   return FDeps;
 }
 
@@ -215,7 +221,8 @@ static CXFileDependencies *
 getFileDependencies(CXDependencyScannerWorker W, int argc,
                     const char *const *argv, const char *WorkingDirectory,
                     CXModuleDiscoveredCallback *MDC, void *Context,
-                    CXString *error, BuildArgsFn GetBuildArgs,
+                    CXString *error, FileBuildArgsFn GetFileBuildArgs,
+                    ModuleBuildArgsFn GetModuleBuildArgs,
                     llvm::Optional<StringRef> ModuleName = None) {
   if (!W || argc < 2)
     return nullptr;
@@ -228,7 +235,8 @@ getFileDependencies(CXDependencyScannerWorker W, int argc,
 
   if (Worker->getFormat() == ScanningOutputFormat::Full)
     return getFullDependencies(Worker, Compilation, WorkingDirectory, MDC,
-                               Context, error, GetBuildArgs, ModuleName);
+                               Context, error, GetFileBuildArgs,
+                               GetModuleBuildArgs, ModuleName);
   return getFlatDependencies(Worker, Compilation, WorkingDirectory, error,
                              ModuleName);
 }
@@ -238,10 +246,14 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
     CXDependencyScannerWorker W, int argc, const char *const *argv,
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *error) {
-  return getFileDependencies(W, argc, argv, WorkingDirectory, MDC, Context,
-                             error, [](const ModuleDeps &MD) {
-                               return MD.getAdditionalArgsWithoutModulePaths();
-                             });
+  return getFileDependencies(
+      W, argc, argv, WorkingDirectory, MDC, Context, error,
+      [](const FullDependencies &FD) {
+        return FD.getAdditionalArgsWithoutModulePaths();
+      },
+      [](const ModuleDeps &MD) {
+        return MD.getAdditionalArgsWithoutModulePaths();
+      });
 }
 
 CXFileDependencies *
@@ -251,6 +263,29 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
     void *Context, CXString *error) {
   return getFileDependencies(
       W, argc, argv, WorkingDirectory, MDC, Context, error,
+      [](const FullDependencies &FD) {
+        return FD.getAdditionalArgsWithoutModulePaths();
+      },
+      [](const ModuleDeps &MD) {
+        std::vector<std::string> Args =
+            MD.getCanonicalCommandLineWithoutModulePaths();
+        llvm::remove_if(Args, [](const std::string &Arg) {
+          return Arg.find("-fmodule-map-file=") == 0;
+        });
+        return Args;
+      });
+}
+
+CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
+    CXDependencyScannerWorker W, int argc, const char *const *argv,
+    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
+    void *Context, CXString *error) {
+  return getFileDependencies(
+      W, argc, argv, WorkingDirectory, MDC, Context, error,
+      [](const FullDependencies &FD) {
+        return FD.getCommandLineWithoutModulePaths();
+      },
       [](const ModuleDeps &MD) {
         return MD.getCanonicalCommandLineWithoutModulePaths();
       });
@@ -263,6 +298,9 @@ clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
     CXModuleDiscoveredCallback *MDC, void *Context, CXString *error) {
   return getFileDependencies(
       W, argc, argv, WorkingDirectory, MDC, Context, error,
+      [](const FullDependencies &FD) {
+        return FD.getCommandLineWithoutModulePaths();
+      },
       [](const ModuleDeps &MD) {
         return MD.getCanonicalCommandLineWithoutModulePaths();
       },
