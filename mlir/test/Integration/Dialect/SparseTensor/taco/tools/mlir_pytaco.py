@@ -692,7 +692,7 @@ class Tensor:
     rank, nse, shape, values, indices = utils.sparse_tensor_to_coo_tensor(
         self._packed_sparse_value, self._dtype.value)
     assert rank == self.order
-    assert np.allclose(self.shape, shape)
+    assert np.array_equal(self.shape, shape)
     assert nse == len(values)
     self._coords = indices
     self._values = values

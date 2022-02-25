@@ -28,7 +28,7 @@ C.insert([1, 2], 7)
 D[i, j] = A[i, j] + B[i, j] - C[i, j]
 
 indices, values = D.get_coordinates_and_values()
-passed = np.allclose(indices, [[0, 0], [0, 1], [1, 2]])
+passed = np.array_equal(indices, [[0, 0], [0, 1], [1, 2]])
 passed += np.allclose(values, [20.0, 5.0, 63.0])
 
 # CHECK: Number of passed: 2
