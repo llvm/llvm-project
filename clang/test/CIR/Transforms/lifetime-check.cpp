@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: cir-tool %t.cir -cir-lifetime-check -o %t-out.cir 2>&1 | FileCheck %s
+// RUN: cir-tool %t.cir -cir-lifetime-check -verify-diagnostics -o %t-out.cir
+// XFAIL: *
 
 int *basic() {
   int *p = nullptr;
@@ -8,8 +9,6 @@ int *basic() {
     p = &x;
     *p = 42;
   }
-  *p = 42;
-  return p;
+  *p = 42;  // expected-warning {{Found invalid use of pointer 'p'}}
+  return p; // expected-warning {{Found invalid use of pointer 'p'}}
 }
-
-// CHECK: Hello Lifetime World
