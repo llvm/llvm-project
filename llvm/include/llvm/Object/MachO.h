@@ -391,6 +391,8 @@ public:
   create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
          uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
 
+  static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch);
+
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
   uint64_t getNValue(DataRefImpl Sym) const;
