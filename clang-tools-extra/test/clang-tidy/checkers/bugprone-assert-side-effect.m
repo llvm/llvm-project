@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-assert-side-effect %t
 
-int abort();
+int abort(void);
 
 @interface NSObject
 @end
@@ -46,7 +46,7 @@ int abort();
 }
 @end
 
-void foo() {
+void foo(void) {
   int x = 0;
   NSCAssert((++x) == 1, @"Ugh.");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in NSCAssert() condition discarded in release builds [bugprone-assert-side-effect]
