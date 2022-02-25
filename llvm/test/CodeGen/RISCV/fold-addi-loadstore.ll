@@ -166,6 +166,37 @@ entry:
    ret void
 }
 
+; Check if we can fold ADDI into the offset of store instructions,
+; when store instructions is the root node in DAG.
+
+@g_4_i32 = global i32 0, align 4
+
+define dso_local void @inc_g_i32() nounwind {
+; RV32I-LABEL: inc_g_i32:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a0, %hi(g_4_i32)
+; RV32I-NEXT:    lw a1, %lo(g_4_i32)(a0)
+; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    sw a1, %lo(g_4_i32)(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: inc_g_i32:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a0, %hi(g_4_i32)
+; RV64I-NEXT:    lw a1, %lo(g_4_i32)(a0)
+; RV64I-NEXT:    addiw a1, a1, 1
+; RV64I-NEXT:    sw a1, %lo(g_4_i32)(a0)
+; RV64I-NEXT:    ret
+entry:
+  %0 = load i32, i32* @g_4_i32
+  %inc = add i32 %0, 1
+  store i32 %inc, i32* @g_4_i32
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 ; Check for folds in accesses to the second element of an i64 array.
 
 @ga_8 = dso_local local_unnamed_addr global [2 x i64] zeroinitializer, align 8
