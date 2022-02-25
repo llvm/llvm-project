@@ -252,6 +252,9 @@ Changes to LLDB
 
 * Fixed continuing from breakpoints and singlestepping on Windows on ARM/ARM64.
 
+* LLDB has been included in Windows on ARM64 binary release with Python support
+  disabled.
+
 Changes to Sanitizers
 ---------------------
 
