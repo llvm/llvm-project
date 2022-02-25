@@ -36,6 +36,8 @@
  *
  ******************************************************************************/
 
+
+#include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "comgr-symbolizer.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/Error.h"
@@ -54,6 +56,11 @@ static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   Config.SourceContextLines = 0;
   return Config;
 }
+
+Symbolizer::Symbolizer(std::unique_ptr<ObjectFile> &&CodeObject,
+                       PrintSymbolCallback PrintSymbol)
+    : CodeObject(std::move(CodeObject)), PrintSymbol(PrintSymbol) {}
+Symbolizer::~Symbolizer() = default;
 
 amd_comgr_status_t
 Symbolizer::create(DataObject *CodeObjectP, PrintSymbolCallback PrintSymbol,
