@@ -882,15 +882,6 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc,
     bool NeedsWinCFI, bool *HasWinCFI, bool InProlog = true) {
-  // Ignore instructions that do not operate on SP, i.e. shadow call stack
-  // instructions and associated CFI instruction.
-  while (MBBI->getOpcode() == AArch64::STRXpost ||
-         MBBI->getOpcode() == AArch64::LDRXpre ||
-         MBBI->getOpcode() == AArch64::CFI_INSTRUCTION) {
-    if (MBBI->getOpcode() != AArch64::CFI_INSTRUCTION)
-      assert(MBBI->getOperand(0).getReg() != AArch64::SP);
-    ++MBBI;
-  }
   unsigned NewOpc;
   switch (MBBI->getOpcode()) {
   default:
@@ -998,16 +989,6 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
     return;
 
   unsigned Opc = MI.getOpcode();
-
-  // Ignore instructions that do not operate on SP, i.e. shadow call stack
-  // instructions and associated CFI instruction.
-  if (Opc == AArch64::STRXpost || Opc == AArch64::LDRXpre ||
-      Opc == AArch64::CFI_INSTRUCTION) {
-    if (Opc != AArch64::CFI_INSTRUCTION)
-      assert(MI.getOperand(0).getReg() != AArch64::SP);
-    return;
-  }
-
   unsigned Scale;
   switch (Opc) {
   case AArch64::STPXi:
@@ -1067,6 +1048,72 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   }
 }
 
+static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) {
+  if (!(llvm::any_of(
+            MF.getFrameInfo().getCalleeSavedInfo(),
+            [](const auto &Info) { return Info.getReg() == AArch64::LR; }) &&
+        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)))
+    return false;
+
+  if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
+    report_fatal_error("Must reserve x18 to use shadow call stack");
+
+  return true;
+}
+
+static void emitShadowCallStackPrologue(const TargetInstrInfo &TII,
+                                        MachineFunction &MF,
+                                        MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL, bool NeedsWinCFI,
+                                        bool NeedsUnwindInfo) {
+  // Shadow call stack prolog: str x30, [x18], #8
+  BuildMI(MBB, MBBI, DL, TII.get(AArch64::STRXpost))
+      .addReg(AArch64::X18, RegState::Define)
+      .addReg(AArch64::LR)
+      .addReg(AArch64::X18)
+      .addImm(8)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // This instruction also makes x18 live-in to the entry block.
+  MBB.addLiveIn(AArch64::X18);
+
+  if (NeedsWinCFI)
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::SEH_Nop))
+        .setMIFlag(MachineInstr::FrameSetup);
+
+  if (NeedsUnwindInfo) {
+    // Emit a CFI instruction that causes 8 to be subtracted from the value of
+    // x18 when unwinding past this frame.
+    static const char CFIInst[] = {
+        dwarf::DW_CFA_val_expression,
+        18, // register
+        2,  // length
+        static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
+        static_cast<char>(-8) & 0x7f, // addend (sleb128)
+    };
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
+        nullptr, StringRef(CFIInst, sizeof(CFIInst))));
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
+}
+
+static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
+                                        MachineFunction &MF,
+                                        MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL) {
+  // Shadow call stack epilog: ldr x30, [x18, #-8]!
+  BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXpre))
+      .addReg(AArch64::X18, RegState::Define)
+      .addReg(AArch64::LR, RegState::Define)
+      .addReg(AArch64::X18)
+      .addImm(-8)
+      .setMIFlag(MachineInstr::FrameDestroy);
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1095,6 +1142,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
+  if (needsShadowCallStackPrologueEpilogue(MF))
+    emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
+                                MFnI.needsDwarfUnwindInfo());
+
   if (MFnI.shouldSignReturnAddress()) {
 
     unsigned PACI;
@@ -1663,6 +1714,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     IsFunclet = isFuncletReturnInstr(*MBBI);
   }
 
+  auto ShadowStackEpilogue = make_scope_exit([&]() {
+    if (needsShadowCallStackPrologueEpilogue(MF))
+      emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
+  });
+
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -1916,19 +1972,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (AfterCSRPopSize) {
     assert(AfterCSRPopSize > 0 && "attempting to reallocate arg stack that an "
                                   "interrupt may have clobbered");
-    // Find an insertion point for the first ldp so that it goes before the
-    // shadow call stack epilog instruction. This ensures that the restore of
-    // lr from x18 is placed after the restore from sp.
-    auto FirstSPPopI = MBB.getFirstTerminator();
-    while (FirstSPPopI != Begin) {
-      auto Prev = std::prev(FirstSPPopI);
-      if (Prev->getOpcode() != AArch64::LDRXpre ||
-          Prev->getOperand(0).getReg() == AArch64::SP)
-        break;
-      FirstSPPopI = Prev;
-    }
 
-    emitFrameOffset(MBB, FirstSPPopI, DL, AArch64::SP, AArch64::SP,
+    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(AfterCSRPopSize), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
   }
@@ -2230,7 +2275,7 @@ struct RegPairInfo {
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
-    bool &NeedShadowCallStackProlog, bool NeedsFrameRecord) {
+    bool NeedsFrameRecord) {
 
   if (CSI.empty())
     return;
@@ -2307,15 +2352,6 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::ZPR:
         break;
       }
-    }
-
-    // If either of the registers to be saved is the lr register, it means that
-    // we also need to save lr in the shadow call stack.
-    if ((RPI.Reg1 == AArch64::LR || RPI.Reg2 == AArch64::LR) &&
-        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-      if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
-        report_fatal_error("Must reserve x18 to use shadow call stack");
-      NeedShadowCallStackProlog = true;
     }
 
     // GPRs and FPRs are saved in pairs of 64-bit regs. We expect the CSI
@@ -2436,45 +2472,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
 
-  bool NeedShadowCallStackProlog = false;
-  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs,
-                                 NeedShadowCallStackProlog, hasFP(MF));
+  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
+
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  if (NeedShadowCallStackProlog) {
-    // Shadow call stack prolog: str x30, [x18], #8
-    BuildMI(MBB, MI, DL, TII.get(AArch64::STRXpost))
-        .addReg(AArch64::X18, RegState::Define)
-        .addReg(AArch64::LR)
-        .addReg(AArch64::X18)
-        .addImm(8)
-        .setMIFlag(MachineInstr::FrameSetup);
-
-    // This instruction also makes x18 live-in to the entry block.
-    MBB.addLiveIn(AArch64::X18);
-
-    if (NeedsWinCFI)
-      BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
-          .setMIFlag(MachineInstr::FrameSetup);
-
-    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo()) {
-      // Emit a CFI instruction that causes 8 to be subtracted from the value of
-      // x18 when unwinding past this frame.
-      static const char CFIInst[] = {
-          dwarf::DW_CFA_val_expression,
-          18, // register
-          2,  // length
-          static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
-          static_cast<char>(-8) & 0x7f, // addend (sleb128)
-      };
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
-          nullptr, StringRef(CFIInst, sizeof(CFIInst))));
-      BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
-    }
-  }
-
   if (homogeneousPrologEpilog(MF)) {
     auto MIB = BuildMI(MBB, MI, DL, TII.get(AArch64::HOM_Prolog))
                    .setMIFlag(MachineInstr::FrameSetup);
@@ -2595,9 +2595,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
 
-  bool NeedShadowCallStackProlog = false;
-  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs,
-                                 NeedShadowCallStackProlog, hasFP(MF));
+  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
   auto EmitMI = [&](const RegPairInfo &RPI) -> MachineBasicBlock::iterator {
     unsigned Reg1 = RPI.Reg1;
@@ -2708,16 +2706,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
         continue;
       (void)EmitMI(RPI);
     }
-  }
-
-  if (NeedShadowCallStackProlog) {
-    // Shadow call stack epilog: ldr x30, [x18, #-8]!
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXpre))
-        .addReg(AArch64::X18, RegState::Define)
-        .addReg(AArch64::LR, RegState::Define)
-        .addReg(AArch64::X18)
-        .addImm(-8)
-        .setMIFlag(MachineInstr::FrameDestroy);
   }
 
   return true;
