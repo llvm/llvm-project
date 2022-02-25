@@ -1025,8 +1025,8 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
 
   // BEGIN SWIFT
   SBStringList no_extra_args;
-  return LLDB_RECORD_RESULT(BreakpointCreateForException(
-      language, catch_bp, throw_bp, no_extra_args));
+  return BreakpointCreateForException(
+      language, catch_bp, throw_bp, no_extra_args);
   // END SWIFT
 }
 
@@ -1035,9 +1035,7 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp,
                                        SBStringList &extra_args) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateForException,
-                     (lldb::LanguageType, bool, bool, SBStringList &), language,
-                     catch_bp, throw_bp, extra_args);
+  LLDB_INSTRUMENT_VA(this, language, catch_bp, throw_bp, extra_args);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());

@@ -356,15 +356,17 @@ SBValue SBThread::GetStopReturnValue() {
   bool is_swift_error_value = false;
   SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
   if (is_swift_error_value) {
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
   } else {
-    return LLDB_RECORD_RESULT(return_value);
+    return return_value;
   }
   // END SWIFT
 }
 
 // BEGIN SWIFT
 SBValue SBThread::GetStopErrorValue() {
+  LLDB_INSTRUMENT_VA(this);
+
   bool is_swift_error_value = false;
   SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
   if (!is_swift_error_value)
@@ -374,7 +376,7 @@ SBValue SBThread::GetStopErrorValue() {
 }
 
 SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBThread, GetStopReturnOrErrorValue, (bool&), is_swift_error_value);
+  LLDB_INSTRUMENT_VA(this, is_swift_error_value);
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
