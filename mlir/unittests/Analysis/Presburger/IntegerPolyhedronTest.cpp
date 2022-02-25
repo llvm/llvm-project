@@ -16,8 +16,9 @@
 
 #include <numeric>
 
-namespace mlir {
-using namespace presburger_utils;
+using namespace mlir;
+using namespace presburger;
+
 using testing::ElementsAre;
 
 enum class TestFunction { Sample, Empty };
@@ -1185,5 +1186,3 @@ TEST(IntegerPolyhedronTest, computeVolume) {
       parsePoly("(x, y) : (2*x - y >= 0, y - 3*x >= 0)"),
       /*trueVolume=*/{}, /*resultBound=*/{});
 }
-
-} // namespace mlir

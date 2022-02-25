@@ -11,6 +11,7 @@
 #include <cassert>
 
 using namespace mlir;
+using namespace presburger;
 
 PresburgerSpace PresburgerSpace::getRelationSpace(unsigned numDomain,
                                                   unsigned numRange,

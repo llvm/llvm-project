@@ -10,6 +10,7 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 
 using namespace mlir;
+using namespace presburger;
 
 // Return the result of subtracting the two given vectors pointwise.
 // The vectors must be of the same size.

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
+namespace presburger {
 
 class LinearTransform {
 public:
@@ -54,5 +55,7 @@ private:
   Matrix matrix;
 };
 
+} // namespace presburger
 } // namespace mlir
+
 #endif // MLIR_ANALYSIS_PRESBURGER_LINEARTRANSFORM_H

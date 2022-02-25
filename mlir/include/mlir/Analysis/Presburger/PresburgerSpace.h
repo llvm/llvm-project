@@ -18,6 +18,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
+namespace presburger {
 
 class PresburgerLocalSpace;
 
@@ -194,6 +195,7 @@ protected:
       : PresburgerSpace(Set, /*numDomain=*/0, numDims, numSymbols, numLocals) {}
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_PRESBURGERSPACE_H

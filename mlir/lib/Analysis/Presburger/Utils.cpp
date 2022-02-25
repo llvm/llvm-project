@@ -16,7 +16,7 @@
 #include "mlir/Support/MathExtras.h"
 
 using namespace mlir;
-using namespace presburger_utils;
+using namespace presburger;
 
 /// Normalize a division's `dividend` and the `divisor` by their GCD. For
 /// example: if the dividend and divisor are [2,0,4] and 4 respectively,
@@ -213,7 +213,7 @@ static bool checkExplicitRepresentation(const IntegerPolyhedron &cst,
 /// the representation could be computed, `dividend` and `denominator` are set.
 /// If the representation could not be computed, the kind attribute in
 /// `MaybeLocalRepr` is set to None.
-MaybeLocalRepr presburger_utils::computeSingleVarRepr(
+MaybeLocalRepr presburger::computeSingleVarRepr(
     const IntegerPolyhedron &cst, ArrayRef<bool> foundRepr, unsigned pos,
     SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
   assert(pos < cst.getNumIds() && "invalid position");
@@ -253,7 +253,7 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
   return repr;
 }
 
-void presburger_utils::removeDuplicateDivs(
+void presburger::removeDuplicateDivs(
     std::vector<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge) {

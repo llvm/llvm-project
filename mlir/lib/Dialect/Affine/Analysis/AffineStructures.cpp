@@ -31,7 +31,7 @@
 #define DEBUG_TYPE "affine-structures"
 
 using namespace mlir;
-using namespace presburger_utils;
+using namespace presburger;
 
 namespace {
 

@@ -21,6 +21,8 @@
 #include <gtest/gtest.h>
 
 namespace mlir {
+namespace presburger {
+
 /// Parses a IntegerPolyhedron from a StringRef. It is expected that the
 /// string represents a valid IntegerSet, otherwise it will violate a gtest
 /// assertion.
@@ -55,6 +57,8 @@ expectComputedVolumeIsValidOverapprox(Optional<uint64_t> computedVolume,
   EXPECT_TRUE(infinityOrUInt64LE(trueVolume, computedVolume));
   EXPECT_TRUE(infinityOrUInt64LE(computedVolume, resultBound));
 }
+
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H

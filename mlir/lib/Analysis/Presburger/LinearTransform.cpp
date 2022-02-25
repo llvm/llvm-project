@@ -9,7 +9,8 @@
 #include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
 LinearTransform::LinearTransform(Matrix &&oMatrix) : matrix(oMatrix) {}
 LinearTransform::LinearTransform(const Matrix &oMatrix) : matrix(oMatrix) {}
@@ -137,5 +138,3 @@ LinearTransform::applyTo(const IntegerPolyhedron &poly) const {
 
   return result;
 }
-
-} // namespace mlir

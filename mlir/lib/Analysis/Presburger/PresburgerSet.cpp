@@ -14,7 +14,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
-using namespace presburger_utils;
+using namespace presburger;
 
 PresburgerSet::PresburgerSet(const IntegerPolyhedron &poly)
     : PresburgerSpace(poly) {

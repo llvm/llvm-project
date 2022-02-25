@@ -14,8 +14,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace mlir {
-using namespace presburger_utils;
+using namespace mlir;
+using namespace presburger;
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
 /// The set should not be empty after rolling back. We add additional
@@ -538,5 +538,3 @@ TEST(SimplexTest, IsRationalSubsetOf) {
   EXPECT_TRUE(sim2.isRationalSubsetOf(s2));
   EXPECT_FALSE(sim2.isRationalSubsetOf(empty));
 }
-
-} // namespace mlir

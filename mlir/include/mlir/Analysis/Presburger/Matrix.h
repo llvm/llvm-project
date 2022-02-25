@@ -21,6 +21,7 @@
 #include <cassert>
 
 namespace mlir {
+namespace presburger {
 
 /// This is a class to represent a resizable matrix.
 ///
@@ -160,6 +161,7 @@ private:
   SmallVector<int64_t, 64> data;
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_MATRIX_H

@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+
 /// This parses a single IntegerSet to an MLIR context and transforms it to
 /// FlatAffineConstraints if it was valid. If not, a failure is returned. If the
 /// passed `str` has additional tokens that were not part of the IntegerSet, a

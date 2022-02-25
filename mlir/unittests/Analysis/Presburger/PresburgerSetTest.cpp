@@ -21,7 +21,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
+
 /// Parse a list of StringRefs to IntegerPolyhedron and combine them into a
 /// PresburgerSet be using the union operation. It is expected that the strings
 /// are all valid IntegerSet representation and that all of them have the same
@@ -661,5 +663,3 @@ TEST(SetTest, computeVolume) {
                                         /*trueVolume=*/{},
                                         /*resultBound=*/{});
 }
-
-} // namespace mlir

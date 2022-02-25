@@ -18,7 +18,8 @@
 
 #include <gtest/gtest.h>
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
 /// Construct a FlatAffineConstraints from a set of inequality, equality, and
 /// division onstraints.
@@ -133,5 +134,3 @@ TEST(ParseFACTest, ParseAndCompareTest) {
                              {{{0, 1, 0}, 2}, {{1, 0, 1, 0}, 3}}),
       &context));
 }
-
-} // namespace mlir
