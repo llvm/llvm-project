@@ -161,7 +161,8 @@ public:
   //
 
   /// iterator* - Provides a way to iterate over all values in the set.
-  using iterator = typename std::set<ECValue>::const_iterator;
+  using iterator =
+      typename std::set<ECValue, ECValueComparator>::const_iterator;
 
   iterator begin() const { return TheMapping.begin(); }
   iterator end() const { return TheMapping.end(); }
