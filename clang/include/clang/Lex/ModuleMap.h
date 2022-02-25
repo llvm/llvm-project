@@ -456,8 +456,11 @@ public:
   /// is effectively internal, but is exposed so HeaderSearch can call it.
   void resolveHeaderDirectives(const FileEntry *File) const;
 
-  /// Resolve all lazy header directives for the specified module.
-  void resolveHeaderDirectives(Module *Mod) const;
+  /// Resolve lazy header directives for the specified module. If File is
+  /// provided, only headers with same size and modtime are resolved. If File
+  /// is not set, all headers are resolved.
+  void resolveHeaderDirectives(Module *Mod,
+                               llvm::Optional<const FileEntry *> File) const;
 
   /// Reports errors if a module must not include a specific file.
   ///
