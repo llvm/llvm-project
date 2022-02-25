@@ -91,7 +91,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
     else if (FileName.endswith(Suffix))
       BaseName = FileName.drop_back(Suffix.size());
 
-    const StringRef ABIVersionPrefix = "abi_version_";
+    const StringRef ABIVersionPrefix = "oclc_abi_version_";
     if (BaseName == "ocml") {
       OCML = FilePath;
     } else if (BaseName == "ockl") {
