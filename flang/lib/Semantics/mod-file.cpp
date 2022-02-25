@@ -1043,7 +1043,17 @@ void SubprogramSymbolCollector::Collect() {
   for (const auto &pair : scope_) {
     const Symbol &symbol{*pair.second};
     if (const auto *useDetails{symbol.detailsIf<UseDetails>()}) {
-      if (useSet_.count(useDetails->symbol().GetUltimate()) > 0) {
+      const Symbol &ultimate{useDetails->symbol().GetUltimate()};
+      bool needed{useSet_.count(ultimate) > 0};
+      if (const auto *generic{ultimate.detailsIf<GenericDetails>()}) {
+        // The generic may not be needed itself, but the specific procedure
+        // &/or derived type that it shadows may be needed.
+        const Symbol *spec{generic->specific()};
+        const Symbol *dt{generic->derivedType()};
+        needed = needed || (spec && useSet_.count(*spec) > 0) ||
+            (dt && useSet_.count(*dt) > 0);
+      }
+      if (needed) {
         need_.push_back(symbol);
       }
     }
