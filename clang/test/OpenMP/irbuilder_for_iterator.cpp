@@ -59,7 +59,7 @@ extern "C" void workshareloop_iterator(float *a, float *b, float *c) {
 // CHECK-NEXT:    store i64 [[TMP2]], i64* [[P_UPPERBOUND]], align 8
 // CHECK-NEXT:    store i64 1, i64* [[P_STRIDE]], align 8
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
-// CHECK-NEXT:    call void @__kmpc_for_static_init_8u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* [[P_LASTITER]], i64* [[P_LOWERBOUND]], i64* [[P_UPPERBOUND]], i64* [[P_STRIDE]], i64 1, i64 1)
+// CHECK-NEXT:    call void @__kmpc_for_static_init_8u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* [[P_LASTITER]], i64* [[P_LOWERBOUND]], i64* [[P_UPPERBOUND]], i64* [[P_STRIDE]], i64 1, i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[P_LOWERBOUND]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, i64* [[P_UPPERBOUND]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], [[TMP3]]

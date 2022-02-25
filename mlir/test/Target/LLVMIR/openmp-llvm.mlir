@@ -423,6 +423,53 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
 
 // -----
 
+llvm.func @body(i32)
+
+// CHECK-LABEL: @test_omp_wsloop_static_defchunk
+llvm.func @test_omp_wsloop_static_defchunk(%lb : i32, %ub : i32, %step : i32) -> () {
+ omp.wsloop (%iv) : i32 = (%lb) to (%ub) step (%step) schedule(static) {
+   // CHECK: call void @__kmpc_for_static_init_4u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 34, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32 1, i32 0)
+   // CHECK: call void @__kmpc_for_static_fini
+   llvm.call @body(%iv) : (i32) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+llvm.func @body(i32)
+
+// CHECK-LABEL: @test_omp_wsloop_static_1
+llvm.func @test_omp_wsloop_static_1(%lb : i32, %ub : i32, %step : i32) -> () {
+ %static_chunk_size = llvm.mlir.constant(1 : i32) : i32
+ omp.wsloop (%iv) : i32 = (%lb) to (%ub) step (%step) schedule(static = %static_chunk_size : i32) {
+   // CHECK: call void @__kmpc_for_static_init_4u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 33, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32 1, i32 1)
+   // CHECK: call void @__kmpc_for_static_fini
+   llvm.call @body(%iv) : (i32) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+llvm.func @body(i32)
+
+// CHECK-LABEL: @test_omp_wsloop_static_2
+llvm.func @test_omp_wsloop_static_2(%lb : i32, %ub : i32, %step : i32) -> () {
+ %static_chunk_size = llvm.mlir.constant(2 : i32) : i32
+ omp.wsloop (%iv) : i32 = (%lb) to (%ub) step (%step) schedule(static = %static_chunk_size : i32) {
+   // CHECK: call void @__kmpc_for_static_init_4u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 33, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32 1, i32 2)
+   // CHECK: call void @__kmpc_for_static_fini
+   llvm.call @body(%iv) : (i32) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {

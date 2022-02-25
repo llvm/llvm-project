@@ -1366,7 +1366,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    store i32 0, i32* [[P_UPPERBOUND]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[P_STRIDE]], align 4
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 1)
+// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 0)
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[P_LOWERBOUND]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[P_UPPERBOUND]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[TMP0]]
@@ -1402,7 +1402,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    store i32 1, i32* [[P_UPPERBOUND29]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[P_STRIDE30]], align 4
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM31:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 1)
+// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 0)
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[P_LOWERBOUND28]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32, i32* [[P_UPPERBOUND29]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]]
@@ -2002,7 +2002,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    store i32 0, i32* [[P_UPPERBOUND]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[P_STRIDE]], align 4
 // CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 1)
+// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 0)
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[P_LOWERBOUND]], align 4
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, i32* [[P_UPPERBOUND]], align 4
 // CHECK4-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[TMP0]]
@@ -2038,7 +2038,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    store i32 1, i32* [[P_UPPERBOUND29]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[P_STRIDE30]], align 4
 // CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM31:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 1)
+// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 0)
 // CHECK4-NEXT:    [[TMP7:%.*]] = load i32, i32* [[P_LOWERBOUND28]], align 4
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, i32* [[P_UPPERBOUND29]], align 4
 // CHECK4-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]]
@@ -3878,7 +3878,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    store i32 0, i32* [[P_UPPERBOUND]], align 4
 // CHECK9-NEXT:    store i32 1, i32* [[P_STRIDE]], align 4
 // CHECK9-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK9-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 1)
+// CHECK9-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 0)
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* [[P_LOWERBOUND]], align 4
 // CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[P_UPPERBOUND]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[TMP0]]
@@ -3914,7 +3914,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    store i32 1, i32* [[P_UPPERBOUND29]], align 4
 // CHECK9-NEXT:    store i32 1, i32* [[P_STRIDE30]], align 4
 // CHECK9-NEXT:    [[OMP_GLOBAL_THREAD_NUM31:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK9-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 1)
+// CHECK9-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 0)
 // CHECK9-NEXT:    [[TMP7:%.*]] = load i32, i32* [[P_LOWERBOUND28]], align 4
 // CHECK9-NEXT:    [[TMP8:%.*]] = load i32, i32* [[P_UPPERBOUND29]], align 4
 // CHECK9-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]]
@@ -4514,7 +4514,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    store i32 0, i32* [[P_UPPERBOUND]], align 4
 // CHECK10-NEXT:    store i32 1, i32* [[P_STRIDE]], align 4
 // CHECK10-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK10-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 1)
+// CHECK10-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 0)
 // CHECK10-NEXT:    [[TMP0:%.*]] = load i32, i32* [[P_LOWERBOUND]], align 4
 // CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[P_UPPERBOUND]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[TMP0]]
@@ -4550,7 +4550,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    store i32 1, i32* [[P_UPPERBOUND29]], align 4
 // CHECK10-NEXT:    store i32 1, i32* [[P_STRIDE30]], align 4
 // CHECK10-NEXT:    [[OMP_GLOBAL_THREAD_NUM31:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK10-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 1)
+// CHECK10-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM31]], i32 34, i32* [[P_LASTITER27]], i32* [[P_LOWERBOUND28]], i32* [[P_UPPERBOUND29]], i32* [[P_STRIDE30]], i32 1, i32 0)
 // CHECK10-NEXT:    [[TMP7:%.*]] = load i32, i32* [[P_LOWERBOUND28]], align 4
 // CHECK10-NEXT:    [[TMP8:%.*]] = load i32, i32* [[P_UPPERBOUND29]], align 4
 // CHECK10-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]]

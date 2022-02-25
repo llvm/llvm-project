@@ -780,8 +780,9 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isSimd = loop.simd_modifier();
 
   if (schedule == omp::ClauseScheduleKind::Static) {
-    ompBuilder->applyStaticWorkshareLoop(ompLoc.DL, loopInfo, allocaIP,
-                                         !loop.nowait(), chunk);
+    ompBuilder->applyWorkshareLoop(ompLoc.DL, loopInfo, allocaIP,
+                                   !loop.nowait(),
+                                   llvm::omp::OMP_SCHEDULE_Static, chunk);
   } else {
     llvm::omp::OMPScheduleType schedType;
     switch (schedule) {

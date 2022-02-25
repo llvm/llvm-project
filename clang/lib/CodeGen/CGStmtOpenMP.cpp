@@ -3717,11 +3717,50 @@ static bool emitWorksharingDirective(CodeGenFunction &CGF,
 static bool isSupportedByOpenMPIRBuilder(const OMPForDirective &S) {
   if (S.hasCancel())
     return false;
-  for (OMPClause *C : S.clauses())
-    if (!isa<OMPNowaitClause>(C))
-      return false;
+  for (OMPClause *C : S.clauses()) {
+    if (isa<OMPNowaitClause>(C))
+      continue;
+
+    if (auto *SC = dyn_cast<OMPScheduleClause>(C)) {
+      if (SC->getFirstScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown)
+        return false;
+      if (SC->getSecondScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown)
+        return false;
+      switch (SC->getScheduleKind()) {
+      case OMPC_SCHEDULE_auto:
+      case OMPC_SCHEDULE_dynamic:
+      case OMPC_SCHEDULE_runtime:
+      case OMPC_SCHEDULE_guided:
+      case OMPC_SCHEDULE_static:
+        continue;
+      case OMPC_SCHEDULE_unknown:
+        return false;
+      }
+    }
+
+    return false;
+  }
 
   return true;
+}
+
+static llvm::omp::ScheduleKind
+convertClauseKindToSchedKind(OpenMPScheduleClauseKind ScheduleClauseKind) {
+  switch (ScheduleClauseKind) {
+  case OMPC_SCHEDULE_unknown:
+    return llvm::omp::OMP_SCHEDULE_Default;
+  case OMPC_SCHEDULE_auto:
+    return llvm::omp::OMP_SCHEDULE_Auto;
+  case OMPC_SCHEDULE_dynamic:
+    return llvm::omp::OMP_SCHEDULE_Dynamic;
+  case OMPC_SCHEDULE_guided:
+    return llvm::omp::OMP_SCHEDULE_Guided;
+  case OMPC_SCHEDULE_runtime:
+    return llvm::omp::OMP_SCHEDULE_Runtime;
+  case OMPC_SCHEDULE_static:
+    return llvm::omp::OMP_SCHEDULE_Static;
+  }
+  llvm_unreachable("Unhandled schedule kind");
 }
 
 void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
@@ -3732,18 +3771,29 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
                     UseOMPIRBuilder](CodeGenFunction &CGF, PrePostActionTy &) {
     // Use the OpenMPIRBuilder if enabled.
     if (UseOMPIRBuilder) {
+      bool NeedsBarrier = !S.getSingleClause<OMPNowaitClause>();
+
+      llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default;
+      llvm::Value *ChunkSize = nullptr;
+      if (auto *SchedClause = S.getSingleClause<OMPScheduleClause>()) {
+        SchedKind =
+            convertClauseKindToSchedKind(SchedClause->getScheduleKind());
+        if (const Expr *ChunkSizeExpr = SchedClause->getChunkSize())
+          ChunkSize = EmitScalarExpr(ChunkSizeExpr);
+      }
+
       // Emit the associated statement and get its loop representation.
       const Stmt *Inner = S.getRawStmt();
       llvm::CanonicalLoopInfo *CLI =
           EmitOMPCollapsedCanonicalLoopNest(Inner, 1);
 
-      bool NeedsBarrier = !S.getSingleClause<OMPNowaitClause>();
       llvm::OpenMPIRBuilder &OMPBuilder =
           CGM.getOpenMPRuntime().getOMPBuilder();
       llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
           AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
       OMPBuilder.applyWorkshareLoop(Builder.getCurrentDebugLocation(), CLI,
-                                    AllocaIP, NeedsBarrier);
+                                    AllocaIP, NeedsBarrier, SchedKind,
+                                    ChunkSize);
       return;
     }
 

@@ -51,7 +51,7 @@
 // CHECK-NEXT:    store i32 %[[TMP8]], i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, i32* %[[P_STRIDE]], align 4
 // CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
-// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[P_LASTITER]], i32* %[[P_LOWERBOUND]], i32* %[[P_UPPERBOUND]], i32* %[[P_STRIDE]], i32 1, i32 1)
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[P_LASTITER]], i32* %[[P_LOWERBOUND]], i32* %[[P_UPPERBOUND]], i32* %[[P_STRIDE]], i32 1, i32 0)
 // CHECK-NEXT:    %[[TMP9:.+]] = load i32, i32* %[[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    %[[TMP10:.+]] = load i32, i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    %[[TMP11:.+]] = sub i32 %[[TMP10]], %[[TMP9]]
