@@ -287,3 +287,39 @@ char foo(char *s) {
 }
 char foo(char *s); // 2
 // CHECK-FIXES: {{^}}char foo(const char *s); // 2{{$}}
+
+void lvalueReference(int *p) {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
+  int &x = *p;
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:32: warning: pointer parameter 'p' can be
+void constLValueReference(int *p) {
+  // CHECK-FIXES: {{^}}void constLValueReference(const int *p) {{{$}}
+  const int &x = *p;
+}
+
+void lambdaLVRef(int *p) {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
+  auto foo = [&]() {
+    int &x = *p;
+  };
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:28: warning: pointer parameter 'p' can be
+void lambdaConstLVRef(int *p) {
+  // CHECK-FIXES: {{^}}void lambdaConstLVRef(const int *p) {{{$}}
+  auto foo = [&]() {
+    const int &x = *p;
+  };
+}
+
+struct Temp1 {
+  Temp1(int &i) {
+    i = 10;
+  }
+};
+void constructLVRef(int *p) {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
+  Temp1 t(*p);
+}

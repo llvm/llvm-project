@@ -13,7 +13,7 @@ float f(float x, float y) {
   return 2.0f + x + y;
 }
 
-int getEvalMethod() {
+int getEvalMethod(void) {
   // CHECK: ret i32 1
   // CHECK-EXT: ret i32 2
   return __FLT_EVAL_METHOD__;

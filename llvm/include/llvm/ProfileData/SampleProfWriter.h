@@ -13,19 +13,15 @@
 #define LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <set>
 #include <system_error>
-#include <unordered_set>
 
 namespace llvm {
 namespace sampleprof {

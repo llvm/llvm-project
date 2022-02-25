@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-strict-prototypes %s
 // rdar://9584012
 //
 // Verify All warnings are still issued with the option -fno-delete-null-pointer-checks
@@ -30,7 +30,7 @@ void baz(__attribute__((nonnull)) const char *str);
 void baz2(__attribute__((nonnull(1))) const char *str); // expected-warning {{'nonnull' attribute when used on parameters takes no arguments}}
 void baz3(__attribute__((nonnull)) int x); // expected-warning {{'nonnull' attribute only applies to pointer arguments}}
 
-void test_baz() {
+void test_baz(void) {
   baz(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   baz2(0); // no-warning
   baz3(0); // no-warning
@@ -53,12 +53,12 @@ void *test_bad_returns_null(void) {
 void PR18795(int (*g)(const char *h, ...) __attribute__((nonnull(1))) __attribute__((nonnull))) {
   g(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
-void PR18795_helper() {
+void PR18795_helper(void) {
   PR18795(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
 
 void vararg1(int n, ...) __attribute__((nonnull(2)));
-void vararg1_test() {
+void vararg1_test(void) {
   vararg1(0);
   vararg1(1, (void*)0); // expected-warning{{null passed}}
   vararg1(2, (void*)0, (void*)0); // expected-warning{{null passed}}
@@ -66,14 +66,14 @@ void vararg1_test() {
 }
 
 void vararg2(int n, ...) __attribute__((nonnull, nonnull, nonnull));
-void vararg2_test() {
+void vararg2_test(void) {
   vararg2(0);
   vararg2(1, (void*)0); // expected-warning{{null passed}}
   vararg2(2, (void*)0, (void*)0); // expected-warning 2{{null passed}}
 }
 
 void vararg3(int n, ...) __attribute__((nonnull, nonnull(2), nonnull(3)));
-void vararg3_test() {
+void vararg3_test(void) {
   vararg3(0);
   vararg3(1, (void*)0); // expected-warning{{null passed}}
   vararg3(2, (void*)0, (void*)0); // expected-warning 2{{null passed}}
@@ -127,8 +127,8 @@ int another_evil_nonnull_func(int* pointer, char ch, void * pv) {
 }
 
 extern void *returns_null(void**);
-extern void FOO();
-extern void FEE();
+extern void FOO(void);
+extern void FEE(void);
 
 extern void *pv;
 __attribute__((__nonnull__))  // expected-note {{declared 'nonnull' here}}
@@ -158,7 +158,7 @@ void pr21668_2(__attribute__((nonnull)) const char *p) {
     ;
 }
 
-__attribute__((returns_nonnull)) void *returns_nonnull_whee();  // expected-note 6{{declared 'returns_nonnull' here}}
+__attribute__((returns_nonnull)) void *returns_nonnull_whee(void);  // expected-note 6{{declared 'returns_nonnull' here}}
 
 void returns_nonnull_warning_tests() {
   if (returns_nonnull_whee() == NULL) {} // expected-warning {{comparison of nonnull function call 'returns_nonnull_whee()' equal to a null pointer is 'false' on first encounter}}
@@ -175,6 +175,6 @@ void returns_nonnull_warning_tests() {
 void pr30828(char *p __attribute__((nonnull)));
 void pr30828(char *p) {}
 
-void call_pr30828() {
+void call_pr30828(void) {
   pr30828(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
 }

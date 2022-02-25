@@ -15,4 +15,4 @@
 // Ensure #line directives without name do emit checksums
 // RUN: %clang -emit-llvm -S -g -gcodeview -x c %S/Inputs/debug-info-file-checksum-line.cpp -o - | FileCheck %s --check-prefix CHECKSUM
 
-// CHECKSUM: !DIFile(filename: "{{.*}}debug-info-file-checksum-line.cpp", directory:{{.*}}, checksumkind: CSK_MD5, checksum: "7b568574d0e3c56c28e5e0234d1f4a06")
+// CHECKSUM: !DIFile(filename: "{{.*}}debug-info-file-checksum-line.cpp", directory:{{.*}}, checksumkind: CSK_MD5, checksum: "e13bca9b34ed822d596a519c9ce60995")

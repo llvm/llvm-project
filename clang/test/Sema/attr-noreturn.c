@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s
+// RUN: %clang_cc1 -verify -Wno-strict-prototypes -fsyntax-only %s
 
 static void (*fp0)(void) __attribute__((noreturn));
 
-void fatal();
+void fatal(void);
 
 static void __attribute__((noreturn)) f0(void) {
   fatal();
@@ -13,17 +13,17 @@ int f1() __attribute__((noreturn));
 
 int g0 __attribute__((noreturn)); // expected-warning {{'noreturn' only applies to function types; type here is 'int'}}
 
-int f2() __attribute__((noreturn(1, 2))); // expected-error {{'noreturn' attribute takes no arguments}}
+int f2(void) __attribute__((noreturn(1, 2))); // expected-error {{'noreturn' attribute takes no arguments}}
 
-void f3() __attribute__((noreturn));
-void f3() {
+void f3(void) __attribute__((noreturn));
+void f3(void) {
   return;  // expected-warning {{function 'f3' declared 'noreturn' should not return}}
 }
 
 #pragma clang diagnostic error "-Winvalid-noreturn"
 
-void f4() __attribute__((noreturn));
-void f4() {
+void f4(void) __attribute__((noreturn));
+void f4(void) {
   return;  // expected-error {{function 'f4' declared 'noreturn' should not return}}
 }
 

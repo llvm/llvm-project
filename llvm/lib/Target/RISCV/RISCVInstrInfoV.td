@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// This file describes the RISC-V instructions from the standard 'V' Vector
-/// extension, version 0.10.
-/// This version is still experimental as the 'V' extension hasn't been
-/// ratified yet.
+/// extension, version 1.0.
 ///
 //===----------------------------------------------------------------------===//
 

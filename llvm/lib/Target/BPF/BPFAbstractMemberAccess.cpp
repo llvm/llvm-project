@@ -271,7 +271,7 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
 
 static Type *getBaseElementType(const CallInst *Call) {
   // Element type is stored in an elementtype() attribute on the first param.
-  return Call->getAttributes().getParamElementType(0);
+  return Call->getParamElementType(0);
 }
 
 /// Check whether a call is a preserve_*_access_index intrinsic call or not.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -fblocks -Wno-strict-prototypes %s
 
 #define bool _Bool
 @protocol NSObject;

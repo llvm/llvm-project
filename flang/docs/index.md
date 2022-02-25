@@ -1,6 +1,13 @@
 # Welcome to Flang's documentation
 
-Flang is LLVM's Fortran frontend
+Flang is LLVM's Fortran frontend that can be found
+[here](https://github.com/llvm/llvm-project/tree/main/flang). It is often
+referred to as "LLVM Flang" to differentiate itself from ["Classic
+Flang"](https://github.com/flang-compiler/flang) - these are two separate and
+independent Fortran compilers. LLVM Flang is under active development. While it
+is capable of generating executables for a number of examples, some
+functionality is still missing. See [GettingInvolved](GettingInvolved) for tips
+on how to get in touch with us and to learn more about the current status.
 
 ```eval_rst
 .. toctree::
@@ -15,12 +22,12 @@ Flang is LLVM's Fortran frontend
 .. toctree::
    :titlesonly:
 
-   GettingInvolved
-   FortranForCProgrammers
-   C++style
    C++17
-   PullRequestChecklist
+   C++style
+   FortranForCProgrammers
+   GettingInvolved
    ImplementingASemanticCheck
+   PullRequestChecklist
 ```
 
 # Design Documents
@@ -29,31 +36,32 @@ Flang is LLVM's Fortran frontend
 .. toctree::
    :titlesonly:
 
-   Overview
-   Preprocessing
-   Parsing
-   LabelResolution
-   ModFiles
-   Semantics
-   OpenMP-semantics
-   ControlFlowGraph
-   FortranIR
-   IORuntimeInternals
-   f2018-grammar.md
-   OpenMP-4.5-grammar.md
-   Directives
-   Extensions
-   Intrinsics
-   OptionComparison
-   ParserCombinators
-   RuntimeDescriptor
-   RuntimeTypeInfo
-   Calls
-   Character
    ArrayComposition
    BijectiveInternalNameUniquing
+   Calls
+   Character
+   ControlFlowGraph
+   Directives
    DoConcurrent
+   Extensions
+   FlangDriver
+   FortranIR
    FortranLLVMTestSuite
+   IORuntimeInternals
+   Intrinsics
+   LabelResolution
+   ModFiles
+   OpenMP-4.5-grammar.md
+   OpenMP-semantics
+   OptionComparison
+   Overview
+   ParserCombinators
+   Parsing
+   Preprocessing
+   RuntimeDescriptor
+   RuntimeTypeInfo
+   Semantics
+   f2018-grammar.md
 ```
 
 # Indices and tables

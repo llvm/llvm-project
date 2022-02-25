@@ -648,6 +648,20 @@ define float @select_fneg_false_no_nsz(float %x, float %y, i1 %b) {
   ret float %r
 }
 
+; The removal of nsz in this pattern is not needed if the select condition can't be poison.
+
+define float @select_fneg_false_nsz_ok(float %x, float %y, i1 noundef %b) {
+; CHECK-LABEL: @select_fneg_false_nsz_ok(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf nsz i1 [[B:%.*]], float [[X_NEG]], float [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %ny = fneg float %y
+  %s = select i1 %b, float %x, float %ny
+  %r = fneg nsz ninf nnan float %s
+  ret float %r
+}
+
 define float @select_fneg_false_nsz(float %x, float %y, i1 %b) {
 ; CHECK-LABEL: @select_fneg_false_nsz(
 ; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]

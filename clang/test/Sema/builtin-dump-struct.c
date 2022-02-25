@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -fsyntax-only -fno-spell-checking -verify %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fsyntax-only -fno-spell-checking -Wno-strict-prototypes -verify %s
 
-void invalid_uses() {
+void invalid_uses(void) {
   struct A {
   };
   struct A a;
@@ -25,7 +25,7 @@ void invalid_uses() {
   __builtin_dump_struct(a, goodfunc);  // expected-error {{passing 'struct A' to parameter of incompatible type structure pointer: type mismatch at 1st parameter ('struct A' vs structure pointer)}}
 }
 
-void valid_uses() {
+void valid_uses(void) {
   struct A {
   };
   union B {

@@ -1,11 +1,13 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRMemRefTestPasses
   TestComposeSubView.cpp
+  TestMultiBuffer.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
   MLIRPass
+  MLIRMemRef
   MLIRMemRefTransforms
   MLIRTestDialect
   )

@@ -429,24 +429,28 @@ def XPERM8 : ALU_rr<0b0010100, 0b100, "xperm8">, Sched<[]>;
 
 let Predicates = [HasStdExtZbt] in {
 def CMIX : RVBTernaryR<0b11, 0b001, OPC_OP, "cmix", "$rd, $rs2, $rs1, $rs3">,
-           Sched<[]>;
+           Sched<[WriteCMix, ReadCMix, ReadCMix, ReadCMix]>;
 def CMOV : RVBTernaryR<0b11, 0b101, OPC_OP, "cmov", "$rd, $rs2, $rs1, $rs3">,
-           Sched<[]>;
+           Sched<[WriteCMov, ReadCMov, ReadCMov, ReadCMov]>;
 def FSL  : RVBTernaryR<0b10, 0b001, OPC_OP, "fsl", "$rd, $rs1, $rs3, $rs2">,
-           Sched<[]>;
+           Sched<[WriteFSReg, ReadFSReg, ReadFSReg, ReadFSReg]>;
 def FSR  : RVBTernaryR<0b10, 0b101, OPC_OP, "fsr", "$rd, $rs1, $rs3, $rs2">,
-           Sched<[]>;
+           Sched<[WriteFSReg, ReadFSReg, ReadFSReg, ReadFSReg]>;
 def FSRI : RVBTernaryImm6<0b101, OPC_OP_IMM, "fsri",
-                          "$rd, $rs1, $rs3, $shamt">, Sched<[]>;
+                          "$rd, $rs1, $rs3, $shamt">,
+           Sched<[WriteFSRImm, ReadFSRImm, ReadFSRImm]>;
 } // Predicates = [HasStdExtZbt]
 
 let Predicates = [HasStdExtZbt, IsRV64] in {
 def FSLW  : RVBTernaryR<0b10, 0b001, OPC_OP_32,
-                        "fslw", "$rd, $rs1, $rs3, $rs2">, Sched<[]>;
+                        "fslw", "$rd, $rs1, $rs3, $rs2">,
+            Sched<[WriteFSReg32, ReadFSReg32, ReadFSReg32, ReadFSReg32]>;
 def FSRW  : RVBTernaryR<0b10, 0b101, OPC_OP_32, "fsrw",
-                        "$rd, $rs1, $rs3, $rs2">, Sched<[]>;
+                        "$rd, $rs1, $rs3, $rs2">,
+            Sched<[WriteFSReg32, ReadFSReg32, ReadFSReg32, ReadFSReg32]>;
 def FSRIW : RVBTernaryImm5<0b10, 0b101, OPC_OP_IMM_32,
-                           "fsriw", "$rd, $rs1, $rs3, $shamt">, Sched<[]>;
+                           "fsriw", "$rd, $rs1, $rs3, $shamt">,
+            Sched<[WriteFSRImm32, ReadFSRImm32, ReadFSRImm32]>;
 } // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb] in {
@@ -524,15 +528,19 @@ def MAXU : ALU_rr<0b0000101, 0b111, "maxu">,
 let Predicates = [HasStdExtZbe] in {
 // NOTE: These mnemonics are from the 0.94 spec. There is a name conflict with
 // bext in the 0.93 spec.
-def BDECOMPRESS : ALU_rr<0b0100100, 0b110, "bdecompress">, Sched<[]>;
-def BCOMPRESS   : ALU_rr<0b0000100, 0b110, "bcompress">, Sched<[]>;
+def BDECOMPRESS : ALU_rr<0b0100100, 0b110, "bdecompress">,
+                  Sched<[WriteDecompress, ReadDecompress, ReadDecompress]>;
+def BCOMPRESS   : ALU_rr<0b0000100, 0b110, "bcompress">,
+                  Sched<[WriteCompress, ReadCompress, ReadCompress]>;
 } // Predicates = [HasStdExtZbe]
 
 let Predicates = [HasStdExtZbe, IsRV64] in {
 // NOTE: These mnemonics are from the 0.94 spec. There is a name conflict with
 // bextw in the 0.93 spec.
-def BDECOMPRESSW : ALUW_rr<0b0100100, 0b110, "bdecompressw">, Sched<[]>;
-def BCOMPRESSW   : ALUW_rr<0b0000100, 0b110, "bcompressw">, Sched<[]>;
+def BDECOMPRESSW : ALUW_rr<0b0100100, 0b110, "bdecompressw">,
+                   Sched<[WriteDecompress32, ReadDecompress32, ReadDecompress32]>;
+def BCOMPRESSW   : ALUW_rr<0b0000100, 0b110, "bcompressw">,
+                   Sched<[WriteCompress32, ReadCompress32, ReadCompress32]>;
 } // Predicates = [HasStdExtZbe, IsRV64]
 
 let Predicates = [HasStdExtZbpOrZbkb] in {
@@ -551,10 +559,12 @@ def PACKUW : ALUW_rr<0b0100100, 0b100, "packuw">, Sched<[]>;
 
 let Predicates = [HasStdExtZbm, IsRV64] in {
 def BMATFLIP : RVBUnary<0b0110000, 0b00011, 0b001, OPC_OP_IMM, "bmatflip">,
-               Sched<[]>;
+               Sched<[WriteBMatrix, ReadBMatrix]>;
 
-def BMATOR   : ALU_rr<0b0000100, 0b011, "bmator">, Sched<[]>;
-def BMATXOR  : ALU_rr<0b0100100, 0b011, "bmatxor">, Sched<[]>;
+def BMATOR   : ALU_rr<0b0000100, 0b011, "bmator">,
+               Sched<[WriteBMatrix, ReadBMatrix, ReadBMatrix]>;
+def BMATXOR  : ALU_rr<0b0100100, 0b011, "bmatxor">,
+               Sched<[WriteBMatrix, ReadBMatrix, ReadBMatrix]>;
 } // Predicates = [HasStdExtZbm, IsRV64]
 
 let Predicates = [HasStdExtZbf] in

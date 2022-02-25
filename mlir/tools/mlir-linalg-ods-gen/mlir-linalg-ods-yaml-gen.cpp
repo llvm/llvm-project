@@ -61,15 +61,22 @@ struct SerializedAffineMap {
   AffineMap affineMap() { return affineMapAttr.getValue(); }
 };
 
-enum class LinalgOperandDefUsage { Input, Output, IndexAttr };
+enum class LinalgOperandDefKind {
+  InputTensor,
+  Scalar,
+  OutputTensor,
+  IndexAttr,
+  TypeFnAttr
+};
 
 struct LinalgOperandDef {
   std::string name;
-  LinalgOperandDefUsage usage;
+  LinalgOperandDefKind kind;
   Optional<std::string> typeVar;
   Optional<SerializedAffineMap> shapeMap;
   Optional<SerializedAffineMap> indexAttrMap;
-  Optional<SmallVector<int64_t>> defaultVals;
+  Optional<SmallVector<int64_t>> defaultIndices;
+  Optional<std::string> defaultFn;
 };
 
 enum class LinalgIteratorTypeDef {
@@ -91,11 +98,12 @@ struct ScalarArithFn {
 };
 
 struct ScalarTypeFn {
-  std::string fnName;
   std::string typeVar;
   // NOTE: This must be of arity 1, but to break the self-referential cycle,
   // we use a heap allocated vector.
   std::vector<ScalarExpression> operands;
+  Optional<std::string> fnName;
+  Optional<std::string> attrName;
 };
 
 struct ScalarExpression {
@@ -180,27 +188,32 @@ struct MappingTraits<LinalgStructuredOpConfig> {
 ///     index attribute symbols. During op creation these symbols are replaced
 ///     by the corresponding `name` index attribue values. Only index attribute
 ///     arguments have an `index_attr_map`.
-///   - `default_vals`: An optional default initialization for index attribute
+///   - `default_indices`: An optional default initialization for index
+///     attribute arguments.
+///   - `default_fn`: An optional default initialization for function attribute
 ///     arguments.
 template <>
 struct MappingTraits<LinalgOperandDef> {
   static void mapping(IO &io, LinalgOperandDef &info) {
     io.mapRequired("name", info.name);
-    io.mapRequired("usage", info.usage);
+    io.mapRequired("kind", info.kind);
     io.mapOptional("type_var", info.typeVar);
     io.mapOptional("shape_map", info.shapeMap);
     io.mapOptional("index_attr_map", info.indexAttrMap);
-    io.mapOptional("default_vals", info.defaultVals);
+    io.mapOptional("default_indices", info.defaultIndices);
+    io.mapOptional("default_fn", info.defaultFn);
   }
 };
 
 /// Usage enum for a named argument.
 template <>
-struct ScalarEnumerationTraits<LinalgOperandDefUsage> {
-  static void enumeration(IO &io, LinalgOperandDefUsage &value) {
-    io.enumCase(value, "Input", LinalgOperandDefUsage::Input);
-    io.enumCase(value, "Output", LinalgOperandDefUsage::Output);
-    io.enumCase(value, "IndexAttr", LinalgOperandDefUsage::IndexAttr);
+struct ScalarEnumerationTraits<LinalgOperandDefKind> {
+  static void enumeration(IO &io, LinalgOperandDefKind &value) {
+    io.enumCase(value, "input_tensor", LinalgOperandDefKind::InputTensor);
+    io.enumCase(value, "scalar", LinalgOperandDefKind::Scalar);
+    io.enumCase(value, "output_tensor", LinalgOperandDefKind::OutputTensor);
+    io.enumCase(value, "index_attr", LinalgOperandDefKind::IndexAttr);
+    io.enumCase(value, "type_fn_attr", LinalgOperandDefKind::TypeFnAttr);
   }
 };
 
@@ -281,9 +294,10 @@ struct MappingTraits<ScalarArithFn> {
 template <>
 struct MappingTraits<ScalarTypeFn> {
   static void mapping(IO &io, ScalarTypeFn &info) {
-    io.mapRequired("fn_name", info.fnName);
     io.mapRequired("type_var", info.typeVar);
     io.mapRequired("operands", info.operands);
+    io.mapOptional("fn_name", info.fnName);
+    io.mapOptional("attr_name", info.attrName);
   }
 };
 
@@ -399,8 +413,9 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
 
   // Search all argument types.
   for (const auto &it : llvm::enumerate(args)) {
-    if (it.value().usage != LinalgOperandDefUsage::Input &&
-        it.value().usage != LinalgOperandDefUsage::Output)
+    if (it.value().kind != LinalgOperandDefKind::InputTensor &&
+        it.value().kind != LinalgOperandDefKind::Scalar &&
+        it.value().kind != LinalgOperandDefKind::OutputTensor)
       continue;
     if (it.value().typeVar.getValue() == typeVar)
       return llvm::formatv("block.getArgument({0}).getType()", it.index())
@@ -552,6 +567,8 @@ static const char structuredOpBuilderFormat[] = R"FMT(
     $_state.addOperands(inputs);
     $_state.addOperands(outputs);
     $_state.addTypes(resultTensorTypes);
+    {2}
+    $_state.addAttributes(attributes);
     $_state.addAttribute(
       "operand_segment_sizes",
       $_builder.getI32VectorAttr({{
@@ -562,8 +579,6 @@ static const char structuredOpBuilderFormat[] = R"FMT(
       $_state,
       TypeRange(inputs),
       TypeRange(outputs));
-    {2}
-    $_state.addAttributes(attributes);
   }]>
 )FMT";
 
@@ -681,42 +696,56 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
 
   interfaceNameList = interleaveToString(opConfig.metadata->implements, ", ");
 
-  // Assemble the attribute specific logic required for the op definition.
   if (llvm::any_of(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
-        return arg.usage == LinalgOperandDefUsage::IndexAttr;
+        return arg.kind == LinalgOperandDefKind::IndexAttr ||
+               arg.kind == LinalgOperandDefKind::TypeFnAttr;
       })) {
     SmallVector<std::string> attrDefs;
     SmallVector<std::string> attrParams;
     SmallVector<std::string> attrStmts;
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
-      if (arg.usage != LinalgOperandDefUsage::IndexAttr)
-        continue;
-      assert(arg.indexAttrMap.hasValue());
-      assert(arg.defaultVals.hasValue());
-      size_t size = arg.indexAttrMap->affineMap().getNumResults();
-      assert(arg.defaultVals.getValue().size() == size);
-      static const char typeFmt[] = "RankedI64ElementsAttr<[{0}]>";
-      static const char defFmt[] = "DefaultValuedAttr<{0}, \"{1}\">:${2}";
       static const char paramFmt[] = "\"Attribute\":${0}";
       static const char stmtFmt[] = "$_state.addAttribute(\"{0}\", {0});";
-      std::string defaultVals;
-      llvm::raw_string_ostream ss(defaultVals);
-      ss << "{ ";
-      llvm::interleave(
-          arg.defaultVals.getValue(), ss,
-          [&](int64_t val) { ss << "static_cast<int64_t>(" << val << ")"; },
-          ", ");
-      ss << " }";
-      attrDefs.push_back(llvm::formatv(defFmt, llvm::formatv(typeFmt, size),
-                                       ss.str(), arg.name));
-      attrParams.push_back(llvm::formatv(paramFmt, arg.name));
-      attrStmts.push_back(llvm::formatv(stmtFmt, arg.name));
+      // Add the type conversion attributes to the op definition and builders.
+      if (arg.kind == LinalgOperandDefKind::TypeFnAttr) {
+        assert(arg.defaultFn.hasValue());
+        static const char typeFmt[] = "TypeFn::{0}";
+        static const char defFmt[] = "DefaultValuedAttr<{0}, \"{1}\">:${2}";
+        attrDefs.push_back(llvm::formatv(defFmt, "TypeFnAttr",
+                                         llvm::formatv(typeFmt, arg.defaultFn),
+                                         arg.name));
+        attrParams.push_back(llvm::formatv(paramFmt, arg.name));
+        attrStmts.push_back(llvm::formatv(stmtFmt, arg.name));
+      }
+      // Add the index attributes to the op definition and builders.
+      if (arg.kind == LinalgOperandDefKind::IndexAttr) {
+        assert(arg.indexAttrMap.hasValue());
+        assert(arg.defaultIndices.hasValue());
+        size_t size = arg.indexAttrMap->affineMap().getNumResults();
+        assert(arg.defaultIndices.getValue().size() == size);
+        static const char typeFmt[] = "RankedI64ElementsAttr<[{0}]>";
+        static const char defFmt[] = "DefaultValuedAttr<{0}, \"{ {1} }\">:${2}";
+        std::string defaultVals;
+        llvm::raw_string_ostream ss(defaultVals);
+        llvm::interleave(
+            arg.defaultIndices.getValue(), ss,
+            [&](int64_t val) { ss << "static_cast<int64_t>(" << val << ")"; },
+            ", ");
+        attrDefs.push_back(llvm::formatv(defFmt, llvm::formatv(typeFmt, size),
+                                         ss.str(), arg.name));
+        attrParams.push_back(llvm::formatv(paramFmt, arg.name));
+        attrStmts.push_back(llvm::formatv(stmtFmt, arg.name));
+      }
+    }
+    if (llvm::any_of(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
+          return arg.kind == LinalgOperandDefKind::IndexAttr;
+        })) {
+      attrMethods = R"(
+        bool hasDynamicIndexingMaps();
+        LogicalResult verifyIndexingMapRequiredAttributes();
+      )";
     }
     attrList = ",\n" + llvm::join(attrDefs, ",\n");
-    attrMethods = R"(
-      bool hasDynamicIndexingMaps();
-      LogicalResult verifyIndexingMapRequiredAttributes();
-    )";
     attrBuilder = llvm::formatv(
         structuredOpBuilderFormat, opConfig.metadata->cppClassName,
         llvm::join(attrParams, ", "), llvm::join(attrStmts, "\n"));
@@ -746,7 +775,9 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
   // Compute the number of scalar and tensor arguments.
   int64_t numOfArgs =
       llvm::count_if(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
-        return arg.usage != LinalgOperandDefUsage::IndexAttr;
+        return arg.kind == LinalgOperandDefKind::InputTensor ||
+               arg.kind == LinalgOperandDefKind::Scalar ||
+               arg.kind == LinalgOperandDefKind::OutputTensor;
       });
 
   // An operation that accesses only scalars and scalar/rank zero tensors is
@@ -817,7 +848,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
 )FMT";
         // Update all symbol bindings mapped to an attribute.
         for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
-          if (arg.usage != LinalgOperandDefUsage::IndexAttr)
+          if (arg.kind != LinalgOperandDefKind::IndexAttr)
             continue;
           assert(arg.indexAttrMap.hasValue());
           for (auto &en :
@@ -910,11 +941,11 @@ std::string {0}::getLibraryCallName() {{
 
   // hasDynamicIndexingMaps() and verifyIndexingMapRequiredAttributes()
   if (llvm::any_of(opConfig.structuredOp->args, [](LinalgOperandDef &arg) {
-        return arg.usage == LinalgOperandDefUsage::IndexAttr;
+        return arg.kind == LinalgOperandDefKind::IndexAttr;
       })) {
     std::vector<std::string> attrVerifications;
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
-      if (arg.usage != LinalgOperandDefUsage::IndexAttr)
+      if (arg.kind != LinalgOperandDefKind::IndexAttr)
         continue;
       assert(arg.indexAttrMap.hasValue());
       // Verify index attribute. Paramters:
@@ -952,7 +983,8 @@ LogicalResult {0}::verifyIndexingMapRequiredAttributes() {{
     // Generates a regionBuilder method. Parameters.
     // {0}: Class name
     // {1}: Number of args
-    // {2}: Statements
+    // {2}: Attributes
+    // {3}: Statements
     static const char structuredOpRegionBuilderFormat[] = R"FMT(
 void {0}::regionBuilder(ImplicitLocOpBuilder &b,
                         Block &block, ArrayRef<NamedAttribute> attrs) {{
@@ -961,6 +993,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
   RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
   SmallVector<Value> yields;
   {2}
+  {3}
   helper.yieldOutputs(yields);
 }
 )FMT";
@@ -968,9 +1001,27 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
     auto &assignments = opConfig.structuredOp->assignments;
     size_t generatedAssignmentCount = 0;
     int localCounter = 0;
+    SmallVector<std::string> attrs;
     SmallVector<std::string> stmts;
     for (LinalgOperandDef &arg : args) {
-      if (arg.usage != LinalgOperandDefUsage::Output)
+      if (arg.kind != LinalgOperandDefKind::TypeFnAttr)
+        continue;
+      // Obtain the type function attribute values. Parameters.
+      // {0}: attribute name
+      // {1}: default type function name
+      static const char attrDef[] = R"FMT(
+TypeFn {0}Val = TypeFn::{1};
+auto {0}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
+                              return attr.getName() == "{0}"; });
+if ({0}Iter != attrs.end()) {{
+  if (auto attr = {0}Iter->getValue().dyn_cast<TypeFnAttr>())
+    {0}Val = attr.getValue();
+}
+)FMT";
+      attrs.push_back(llvm::formatv(attrDef, arg.name, arg.defaultFn));
+    }
+    for (LinalgOperandDef &arg : args) {
+      if (arg.kind != LinalgOperandDefKind::OutputTensor)
         continue;
 
       // Find the assignment that correlates with the argument.
@@ -1048,11 +1099,25 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
                 << "an argument type but it does not";
             return None;
           }
+
+          // Use the function name or the attribute to build the type function.
+          std::string typeFunc = llvm::formatv(
+              "TypeFn::{0}", expression.typeFn->fnName.getValueOr(""));
+          if (expression.typeFn->attrName) {
+            if (llvm::none_of(args, [&](LinalgOperandDef &arg) {
+                  return arg.kind == LinalgOperandDefKind::TypeFnAttr &&
+                         arg.name == expression.typeFn->attrName.getValue();
+                })) {
+              emitError(genContext.getLoc())
+                  << "missing type function attribute "
+                  << expression.typeFn->attrName.getValue();
+            }
+            typeFunc = llvm::formatv("{0}Val", *expression.typeFn->attrName);
+          }
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
-          stmts.push_back(
-              llvm::formatv("Value {0} = helper.typefn__{1}({2}, {3});",
-                            cppIdent, expression.typeFn->fnName,
-                            typeCppValue.getValue(), *operandCppValue));
+          stmts.push_back(llvm::formatv(
+              "Value {0} = helper.buildTypeFn({1}, {2}, {3});", cppIdent,
+              typeFunc, typeCppValue.getValue(), *operandCppValue));
           return cppIdent;
         }
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";
@@ -1069,6 +1134,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
              << "mismatched number of assignments vs output arguments";
 
     os << llvm::formatv(structuredOpRegionBuilderFormat, className, numOfArgs,
+                        interleaveToString(attrs, "\n  "),
                         interleaveToString(stmts, "\n  "));
   }
 

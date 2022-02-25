@@ -1820,6 +1820,22 @@ bool AffineForOp::isDefinedOutsideOfLoop(Value value) {
   return !region().isAncestor(value.getParentRegion());
 }
 
+Optional<Value> AffineForOp::getSingleInductionVar() {
+  return getInductionVar();
+}
+
+Optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
+  if (!hasConstantLowerBound())
+    return llvm::None;
+  OpBuilder b(getContext());
+  return OpFoldResult(b.getI64IntegerAttr(getConstantLowerBound()));
+}
+
+Optional<OpFoldResult> AffineForOp::getSingleStep() {
+  OpBuilder b(getContext());
+  return OpFoldResult(b.getI64IntegerAttr(getStep()));
+}
+
 LogicalResult AffineForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
   for (auto *op : ops)
     op->moveBefore(*this);

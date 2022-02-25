@@ -3,14 +3,15 @@
 define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(float addrspace(4)* %wei_ptr, float addrspace(1)* %out_ptr, float addrspace(1)* %in) {
 ; CHECK-LABEL: excess_soft_clause_reg_pressure:
 ; CHECK:  BB0_1: ; %for.cond28.preheader
+; CHECK:         s_load_dwordx16
+; CHECK-NEXT:    s_load_dwordx16
+
 ; CHECK:         global_load_dword
 ; CHECK-NEXT:    global_load_dword
 ; CHECK-NEXT:    global_load_dword
 ; CHECK-NEXT:    global_load_dword
 
 ; CHECK:         s_load_dwordx16
-; CHECK-NEXT:    s_load_dwordx16
-; CHECK-NEXT:    s_load_dwordx16
 ; CHECK-NEXT:    s_load_dwordx16
 
 ; CHECK-NOT: v_writelane_b32

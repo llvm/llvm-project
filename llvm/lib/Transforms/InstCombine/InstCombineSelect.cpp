@@ -1142,29 +1142,55 @@ static Instruction *canonicalizeMinMaxWithConstant(SelectInst &Sel,
   return &Sel;
 }
 
-static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
-                                        InstCombinerImpl &IC) {
-  if (!Cmp.hasOneUse() || !isa<Constant>(Cmp.getOperand(1)))
-    return nullptr;
-
+static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
+                                    InstCombinerImpl &IC) {
   Value *LHS, *RHS;
-  SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
-  if (SPF != SelectPatternFlavor::SPF_ABS &&
-      SPF != SelectPatternFlavor::SPF_NABS)
+  // TODO: What to do with pointer min/max patterns?
+  if (!Sel.getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  // Note that NSW flag can only be propagated for normal, non-negated abs!
-  bool IntMinIsPoison = SPF == SelectPatternFlavor::SPF_ABS &&
-                        match(RHS, m_NSWNeg(m_Specific(LHS)));
-  Constant *IntMinIsPoisonC =
-      ConstantInt::get(Type::getInt1Ty(Sel.getContext()), IntMinIsPoison);
-  Instruction *Abs =
-      IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
+  SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
+  if (SPF == SelectPatternFlavor::SPF_ABS ||
+      SPF == SelectPatternFlavor::SPF_NABS) {
+    if (!Cmp.hasOneUse())
+      return nullptr; // TODO: Relax this restriction.
 
-  if (SPF == SelectPatternFlavor::SPF_NABS)
-    return BinaryOperator::CreateNeg(Abs); // Always without NSW flag!
+    // Note that NSW flag can only be propagated for normal, non-negated abs!
+    bool IntMinIsPoison = SPF == SelectPatternFlavor::SPF_ABS &&
+                          match(RHS, m_NSWNeg(m_Specific(LHS)));
+    Constant *IntMinIsPoisonC =
+        ConstantInt::get(Type::getInt1Ty(Sel.getContext()), IntMinIsPoison);
+    Instruction *Abs =
+        IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
 
-  return IC.replaceInstUsesWith(Sel, Abs);
+    if (SPF == SelectPatternFlavor::SPF_NABS)
+      return BinaryOperator::CreateNeg(Abs); // Always without NSW flag!
+    return IC.replaceInstUsesWith(Sel, Abs);
+  }
+
+  if (SelectPatternResult::isMinOrMax(SPF)) {
+    Intrinsic::ID IntrinsicID;
+    switch (SPF) {
+    case SelectPatternFlavor::SPF_UMIN:
+      IntrinsicID = Intrinsic::umin;
+      break;
+    case SelectPatternFlavor::SPF_UMAX:
+      IntrinsicID = Intrinsic::umax;
+      break;
+    case SelectPatternFlavor::SPF_SMIN:
+      IntrinsicID = Intrinsic::smin;
+      break;
+    case SelectPatternFlavor::SPF_SMAX:
+      IntrinsicID = Intrinsic::smax;
+      break;
+    default:
+      llvm_unreachable("Unexpected SPF");
+    }
+    return IC.replaceInstUsesWith(
+        Sel, IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS));
+  }
+
+  return nullptr;
 }
 
 /// If we have a select with an equality comparison, then we know the value in
@@ -1540,8 +1566,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *this))
     return NewSel;
 
-  if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, *this))
-    return NewAbs;
+  if (Instruction *NewSPF = canonicalizeSPF(SI, *ICI, *this))
+    return NewSPF;
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
     return replaceInstUsesWith(SI, V);

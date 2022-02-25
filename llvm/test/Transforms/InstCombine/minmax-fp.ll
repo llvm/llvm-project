@@ -244,9 +244,8 @@ define double @t16(i32 %x) {
 
 define double @t17(i32 %x) {
 ; CHECK-LABEL: @t17(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[SEL1]] to double
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to double
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %cmp = icmp sgt i32 %x, 2

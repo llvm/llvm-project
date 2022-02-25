@@ -6,6 +6,6 @@ inline int system_header_func(int x)
   return 0;
 }
 
-void test_system_header() {
+void test_system_header(void) {
   system_header_func(0); // expected-warning {{system header warning}}
 }

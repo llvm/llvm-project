@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify %s
 
 // Functions cannot have parameters of type __fp16.
 extern void f (__fp16); // expected-error {{parameters cannot have __fp16 type; did you forget * ?}}
