@@ -36,8 +36,6 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-#include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.cpp.inc"
-
 /// Forward declarations.
 
 /// Generic entry point to create the block for the region of a LinalgOp.
@@ -232,14 +230,14 @@ public:
     return operand;
   }
 
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value typefn__cast(Type toType, Value operand) {
-    return cast(toType, operand, false);
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value typefn__cast_unsigned(Type toType, Value operand) {
-    return cast(toType, operand, true);
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+    switch (typeFn) {
+    case TypeFn::cast:
+      return cast(toType, operand, false);
+    case TypeFn::cast_unsigned:
+      return cast(toType, operand, true);
+    }
+    llvm_unreachable("unsupported type conversion function");
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
