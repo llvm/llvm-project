@@ -1,14 +1,14 @@
-; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
-; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
-; RUN: llc -mtriple=riscv32 -mattr=+f -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
-; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
-; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
-; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi ilp32f -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IF %s
