@@ -204,30 +204,40 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
                 bp_id_list += ids
         return set(bp_id_list)
 
-    def delete_breakpoint(self, id):
-        """Delete a breakpoint by id.
+    def delete_breakpoints(self, ids):
+        """Delete breakpoints by their ids.
 
         Raises a KeyError if no breakpoint with this id exists.
         """
-        vsbp = self._dex_id_to_vs[id]
+        vsbp_set = set()
+        for id in ids:
+            vsbp = self._dex_id_to_vs[id]
 
-        # Remove our id from the associated list of dex ids.
-        self._vs_to_dex_ids[vsbp].remove(id)
-        del self._dex_id_to_vs[id]
+            # Remove our id from the associated list of dex ids.
+            self._vs_to_dex_ids[vsbp].remove(id)
+            del self._dex_id_to_vs[id]
 
-        # Bail if there are other uses of this vsbp.
-        if len(self._vs_to_dex_ids[vsbp]) > 0:
-            return
-        # Otherwise find and delete it.
+            # Bail if there are other uses of this vsbp.
+            if len(self._vs_to_dex_ids[vsbp]) > 0:
+                continue
+            # Otherwise find and delete it.
+            vsbp_set.add(vsbp)
+
+        vsbp_to_del_count = len(vsbp_set)
+
         for bp in self._debugger.Breakpoints:
-            # We're looking at the user-set breakpoints so there shouild be no
+            # We're looking at the user-set breakpoints so there should be no
             # Parent.
             assert bp.Parent == None
             this_vsbp = VSBreakpoint(PurePath(bp.File), bp.FileLine,
                                      bp.FileColumn, bp.Condition)
-            if vsbp == this_vsbp:
+            if this_vsbp in vsbp_set:
                 bp.Delete()
-                break
+                vsbp_to_del_count -= 1
+                if vsbp_to_del_count == 0:
+                    break
+        if vsbp_to_del_count:
+            raise KeyError('did not find breakpoint to be deleted')
 
     def _fetch_property(self, props, name):
         num_props = props.Count

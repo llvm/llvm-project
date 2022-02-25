@@ -175,8 +175,7 @@ class ConditionalController(DebuggerControllerBase):
                     self.debugger.add_breakpoint(bpr.path, line)
 
             # Remove any trailing or expired leading breakpoints we just hit.
-            for bp_id in bp_to_delete:
-                self.debugger.delete_breakpoint(bp_id)
+            self.debugger.delete_breakpoints(bp_to_delete)
 
             if exit_desired:
                 break

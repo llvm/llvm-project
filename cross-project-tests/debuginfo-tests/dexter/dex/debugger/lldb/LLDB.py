@@ -157,17 +157,18 @@ class LLDB(DebuggerBase):
                 breakpoint_ids.add(id)
         return breakpoint_ids
 
-    def delete_breakpoint(self, id):
-        bp = self._target.FindBreakpointByID(id)
-        if not bp:
-            # The ID is not valid.
-            raise KeyError
-        try:
-            del self._breakpoint_conditions[id]
-        except KeyError:
-            # This must be an unconditional breakpoint.
-            pass
-        self._target.BreakpointDelete(id)
+    def delete_breakpoints(self, ids):
+        for id in ids:
+            bp = self._target.FindBreakpointByID(id)
+            if not bp:
+                # The ID is not valid.
+                raise KeyError
+            try:
+                del self._breakpoint_conditions[id]
+            except KeyError:
+                # This must be an unconditional breakpoint.
+                pass
+            self._target.BreakpointDelete(id)
 
     def launch(self, cmdline):
         self._process = self._target.LaunchSimple(cmdline, None, os.getcwd())
