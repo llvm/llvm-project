@@ -118,6 +118,16 @@ public:
   /// Negate the specified column.
   void negateColumn(unsigned column);
 
+  /// Negate the specified row.
+  void negateRow(unsigned row);
+
+  /// Divide the first `nCols` of the specified row by their GCD.
+  /// Returns the GCD of the first `nCols` of the specified row.
+  uint64_t normalizeRow(unsigned row, unsigned nCols);
+  /// Divide the columns of the specified row by their GCD.
+  /// Returns the GCD of the columns of the specified row.
+  uint64_t normalizeRow(unsigned row);
+
   /// The given vector is interpreted as a row vector v. Post-multiply v with
   /// this matrix, say M, and return vM.
   SmallVector<int64_t, 8> preMultiplyWithRow(ArrayRef<int64_t> rowVec) const;
