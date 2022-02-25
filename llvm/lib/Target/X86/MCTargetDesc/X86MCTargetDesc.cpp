@@ -72,6 +72,97 @@ bool X86_MC::hasLockPrefix(const MCInst &MI) {
   return MI.getFlags() & X86::IP_HAS_LOCK;
 }
 
+static bool isMemOperand(const MCInst &MI, unsigned Op, unsigned RegClassID) {
+  const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
+  const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
+  const MCRegisterClass &RC = X86MCRegisterClasses[RegClassID];
+
+  return (Base.isReg() && Base.getReg() != 0 && RC.contains(Base.getReg())) ||
+         (Index.isReg() && Index.getReg() != 0 && RC.contains(Index.getReg()));
+}
+
+bool X86_MC::is16BitMemOperand(const MCInst &MI, unsigned Op,
+                               const MCSubtargetInfo &STI) {
+  const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
+  const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
+
+  if (STI.hasFeature(X86::Mode16Bit) && Base.isReg() && Base.getReg() == 0 &&
+      Index.isReg() && Index.getReg() == 0)
+    return true;
+  return isMemOperand(MI, Op, X86::GR16RegClassID);
+}
+
+bool X86_MC::is32BitMemOperand(const MCInst &MI, unsigned Op) {
+  const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
+  const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
+  if (Base.isReg() && Base.getReg() == X86::EIP) {
+    assert(Index.isReg() && Index.getReg() == 0 && "Invalid eip-based address");
+    return true;
+  }
+  if (Index.isReg() && Index.getReg() == X86::EIZ)
+    return true;
+  return isMemOperand(MI, Op, X86::GR32RegClassID);
+}
+
+#ifndef NDEBUG
+bool X86_MC::is64BitMemOperand(const MCInst &MI, unsigned Op) {
+  return isMemOperand(MI, Op, X86::GR64RegClassID);
+}
+#endif
+
+bool X86_MC::needsAddressSizeOverride(const MCInst &MI,
+                                      const MCSubtargetInfo &STI,
+                                      int MemoryOperand, uint64_t TSFlags) {
+  uint64_t AdSize = TSFlags & X86II::AdSizeMask;
+  bool Is16BitMode = STI.hasFeature(X86::Mode16Bit);
+  bool Is32BitMode = STI.hasFeature(X86::Mode32Bit);
+  bool Is64BitMode = STI.hasFeature(X86::Mode64Bit);
+  if ((Is16BitMode && AdSize == X86II::AdSize32) ||
+      (Is32BitMode && AdSize == X86II::AdSize16) ||
+      (Is64BitMode && AdSize == X86II::AdSize32))
+    return true;
+  uint64_t Form = TSFlags & X86II::FormMask;
+  switch (Form) {
+  default:
+    break;
+  case X86II::RawFrmDstSrc: {
+    unsigned siReg = MI.getOperand(1).getReg();
+    assert(((siReg == X86::SI && MI.getOperand(0).getReg() == X86::DI) ||
+            (siReg == X86::ESI && MI.getOperand(0).getReg() == X86::EDI) ||
+            (siReg == X86::RSI && MI.getOperand(0).getReg() == X86::RDI)) &&
+           "SI and DI register sizes do not match");
+    return (!Is32BitMode && siReg == X86::ESI) ||
+           (Is32BitMode && siReg == X86::SI);
+  }
+  case X86II::RawFrmSrc: {
+    unsigned siReg = MI.getOperand(0).getReg();
+    return (!Is32BitMode && siReg == X86::ESI) ||
+           (Is32BitMode && siReg == X86::SI);
+  }
+  case X86II::RawFrmDst: {
+    unsigned siReg = MI.getOperand(0).getReg();
+    return (!Is32BitMode && siReg == X86::EDI) ||
+           (Is32BitMode && siReg == X86::DI);
+  }
+  }
+
+  // Determine where the memory operand starts, if present.
+  if (MemoryOperand < 0)
+    return false;
+
+  if (STI.hasFeature(X86::Mode64Bit)) {
+    assert(!is16BitMemOperand(MI, MemoryOperand, STI));
+    return is32BitMemOperand(MI, MemoryOperand);
+  }
+  if (STI.hasFeature(X86::Mode32Bit)) {
+    assert(!is64BitMemOperand(MI, MemoryOperand));
+    return is16BitMemOperand(MI, MemoryOperand, STI);
+  }
+  assert(STI.hasFeature(X86::Mode16Bit));
+  assert(!is64BitMemOperand(MI, MemoryOperand));
+  return !is16BitMemOperand(MI, MemoryOperand, STI);
+}
+
 void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
   // FIXME: TableGen these.
   for (unsigned Reg = X86::NoRegister + 1; Reg < X86::NUM_TARGET_REGS; ++Reg) {

@@ -40,7 +40,7 @@ void X86IntelInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
 void X86IntelInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                     StringRef Annot, const MCSubtargetInfo &STI,
                                     raw_ostream &OS) {
-  printInstFlags(MI, OS);
+  printInstFlags(MI, OS, STI);
 
   // In 16-bit mode, print data16 as data32.
   if (MI->getOpcode() == X86::DATA16_PREFIX &&

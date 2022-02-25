@@ -46,7 +46,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (CommentStream)
     HasCustomInstComment = EmitAnyX86InstComments(MI, *CommentStream, MII);
 
-  printInstFlags(MI, OS);
+  printInstFlags(MI, OS, STI);
 
   // Output CALLpcrel32 as "callq" in 64-bit mode.
   // In Intel annotation it's always emitted as "call".

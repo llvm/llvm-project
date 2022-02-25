@@ -33,7 +33,8 @@ public:
                      raw_ostream &O);
 
 protected:
-  void printInstFlags(const MCInst *MI, raw_ostream &O);
+  void printInstFlags(const MCInst *MI, raw_ostream &O,
+                      const MCSubtargetInfo &STI);
   void printOptionalSegReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printVKPair(const MCInst *MI, unsigned OpNo, raw_ostream &OS);
 };
