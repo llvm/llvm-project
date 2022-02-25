@@ -195,7 +195,6 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
-; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; GCN-NEXT:    s_mov_b64 s[10:11], -1
 ; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
@@ -203,7 +202,6 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
 ; GCN-NEXT:    s_cbranch_vccz .LBB1_5
 ; GCN-NEXT:  ; %bb.4: ; %case1
@@ -223,7 +221,6 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:  ; %bb.7: ; %LeafBlock
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
 ; GCN-NEXT:    s_cbranch_vccz .LBB1_1
 ; GCN-NEXT:  ; %bb.8: ; %case0

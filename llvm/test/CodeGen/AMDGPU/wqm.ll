@@ -1864,7 +1864,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v3, v7
-; GFX9-W64-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX9-W64-NEXT:    s_cbranch_vccz .LBB31_1
 ; GFX9-W64-NEXT:  ; %bb.3:
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], -1
@@ -1914,7 +1913,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
-; GFX10-W32-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_vccz .LBB31_1
 ; GFX10-W32-NEXT:  ; %bb.3:
 ; GFX10-W32-NEXT:    s_mov_b32 s1, -1

@@ -750,7 +750,6 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_and_b64 vcc, exec, vcc
 ; SI-NEXT:    s_cbranch_vccnz .LBB10_2
 ; SI-NEXT:  .LBB10_4: ; %Flow1
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -796,7 +795,6 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX10-WAVE64-NEXT:    global_load_dword v0, v[0:1], off glc dlc
 ; GFX10-WAVE64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX10-WAVE64-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX10-WAVE64-NEXT:    s_cbranch_vccnz .LBB10_1
 ; GFX10-WAVE64-NEXT:  .LBB10_3: ; %Flow1
 ; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[2:3]
@@ -840,7 +838,6 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX10-WAVE32-NEXT:    global_load_dword v0, v[0:1], off glc dlc
 ; GFX10-WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX10-WAVE32-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_cbranch_vccnz .LBB10_1
 ; GFX10-WAVE32-NEXT:  .LBB10_3: ; %Flow1
 ; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
@@ -901,7 +898,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; SI-NEXT:    v_mov_b32_e32 v0, 4.0
 ; SI-NEXT:  .LBB11_3: ; %phibb
 ; SI-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; SI-NEXT:    s_and_b64 vcc, exec, vcc
 ; SI-NEXT:    s_cbranch_vccz .LBB11_5
 ; SI-NEXT:  ; %bb.4: ; %bb10
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -934,7 +930,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX10-WAVE64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WAVE64-NEXT:  .LBB11_3: ; %phibb
 ; GFX10-WAVE64-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; GFX10-WAVE64-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX10-WAVE64-NEXT:    s_cbranch_vccz .LBB11_5
 ; GFX10-WAVE64-NEXT:  ; %bb.4: ; %bb10
 ; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 9
@@ -965,7 +960,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX10-WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WAVE32-NEXT:  .LBB11_3: ; %phibb
 ; GFX10-WAVE32-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
-; GFX10-WAVE32-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_cbranch_vccz .LBB11_5
 ; GFX10-WAVE32-NEXT:  ; %bb.4: ; %bb10
 ; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v0, 9
