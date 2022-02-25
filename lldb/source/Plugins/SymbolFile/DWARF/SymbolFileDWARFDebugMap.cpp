@@ -1453,7 +1453,7 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
 
 std::vector<DataBufferSP>
 SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
+  Log *log = GetLog(DWARFLog::DebugMap);
 
   std::vector<DataBufferSP> ast_datas;
   if (language != eLanguageTypeSwift) {
@@ -1495,7 +1495,7 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
       if (exists) {
         // We found the source data for the AST data blob.
         // Read it in and add it to our return vector.
-        std::shared_ptr<DataBufferLLVM> data_buf_sp 
+        std::shared_ptr<DataBufferLLVM> data_buf_sp
                 = FileSystem::Instance().CreateDataBuffer(file_spec.GetPath());
         if (data_buf_sp) {
           ast_datas.push_back(data_buf_sp);
@@ -1507,7 +1507,7 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
           if (log)
             log->Printf("SymbolFileDWARFDebugMap::%s() - got empty data buffer "
                         "SP from extant file %s",
-                        __FUNCTION__, file_spec.GetPath().c_str());        
+                        __FUNCTION__, file_spec.GetPath().c_str());
         }
       } else {
         if (log)
