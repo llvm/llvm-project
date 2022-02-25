@@ -410,8 +410,13 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     }
 
     if (funcRetrievesHostcallPtr(A)) {
-      removeAssumedBits(IMPLICIT_ARG_PTR);
+      assert(!isAssumed(IMPLICIT_ARG_PTR) && "hostcall needs implicitarg_ptr");
       removeAssumedBits(HOSTCALL_PTR);
+    }
+
+    if (funcRetrievesHeapPtr(A)) {
+      assert(!isAssumed(IMPLICIT_ARG_PTR) && "heap_ptr needs implicitarg_ptr");
+      removeAssumedBits(HEAP_PTR);
     }
 
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
@@ -498,14 +503,27 @@ private:
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
     auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
+    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, OAS);
+  }
 
+  bool funcRetrievesHeapPtr(Attributor &A) {
+    if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
+      return false;
+    auto Pos = llvm::AMDGPU::getHeapPtrImplicitArgPosition();
+    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, OAS);
+  }
+
+  bool funcRetrievesImplicitKernelArg(Attributor &A,
+                                      AAPointerInfo::OffsetAndSize OAS) {
     // Check if this is a call to the implicitarg_ptr builtin and it
     // is used to retrieve the hostcall pointer. The implicit arg for
     // hostcall is not used only if every use of the implicitarg_ptr
     // is a load that clearly does not retrieve any byte of the
     // hostcall pointer. We check this by tracing all the uses of the
     // initial call to the implicitarg_ptr intrinsic.
-    auto DoesNotLeadToHostcallPtr = [&](Instruction &I) {
+    auto DoesNotLeadToKernelArgLoc = [&](Instruction &I) {
       auto &Call = cast<CallBase>(I);
       if (Call.getIntrinsicID() != Intrinsic::amdgcn_implicitarg_ptr)
         return true;
@@ -513,7 +531,6 @@ private:
       const auto &PointerInfoAA = A.getAAFor<AAPointerInfo>(
           *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
 
-      AAPointerInfo::OffsetAndSize OAS(Pos, 8);
       return PointerInfoAA.forallInterferingAccesses(
           OAS, [](const AAPointerInfo::Access &Acc, bool IsExact) {
             return Acc.getRemoteInst()->isDroppable();
@@ -521,7 +538,7 @@ private:
     };
 
     bool UsedAssumedInformation = false;
-    return !A.checkForAllCallLikeInstructions(DoesNotLeadToHostcallPtr, *this,
+    return !A.checkForAllCallLikeInstructions(DoesNotLeadToKernelArgLoc, *this,
                                               UsedAssumedInformation);
   }
 };
