@@ -109,6 +109,27 @@ enum class ConstituentSemantics {
   RefOpaque
 };
 
+/// Convert parser's INTEGER relational operators to MLIR.  TODO: using
+/// unordered, but we may want to cons ordered in certain situation.
+static mlir::arith::CmpIPredicate
+translateRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::slt;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::sle;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::sgt;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
 /// Place \p exv in memory if it is not already a memory reference. If
 /// \p forceValueType is provided, the value is first casted to the provided
 /// type before being stored (this is mainly intended for logicals whose value
@@ -338,6 +359,20 @@ public:
     return builder.createRealConstant(getLoc(), fltTy, value);
   }
 
+  template <typename OpTy>
+  mlir::Value createCompareOp(mlir::arith::CmpIPredicate pred,
+                              const ExtValue &left, const ExtValue &right) {
+    if (const fir::UnboxedValue *lhs = left.getUnboxed())
+      if (const fir::UnboxedValue *rhs = right.getUnboxed())
+        return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
+    fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
+  }
+  template <typename OpTy, typename A>
+  mlir::Value createCompareOp(const A &ex, mlir::arith::CmpIPredicate pred) {
+    ExtValue left = genval(ex.left());
+    return createCompareOp<OpTy>(pred, left, genval(ex.right()));
+  }
+
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   ExtValue gen(Fortran::semantics::SymbolRef sym) {
@@ -494,7 +529,8 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Integer, KIND>> &op) {
-    TODO(getLoc(), "genval integer comparison");
+    return createCompareOp<mlir::arith::CmpIOp>(op,
+                                                translateRelational(op.opr));
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
@@ -514,7 +550,7 @@ public:
 
   ExtValue
   genval(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &op) {
-    TODO(getLoc(), "genval comparison");
+    return std::visit([&](const auto &x) { return genval(x); }, op.u);
   }
 
   template <Fortran::common::TypeCategory TC1, int KIND,
