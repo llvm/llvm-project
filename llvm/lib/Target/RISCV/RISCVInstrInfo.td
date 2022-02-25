@@ -1418,7 +1418,7 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
 // if only the lower 32 bits of their result is used.
 class binop_allwusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
-              (operator node:$lhs, node:$rhs), [{
+              (i64 (operator node:$lhs, node:$rhs)), [{
   return hasAllWUsers(Node);
 }]>;
 
