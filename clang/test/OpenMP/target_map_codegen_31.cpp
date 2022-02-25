@@ -41,6 +41,7 @@ struct ST {
 
 // CK31A-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 //
+// CK31A: [[SIZE00:@.+]] = private {{.*}}constant [7 x i64] [i64 0, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4]
 // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
 // CK31A-USE: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1020]],
 // CK31A-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1000]],
@@ -102,32 +103,26 @@ void explicit_maps_single (int ii){
 // st1.j
 // CK31A-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK31A-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK31A-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
 // CK31A-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[ST]]**
 // CK31A-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
 // CK31A-DAG: store [[ST]]* [[ST1]], [[ST]]** [[CBP1]]
 // CK31A-DAG: store i32* [[ST1_J]], i32** [[CP1]]
-// CK31A-DAG: store i64 4, i64* [[S1]]
 
 // st1.i
 // CK31A-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
 // CK31A-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-// CK31A-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
 // CK31A-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to [[ST]]**
 // CK31A-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to i32**
 // CK31A-DAG: store [[ST]]* [[ST1]], [[ST]]** [[CBP2]]
 // CK31A-DAG: store i32* [[ST1_I]], i32** [[CP2]]
-// CK31A-DAG: store i64 4, i64* [[S2]]
 
 // a
 // CK31A-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
 // CK31A-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
-// CK31A-DAG: [[S3:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 3
 // CK31A-DAG: [[CBP3:%.+]] = bitcast i8** [[BP3]] to i32**
 // CK31A-DAG: [[CP3:%.+]] = bitcast i8** [[P3]] to i32**
 // CK31A-DAG: store i32* [[A]], i32** [[CBP3]]
 // CK31A-DAG: store i32* [[A]], i32** [[CP3]]
-// CK31A-DAG: store i64 4, i64* [[S3]]
 
 // st2
 // CK31A-DAG: [[BP4:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 4
@@ -142,22 +137,18 @@ void explicit_maps_single (int ii){
 // st2.i
 // CK31A-DAG: [[BP5:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 5
 // CK31A-DAG: [[P5:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 5
-// CK31A-DAG: [[S5:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 5
 // CK31A-DAG: [[CBP5:%.+]] = bitcast i8** [[BP5]] to [[ST]]**
 // CK31A-DAG: [[CP5:%.+]] = bitcast i8** [[P5]] to i32**
 // CK31A-DAG: store [[ST]]* [[ST2]], [[ST]]** [[CBP5]]
 // CK31A-DAG: store i32* [[ST2_I]], i32** [[CP5]]
-// CK31A-DAG: store i64 4, i64* [[S5]]
 
 // st2.j
 // CK31A-DAG: [[BP6:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 6
 // CK31A-DAG: [[P6:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 6
-// CK31A-DAG: [[S6:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 6
 // CK31A-DAG: [[CBP6:%.+]] = bitcast i8** [[BP6]] to [[ST]]**
 // CK31A-DAG: [[CP6:%.+]] = bitcast i8** [[P6]] to i32**
 // CK31A-DAG: store [[ST]]* [[ST2]], [[ST]]** [[CBP6]]
 // CK31A-DAG: store i32* [[ST2_J]], i32** [[CP6]]
-// CK31A-DAG: store i64 4, i64* [[S6]]
 
 // CK31A-USE: call void [[CALL00:@.+]]([[ST]]* [[ST1]], i32* [[A]], [[ST]]* [[ST2]])
 // CK31A-NOUSE: call void [[CALL00:@.+]]()
