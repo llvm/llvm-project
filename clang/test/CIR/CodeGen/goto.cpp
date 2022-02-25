@@ -10,8 +10,8 @@ end:
 }
 
 // CHECK:   func @g0
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, [cinit] {alignment = 4 : i64}
-// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, [paraminit] {alignment = 4 : i64}
+// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["b", cinit] {alignment = 4 : i64}
+// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
 // CHECK:     cir.store %arg0, %1 : i32, cir.ptr <i32>
 // CHECK:     %2 = cir.load %1 lvalue_to_rvalue : cir.ptr <i32>, i32
 // CHECK:     cir.store %2, %0 : i32, cir.ptr <i32>
