@@ -352,6 +352,10 @@ Changes in existing checks
   return statements associated with ``case``, ``default`` and labeled
   statements.
 
+- Fixed a crash in :doc:`readability-suspicious-call-argument
+  <clang-tidy/checks/readability-suspicious-call-argument>` related to passing
+  arguments that refer to program elements without a trivial identifier.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
