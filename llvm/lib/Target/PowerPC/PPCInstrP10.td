@@ -1,3 +1,56 @@
+//===-- PPCInstrP10.td - Power10 Instruction Set -----------*- tablegen -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file describes the instructions introduced for the Power10 CPU.
+//
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// Naming convention for future instruction formats
+//
+// <INSTR_FORM>{_<OP_TYPE><OP_LENGTH>}+
+//
+// Where:
+// <INSTR_FORM> - name of instruction format as per the ISA
+//                (X-Form, VX-Form, etc.)
+// <OP_TYPE> - operand type
+//             * FRT/RT/VT/XT/BT - target register
+//                                 (FPR, GPR, VR, VSR, CR-bit respectively)
+//                                 In some situations, the 'T' is replaced by
+//                                 'D' when describing the target register.
+//             * [FR|R|V|X|B][A-Z] - register source (i.e. FRA, RA, XB, etc.)
+//             * IMM - immediate (where signedness matters,
+//                     this is SI/UI for signed/unsigned)
+//             * [R|X|FR]Tp - register pair target (i.e. FRTp, RTp)
+//             * R - PC-Relative bit
+//                   (denotes that the address is computed pc-relative)
+//             * VRM - Masked Registers
+//             * AT - target accumulator
+//             * N - the Nth bit in a VSR
+//             * Additional 1-bit operands may be required for certain
+//               instruction formats such as: MC, P, MP
+//             * X / Y / P - mask values. In the instruction encoding, this is
+//                           represented as XMSK, YMSK and PMSK.
+//             * MEM - indicates if the instruction format requires any memory
+//                     accesses. This does not have <OP_LENGTH> attached to it.
+// <OP_LENGTH> - the length of each operand in bits.
+//               For operands that are 1 bit, the '1' is omitted from the name.
+//
+// Example: 8RR_XX4Form_IMM8_XTAB6
+//          8RR_XX4Form is the instruction format.
+//          The operand is an 8-bit immediate (IMM), the destination (XT)
+//          and sources (XA, XB) that are all 6-bits. The destination and
+//          source registers are combined if they are of the same length.
+//          Moreover, the order of operands reflects the order of operands
+//          in the encoding.
+
 //-------------------------- Predicate definitions ---------------------------//
 def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
 
