@@ -52,6 +52,7 @@ namespace __format_spec {
  * * The format-type filtering needs to be done post parsing in the parser
  *   derived from @ref __parser_std.
  */
+_LIBCPP_PACKED_BYTE_FOR_AIX
 class _LIBCPP_TYPE_VIS _Flags {
 public:
   enum class _LIBCPP_ENUM_VIS _Alignment : uint8_t {
@@ -109,6 +110,7 @@ public:
 
   _Type __type{_Type::__default};
 };
+_LIBCPP_PACKED_BYTE_FOR_AIX_END
 
 namespace __detail {
 template <class _CharT>
