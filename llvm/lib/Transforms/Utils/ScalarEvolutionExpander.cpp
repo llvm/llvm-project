@@ -1870,9 +1870,8 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
   return V;
 }
 
-ScalarEvolution::ValueOffsetPair
-SCEVExpander::FindValueInExprValueMap(const SCEV *S,
-                                      const Instruction *InsertPt) {
+Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
+                                             const Instruction *InsertPt) {
   auto *Set = SE.getSCEVValues(S);
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
@@ -1882,9 +1881,7 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
       // Choose a Value from the set which dominates the InsertPt.
       // InsertPt should be inside the Value's parent loop so as not to break
       // the LCSSA form.
-      for (auto const &VOPair : *Set) {
-        Value *V = VOPair.first;
-        ConstantInt *Offset = VOPair.second;
+      for (Value *V : *Set) {
         Instruction *EntInst = dyn_cast_or_null<Instruction>(V);
         if (!EntInst)
           continue;
@@ -1894,11 +1891,11 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
             SE.DT.dominates(EntInst, InsertPt) &&
             (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
              SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
-          return {V, Offset};
+          return V;
       }
     }
   }
-  return {nullptr, nullptr};
+  return nullptr;
 }
 
 // The expansion of SCEV will either reuse a previous Value in ExprValueMap,
@@ -1967,9 +1964,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
   Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
-  ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, InsertPt);
-  Value *V = VO.first;
-
+  Value *V = FindValueInExprValueMap(S, InsertPt);
   if (!V)
     V = visit(S);
   else {
@@ -1980,21 +1975,6 @@ Value *SCEVExpander::expand(const SCEV *S) {
     if (auto *I = dyn_cast<Instruction>(V))
       if (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I))
         I->dropPoisonGeneratingFlags();
-
-    if (VO.second) {
-      if (PointerType *Vty = dyn_cast<PointerType>(V->getType())) {
-        int64_t Offset = VO.second->getSExtValue();
-        ConstantInt *Idx =
-          ConstantInt::getSigned(VO.second->getType(), -Offset);
-        unsigned AS = Vty->getAddressSpace();
-        V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
-        V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
-                              "uglygep");
-        V = Builder.CreateBitCast(V, Vty);
-      } else {
-        V = Builder.CreateSub(V, VO.second);
-      }
-    }
   }
   // Remember the expanded value for this SCEV at this location.
   //
@@ -2176,9 +2156,9 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
   return NumElim;
 }
 
-Optional<ScalarEvolution::ValueOffsetPair>
-SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
-                                          Loop *L) {
+Value *SCEVExpander::getRelatedExistingExpansion(const SCEV *S,
+                                                 const Instruction *At,
+                                                 Loop *L) {
   using namespace llvm::PatternMatch;
 
   SmallVector<BasicBlock *, 4> ExitingBlocks;
@@ -2195,25 +2175,17 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
       continue;
 
     if (SE.getSCEV(LHS) == S && SE.DT.dominates(LHS, At))
-      return ScalarEvolution::ValueOffsetPair(LHS, nullptr);
+      return LHS;
 
     if (SE.getSCEV(RHS) == S && SE.DT.dominates(RHS, At))
-      return ScalarEvolution::ValueOffsetPair(RHS, nullptr);
+      return RHS;
   }
 
   // Use expand's logic which is used for reusing a previous Value in
   // ExprValueMap.  Note that we don't currently model the cost of
   // needing to drop poison generating flags on the instruction if we
   // want to reuse it.  We effectively assume that has zero cost.
-  ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, At);
-  if (VO.first)
-    return VO;
-
-  // There is potential to make this significantly smarter, but this simple
-  // heuristic already gets some interesting cases.
-
-  // Can not find suitable value.
-  return None;
+  return FindValueInExprValueMap(S, At);
 }
 
 template<typename T> static InstructionCost costAndCollectOperands(
