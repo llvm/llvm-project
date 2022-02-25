@@ -1633,25 +1633,6 @@ void IntegerPolyhedron::removeTrivialRedundancy() {
   // the savings.
 }
 
-static std::pair<unsigned, unsigned>
-getNewNumDimsSymbols(unsigned pos, const IntegerPolyhedron &cst) {
-  unsigned numDims = cst.getNumDimIds();
-  unsigned numSymbols = cst.getNumSymbolIds();
-  unsigned newNumDims, newNumSymbols;
-  if (pos < numDims) {
-    newNumDims = numDims - 1;
-    newNumSymbols = numSymbols;
-  } else if (pos < numDims + numSymbols) {
-    assert(numSymbols >= 1);
-    newNumDims = numDims;
-    newNumSymbols = numSymbols - 1;
-  } else {
-    newNumDims = numDims;
-    newNumSymbols = numSymbols;
-  }
-  return {newNumDims, newNumSymbols};
-}
-
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "fm"
 
@@ -1722,12 +1703,7 @@ void IntegerPolyhedron::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   gcdTightenInequalities();
 
   // Check if the identifier appears at all in any of the inequalities.
-  unsigned r, e;
-  for (r = 0, e = getNumInequalities(); r < e; r++) {
-    if (atIneq(r, pos) != 0)
-      break;
-  }
-  if (r == getNumInequalities()) {
+  if (isColZero(pos)) {
     // If it doesn't appear, just remove the column and return.
     // TODO: refactor removeColumns to use it from here.
     removeId(pos);
@@ -1760,16 +1736,19 @@ void IntegerPolyhedron::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     }
   }
 
-  // Set the number of dimensions, symbols in the resulting system.
-  const auto &dimsSymbols = getNewNumDimsSymbols(pos, *this);
-  unsigned newNumDims = dimsSymbols.first;
-  unsigned newNumSymbols = dimsSymbols.second;
+  // Set the number of dimensions, symbols, locals in the resulting system.
+  unsigned newNumDims =
+      getNumDimIds() - getIdKindOverlap(IdKind::SetDim, pos, pos + 1);
+  unsigned newNumSymbols =
+      getNumSymbolIds() - getIdKindOverlap(IdKind::Symbol, pos, pos + 1);
+  unsigned newNumLocals =
+      getNumLocalIds() - getIdKindOverlap(IdKind::Local, pos, pos + 1);
 
   /// Create the new system which has one identifier less.
-  IntegerPolyhedron newPoly(
-      lbIndices.size() * ubIndices.size() + nbIndices.size(),
-      getNumEqualities(), getNumCols() - 1, newNumDims, newNumSymbols,
-      /*numLocals=*/getNumIds() - 1 - newNumDims - newNumSymbols);
+  IntegerPolyhedron newPoly(lbIndices.size() * ubIndices.size() +
+                                nbIndices.size(),
+                            getNumEqualities(), getNumCols() - 1, newNumDims,
+                            newNumSymbols, newNumLocals);
 
   // This will be used to check if the elimination was integer exact.
   unsigned lcmProducts = 1;
