@@ -9,7 +9,7 @@ write_cmake_config("Config") {
   output = "$target_gen_dir/config.h"
   values = [
     "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
-    "CLANG_DEFAULT_PIE_ON_LINUX=",
+    "CLANG_DEFAULT_PIE_ON_LINUX=1",
     "CLANG_DEFAULT_LINKER=",
     "CLANG_DEFAULT_STD_C=",
     "CLANG_DEFAULT_STD_CXX=",
