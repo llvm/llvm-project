@@ -895,7 +895,7 @@ define void @vf16(<16 x i16>* %in.vecptr0, <16 x i16>* %in.vecptr1, <16 x i16>* 
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm7[0],xmm4[0],xmm7[1],xmm4[1],xmm7[2],xmm4[2],xmm7[3],xmm4[3]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,1,2,2,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,2,1]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm3[2,2,2,2,4,5,6,7]
 ; AVX1-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,4,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm13[0,1,2,3],xmm0[4],xmm13[5,6,7]
@@ -1767,7 +1767,7 @@ define void @vf32(<32 x i16>* %in.vecptr0, <32 x i16>* %in.vecptr1, <32 x i16>* 
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm4[0,1,2,2,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,0,2,1]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
 ; AVX1-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm5[0,1,2,3],xmm14[4],xmm5[5,6,7]
@@ -1870,7 +1870,7 @@ define void @vf32(<32 x i16>* %in.vecptr0, <32 x i16>* %in.vecptr1, <32 x i16>* 
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,1,2,2,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm3[2,2,2,2,4,5,6,7]
 ; AVX1-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,4,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm14 = xmm14[0,1,2,3],xmm2[4],xmm14[5,6,7]
