@@ -4280,11 +4280,10 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
 
 /// Return the ValueOffsetPair set for \p S. \p S can be represented
 /// by the value and offset from any ValueOffsetPair in the set.
-ScalarEvolution::ValueSetVector *
-ScalarEvolution::getSCEVValues(const SCEV *S) {
+ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
-    return nullptr;
+    return None;
 #ifndef NDEBUG
   if (VerifySCEVMap) {
     // Check there is no dangling Value in the set returned.
@@ -4292,7 +4291,7 @@ ScalarEvolution::getSCEVValues(const SCEV *S) {
       assert(ValueExprMap.count(V));
   }
 #endif
-  return &SI->second;
+  return SI->second.getArrayRef();
 }
 
 /// Erase Value from ValueExprMap and ExprValueMap. ValueExprMap.erase(V)
@@ -4301,11 +4300,11 @@ ScalarEvolution::getSCEVValues(const SCEV *S) {
 void ScalarEvolution::eraseValueFromMap(Value *V) {
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
-    const SCEV *S = I->second;
-    // Remove V from the set of ExprValueMap[S]
-    if (auto *SV = getSCEVValues(S))
-      SV->remove(V);
-    ValueExprMap.erase(V);
+    auto EVIt = ExprValueMap.find(I->second);
+    bool Removed = EVIt->second.remove(V);
+    (void) Removed;
+    assert(Removed && "Value not in ExprValueMap?");
+    ValueExprMap.erase(I);
   }
 }
 
