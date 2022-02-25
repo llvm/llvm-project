@@ -11,6 +11,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   TestingSupportTest.cpp
   TransferTest.cpp
   TypeErasedDataflowAnalysisTest.cpp
+  SolverTest.cpp
   )
 
 clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
