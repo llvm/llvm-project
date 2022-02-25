@@ -609,6 +609,16 @@ TEST(SetTest, coalesceContainedEqComplex) {
   expectCoalesce(1, set);
 }
 
+TEST(SetTest, coalesceThreeContained) {
+  PresburgerSet set =
+      parsePresburgerSetFromPolyStrings(1, {
+                                               "(x) : (x >= 0, -x + 1 >= 0)",
+                                               "(x) : (x >= 0, -x + 2 >= 0)",
+                                               "(x) : (x >= 0, -x + 3 >= 0)",
+                                           });
+  expectCoalesce(1, set);
+}
+
 static void
 expectComputedVolumeIsValidOverapprox(const PresburgerSet &set,
                                       Optional<uint64_t> trueVolume,
