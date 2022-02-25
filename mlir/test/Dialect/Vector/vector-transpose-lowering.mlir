@@ -548,6 +548,15 @@ func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
 
 // -----
 
+func @do_not_lower_nonf32_to_avx2(%arg0: vector<4x8xi32>) -> vector<8x4xi32> {
+  %0 = vector.transpose %arg0, [1, 0] : vector<4x8xi32> to vector<8x4xi32>
+  return %0 : vector<8x4xi32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
 // AVX2-LABEL: func @transpose021_8x1x8
 func @transpose021_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
   %0 = vector.transpose %arg0, [0, 2, 1] : vector<8x1x8xf32> to vector<8x8x1xf32>
