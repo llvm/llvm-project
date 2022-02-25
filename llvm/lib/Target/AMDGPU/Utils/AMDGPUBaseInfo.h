@@ -50,12 +50,18 @@ bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 5,
 /// false otherwise.
 bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 3 or 4,
+/// \returns True if HSA OS ABI Version identification is 3 and above,
 /// false otherwise.
 bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI);
 
 /// \returns The offset of the hostcall pointer argument from implicitarg_ptr
 unsigned getHostcallImplicitArgPosition();
+
+/// \returns The offset of the heap ptr argument from implicitarg_ptr
+unsigned getHeapPtrImplicitArgPosition();
+
+/// \returns Code object version.
+unsigned getAmdhsaCodeObjectVersion();
 
 struct GcnBufferFormatInfo {
   unsigned Format;
