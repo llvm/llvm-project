@@ -15715,9 +15715,7 @@ void __ovld write_imageh(read_write image1d_buffer_t, int, half4);
 int __ovld __cnfn get_image_width(read_only image1d_t);
 int __ovld __cnfn get_image_width(read_only image1d_buffer_t);
 int __ovld __cnfn get_image_width(read_only image2d_t);
-#ifdef cl_khr_3d_image_writes
 int __ovld __cnfn get_image_width(read_only image3d_t);
-#endif
 int __ovld __cnfn get_image_width(read_only image1d_array_t);
 int __ovld __cnfn get_image_width(read_only image2d_array_t);
 #ifdef cl_khr_depth_images
