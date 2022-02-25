@@ -9,22 +9,24 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK:  -
 # CHECK:    arg: C
 # CHECK:    value:
-# CHECK:      arith_fn:
+# CHECK:      scalar_fn:
 # CHECK:        fn_name: add
 # CHECK:        operands:
-# CHECK:          arith_fn:
+# CHECK:          scalar_fn:
 # CHECK:            fn_name: mul
 # CHECK:            operands:
-# CHECK:              type_fn:
+# CHECK:              scalar_fn:
+# CHECK:                kind: type
+# CHECK:                attr_name: cast
 # CHECK:                type_var: U
 # CHECK:                operands:
 # CHECK:                  scalar_arg: A
+# CHECK:              scalar_fn:
+# CHECK:                kind: type
 # CHECK:                attr_name: cast
-# CHECK:              type_fn:
 # CHECK:                type_var: U
 # CHECK:                operands:
 # CHECK:                  scalar_arg: B
-# CHECK:                attr_name: cast
 @linalg_structured_op
 def matmul(
     A=TensorDef(T, S.M, S.K),
@@ -39,21 +41,32 @@ def matmul(
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      arith_fn:
+# CHECK:      scalar_fn:
+# CHECK:        kind: binary
 # CHECK:        fn_name: sub
 # CHECK:        operands:
-# CHECK:          arith_fn:
+# CHECK:          scalar_fn:
+# CHECK:            kind: binary
 # CHECK:            fn_name: add
 # CHECK:            operands:
-# CHECK:              type_fn:
-# CHECK:                type_var: T
+# CHECK:              scalar_fn:
+# CHECK:                kind: unary
+# CHECK:                fn_name: exp
 # CHECK:                operands:
-# CHECK:                  scalar_const: '3.1415926535897931 : f64'
-# CHECK:              type_fn:
+# CHECK:                  scalar_fn:
+# CHECK:                    kind: type
+# CHECK:                    type_var: T
+# CHECK:                    operands:
+# CHECK:                      scalar_const: '3.1415926535897931 : f64'
+# CHECK:              scalar_fn:
+# CHECK:                kind: type
+# CHECK:                fn_name: cast
 # CHECK:                type_var: T
 # CHECK:                operands:
 # CHECK:                  scalar_const: '42 : i64'
-# CHECK:          type_fn:
+# CHECK:          scalar_fn:
+# CHECK:            kind: type
+# CHECK:            fn_name: cast
 # CHECK:            type_var: T
 # CHECK:            operands:
 # CHECK:              scalar_const: '1.{{[0]*}}e+03 : f64'
@@ -62,15 +75,15 @@ def constants(O=TensorDef(T, S.M, S.K, output=True)):
   pi = TypeFn.cast(T, const(3.1415926535897931))
   cst42 = TypeFn.cast(T, const(42))
   cst1000 = TypeFn.cast(T, const(1e+3))
-  O[D.m, D.n] = pi + cst42 - cst1000
-
+  O[D.m, D.n] = UnaryFn.exp(pi) + cst42 - cst1000
 
 # CHECK: ---
 # CHECK-LABEL: indices
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      arith_fn:
+# CHECK:      scalar_fn:
+# CHECK:        kind: binary
 # CHECK:        fn_name: add
 # CHECK:        operands:
 # CHECK:          scalar_index: 1

@@ -80,15 +80,15 @@ def _implement_read_tns_test(
   passed = 0
 
   # Verify the output shape for the tensor.
-  if np.allclose(o_shape, t.shape):
+  if np.array_equal(o_shape, t.shape):
     passed += 1
 
   # Use the output MLIR sparse tensor pointer to retrieve the COO-flavored
   # values and verify the values.
   o_rank, o_nse, o_shape, o_values, o_indices = (
       pytaco_utils.sparse_tensor_to_coo_tensor(sparse_tensor, np.float64))
-  if o_rank == t.rank and o_nse == t.nse and np.allclose(
-      o_shape, t.shape) and np.allclose(o_values, t.values) and np.allclose(
+  if o_rank == t.rank and o_nse == t.nse and np.array_equal(
+      o_shape, t.shape) and np.allclose(o_values, t.values) and np.array_equal(
           o_indices, t.indices):
     passed += 1
 

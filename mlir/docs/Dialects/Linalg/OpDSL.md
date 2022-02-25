@@ -178,17 +178,17 @@ TODO: Introduce a directive to fix the dimension bindings.
 Reduction dimensions are inferred to be any dimensions on the RHS that are not
 on the LHS.
 
-A number of arithmetic functions are supported:
+A number of unary and binary arithmetic functions are supported:
 
-*   `ArithFn.add(a, b)` (also via overloading the binary `+` operator)
-*   `ArithFn.exp(a)`
-*   `ArithFn.log(a)`
-*   `ArithFn.mul(a, b)` (also via overloading the binary `*` operator)
-*   `ArithFn.max(a, b)`
-*   `ArithFn.min(a, b)`
-*   `ArithFn.sub(a, b)` (also via overloading the binary `-` operator)
-*   `ArithFn.max_unsigned(a, b)`
-*   `ArithFn.min_unsigned(a, b)`
+*   `BinaryFn.add(a, b)` (also via overloading the binary `+` operator)
+*   `BinaryFn.mul(a, b)` (also via overloading the binary `*` operator)
+*   `BinaryFn.max(a, b)`
+*   `BinaryFn.min(a, b)`
+*   `BinaryFn.sub(a, b)` (also via overloading the binary `-` operator)
+*   `BinaryFn.max_unsigned(a, b)`
+*   `BinaryFn.min_unsigned(a, b)`
+*   `UnaryFn.exp(a)`
+*   `UnaryFn.log(a)`
 
 As the integer types are signless, signedness is implement by different
 functions that treat integers as signed or unsigned values.
