@@ -2506,7 +2506,7 @@ multiclass sve2_fp_mla_long<bits<2> opc, string asm, SDPatternOperator op> {
 // SVE Stack Allocation Group
 //===----------------------------------------------------------------------===//
 
-class sve_int_arith_vl<bit opc, string asm>
+class sve_int_arith_vl<bit opc, string asm, bit streaming_sve = 0b0>
 : I<(outs GPR64sp:$Rd), (ins GPR64sp:$Rn, simm6_32b:$imm6),
   asm, "\t$Rd, $Rn, $imm6",
   "",
@@ -2518,7 +2518,8 @@ class sve_int_arith_vl<bit opc, string asm>
   let Inst{22}    = opc;
   let Inst{21}    = 0b1;
   let Inst{20-16} = Rn;
-  let Inst{15-11} = 0b01010;
+  let Inst{15-12} = 0b0101;
+  let Inst{11}    = streaming_sve;
   let Inst{10-5}  = imm6;
   let Inst{4-0}   = Rd;
 }
