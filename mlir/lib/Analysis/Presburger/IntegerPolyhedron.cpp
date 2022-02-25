@@ -22,7 +22,8 @@
 #define DEBUG_TYPE "presburger"
 
 using namespace mlir;
-using namespace presburger_utils;
+using namespace presburger;
+
 using llvm::SmallDenseMap;
 using llvm::SmallDenseSet;
 

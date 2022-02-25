@@ -9,7 +9,8 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/Support/MathExtras.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
 Matrix::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
                unsigned reservedColumns)
@@ -247,5 +248,3 @@ bool Matrix::hasConsistentState() const {
         return false;
   return true;
 }
-
-} // namespace mlir

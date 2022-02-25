@@ -20,6 +20,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+namespace presburger {
 
 /// An IntegerRelation is a PresburgerLocalSpace subject to affine constraints.
 /// Affine constraints can be inequalities or equalities in the form:
@@ -254,15 +255,13 @@ public:
   /// constraints. Returns an empty optional if the polyhedron is empty or if
   /// the lexmin is unbounded. Symbols are not supported and will result in
   /// assert-failure.
-  presburger_utils::MaybeOptimum<SmallVector<Fraction, 8>>
-  findRationalLexMin() const;
+  MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin() const;
 
   /// Same as above, but returns lexicographically minimal integer point.
   /// Note: this should be used only when the lexmin is really required.
   /// For a generic integer sampling operation, findIntegerSample is more
   /// robust and should be preferred.
-  presburger_utils::MaybeOptimum<SmallVector<int64_t, 8>>
-  findIntegerLexMin() const;
+  MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin() const;
 
   /// Swap the posA^th identifier with the posB^th identifier.
   virtual void swapId(unsigned posA, unsigned posB);
@@ -343,8 +342,8 @@ public:
   /// to 0.
   void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
                      SmallVector<unsigned, 4> &denominators,
-                     std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
+                     std::vector<MaybeLocalRepr> &repr) const;
+  void getLocalReprs(std::vector<MaybeLocalRepr> &repr) const;
   void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
                      SmallVector<unsigned, 4> &denominators) const;
 
@@ -563,6 +562,7 @@ protected:
   constexpr static unsigned kExplosionFactor = 32;
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
