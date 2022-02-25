@@ -1,8 +1,15 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -analyzer-checker=core,deadcode,alpha.security.taint,debug.TaintTest,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -verify %s \
+// RUN:   -analyzer-checker=core,deadcode,alpha.security.taint,debug.TaintTest,debug.ExprInspection \
+// RUN:   -DERRNO_HEADER=\"Inputs/errno_var.h\" %s
+
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -verify %s \
+// RUN:   -analyzer-checker=core,deadcode,alpha.security.taint,debug.TaintTest,debug.ExprInspection \
+// RUN:   -DERRNO_HEADER=\"Inputs/errno_func.h\"
 
 void clang_analyzer_eval(int);
 
 // Note, we do need to include headers here, since the analyzer checks if the function declaration is located in a system header.
+#include ERRNO_HEADER
 #include "Inputs/system-header-simulator.h"
 
 // Test that system header does not invalidate the internal global.
