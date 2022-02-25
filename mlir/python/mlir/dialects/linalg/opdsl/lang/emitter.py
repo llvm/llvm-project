@@ -37,11 +37,21 @@ def isa(cls: Type, ty: Type):
 
 def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
                                  *ins: Value, outs: ValueList,
-                                 **attrs: Sequence[int]):
+                                 **attrs: Union[Sequence[int], TypeFnType]):
   all_arg_defs = op_config.ordered_operands
-  in_arg_defs = [d for d in all_arg_defs if d.usage == "Input"]
-  out_arg_defs = [d for d in all_arg_defs if d.usage == "Output"]
-  index_attr_arg_defs = [d for d in all_arg_defs if d.usage == "IndexAttr"]
+  in_arg_defs = [
+      d for d in all_arg_defs
+      if d.kind == OperandKind.SCALAR or d.kind == OperandKind.INPUT_TENSOR
+  ]
+  out_arg_defs = [
+      d for d in all_arg_defs if d.kind == OperandKind.OUTPUT_TENSOR
+  ]
+  index_attr_arg_defs = [
+      d for d in all_arg_defs if d.kind == OperandKind.INDEX_ATTR
+  ]
+  type_fn_attr_arg_defs = [
+      d for d in all_arg_defs if d.kind == OperandKind.TYPE_FN_ATTR
+  ]
 
   # Verify outs is a sequence or a list of results.
   if not isinstance(outs, (Sequence, OpResultList)):
@@ -56,11 +66,11 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
     raise ValueError(f"Expected {len(out_arg_defs)} outputs but got "
                      f"{len(outs)} for {op_config}")
 
-  # Compute a replacement list for all attribute symbols.
+  # Compute a replacement list for all index attribute symbols.
   expressions = []  # type: Sequence[AffineExpr]
   replacements = []  # type: Sequence[AffineExpr]
   for index_attr in index_attr_arg_defs:
-    index_attr_vals = index_attr.operand_def.default_vals
+    index_attr_vals = index_attr.operand_def.default_indices
     if index_attr.name in attrs:
       index_attr_vals = attrs.get(index_attr.name)
     assert index_attr_vals, "Index attribute has no value"
@@ -125,15 +135,29 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
       array = np.array(index_attr_vals, dtype=np.int64)
       index_attrs[index_attr.name] = DenseElementsAttr.get(array)
 
+  # Compute the type function attribute mapping.
+  type_fn_attr_mapping = {}
+  for type_fn_attr in type_fn_attr_arg_defs:
+    attr_val = type_fn_attr.operand_def.default_fn
+    if type_fn_attr.name in attrs:
+      type_fn = attrs.get(type_fn_attr.name)
+      if not isinstance(type_fn, TypeFnType):
+        raise ValueError(f"Attribute {type_fn_attr.name} needs to be of type "
+                         f"TypeFnType but got {type(attr_val)}")
+      attr_val = type_fn.fn_name
+    assert attr_val, "Type function attribute has no value"
+    type_fn_attr_mapping[type_fn_attr.name] = attr_val
+
   return (all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types,
-          type_mapping, indexing_maps_attr, iterator_types_attr,
-          index_attrs, block_arg_types)
+          type_mapping, indexing_maps_attr, iterator_types_attr, index_attrs,
+          type_fn_attr_mapping, block_arg_types)
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
                                outs: ValueList, **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  indexing_maps_attr, iterator_types_attr, index_attrs, block_arg_types = \
+  indexing_maps_attr, iterator_types_attr, index_attrs, type_fn_attr_mapping, \
+  block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
 
   # An operation that accesses only scalars and scalar/rank zero tensors is
@@ -147,10 +171,9 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
     tensor_map = AffineMap.get_identity(rank)
     indexing_maps = []
     for arg_def in all_arg_defs:
-      if arg_def.operand_def.kind == OperandKind.Scalar:
+      if arg_def.operand_def.kind == OperandKind.SCALAR:
         indexing_maps.append(scalar_map)
-      if (arg_def.operand_def.kind == OperandKind.InputTensor or
-          arg_def.operand_def.kind == OperandKind.OutputTensor):
+      if arg_def.operand_def.is_tensor():
         indexing_maps.append(tensor_map)
     indexing_maps_attr = ArrayAttr.get(
         [AffineMapAttr.get(am) for am in indexing_maps])
@@ -169,7 +192,8 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
   block = generic_op.regions[0].blocks.append(*block_arg_types)
   block_arg_mapping = dict(zip(block_arg_names, block.arguments))
   with InsertionPoint(block):
-    body_builder = _BodyBuilder(type_mapping, block_arg_mapping)
+    body_builder = _BodyBuilder(type_mapping, block_arg_mapping,
+                                type_fn_attr_mapping)
     for assignment in op_config.assignments:
       body_builder.assign(assignment)
     body_builder.yield_outputs(*_get_operand_def_names(*out_arg_defs))
@@ -184,7 +208,8 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
                              op_class_name: str, *ins: Value, outs: ValueList,
                              **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  indexing_maps_attr, iterator_types_attr, index_attrs, block_arg_types = \
+  indexing_maps_attr, iterator_types_attr, index_attrs, type_fn_attr_mapping, \
+  block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
 
   # If we get here, there must exist a builtin class `op_class_name`.
@@ -200,6 +225,11 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
   for name, value in index_attrs.items():
     named_op.operation.attributes[name] = value
 
+  # Set the type function attributes.
+  for name, value in type_fn_attr_mapping.items():
+    named_op.operation.attributes[name] = Attribute.parse(
+        f"#linalg.type_fn<{value}>")
+
   linalg.fill_builtin_region(named_op.operation)
 
   if len(result_types) == 1:
@@ -212,9 +242,11 @@ class _BodyBuilder:
   """Constructs a structured op body by evaluating assignments."""
 
   def __init__(self, type_mapping: Dict[str, Type],
-               block_arg_mapping: Dict[str, Value]):
+               block_arg_mapping: Dict[str, Value],
+               type_fn_attr_mapping: Dict[str, str]):
     self.type_mapping = type_mapping
     self.block_arg_mapping = block_arg_mapping
+    self.type_fn_attr_mapping = type_fn_attr_mapping
     self.yield_mapping = dict()  # type: Dict[str, Value]
 
   def assign(self, assignment: ScalarAssign):
@@ -245,7 +277,10 @@ class _BodyBuilder:
       ]
       return fn(*operand_values)
     elif expr.type_fn:
-      fn = self._get_function(f"_typefn_{expr.type_fn.fn_name}")
+      fn_name = expr.type_fn.fn_name
+      if expr.type_fn.attr_name:
+        fn_name = self.type_fn_attr_mapping[expr.type_fn.attr_name]
+      fn = self._get_function(f"_typefn_{fn_name}")
       operand = self.expression(expr.type_fn.operand)
       return fn(expr.type_fn.type_var.name, operand)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")

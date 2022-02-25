@@ -1258,7 +1258,7 @@ class IndexExpr(abc.ABC):
     value = self._emit_expression(expr_to_input_opnd, expr_to_info)
     # Emit the structured op representation for the destination tensor.
     dst_opnd = _emit_operand(op_def, op_info.dst_indices, op_info.dst_name,
-                             lang.OperandKind.OutputTensor)
+                             lang.OperandKind.OUTPUT_TENSOR)
     dst_dim_syms = _mlir_dimensions_from_index_vars(op_info.dst_indices)
     dst_use = lang.TensorUse(dst_opnd, dst_dim_syms)
 
@@ -1893,6 +1893,6 @@ def _emit_structured_op_input(
     name = expr.tensor.name
 
   dim_sym = _mlir_symbols_from_index_vars(indices)
-  opnd = lang.OperandDef(lang.OperandKind.InputTensor, lang.T, dim_sym)
+  opnd = lang.OperandDef(lang.OperandKind.INPUT_TENSOR, lang.T, dim_sym)
   op_def.add_operand(name, opnd)
   return opnd

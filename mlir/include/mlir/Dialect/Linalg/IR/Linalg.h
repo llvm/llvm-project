@@ -105,6 +105,19 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 #include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
+// Linalg Enums
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Linalg/IR/LinalgOpsEnums.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Linalg Attributes
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Linalg/IR/LinalgOpsAttrDefs.h.inc"
+
+//===----------------------------------------------------------------------===//
 // Linalg Interfaces
 //===----------------------------------------------------------------------===//
 

@@ -46,9 +46,10 @@ class ScalarArithFn:
 class ScalarTypeFn:
   """A type of ScalarExpression that applies a type conversion function."""
 
-  def __init__(self, fn_name: str, type_var: TypeVar,
-               operand: "ScalarExpression"):
+  def __init__(self, fn_name: Optional[str], attr_name: Optional[str],
+               type_var: TypeVar, operand: "ScalarExpression"):
     self.fn_name = fn_name
+    self.attr_name = attr_name
     self.type_var = type_var
     self.operand = operand
 
@@ -56,7 +57,8 @@ class ScalarTypeFn:
     return ScalarExpression(type_fn=self)
 
   def __repr__(self):
-    return f"ScalarTypeFn<{self.fn_name}>({self.type_var}, {self.operand})"
+    return (f"ScalarTypeFn<{self.fn_name}[{self.attr_name}]>"
+            f"({self.type_var}, {self.operand})")
 
 
 class ScalarArg:
@@ -138,12 +140,15 @@ class ScalarExpression(YAMLObject):
       # Note that even though operands must be arity 1, we write it the
       # same way as for apply because it allows handling code to be more
       # generic vs having a special form.
-      return dict(
-          type_fn=dict(
-              fn_name=self.type_fn.fn_name,
-              type_var=self.type_fn.type_var.name,
-              operands=[self.type_fn.operand],
-          ))
+      type_fn_dict = dict(
+          type_var=self.type_fn.type_var.name,
+          operands=[self.type_fn.operand],
+      )
+      if self.type_fn.fn_name:
+        type_fn_dict["fn_name"] = self.type_fn.fn_name
+      if self.type_fn.attr_name:
+        type_fn_dict["attr_name"] = self.type_fn.attr_name
+      return dict(type_fn=type_fn_dict)
     elif self.scalar_arg:
       return dict(scalar_arg=self.scalar_arg.arg)
     elif self.scalar_const:

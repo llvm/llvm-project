@@ -24,19 +24,10 @@ def matmul_mono(
 def matmul_poly(
     A=TensorDef(T1, S.M, S.K),
     B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True)):
+    C=TensorDef(U, S.M, S.N, output=True),
+    cast=TypeFnAttrDef(default=TypeFn.cast)):
   domain(D.m, D.n, D.k)
-  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])
-
-
-@linalg_structured_op
-def matmul_unsigned_poly(
-    A=TensorDef(T1, S.M, S.K),
-    B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True)):
-  domain(D.m, D.n, D.k)
-  C[D.m, D.n] += TypeFn.cast_unsigned(U, A[D.m, D.k]) * TypeFn.cast_unsigned(
-      U, B[D.k, D.n])
+  C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
 
 
 with Context() as ctx, Location.unknown():
@@ -92,7 +83,8 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
         RankedTensorType.get((4, 8), i32))
     def test_i8i8i32_matmul_unsigned(lhs, rhs, init_result):
-      return matmul_unsigned_poly(lhs, rhs, outs=[init_result])
+      return matmul_poly(
+          lhs, rhs, outs=[init_result], cast=TypeFn.cast_unsigned)
 
     # CHECK-LABEL: @test_i8i16i32_matmul
     # CHECK:      ^{{.*}}(%[[A_ARG:.+]]: i8, %[[B_ARG:.+]]: i16, %[[C_ARG:.+]]: i32)
@@ -143,7 +135,8 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
         RankedTensorType.get((4, 8), f32))
     def test_i8i8f32_matmul_unsigned(lhs, rhs, init_result):
-      return matmul_unsigned_poly(lhs, rhs, outs=[init_result])
+      return matmul_poly(
+          lhs, rhs, outs=[init_result], cast=TypeFn.cast_unsigned)
 
     # CHECK-LABEL: @test_f16f16f32_matmul
     # CHECK:      ^{{.*}}(%[[A_ARG:.+]]: f16, %[[B_ARG:.+]]: f16, %[[C_ARG:.+]]: f32)

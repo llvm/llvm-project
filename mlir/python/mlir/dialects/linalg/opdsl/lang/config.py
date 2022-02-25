@@ -56,27 +56,25 @@ class OperandDefConfig(YAMLObject):
     return self.operand_def.name
 
   @property
+  def kind(self) -> OperandKind:
+    return self.operand_def.kind
+
+  @property
   def type_var(self) -> TypeVar:
     return self.operand_def.type_var
 
-  @property
-  def usage(self) -> str:
-    if self.operand_def.kind == OperandKind.IndexAttr:
-      return "IndexAttr"
-    if self.operand_def.kind == OperandKind.OutputTensor:
-      return "Output"
-    return "Input"
-
   def to_yaml_custom_dict(self):
-    self_dict = dict(name=self.name, usage=self.usage)
+    self_dict = dict(name=self.name, kind=self.operand_def.kind.name.lower())
     if self.type_var:
       self_dict["type_var"] = self.type_var.name
     if self.shape_map:
       self_dict["shape_map"] = _serialize_affine_map(self.shape_map)
     if self.index_attr_map:
       self_dict["index_attr_map"] = _serialize_affine_map(self.index_attr_map)
-    if self.operand_def.default_vals:
-      self_dict["default_vals"] = self.operand_def.default_vals
+    if self.operand_def.default_indices:
+      self_dict["default_indices"] = self.operand_def.default_indices
+    if self.operand_def.default_fn:
+      self_dict["default_fn"] = self.operand_def.default_fn
     return self_dict
 
   def __repr__(self):
@@ -166,7 +164,7 @@ class LinalgStructuredOpConfig(YAMLObject):
     # Collect all attribute definitions.
     collected_attr_defs = list()
     for operand in registered_operands:
-      if operand.kind == OperandKind.IndexAttr:
+      if operand.is_attribute():
         collected_attr_defs.append(operand)
 
     # Collect all tensors with manual indexing annotation.
@@ -244,12 +242,12 @@ class LinalgStructuredOpConfig(YAMLObject):
 
     # Set the indexing map of all scalar uses to the empty map.
     for operand_config in self.operands.values():
-      if operand_config.operand_def.kind == OperandKind.Scalar:
+      if operand_config.operand_def.kind == OperandKind.SCALAR:
         operand_config.indexing_map = self._get_scalar_map()
 
     # Check all registered tensor and scalar operands have an indexing map.
     for operand in registered_operands:
-      if operand.kind == OperandKind.IndexAttr:
+      if operand.is_attribute():
         continue
       if not (operand in self.operands and self.operands[operand].indexing_map):
         raise ValueError(f"Failed to compute an indexing map for operand "
@@ -311,7 +309,8 @@ class LinalgStructuredOpConfig(YAMLObject):
   def add_operand(self, operand_def: OperandDef):
     if operand_def in self.operands:
       return
-    if operand_def.kind == OperandKind.Scalar:
+    if (operand_def.kind == OperandKind.SCALAR or
+        operand_def.kind == OperandKind.TYPE_FN_ATTR):
       self.operands[operand_def] = OperandDefConfig(operand_def)
       return
     with self.context:
@@ -323,7 +322,7 @@ class LinalgStructuredOpConfig(YAMLObject):
       assert local_state.local_dim_count == 0
       affine_map = _ir.AffineMap.get(
           dim_count=0, symbol_count=local_state.symbol_count, exprs=exprs)
-      if operand_def.kind == OperandKind.IndexAttr:
+      if operand_def.kind == OperandKind.INDEX_ATTR:
         self.operands[operand_def] = OperandDefConfig(
             operand_def, index_attr_map=affine_map)
       else:
@@ -429,8 +428,7 @@ class LinalgOpConfig(YAMLObject):
       context: Optional[_ir.Context] = None) -> Sequence["LinalgOpConfig"]:
     """Expands a LinalgOpDef into corresponding Linalg configured ops."""
     # TODO: Many LinalgOpDef patterns need to expand to multiple generics.
-    assert len(
-        op_def.comprehensions) == 1, "Only one comprehension supported"
+    assert len(op_def.comprehensions) == 1, "Only one comprehension supported"
     return [
         LinalgOpConfig(
             op_def.metadata,

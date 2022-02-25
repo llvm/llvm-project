@@ -2,7 +2,8 @@
 # RUN: mlir-linalg-ods-yaml-gen %s --o-impl=- | FileCheck %s --check-prefix=IMPL
 
 # @linalg_structured_op
-# def test1(O=TensorDef(T, S.M, S.N, output=True)):
+# def test1(O=TensorDef(T, S.M, S.N, output=True),
+#           cast=TypeFnAttrDef(default=TypeFn.cast)):
 #   """Title.
 
 #   Detailed description.
@@ -21,9 +22,13 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: T
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
+  - !LinalgOperandDefConfig
+    name: cast
+    kind: type_fn_attr
+    default_fn: cast
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
@@ -39,18 +44,18 @@ structured_op: !LinalgStructuredOpConfig
         operands:
         - !ScalarExpression
           type_fn:
-            fn_name: cast
             type_var: T
             operands:
             - !ScalarExpression
               scalar_const: '42 : i64'
+            attr_name: cast
         - !ScalarExpression
           type_fn:
-            fn_name: cast_unsigned
             type_var: T
             operands:
             - !ScalarExpression
               scalar_index: 1
+            attr_name: cast
 
 # ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
 
@@ -61,16 +66,22 @@ structured_op: !LinalgStructuredOpConfig
 
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
-#  ODS-NEXT:    Variadic<AnyShaped>:$outputs
+#  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
+#  ODS-NEXT:    DefaultValuedAttr<TypeFnAttr, "TypeFn::cast">:$cast
 
 #       ODS:  let builders =
 #       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
 #  ODS-NEXT:       "ValueRange":$outputs,
 #  ODS-NEXT:       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
 
+#       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+#  ODS-NEXT:       "ValueRange":$outputs, "Attribute":$cast,
+#  ODS-NEXT:       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+
 #       ODS:    $_state.addOperands(inputs);
 #  ODS-NEXT:    $_state.addOperands(outputs);
 #  ODS-NEXT:    $_state.addTypes(resultTensorTypes);
+#  ODS-NEXT:    $_state.addAttribute("cast", cast)
 #  ODS-NEXT:    $_state.addAttributes(attributes);
 #  ODS-NEXT:    $_state.addAttribute(
 #  ODS-NEXT:      "operand_segment_sizes",
@@ -85,10 +96,18 @@ structured_op: !LinalgStructuredOpConfig
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
 #  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
+#       IMPL:  TypeFn castVal = TypeFn::cast;
+#  IMPL-NEXT:  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+#  IMPL-NEXT:                                return attr.getName() == "cast"; });
+#  IMPL-NEXT:  if (castIter != attrs.end()) {
+#  IMPL-NEXT:    if (auto attr = castIter->getValue().dyn_cast<TypeFnAttr>())
+#  IMPL-NEXT:      castVal = attr.getValue();
+#  IMPL-NEXT:  }
+
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
-#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.typefn__cast(block.getArgument(0).getType(), [[VAL0]]);
+#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL0]]);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
-#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.typefn__cast_unsigned(block.getArgument(0).getType(), [[VAL2]]);
+#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL2]]);
 #   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.arithfn__add([[VAL1]], [[VAL3]]);
 
 
@@ -114,19 +133,19 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: Input
+    kind: input_tensor
     type_var: T
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: T
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttr
+    kind: index_attr
     index_attr_map: affine_map<()[s0, s1, s2, s3] -> (s2, s3)>
-    default_vals:
+    default_indices:
     - 1
     - 2
   indexing_maps: !LinalgIndexingMapsConfig
@@ -201,11 +220,11 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: value
-    usage: Input
+    kind: scalar
     type_var: T1
   - !LinalgOperandDefConfig
     name: O
-    usage: Output
+    kind: output_tensor
     type_var: U
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig

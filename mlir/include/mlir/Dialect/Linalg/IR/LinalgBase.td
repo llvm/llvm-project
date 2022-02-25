@@ -13,6 +13,7 @@
 #ifndef LINALG_BASE
 #define LINALG_BASE
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def Linalg_Dialect : Dialect {
@@ -55,6 +56,19 @@ def Linalg_Dialect : Dialect {
     private:
       llvm::StringMap<RegionBuilderFunType> namedStructuredOpRegionBuilders;
   }];
+}
+
+// Define a TypeFn enum matching the OpDSL TypeFn class.
+def TypeFn : I32EnumAttr<"TypeFn", "", [
+  I32EnumAttrCase<"cast", 0>,
+  I32EnumAttrCase<"cast_unsigned", 1>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
+def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 #endif // LINALG_BASE
