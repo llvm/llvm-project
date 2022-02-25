@@ -1785,4 +1785,3 @@ DataFileCache *Module::GetIndexCache() {
   static DataFileCache *g_data_file_cache = new DataFileCache(ModuleList::GetGlobalModuleListProperties().GetLLDBIndexCachePath().GetPath());
   return g_data_file_cache;
 }
->>>>>>> refs/am/changes/da816ca0cb3b1367fe90b3e6fb73439c93ed80df_next

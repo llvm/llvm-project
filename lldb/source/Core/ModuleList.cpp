@@ -230,7 +230,6 @@ uint64_t ModuleListProperties::GetLLDBIndexCacheExpirationDays() {
   return m_collection_sp->GetPropertyAtIndexAsUInt64(
       nullptr, idx, g_modulelist_properties[idx].default_uint_value);
 }
->>>>>>> refs/am/changes/da816ca0cb3b1367fe90b3e6fb73439c93ed80df_next
 
 void ModuleListProperties::UpdateSymlinkMappings() {
   FileSpecList list = m_collection_sp
