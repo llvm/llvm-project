@@ -257,7 +257,7 @@ define i8* @test6b(i1 %c) {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8* [ [[RET]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i8* [[PHI]]
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
 entry:
   %ret = call i8* @ret_nonnull()

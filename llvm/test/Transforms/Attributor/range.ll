@@ -967,8 +967,7 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #[[ATTR5]], !range [[RNG4]]
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; IS__TUNIT_OPM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
-; IS__TUNIT_OPM-NEXT:    [[F:%.*]] = and i1 [[I1]], true
-; IS__TUNIT_OPM-NEXT:    ret i1 [[F]]
+; IS__TUNIT_OPM-NEXT:    ret i1 [[I1]]
 ;
 ; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@callee_range_2
@@ -986,8 +985,7 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ; IS__CGSCC_OPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #[[ATTR5]], !range [[RNG5]]
 ; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; IS__CGSCC_OPM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
-; IS__CGSCC_OPM-NEXT:    [[F:%.*]] = and i1 [[I1]], true
-; IS__CGSCC_OPM-NEXT:    ret i1 [[F]]
+; IS__CGSCC_OPM-NEXT:    ret i1 [[I1]]
 ;
   %r1 = call i32 @ret1or2(i1 %c1)
   %r2 = call i32 @ret1or2(i1 %c2)
