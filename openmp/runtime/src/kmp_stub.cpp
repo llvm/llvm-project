@@ -357,6 +357,9 @@ omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc =
     (omp_allocator_handle_t const)101;
 omp_allocator_handle_t const llvm_omp_target_device_mem_alloc =
     (omp_allocator_handle_t const)102;
+// Preview of pinned memory support
+omp_allocator_handle_t const ompx_pinned_mem_alloc =
+    (omp_allocator_handle_t const)120;
 
 omp_memspace_handle_t const omp_default_mem_space =
     (omp_memspace_handle_t const)0;

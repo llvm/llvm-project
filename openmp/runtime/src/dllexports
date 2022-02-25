@@ -582,6 +582,8 @@ kmp_set_disp_num_buffers                    890
     llvm_omp_target_host_mem_alloc         DATA
     llvm_omp_target_shared_mem_alloc       DATA
     llvm_omp_target_device_mem_alloc       DATA
+    # Preview of pinned memory support
+    ompx_pinned_mem_alloc                  DATA
 
     omp_default_mem_space                  DATA
     omp_large_cap_mem_space                DATA

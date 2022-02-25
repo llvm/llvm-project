@@ -225,6 +225,9 @@
       parameter(llvm_omp_target_shared_mem_alloc=101)
       integer(omp_allocator_handle_kind)llvm_omp_target_device_mem_alloc
       parameter(llvm_omp_target_device_mem_alloc=102)
+      ! Preview of pinned memory support
+      integer(kind=omp_allocator_handle_kind)ompx_pinned_mem_alloc
+      parameter(ompx_pinned_mem_alloc=120)
 
       integer(kind=omp_memspace_handle_kind)omp_default_mem_space
       parameter(omp_default_mem_space=0)

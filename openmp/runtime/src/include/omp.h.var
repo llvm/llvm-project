@@ -384,6 +384,8 @@
     extern __KMP_IMP omp_allocator_handle_t const llvm_omp_target_host_mem_alloc;
     extern __KMP_IMP omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc;
     extern __KMP_IMP omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;
+    /* Preview of pinned memory support */
+    extern __KMP_IMP omp_allocator_handle_t const ompx_pinned_mem_alloc;
 
     typedef omp_uintptr_t omp_memspace_handle_t;
     extern __KMP_IMP omp_memspace_handle_t const omp_default_mem_space;
@@ -415,6 +417,8 @@
       llvm_omp_target_host_mem_alloc = 100,
       llvm_omp_target_shared_mem_alloc = 101,
       llvm_omp_target_device_mem_alloc = 102,
+      /* Preview of pinned memory support */
+      ompx_pinned_mem_alloc = 120,
       KMP_ALLOCATOR_MAX_HANDLE = UINTPTR_MAX
     } omp_allocator_handle_t;
 #       if __cplusplus >= 201103

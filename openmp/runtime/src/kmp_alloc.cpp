@@ -1614,9 +1614,12 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
     align = algn; // max of allocator trait, parameter and sizeof(void*)
   desc.size_orig = size;
   desc.size_a = size + sz_desc + align;
+
   bool is_pinned = false;
   if (allocator > kmp_max_mem_alloc)
     is_pinned = al->pinned;
+  else if (allocator == ompx_pinned_mem_alloc)
+    is_pinned = true;
 
   if (__kmp_memkind_available) {
     if (allocator < kmp_max_mem_alloc) {
@@ -1867,11 +1870,12 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   kmp_uintptr_t addr_align; // address to return to caller
   kmp_uintptr_t addr_descr; // address of memory block descriptor
   bool is_tgt_mem_space =
-      al && (is_tgt_mem_space =
-                 KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
-                 (al->memspace > kmp_max_mem_space &&
-                  KMP_IS_TARGET_MEM_SPACE(
-                      RCAST(kmp_memspace_t *, al->memspace)->memspace)));
+      (allocator > kmp_max_mem_alloc) && al &&
+      (is_tgt_mem_space =
+           KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
+           (al->memspace > kmp_max_mem_space &&
+            KMP_IS_TARGET_MEM_SPACE(
+                RCAST(kmp_memspace_t *, al->memspace)->memspace)));
   if (KMP_IS_TARGET_MEM_ALLOC(allocator) ||
       (allocator > kmp_max_mem_alloc && is_tgt_mem_space)) {
     KMP_DEBUG_ASSERT(kmp_target_free);
@@ -1898,7 +1902,12 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   KMP_DEBUG_ASSERT(al);
 
   // if locked, we locked descriptor and user memory: unlock both
-  if (allocator && al->pinned && kmp_target_unlock_mem) {
+  bool is_pinned = false;
+  if (allocator > kmp_max_mem_alloc)
+    is_pinned = al->pinned;
+  else if (allocator == ompx_pinned_mem_alloc)
+    is_pinned = true;
+  if (is_pinned && kmp_target_unlock_mem) {
     kmp_int32 default_device =
         __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
     kmp_target_unlock_mem(desc.ptr_align, default_device);
