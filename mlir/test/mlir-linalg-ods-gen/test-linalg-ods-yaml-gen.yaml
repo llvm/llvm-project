@@ -40,7 +40,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
@@ -111,7 +111,7 @@ structured_op: !LinalgStructuredOpConfig
 #   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL0]]);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
 #   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL2]]);
-#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.arithfn__add([[VAL1]], [[VAL3]]);
+#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.binary__add([[VAL1]], [[VAL3]]);
 
 
 # @linalg_structured_op
@@ -254,3 +254,58 @@ structured_op: !LinalgStructuredOpConfig
 #  IMPL-NEXT:    MLIRContext *context = getContext();
 #  IMPL-NEXT:    AffineMap scalarMap = AffineMap::get(getNumParallelLoops(), 0, context);
 #  IMPL-NEXT:    AffineMap tensorMap = AffineMap::getMultiDimIdentityMap(
+
+
+# @linalg_structured_op
+# def test4(O=TensorDef(T, S.M, S.N, output=True)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   O[D.m, D.n] = BinaryFn.add(UnaryFn.exp(O[D.m, D.n]), O[D.m, D.n])
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test4
+  cpp_class_name: Test4Op
+  doc: |-
+    Title.
+
+    Detailed description.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T
+    shape_map: affine_map<()[s0, s1] -> (s0, s1)>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_fn:
+            kind: unary
+            fn_name: exp
+            operands:
+            - !ScalarExpression
+              scalar_arg: O
+        - !ScalarExpression
+          scalar_arg: O
+
+# IMPL-LABEL:  void Test4Op::regionBuilder(ImplicitLocOpBuilder &b,
+#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
+
+#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.unary__exp(block.getArgument(0))
+#  IMPL-NEXT:  Value [[VAL1:[a-z0-9]+]] = helper.binary__add([[VAL0]], block.getArgument(0))
+#  IMPL-NEXT:  yields.push_back([[VAL1]])

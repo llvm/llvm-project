@@ -90,7 +90,7 @@ struct LinalgIndexingMapsConfig {
 
 struct ScalarExpression;
 
-enum class ScalarFnKind { Arith, Type };
+enum class ScalarFnKind { Unary, Binary, Type };
 
 struct ScalarFn {
   ScalarFnKind kind;
@@ -275,7 +275,8 @@ struct MappingTraits<ScalarExpression> {
 template <>
 struct ScalarEnumerationTraits<ScalarFnKind> {
   static void enumeration(IO &io, ScalarFnKind &value) {
-    io.enumCase(value, "arith", ScalarFnKind::Arith);
+    io.enumCase(value, "unary", ScalarFnKind::Unary);
+    io.enumCase(value, "binary", ScalarFnKind::Binary);
     io.enumCase(value, "type", ScalarFnKind::Type);
   }
 };
@@ -1056,7 +1057,7 @@ if ({0}Iter != attrs.end()) {{
           return cppIdent;
         }
         if (expression.scalarFn &&
-            expression.scalarFn->kind == ScalarFnKind::Arith) {
+            expression.scalarFn->kind != ScalarFnKind::Type) {
           // Apply function.
           // Recursively generate operands.
           SmallVector<std::string> operandCppValues;
@@ -1066,10 +1067,14 @@ if ({0}Iter != attrs.end()) {{
               return None;
             operandCppValues.push_back(*operandCppValue);
           }
+
+          std::string prefix = expression.scalarFn->kind == ScalarFnKind::Unary
+                                   ? "unary"
+                                   : "binary";
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
           stmts.push_back(
-              llvm::formatv("Value {0} = helper.arithfn__{1}({2});", cppIdent,
-                            expression.scalarFn->fnName,
+              llvm::formatv("Value {0} = helper.{1}__{2}({3});", cppIdent,
+                            prefix, expression.scalarFn->fnName,
                             interleaveToString(operandCppValues, ", ")));
           return cppIdent;
         }

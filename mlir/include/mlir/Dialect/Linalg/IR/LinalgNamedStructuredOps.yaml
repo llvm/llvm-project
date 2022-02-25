@@ -46,14 +46,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -114,14 +114,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -192,19 +192,19 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -225,7 +225,7 @@ structured_op: !LinalgStructuredOpConfig
                       scalar_arg: AZp
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -297,14 +297,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: accum
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: accum
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -366,14 +366,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -445,19 +445,19 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -478,7 +478,7 @@ structured_op: !LinalgStructuredOpConfig
                       scalar_arg: AZp
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -538,14 +538,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: x
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: x
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -605,14 +605,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: x
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: x
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -673,14 +673,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -739,14 +739,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: C
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -806,14 +806,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -875,14 +875,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -947,14 +947,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1031,14 +1031,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1129,14 +1129,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1240,19 +1240,19 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -1273,7 +1273,7 @@ structured_op: !LinalgStructuredOpConfig
                       scalar_arg: IZp
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -1364,14 +1364,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1464,14 +1464,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1547,14 +1547,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1640,14 +1640,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1744,19 +1744,19 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -1777,7 +1777,7 @@ structured_op: !LinalgStructuredOpConfig
                       scalar_arg: IZp
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -1864,14 +1864,14 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
@@ -1970,19 +1970,19 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: mul
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -2003,7 +2003,7 @@ structured_op: !LinalgStructuredOpConfig
                       scalar_arg: IZp
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: sub
                 operands:
                 - !ScalarExpression
@@ -2088,7 +2088,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
@@ -2167,7 +2167,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: max
         operands:
         - !ScalarExpression
@@ -2246,7 +2246,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: max_unsigned
         operands:
         - !ScalarExpression
@@ -2325,7 +2325,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: max
         operands:
         - !ScalarExpression
@@ -2404,7 +2404,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: min
         operands:
         - !ScalarExpression
@@ -2483,7 +2483,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: min_unsigned
         operands:
         - !ScalarExpression
@@ -2568,7 +2568,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: add
         operands:
         - !ScalarExpression
@@ -2653,7 +2653,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: max
         operands:
         - !ScalarExpression
@@ -2738,7 +2738,7 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: binary
         fn_name: min
         operands:
         - !ScalarExpression
@@ -2841,17 +2841,17 @@ structured_op: !LinalgStructuredOpConfig
         operands:
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: add
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: binary
                 fn_name: mul
                 operands:
                 - !ScalarExpression
                   scalar_fn:
-                    kind: arith
+                    kind: binary
                     fn_name: add
                     operands:
                     - !ScalarExpression
@@ -2870,17 +2870,17 @@ structured_op: !LinalgStructuredOpConfig
                         operands:
                         - !ScalarExpression
                           scalar_fn:
-                            kind: arith
+                            kind: binary
                             fn_name: add
                             operands:
                             - !ScalarExpression
                               scalar_fn:
-                                kind: arith
+                                kind: binary
                                 fn_name: mul
                                 operands:
                                 - !ScalarExpression
                                   scalar_fn:
-                                    kind: arith
+                                    kind: binary
                                     fn_name: add
                                     operands:
                                     - !ScalarExpression
@@ -2893,17 +2893,17 @@ structured_op: !LinalgStructuredOpConfig
                                           scalar_index: 1
                                     - !ScalarExpression
                                       scalar_fn:
-                                        kind: arith
+                                        kind: binary
                                         fn_name: add
                                         operands:
                                         - !ScalarExpression
                                           scalar_fn:
-                                            kind: arith
+                                            kind: binary
                                             fn_name: mul
                                             operands:
                                             - !ScalarExpression
                                               scalar_fn:
-                                                kind: arith
+                                                kind: binary
                                                 fn_name: add
                                                 operands:
                                                 - !ScalarExpression
@@ -2950,12 +2950,12 @@ structured_op: !LinalgStructuredOpConfig
                                   scalar_const: '12345 : i64'
                 - !ScalarExpression
                   scalar_fn:
-                    kind: arith
+                    kind: binary
                     fn_name: mul
                     operands:
                     - !ScalarExpression
                       scalar_fn:
-                        kind: arith
+                        kind: binary
                         fn_name: sub
                         operands:
                         - !ScalarExpression
@@ -3005,12 +3005,12 @@ structured_op: !LinalgStructuredOpConfig
     arg: O
     value: !ScalarExpression
       scalar_fn:
-        kind: arith
+        kind: unary
         fn_name: log
         operands:
         - !ScalarExpression
           scalar_fn:
-            kind: arith
+            kind: binary
             fn_name: add
             operands:
             - !ScalarExpression
@@ -3023,7 +3023,7 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_const: '1.000000e+00 : f64'
             - !ScalarExpression
               scalar_fn:
-                kind: arith
+                kind: unary
                 fn_name: exp
                 operands:
                 - !ScalarExpression

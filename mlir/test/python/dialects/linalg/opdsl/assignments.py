@@ -42,18 +42,22 @@ def matmul(
 # CHECK:  -
 # CHECK:    arg: O
 # CHECK:      scalar_fn:
-# CHECK:        kind: arith
+# CHECK:        kind: binary
 # CHECK:        fn_name: sub
 # CHECK:        operands:
 # CHECK:          scalar_fn:
-# CHECK:            kind: arith
+# CHECK:            kind: binary
 # CHECK:            fn_name: add
 # CHECK:            operands:
 # CHECK:              scalar_fn:
-# CHECK:                kind: type
-# CHECK:                type_var: T
+# CHECK:                kind: unary
+# CHECK:                fn_name: exp
 # CHECK:                operands:
-# CHECK:                  scalar_const: '3.1415926535897931 : f64'
+# CHECK:                  scalar_fn:
+# CHECK:                    kind: type
+# CHECK:                    type_var: T
+# CHECK:                    operands:
+# CHECK:                      scalar_const: '3.1415926535897931 : f64'
 # CHECK:              scalar_fn:
 # CHECK:                kind: type
 # CHECK:                fn_name: cast
@@ -71,8 +75,7 @@ def constants(O=TensorDef(T, S.M, S.K, output=True)):
   pi = TypeFn.cast(T, const(3.1415926535897931))
   cst42 = TypeFn.cast(T, const(42))
   cst1000 = TypeFn.cast(T, const(1e+3))
-  O[D.m, D.n] = pi + cst42 - cst1000
-
+  O[D.m, D.n] = UnaryFn.exp(pi) + cst42 - cst1000
 
 # CHECK: ---
 # CHECK-LABEL: indices
@@ -80,7 +83,7 @@ def constants(O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK:  -
 # CHECK:    arg: O
 # CHECK:      scalar_fn:
-# CHECK:        kind: arith
+# CHECK:        kind: binary
 # CHECK:        fn_name: add
 # CHECK:        operands:
 # CHECK:          scalar_index: 1
