@@ -141,3 +141,10 @@ complex(16) function cplxfct6()
 end
 ! CHECK-LABEL: func @_QPcplxfct6() -> !fir.complex<16>
 ! CHECK:         return %{{.*}} : !fir.complex<16>
+
+function fct_with_character_return(i)
+  character(10) :: fct_with_character_return
+  integer :: i
+end
+! CHECK-LABEL: func @_QPfct_with_character_return(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.char<1,10>>{{.*}}, %{{.*}}: index{{.*}}, %{{.*}}: !fir.ref<i32>{{.*}}) -> !fir.boxchar<1> {

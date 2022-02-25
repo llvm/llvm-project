@@ -24,6 +24,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Semantics/tools.h"
@@ -248,13 +249,13 @@ public:
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
     auto mapPassedEntity = [&](const auto arg) -> void {
       if (arg.passBy == PassBy::AddressAndLength) {
-        // // TODO: now that fir call has some attributes regarding character
-        // // return, PassBy::AddressAndLength should be retired.
-        // mlir::Location loc = toLocation();
-        // fir::factory::CharacterExprHelper charHelp{*builder, loc};
-        // mlir::Value box =
-        //     charHelp.createEmboxChar(arg.firArgument, arg.firLength);
-        // addSymbol(arg.entity->get(), box);
+        // TODO: now that fir call has some attributes regarding character
+        // return, PassBy::AddressAndLength should be retired.
+        mlir::Location loc = toLocation();
+        fir::factory::CharacterExprHelper charHelp{*builder, loc};
+        mlir::Value box =
+            charHelp.createEmboxChar(arg.firArgument, arg.firLength);
+        addSymbol(arg.entity->get(), box);
       } else {
         if (arg.entity.has_value()) {
           addSymbol(arg.entity->get(), arg.firArgument);
@@ -444,7 +445,8 @@ private:
     }
     mlir::Value resultVal = resultSymBox.match(
         [&](const fir::CharBoxValue &x) -> mlir::Value {
-          TODO(loc, "Function return CharBoxValue");
+          return fir::factory::CharacterExprHelper{*builder, loc}
+              .createEmboxChar(x.getBuffer(), x.getLen());
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
