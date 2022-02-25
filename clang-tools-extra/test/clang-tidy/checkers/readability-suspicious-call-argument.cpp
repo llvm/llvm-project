@@ -485,3 +485,32 @@ int main() {
 
   return 0;
 }
+
+namespace Issue_54074 {
+
+class T {};
+using OperatorTy = int(const T &, const T &);
+int operator-(const T &, const T &);
+
+template <typename U>
+struct Wrap {
+  Wrap(U);
+};
+
+template <typename V>
+void wrapTaker(V, Wrap<OperatorTy>);
+
+template <typename V>
+void wrapTaker(V aaaaa, V bbbbb, Wrap<OperatorTy>);
+
+void test() {
+  wrapTaker(0, operator-);
+  // NO-WARN. No crash!
+
+  int aaaaa = 4, bbbbb = 8;
+  wrapTaker(bbbbb, aaaaa, operator-);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 1st argument 'bbbbb' (passed to 'aaaaa') looks like it might be swapped with the 2nd, 'aaaaa' (passed to 'bbbbb')
+  // CHECK-MESSAGES: :[[@LINE-9]]:6: note: in the call to 'wrapTaker<int>', declared here
+}
+
+} // namespace Issue_54074

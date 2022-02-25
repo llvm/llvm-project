@@ -711,23 +711,28 @@ void SuspiciousCallArgumentCheck::setArgNamesAndTypes(
 
   for (std::size_t I = InitialArgIndex, J = MatchedCallExpr->getNumArgs();
        I < J; ++I) {
+    assert(ArgTypes.size() == I - InitialArgIndex &&
+           ArgNames.size() == ArgTypes.size() &&
+           "Every iteration must put an element into the vectors!");
+
     if (const auto *ArgExpr = dyn_cast<DeclRefExpr>(
             MatchedCallExpr->getArg(I)->IgnoreUnlessSpelledInSource())) {
       if (const auto *Var = dyn_cast<VarDecl>(ArgExpr->getDecl())) {
         ArgTypes.push_back(Var->getType());
         ArgNames.push_back(Var->getName());
-      } else if (const auto *FCall =
-                     dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
-        ArgTypes.push_back(FCall->getType());
-        ArgNames.push_back(FCall->getName());
-      } else {
-        ArgTypes.push_back(QualType());
-        ArgNames.push_back(StringRef());
+        continue;
       }
-    } else {
-      ArgTypes.push_back(QualType());
-      ArgNames.push_back(StringRef());
+      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
+        if (FCall->getNameInfo().getName().isIdentifier()) {
+          ArgTypes.push_back(FCall->getType());
+          ArgNames.push_back(FCall->getName());
+          continue;
+        }
+      }
     }
+
+    ArgTypes.push_back(QualType());
+    ArgNames.push_back(StringRef());
   }
 }
 
