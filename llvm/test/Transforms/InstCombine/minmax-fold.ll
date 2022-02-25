@@ -363,7 +363,7 @@ define i32 @clamp_signed1(i32 %x) {
 define i32 @clamp_signed2(i32 %x) {
 ; CHECK-LABEL: @clamp_signed2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 15)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 255)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 255)
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %cmp2 = icmp sgt i32 %x, 15
@@ -393,7 +393,7 @@ define i32 @clamp_signed3(i32 %x) {
 define i32 @clamp_signed4(i32 %x) {
 ; CHECK-LABEL: @clamp_signed4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 15)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 255)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 255)
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %cmp2 = icmp sgt i32 %x, 15
