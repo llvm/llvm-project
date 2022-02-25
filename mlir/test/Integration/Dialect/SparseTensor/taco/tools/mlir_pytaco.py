@@ -1539,12 +1539,12 @@ def _gather_input_accesses_index_vars(
     input_accesses.append(expr)
 
 
-def _op_to_callable(op: _BinaryOp) -> lang.ArithFnType:
+def _op_to_callable(op: _BinaryOp) -> lang.BinaryFnType:
   """Returns the linalg dialect function object for the given operation."""
   op_to_callable = {
-      operator.add: lang.ArithFn.add,
-      operator.sub: lang.ArithFn.sub,
-      operator.mul: lang.ArithFn.mul,
+      operator.add: lang.BinaryFn.add,
+      operator.sub: lang.BinaryFn.sub,
+      operator.mul: lang.BinaryFn.mul,
   }
   return op_to_callable[op]
 

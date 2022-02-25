@@ -270,17 +270,19 @@ class _BodyBuilder:
       dim_attr = IntegerAttr.get(
           IntegerType.get_signless(64), expr.scalar_index.dim)
       return linalg.IndexOp(dim_attr).result
-    elif expr.scalar_fn and expr.scalar_fn.kind == FunctionKind.ARITH:
-      fn = self._get_function(f"_arithfn_{expr.scalar_fn.fn_name}")
+    elif expr.scalar_fn and expr.scalar_fn.kind is not FunctionKind.TYPE:
+      kind = expr.scalar_fn.kind.name.lower()
+      fn = self._get_function(f"_{kind}_{expr.scalar_fn.fn_name}")
       operand_values = [
           self.expression(operand) for operand in expr.scalar_fn.operands
       ]
       return fn(*operand_values)
-    elif expr.scalar_fn and expr.scalar_fn.kind == FunctionKind.TYPE:
+    elif expr.scalar_fn and expr.scalar_fn.kind is FunctionKind.TYPE:
+      kind = expr.scalar_fn.kind.name.lower()
       fn_name = expr.scalar_fn.fn_name
       if expr.scalar_fn.attr_name:
         fn_name = self.type_fn_attr_mapping[expr.scalar_fn.attr_name]
-      fn = self._get_function(f"_typefn_{fn_name}")
+      fn = self._get_function(f"_{kind}_{fn_name}")
       operand_value = self.expression(expr.scalar_fn.operands[0])
       return fn(expr.scalar_fn.type_var.name, operand_value)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
@@ -356,70 +358,72 @@ class _BodyBuilder:
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
-  def _typefn_cast(self, type_var_name: str, operand: Value) -> Value:
+  def _type_cast(self, type_var_name: str, operand: Value) -> Value:
     return self._cast(type_var_name, operand, False)
 
-  def _typefn_cast_unsigned(self, type_var_name: str, operand: Value) -> Value:
+  def _type_cast_unsigned(self, type_var_name: str, operand: Value) -> Value:
     return self._cast(type_var_name, operand, True)
 
-  def _arithfn_add(self, lhs: Value, rhs: Value) -> Value:
-    if _is_floating_point_type(lhs.type):
-      return arith.AddFOp(lhs, rhs).result
-    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return arith.AddIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'add' operand: {lhs}")
-
-  def _arithfn_exp(self, x: Value) -> Value:
+  def _unary_exp(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
       return math.ExpOp(x).result
     raise NotImplementedError("Unsupported 'exp' operand: {x}")
 
-  def _arithfn_log(self, x: Value) -> Value:
+  def _unary_log(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
       return math.LogOp(x).result
     raise NotImplementedError("Unsupported 'log' operand: {x}")
 
-  def _arithfn_sub(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_add(self, lhs: Value, rhs: Value) -> Value:
+    if _is_floating_point_type(lhs.type):
+      return arith.AddFOp(lhs, rhs).result
+    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+      return arith.AddIOp(lhs, rhs).result
+    raise NotImplementedError("Unsupported 'add' operands: {lhs}, {rhs}")
+
+  def _binary_sub(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.SubFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.SubIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'sub' operand: {lhs}")
+    raise NotImplementedError("Unsupported 'sub' operands: {lhs}, {rhs}")
 
-  def _arithfn_mul(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_mul(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MulFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MulIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'mul' operand: {lhs}")
+    raise NotImplementedError("Unsupported 'mul' operands: {lhs}, {rhs}")
 
-  def _arithfn_max(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_max(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MaxSIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'max' operand: {lhs}")
+    raise NotImplementedError("Unsupported 'max' operands: {lhs}, {rhs}")
 
-  def _arithfn_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MaxUIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'max_unsigned' operand: {lhs}")
+    raise NotImplementedError(
+        "Unsupported 'max_unsigned' operands: {lhs}, {rhs}")
 
-  def _arithfn_min(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_min(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MinSIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'min' operand: {lhs}")
+    raise NotImplementedError("Unsupported 'min' operands: {lhs}, {rhs}")
 
-  def _arithfn_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MinUIOp(lhs, rhs).result
-    raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
+    raise NotImplementedError(
+        "Unsupported 'min_unsigned' operands: {lhs}, {rhs}")
 
 
 def _infer_structured_outs(

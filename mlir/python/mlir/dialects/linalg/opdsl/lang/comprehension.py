@@ -77,13 +77,13 @@ class TensorExpression:
     self.visit_tensor_exprs(visit_scalar_def)
 
   def __add__(self, rhs: "TensorExpression") -> "TensorExpression":
-    return ArithFn.add(self, rhs)
+    return BinaryFn.add(self, rhs)
 
   def __mul__(self, rhs) -> "TensorExpression":
-    return ArithFn.mul(self, rhs)
+    return BinaryFn.mul(self, rhs)
 
   def __sub__(self, rhs) -> "TensorExpression":
-    return ArithFn.sub(self, rhs)
+    return BinaryFn.sub(self, rhs)
 
   def __hash__(self):
     return hash(id(self))
@@ -126,7 +126,7 @@ class TensorUse(TensorExpression):
     return rhs_dims - lhs_dims
 
   def __iadd__(self, rhs: TensorExpression) -> "TensorReduceFn":
-    return ReduceFnUse(ArithFn.add, *self._compute_reduce_dims(rhs))(rhs)
+    return ReduceFnUse(BinaryFn.add, *self._compute_reduce_dims(rhs))(rhs)
 
   def __repr__(self):
     return (f"{self.operand_def.name}"
@@ -183,8 +183,8 @@ class TensorReduceFn(TensorExpression):
                        f"bound to its lhs: {self}")
     full_args = [self.lhs.to_scalar_expression()
                 ] + [arg.to_scalar_expression() for arg in self.args]
-    return ScalarFn(FunctionKind.ARITH, self.reduce_use.arith_fn.fn_name, None,
-                    None, full_args).expr()
+    return ScalarFn(FunctionKind.BINARY, self.reduce_use.binary_fn.fn_name,
+                    None, None, full_args).expr()
 
   def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
     for arg in self.args:
@@ -242,8 +242,69 @@ class index(TensorExpression):
 
 
 class FunctionKind(Enum):
-  ARITH = 0
-  TYPE = 1
+  UNARY = 0
+  BINARY = 1
+  TYPE = 2
+
+
+class UnaryFnType:
+  """Unary function.
+
+  A unary function takes one tensor expression and returns the
+  function evaluation result.
+  """
+
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, exp: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.UNARY, self.fn_name, None, None, [exp])
+
+  def __repr__(self):
+    return f"{self.fn_name}"
+
+
+class UnaryFn:
+  """Unary function namespace."""
+  exp = UnaryFnType("exp")
+  log = UnaryFnType("log")
+
+
+class BinaryFnType:
+  """Binary function.
+
+  A binary function takes two tensor expressions and returns the
+  function evaluation result.
+  """
+
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, arg0: TensorExpression,
+               arg1: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.BINARY, self.fn_name, None, None, [arg0, arg1])
+
+  def __repr__(self):
+    return f"{self.fn_name}"
+
+
+class BinaryFn:
+  """Binary function namespace.
+
+  As the integer types are signless, signedness is implement by different
+  functions that treat integers as signed or unsigned values.
+
+  Examples:
+  - max -> `arith.MaxSIOp`
+  - max_unsinged -> `arith.MaxUIOp`
+  """
+  add = BinaryFnType("add")
+  mul = BinaryFnType("mul")
+  max = BinaryFnType("max")
+  min = BinaryFnType("min")
+  sub = BinaryFnType("sub")
+  max_unsigned = BinaryFnType("max_unsigned")
+  min_unsigned = BinaryFnType("min_unsigned")
 
 
 class TypeFnType:
@@ -278,87 +339,49 @@ class TypeFn:
   cast_unsigned = TypeFnType("cast_unsigned")
 
 
-class ArithFnType:
-  """Arithmetic function.
-
-  An arithmetic function takes one ore more tensor expressions and returns the
-  function evaluation result.
-  """
-
-  def __init__(self, fn_name: str):
-    self.fn_name = fn_name
-
-  def __call__(self, *args) -> "TensorFn":
-    return TensorFn(FunctionKind.ARITH, self.fn_name, None, None, args)
-
-  def __repr__(self):
-    return f"{self.fn_name}"
-
-
-class ArithFn:
-  """Arithmetic function namespace.
-
-  As the integer types are signless, signedness is implement by different
-  functions that treat integers as signed or unsigned values.
-
-  Examples:
-  - max -> `arith.MaxSIOp`
-  - max_unsinged -> `arith.MaxUIOp`
-  """
-  add = ArithFnType("add")
-  exp = ArithFnType("exp")
-  log = ArithFnType("log")
-  mul = ArithFnType("mul")
-  max = ArithFnType("max")
-  min = ArithFnType("min")
-  sub = ArithFnType("sub")
-  max_unsigned = ArithFnType("max_unsigned")
-  min_unsigned = ArithFnType("min_unsigned")
-
-
 class ReduceFnUse:
   """Reduction function use.
 
   A reduction use specifies the reduction function and dimensions.
   """
 
-  def __init__(self, arith_fn: ArithFnType, *reduce_dims: DimDef):
-    self.arith_fn = arith_fn
+  def __init__(self, binary_fn: BinaryFnType, *reduce_dims: DimDef):
+    self.binary_fn = binary_fn
     self.reduce_dims = reduce_dims
 
-  def __call__(self, *args: TensorExpression):
+  def __call__(self, *args: TensorExpression) -> "TensorReduceFn":
     return TensorReduceFn(self, args)
 
   def __repr__(self):
-    return (f"reduce_{self.arith_fn.fn_name}"
+    return (f"reduce_{self.binary_fn.fn_name}"
             f"({', '.join(repr(d) for d in self.reduce_dims)})")
 
 
 class ReduceFnType:
   """Reduction function.
 
-  An arithmetic function that reduces its RHS into its LHS.
+  A binary function that reduces its RHS into its LHS.
   """
 
-  def __init__(self, arith_fn: ArithFnType):
-    if not isinstance(arith_fn, ArithFnType):
-      raise ValueError(f"Reduce expected a ArithFnType but got {arith_fn}")
-    self.arith_fn = arith_fn
+  def __init__(self, binary_fn: BinaryFnType):
+    if not isinstance(binary_fn, BinaryFnType):
+      raise ValueError(f"Reduce expected a BinaryFnType but got {binary_fn}")
+    self.binary_fn = binary_fn
 
   def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
-    return ReduceFnUse(self.arith_fn, *reduce_dims)
+    return ReduceFnUse(self.binary_fn, *reduce_dims)
 
   def __repr__(self):
-    return (f"reduce_{self.arith_fn.fn_name}")
+    return (f"reduce_{self.binary_fn.fn_name}")
 
 
 class ReduceFn:
-  add = ReduceFnType(ArithFn.add)
-  mul = ReduceFnType(ArithFn.mul)
-  max = ReduceFnType(ArithFn.max)
-  min = ReduceFnType(ArithFn.min)
-  max_unsigned = ReduceFnType(ArithFn.max_unsigned)
-  min_unsigned = ReduceFnType(ArithFn.min_unsigned)
+  add = ReduceFnType(BinaryFn.add)
+  mul = ReduceFnType(BinaryFn.mul)
+  max = ReduceFnType(BinaryFn.max)
+  min = ReduceFnType(BinaryFn.min)
+  max_unsigned = ReduceFnType(BinaryFn.max_unsigned)
+  min_unsigned = ReduceFnType(BinaryFn.min_unsigned)
 
 
 ###############################################################################

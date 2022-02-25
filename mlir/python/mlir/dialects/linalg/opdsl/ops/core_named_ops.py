@@ -677,4 +677,4 @@ def soft_plus_2d(
   """
   domain(D.m, D.n)
   O[D.m, D.n] = \
-      ArithFn.log(TypeFn.cast(U, const(1.0)) + ArithFn.exp(TypeFn.cast(U, I[D.m, D.n])))
+      UnaryFn.log(TypeFn.cast(U, const(1.0)) + UnaryFn.exp(TypeFn.cast(U, I[D.m, D.n])))
