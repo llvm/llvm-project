@@ -95,7 +95,7 @@ class TestSwiftTypeLookup(TestBase):
 
         # check that mangled name lookup works
         self.expect(
-            'type lookup _TtSi',
+            'type lookup _$sSiD',
             substrs=[
                 'struct Int',
                 'extension Swift.Int'])

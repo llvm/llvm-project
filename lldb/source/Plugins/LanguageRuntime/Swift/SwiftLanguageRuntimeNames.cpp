@@ -607,6 +607,15 @@ bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
 }
 
 bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
+  // Old-style mangling uses a "_T" prefix. This can lead to false positives
+  // with other symbols that just so happen to start with "_T". To prevent this,
+  // only return true for select old-style mangled names. The known cases to are
+  // ObjC classes and protocols. Classes are prefixed with either "_TtC" or
+  // "_TtGC" (generic classes). Protocols are prefixed with "_TtP". Other "_T"
+  // prefixed symbols are not considered to be Swift symbols.
+  if (name.startswith("_T"))
+    return name.startswith("_TtC") || name.startswith("_TtGC") ||
+           name.startswith("_TtP");
   return swift::Demangle::isSwiftSymbol(name);
 }
 
