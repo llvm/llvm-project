@@ -836,7 +836,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 TargetTransformInfo
-GCNTargetMachine::getTargetTransformInfo(const Function &F) {
+GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
 }
 

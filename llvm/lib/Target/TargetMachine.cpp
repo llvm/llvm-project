@@ -192,7 +192,8 @@ CodeGenOpt::Level TargetMachine::getOptLevel() const { return OptLevel; }
 
 void TargetMachine::setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
 
-TargetTransformInfo TargetMachine::getTargetTransformInfo(const Function &F) {
+TargetTransformInfo
+TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(F.getParent()->getDataLayout());
 }
 
@@ -220,7 +221,7 @@ MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   return TLOF->getContext().getOrCreateSymbol(NameStr);
 }
 
-TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
+TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
   // Since Analysis can't depend on Target, use a std::function to invert the
   // dependency.
   return TargetIRAnalysis(

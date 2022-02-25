@@ -307,7 +307,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 TargetTransformInfo
-ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) {
+ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(ARMTTIImpl(this, F));
 }
 

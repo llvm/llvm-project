@@ -565,7 +565,7 @@ void PPCPassConfig::addPreEmitPass2() {
 }
 
 TargetTransformInfo
-PPCTargetMachine::getTargetTransformInfo(const Function &F) {
+PPCTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(PPCTTIImpl(this, F));
 }
 

@@ -504,7 +504,7 @@ public:
 } // end anonymous namespace
 
 TargetTransformInfo
-AArch64TargetMachine::getTargetTransformInfo(const Function &F) {
+AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(AArch64TTIImpl(this, F));
 }
 
