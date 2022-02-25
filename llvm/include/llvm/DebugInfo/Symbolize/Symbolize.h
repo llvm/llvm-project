@@ -68,7 +68,7 @@ public:
                               : 4ULL * 1024 * 1024 * 1024 /* 4 GiB */;
   };
 
-  LLVMSymbolizer() = default;
+  LLVMSymbolizer();
   LLVMSymbolizer(const Options &Opts);
 
   ~LLVMSymbolizer();
