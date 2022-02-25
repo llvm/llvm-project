@@ -1328,3 +1328,23 @@ FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
     return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
   return {};
 }
+
+llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
+#if !defined(__APPLE__)
+  return llvm::Triple::MacOSX;
+#else
+#if TARGET_OS_OSX
+  return llvm::Triple::MacOSX;
+#elif TARGET_OS_IOS
+  return llvm::Triple::IOS;
+#elif TARGET_OS_WATCH
+  return llvm::Triple::WatchOS;
+#elif TARGET_OS_TV
+  return llvm::Triple::TvOS;
+#elif TARGET_OS_BRIDGE
+  return llvm::Triple::BridgeOS;
+#else
+#error "LLDB being compiled for an unrecognized Darwin OS"
+#endif
+#endif // __APPLE__
+}
