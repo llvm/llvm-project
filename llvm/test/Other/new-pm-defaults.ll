@@ -63,7 +63,7 @@
 ; RUN:     -passes='lto-pre-link<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-LTO,CHECK-O3,%llvmcheckext,CHECK-EP-PIPELINE-START,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=1 -eagerly-invalidate-analyses=0 -debug-pass-manager \
-; RUN:     -passes-ep-optimizer-last='no-op-function' \
+; RUN:     -passes-ep-optimizer-last='no-op-module' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,%llvmcheckext,CHECK-EP-OPTIMIZER-LAST,CHECK-O23SZ
 
@@ -256,7 +256,7 @@
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
-; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpFunctionPass
+; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpModulePass
 ; CHECK-HOT-COLD-SPLIT-NEXT: Running pass: HotColdSplittingPass
 ; CHECK-IR-OUTLINER-NEXT: Running pass: IROutlinerPass
 ; CHECK-IR-OUTLINER-NEXT: Running analysis: IRSimilarityAnalysis
