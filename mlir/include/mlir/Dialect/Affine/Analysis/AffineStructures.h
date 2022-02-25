@@ -57,7 +57,7 @@ struct MutableAffineMap;
 /// that some floordiv combinations are converted to mod's by AffineExpr
 /// construction.
 ///
-class FlatAffineConstraints : public IntegerPolyhedron {
+class FlatAffineConstraints : public presburger::IntegerPolyhedron {
 public:
   /// Constructs a constraint system reserving memory for the specified number
   /// of constraints and identifiers.

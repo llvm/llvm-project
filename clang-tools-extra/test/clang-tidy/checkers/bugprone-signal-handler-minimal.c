@@ -25,7 +25,7 @@ void handler_good(int) {
   signal(0, SIG_DFL);
 }
 
-void test() {
+void test(void) {
   signal(SIGINT, handler_bad1);
   signal(SIGINT, handler_bad2);
   signal(SIGINT, handler_good);

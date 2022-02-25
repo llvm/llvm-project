@@ -35,8 +35,8 @@ def fill_rng_poly(
 @linalg_structured_op
 def soft_plus_poly(
     I=TensorDef(T, S.M, S.N), O=TensorDef(U, S.M, S.N, output=True)):
-  O[D.m, D.n] = ArithFn.log(
-      TypeFn.cast(U, const(1.0)) + TypeFn.cast(U, ArithFn.exp(I[D.m, D.n])))
+  O[D.m, D.n] = UnaryFn.log(
+      TypeFn.cast(U, const(1.0)) + TypeFn.cast(U, UnaryFn.exp(I[D.m, D.n])))
 
 
 @linalg_structured_op(op_name="custom_op_name")

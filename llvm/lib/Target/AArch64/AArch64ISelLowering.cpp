@@ -1304,9 +1304,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSCATTER, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+      setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
     }
-
-    setOperationAction(ISD::SPLAT_VECTOR, MVT::nxv8bf16, Custom);
 
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
@@ -10090,13 +10089,11 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
   case MVT::i1: {
     // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
     // lowering code.
-    if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
-      // We can hande the zero case during isel.
-      if (ConstVal->isZero())
-        return Op;
-      if (ConstVal->isOne())
-        return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
-    }
+
+    // We can handle the constant cases during isel.
+    if (isa<ConstantSDNode>(SplatVal))
+      return Op;
+
     // The general case of i1.  There isn't any natural way to do this,
     // so we use some trickery with whilelo.
     SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
@@ -15362,6 +15359,9 @@ static bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) {
     if (N.getValueType().getVectorMinNumElements() < NumElts)
       return false;
   }
+
+  if (ISD::isConstantSplatVectorAllOnes(N.getNode()))
+    return true;
 
   // "ptrue p.<ty>, all" can be considered all active when <ty> is the same size
   // or smaller than the implicit element type represented by N.

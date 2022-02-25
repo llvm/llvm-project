@@ -1097,51 +1097,6 @@ static bool adjustMinMax(SelectInst &Sel, ICmpInst &Cmp) {
   return true;
 }
 
-/// If this is an integer min/max (icmp + select) with a constant operand,
-/// create the canonical icmp for the min/max operation and canonicalize the
-/// constant to the 'false' operand of the select:
-/// select (icmp Pred X, C1), C2, X --> select (icmp Pred' X, C2), X, C2
-/// Note: if C1 != C2, this will change the icmp constant to the existing
-/// constant operand of the select.
-static Instruction *canonicalizeMinMaxWithConstant(SelectInst &Sel,
-                                                   ICmpInst &Cmp,
-                                                   InstCombinerImpl &IC) {
-  if (!Cmp.hasOneUse() || !isa<Constant>(Cmp.getOperand(1)))
-    return nullptr;
-
-  // Canonicalize the compare predicate based on whether we have min or max.
-  Value *LHS, *RHS;
-  SelectPatternResult SPR = matchSelectPattern(&Sel, LHS, RHS);
-  if (!SelectPatternResult::isMinOrMax(SPR.Flavor))
-    return nullptr;
-
-  // Is this already canonical?
-  ICmpInst::Predicate CanonicalPred = getMinMaxPred(SPR.Flavor);
-  if (Cmp.getOperand(0) == LHS && Cmp.getOperand(1) == RHS &&
-      Cmp.getPredicate() == CanonicalPred)
-    return nullptr;
-
-  // Bail out on unsimplified X-0 operand (due to some worklist management bug),
-  // as this may cause an infinite combine loop. Let the sub be folded first.
-  if (match(LHS, m_Sub(m_Value(), m_Zero())) ||
-      match(RHS, m_Sub(m_Value(), m_Zero())))
-    return nullptr;
-
-  // Create the canonical compare and plug it into the select.
-  IC.replaceOperand(Sel, 0, IC.Builder.CreateICmp(CanonicalPred, LHS, RHS));
-
-  // If the select operands did not change, we're done.
-  if (Sel.getTrueValue() == LHS && Sel.getFalseValue() == RHS)
-    return &Sel;
-
-  // If we are swapping the select operands, swap the metadata too.
-  assert(Sel.getTrueValue() == RHS && Sel.getFalseValue() == LHS &&
-         "Unexpected results from matchSelectPattern");
-  Sel.swapValues();
-  Sel.swapProfMetadata();
-  return &Sel;
-}
-
 static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
                                     InstCombinerImpl &IC) {
   Value *LHS, *RHS;
@@ -1561,9 +1516,6 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
   if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
-    return NewSel;
-
-  if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *this))
     return NewSel;
 
   if (Instruction *NewSPF = canonicalizeSPF(SI, *ICI, *this))

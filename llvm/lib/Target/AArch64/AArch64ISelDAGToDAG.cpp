@@ -204,6 +204,11 @@ public:
     return SelectSVEAddSubImm(N, VT, Imm, Shift);
   }
 
+  template <MVT::SimpleValueType VT>
+  bool SelectSVECpyDupImm(SDValue N, SDValue &Imm, SDValue &Shift) {
+    return SelectSVECpyDupImm(N, VT, Imm, Shift);
+  }
+
   template <MVT::SimpleValueType VT, bool Invert = false>
   bool SelectSVELogicalImm(SDValue N, SDValue &Imm) {
     return SelectSVELogicalImm(N, VT, Imm, Invert);
@@ -357,10 +362,8 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
-  bool SelectSVE8BitLslImm(SDValue N, SDValue &Imm, SDValue &Shift);
-
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
-
+  bool SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm, bool Invert);
 
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
@@ -3129,72 +3132,81 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   return true;
 }
 
-bool AArch64DAGToDAGISel::SelectSVE8BitLslImm(SDValue N, SDValue &Base,
-                                                  SDValue &Offset) {
-  auto C = dyn_cast<ConstantSDNode>(N);
-  if (!C)
+bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
+                                             SDValue &Shift) {
+  if (!isa<ConstantSDNode>(N))
     return false;
 
-  auto Ty = N->getValueType(0);
-
-  int64_t Imm = C->getSExtValue();
   SDLoc DL(N);
+  uint64_t Val = cast<ConstantSDNode>(N)
+                     ->getAPIntValue()
+                     .truncOrSelf(VT.getFixedSizeInBits())
+                     .getZExtValue();
 
-  if ((Imm >= -128) && (Imm <= 127)) {
-    Base = CurDAG->getTargetConstant(Imm, DL, Ty);
-    Offset = CurDAG->getTargetConstant(0, DL, Ty);
+  switch (VT.SimpleTy) {
+  case MVT::i8:
+    // All immediates are supported.
+    Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    Imm = CurDAG->getTargetConstant(Val, DL, MVT::i32);
     return true;
-  }
-
-  if (((Imm % 256) == 0) && (Imm >= -32768) && (Imm <= 32512)) {
-    Base = CurDAG->getTargetConstant(Imm/256, DL, Ty);
-    Offset = CurDAG->getTargetConstant(8, DL, Ty);
-    return true;
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::i64:
+    // Support 8bit unsigned immediates.
+    if (Val <= 255) {
+      Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val, DL, MVT::i32);
+      return true;
+    }
+    // Support 16bit unsigned immediates that are a multiple of 256.
+    if (Val <= 65280 && Val % 256 == 0) {
+      Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val >> 8, DL, MVT::i32);
+      return true;
+    }
+    break;
+  default:
+    break;
   }
 
   return false;
 }
 
-bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift) {
-  if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
-    const int64_t ImmVal = CNode->getSExtValue();
-    SDLoc DL(N);
+bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
+                                             SDValue &Shift) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
 
-    switch (VT.SimpleTy) {
-    case MVT::i8:
-      // Can always select i8s, no shift, mask the immediate value to
-      // deal with sign-extended value from lowering.
+  SDLoc DL(N);
+  int64_t Val = cast<ConstantSDNode>(N)
+                    ->getAPIntValue()
+                    .truncOrSelf(VT.getFixedSizeInBits())
+                    .getSExtValue();
+
+  switch (VT.SimpleTy) {
+  case MVT::i8:
+    // All immediates are supported.
+    Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    Imm = CurDAG->getTargetConstant(Val & 0xFF, DL, MVT::i32);
+    return true;
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::i64:
+    // Support 8bit signed immediates.
+    if (Val >= -128 && Val <= 127) {
       Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant(ImmVal & 0xFF, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val & 0xFF, DL, MVT::i32);
       return true;
-    case MVT::i16:
-      // i16 values get sign-extended to 32-bits during lowering.
-      if ((ImmVal & 0xFF) == ImmVal) {
-        Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-        Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
-        return true;
-      } else if ((ImmVal & 0xFF) == 0) {
-        Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
-        Imm = CurDAG->getTargetConstant((ImmVal >> 8) & 0xFF, DL, MVT::i32);
-        return true;
-      }
-      break;
-    case MVT::i32:
-    case MVT::i64:
-      // Range of immediate won't trigger signedness problems for 32/64b.
-      if ((ImmVal & 0xFF) == ImmVal) {
-        Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-        Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
-        return true;
-      } else if ((ImmVal & 0xFF00) == ImmVal) {
-        Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
-        Imm = CurDAG->getTargetConstant(ImmVal >> 8, DL, MVT::i32);
-        return true;
-      }
-      break;
-    default:
-      break;
     }
+    // Support 16bit signed immediates that are a multiple of 256.
+    if (Val >= -32768 && Val <= 32512 && Val % 256 == 0) {
+      Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant((Val >> 8) & 0xFF, DL, MVT::i32);
+      return true;
+    }
+    break;
+  default:
+    break;
   }
 
   return false;

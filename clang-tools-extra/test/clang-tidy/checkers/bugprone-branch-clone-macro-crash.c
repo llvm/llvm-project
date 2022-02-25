@@ -8,7 +8,7 @@ int y = 1;
   else if (c)   \
     d = b;
 
-f() {
+void f(void) {
   // CHECK-MESSAGES: warning: repeated branch in conditional chain [bugprone-branch-clone]
   a(x, y)
 }

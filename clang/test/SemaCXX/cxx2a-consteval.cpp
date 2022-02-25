@@ -613,6 +613,32 @@ static_assert(is_same<long, T>::value);
 
 } // namespace unevaluated
 
+namespace value_dependent {
+
+consteval int foo(int x) {
+  return x;
+}
+
+template <int X> constexpr int bar() {
+  // Previously this call was rejected as value-dependent constant expressions
+  // can't be immediately evaluated. Now we show that we don't immediately
+  // evaluate them until they are instantiated.
+  return foo(X);
+}
+
+template <typename T> constexpr int baz() {
+  constexpr int t = sizeof(T);
+  // Previously this call was rejected as `t` is value-dependent and its value
+  // is unknown until the function is instantiated. Now we show that we don't
+  // reject such calls.
+  return foo(t);
+}
+
+static_assert(bar<15>() == 15);
+static_assert(baz<int>() == sizeof(int));
+
+} // namespace value_dependent
+
 namespace PR50779 {
 struct derp {
   int b = 0;

@@ -1,9 +1,9 @@
 // RUN: %check_clang_tidy %s cert-msc30-c %t
 
 extern int rand(void);
-int nonrand();
+int nonrand(void);
 
-int cTest() {
+int cTest(void) {
   int i = rand();
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: rand() has limited randomness [cert-msc30-c]
 

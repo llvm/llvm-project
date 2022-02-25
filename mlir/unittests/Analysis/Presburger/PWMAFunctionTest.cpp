@@ -19,7 +19,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
+
 using testing::ElementsAre;
 
 static Matrix makeMatrix(unsigned numRow, unsigned numColumns,
@@ -168,5 +170,3 @@ TEST(PWMAFunction, valueAt) {
   EXPECT_THAT(*nonNegPWAF.valueAt({2, -3}), ElementsAre(-1, -1));
   EXPECT_FALSE(nonNegPWAF.valueAt({-2, -3}).hasValue());
 }
-
-} // namespace mlir

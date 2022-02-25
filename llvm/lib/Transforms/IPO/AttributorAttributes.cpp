@@ -9849,22 +9849,21 @@ public:
     }
 
     // Update the Instruction queries.
-    const AAReachability *Reachability;
     if (!InstQueries.empty()) {
-      Reachability = &A.getAAFor<AAReachability>(
+      const AAReachability *Reachability = &A.getAAFor<AAReachability>(
           *this, IRPosition::function(*getAssociatedFunction()),
           DepClassTy::REQUIRED);
-    }
 
-    // Check for local callbases first.
-    for (auto &InstPair : InstQueries) {
-      SmallVector<const AACallEdges *> CallEdges;
-      bool AllKnown =
-          getReachableCallEdges(A, *Reachability, *InstPair.first, CallEdges);
-      // Update will return change if we this effects any queries.
-      if (!AllKnown)
-        InstPair.second.CanReachUnknownCallee = true;
-      Change |= InstPair.second.update(A, *this, CallEdges);
+      // Check for local callbases first.
+      for (auto &InstPair : InstQueries) {
+        SmallVector<const AACallEdges *> CallEdges;
+        bool AllKnown =
+            getReachableCallEdges(A, *Reachability, *InstPair.first, CallEdges);
+        // Update will return change if we this effects any queries.
+        if (!AllKnown)
+          InstPair.second.CanReachUnknownCallee = true;
+        Change |= InstPair.second.update(A, *this, CallEdges);
+      }
     }
 
     return Change;

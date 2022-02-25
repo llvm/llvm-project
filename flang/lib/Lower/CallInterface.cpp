@@ -443,6 +443,18 @@ getDataObjectEntity(const Fortran::semantics::Symbol *arg) {
   return *arg;
 }
 
+static const Fortran::evaluate::ActualArgument *
+getResultEntity(const Fortran::evaluate::ProcedureRef &) {
+  return nullptr;
+}
+
+static const Fortran::semantics::Symbol &
+getResultEntity(Fortran::lower::pft::FunctionLikeUnit &funit) {
+  return funit.getSubprogramSymbol()
+      .get<Fortran::semantics::SubprogramDetails>()
+      .result();
+}
+
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and caller
 // sides.
@@ -455,6 +467,7 @@ class Fortran::lower::CallInterfaceImpl {
   using CallInterface = Fortran::lower::CallInterface<T>;
   using PassEntityBy = typename CallInterface::PassEntityBy;
   using PassedEntity = typename CallInterface::PassedEntity;
+  using FirValue = typename CallInterface::FirValue;
   using FortranEntity = typename CallInterface::FortranEntity;
   using FirPlaceHolder = typename CallInterface::FirPlaceHolder;
   using Property = typename CallInterface::Property;
@@ -549,9 +562,9 @@ private:
         result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
     Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
+    // Character result allocated by caller and passed as hidden arguments
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      TODO(interface.converter.getCurrentLocation(),
-           "implicit result character type");
+      handleImplicitCharacterResult(dynamicType);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
       TODO(interface.converter.getCurrentLocation(),
@@ -566,6 +579,24 @@ private:
     }
   }
 
+  void
+  handleImplicitCharacterResult(const Fortran::evaluate::DynamicType &type) {
+    int resultPosition = FirPlaceHolder::resultEntityPosition;
+    setPassedResult(PassEntityBy::AddressAndLength,
+                    getResultEntity(interface.side().getCallDescription()));
+    mlir::Type lenTy = mlir::IndexType::get(&mlirContext);
+    std::optional<std::int64_t> constantLen = type.knownLength();
+    fir::CharacterType::LenType len =
+        constantLen ? *constantLen : fir::CharacterType::unknownLen();
+    mlir::Type charRefTy = fir::ReferenceType::get(
+        fir::CharacterType::get(&mlirContext, type.kind(), len));
+    mlir::Type boxCharTy = fir::BoxCharType::get(&mlirContext, type.kind());
+    addFirOperand(charRefTy, resultPosition, Property::CharAddress);
+    addFirOperand(lenTy, resultPosition, Property::CharLength);
+    /// For now, also return it by boxchar
+    addFirResult(boxCharTy, resultPosition, Property::BoxChar);
+  }
+
   void handleExplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result) {
     using Attr = Fortran::evaluate::characteristics::FunctionResult::Attr;
@@ -576,17 +607,7 @@ private:
     const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
         result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
-    Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
-    if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      TODO(interface.converter.getCurrentLocation(),
-           "implicit result character type");
-    } else if (dynamicType.category() ==
-               Fortran::common::TypeCategory::Derived) {
-      TODO(interface.converter.getCurrentLocation(),
-           "implicit result derived type");
-    }
-    mlir::Type mlirType =
-        getConverter().genType(dynamicType.category(), dynamicType.kind());
+    mlir::Type mlirType = translateDynamicType(typeAndShape->type());
     fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
     if (!bounds.empty())
       mlirType = fir::SequenceType::get(bounds, mlirType);
@@ -595,8 +616,21 @@ private:
     if (result.attrs.test(Attr::Pointer))
       mlirType = fir::BoxType::get(fir::PointerType::get(mlirType));
 
+    if (fir::isa_char(mlirType)) {
+      // Character scalar results must be passed as arguments in lowering so
+      // that an assumed length character function callee can access the result
+      // length. A function with a result requiring an explicit interface does
+      // not have to be compatible with assumed length function, but most
+      // compilers supports it.
+      handleImplicitCharacterResult(typeAndShape->type());
+      return;
+    }
+
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                  Property::Value);
+    // Explicit results require the caller to allocate the storage and save the
+    // function result in the storage with a fir.save_result.
+    setSaveResult();
   }
 
   fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
@@ -817,7 +851,20 @@ private:
     interface.passedArguments.emplace_back(
         PassedEntity{p, entity, {}, {}, characteristics});
   }
+  void setPassedResult(PassEntityBy p, FortranEntity entity) {
+    interface.passedResult =
+        PassedEntity{p, entity, emptyValue(), emptyValue()};
+  }
+  void setSaveResult() { interface.saveResult = true; }
   int nextPassedArgPosition() { return interface.passedArguments.size(); }
+
+  static FirValue emptyValue() {
+    if constexpr (std::is_same_v<Fortran::lower::CalleeInterface, T>) {
+      return {};
+    } else {
+      return -1;
+    }
+  }
 
   Fortran::lower::AbstractConverter &getConverter() {
     return interface.converter;

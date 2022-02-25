@@ -68,6 +68,8 @@ static uint64_t getCallStackHash(const MachineBasicBlock &BB,
 bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableFSDiscriminator)
     return false;
+  if (!MF.getFunction().isDebugInfoForProfiling())
+    return false;
 
   bool Changed = false;
   using LocationDiscriminator = std::tuple<StringRef, unsigned, unsigned>;
