@@ -131,6 +131,7 @@ define void @CmovInHotPath(i32 %n, i32 %a, i32 %b, i32* nocapture %c, i32* nocap
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_5: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: CmovInHotPath:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    testl %edi, %edi
@@ -211,6 +212,7 @@ define void @CmovNotInHotPath(i32 %n, i32 %a, i32 %b, i32* nocapture %c, i32* no
 ; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: CmovNotInHotPath:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    testl %edi, %edi
@@ -298,6 +300,7 @@ define i32 @MaxIndex(i32 %n, i32* nocapture readonly %a) #0 {
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  .LBB2_5: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: MaxIndex:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
@@ -382,6 +385,7 @@ define i32 @MaxIndex_unpredictable(i32 %n, i32* nocapture readonly %a) #0 {
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  .LBB3_5: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: MaxIndex_unpredictable:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
@@ -456,6 +460,7 @@ define i32 @MaxValue(i32 %n, i32* nocapture readonly %a) #0 {
 ; CHECK-NEXT:    jne .LBB4_2
 ; CHECK-NEXT:  .LBB4_3: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: MaxValue:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl (%rsi), %ecx
@@ -469,15 +474,15 @@ define i32 @MaxValue(i32 %n, i32* nocapture readonly %a) #0 {
 ; CHECK-FORCEALL-NEXT:    movl %edi, %edi
 ; CHECK-FORCEALL-NEXT:    movl $1, %edx
 ; CHECK-FORCEALL-NEXT:  .LBB4_4: # %for.body
-; CHECK-FORCEALL-NEXT:  # =>This Inner Loop Header: Depth=1
+; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %eax
 ; CHECK-FORCEALL-NEXT:    cmpl %ecx, %eax
 ; CHECK-FORCEALL-NEXT:    jg .LBB4_6
 ; CHECK-FORCEALL-NEXT:  # %bb.5: # %for.body
-; CHECK-FORCEALL-NEXT:  # in Loop: Header=BB4_4 Depth=1
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB4_4 Depth=1
 ; CHECK-FORCEALL-NEXT:    movl %ecx, %eax
 ; CHECK-FORCEALL-NEXT:  .LBB4_6: # %for.body
-; CHECK-FORCEALL-NEXT:  # in Loop: Header=BB4_4 Depth=1
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB4_4 Depth=1
 ; CHECK-FORCEALL-NEXT:    addq $1, %rdx
 ; CHECK-FORCEALL-NEXT:    movl %eax, %ecx
 ; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rdi
@@ -527,6 +532,7 @@ define i32 @BinarySearch(i32 %Mask, %struct.Node* nocapture readonly %Curr, %str
 ; CHECK-NEXT:    ja .LBB5_1
 ; CHECK-NEXT:  # %bb.3: # %while.end
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: BinarySearch:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl (%rsi), %eax
@@ -635,6 +641,7 @@ define void @Transform(i32 *%arr, i32 *%arr2, i32 %a, i32 %b, i32 %c, i32 %n) #0
 ; CHECK-NEXT:    ja .LBB6_2
 ; CHECK-NEXT:  .LBB6_5: # %while.end
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: Transform:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movb $1, %al
@@ -703,6 +710,7 @@ define i32 @test_cmov_memoperand(i32 %a, i32 %b, i32 %x, i32* %y) #0 {
 ; CHECK-NEXT:    movl (%rcx), %eax
 ; CHECK-NEXT:  .LBB7_2: # %entry
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edx, %eax
@@ -730,6 +738,7 @@ define i32 @test_cmov_memoperand_unpredictable(i32 %a, i32 %b, i32 %x, i32* %y) 
 ; CHECK-NEXT:    movl (%rcx), %eax
 ; CHECK-NEXT:  .LBB8_2: # %entry
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_unpredictable:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edx, %eax
@@ -763,6 +772,7 @@ define i32 @test_cmov_memoperand_in_group(i32 %a, i32 %b, i32 %x, i32* %y.ptr) #
 ; CHECK-NEXT:    addl %r8d, %eax
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_in_group:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edx, %eax
@@ -804,6 +814,7 @@ define i32 @test_cmov_memoperand_in_group2(i32 %a, i32 %b, i32 %x, i32* %y.ptr) 
 ; CHECK-NEXT:    addl %r8d, %eax
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_in_group2:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edx, %eax
@@ -840,6 +851,7 @@ define i32 @test_cmov_memoperand_conflicting_dir(i32 %a, i32 %b, i32 %x, i32* %y
 ; CHECK-NEXT:    cmoval (%r8), %edx
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_conflicting_dir:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    cmpl %esi, %edi
@@ -871,6 +883,7 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr(i32 %a, i32 %b, i32* %x
 ; CHECK-NEXT:    movl (%rcx), %eax
 ; CHECK-NEXT:  .LBB12_2: # %entry
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_in_group_reuse_for_addr:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edi, %eax
@@ -901,6 +914,7 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr2(i32 %a, i32 %b, i32* %
 ; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:  .LBB13_2: # %entry
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_in_group_reuse_for_addr2:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edi, %eax
@@ -933,6 +947,7 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr3(i32 %a, i32 %b, i32* %
 ; CHECK-NEXT:    movl (%rcx), %eax
 ; CHECK-NEXT:  .LBB14_2: # %entry
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_in_group_reuse_for_addr3:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edi, %eax
@@ -988,6 +1003,7 @@ define void @test_memoperand_loop(i32 %data) #0 {
 ; CHECK-NEXT:    jl .LBB15_1
 ; CHECK-NEXT:  # %bb.6: # %exit
 ; CHECK-NEXT:    retq
+;
 ; CHECK-FORCEALL-LABEL: test_memoperand_loop:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movq begin@GOTPCREL(%rip), %r8

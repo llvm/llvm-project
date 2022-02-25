@@ -1,4 +1,4 @@
-// RUN: clang-tidy -checks=-*,modernize-redundant-void-arg %s -- -x c | count 0
+// RUN: clang-tidy -checks=-*,modernize-redundant-void-arg %s -- -Wno-strict-prototypes -x c | count 0
 
 #define NULL 0
 
@@ -38,7 +38,7 @@ void (*(*returns_fn_returns_fn_void_void(void))(void))(void) {
   return NULL;
 }
 
-void bar() {
+void bar(void) {
   int i;
   int *pi = NULL;
   void *pv = (void *) pi;

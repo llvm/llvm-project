@@ -64,13 +64,13 @@ int flp37_c_compliant(const struct S2 *s1, const struct S2 *s2) {
   // no-warning
 }
 
-void Test_Float() {
+void Test_Float(void) {
   float a, b;
   memcmp(&a, &b, sizeof(float));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'float' which does not have a unique object representation; consider comparing the values manually
 }
 
-void TestArray_Float() {
+void TestArray_Float(void) {
   float a[3], b[3];
   memcmp(a, b, sizeof(a));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'float' which does not have a unique object representation; consider comparing the values manually
@@ -88,12 +88,12 @@ struct NoPadding {
   int y;
 };
 
-void Test_NoPadding() {
+void Test_NoPadding(void) {
   struct NoPadding a, b;
   memcmp(&a, &b, sizeof(struct NoPadding));
 }
 
-void TestArray_NoPadding() {
+void TestArray_NoPadding(void) {
   struct NoPadding a[3], b[3];
   memcmp(a, b, 3 * sizeof(struct NoPadding));
 }
@@ -103,7 +103,7 @@ struct TrailingPadding {
   char c;
 };
 
-void Test_TrailingPadding() {
+void Test_TrailingPadding(void) {
   struct TrailingPadding a, b;
   memcmp(&a, &b, sizeof(struct TrailingPadding));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct TrailingPadding' which does not have a unique object representation; consider comparing the members of the object manually
@@ -117,7 +117,7 @@ struct TrailingPadding2 {
   char c;
 };
 
-void Test_TrailingPadding2() {
+void Test_TrailingPadding2(void) {
   struct TrailingPadding2 a, b;
   memcmp(&a, &b, 2 * sizeof(int)); // no-warning: not comparing entire object
   memcmp(&a, &b, sizeof(struct TrailingPadding2));
@@ -129,13 +129,13 @@ void Test_UnknownCount(size_t count) {
   memcmp(&a, &b, count); // no-warning: unknown count value
 }
 
-void Test_ExplicitVoidCast() {
+void Test_ExplicitVoidCast(void) {
   struct TrailingPadding a, b;
   memcmp((void *)&a, (void *)&b,
          sizeof(struct TrailingPadding)); // no-warning: explicit cast
 }
 
-void TestArray_TrailingPadding() {
+void TestArray_TrailingPadding(void) {
   struct TrailingPadding a[3], b[3];
   memcmp(a, b, 3 * sizeof(struct TrailingPadding));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct TrailingPadding' which does not have a unique object representation; consider comparing the members of the object manually
@@ -146,7 +146,7 @@ struct InnerPadding {
   int i;
 };
 
-void Test_InnerPadding() {
+void Test_InnerPadding(void) {
   struct InnerPadding a, b;
   memcmp(&a, &b, sizeof(struct InnerPadding));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct InnerPadding' which does not have a unique object representation; consider comparing the members of the object manually
@@ -157,7 +157,7 @@ struct Bitfield_TrailingPaddingBytes {
   int y : 6;
 };
 
-void Test_Bitfield_TrailingPaddingBytes() {
+void Test_Bitfield_TrailingPaddingBytes(void) {
   struct Bitfield_TrailingPaddingBytes a, b;
   memcmp(&a, &b, sizeof(struct S));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct Bitfield_TrailingPaddingBytes' which does not have a unique object representation; consider comparing the members of the object manually
@@ -168,7 +168,7 @@ struct Bitfield_TrailingPaddingBits {
   int y : 20;
 };
 
-void Test_Bitfield_TrailingPaddingBits() {
+void Test_Bitfield_TrailingPaddingBits(void) {
   struct Bitfield_TrailingPaddingBits a, b;
   memcmp(&a, &b, sizeof(struct Bitfield_TrailingPaddingBits));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct Bitfield_TrailingPaddingBits' which does not have a unique object representation; consider comparing the members of the object manually
@@ -180,7 +180,7 @@ struct Bitfield_InnerPaddingBits {
   char y : 8;
 };
 
-void Test_Bitfield_InnerPaddingBits() {
+void Test_Bitfield_InnerPaddingBits(void) {
   struct Bitfield_InnerPaddingBits a, b;
   memcmp(&a, &b, sizeof(struct Bitfield_InnerPaddingBits));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct Bitfield_InnerPaddingBits' which does not have a unique object representation; consider comparing the members of the object manually
@@ -195,7 +195,7 @@ struct Bitfield_NoPadding {
 _Static_assert(sizeof(struct Bitfield_NoPadding) == sizeof(int),
                "Bit-fields should line up perfectly");
 
-void Test_Bitfield_NoPadding() {
+void Test_Bitfield_NoPadding(void) {
   struct Bitfield_NoPadding a, b;
   memcmp(&a, &b, sizeof(struct Bitfield_NoPadding)); // no-warning
 }
@@ -205,7 +205,7 @@ struct Bitfield_TrailingUnnamed {
   int : 0;
 };
 
-void Bitfield_TrailingUnnamed() {
+void Bitfield_TrailingUnnamed(void) {
   struct Bitfield_TrailingUnnamed a, b;
   memcmp(&a, &b, 2 * sizeof(int));                         // no-warning
   memcmp(&a, &b, sizeof(struct Bitfield_TrailingUnnamed)); // no-warning
@@ -220,7 +220,7 @@ struct PaddingAfterUnion {
   int y;
 };
 
-void Test_PaddingAfterUnion() {
+void Test_PaddingAfterUnion(void) {
   struct PaddingAfterUnion a, b;
   memcmp(&a, &b, sizeof(struct PaddingAfterUnion));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct PaddingAfterUnion' which does not have a unique object representation; consider comparing the members of the object manually
@@ -235,7 +235,7 @@ struct Union_NoPadding {
   int y;
 };
 
-void Test_Union_NoPadding() {
+void Test_Union_NoPadding(void) {
   struct Union_NoPadding a, b;
   memcmp(&a, &b, 2 * sizeof(int));
   memcmp(&a, &b, sizeof(struct Union_NoPadding));
@@ -250,7 +250,7 @@ union UnionWithPaddingInNestedStruct {
   } x;
 };
 
-void Test_UnionWithPaddingInNestedStruct() {
+void Test_UnionWithPaddingInNestedStruct(void) {
   union UnionWithPaddingInNestedStruct a, b;
   memcmp(&a, &b, sizeof(union UnionWithPaddingInNestedStruct));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'union UnionWithPaddingInNestedStruct' which does not have a unique object representation; consider comparing the members of the object manually
@@ -261,7 +261,7 @@ struct PaddingInNested {
   char y;
 };
 
-void Test_PaddingInNested() {
+void Test_PaddingInNested(void) {
   struct PaddingInNested a, b;
   memcmp(&a, &b, sizeof(struct PaddingInNested));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct PaddingInNested' which does not have a unique object representation; consider comparing the members of the object manually
@@ -275,7 +275,7 @@ struct PaddingAfterNested {
   int y;
 };
 
-void Test_PaddingAfterNested() {
+void Test_PaddingAfterNested(void) {
   struct PaddingAfterNested a, b;
   memcmp(&a, &b, sizeof(struct PaddingAfterNested));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct PaddingAfterNested' which does not have a unique object representation; consider comparing the members of the object manually
@@ -285,7 +285,7 @@ struct AtomicMember {
   _Atomic(int) x;
 };
 
-void Test_AtomicMember() {
+void Test_AtomicMember(void) {
   // FIXME: this is a false positive as the list of objects with unique object
   // representations is incomplete.
   struct AtomicMember a, b;
