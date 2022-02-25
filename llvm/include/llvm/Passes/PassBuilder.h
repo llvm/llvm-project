@@ -477,6 +477,24 @@ public:
     OptimizerLastEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the start of the full
+  /// LTO pipeline.
+  void registerFullLinkTimeOptimizationEarlyEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    FullLinkTimeOptimizationEarlyEPCallbacks.push_back(C);
+  }
+
+  /// Register a callback for a default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the end of the full
+  /// LTO pipeline.
+  void registerFullLinkTimeOptimizationLastEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    FullLinkTimeOptimizationLastEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -600,6 +618,10 @@ private:
       VectorizerStartEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       OptimizerLastEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      FullLinkTimeOptimizationEarlyEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      FullLinkTimeOptimizationLastEPCallbacks;
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
