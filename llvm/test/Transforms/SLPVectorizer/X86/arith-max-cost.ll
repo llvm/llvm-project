@@ -6,13 +6,11 @@
 ; This maps to a single PMAX instruction in x86.
 define void @smax_intrinsic_cost(i64 %arg0, i64 %arg1) {
 ; CHECK-LABEL: @smax_intrinsic_cost(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[ARG0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[ARG1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i64> [[TMP2]], <i64 123, i64 456>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP3]], <2 x i64> [[TMP2]], <2 x i64> <i64 123, i64 456>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; CHECK-NEXT:    [[ROOT:%.*]] = icmp sle i64 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[ICMP0:%.*]] = icmp sgt i64 [[ARG0:%.*]], 123
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i64 [[ARG1:%.*]], 456
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[ICMP0]], i64 [[ARG0]], i64 123
+; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 [[ICMP1]], i64 [[ARG1]], i64 456
+; CHECK-NEXT:    [[ROOT:%.*]] = icmp sle i64 [[SELECT0]], [[SELECT1]]
 ; CHECK-NEXT:    ret void
 ;
   %icmp0 = icmp sgt i64 %arg0, 123
