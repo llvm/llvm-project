@@ -78,6 +78,10 @@ struct TestLinalgTransforms
       *this, "test-tile-and-distribute-options",
       llvm::cl::desc("Test tile and distribute options"),
       llvm::cl::init(false)};
+  Option<bool> testTileFuseAndDistributionOptions{
+      *this, "test-tile-fuse-and-distribute-options",
+      llvm::cl::desc("Test tile, fuse and distribute options"),
+      llvm::cl::init(false)};
   Option<bool> testVectorTransferForwardingPatterns{
       *this, "test-vector-transfer-forwarding-patterns",
       llvm::cl::desc(
@@ -505,6 +509,21 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
   }
 }
 
+static void fillTileFuseAndDistributePatterns(MLIRContext *context,
+                                              RewritePatternSet &patterns) {
+  LinalgLoopDistributionOptions cyclicNprocsEqNiters;
+  cyclicNprocsEqNiters.distributionMethod.resize(2, DistributionMethod::Cyclic);
+  cyclicNprocsEqNiters.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+  patterns.add<LinalgTileAndFuseTensorOpsPattern>(
+      MatmulOp::getOperationName(), context,
+      LinalgTilingAndFusionOptions()
+          .setTileSizes({8, 8, 4})
+          .setDistributionOptions(cyclicNprocsEqNiters),
+      LinalgTransformationFilter(
+          StringAttr::get(context, "tensors_fuse_distribute1"),
+          StringAttr::get(context, "tensors_after_fuse_distribute1")));
+}
+
 static void
 applyMatmulToVectorPatterns(FuncOp funcOp,
                             bool testMatmulToVectorPatterns1dTiling,
@@ -695,6 +714,12 @@ void TestLinalgTransforms::runOnOperation() {
   if (testTileAndDistributionOptions) {
     RewritePatternSet patterns(&getContext());
     fillTileAndDistributePatterns(&getContext(), patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    return;
+  }
+  if (testTileFuseAndDistributionOptions) {
+    RewritePatternSet patterns(&getContext());
+    fillTileFuseAndDistributePatterns(&getContext(), patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     return;
   }
