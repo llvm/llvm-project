@@ -334,6 +334,6 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 TargetTransformInfo
-SystemZTargetMachine::getTargetTransformInfo(const Function &F) {
+SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(SystemZTTIImpl(this, F));
 }

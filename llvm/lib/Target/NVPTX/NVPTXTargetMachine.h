@@ -65,7 +65,7 @@ public:
   void adjustPassManager(PassManagerBuilder &) override;
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   bool isMachineVerifierClean() const override {
     return false;
