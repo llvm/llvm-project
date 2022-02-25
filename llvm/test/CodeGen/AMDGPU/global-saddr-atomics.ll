@@ -177,7 +177,7 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_2048(i8 addrspace(1)* inreg %s
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:-2048 glc
+; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:2048 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
