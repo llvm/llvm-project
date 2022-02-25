@@ -4,7 +4,7 @@ void *memset(void *, int, __SIZE_TYPE__);
 void *memset(void *);
 // CHECK-MESSAGES: :[[@LINE-1]]:7: error: conflicting types for 'memset'
 
-void test() {
+void test(void) {
   // no crash
   memset(undefine);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: error: use of undeclared identifier

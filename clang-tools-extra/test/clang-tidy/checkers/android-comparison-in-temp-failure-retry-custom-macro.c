@@ -18,10 +18,10 @@
     __z;                               \
   })
 
-int foo();
+int foo(void);
 int bar(int a);
 
-void with_custom_macro() {
+void with_custom_macro(void) {
   MY_TEMP_FAILURE_RETRY(foo());
   MY_TEMP_FAILURE_RETRY(foo() == 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: top-level comparison in MY_TEMP_FAILURE_RETRY
@@ -33,7 +33,7 @@ void with_custom_macro() {
   // CHECK-MESSAGES: :[[@LINE-1]]:49: warning: top-level comparison in MY_TEMP_FAILURE_RETRY
 }
 
-void with_other_custom_macro() {
+void with_other_custom_macro(void) {
   MY_OTHER_TEMP_FAILURE_RETRY(foo());
   MY_OTHER_TEMP_FAILURE_RETRY(foo() == 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: top-level comparison in MY_OTHER_TEMP_FAILURE_RETRY

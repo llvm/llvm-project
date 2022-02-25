@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-isolate-declaration %t
 
-void c_specific() {
+void c_specific(void) {
   void (*signal(int sig, void (*func)(int)))(int);
   int i = sizeof(struct S { int i; });
   int j = sizeof(struct T { int i; }), k;

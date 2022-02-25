@@ -4,7 +4,7 @@ void srand(int seed);
 typedef int time_t;
 time_t time(time_t *t);
 
-void f() {
+void f(void) {
   srand(1);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: random number generator seeded with a constant value will generate a predictable sequence of values [cert-msc32-c]
 
@@ -17,7 +17,7 @@ void f() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: random number generator seeded with a disallowed source of seed value will generate a predictable sequence of values [cert-msc32-c]
 }
 
-void g() {
+void g(void) {
   typedef int user_t;
   user_t a = 1;
   srand(a);
