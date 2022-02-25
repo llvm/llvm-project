@@ -133,17 +133,26 @@ class TensorUse(TensorExpression):
             f"[{', '.join([repr(i) for i in self.indices])}]")
 
 
-class TensorArithFn(TensorExpression):
-  """Application of an arithmetic function."""
+class TensorFn(TensorExpression):
+  """Application of a tensor function."""
 
-  def __init__(self, arith_fn: "ArithFnType", args: Sequence[TensorExpression]):
-    self.arith_fn = arith_fn
-    self.args = tuple(args)
+  def __init__(self, kind: "FunctionKind", name: Optional[str],
+               operand_def: Optional["OperandDef"], type_var: Optional[TypeVar],
+               args: Sequence[TensorExpression]):
+    if bool(name) + bool(operand_def) != 1:
+      raise ValueError("One of 'name', 'operand_def' must be specified")
+    self.name = name
+    self.kind = kind
+    self.operand_def = operand_def
+    self.type_var = type_var
+    self.args = args
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarArithFn(self.arith_fn.fn_name,
-                         *[arg.to_scalar_expression() for arg in self.args
-                          ]).expr()
+    if self.operand_def:
+      assert self.operand_def.name, "TensorFn not registered with an op"
+    attr_name = self.operand_def.name if self.operand_def else None
+    args = [arg.to_scalar_expression() for arg in self.args]
+    return ScalarFn(self.kind, self.name, attr_name, self.type_var, args).expr()
 
   def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
     super().visit_tensor_exprs(callback)
@@ -151,37 +160,9 @@ class TensorArithFn(TensorExpression):
       arg.visit_tensor_exprs(callback)
 
   def __repr__(self):
-    return f"{repr(self.arith_fn)}({', '.join(repr(a) for a in self.args)})"
-
-
-class TensorTypeFn(TensorExpression):
-  """Application of a type conversion function."""
-
-  def __init__(self, type_fn: Optional["TypeFn"],
-               operand_def: Optional["OperandDef"], type_var: TypeVar,
-               arg: TensorExpression):
-    if bool(type_fn) + bool(operand_def) != 1:
-      raise ValueError("Either 'type_fn' or 'operand_def' must be specified")
-    self.type_fn = type_fn
-    self.operand_def = operand_def
-    self.type_var = type_var
-    self.arg = arg
-
-  def to_scalar_expression(self) -> ScalarExpression:
-    if self.operand_def:
-      assert self.operand_def.name, "TypeFnAttr not registered with an op"
-    fn_name = self.type_fn.fn_name if self.type_fn else None
-    attr_name = self.operand_def.name if self.operand_def else None
-    return ScalarTypeFn(fn_name, attr_name, self.type_var,
-                        self.arg.to_scalar_expression()).expr()
-
-  def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
-    super().visit_tensor_exprs(callback)
-    self.arg.visit_tensor_exprs(callback)
-
-  def __repr__(self):
-    return (f"{repr(self.type_fn)}[{repr(self.operand_def)}]"
-            f"({self.type_var}, {self.arg})")
+    name = self.operand_def.name if self.operand_def else self.name
+    return (f"{self.kind.name}.{name}(type_var={self.type_var}, "
+            f"args={', '.join(repr(a) for a in self.args)})")
 
 
 class TensorReduceFn(TensorExpression):
@@ -194,7 +175,7 @@ class TensorReduceFn(TensorExpression):
                args: Sequence[TensorExpression]):
     self.reduce_use = reduce_use
     self.lhs = None  # type: Optional[TensorUse]
-    self.args = tuple(args)
+    self.args = args
 
   def to_scalar_expression(self) -> ScalarExpression:
     if self.lhs is None:
@@ -202,7 +183,8 @@ class TensorReduceFn(TensorExpression):
                        f"bound to its lhs: {self}")
     full_args = [self.lhs.to_scalar_expression()
                 ] + [arg.to_scalar_expression() for arg in self.args]
-    return ScalarArithFn(self.reduce_use.arith_fn.fn_name, *full_args).expr()
+    return ScalarFn(FunctionKind.ARITH, self.reduce_use.arith_fn.fn_name, None,
+                    None, full_args).expr()
 
   def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
     for arg in self.args:
@@ -259,6 +241,11 @@ class index(TensorExpression):
 ###############################################################################
 
 
+class FunctionKind(Enum):
+  ARITH = 0
+  TYPE = 1
+
+
 class TypeFnType:
   """Type conversion function.
 
@@ -269,8 +256,8 @@ class TypeFnType:
   def __init__(self, fn_name: str):
     self.fn_name = fn_name
 
-  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> "TypeFnType":
-    return TensorTypeFn(self, None, type_var, arg)
+  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.TYPE, self.fn_name, None, type_var, [arg])
 
   def __repr__(self):
     return f"{self.fn_name}"
@@ -301,8 +288,8 @@ class ArithFnType:
   def __init__(self, fn_name: str):
     self.fn_name = fn_name
 
-  def __call__(self, *args) -> "TensorArithFn":
-    return TensorArithFn(self, args)
+  def __call__(self, *args) -> "TensorFn":
+    return TensorFn(FunctionKind.ARITH, self.fn_name, None, None, args)
 
   def __repr__(self):
     return f"{self.fn_name}"
@@ -562,8 +549,8 @@ class TypeFnAttrDef:
     self.operand_def = OperandDef(
         OperandKind.TYPE_FN_ATTR, default_fn=default.fn_name)
 
-  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> TensorTypeFn:
-    return TensorTypeFn(None, self.operand_def, type_var, arg)
+  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> TensorFn:
+    return TensorFn(FunctionKind.TYPE, None, self.operand_def, type_var, [arg])
 
 
 ###############################################################################

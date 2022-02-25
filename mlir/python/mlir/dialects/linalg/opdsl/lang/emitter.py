@@ -270,19 +270,19 @@ class _BodyBuilder:
       dim_attr = IntegerAttr.get(
           IntegerType.get_signless(64), expr.scalar_index.dim)
       return linalg.IndexOp(dim_attr).result
-    elif expr.arith_fn:
-      fn = self._get_function(f"_arithfn_{expr.arith_fn.fn_name}")
+    elif expr.scalar_fn and expr.scalar_fn.kind == FunctionKind.ARITH:
+      fn = self._get_function(f"_arithfn_{expr.scalar_fn.fn_name}")
       operand_values = [
-          self.expression(operand) for operand in expr.arith_fn.operands
+          self.expression(operand) for operand in expr.scalar_fn.operands
       ]
       return fn(*operand_values)
-    elif expr.type_fn:
-      fn_name = expr.type_fn.fn_name
-      if expr.type_fn.attr_name:
-        fn_name = self.type_fn_attr_mapping[expr.type_fn.attr_name]
+    elif expr.scalar_fn and expr.scalar_fn.kind == FunctionKind.TYPE:
+      fn_name = expr.scalar_fn.fn_name
+      if expr.scalar_fn.attr_name:
+        fn_name = self.type_fn_attr_mapping[expr.scalar_fn.attr_name]
       fn = self._get_function(f"_typefn_{fn_name}")
-      operand = self.expression(expr.type_fn.operand)
-      return fn(expr.type_fn.type_var.name, operand)
+      operand_value = self.expression(expr.scalar_fn.operands[0])
+      return fn(expr.scalar_fn.type_var.name, operand_value)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
 
   def yield_outputs(self, *output_names: str):
