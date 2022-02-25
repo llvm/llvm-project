@@ -15,9 +15,9 @@ int s0(int a, int b) {
 // CHECK: #[[loc3:loc[0-9]+]] = loc(fused["{{.*}}sourcelocation.cpp":4:15, "{{.*}}sourcelocation.cpp":4:19])
 // CHECK: module  {
 // CHECK:   func @s0(%arg0: i32 loc(fused["{{.*}}sourcelocation.cpp":4:8, "{{.*}}sourcelocation.cpp":4:12]), %arg1: i32 loc(fused["{{.*}}sourcelocation.cpp":4:15, "{{.*}}sourcelocation.cpp":4:19])) -> i32 {
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, [cinit] {alignment = 4 : i64} loc(#[[loc4:loc[0-9]+]])
-// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, [paraminit] {alignment = 4 : i64} loc(#[[loc3]])
-// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, [paraminit] {alignment = 4 : i64} loc(#[[loc2]])
+// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64} loc(#[[loc4:loc[0-9]+]])
+// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", paraminit] {alignment = 4 : i64} loc(#[[loc3]])
+// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64} loc(#[[loc2]])
 // CHECK:     cir.store %arg0, %2 : i32, cir.ptr <i32> loc(#[[loc5:loc[0-9]+]])
 // CHECK:     cir.store %arg1, %1 : i32, cir.ptr <i32> loc(#[[loc5]])
 // CHECK:     %3 = cir.load %2 lvalue_to_rvalue : cir.ptr <i32>, i32 loc(#[[loc6:loc[0-9]+]])

@@ -120,6 +120,7 @@ mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType T,
 
   auto localVarAddr = builder.create<mlir::cir::AllocaOp>(
       loc, /*addr type*/ localVarPtrTy, /*var type*/ localVarTy,
+      namedVar->getName(),
       IsParam ? InitStyle::paraminit : InitStyle::uninitialized, alignIntAttr);
 
   auto *parentBlock = localVarAddr->getBlock();

@@ -154,12 +154,14 @@ def AllocaOp : CIR_Op<"alloca", [
 
     ```mlir
     // Local variable with uninitialized value.
-    %0 = cir.alloca i32, !cir.ptr<i32>, [cinit]
+    // int count = ...
+    %0 = cir.alloca i32, !cir.ptr<i32>, ["count", cinit]
     ```
   }];
 
   let arguments = (ins
     TypeAttr:$allocaType,
+    StrAttr:$name,
     // FIXME: add "uninitialzed" as default mode
     Arg<InitStyle, "initialization style">:$init,
     ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment
@@ -168,8 +170,13 @@ def AllocaOp : CIR_Op<"alloca", [
   let results = (outs Res<CIR_PointerType, "",
                       [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
 
+  let extraClassDeclaration = [{
+    // Whether the alloca input type is a pointer.
+    bool isPointerType() { return getAllocaType().isa<::mlir::cir::PointerType>(); }
+  }];
+
   let assemblyFormat = [{
-    $allocaType `,` `cir.ptr` type($addr) `,` `[` $init `]`  attr-dict
+    $allocaType `,` `cir.ptr` type($addr) `,` `[` $name `,` $init `]` attr-dict
   }];
 
   let hasVerifier = 0;

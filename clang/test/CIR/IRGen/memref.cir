@@ -4,7 +4,7 @@
 
 module {
   func.func @foo() -> i32 {
-    %0 = cir.alloca i32, cir.ptr <i32>, [cinit] {alignment = 4 : i64}
+    %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
     %1 = cir.cst(1 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
     %2 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
