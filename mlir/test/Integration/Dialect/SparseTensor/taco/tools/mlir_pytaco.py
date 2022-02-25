@@ -477,7 +477,7 @@ class _StructOpInfo:
 
   def emit_tensor_init(self) -> ir.RankedTensorType:
     """Returns an initialization for the destination tensor."""
-    if self.dst_format is None:
+    if self.dst_format is None or self.dst_format.rank() == 0:
       # Initialize the dense tensor.
       ir_type = _mlir_type_from_taco_type(self.dst_dtype)
       tensor = linalg.InitTensorOp(self.dst_dims, ir_type).result
@@ -1023,11 +1023,26 @@ class Tensor:
 
     return ctypes.pointer(ctypes.cast(ptr, ctypes.c_void_p))
 
+  def get_scalar_value(self) -> _AnyRuntimeType:
+    """Returns the value for the scalar tensor.
+
+    This method also evaluates the assignment to the tensor.
+
+    Raises:
+      ValueError: If the tensor is not a scalar.
+    """
+    if self.order != 0:
+      raise ValueError(f"Expected a scalar tensor, got: rank={self.order}")
+
+    self._sync_value()
+    return self._dense_storage
+
+
   def get_coordinates_and_values(
       self) -> Tuple[List[Tuple[int, ...]], List[_AnyRuntimeType]]:
     """Returns the coordinates and values for the non-zero elements.
 
-    This method also evaluate the assignment to the tensor and unpack the
+    This method also evaluates the assignment to the tensor and unpack the
     sparse tensor.
     """
     self._sync_value()
@@ -1035,6 +1050,9 @@ class Tensor:
     if not self.is_dense():
       self.unpack()
       return (self._coords, self._values)
+
+    if self.order == 0:
+      return ([], self._dense_storage)
 
     # Coordinates for non-zero elements, grouped by dimensions.
     coords_by_dims = self._dense_storage.nonzero()
