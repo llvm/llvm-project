@@ -269,9 +269,10 @@ bool TileLoopNest::hasOtherUses(BlockArgument bbArg,
   });
 }
 
-LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
-                                       ArrayRef<int64_t> tileSizes,
-                                       ArrayRef<int64_t> tileInterchange) {
+LogicalResult TileLoopNest::tileRootOp(
+    OpBuilder &b, ArrayRef<int64_t> tileSizes,
+    ArrayRef<int64_t> tileInterchange,
+    Optional<LinalgLoopDistributionOptions> tileDistribution) {
   // Exit if all tile sizes are zero.
   if (tileSizes.size() == static_cast<size_t>(count(tileSizes, 0)))
     return success();
@@ -283,6 +284,9 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
                           tileInterchange.begin(), tileInterchange.end()))
                       .setTileSizes(tileSizes)
                       .setLoopType(LinalgTilingLoopType::Loops);
+  if (tileDistribution)
+    tilingOptions =
+        tilingOptions.setDistributionOptions(tileDistribution.getValue());
 
   // TODO: Propagate RewriterBase everywhere.
   IRRewriter rewriter(b);
@@ -408,10 +412,10 @@ SmallVector<LinalgOp> TileLoopNest::getAllTiledAndFusedOps() {
 // Tile and fuse entry-points.
 //===----------------------------------------------------------------------===//
 
-FailureOr<TileLoopNest>
-mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
-                                           ArrayRef<int64_t> tileSizes,
-                                           ArrayRef<int64_t> tileInterchange) {
+FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
+    OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
+    ArrayRef<int64_t> tileInterchange,
+    Optional<LinalgLoopDistributionOptions> tileDistribution) {
   assert(tileSizes.size() == tileInterchange.size() &&
          "expect the number of tile sizes and interchange dims to match");
   assert(isPermutation(tileInterchange) &&
@@ -446,7 +450,8 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
   SmallVector<int64_t> outerTileSizes;
   outerTileSizes.append(tileSizes.begin(), tileSizes.begin() + split);
   outerTileSizes.append(tileSizes.size() - split, 0);
-  if (failed(tileLoopNest.tileRootOp(b, outerTileSizes, tileInterchange)))
+  if (failed(tileLoopNest.tileRootOp(b, outerTileSizes, tileInterchange,
+                                     tileDistribution)))
     return failure();
   fuseProducersGreedily(tileLoopNest.getRootOp().getOutputOperands());
 
@@ -454,7 +459,8 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
   SmallVector<int64_t> innerTileSizes;
   innerTileSizes.append(split, 0);
   innerTileSizes.append(tileSizes.begin() + split, tileSizes.end());
-  if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange)))
+  if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange,
+                                     tileDistribution)))
     return failure();
   fuseProducersGreedily(tileLoopNest.getRootOp().getInputOperands());
 
