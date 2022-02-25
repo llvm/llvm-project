@@ -25,22 +25,22 @@ psel p0, p0, p0.b[w16]
 // --------------------------------------------------------------------------//
 // Invalid immediates
 
-psel p0, p0, p0.b[w12, #16]
+psel p0, p0, p0.b[w12, 16]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 15].
-// CHECK-NEXT: psel p0, p0, p0.b[w12, #16]
+// CHECK-NEXT: psel p0, p0, p0.b[w12, 16]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-psel p0, p0, p0.h[w12, #8]
+psel p0, p0, p0.h[w12, 8]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
-// CHECK-NEXT: psel p0, p0, p0.h[w12, #8]
+// CHECK-NEXT: psel p0, p0, p0.h[w12, 8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-psel p0, p0, p0.s[w12, #4]
+psel p0, p0, p0.s[w12, 4]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 3].
-// CHECK-NEXT: psel p0, p0, p0.s[w12, #4]
+// CHECK-NEXT: psel p0, p0, p0.s[w12, 4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-psel p0, p0, p0.d[w12, #2]
+psel p0, p0, p0.d[w12, 2]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 1].
-// CHECK-NEXT: psel  p0, p0, p0.d[w12, #2]
+// CHECK-NEXT: psel  p0, p0, p0.d[w12, 2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
