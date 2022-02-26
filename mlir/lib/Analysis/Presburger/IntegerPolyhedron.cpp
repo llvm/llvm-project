@@ -49,9 +49,7 @@ void IntegerPolyhedron::reset(unsigned newNumDims, unsigned newNumSymbols,
 }
 
 void IntegerPolyhedron::append(const IntegerPolyhedron &other) {
-  assert(other.getNumCols() == getNumCols());
-  assert(other.getNumDimIds() == getNumDimIds());
-  assert(other.getNumSymbolIds() == getNumSymbolIds());
+  assert(PresburgerLocalSpace::isEqual(other) && "Spaces must be equal.");
 
   inequalities.reserveRows(inequalities.getNumRows() +
                            other.getNumInequalities());
@@ -113,18 +111,6 @@ IntegerPolyhedron::findIntegerLexMin() const {
   return maybeLexMin;
 }
 
-unsigned IntegerPolyhedron::insertDimId(unsigned pos, unsigned num) {
-  return insertId(IdKind::SetDim, pos, num);
-}
-
-unsigned IntegerPolyhedron::insertSymbolId(unsigned pos, unsigned num) {
-  return insertId(IdKind::Symbol, pos, num);
-}
-
-unsigned IntegerPolyhedron::insertLocalId(unsigned pos, unsigned num) {
-  return insertId(IdKind::Local, pos, num);
-}
-
 unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
@@ -134,22 +120,9 @@ unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   return insertPos;
 }
 
-unsigned IntegerPolyhedron::appendDimId(unsigned num) {
-  unsigned pos = getNumDimIds();
-  insertId(IdKind::SetDim, pos, num);
-  return pos;
-}
-
-unsigned IntegerPolyhedron::appendSymbolId(unsigned num) {
-  unsigned pos = getNumSymbolIds();
-  insertId(IdKind::Symbol, pos, num);
-  return pos;
-}
-
-unsigned IntegerPolyhedron::appendLocalId(unsigned num) {
-  unsigned pos = getNumLocalIds();
-  insertId(IdKind::Local, pos, num);
-  return pos;
+unsigned IntegerPolyhedron::appendId(IdKind kind, unsigned num) {
+  unsigned pos = getNumIdKind(kind);
+  return insertId(kind, pos, num);
 }
 
 void IntegerPolyhedron::addEquality(ArrayRef<int64_t> eq) {
@@ -283,12 +256,6 @@ bool IntegerPolyhedron::hasConsistentState() const {
     return false;
   if (!equalities.hasConsistentState())
     return false;
-
-  // Catches errors where numDims, numSymbols, numIds aren't consistent.
-  if (getNumDimIds() > getNumIds() || getNumSymbolIds() > getNumIds() ||
-      getNumDimAndSymbolIds() > getNumIds())
-    return false;
-
   return true;
 }
 
@@ -1037,10 +1004,7 @@ void IntegerPolyhedron::eliminateRedundantLocalId(unsigned posA,
 /// division representation for some local id cannot be obtained, and thus these
 /// local ids are not considered for detecting duplicates.
 void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
-  assert(getNumDimIds() == other.getNumDimIds() &&
-         "Number of dimension ids should match");
-  assert(getNumSymbolIds() == other.getNumSymbolIds() &&
-         "Number of symbol ids should match");
+  assert(PresburgerSpace::isEqual(other) && "Spaces should match.");
 
   IntegerPolyhedron &polyA = *this;
   IntegerPolyhedron &polyB = other;
@@ -1049,8 +1013,8 @@ void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
   // i.e. append local ids of `polyB` to `polyA` and insert local ids of `polyA`
   // to `polyB` at start of its local ids.
   unsigned initLocals = polyA.getNumLocalIds();
-  insertLocalId(polyA.getNumLocalIds(), polyB.getNumLocalIds());
-  polyB.insertLocalId(0, initLocals);
+  insertId(IdKind::Local, polyA.getNumLocalIds(), polyB.getNumLocalIds());
+  polyB.insertId(IdKind::Local, 0, initLocals);
 
   // Get division representations from each poly.
   std::vector<SmallVector<int64_t, 8>> divsA, divsB;
@@ -1138,7 +1102,7 @@ void IntegerPolyhedron::convertDimToLocal(unsigned dimStart,
   // Append new local variables corresponding to the dimensions to be converted.
   unsigned convertCount = dimLimit - dimStart;
   unsigned newLocalIdStart = getNumIds();
-  appendLocalId(convertCount);
+  appendId(IdKind::Local, convertCount);
 
   // Swap the new local variables with dimensions.
   for (unsigned i = 0; i < convertCount; ++i)
@@ -1183,7 +1147,7 @@ void IntegerPolyhedron::addLocalFloorDiv(ArrayRef<int64_t> dividend,
   assert(dividend.size() == getNumCols() && "incorrect dividend size");
   assert(divisor > 0 && "positive divisor expected");
 
-  appendLocalId();
+  appendId(IdKind::Local);
 
   // Add two constraints for this new identifier 'q'.
   SmallVector<int64_t, 8> bound(dividend.size() + 1);
@@ -1856,8 +1820,7 @@ static void getCommonConstraints(const IntegerPolyhedron &a,
 // lower bounds and the max of the upper bounds along each of the dimensions.
 LogicalResult
 IntegerPolyhedron::unionBoundingBox(const IntegerPolyhedron &otherCst) {
-  assert(otherCst.getNumDimIds() == getNumDimIds() && "dims mismatch");
-  assert(otherCst.getNumLocalIds() == 0 && "local ids not supported here");
+  assert(PresburgerLocalSpace::isEqual(otherCst) && "Spaces should match.");
   assert(getNumLocalIds() == 0 && "local ids not supported yet here");
 
   // Get the constraints common to both systems; these will be added as is to

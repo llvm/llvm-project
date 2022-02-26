@@ -68,7 +68,7 @@ LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,
 }
 
 TargetTransformInfo
-LanaiTargetMachine::getTargetTransformInfo(const Function &F) {
+LanaiTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(LanaiTTIImpl(this, F));
 }
 

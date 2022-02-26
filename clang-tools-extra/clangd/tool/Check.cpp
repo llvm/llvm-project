@@ -26,6 +26,7 @@
 
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
+#include "CompileCommands.h"
 #include "Config.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
@@ -39,13 +40,11 @@
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {

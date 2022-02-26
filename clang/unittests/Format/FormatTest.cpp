@@ -24482,6 +24482,13 @@ TEST_F(FormatTest, InsertBraces) {
                Style);
 
   verifyFormat("if (a) {\n"
+               "  f(); // comment\n"
+               "}",
+               "if (a)\n"
+               "  f(); // comment",
+               Style);
+
+  verifyFormat("if (a) {\n"
                "  f();\n"
                "}\n"
                "#undef A\n"

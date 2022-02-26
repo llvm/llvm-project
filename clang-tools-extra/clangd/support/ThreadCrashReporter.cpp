@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "support/ThreadCrashReporter.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadLocal.h"
 #include <atomic>
 

@@ -836,13 +836,19 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
 }
 
 void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
+  Assert(GlobalIFunc::isValidLinkage(GI.getLinkage()),
+         "IFunc should have private, internal, linkonce, weak, linkonce_odr, "
+         "weak_odr, or external linkage!",
+         &GI);
   // Pierce through ConstantExprs and GlobalAliases and check that the resolver
-  // has a Function 
+  // is a Function definition.
   const Function *Resolver = GI.getResolverFunction();
   Assert(Resolver, "IFunc must have a Function resolver", &GI);
+  Assert(!Resolver->isDeclarationForLinker(),
+         "IFunc resolver must be a definition", &GI);
 
   // Check that the immediate resolver operand (prior to any bitcasts) has the
-  // correct type
+  // correct type.
   const Type *ResolverTy = GI.getResolver()->getType();
   const Type *ResolverFuncTy =
       GlobalIFunc::getResolverFunctionType(GI.getValueType());

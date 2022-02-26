@@ -3259,13 +3259,13 @@ MachOChainedFixupEntry::MachOChainedFixupEntry(Error *E,
                                                bool Parse)
     : MachOAbstractFixupEntry(E, O) {
   ErrorAsOutParameter e(E);
-  if (Parse) {
-    if (auto FixupTargetsOrErr = O->getDyldChainedFixupTargets())
-      FixupTargets = *FixupTargetsOrErr;
-    else {
-      *E = FixupTargetsOrErr.takeError();
-      return;
-    }
+  if (!Parse)
+    return;
+  if (auto FixupTargetsOrErr = O->getDyldChainedFixupTargets())
+    FixupTargets = *FixupTargetsOrErr;
+  else {
+    *E = FixupTargetsOrErr.takeError();
+    return;
   }
 }
 
@@ -4763,11 +4763,11 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   return makeArrayRef(Ptr, DyldInfo.lazy_bind_size);
 }
 
-Expected<std::vector<ChainedFixupTarget>>
-MachOObjectFile::getDyldChainedFixupTargets() const {
+Expected<Optional<MachO::dyld_chained_fixups_header>>
+MachOObjectFile::getChainedFixupsHeader() const {
   // Load the dyld chained fixups load command.
   if (!DyldChainedFixupsLoadCmd)
-    return std::vector<ChainedFixupTarget>();
+    return llvm::None;
   auto DyldChainedFixupsOrErr = getStructOrErr<MachO::linkedit_data_command>(
       *this, DyldChainedFixupsLoadCmd);
   if (!DyldChainedFixupsOrErr)
@@ -4775,11 +4775,10 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
   MachO::linkedit_data_command DyldChainedFixups = DyldChainedFixupsOrErr.get();
 
   // If the load command is present but the data offset has been zeroed out,
-  // as is the case for dylib stubs, return an empty list of targets.
+  // as is the case for dylib stubs, return None (no error).
   uint64_t CFHeaderOffset = DyldChainedFixups.dataoff;
-  std::vector<ChainedFixupTarget> Targets;
   if (CFHeaderOffset == 0)
-    return Targets;
+    return DyldChainedFixupsOrErr.takeError();
 
   // Load the dyld chained fixups header.
   const char *CFHeaderPtr = getPtr(*this, CFHeaderOffset);
@@ -4798,6 +4797,35 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
         Twine("bad chained fixups: unknown imports format: ") +
         Twine(CFHeader.imports_format));
 
+  // Validate the image format.
+  //
+  // Load the image starts.
+  uint64_t CFImageStartsOffset = (CFHeaderOffset + CFHeader.starts_offset);
+  if (CFHeader.starts_offset < sizeof(MachO::dyld_chained_fixups_header)) {
+    return malformedError(Twine("bad chained fixups: image starts offset ") +
+                          Twine(CFHeader.starts_offset) +
+                          " overlaps with chained fixups header");
+  }
+  uint32_t EndOffset = DyldChainedFixups.dataoff + DyldChainedFixups.datasize;
+  if (CFImageStartsOffset + sizeof(MachO::dyld_chained_starts_in_image) >
+      EndOffset) {
+    return malformedError(Twine("bad chained fixups: image starts end ") +
+                          Twine(CFImageStartsOffset +
+                                sizeof(MachO::dyld_chained_starts_in_image)) +
+                          " extends past end " + Twine(EndOffset));
+  }
+
+  return CFHeader;
+}
+
+Expected<std::vector<ChainedFixupTarget>>
+MachOObjectFile::getDyldChainedFixupTargets() const {
+  auto CFHeaderOrErr = getChainedFixupsHeader();
+  if (!CFHeaderOrErr)
+    return CFHeaderOrErr.takeError();
+  std::vector<ChainedFixupTarget> Targets;
+  if (!(*CFHeaderOrErr))
+    return Targets;
   return Targets;
 }
 

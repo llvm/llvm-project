@@ -47,6 +47,7 @@
 // requests will receive latest build preamble, which might possibly be stale.
 
 #include "TUScheduler.h"
+#include "CompileCommands.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
@@ -1503,7 +1504,7 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
                          const Options &Opts,
                          std::unique_ptr<ParsingCallbacks> Callbacks)
     : CDB(CDB), Opts(Opts),
-      Callbacks(Callbacks ? move(Callbacks)
+      Callbacks(Callbacks ? std::move(Callbacks)
                           : std::make_unique<ParsingCallbacks>()),
       Barrier(Opts.AsyncThreadsCount), QuickRunBarrier(Opts.AsyncThreadsCount),
       IdleASTs(

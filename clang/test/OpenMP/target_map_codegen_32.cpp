@@ -40,6 +40,7 @@
 // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
 
 // CK31B-LABEL: @.__omp_offloading_{{.*}}test_present_members{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK31B: [[SIZE00:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 4, i64 4]
 // CK31B-USE: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1020]],
 // CK31B-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1000]],
 // CK31B-USE-SAME: {{^}} i64 [[#0x1000000001003]], i64 [[#0x1000000000003]]]
@@ -73,22 +74,18 @@ struct ST {
 // j
 // CK31B-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK31B-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK31B-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
 // CK31B-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[ST]]**
 // CK31B-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
 // CK31B-DAG: store [[ST]]* [[THIS]], [[ST]]** [[CBP1]]
 // CK31B-DAG: store i32* [[J]], i32** [[CP1]]
-// CK31B-DAG: store i64 4, i64* [[S1]]
 
 // i
 // CK31B-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
 // CK31B-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-// CK31B-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
 // CK31B-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to [[ST]]**
 // CK31B-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to i32**
 // CK31B-DAG: store [[ST]]* [[THIS]], [[ST]]** [[CBP2]]
 // CK31B-DAG: store i32* [[I]], i32** [[CP2]]
-// CK31B-DAG: store i64 4, i64* [[S2]]
 
 // CK31B-USE: call void [[CALL00:@.+]]([[ST]]* [[THIS]])
 // CK31B-NOUSE: call void [[CALL00:@.+]]()

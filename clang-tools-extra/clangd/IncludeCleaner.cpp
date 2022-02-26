@@ -73,10 +73,8 @@ public:
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType *TST) {
-    if (isNew(TST)) {
-      add(TST->getTemplateName().getAsTemplateDecl()); // Primary template.
-      add(TST->getAsCXXRecordDecl());                  // Specialization
-    }
+    add(TST->getTemplateName().getAsTemplateDecl()); // Primary template.
+    add(TST->getAsCXXRecordDecl());                  // Specialization
     return true;
   }
 

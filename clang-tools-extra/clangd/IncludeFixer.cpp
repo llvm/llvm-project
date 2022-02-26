@@ -20,6 +20,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -182,6 +183,8 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
 
   case diag::err_unknown_typename:
   case diag::err_unknown_typename_suggest:
+  case diag::err_unknown_type_or_class_name_suggest:
+  case diag::err_expected_class_name:
   case diag::err_typename_nested_not_found:
   case diag::err_no_template:
   case diag::err_no_template_suggest:
