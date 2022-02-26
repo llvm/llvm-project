@@ -489,6 +489,7 @@ if (current_toolchain == default_toolchain) {
       "complex.h",
       "concepts",
       "condition_variable",
+      "coroutine",
       "csetjmp",
       "csignal",
       "cstdarg",
