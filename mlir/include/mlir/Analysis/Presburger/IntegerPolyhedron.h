@@ -212,18 +212,13 @@ public:
   /// corresponding to the added identifiers are initialized to zero. Return the
   /// absolute column position (i.e., not relative to the kind of identifier)
   /// of the first added identifier.
-  unsigned insertDimId(unsigned pos, unsigned num = 1);
-  unsigned insertSymbolId(unsigned pos, unsigned num = 1);
-  unsigned insertLocalId(unsigned pos, unsigned num = 1);
   unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
 
   /// Append `num` identifiers of the specified kind after the last identifier.
-  /// of that kind. Return the position of the first appended column. The
-  /// coefficient columns corresponding to the added identifiers are initialized
-  /// to zero.
-  unsigned appendDimId(unsigned num = 1);
-  unsigned appendSymbolId(unsigned num = 1);
-  unsigned appendLocalId(unsigned num = 1);
+  /// of that kind. Return the position of the first appended column relative to
+  /// the kind of identifier. The coefficient columns corresponding to the added
+  /// identifiers are initialized to zero.
+  unsigned appendId(IdKind kind, unsigned num = 1);
 
   /// Adds an inequality (>= 0) from the coefficients specified in `inEq`.
   void addInequality(ArrayRef<int64_t> inEq);

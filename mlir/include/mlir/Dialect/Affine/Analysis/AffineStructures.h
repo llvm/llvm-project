@@ -105,6 +105,35 @@ public:
   // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;
 
+  /// Insert `num` identifiers of the specified kind at position `pos`.
+  /// Positions are relative to the kind of identifier. The coefficient columns
+  /// corresponding to the added identifiers are initialized to zero. Return the
+  /// absolute column position (i.e., not relative to the kind of identifier)
+  /// of the first added identifier.
+  unsigned insertDimId(unsigned pos, unsigned num = 1) {
+    return insertId(IdKind::SetDim, pos, num);
+  }
+  unsigned insertSymbolId(unsigned pos, unsigned num = 1) {
+    return insertId(IdKind::Symbol, pos, num);
+  }
+  unsigned insertLocalId(unsigned pos, unsigned num = 1) {
+    return insertId(IdKind::Local, pos, num);
+  }
+
+  /// Append `num` identifiers of the specified kind after the last identifier.
+  /// of that kind. Return the position of the first appended column relative to
+  /// the kind of identifier. The coefficient columns corresponding to the added
+  /// identifiers are initialized to zero.
+  unsigned appendDimId(unsigned num = 1) {
+    return appendId(IdKind::SetDim, num);
+  }
+  unsigned appendSymbolId(unsigned num = 1) {
+    return appendId(IdKind::Symbol, num);
+  }
+  unsigned appendLocalId(unsigned num = 1) {
+    return appendId(IdKind::Local, num);
+  }
+
   /// Adds a bound for the identifier at the specified position with constraints
   /// being drawn from the specified bound map. In case of an EQ bound, the
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
@@ -156,6 +185,8 @@ public:
                         MLIRContext *context) const;
 
 protected:
+  using IdKind = presburger::IdKind;
+
   /// Given an affine map that is aligned with this constraint system:
   /// * Flatten the map.
   /// * Add newly introduced local columns at the beginning of this constraint
