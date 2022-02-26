@@ -444,6 +444,8 @@ LogicalResult coalescePair(unsigned i, unsigned j,
 
   IntegerPolyhedron &a = polyhedrons[i];
   IntegerPolyhedron &b = polyhedrons[j];
+  assert(a.getNumLocalIds() == 0 && b.getNumLocalIds() == 0 &&
+         "Locals are not yet supported!");
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
 
