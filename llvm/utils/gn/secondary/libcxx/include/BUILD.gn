@@ -565,6 +565,7 @@ if (current_toolchain == default_toolchain) {
       "ostream",
       "queue",
       "random",
+      "ranges",
       "ratio",
       "regex",
       "scoped_allocator",
