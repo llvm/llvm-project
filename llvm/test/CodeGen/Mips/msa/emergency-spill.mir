@@ -214,8 +214,8 @@ body:             |
     ST_B killed $w0, %stack.4.b.addr, 0 :: (store (s128) into %ir.b.addr)
     $w0 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load (s128) from %ir.b.addr)
     ST_B killed $w0, %stack.0.retval, 0 :: (store (s128) into %ir.retval)
-    $v0_64 = LD %stack.0.retval, 0 :: (dereferenceable load (s64) from %ir.20, align 16)
-    $v1_64 = LD %stack.0.retval, 8 :: (dereferenceable load (s64) from %ir.20 + 8, align 16)
+    $v0_64 = LD %stack.0.retval, 0 :: (dereferenceable load (s64) from %ir.20, basealign 16)
+    $v1_64 = LD %stack.0.retval, 8 :: (dereferenceable load (s64) from %ir.20 + 8, basealign 16)
     RetRA implicit $v0_64, implicit $v1_64
 
 ...

@@ -10,7 +10,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
 void testColumnEchelonForm(const Matrix &m, unsigned expectedRank) {
   unsigned lastAllowedNonZeroCol = 0;
@@ -85,4 +86,3 @@ TEST(LinearTransformTest, transformToColumnEchelonTest) {
   m6(1, 1) = -7;
   testColumnEchelonForm(m5, 2u);
 }
-} // namespace mlir

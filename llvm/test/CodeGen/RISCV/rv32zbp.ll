@@ -3370,7 +3370,6 @@ define i32 @or_shl_fshl_simplify(i32 %x, i32 %y, i32 %s) {
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    srl a0, a0, a2
 ; RV32I-NEXT:    or a0, a1, a0
-; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: or_shl_fshl_simplify:
@@ -3380,7 +3379,6 @@ define i32 @or_shl_fshl_simplify(i32 %x, i32 %y, i32 %s) {
 ; RV32ZBP-NEXT:    srli a0, a0, 1
 ; RV32ZBP-NEXT:    srl a0, a0, a2
 ; RV32ZBP-NEXT:    or a0, a1, a0
-; RV32ZBP-NEXT:    or a0, a0, a1
 ; RV32ZBP-NEXT:    ret
   %shy = shl i32 %y, %s
   %fun = call i32 @llvm.fshl.i32(i32 %y, i32 %x, i32 %s)
@@ -3396,7 +3394,6 @@ define i32 @or_lshr_fshr_simplify(i32 %x, i32 %y, i32 %s) {
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    sll a0, a0, a2
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: or_lshr_fshr_simplify:
@@ -3406,7 +3403,6 @@ define i32 @or_lshr_fshr_simplify(i32 %x, i32 %y, i32 %s) {
 ; RV32ZBP-NEXT:    slli a0, a0, 1
 ; RV32ZBP-NEXT:    sll a0, a0, a2
 ; RV32ZBP-NEXT:    or a0, a0, a1
-; RV32ZBP-NEXT:    or a0, a1, a0
 ; RV32ZBP-NEXT:    ret
   %shy = lshr i32 %y, %s
   %fun = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %s)

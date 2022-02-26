@@ -1021,40 +1021,6 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   symbols.resize(eSyms.size());
-  SymbolUnion *locals =
-      firstGlobal == 0
-          ? nullptr
-          : getSpecificAllocSingleton<SymbolUnion>().Allocate(firstGlobal);
-
-  for (size_t i = 0, end = firstGlobal; i != end; ++i) {
-    const Elf_Sym &eSym = eSyms[i];
-    uint32_t secIdx = eSym.st_shndx;
-    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
-      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
-    else if (secIdx >= SHN_LORESERVE)
-      secIdx = 0;
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
-    if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
-      error(toString(this) + ": non-local symbol (" + Twine(i) +
-            ") found at index < .symtab's sh_info (" + Twine(end) + ")");
-
-    InputSectionBase *sec = sections[secIdx];
-    uint8_t type = eSym.getType();
-    if (type == STT_FILE)
-      sourceFile = CHECK(eSym.getName(stringTable), this);
-    if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
-      fatal(toString(this) + ": invalid symbol name offset");
-    StringRef name(stringTable.data() + eSym.st_name);
-
-    symbols[i] = reinterpret_cast<Symbol *>(locals + i);
-    if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
-      new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
-                                 /*discardedSecIdx=*/secIdx);
-    else
-      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
-                               eSym.st_value, eSym.st_size, sec);
-  }
 
   // Some entries have been filled by LazyObjFile.
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
@@ -1091,6 +1057,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     uint64_t size = eSym.st_size;
 
     Symbol *sym = symbols[i];
+    sym->isUsedInRegularObj = true;
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
         fatal(toString(this) + ": common symbol '" + sym->getName() +
@@ -1113,12 +1080,9 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
       // extract. We should demote the lazy symbol to an Undefined so that any
       // relocations outside of the group to it will trigger a discarded section
       // error.
-      if (sym->symbolKind == Symbol::LazyObjectKind && !sym->file->lazy) {
+      if (sym->symbolKind == Symbol::LazyObjectKind && !sym->file->lazy)
         sym->replace(und);
-        // Prevent LTO from internalizing the symbol in case there is a
-        // reference to this symbol from this file.
-        sym->isUsedInRegularObj = true;
-      } else
+      else
         sym->resolve(und);
       continue;
     }
@@ -1145,7 +1109,47 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     Symbol *sym = symbols[i];
     sym->resolve(Undefined{this, StringRef(), eSym.getBinding(), eSym.st_other,
                            eSym.getType()});
+    sym->isUsedInRegularObj = true;
     sym->referenced = true;
+  }
+}
+
+template <class ELFT> void ObjFile<ELFT>::initializeLocalSymbols() {
+  if (!firstGlobal)
+    return;
+  localSymStorage = std::make_unique<SymbolUnion[]>(firstGlobal);
+  SymbolUnion *locals = localSymStorage.get();
+
+  ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
+  for (size_t i = 0, end = firstGlobal; i != end; ++i) {
+    const Elf_Sym &eSym = eSyms[i];
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
+    if (LLVM_UNLIKELY(secIdx >= sections.size()))
+      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
+    if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
+      error(toString(this) + ": non-local symbol (" + Twine(i) +
+            ") found at index < .symtab's sh_info (" + Twine(end) + ")");
+
+    InputSectionBase *sec = sections[secIdx];
+    uint8_t type = eSym.getType();
+    if (type == STT_FILE)
+      sourceFile = CHECK(eSym.getName(stringTable), this);
+    if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
+      fatal(toString(this) + ": invalid symbol name offset");
+    StringRef name(stringTable.data() + eSym.st_name);
+
+    symbols[i] = reinterpret_cast<Symbol *>(locals + i);
+    if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
+      new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
+                                 /*discardedSecIdx=*/secIdx);
+    else
+      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
+                               eSym.st_value, eSym.st_size, sec);
+    symbols[i]->isUsedInRegularObj = true;
   }
 }
 
@@ -1156,6 +1160,16 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     const Symbol &sym = *symbols[i];
+
+    // st_value of STT_TLS represents the assigned offset, not the actual
+    // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
+    // only be referenced by special TLS relocations. It is usually an error if
+    // a STT_TLS symbol is replaced by a non-STT_TLS symbol, vice versa.
+    if (LLVM_UNLIKELY(sym.isTls()) && eSym.getType() != STT_TLS &&
+        eSym.getType() != STT_NOTYPE)
+      errorOrWarn("TLS attribute mismatch: " + toString(sym) + "\n>>> in " +
+                  toString(sym.file) + "\n>>> in " + toString(this));
+
     // !sym.file allows a symbol assignment redefines a symbol without an error.
     if (sym.file == this || !sym.file || !sym.isDefined() ||
         eSym.st_shndx == SHN_UNDEF || eSym.st_shndx == SHN_COMMON ||

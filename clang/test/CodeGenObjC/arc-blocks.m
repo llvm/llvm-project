@@ -727,7 +727,7 @@ void test19(void (^b)(void)) {
 // CHECK-UNOPT: store i8* [[RETAINED]], i8** [[BLOCKCAPTURED]]
 // CHECK-UNOPT: call void @llvm.objc.storeStrong(i8** [[BLOCKCAPTURED]], i8* null)
 
-void test20_callee(void (^)());
+void test20_callee(void (^)(void));
 void test20(const id x) {
   test20_callee(^{ (void)x; });
 }

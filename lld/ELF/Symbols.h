@@ -13,7 +13,7 @@
 #ifndef LLD_ELF_SYMBOLS_H
 #define LLD_ELF_SYMBOLS_H
 
-#include "InputFiles.h"
+#include "Config.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseMap.h"
@@ -21,6 +21,9 @@
 #include <tuple>
 
 namespace lld {
+namespace elf {
+class Symbol;
+}
 // Returns a string representation for a symbol for diagnostics.
 std::string toString(const elf::Symbol &);
 
@@ -29,9 +32,12 @@ class CommonSymbol;
 class Defined;
 class OutputSection;
 class SectionBase;
+class InputSectionBase;
 class SharedSymbol;
 class Symbol;
 class Undefined;
+class LazyObject;
+class InputFile;
 
 // Some index properties of a symbol are stored separately in this auxiliary
 // struct to decrease sizeof(SymbolUnion) in the majority of cases.
@@ -219,10 +225,10 @@ private:
   void resolveUndefined(const Undefined &other);
   void resolveCommon(const CommonSymbol &other);
   void resolveDefined(const Defined &other);
-  template <class LazyT> void resolveLazy(const LazyT &other);
+  void resolveLazy(const LazyObject &other);
   void resolveShared(const SharedSymbol &other);
 
-  int compare(const Symbol *other) const;
+  bool compare(const Defined &other) const;
 
   inline size_t getSymbolSize() const;
 
@@ -232,12 +238,11 @@ protected:
       : file(file), nameData(name.data()), nameSize(name.size()),
         binding(binding), type(type), stOther(stOther), symbolKind(k),
         visibility(stOther & 3), isPreemptible(false),
-        isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
-        used(false), exportDynamic(false), inDynamicList(false),
-        referenced(false), traced(false), hasVersionSuffix(false),
-        isInIplt(false), gotInIgot(false), folded(false),
-        needsTocRestore(false), scriptDefined(false), needsCopy(false),
-        needsGot(false), needsPlt(false), needsTlsDesc(false),
+        isUsedInRegularObj(false), used(false), exportDynamic(false),
+        inDynamicList(false), referenced(false), traced(false),
+        hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
+        folded(false), needsTocRestore(false), scriptDefined(false),
+        needsCopy(false), needsGot(false), needsPlt(false), needsTlsDesc(false),
         needsTlsGd(false), needsTlsGdToIe(false), needsGotDtprel(false),
         needsTlsIe(false), hasDirectReloc(false) {}
 
@@ -314,7 +319,7 @@ public:
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = config->shared || config->exportDynamic;
+    exportDynamic = config->exportDynamic;
   }
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
@@ -351,7 +356,7 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = config->shared || config->exportDynamic;
+    exportDynamic = config->exportDynamic;
   }
 
   static bool classof(const Symbol *s) { return s->isCommon(); }
@@ -403,8 +408,6 @@ public:
       this->type = llvm::ELF::STT_FUNC;
   }
 
-  SharedFile &getFile() const { return *cast<SharedFile>(file); }
-
   uint64_t value; // st_value
   uint64_t size;  // st_size
   uint32_t alignment;
@@ -423,9 +426,7 @@ class LazyObject : public Symbol {
 public:
   LazyObject(InputFile &file)
       : Symbol(LazyObjectKind, &file, {}, llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {
-    isUsedInRegularObj = false;
-  }
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
@@ -525,21 +526,6 @@ size_t Symbol::getSymbolSize() const {
 // it over to "this". This function is called as a result of name
 // resolution, e.g. to replace an undefind symbol with a defined symbol.
 void Symbol::replace(const Symbol &other) {
-  using llvm::ELF::STT_TLS;
-
-  // st_value of STT_TLS represents the assigned offset, not the actual address
-  // which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can only be
-  // referenced by special TLS relocations. It is usually an error if a STT_TLS
-  // symbol is replaced by a non-STT_TLS symbol, vice versa. There are two
-  // exceptions: (a) a STT_NOTYPE lazy/undefined symbol can be replaced by a
-  // STT_TLS symbol, (b) a STT_TLS undefined symbol can be replaced by a
-  // STT_NOTYPE lazy symbol.
-  if (symbolKind != PlaceholderKind && !other.isLazy() &&
-      (type == STT_TLS) != (other.type == STT_TLS) &&
-      type != llvm::ELF::STT_NOTYPE)
-    error("TLS attribute mismatch: " + toString(*this) + "\n>>> defined in " +
-          toString(other.file) + "\n>>> defined in " + toString(file));
-
   Symbol old = *this;
   memcpy(this, &other, other.getSymbolSize());
 

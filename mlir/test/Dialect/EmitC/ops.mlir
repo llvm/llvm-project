@@ -12,7 +12,7 @@ func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
-func @c(%arg0: i32) {
+func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
   return
 }

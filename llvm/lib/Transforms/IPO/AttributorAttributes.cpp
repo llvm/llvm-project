@@ -38,12 +38,14 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -6356,7 +6358,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       continue;
 
     if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
-      if (!getAPInt(A, *this, *Align)) {
+      Optional<APInt> APAlign = getAPInt(A, *this, *Align);
+      if (!APAlign) {
         // Can't generate an alloca which respects the required alignment
         // on the allocation.
         LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
@@ -6364,6 +6367,13 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         AI.Status = AllocationInfo::INVALID;
         Changed = ChangeStatus::CHANGED;
         continue;
+      } else {
+        if (APAlign->ugt(llvm::Value::MaximumAlignment) || !APAlign->isPowerOf2()) {
+          LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign << "\n");
+          AI.Status = AllocationInfo::INVALID;
+          Changed = ChangeStatus::CHANGED;
+          continue;
+        }
       }
     }
 
@@ -9839,22 +9849,21 @@ public:
     }
 
     // Update the Instruction queries.
-    const AAReachability *Reachability;
     if (!InstQueries.empty()) {
-      Reachability = &A.getAAFor<AAReachability>(
+      const AAReachability *Reachability = &A.getAAFor<AAReachability>(
           *this, IRPosition::function(*getAssociatedFunction()),
           DepClassTy::REQUIRED);
-    }
 
-    // Check for local callbases first.
-    for (auto &InstPair : InstQueries) {
-      SmallVector<const AACallEdges *> CallEdges;
-      bool AllKnown =
-          getReachableCallEdges(A, *Reachability, *InstPair.first, CallEdges);
-      // Update will return change if we this effects any queries.
-      if (!AllKnown)
-        InstPair.second.CanReachUnknownCallee = true;
-      Change |= InstPair.second.update(A, *this, CallEdges);
+      // Check for local callbases first.
+      for (auto &InstPair : InstQueries) {
+        SmallVector<const AACallEdges *> CallEdges;
+        bool AllKnown =
+            getReachableCallEdges(A, *Reachability, *InstPair.first, CallEdges);
+        // Update will return change if we this effects any queries.
+        if (!AllKnown)
+          InstPair.second.CanReachUnknownCallee = true;
+        Change |= InstPair.second.update(A, *this, CallEdges);
+      }
     }
 
     return Change;

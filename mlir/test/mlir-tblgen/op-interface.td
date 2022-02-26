@@ -42,6 +42,19 @@ def TestOpInterface : OpInterface<"TestOpInterface"> {
   ];
 }
 
+def TestOpInterfaceVerify : OpInterface<"TestOpInterfaceVerify"> {
+  let verify = [{
+    return foo();
+  }];
+}
+
+def TestOpInterfaceVerifyRegion : OpInterface<"TestOpInterfaceVerifyRegion"> {
+  let verify = [{
+    return foo();
+  }];
+  let verifyWithRegions = 1;
+}
+
 // Define Ops with TestOpInterface and
 // DeclareOpInterfaceMethods<TestOpInterface> traits to check that there
 // are not duplicated C++ classes generated.
@@ -64,6 +77,12 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
 
 // DECL: template<typename ConcreteOp>
 // DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::foo
+
+// DECL-LABEL: struct TestOpInterfaceVerifyTrait
+// DECL: verifyTrait
+
+// DECL-LABEL: struct TestOpInterfaceVerifyRegionTrait
+// DECL: verifyRegionTrait
 
 // OP_DECL-LABEL: class DeclareMethodsOp : public
 // OP_DECL: int foo(int input);

@@ -151,45 +151,45 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; MIPSEL-NEXT:    lui $1, 12057
 ; MIPSEL-NEXT:    ori $1, $1, 37186
 ; MIPSEL-NEXT:    multu $6, $1
-; MIPSEL-NEXT:    mflo $2
-; MIPSEL-NEXT:    mfhi $3
-; MIPSEL-NEXT:    lui $7, 52741
-; MIPSEL-NEXT:    ori $7, $7, 40665
-; MIPSEL-NEXT:    multu $6, $7
-; MIPSEL-NEXT:    mflo $8
+; MIPSEL-NEXT:    mflo $1
+; MIPSEL-NEXT:    mfhi $2
+; MIPSEL-NEXT:    lui $3, 52741
+; MIPSEL-NEXT:    ori $3, $3, 40665
+; MIPSEL-NEXT:    multu $6, $3
+; MIPSEL-NEXT:    mflo $7
+; MIPSEL-NEXT:    mfhi $8
+; MIPSEL-NEXT:    multu $5, $3
 ; MIPSEL-NEXT:    mfhi $9
-; MIPSEL-NEXT:    multu $5, $7
-; MIPSEL-NEXT:    mfhi $10
-; MIPSEL-NEXT:    mflo $11
-; MIPSEL-NEXT:    addu $9, $11, $9
-; MIPSEL-NEXT:    addu $12, $2, $9
-; MIPSEL-NEXT:    sltu $9, $9, $11
-; MIPSEL-NEXT:    sll $11, $12, 31
-; MIPSEL-NEXT:    sltu $2, $12, $2
-; MIPSEL-NEXT:    srl $13, $8, 1
-; MIPSEL-NEXT:    sll $8, $8, 1
-; MIPSEL-NEXT:    addu $2, $3, $2
-; MIPSEL-NEXT:    or $3, $13, $11
-; MIPSEL-NEXT:    srl $11, $12, 1
-; MIPSEL-NEXT:    addu $9, $10, $9
-; MIPSEL-NEXT:    mul $4, $4, $7
-; MIPSEL-NEXT:    mul $1, $5, $1
-; MIPSEL-NEXT:    sll $5, $6, 1
+; MIPSEL-NEXT:    mflo $10
+; MIPSEL-NEXT:    addu $8, $10, $8
+; MIPSEL-NEXT:    addu $11, $1, $8
+; MIPSEL-NEXT:    sltu $8, $8, $10
+; MIPSEL-NEXT:    sll $10, $11, 31
+; MIPSEL-NEXT:    sltu $1, $11, $1
+; MIPSEL-NEXT:    srl $12, $7, 1
+; MIPSEL-NEXT:    sll $7, $7, 1
+; MIPSEL-NEXT:    addu $1, $2, $1
+; MIPSEL-NEXT:    or $10, $12, $10
+; MIPSEL-NEXT:    srl $2, $11, 1
+; MIPSEL-NEXT:    addu $8, $9, $8
+; MIPSEL-NEXT:    mul $3, $4, $3
+; MIPSEL-NEXT:    sll $4, $6, 1
+; MIPSEL-NEXT:    sll $5, $5, 1
 ; MIPSEL-NEXT:    lui $6, 60010
 ; MIPSEL-NEXT:    ori $6, $6, 61135
-; MIPSEL-NEXT:    addu $2, $9, $2
-; MIPSEL-NEXT:    addu $1, $1, $2
-; MIPSEL-NEXT:    addu $2, $5, $4
-; MIPSEL-NEXT:    addu $1, $1, $2
+; MIPSEL-NEXT:    addu $1, $8, $1
+; MIPSEL-NEXT:    subu $1, $1, $5
+; MIPSEL-NEXT:    addu $3, $4, $3
+; MIPSEL-NEXT:    addu $1, $1, $3
 ; MIPSEL-NEXT:    andi $1, $1, 3
-; MIPSEL-NEXT:    sll $2, $1, 31
-; MIPSEL-NEXT:    or $4, $11, $2
-; MIPSEL-NEXT:    sltiu $2, $4, 13
-; MIPSEL-NEXT:    xori $4, $4, 13
-; MIPSEL-NEXT:    sltu $3, $3, $6
-; MIPSEL-NEXT:    movz $2, $3, $4
+; MIPSEL-NEXT:    sll $3, $1, 31
+; MIPSEL-NEXT:    or $3, $2, $3
+; MIPSEL-NEXT:    sltiu $2, $3, 13
+; MIPSEL-NEXT:    xori $3, $3, 13
+; MIPSEL-NEXT:    sltu $4, $10, $6
+; MIPSEL-NEXT:    movz $2, $4, $3
 ; MIPSEL-NEXT:    srl $1, $1, 1
-; MIPSEL-NEXT:    or $1, $1, $8
+; MIPSEL-NEXT:    or $1, $1, $7
 ; MIPSEL-NEXT:    andi $1, $1, 3
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    movn $2, $zero, $1

@@ -59,6 +59,9 @@ void populateConvolutionVectorizationPatterns(RewritePatternSet &patterns,
 /// parallel loops.
 void populateElementwiseToLinalgConversionPatterns(RewritePatternSet &patterns);
 
+/// Populate patterns that are only useful in the context of sparse tensors.
+void populateSparseTensorRewriting(RewritePatternSet &patterns);
+
 /// Function type which is used to control when to stop fusion. It is expected
 /// that OpOperand is not modified in the callback. The OpOperand is not marked
 /// as const to allow callers to use non-const methods.
@@ -635,8 +638,20 @@ struct LinalgPaddingOptions {
 struct LinalgTilingAndFusionOptions {
   /// Tile sizes used to tile the root operation.
   SmallVector<int64_t> tileSizes;
+  LinalgTilingAndFusionOptions &setTileSizes(ArrayRef<int64_t> ts) {
+    tileSizes.assign(ts.begin(), ts.end());
+    return *this;
+  }
   /// Tile interchange used to permute the tile loops.
   SmallVector<int64_t> tileInterchange;
+  /// When specified, specifies distribution of generated tile loops to
+  /// processors.
+  Optional<LinalgLoopDistributionOptions> tileDistribution = None;
+  LinalgTilingAndFusionOptions &
+  setDistributionOptions(LinalgLoopDistributionOptions distributionOptions) {
+    tileDistribution = std::move(distributionOptions);
+    return *this;
+  }
 };
 
 struct LinalgTilingOptions {

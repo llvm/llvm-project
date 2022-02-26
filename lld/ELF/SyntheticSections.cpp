@@ -2696,6 +2696,8 @@ size_t IBTPltSection::getSize() const {
   return 16 + in.plt->getNumEntries() * target->pltEntrySize;
 }
 
+bool IBTPltSection::isNeeded() const { return in.plt->getNumEntries() > 0; }
+
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
   uint32_t h = 0;

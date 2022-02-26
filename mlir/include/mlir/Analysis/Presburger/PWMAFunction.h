@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
 
 namespace mlir {
+namespace presburger {
 
 /// This class represents a multi-affine function whose domain is given by an
 /// IntegerPolyhedron. This can be thought of as an IntegerPolyhedron with a
@@ -72,8 +73,6 @@ public:
   }
   const IntegerPolyhedron &getDomain() const { return *this; }
 
-  bool hasCompatibleDimensions(const MultiAffineFunction &f) const;
-
   /// Insert `num` identifiers of the specified kind at position `pos`.
   /// Positions are relative to the kind of identifier. The coefficient columns
   /// corresponding to the added identifiers are initialized to zero. Return the
@@ -96,6 +95,16 @@ public:
   /// functions are defined, i.e., the outputs should be equal for all points in
   /// the intersection of the domains.
   bool isEqualWhereDomainsOverlap(MultiAffineFunction other) const;
+
+  /// Returns whether the underlying PresburgerSpace is equal to `other`.
+  bool isSpaceEqual(const PresburgerSpace &other) const {
+    return PresburgerSpace::isEqual(other);
+  };
+
+  /// Returns whether the underlying PresburgerLocalSpace is equal to `other`.
+  bool isSpaceEqual(const PresburgerLocalSpace &other) const {
+    return PresburgerLocalSpace::isEqual(other);
+  };
 
   /// Return whether the `this` and `other` are equal. This is the case if
   /// they lie in the same space, i.e. have the same dimensions, and their
@@ -138,7 +147,7 @@ private:
 /// Support is provided to compare equality of two such functions as well as
 /// finding the value of the function at a point. Note that local ids in the
 /// piece are not supported for the latter.
-class PWMAFunction : PresburgerSpace {
+class PWMAFunction : public PresburgerSpace {
 public:
   PWMAFunction(unsigned numDims, unsigned numSymbols, unsigned numOutputs)
       : PresburgerSpace(numDims, numSymbols), numOutputs(numOutputs) {
@@ -157,12 +166,6 @@ public:
   /// Return the domain of this piece-wise MultiAffineFunction. This is the
   /// union of the domains of all the pieces.
   PresburgerSet getDomain() const;
-
-  /// Check whether the `this` and the given function have compatible
-  /// dimensions, i.e., the same number of dimension inputs, symbol inputs, and
-  /// outputs.
-  bool hasCompatibleDimensions(const MultiAffineFunction &f) const;
-  bool hasCompatibleDimensions(const PWMAFunction &f) const;
 
   /// Return the value at the specified point and an empty optional if the
   /// point does not lie in the domain.
@@ -186,6 +189,7 @@ private:
   unsigned numOutputs;
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H

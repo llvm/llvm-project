@@ -8,11 +8,9 @@
 
 #include "Headers.h"
 #include "RIFF.h"
-#include "index/Index.h"
 #include "index/Serialization.h"
 #include "support/Logger.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"

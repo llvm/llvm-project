@@ -280,6 +280,9 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_PPC_NONE:
     return 0;
+  case R_PPC_ADDR32:
+  case R_PPC_REL32:
+    return SignExtend64<32>(read32(buf));
   default:
     internalLinkerError(getErrorLocation(buf),
                         "cannot read addend for relocation " + toString(type));

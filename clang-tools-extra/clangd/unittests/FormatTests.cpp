@@ -9,7 +9,6 @@
 #include "Format.h"
 #include "Annotations.h"
 #include "SourceCode.h"
-#include "TestFS.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"

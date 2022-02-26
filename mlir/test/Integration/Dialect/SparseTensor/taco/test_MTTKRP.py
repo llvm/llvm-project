@@ -30,8 +30,8 @@ B = pt.read(os.path.join(_SCRIPT_PATH, "data/nell-2.tns"), csf)
 
 # These two lines have been modified from the original program to use static
 # data to support result comparison.
-C = pt.from_array(np.full((B.shape[1], 25), 1, dtype=np.float64))
-D = pt.from_array(np.full((B.shape[2], 25), 2, dtype=np.float64))
+C = pt.from_array(np.full((B.shape[1], 25), 1, dtype=np.float32))
+D = pt.from_array(np.full((B.shape[2], 25), 2, dtype=np.float32))
 
 # Declare the result to be a dense matrix.
 A = pt.tensor([B.shape[0], 25], rm)

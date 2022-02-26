@@ -29,6 +29,12 @@
 namespace clang {
 namespace dataflow {
 
+// FIXME: convert these to parameters of the analysis or environment. Current
+// settings have been experimentaly validated, but only for a particular
+// analysis.
+static constexpr int MaxCompositeValueDepth = 3;
+static constexpr int MaxCompositeValueSize = 1000;
+
 /// Returns a map consisting of key-value entries that are present in both maps.
 template <typename K, typename V>
 llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
@@ -138,6 +144,9 @@ bool Environment::equivalentTo(const Environment &Other,
   if (ExprToLoc != Other.ExprToLoc)
     return false;
 
+  if (MemberLocToStruct != Other.MemberLocToStruct)
+    return false;
+
   if (LocToVal.size() != Other.LocToVal.size())
     return false;
 
@@ -174,6 +183,12 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   const unsigned ExprToLocSizeBefore = ExprToLoc.size();
   ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
   if (ExprToLocSizeBefore != ExprToLoc.size())
+    Effect = LatticeJoinEffect::Changed;
+
+  const unsigned MemberLocToStructSizeBefore = MemberLocToStruct.size();
+  MemberLocToStruct =
+      intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
+  if (MemberLocToStructSizeBefore != MemberLocToStruct.size())
     Effect = LatticeJoinEffect::Changed;
 
   // Move `LocToVal` so that `Environment::ValueModel::merge` can safely assign
@@ -285,8 +300,24 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 
     for (const FieldDecl *Field : Type->getAsRecordDecl()->fields()) {
       assert(Field != nullptr);
-      setValue(AggregateLoc.getChild(*Field), StructVal->getChild(*Field));
+      StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
+      MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
+      setValue(FieldLoc, StructVal->getChild(*Field));
     }
+  }
+
+  auto IT = MemberLocToStruct.find(&Loc);
+  if (IT != MemberLocToStruct.end()) {
+    // `Loc` is the location of a struct member so we need to also update the
+    // value of the member in the corresponding `StructValue`.
+
+    assert(IT->second.first != nullptr);
+    StructValue &StructVal = *IT->second.first;
+
+    assert(IT->second.second != nullptr);
+    const ValueDecl &Member = *IT->second.second;
+
+    StructVal.setChild(Member, Val);
   }
 }
 
@@ -311,25 +342,40 @@ Value *Environment::getValue(const Expr &E, SkipPast SP) const {
 
 Value *Environment::createValue(QualType Type) {
   llvm::DenseSet<QualType> Visited;
-  return createValueUnlessSelfReferential(Type, Visited);
+  int CreatedValuesCount = 0;
+  Value *Val = createValueUnlessSelfReferential(Type, Visited, /*Depth=*/0,
+                                                CreatedValuesCount);
+  if (CreatedValuesCount > MaxCompositeValueSize) {
+    llvm::errs() << "Attempting to initialize a huge value of type: "
+                 << Type.getAsString() << "\n";
+  }
+  return Val;
 }
 
 Value *Environment::createValueUnlessSelfReferential(
-    QualType Type, llvm::DenseSet<QualType> &Visited) {
+    QualType Type, llvm::DenseSet<QualType> &Visited, int Depth,
+    int &CreatedValuesCount) {
   assert(!Type.isNull());
 
+  // Allow unlimited fields at depth 1; only cap at deeper nesting levels.
+  if ((Depth > 1 && CreatedValuesCount > MaxCompositeValueSize) ||
+      Depth > MaxCompositeValueDepth)
+    return nullptr;
+
   if (Type->isIntegerType()) {
+    CreatedValuesCount++;
     return &takeOwnership(std::make_unique<IntegerValue>());
   }
 
   if (Type->isReferenceType()) {
+    CreatedValuesCount++;
     QualType PointeeType = Type->getAs<ReferenceType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
       Visited.insert(PointeeType.getCanonicalType());
-      Value *PointeeVal =
-          createValueUnlessSelfReferential(PointeeType, Visited);
+      Value *PointeeVal = createValueUnlessSelfReferential(
+          PointeeType, Visited, Depth, CreatedValuesCount);
       Visited.erase(PointeeType.getCanonicalType());
 
       if (PointeeVal != nullptr)
@@ -340,13 +386,14 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   if (Type->isPointerType()) {
+    CreatedValuesCount++;
     QualType PointeeType = Type->getAs<PointerType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
       Visited.insert(PointeeType.getCanonicalType());
-      Value *PointeeVal =
-          createValueUnlessSelfReferential(PointeeType, Visited);
+      Value *PointeeVal = createValueUnlessSelfReferential(
+          PointeeType, Visited, Depth, CreatedValuesCount);
       Visited.erase(PointeeType.getCanonicalType());
 
       if (PointeeVal != nullptr)
@@ -357,6 +404,7 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   if (Type->isStructureOrClassType()) {
+    CreatedValuesCount++;
     // FIXME: Initialize only fields that are accessed in the context that is
     // being analyzed.
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
@@ -369,7 +417,8 @@ Value *Environment::createValueUnlessSelfReferential(
 
       Visited.insert(FieldType.getCanonicalType());
       FieldValues.insert(
-          {Field, createValueUnlessSelfReferential(FieldType, Visited)});
+          {Field, createValueUnlessSelfReferential(
+                      FieldType, Visited, Depth + 1, CreatedValuesCount)});
       Visited.erase(FieldType.getCanonicalType());
     }
 

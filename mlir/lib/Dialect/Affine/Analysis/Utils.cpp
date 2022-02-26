@@ -27,6 +27,7 @@
 #define DEBUG_TYPE "analysis-utils"
 
 using namespace mlir;
+using namespace presburger;
 
 using llvm::SmallDenseMap;
 

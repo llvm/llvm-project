@@ -434,9 +434,9 @@ body:             |
     renamable $x14 = ADDXri renamable $x10, 64, 0, debug-location !35
     $x15 = MOVZXi 35507, 0, debug-location !35
     $x15 = MOVKXi $x15, 16821, 16, debug-location !35
-    STRXui killed renamable $x15, $sp, 24, debug-location !35 :: (store (s768) into %stack.3.MyAlloca, align 32)
-    STRXui killed renamable $x9, $sp, 25, debug-location !35 :: (store (s768) into %stack.3.MyAlloca + 1, align 32)
-    STRXui killed renamable $x8, $sp, 26, debug-location !35 :: (store (s768) into %stack.3.MyAlloca + 2, align 32)
+    STRXui killed renamable $x15, $sp, 24, debug-location !35 :: (store (s768) into %stack.3.MyAlloca, basealign 32)
+    STRXui killed renamable $x9, $sp, 25, debug-location !35 :: (store (s768) into %stack.3.MyAlloca + 1, basealign 32)
+    STRXui killed renamable $x8, $sp, 26, debug-location !35 :: (store (s768) into %stack.3.MyAlloca + 2, basealign 32)
     renamable $x8 = UBFMXri renamable $x10, 3, 63, debug-location !35
     renamable $x9 = ADDXrs renamable $x11, renamable $x10, 67, debug-location !35
     $x15 = MOVZXi 61937, 0, debug-location !35

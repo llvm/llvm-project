@@ -21,7 +21,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
+
 /// Parse a list of StringRefs to IntegerPolyhedron and combine them into a
 /// PresburgerSet be using the union operation. It is expected that the strings
 /// are all valid IntegerSet representation and that all of them have the same
@@ -607,6 +609,27 @@ TEST(SetTest, coalesceContainedEqComplex) {
   expectCoalesce(1, set);
 }
 
+TEST(SetTest, coalesceThreeContained) {
+  PresburgerSet set =
+      parsePresburgerSetFromPolyStrings(1, {
+                                               "(x) : (x >= 0, -x + 1 >= 0)",
+                                               "(x) : (x >= 0, -x + 2 >= 0)",
+                                               "(x) : (x >= 0, -x + 3 >= 0)",
+                                           });
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceDoubleIncrement) {
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
+      1, {
+             "(x) : (x == 0)",
+             "(x) : (x - 2 == 0)",
+             "(x) : (x + 2 == 0)",
+             "(x) : (x - 2 >= 0, -x + 3 >= 0)",
+         });
+  expectCoalesce(3, set);
+}
+
 static void
 expectComputedVolumeIsValidOverapprox(const PresburgerSet &set,
                                       Optional<uint64_t> trueVolume,
@@ -661,5 +684,3 @@ TEST(SetTest, computeVolume) {
                                         /*trueVolume=*/{},
                                         /*resultBound=*/{});
 }
-
-} // namespace mlir

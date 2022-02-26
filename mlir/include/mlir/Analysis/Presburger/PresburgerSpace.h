@@ -18,8 +18,14 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
+namespace presburger {
 
 class PresburgerLocalSpace;
+
+/// Kind of identifier. Implementation wise SetDims are treated as Range
+/// ids, and spaces with no distinction between dimension ids are treated
+/// as relations with zero domain ids.
+enum class IdKind { Symbol, Local, Domain, Range, SetDim = Range };
 
 /// PresburgerSpace is the space of all possible values of a tuple of integer
 /// valued variables/identifiers. Each identifier has one of the three types:
@@ -64,11 +70,6 @@ class PresburgerSpace {
   friend PresburgerLocalSpace;
 
 public:
-  /// Kind of identifier. Implementation wise SetDims are treated as Range
-  /// ids, and spaces with no distinction between dimension ids are treated
-  /// as relations with zero domain ids.
-  enum IdKind { Symbol, Local, Domain, Range, SetDim = Range };
-
   static PresburgerSpace getRelationSpace(unsigned numDomain, unsigned numRange,
                                           unsigned numSymbols);
 
@@ -111,6 +112,10 @@ public:
 
   /// Removes identifiers in the column range [idStart, idLimit).
   virtual void removeIdRange(unsigned idStart, unsigned idLimit);
+
+  /// Returns true if both the spaces are equal i.e. if both spaces have the
+  /// same number of identifiers of each kind (excluding Local Identifiers).
+  bool isEqual(const PresburgerSpace &other) const;
 
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of dimensional identifiers immediately before
@@ -192,8 +197,13 @@ protected:
   PresburgerLocalSpace(unsigned numDims, unsigned numSymbols,
                        unsigned numLocals)
       : PresburgerSpace(Set, /*numDomain=*/0, numDims, numSymbols, numLocals) {}
+
+  /// Returns true if both the spaces are equal i.e. if both spaces have the
+  /// same number of identifiers of each kind.
+  bool isEqual(const PresburgerLocalSpace &other) const;
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_PRESBURGERSPACE_H

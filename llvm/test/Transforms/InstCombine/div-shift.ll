@@ -67,10 +67,9 @@ define i64 @t3(i64 %x, i32 %y) {
 
 define i32 @t4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[Y:%.*]], 5
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 5
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[X:%.*]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 5)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = shl i32 1, %y
   %2 = icmp ult i32 %1, 32

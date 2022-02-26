@@ -451,12 +451,9 @@ define { i64, i64, i1 } @addcarry_hidden_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1
 ; CHECK-LABEL: addcarry_hidden_2x64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq %rcx, %rsi
-; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    addq %rdx, %rax
-; CHECK-NEXT:    adcq $0, %rsi
+; CHECK-NEXT:    adcq %rcx, %rsi
 ; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %dil, %cl
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
   %t0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
@@ -1369,11 +1366,9 @@ define void @add_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %ui
 define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: addcarry_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    adcl %esi, %eax
 ; CHECK-NEXT:    retq
   %s = add i32 %a, %b
   %k = icmp ult i32 %x, %y
@@ -1385,11 +1380,9 @@ define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) {
 define i32 @addcarry_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: addcarry_ugt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmpl %edx, %ecx
-; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    adcl %esi, %eax
 ; CHECK-NEXT:    retq
   %s = add i32 %a, %b
   %k = icmp ugt i32 %x, %y

@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MarkLive.h"
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "SymbolTable.h"
@@ -118,7 +119,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
 
   if (auto *ss = dyn_cast<SharedSymbol>(&sym))
     if (!ss->isWeak())
-      ss->getFile().isNeeded = true;
+      cast<SharedFile>(ss->file)->isNeeded = true;
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
     enqueue(sec, 0);
@@ -373,7 +374,7 @@ template <class ELFT> void elf::markLive() {
     for (Symbol *sym : symtab->symbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
-          s->getFile().isNeeded = true;
+          cast<SharedFile>(s->file)->isNeeded = true;
     return;
   }
 

@@ -25,6 +25,7 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#  pragma clang include_instead(<format>)
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -52,6 +53,7 @@ namespace __format_spec {
  * * The format-type filtering needs to be done post parsing in the parser
  *   derived from @ref __parser_std.
  */
+_LIBCPP_PACKED_BYTE_FOR_AIX
 class _LIBCPP_TYPE_VIS _Flags {
 public:
   enum class _LIBCPP_ENUM_VIS _Alignment : uint8_t {
@@ -109,6 +111,7 @@ public:
 
   _Type __type{_Type::__default};
 };
+_LIBCPP_PACKED_BYTE_FOR_AIX_END
 
 namespace __detail {
 template <class _CharT>
@@ -1271,7 +1274,7 @@ __estimate_column_width(const _CharT* __first, const _CharT* __last,
   size_t __result = 0;
 
   while (__first != __last) {
-    wchar_t __c = *__first;
+    uint32_t __c = *__first;
     __result += __column_width(__c);
 
     if (__result > __maximum)

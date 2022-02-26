@@ -6983,13 +6983,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
       W.printString("Name", FuncName);
 
       ListScope L(W, "BB entries");
-      uint32_t FunctionRelativeAddress = 0;
       for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
         DictScope L(W);
-        FunctionRelativeAddress += BBE.Offset;
-        W.printHex("Offset", FunctionRelativeAddress);
+        W.printHex("Offset", BBE.Offset);
         W.printHex("Size", BBE.Size);
-        FunctionRelativeAddress += BBE.Size;
         W.printBoolean("HasReturn", BBE.HasReturn);
         W.printBoolean("HasTailCall", BBE.HasTailCall);
         W.printBoolean("IsEHPad", BBE.IsEHPad);

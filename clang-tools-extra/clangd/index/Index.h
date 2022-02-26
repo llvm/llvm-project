@@ -9,14 +9,13 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
-#include "Ref.h"
-#include "Relation.h"
-#include "Symbol.h"
-#include "SymbolID.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Symbol.h"
+#include "index/SymbolID.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/JSON.h"
 #include <mutex>
 #include <string>

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -1064,6 +1065,11 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_PPC64_NONE:
     return 0;
+  case R_PPC64_REL32:
+    return SignExtend64<32>(read32(buf));
+  case R_PPC64_ADDR64:
+  case R_PPC64_REL64:
+    return read64(buf);
   default:
     internalLinkerError(getErrorLocation(buf),
                         "cannot read addend for relocation " + toString(type));

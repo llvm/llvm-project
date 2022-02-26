@@ -27,10 +27,12 @@ public:
   void foo();
 };
 
+// CK35-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 8]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | PTR_AND_OBJ | TO = 0x1000000000011
 // CK35-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000011]]]
+// CK35-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 8]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | PTR_AND_OBJ | FROM = 0x1000000000012
 // CK35-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x20]], i64 [[#0x1000000000012]]]
@@ -115,14 +117,12 @@ void ref_map() {
 
   // CK35-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
   // CK35-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
-  // CK35-DAG: [[S3:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 3
 
   // CK35-DAG: [[BPC3:%.+]] = bitcast i8** [[BP3]] to %class.S**
   // CK35-DAG: [[PC3:%.+]] = bitcast i8** [[P3]] to double**
 
   // CK35-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC3]],
   // CK35-DAG: store double* [[B_ADDR:%.+]], double** [[PC3]],
-  // CK35-DAG: store i64 8, i64* [[S3]],
 
   // CK35-DAG: [[B_ADDR]] = load double*, double** [[B_REF:%.+]],
   // CK35-DAG: [[B_REF]] = getelementptr inbounds %class.S, %class.S* [[S_ADDR]], i32 0, i32 1
@@ -163,14 +163,12 @@ void ref_map() {
 
   // CK35-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK35-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK35-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
 
   // CK35-DAG: [[BPC1:%.+]] = bitcast i8** [[BP1]] to %class.S**
   // CK35-DAG: [[PC1:%.+]] = bitcast i8** [[P1]] to double**
 
   // CK35-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC1]],
   // CK35-DAG: store double* [[B_ADDR:%.+]], double** [[PC1]],
-  // CK35-DAG: store i64 8, i64* [[S1]],
 
   // CK35-DAG: [[B_ADDR]] = load double*, double** [[SB_ADDR]],
 

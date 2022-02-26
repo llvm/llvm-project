@@ -37,7 +37,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
 
     LogicalResult reifyResultShapes(OpBuilder &b,
         ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-      return cast<LinalgOp>(getOperation()).reifyResultShapes(b,
+      return llvm::cast<LinalgOp>(getOperation()).reifyResultShapes(b,
           reifiedReturnShapes);
     }
   }];

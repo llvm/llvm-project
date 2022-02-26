@@ -74,6 +74,15 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // We end up with this pattern sometimes after basic block placement.
   // It happens while combining a block which assigns -1 or 0 to a saved mask
   // and another block which consumes that saved mask and then a branch.
+  //
+  // While searching this also performs the following substitution:
+  // vcc = V_CMP
+  // vcc = S_AND exec, vcc
+  // S_CBRANCH_VCC[N]Z
+  // =>
+  // vcc = V_CMP
+  // S_CBRANCH_VCC[N]Z
+
   bool Changed = false;
   MachineBasicBlock &MBB = *MI.getParent();
   const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
@@ -121,14 +130,27 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     SReg = Op2.getReg();
     auto M = std::next(A);
     bool ReadsSreg = false;
+    bool ModifiesExec = false;
     for (; M != E; ++M) {
       if (M->definesRegister(SReg, TRI))
         break;
       if (M->modifiesRegister(SReg, TRI))
         return Changed;
       ReadsSreg |= M->readsRegister(SReg, TRI);
+      ModifiesExec |= M->modifiesRegister(ExecReg, TRI);
     }
-    if (M == E || !M->isMoveImmediate() || !M->getOperand(1).isImm() ||
+    if (M == E)
+      return Changed;
+    // If SReg is VCC and SReg definition is a VALU comparison.
+    // This means S_AND with EXEC is not required.
+    // Erase the S_AND and return.
+    // Note: isVOPC is used instead of isCompare to catch V_CMP_CLASS
+    if (A->getOpcode() == And && SReg == CondReg && !ModifiesExec &&
+        TII->isVOPC(*M) && TII->isVALU(*M)) {
+      A->eraseFromParent();
+      return true;
+    }
+    if (!M->isMoveImmediate() || !M->getOperand(1).isImm() ||
         (M->getOperand(1).getImm() != -1 && M->getOperand(1).getImm() != 0))
       return Changed;
     MaskValue = M->getOperand(1).getImm();

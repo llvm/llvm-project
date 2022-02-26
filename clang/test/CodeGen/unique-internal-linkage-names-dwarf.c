@@ -1,11 +1,11 @@
 // This test checks if C functions with internal linkage names are mangled
 // and the module hash suffixes attached including emitting DW_AT_linkage_name.
 //
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -debug-info-kind=limited -dwarf-version=4 -emit-llvm -o -  %s | FileCheck %s --check-prefix=PLAIN
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -debug-info-kind=limited -dwarf-version=4 -funique-internal-linkage-names -emit-llvm -o -  %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -Wno-strict-prototypes -debug-info-kind=limited -dwarf-version=4 -emit-llvm -o -  %s | FileCheck %s --check-prefix=PLAIN
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -Wno-strict-prototypes -debug-info-kind=limited -dwarf-version=4 -funique-internal-linkage-names -emit-llvm -o -  %s | FileCheck %s --check-prefix=UNIQUE
 //
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -debug-info-kind=limited -dwarf-version=5 -emit-llvm -o -  %s | FileCheck %s --check-prefix=PLAIN
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -debug-info-kind=limited -dwarf-version=5 -funique-internal-linkage-names -emit-llvm -o -  %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -Wno-strict-prototypes -debug-info-kind=limited -dwarf-version=5 -emit-llvm -o -  %s | FileCheck %s --check-prefix=PLAIN
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -Wno-strict-prototypes -debug-info-kind=limited -dwarf-version=5 -funique-internal-linkage-names -emit-llvm -o -  %s | FileCheck %s --check-prefix=UNIQUE
 
 static int glob;
 // foo should be given a uniquefied name under -funique-internal-linkage-names.

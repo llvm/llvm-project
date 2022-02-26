@@ -3291,6 +3291,13 @@ bool fir::valueHasFirAttribute(mlir::Value value,
   return false;
 }
 
+bool fir::anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr) {
+  for (unsigned i = 0, end = func.getNumArguments(); i < end; ++i)
+    if (func.getArgAttr(i, attr))
+      return true;
+  return false;
+}
+
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   for (auto i = path.begin(), end = path.end(); eleTy && i < end;) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)

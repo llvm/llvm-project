@@ -62,20 +62,6 @@ end
 ! CHECK-LABEL: func @_QPfct_iarr2() -> !fir.array<10x20xi32>
 ! CHECK:         return %{{.*}} : !fir.array<10x20xi32>
 
-function fct_iarr3()
-  integer, dimension(:, :), allocatable :: fct_iarr3
-end
-
-! CHECK-LABEL: func @_QPfct_iarr3() -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
-! CHECK:        return %{{.*}} : !fir.box<!fir.heap<!fir.array<?x?xi32>>>
-
-function fct_iarr4()
-  integer, dimension(:), pointer :: fct_iarr4
-end
-
-! CHECK-LABEL: func @_QPfct_iarr4() -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
-! CHECK:         return %{{.*}} : !fir.box<!fir.ptr<!fir.array<?xi32>>>
-
 logical(1) function lfct1()
 end
 ! CHECK-LABEL: func @_QPlfct1() -> !fir.logical<1>
@@ -155,3 +141,10 @@ complex(16) function cplxfct6()
 end
 ! CHECK-LABEL: func @_QPcplxfct6() -> !fir.complex<16>
 ! CHECK:         return %{{.*}} : !fir.complex<16>
+
+function fct_with_character_return(i)
+  character(10) :: fct_with_character_return
+  integer :: i
+end
+! CHECK-LABEL: func @_QPfct_with_character_return(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.char<1,10>>{{.*}}, %{{.*}}: index{{.*}}, %{{.*}}: !fir.ref<i32>{{.*}}) -> !fir.boxchar<1> {

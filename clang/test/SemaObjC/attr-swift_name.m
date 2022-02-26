@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fobjc-arc -fblocks %s
+// RUN: %clang_cc1 -verify -fsyntax-only -fobjc-arc -fblocks -Wno-strict-prototypes %s
 
 #define SWIFT_NAME(name) __attribute__((__swift_name__(name)))
 #define SWIFT_ASYNC_NAME(name) __attribute__((__swift_async_name__(name)))

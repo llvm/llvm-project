@@ -22,8 +22,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 
-#include "index/Index.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <vector>

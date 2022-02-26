@@ -16,11 +16,16 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -77,15 +82,22 @@ public:
   }
 
   fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
+                                 Fortran::lower::StatementContext &context,
                                  mlir::Location *loc = nullptr) override final {
     return createSomeExtendedAddress(loc ? *loc : toLocation(), *this, expr,
-                                     localSymbols);
+                                     localSymbols, context);
   }
   fir::ExtendedValue
   genExprValue(const Fortran::lower::SomeExpr &expr,
+               Fortran::lower::StatementContext &context,
                mlir::Location *loc = nullptr) override final {
     return createSomeExtendedExpression(loc ? *loc : toLocation(), *this, expr,
-                                        localSymbols);
+                                        localSymbols, context);
+  }
+  fir::MutableBoxValue
+  genExprMutableBox(mlir::Location loc,
+                    const Fortran::lower::SomeExpr &expr) override final {
+    return Fortran::lower::createMutableBox(loc, *this, expr, localSymbols);
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -224,6 +236,7 @@ public:
                                 {builder->getRegion()}); // remove dead code
     delete builder;
     builder = nullptr;
+    hostAssocTuple = mlir::Value{};
     localSymbols.clear();
   }
 
@@ -236,13 +249,13 @@ public:
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
     auto mapPassedEntity = [&](const auto arg) -> void {
       if (arg.passBy == PassBy::AddressAndLength) {
-        // // TODO: now that fir call has some attributes regarding character
-        // // return, PassBy::AddressAndLength should be retired.
-        // mlir::Location loc = toLocation();
-        // fir::factory::CharacterExprHelper charHelp{*builder, loc};
-        // mlir::Value box =
-        //     charHelp.createEmboxChar(arg.firArgument, arg.firLength);
-        // addSymbol(arg.entity->get(), box);
+        // TODO: now that fir call has some attributes regarding character
+        // return, PassBy::AddressAndLength should be retired.
+        mlir::Location loc = toLocation();
+        fir::factory::CharacterExprHelper charHelp{*builder, loc};
+        mlir::Value box =
+            charHelp.createEmboxChar(arg.firArgument, arg.firLength);
+        addSymbol(arg.entity->get(), box);
       } else {
         if (arg.entity.has_value()) {
           addSymbol(arg.entity->get(), arg.firArgument);
@@ -357,6 +370,8 @@ public:
       lowerFunc(f); // internal procedure
   }
 
+  mlir::Value hostAssocTupleValue() override final { return hostAssocTuple; }
+
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
@@ -430,7 +445,8 @@ private:
     }
     mlir::Value resultVal = resultSymBox.match(
         [&](const fir::CharBoxValue &x) -> mlir::Value {
-          TODO(loc, "Function return CharBoxValue");
+          return fir::factory::CharacterExprHelper{*builder, loc}
+              .createEmboxChar(x.getBuffer(), x.getLen());
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
@@ -476,8 +492,8 @@ private:
   }
 
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
+    Fortran::lower::StatementContext stmtCtx;
     mlir::Location loc = toLocation();
-
     std::visit(
         Fortran::common::visitors{
             // [1] Plain old assignment.
@@ -504,7 +520,7 @@ private:
               if (assign.lhs.Rank() > 0) {
                 // Array assignment
                 // See Fortran 2018 10.2.1.3 p5, p6, and p7
-                TODO(toLocation(), "Array assignment");
+                genArrayAssignment(assign, stmtCtx);
                 return;
               }
 
@@ -512,15 +528,34 @@ private:
               const bool isNumericScalar =
                   isNumericScalarCategory(lhsType->category());
               fir::ExtendedValue rhs = isNumericScalar
-                                           ? genExprValue(assign.rhs)
-                                           : genExprAddr(assign.rhs);
+                                           ? genExprValue(assign.rhs, stmtCtx)
+                                           : genExprAddr(assign.rhs, stmtCtx);
+              bool lhsIsWholeAllocatable = isWholeAllocatable(assign.lhs);
+              llvm::Optional<fir::factory::MutableBoxReallocation> lhsRealloc;
+              llvm::Optional<fir::MutableBoxValue> lhsMutableBox;
+              auto lhs = [&]() -> fir::ExtendedValue {
+                if (lhsIsWholeAllocatable) {
+                  lhsMutableBox = genExprMutableBox(loc, assign.lhs);
+                  llvm::SmallVector<mlir::Value> lengthParams;
+                  if (const fir::CharBoxValue *charBox = rhs.getCharBox())
+                    lengthParams.push_back(charBox->getLen());
+                  else if (fir::isDerivedWithLengthParameters(rhs))
+                    TODO(loc, "assignment to derived type allocatable with "
+                              "length parameters");
+                  lhsRealloc = fir::factory::genReallocIfNeeded(
+                      *builder, loc, *lhsMutableBox,
+                      /*shape=*/llvm::None, lengthParams);
+                  return lhsRealloc->newValue;
+                }
+                return genExprAddr(assign.lhs, stmtCtx);
+              }();
 
               if (isNumericScalar) {
                 // Fortran 2018 10.2.1.3 p8 and p9
                 // Conversions should have been inserted by semantic analysis,
                 // but they can be incorrect between the rhs and lhs. Correct
                 // that here.
-                mlir::Value addr = fir::getBase(genExprAddr(assign.lhs));
+                mlir::Value addr = fir::getBase(lhs);
                 mlir::Value val = fir::getBase(rhs);
                 // A function with multiple entry points returning different
                 // types tags all result variables with one of the largest
@@ -543,6 +578,11 @@ private:
               } else {
                 llvm_unreachable("unknown category");
               }
+              if (lhsIsWholeAllocatable)
+                fir::factory::finalizeRealloc(
+                    *builder, loc, lhsMutableBox.getValue(),
+                    /*lbounds=*/llvm::None, /*takeLboundsIfRealloc=*/false,
+                    lhsRealloc.getValue());
             },
 
             // [2] User defined assignment. If the context is a scalar
@@ -568,8 +608,16 @@ private:
         assign.u);
   }
 
+  /// Lowering of CALL statement
   void genFIR(const Fortran::parser::CallStmt &stmt) {
-    TODO(toLocation(), "CallStmt lowering");
+    Fortran::lower::StatementContext stmtCtx;
+    setCurrentPosition(stmt.v.source);
+    assert(stmt.typedCall && "Call was not analyzed");
+    // Call statement lowering shares code with function call lowering.
+    mlir::Value res = Fortran::lower::createSubroutineCall(
+        *this, *stmt.typedCall, localSymbols, stmtCtx);
+    if (!res)
+      return; // "Normal" subroutine call.
   }
 
   void genFIR(const Fortran::parser::ComputedGotoStmt &stmt) {
@@ -790,6 +838,26 @@ private:
     TODO(toLocation(), "LockStmt lowering");
   }
 
+  /// Generate an array assignment.
+  /// This is an assignment expression with rank > 0. The assignment may or may
+  /// not be in a WHERE and/or FORALL context.
+  void genArrayAssignment(const Fortran::evaluate::Assignment &assign,
+                          Fortran::lower::StatementContext &stmtCtx) {
+    if (isWholeAllocatable(assign.lhs)) {
+      // Assignment to allocatables may require the lhs to be
+      // deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
+      Fortran::lower::createAllocatableArrayAssignment(
+          *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
+          localSymbols, stmtCtx);
+      return;
+    }
+
+    // No masks and the iteration space is implied by the array, so create a
+    // simple array assignment.
+    Fortran::lower::createSomeArrayAssignment(*this, assign.lhs, assign.rhs,
+                                              localSymbols, stmtCtx);
+  }
+
   void genFIR(const Fortran::parser::WhereConstruct &c) {
     TODO(toLocation(), "WhereConstruct lowering");
   }
@@ -999,6 +1067,11 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
+
+  /// Tuple of host assoicated variables.
+  mlir::Value hostAssocTuple;
+  Fortran::lower::ImplicitIterSpace implicitIterSpace;
+  Fortran::lower::ExplicitIterSpace explicitIterSpace;
 };
 
 } // namespace

@@ -17,10 +17,9 @@
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
+namespace presburger {
 
 class IntegerPolyhedron;
-
-namespace presburger_utils {
 
 /// This class represents the result of operations optimizing something subject
 /// to some constraints. If the constraints were not satisfiable the, kind will
@@ -131,7 +130,7 @@ void removeDuplicateDivs(
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
-} // namespace presburger_utils
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_UTILS_H

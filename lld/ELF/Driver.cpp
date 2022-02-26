@@ -1016,7 +1016,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->executeOnly =
       args.hasFlag(OPT_execute_only, OPT_no_execute_only, false);
   config->exportDynamic =
-      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
+      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false) ||
+      args.hasArg(OPT_shared);
   config->filterList = args::getStrings(args, OPT_filter);
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419) &&
@@ -1832,7 +1833,7 @@ static void demoteSharedAndLazySymbols() {
   llvm::TimeTraceScope timeScope("Demote shared and lazy symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !s->getFile().isNeeded) && !sym->isLazy())
+    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
       continue;
 
     bool used = sym->used;
@@ -1958,16 +1959,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   sym->partition = newPart.getNumber();
 }
 
-static Symbol *addUndefined(StringRef name) {
-  return symtab->addSymbol(
-      Undefined{nullptr, name, STB_GLOBAL, STV_DEFAULT, 0});
-}
-
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  Undefined sym{nullptr, name, binding, STV_DEFAULT, 0};
-  sym.isUsedInRegularObj = false;
-  return symtab->addSymbol(sym);
+  return symtab->addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2225,6 +2219,25 @@ static uint32_t getAndFeatures() {
   return ret;
 }
 
+static void initializeLocalSymbols(ELFFileBase *file) {
+  switch (config->ekind) {
+  case ELF32LEKind:
+    cast<ObjFile<ELF32LE>>(file)->initializeLocalSymbols();
+    break;
+  case ELF32BEKind:
+    cast<ObjFile<ELF32BE>>(file)->initializeLocalSymbols();
+    break;
+  case ELF64LEKind:
+    cast<ObjFile<ELF64LE>>(file)->initializeLocalSymbols();
+    break;
+  case ELF64BEKind:
+    cast<ObjFile<ELF64BE>>(file)->initializeLocalSymbols();
+    break;
+  default:
+    llvm_unreachable("");
+  }
+}
+
 static void postParseObjectFile(ELFFileBase *file) {
   switch (config->ekind) {
   case ELF32LEKind:
@@ -2319,7 +2332,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
   for (StringRef name : script->referencedSymbols)
-    addUndefined(name);
+    addUnusedUndefined(name)->isUsedInRegularObj = true;
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
@@ -2363,6 +2376,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
+  parallelForEach(objectFiles, initializeLocalSymbols);
   parallelForEach(objectFiles, postParseObjectFile);
   parallelForEach(bitcodeFiles, [](BitcodeFile *file) { file->postParse(); });
 
@@ -2434,6 +2448,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
   auto newObjectFiles = makeArrayRef(objectFiles).slice(numObjsBeforeLTO);
+  parallelForEach(newObjectFiles, initializeLocalSymbols);
   parallelForEach(newObjectFiles, postParseObjectFile);
 
   // Handle --exclude-libs again because lto.tmp may reference additional

@@ -23,14 +23,14 @@
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
-// TruncInstCombine - looks for expression dags dominated by trunc instructions
-// and for each eligible dag, it will create a reduced bit-width expression and
-// replace the old expression with this new one and remove the old one.
-// Eligible expression dag is such that:
+// TruncInstCombine - looks for expression graphs dominated by trunc
+// instructions and for each eligible graph, it will create a reduced bit-width
+// expression and replace the old expression with this new one and remove the
+// old one. Eligible expression graph is such that:
 //   1. Contains only supported instructions.
 //   2. Supported leaves: ZExtInst, SExtInst, TruncInst and Constant value.
 //   3. Can be evaluated into type with reduced legal bit-width (or Trunc type).
-//   4. All instructions in the dag must not have users outside the dag.
+//   4. All instructions in the graph must not have users outside the graph.
 //      Only exception is for {ZExt, SExt}Inst with operand type equal to the
 //      new reduced type chosen in (3).
 //
@@ -63,7 +63,7 @@ class TruncInstCombine {
   /// Current processed TruncInst instruction.
   TruncInst *CurrentTruncInst = nullptr;
 
-  /// Information per each instruction in the expression dag.
+  /// Information per each instruction in the expression graph.
   struct Info {
     /// Number of LSBs that are needed to generate a valid expression.
     unsigned ValidBitWidth = 0;
@@ -72,10 +72,10 @@ class TruncInstCombine {
     /// The reduced value generated to replace the old instruction.
     Value *NewValue = nullptr;
   };
-  /// An ordered map representing expression dag post-dominated by current
-  /// processed TruncInst. It maps each instruction in the dag to its Info
+  /// An ordered map representing expression graph post-dominated by current
+  /// processed TruncInst. It maps each instruction in the graph to its Info
   /// structure. The map is ordered such that each instruction appears before
-  /// all other instructions in the dag that uses it.
+  /// all other instructions in the graph that uses it.
   MapVector<Instruction *, Info> InstInfoMap;
 
 public:
@@ -87,11 +87,11 @@ public:
   bool run(Function &F);
 
 private:
-  /// Build expression dag dominated by the /p CurrentTruncInst and append it to
-  /// the InstInfoMap container.
+  /// Build expression graph dominated by the /p CurrentTruncInst and append it
+  /// to the InstInfoMap container.
   ///
-  /// \return true only if succeed to generate an eligible sub expression dag.
-  bool buildTruncExpressionDag();
+  /// \return true only if succeed to generate an eligible sub expression graph.
+  bool buildTruncExpressionGraph();
 
   /// Calculate the minimal allowed bit-width of the chain ending with the
   /// currently visited truncate's operand.
@@ -100,12 +100,12 @@ private:
   /// truncate's operand can be shrunk to.
   unsigned getMinBitWidth();
 
-  /// Build an expression dag dominated by the current processed TruncInst and
+  /// Build an expression graph dominated by the current processed TruncInst and
   /// Check if it is eligible to be reduced to a smaller type.
   ///
   /// \return the scalar version of the new type to be used for the reduced
-  ///         expression dag, or nullptr if the expression dag is not eligible
-  ///         to be reduced.
+  ///         expression graph, or nullptr if the expression graph is not
+  ///         eligible to be reduced.
   Type *getBestTruncatedType();
 
   KnownBits computeKnownBits(const Value *V) const {
@@ -128,12 +128,12 @@ private:
   /// \return the new reduced value.
   Value *getReducedOperand(Value *V, Type *SclTy);
 
-  /// Create a new expression dag using the reduced /p SclTy type and replace
-  /// the old expression dag with it. Also erase all instructions in the old
-  /// dag, except those that are still needed outside the dag.
+  /// Create a new expression graph using the reduced /p SclTy type and replace
+  /// the old expression graph with it. Also erase all instructions in the old
+  /// graph, except those that are still needed outside the graph.
   ///
-  /// \param SclTy scalar version of new type to reduce expression dag into.
-  void ReduceExpressionDag(Type *SclTy);
+  /// \param SclTy scalar version of new type to reduce expression graph into.
+  void ReduceExpressionGraph(Type *SclTy);
 };
 } // end namespace llvm.
 

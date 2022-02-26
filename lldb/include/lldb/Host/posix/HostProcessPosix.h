@@ -32,8 +32,7 @@ public:
   bool IsRunning() const override;
 
   llvm::Expected<HostThread>
-  StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                  bool monitor_signals) override;
+  StartMonitoring(const Host::MonitorChildProcessCallback &callback) override;
 };
 
 } // namespace lldb_private

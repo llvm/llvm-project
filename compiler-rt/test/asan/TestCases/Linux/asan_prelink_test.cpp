@@ -7,7 +7,7 @@
 // RUN: %clangxx_asan -DBUILD_SO=1 -fPIC -shared %s -o %t.so -Wl,-Ttext-segment=0x3600000000 ||\
 // RUN:   %clangxx_asan -DBUILD_SO=1 -fPIC -shared %s -o %t.so -Wl,--image-base=0x3600000000 ||\
 // RUN:   %clangxx_asan -DBUILD_SO=1 -fPIC -shared %s -o %t.so -Wl,-Ttext=0x3600000000
-// RUN: %clangxx_asan %t.o %t.so -Wl,-R. -o %t
+// RUN: %clangxx_asan -fno-pie -no-pie %t.o %t.so -Wl,-R. -o %t
 // RUN: %env_asan_opts=verbosity=1 %run %t 2>&1 | FileCheck %s
 
 // GNU driver doesn't handle .so files properly.

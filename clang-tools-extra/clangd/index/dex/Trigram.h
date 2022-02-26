@@ -23,9 +23,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TRIGRAM_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TRIGRAM_H
 
-#include "Token.h"
+#include "index/dex/Token.h"
 #include "llvm/ADT/bit.h"
 
+#include <array>
 #include <string>
 
 namespace clang {

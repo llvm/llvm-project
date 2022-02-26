@@ -38,6 +38,11 @@ mlir::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
   return modOp.lookupSymbol<mlir::FuncOp>(name);
 }
 
+mlir::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
+                                                 mlir::SymbolRefAttr symbol) {
+  return modOp.lookupSymbol<mlir::FuncOp>(symbol);
+}
+
 fir::GlobalOp fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
                                                 llvm::StringRef name) {
   return modOp.lookupSymbol<fir::GlobalOp>(name);
@@ -258,9 +263,10 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   return glob;
 }
 
-mlir::Value fir::FirOpBuilder::convertWithSemantics(mlir::Location loc,
-                                                    mlir::Type toTy,
-                                                    mlir::Value val) {
+mlir::Value
+fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value val,
+                                        bool allowCharacterConversion) {
   assert(toTy && "store location must be typed");
   auto fromTy = val.getType();
   if (fromTy == toTy)
@@ -282,6 +288,35 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(mlir::Location loc,
     auto rp = helper.extractComplexPart(val, /*isImagPart=*/false);
     return createConvert(loc, toTy, rp);
   }
+  if (allowCharacterConversion) {
+    if (fromTy.isa<fir::BoxCharType>()) {
+      // Extract the address of the character string and pass it
+      fir::factory::CharacterExprHelper charHelper{*this, loc};
+      std::pair<mlir::Value, mlir::Value> unboxchar =
+          charHelper.createUnboxChar(val);
+      return createConvert(loc, toTy, unboxchar.first);
+    }
+    if (auto boxType = toTy.dyn_cast<fir::BoxCharType>()) {
+      // Extract the address of the actual argument and create a boxed
+      // character value with an undefined length
+      // TODO: We should really calculate the total size of the actual
+      // argument in characters and use it as the length of the string
+      auto refType = getRefType(boxType.getEleTy());
+      mlir::Value charBase = createConvert(loc, refType, val);
+      mlir::Value unknownLen = create<fir::UndefOp>(loc, getIndexType());
+      fir::factory::CharacterExprHelper charHelper{*this, loc};
+      return charHelper.createEmboxChar(charBase, unknownLen);
+    }
+  }
+  if (fir::isa_ref_type(toTy) && fir::isa_box_type(fromTy)) {
+    // Call is expecting a raw data pointer, not a box. Get the data pointer out
+    // of the box and pass that.
+    assert((fir::unwrapRefType(toTy) ==
+                fir::unwrapRefType(fir::unwrapPassByRefType(fromTy)) &&
+            "element types expected to match"));
+    return create<fir::BoxAddrOp>(loc, toTy, val);
+  }
+
   return createConvert(loc, toTy, val);
 }
 
@@ -353,6 +388,57 @@ mlir::Value fir::FirOpBuilder::createShape(mlir::Location loc,
         fir::emitFatalError(loc, "createShape on MutableBoxValue");
       },
       [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
+}
+
+mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
+                                           const fir::ExtendedValue &exv,
+                                           mlir::ValueRange triples,
+                                           mlir::ValueRange path) {
+  if (triples.empty()) {
+    // If there is no slicing by triple notation, then take the whole array.
+    auto fullShape = [&](const llvm::ArrayRef<mlir::Value> lbounds,
+                         llvm::ArrayRef<mlir::Value> extents) -> mlir::Value {
+      llvm::SmallVector<mlir::Value> trips;
+      auto idxTy = getIndexType();
+      auto one = createIntegerConstant(loc, idxTy, 1);
+      if (lbounds.empty()) {
+        for (auto v : extents) {
+          trips.push_back(one);
+          trips.push_back(v);
+          trips.push_back(one);
+        }
+        return create<fir::SliceOp>(loc, trips, path);
+      }
+      for (auto [lbnd, extent] : llvm::zip(lbounds, extents)) {
+        auto lb = createConvert(loc, idxTy, lbnd);
+        auto ext = createConvert(loc, idxTy, extent);
+        auto shift = create<mlir::arith::SubIOp>(loc, lb, one);
+        auto ub = create<mlir::arith::AddIOp>(loc, ext, shift);
+        trips.push_back(lb);
+        trips.push_back(ub);
+        trips.push_back(one);
+      }
+      return create<fir::SliceOp>(loc, trips, path);
+    };
+    return exv.match(
+        [&](const fir::ArrayBoxValue &box) {
+          return fullShape(box.getLBounds(), box.getExtents());
+        },
+        [&](const fir::CharArrayBoxValue &box) {
+          return fullShape(box.getLBounds(), box.getExtents());
+        },
+        [&](const fir::BoxValue &box) {
+          auto extents = fir::factory::readExtents(*this, loc, box);
+          return fullShape(box.getLBounds(), extents);
+        },
+        [&](const fir::MutableBoxValue &) -> mlir::Value {
+          // MutableBoxValue must be read into another category to work with
+          // them outside of allocation/assignment contexts.
+          fir::emitFatalError(loc, "createSlice on MutableBoxValue");
+        },
+        [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
+  }
+  return create<fir::SliceOp>(loc, triples, path);
 }
 
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
@@ -483,6 +569,35 @@ mlir::Value fir::factory::readExtent(fir::FirOpBuilder &builder,
       });
 }
 
+mlir::Value fir::factory::readLowerBound(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         const fir::ExtendedValue &box,
+                                         unsigned dim,
+                                         mlir::Value defaultValue) {
+  assert(box.rank() > dim);
+  auto lb = box.match(
+      [&](const fir::ArrayBoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::CharArrayBoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::BoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::MutableBoxValue &x) -> mlir::Value {
+        return readLowerBound(builder, loc,
+                              fir::factory::genMutableBoxRead(builder, loc, x),
+                              dim, defaultValue);
+      },
+      [&](const auto &) -> mlir::Value {
+        fir::emitFatalError(loc, "lower bound inquiry on scalar");
+      });
+  if (lb)
+    return lb;
+  return defaultValue;
+}
+
 llvm::SmallVector<mlir::Value>
 fir::factory::readExtents(fir::FirOpBuilder &builder, mlir::Location loc,
                           const fir::BoxValue &box) {
@@ -521,6 +636,29 @@ fir::factory::getExtents(fir::FirOpBuilder &builder, mlir::Location loc,
         return fir::factory::getExtents(builder, loc, load);
       },
       [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
+}
+
+fir::ExtendedValue fir::factory::readBoxValue(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              const fir::BoxValue &box) {
+  assert(!box.isUnlimitedPolymorphic() && !box.hasAssumedRank() &&
+         "cannot read unlimited polymorphic or assumed rank fir.box");
+  auto addr =
+      builder.create<fir::BoxAddrOp>(loc, box.getMemTy(), box.getAddr());
+  if (box.isCharacter()) {
+    auto len = fir::factory::readCharLen(builder, loc, box);
+    if (box.rank() == 0)
+      return fir::CharBoxValue(addr, len);
+    return fir::CharArrayBoxValue(addr, len,
+                                  fir::factory::readExtents(builder, loc, box),
+                                  box.getLBounds());
+  }
+  if (box.isDerivedWithLengthParameters())
+    TODO(loc, "read fir.box with length parameters");
+  if (box.rank() == 0)
+    return addr;
+  return fir::ArrayBoxValue(addr, fir::factory::readExtents(builder, loc, box),
+                            box.getLBounds());
 }
 
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
@@ -593,6 +731,111 @@ fir::factory::createExtents(fir::FirOpBuilder &builder, mlir::Location loc,
             ? builder.create<fir::UndefOp>(loc, idxTy).getResult()
             : builder.createIntegerConstant(loc, idxTy, ext));
   return extents;
+}
+
+// FIXME: This needs some work. To correctly determine the extended value of a
+// component, one needs the base object, its type, and its type parameters. (An
+// alternative would be to provide an already computed address of the final
+// component rather than the base object's address, the point being the result
+// will require the address of the final component to create the extended
+// value.) One further needs the full path of components being applied. One
+// needs to apply type-based expressions to type parameters along this said
+// path. (See applyPathToType for a type-only derivation.) Finally, one needs to
+// compose the extended value of the terminal component, including all of its
+// parameters: array lower bounds expressions, extents, type parameters, etc.
+// Any of these properties may be deferred until runtime in Fortran. This
+// operation may therefore generate a sizeable block of IR, including calls to
+// type-based helper functions, so caching the result of this operation in the
+// client would be advised as well.
+fir::ExtendedValue fir::factory::componentToExtendedValue(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value component) {
+  auto fieldTy = component.getType();
+  if (auto ty = fir::dyn_cast_ptrEleTy(fieldTy))
+    fieldTy = ty;
+  if (fieldTy.isa<fir::BoxType>()) {
+    llvm::SmallVector<mlir::Value> nonDeferredTypeParams;
+    auto eleTy = fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(fieldTy));
+    if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+      auto lenTy = builder.getCharacterLengthType();
+      if (charTy.hasConstantLen())
+        nonDeferredTypeParams.emplace_back(
+            builder.createIntegerConstant(loc, lenTy, charTy.getLen()));
+      // TODO: Starting, F2003, the dynamic character length might be dependent
+      // on a PDT length parameter. There is no way to make a difference with
+      // deferred length here yet.
+    }
+    if (auto recTy = eleTy.dyn_cast<fir::RecordType>())
+      if (recTy.getNumLenParams() > 0)
+        TODO(loc, "allocatable and pointer components non deferred length "
+                  "parameters");
+
+    return fir::MutableBoxValue(component, nonDeferredTypeParams,
+                                /*mutableProperties=*/{});
+  }
+  llvm::SmallVector<mlir::Value> extents;
+  if (auto seqTy = fieldTy.dyn_cast<fir::SequenceType>()) {
+    fieldTy = seqTy.getEleTy();
+    auto idxTy = builder.getIndexType();
+    for (auto extent : seqTy.getShape()) {
+      if (extent == fir::SequenceType::getUnknownExtent())
+        TODO(loc, "array component shape depending on length parameters");
+      extents.emplace_back(builder.createIntegerConstant(loc, idxTy, extent));
+    }
+  }
+  if (auto charTy = fieldTy.dyn_cast<fir::CharacterType>()) {
+    auto cstLen = charTy.getLen();
+    if (cstLen == fir::CharacterType::unknownLen())
+      TODO(loc, "get character component length from length type parameters");
+    auto len = builder.createIntegerConstant(
+        loc, builder.getCharacterLengthType(), cstLen);
+    if (!extents.empty())
+      return fir::CharArrayBoxValue{component, len, extents};
+    return fir::CharBoxValue{component, len};
+  }
+  if (auto recordTy = fieldTy.dyn_cast<fir::RecordType>())
+    if (recordTy.getNumLenParams() != 0)
+      TODO(loc,
+           "lower component ref that is a derived type with length parameter");
+  if (!extents.empty())
+    return fir::ArrayBoxValue{component, extents};
+  return component;
+}
+
+fir::ExtendedValue fir::factory::arrayElementToExtendedValue(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &array, mlir::Value element) {
+  return array.match(
+      [&](const fir::CharBoxValue &cb) -> fir::ExtendedValue {
+        return cb.clone(element);
+      },
+      [&](const fir::CharArrayBoxValue &bv) -> fir::ExtendedValue {
+        return bv.cloneElement(element);
+      },
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
+        if (box.isCharacter()) {
+          auto len = fir::factory::readCharLen(builder, loc, box);
+          return fir::CharBoxValue{element, len};
+        }
+        if (box.isDerivedWithLengthParameters())
+          TODO(loc, "get length parameters from derived type BoxValue");
+        return element;
+      },
+      [&](const auto &) -> fir::ExtendedValue { return element; });
+}
+
+fir::ExtendedValue fir::factory::arraySectionElementToExtendedValue(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &array, mlir::Value element, mlir::Value slice) {
+  if (!slice)
+    return arrayElementToExtendedValue(builder, loc, array, element);
+  auto sliceOp = mlir::dyn_cast_or_null<fir::SliceOp>(slice.getDefiningOp());
+  assert(sliceOp && "slice must be a sliceOp");
+  if (sliceOp.getFields().empty())
+    return arrayElementToExtendedValue(builder, loc, array, element);
+  // For F95, using componentToExtendedValue will work, but when PDTs are
+  // lowered. It will be required to go down the slice to propagate the length
+  // parameters.
+  return fir::factory::componentToExtendedValue(builder, loc, element);
 }
 
 mlir::TupleType

@@ -14,14 +14,12 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -29,7 +27,6 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/SymbolRemappingReader.h"
 #include <algorithm>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -45,13 +42,13 @@ using namespace llvm;
 static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
   if (Version & VARIANT_MASK_IR_PROF) {
-    ProfileKind |= InstrProfKind::IR;
+    ProfileKind |= InstrProfKind::IRInstrumentation;
   }
   if (Version & VARIANT_MASK_CSIR_PROF) {
-    ProfileKind |= InstrProfKind::CS;
+    ProfileKind |= InstrProfKind::ContextSensitive;
   }
   if (Version & VARIANT_MASK_INSTR_ENTRY) {
-    ProfileKind |= InstrProfKind::BB;
+    ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
   }
   if (Version & VARIANT_MASK_BYTE_COVERAGE) {
     ProfileKind |= InstrProfKind::SingleByteCoverage;
@@ -177,16 +174,16 @@ Error TextInstrProfReader::readHeader() {
   while (Line->startswith(":")) {
     StringRef Str = Line->substr(1);
     if (Str.equals_insensitive("ir"))
-      ProfileKind |= InstrProfKind::IR;
+      ProfileKind |= InstrProfKind::IRInstrumentation;
     else if (Str.equals_insensitive("fe"))
-      ProfileKind |= InstrProfKind::FE;
+      ProfileKind |= InstrProfKind::FrontendInstrumentation;
     else if (Str.equals_insensitive("csir")) {
-      ProfileKind |= InstrProfKind::IR;
-      ProfileKind |= InstrProfKind::CS;
+      ProfileKind |= InstrProfKind::IRInstrumentation;
+      ProfileKind |= InstrProfKind::ContextSensitive;
     } else if (Str.equals_insensitive("entry_first"))
-      ProfileKind |= InstrProfKind::BB;
+      ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
-      ProfileKind &= ~InstrProfKind::BB;
+      ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
     else
       return error(instrprof_error::bad_header);
     ++Line;

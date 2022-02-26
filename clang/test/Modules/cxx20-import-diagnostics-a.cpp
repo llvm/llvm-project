@@ -95,9 +95,9 @@ import C; // expected-error {{imports must immediately follow the module declara
 //--- import-diags-tu7.cpp
 
 module;
-// We can only have preprocessor commands here, which could include an include
+// We can only have preprocessor directives here, which permits an include-
 // translated header unit.  However those are identified specifically by the
-// preprocessor; non-preprocessed user code should not contain an import here.
+// preprocessor; non-preprocessed user code should not contain an 'import' here.
 import B; // expected-error {{module imports cannot be in the global module fragment}}
 
 export module D;
@@ -118,13 +118,13 @@ import B; // expected-error {{module imports cannot be in the private module fra
 
 module B;
 
-import B; // expected-error {{import of module 'B' appears within same top-level module 'B'}}
+import B; // expected-error {{import of module 'B' appears within its own implementation}}
 
 //--- import-diags-tu10.cpp
 
 export module B;
 
-import B; // expected-error {{import of module 'B' appears within same top-level module 'B'}}
+import B; // expected-error {{import of module 'B' appears within its own interface}}
 
 //--- import-diags-tu11.cpp
 

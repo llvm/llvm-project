@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
-
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -std=c99 -fms-extensions -Wno-pragma-pack -Wno-strict-prototypes %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -std=c99 -fms-extensions -Wno-pragma-pack -Wno-strict-prototypes %s
 
 
 #pragma omp declare // expected-error {{expected an OpenMP directive}}

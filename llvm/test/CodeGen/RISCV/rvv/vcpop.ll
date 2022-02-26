@@ -21,6 +21,19 @@ entry:
   ret iXLen %a
 }
 
+define iXLen @intrinsic_vcpop_m_nxv1i1_zero(<vscale x 1 x i1> %0) nounwind {
+; CHECK-LABEL: intrinsic_vcpop_m_nxv1i1_zero:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %a = call iXLen @llvm.riscv.vcpop.iXLen.nxv1i1(
+    <vscale x 1 x i1> %0,
+    iXLen 0)
+
+  ret iXLen %a
+}
+
 declare iXLen @llvm.riscv.vcpop.mask.iXLen.nxv1i1(
   <vscale x 1 x i1>,
   <vscale x 1 x i1>,
@@ -39,6 +52,20 @@ entry:
     <vscale x 1 x i1> %0,
     <vscale x 1 x i1> %1,
     iXLen %2)
+
+  ret iXLen %a
+}
+
+define iXLen @intrinsic_vcpop_mask_m_nxv1i1_zero(<vscale x 1 x i1> %0, <vscale x 1 x i1> %1) nounwind {
+; CHECK-LABEL: intrinsic_vcpop_mask_m_nxv1i1_zero:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %a = call iXLen @llvm.riscv.vcpop.mask.iXLen.nxv1i1(
+    <vscale x 1 x i1> %0,
+    <vscale x 1 x i1> %1,
+    iXLen 0)
 
   ret iXLen %a
 }

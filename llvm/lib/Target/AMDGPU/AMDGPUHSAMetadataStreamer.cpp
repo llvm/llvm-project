@@ -1028,9 +1028,10 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
                 Args);
 
-  // Ignore temporarily until it is implemented.
-  // emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
-  Offset += 8;
+  if (MFI.hasHeapPtr())
+    emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
+  else
+    Offset += 8; // Skipped.
 
   if (Func.hasFnAttribute("calls-enqueue-kernel")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,

@@ -84,6 +84,11 @@ public:
     return FunctionType::get(IFuncValTy->getPointerTo(), false);
   }
 
+  static bool isValidLinkage(LinkageTypes L) {
+    return isExternalLinkage(L) || isLocalLinkage(L) || isWeakLinkage(L) ||
+           isLinkOnceLinkage(L);
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalIFuncVal;

@@ -1097,74 +1097,55 @@ static bool adjustMinMax(SelectInst &Sel, ICmpInst &Cmp) {
   return true;
 }
 
-/// If this is an integer min/max (icmp + select) with a constant operand,
-/// create the canonical icmp for the min/max operation and canonicalize the
-/// constant to the 'false' operand of the select:
-/// select (icmp Pred X, C1), C2, X --> select (icmp Pred' X, C2), X, C2
-/// Note: if C1 != C2, this will change the icmp constant to the existing
-/// constant operand of the select.
-static Instruction *canonicalizeMinMaxWithConstant(SelectInst &Sel,
-                                                   ICmpInst &Cmp,
-                                                   InstCombinerImpl &IC) {
-  if (!Cmp.hasOneUse() || !isa<Constant>(Cmp.getOperand(1)))
-    return nullptr;
-
-  // Canonicalize the compare predicate based on whether we have min or max.
+static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
+                                    InstCombinerImpl &IC) {
   Value *LHS, *RHS;
-  SelectPatternResult SPR = matchSelectPattern(&Sel, LHS, RHS);
-  if (!SelectPatternResult::isMinOrMax(SPR.Flavor))
+  // TODO: What to do with pointer min/max patterns?
+  if (!Sel.getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  // Is this already canonical?
-  ICmpInst::Predicate CanonicalPred = getMinMaxPred(SPR.Flavor);
-  if (Cmp.getOperand(0) == LHS && Cmp.getOperand(1) == RHS &&
-      Cmp.getPredicate() == CanonicalPred)
-    return nullptr;
-
-  // Bail out on unsimplified X-0 operand (due to some worklist management bug),
-  // as this may cause an infinite combine loop. Let the sub be folded first.
-  if (match(LHS, m_Sub(m_Value(), m_Zero())) ||
-      match(RHS, m_Sub(m_Value(), m_Zero())))
-    return nullptr;
-
-  // Create the canonical compare and plug it into the select.
-  IC.replaceOperand(Sel, 0, IC.Builder.CreateICmp(CanonicalPred, LHS, RHS));
-
-  // If the select operands did not change, we're done.
-  if (Sel.getTrueValue() == LHS && Sel.getFalseValue() == RHS)
-    return &Sel;
-
-  // If we are swapping the select operands, swap the metadata too.
-  assert(Sel.getTrueValue() == RHS && Sel.getFalseValue() == LHS &&
-         "Unexpected results from matchSelectPattern");
-  Sel.swapValues();
-  Sel.swapProfMetadata();
-  return &Sel;
-}
-
-static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
-                                        InstCombinerImpl &IC) {
-  if (!Cmp.hasOneUse() || !isa<Constant>(Cmp.getOperand(1)))
-    return nullptr;
-
-  Value *LHS, *RHS;
   SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
-  if (SPF != SelectPatternFlavor::SPF_ABS &&
-      SPF != SelectPatternFlavor::SPF_NABS)
-    return nullptr;
+  if (SPF == SelectPatternFlavor::SPF_ABS ||
+      SPF == SelectPatternFlavor::SPF_NABS) {
+    if (!Cmp.hasOneUse())
+      return nullptr; // TODO: Relax this restriction.
 
-  // Note that NSW flag can only be propagated for normal, non-negated abs!
-  bool IntMinIsPoison = SPF == SelectPatternFlavor::SPF_ABS &&
-                        match(RHS, m_NSWNeg(m_Specific(LHS)));
-  Constant *IntMinIsPoisonC =
-      ConstantInt::get(Type::getInt1Ty(Sel.getContext()), IntMinIsPoison);
-  Instruction *Abs =
-      IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
+    // Note that NSW flag can only be propagated for normal, non-negated abs!
+    bool IntMinIsPoison = SPF == SelectPatternFlavor::SPF_ABS &&
+                          match(RHS, m_NSWNeg(m_Specific(LHS)));
+    Constant *IntMinIsPoisonC =
+        ConstantInt::get(Type::getInt1Ty(Sel.getContext()), IntMinIsPoison);
+    Instruction *Abs =
+        IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
 
-  if (SPF == SelectPatternFlavor::SPF_NABS)
-    return BinaryOperator::CreateNeg(Abs); // Always without NSW flag!
+    if (SPF == SelectPatternFlavor::SPF_NABS)
+      return BinaryOperator::CreateNeg(Abs); // Always without NSW flag!
+    return IC.replaceInstUsesWith(Sel, Abs);
+  }
 
-  return IC.replaceInstUsesWith(Sel, Abs);
+  if (SelectPatternResult::isMinOrMax(SPF)) {
+    Intrinsic::ID IntrinsicID;
+    switch (SPF) {
+    case SelectPatternFlavor::SPF_UMIN:
+      IntrinsicID = Intrinsic::umin;
+      break;
+    case SelectPatternFlavor::SPF_UMAX:
+      IntrinsicID = Intrinsic::umax;
+      break;
+    case SelectPatternFlavor::SPF_SMIN:
+      IntrinsicID = Intrinsic::smin;
+      break;
+    case SelectPatternFlavor::SPF_SMAX:
+      IntrinsicID = Intrinsic::smax;
+      break;
+    default:
+      llvm_unreachable("Unexpected SPF");
+    }
+    return IC.replaceInstUsesWith(
+        Sel, IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS));
+  }
+
+  return nullptr;
 }
 
 /// If we have a select with an equality comparison, then we know the value in
@@ -1537,11 +1518,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
     return NewSel;
 
-  if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *this))
-    return NewSel;
-
-  if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, *this))
-    return NewAbs;
+  if (Instruction *NewSPF = canonicalizeSPF(SI, *ICI, *this))
+    return NewSPF;
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
     return replaceInstUsesWith(SI, V);

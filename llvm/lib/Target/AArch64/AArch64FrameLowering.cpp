@@ -882,15 +882,6 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc,
     bool NeedsWinCFI, bool *HasWinCFI, bool InProlog = true) {
-  // Ignore instructions that do not operate on SP, i.e. shadow call stack
-  // instructions and associated CFI instruction.
-  while (MBBI->getOpcode() == AArch64::STRXpost ||
-         MBBI->getOpcode() == AArch64::LDRXpre ||
-         MBBI->getOpcode() == AArch64::CFI_INSTRUCTION) {
-    if (MBBI->getOpcode() != AArch64::CFI_INSTRUCTION)
-      assert(MBBI->getOperand(0).getReg() != AArch64::SP);
-    ++MBBI;
-  }
   unsigned NewOpc;
   switch (MBBI->getOpcode()) {
   default:
@@ -998,16 +989,6 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
     return;
 
   unsigned Opc = MI.getOpcode();
-
-  // Ignore instructions that do not operate on SP, i.e. shadow call stack
-  // instructions and associated CFI instruction.
-  if (Opc == AArch64::STRXpost || Opc == AArch64::LDRXpre ||
-      Opc == AArch64::CFI_INSTRUCTION) {
-    if (Opc != AArch64::CFI_INSTRUCTION)
-      assert(MI.getOperand(0).getReg() != AArch64::SP);
-    return;
-  }
-
   unsigned Scale;
   switch (Opc) {
   case AArch64::STPXi:
@@ -1049,38 +1030,6 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
   }
 }
 
-static void adaptForLdStOpt(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator FirstSPPopI,
-                            MachineBasicBlock::iterator LastPopI) {
-  // Sometimes (when we restore in the same order as we save), we can end up
-  // with code like this:
-  //
-  // ldp      x26, x25, [sp]
-  // ldp      x24, x23, [sp, #16]
-  // ldp      x22, x21, [sp, #32]
-  // ldp      x20, x19, [sp, #48]
-  // add      sp, sp, #64
-  //
-  // In this case, it is always better to put the first ldp at the end, so
-  // that the load-store optimizer can run and merge the ldp and the add into
-  // a post-index ldp.
-  // If we managed to grab the first pop instruction, move it to the end.
-  if (ReverseCSRRestoreSeq)
-    MBB.splice(FirstSPPopI, &MBB, LastPopI);
-  // We should end up with something like this now:
-  //
-  // ldp      x24, x23, [sp, #16]
-  // ldp      x22, x21, [sp, #32]
-  // ldp      x20, x19, [sp, #48]
-  // ldp      x26, x25, [sp]
-  // add      sp, sp, #64
-  //
-  // and the load-store optimizer can merge the last two instructions into:
-  //
-  // ldp      x26, x25, [sp], #64
-  //
-}
-
 static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
@@ -1099,6 +1048,72 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   }
 }
 
+static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) {
+  if (!(llvm::any_of(
+            MF.getFrameInfo().getCalleeSavedInfo(),
+            [](const auto &Info) { return Info.getReg() == AArch64::LR; }) &&
+        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)))
+    return false;
+
+  if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
+    report_fatal_error("Must reserve x18 to use shadow call stack");
+
+  return true;
+}
+
+static void emitShadowCallStackPrologue(const TargetInstrInfo &TII,
+                                        MachineFunction &MF,
+                                        MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL, bool NeedsWinCFI,
+                                        bool NeedsUnwindInfo) {
+  // Shadow call stack prolog: str x30, [x18], #8
+  BuildMI(MBB, MBBI, DL, TII.get(AArch64::STRXpost))
+      .addReg(AArch64::X18, RegState::Define)
+      .addReg(AArch64::LR)
+      .addReg(AArch64::X18)
+      .addImm(8)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // This instruction also makes x18 live-in to the entry block.
+  MBB.addLiveIn(AArch64::X18);
+
+  if (NeedsWinCFI)
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::SEH_Nop))
+        .setMIFlag(MachineInstr::FrameSetup);
+
+  if (NeedsUnwindInfo) {
+    // Emit a CFI instruction that causes 8 to be subtracted from the value of
+    // x18 when unwinding past this frame.
+    static const char CFIInst[] = {
+        dwarf::DW_CFA_val_expression,
+        18, // register
+        2,  // length
+        static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
+        static_cast<char>(-8) & 0x7f, // addend (sleb128)
+    };
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
+        nullptr, StringRef(CFIInst, sizeof(CFIInst))));
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
+}
+
+static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
+                                        MachineFunction &MF,
+                                        MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL) {
+  // Shadow call stack epilog: ldr x30, [x18, #-8]!
+  BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXpre))
+      .addReg(AArch64::X18, RegState::Define)
+      .addReg(AArch64::LR, RegState::Define)
+      .addReg(AArch64::X18)
+      .addImm(-8)
+      .setMIFlag(MachineInstr::FrameDestroy);
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1109,8 +1124,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool needsFrameMoves =
-      MF.needsFrameMoves() && !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool EmitCFI = AFI->needsDwarfUnwindInfo();
   bool HasFP = hasFP(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   bool HasWinCFI = false;
@@ -1128,6 +1142,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
+  if (needsShadowCallStackPrologueEpilogue(MF))
+    emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
+                                MFnI.needsDwarfUnwindInfo());
+
   if (MFnI.shouldSignReturnAddress()) {
 
     unsigned PACI;
@@ -1145,12 +1163,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(AArch64::LR)
           .addReg(AArch64::SP, RegState::InternalRead);
     MI.setMIFlag(MachineInstr::FrameSetup);
-
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameSetup);
+    if (EmitCFI) {
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameSetup);
+    }
   }
 
   // We signal the presence of a Swift extended frame to external tools by
@@ -1227,7 +1246,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                       StackOffset::getFixed(-NumBytes), TII,
                       MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
-      if (needsFrameMoves) {
+      if (EmitCFI) {
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
         MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
           // Encode the stack size of the leaf function.
@@ -1533,7 +1552,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (needsFrameMoves) {
+  if (EmitCFI) {
     // An example of the prologue:
     //
     //     .globl __foo
@@ -1694,6 +1713,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     DL = MBBI->getDebugLoc();
     IsFunclet = isFuncletReturnInstr(*MBBI);
   }
+
+  auto ShadowStackEpilogue = make_scope_exit([&]() {
+    if (needsShadowCallStackPrologueEpilogue(MF))
+      emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
+  });
 
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
@@ -1911,18 +1935,12 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     if (NoCalleeSaveRestore)
       StackRestoreBytes += AfterCSRPopSize;
 
-    // If we were able to combine the local stack pop with the argument pop,
-    // then we're done.
-    bool Done = NoCalleeSaveRestore || AfterCSRPopSize == 0;
-
-    // If we're done after this, make sure to help the load store optimizer.
-    if (Done)
-      adaptForLdStOpt(MBB, MBB.getFirstTerminator(), LastPopI);
-
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(StackRestoreBytes), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
-    if (Done) {
+    // If we were able to combine the local stack pop with the argument pop,
+    // then we're done.
+    if (NoCalleeSaveRestore || AfterCSRPopSize == 0) {
       if (HasWinCFI) {
         BuildMI(MBB, MBB.getFirstTerminator(), DL,
                 TII->get(AArch64::SEH_EpilogEnd))
@@ -1954,21 +1972,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (AfterCSRPopSize) {
     assert(AfterCSRPopSize > 0 && "attempting to reallocate arg stack that an "
                                   "interrupt may have clobbered");
-    // Find an insertion point for the first ldp so that it goes before the
-    // shadow call stack epilog instruction. This ensures that the restore of
-    // lr from x18 is placed after the restore from sp.
-    auto FirstSPPopI = MBB.getFirstTerminator();
-    while (FirstSPPopI != Begin) {
-      auto Prev = std::prev(FirstSPPopI);
-      if (Prev->getOpcode() != AArch64::LDRXpre ||
-          Prev->getOperand(0).getReg() == AArch64::SP)
-        break;
-      FirstSPPopI = Prev;
-    }
 
-    adaptForLdStOpt(MBB, FirstSPPopI, LastPopI);
-
-    emitFrameOffset(MBB, FirstSPPopI, DL, AArch64::SP, AArch64::SP,
+    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(AfterCSRPopSize), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
   }
@@ -2270,7 +2275,7 @@ struct RegPairInfo {
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
-    bool &NeedShadowCallStackProlog, bool NeedsFrameRecord) {
+    bool NeedsFrameRecord) {
 
   if (CSI.empty())
     return;
@@ -2347,15 +2352,6 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::ZPR:
         break;
       }
-    }
-
-    // If either of the registers to be saved is the lr register, it means that
-    // we also need to save lr in the shadow call stack.
-    if ((RPI.Reg1 == AArch64::LR || RPI.Reg2 == AArch64::LR) &&
-        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-      if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
-        report_fatal_error("Must reserve x18 to use shadow call stack");
-      NeedShadowCallStackProlog = true;
     }
 
     // GPRs and FPRs are saved in pairs of 64-bit regs. We expect the CSI
@@ -2476,43 +2472,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
 
-  bool NeedShadowCallStackProlog = false;
-  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs,
-                                 NeedShadowCallStackProlog, hasFP(MF));
+  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
+
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  if (NeedShadowCallStackProlog) {
-    // Shadow call stack prolog: str x30, [x18], #8
-    BuildMI(MBB, MI, DL, TII.get(AArch64::STRXpost))
-        .addReg(AArch64::X18, RegState::Define)
-        .addReg(AArch64::LR)
-        .addReg(AArch64::X18)
-        .addImm(8)
-        .setMIFlag(MachineInstr::FrameSetup);
-
-    if (NeedsWinCFI)
-      BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
-          .setMIFlag(MachineInstr::FrameSetup);
-
-    // Emit a CFI instruction that causes 8 to be subtracted from the value of
-    // x18 when unwinding past this frame.
-    static const char CFIInst[] = {
-        dwarf::DW_CFA_val_expression,
-        18, // register
-        2,  // length
-        static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
-        static_cast<char>(-8) & 0x7f, // addend (sleb128)
-    };
-    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
-        nullptr, StringRef(CFIInst, sizeof(CFIInst))));
-    BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlag(MachineInstr::FrameSetup);
-
-    // This instruction also makes x18 live-in to the entry block.
-    MBB.addLiveIn(AArch64::X18);
-  }
-
   if (homogeneousPrologEpilog(MF)) {
     auto MIB = BuildMI(MBB, MI, DL, TII.get(AArch64::HOM_Prolog))
                    .setMIFlag(MachineInstr::FrameSetup);
@@ -2622,7 +2584,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 }
 
 bool AArch64FrameLowering::restoreCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -2630,14 +2592,12 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   SmallVector<RegPairInfo, 8> RegPairs;
   bool NeedsWinCFI = needsWinCFI(MF);
 
-  if (MI != MBB.end())
-    DL = MI->getDebugLoc();
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
 
-  bool NeedShadowCallStackProlog = false;
-  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs,
-                                 NeedShadowCallStackProlog, hasFP(MF));
+  computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
-  auto EmitMI = [&](const RegPairInfo &RPI) {
+  auto EmitMI = [&](const RegPairInfo &RPI) -> MachineBasicBlock::iterator {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
 
@@ -2694,7 +2654,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       std::swap(Reg1, Reg2);
       std::swap(FrameIdxReg1, FrameIdxReg2);
     }
-    MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(LdrOpc));
+    MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
     if (RPI.isPaired()) {
       MIB.addReg(Reg2, getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
@@ -2711,6 +2671,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
         MachineMemOperand::MOLoad, Size, Alignment));
     if (NeedsWinCFI)
       InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
+    return MIB->getIterator();
   };
 
   // SVE objects are always restored in reverse order.
@@ -2718,31 +2679,33 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     if (RPI.isScalable())
       EmitMI(RPI);
 
-  if (ReverseCSRRestoreSeq) {
-    for (const RegPairInfo &RPI : reverse(RegPairs))
-      if (!RPI.isScalable())
-        EmitMI(RPI);
-  } else if (homogeneousPrologEpilog(MF, &MBB)) {
-    auto MIB = BuildMI(MBB, MI, DL, TII.get(AArch64::HOM_Epilog))
+  if (homogeneousPrologEpilog(MF, &MBB)) {
+    auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
                    .setMIFlag(MachineInstr::FrameDestroy);
     for (auto &RPI : RegPairs) {
       MIB.addReg(RPI.Reg1, RegState::Define);
       MIB.addReg(RPI.Reg2, RegState::Define);
     }
     return true;
-  } else
-    for (const RegPairInfo &RPI : RegPairs)
-      if (!RPI.isScalable())
-        EmitMI(RPI);
+  }
 
-  if (NeedShadowCallStackProlog) {
-    // Shadow call stack epilog: ldr x30, [x18, #-8]!
-    BuildMI(MBB, MI, DL, TII.get(AArch64::LDRXpre))
-        .addReg(AArch64::X18, RegState::Define)
-        .addReg(AArch64::LR, RegState::Define)
-        .addReg(AArch64::X18)
-        .addImm(-8)
-        .setMIFlag(MachineInstr::FrameDestroy);
+  if (ReverseCSRRestoreSeq) {
+    MachineBasicBlock::iterator First = MBB.end();
+    for (const RegPairInfo &RPI : reverse(RegPairs)) {
+      if (RPI.isScalable())
+        continue;
+      MachineBasicBlock::iterator It = EmitMI(RPI);
+      if (First == MBB.end())
+        First = It;
+    }
+    if (First != MBB.end())
+      MBB.splice(MBBI, &MBB, First);
+  } else {
+    for (const RegPairInfo &RPI : RegPairs) {
+      if (RPI.isScalable())
+        continue;
+      (void)EmitMI(RPI);
+    }
   }
 
   return true;

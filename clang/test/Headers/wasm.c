@@ -1711,10 +1711,9 @@ v128_t test_u8x16_sub_sat(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <16 x i8> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.smin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_i8x16_min(v128_t a, v128_t b) {
   return wasm_i8x16_min(a, b);
@@ -1724,10 +1723,9 @@ v128_t test_i8x16_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <16 x i8> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_u8x16_min(v128_t a, v128_t b) {
   return wasm_u8x16_min(a, b);
@@ -1737,10 +1735,9 @@ v128_t test_u8x16_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <16 x i8> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.smax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_i8x16_max(v128_t a, v128_t b) {
   return wasm_i8x16_max(a, b);
@@ -1750,10 +1747,9 @@ v128_t test_i8x16_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <16 x i8> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_u8x16_max(v128_t a, v128_t b) {
   return wasm_u8x16_max(a, b);
@@ -1944,10 +1940,9 @@ v128_t test_i16x8_mul(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i16> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP0]], <8 x i16> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_i16x8_min(v128_t a, v128_t b) {
   return wasm_i16x8_min(a, b);
@@ -1957,10 +1952,9 @@ v128_t test_i16x8_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <8 x i16> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP0]], <8 x i16> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_u16x8_min(v128_t a, v128_t b) {
   return wasm_u16x8_min(a, b);
@@ -1970,10 +1964,9 @@ v128_t test_u16x8_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <8 x i16> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP0]], <8 x i16> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_i16x8_max(v128_t a, v128_t b) {
   return wasm_i16x8_max(a, b);
@@ -1983,10 +1976,9 @@ v128_t test_i16x8_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <8 x i16> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP0]], <8 x i16> [[TMP1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umax.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_u16x8_max(v128_t a, v128_t b) {
   return wasm_u16x8_max(a, b);
@@ -2103,9 +2095,8 @@ v128_t test_i32x4_mul(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i32x4_min(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[A:%.*]], [[B:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[A]], <4 x i32> [[B]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR7]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i32x4_min(v128_t a, v128_t b) {
   return wasm_i32x4_min(a, b);
@@ -2113,9 +2104,8 @@ v128_t test_i32x4_min(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u32x4_min(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i32> [[A:%.*]], [[B:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[A]], <4 x i32> [[B]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR7]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_u32x4_min(v128_t a, v128_t b) {
   return wasm_u32x4_min(a, b);
@@ -2123,9 +2113,8 @@ v128_t test_u32x4_min(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i32x4_max(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <4 x i32> [[A:%.*]], [[B:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[A]], <4 x i32> [[B]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR7]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i32x4_max(v128_t a, v128_t b) {
   return wasm_i32x4_max(a, b);
@@ -2133,9 +2122,8 @@ v128_t test_i32x4_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u32x4_max(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[A:%.*]], [[B:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[A]], <4 x i32> [[B]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR7]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_u32x4_max(v128_t a, v128_t b) {
   return wasm_u32x4_max(a, b);

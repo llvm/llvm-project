@@ -47,8 +47,8 @@ define float @_Z3foofffi(float %b, float %x, float %y, i32 %z) uwtable ssp minsi
 ; CHECK-LINUX-NEXT:    stp d11, d10, [sp, #-64]!
 ; CHECK-LINUX-NEXT:    stp d9, d8, [sp, #16]
 ; CHECK-LINUX-NEXT:    stp x29, x30, [sp, #32]
-; CHECK-LINUX-NEXT:    add x29, sp, #32
 ; CHECK-LINUX-NEXT:    stp x20, x19, [sp, #48]
+; CHECK-LINUX-NEXT:    add x29, sp, #32
 ; CHECK-LINUX-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-LINUX-NEXT:    .cfi_offset w19, -8
 ; CHECK-LINUX-NEXT:    .cfi_offset w20, -16

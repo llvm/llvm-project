@@ -29,6 +29,7 @@
 // execution, this mechanism is not used by default and only executes binaries
 // in the paths that are explicitly included by the user.
 
+#include "CompileCommands.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
 #include "support/Path.h"

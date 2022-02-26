@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core,debug.ExprInspection \
 // RUN:                    -analyzer-output=text -verify %s
 
-int OSAtomicCompareAndSwapPtrBarrier(*, *, **);
-int OSAtomicCompareAndSwapPtrBarrier() {
+int OSAtomicCompareAndSwapPtrBarrier(void *, void *, void **);
+int OSAtomicCompareAndSwapPtrBarrier(void *, void *, void **) {
   // There is some body in the actual header,
   // but we should trust our BodyFarm instead.
 }

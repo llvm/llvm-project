@@ -13,6 +13,7 @@
 #include "ErrorHandling.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -289,6 +290,9 @@ class ProfiledBinary {
 
   // Load debug info of subprograms from DWARF section.
   void loadSymbolsFromDWARF(ObjectFile &Obj);
+
+  // Load debug info from DWARF unit.
+  void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start offset of a function is the real entry of the

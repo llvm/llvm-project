@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
 
 void __fastcall f1(void);
 void __stdcall f2(void);
