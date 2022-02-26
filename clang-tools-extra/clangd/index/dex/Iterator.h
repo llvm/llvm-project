@@ -124,8 +124,8 @@ inline void populateChildren(std::vector<std::unique_ptr<Iterator>> &) {}
 template <typename... TailT>
 void populateChildren(std::vector<std::unique_ptr<Iterator>> &Children,
                       std::unique_ptr<Iterator> Head, TailT... Tail) {
-  Children.push_back(move(Head));
-  populateChildren(Children, move(Tail)...);
+  Children.push_back(std::move(Head));
+  populateChildren(Children, std::move(Tail)...);
 }
 } // namespace detail
 
@@ -178,7 +178,7 @@ public:
   std::unique_ptr<Iterator> intersect(Args... args) const {
     std::vector<std::unique_ptr<Iterator>> Children;
     detail::populateChildren(Children, std::forward<Args>(args)...);
-    return intersect(move(Children));
+    return intersect(std::move(Children));
   }
 
   /// This allows unionOf(create(...), create(...)) syntax.
@@ -186,7 +186,7 @@ public:
   std::unique_ptr<Iterator> unionOf(Args... args) const {
     std::vector<std::unique_ptr<Iterator>> Children;
     detail::populateChildren(Children, std::forward<Args>(args)...);
-    return unionOf(move(Children));
+    return unionOf(std::move(Children));
   }
 };
 
