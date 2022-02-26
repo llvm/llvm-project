@@ -16,10 +16,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
 #include "Headers.h"
-#include "Index.h"
-#include "MemIndex.h"
-#include "Merge.h"
 #include "index/CanonicalIncludes.h"
+#include "index/Index.h"
+#include "index/Merge.h"
 #include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/Serialization.h"
@@ -27,7 +26,6 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"

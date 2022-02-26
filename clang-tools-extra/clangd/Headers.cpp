@@ -7,15 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Headers.h"
-#include "Compiler.h"
 #include "Preamble.h"
 #include "SourceCode.h"
-#include "support/Logger.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"

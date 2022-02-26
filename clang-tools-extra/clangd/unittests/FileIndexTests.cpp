@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AST.h"
 #include "Annotations.h"
 #include "Compiler.h"
 #include "Headers.h"
@@ -26,8 +25,6 @@
 #include "index/SymbolID.h"
 #include "support/Threading.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/Utils.h"
-#include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"

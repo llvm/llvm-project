@@ -8,7 +8,6 @@
 
 #include "AST.h"
 #include "Config.h"
-#include "FindTarget.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"

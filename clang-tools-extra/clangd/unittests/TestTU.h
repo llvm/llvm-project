@@ -23,7 +23,6 @@
 #include "ParsedAST.h"
 #include "TestFS.h"
 #include "index/Index.h"
-#include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <string>

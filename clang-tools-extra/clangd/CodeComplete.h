@@ -17,22 +17,18 @@
 
 #include "ASTSignals.h"
 #include "Compiler.h"
-#include "Headers.h"
 #include "Protocol.h"
 #include "Quality.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
-#include "support/Logger.h"
 #include "support/Markup.h"
 #include "support/Path.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
-#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
 #include <functional>
 #include <future>
 

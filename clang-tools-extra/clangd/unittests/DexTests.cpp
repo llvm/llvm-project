@@ -6,18 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FuzzyMatch.h"
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "index/Index.h"
-#include "index/Merge.h"
 #include "index/SymbolID.h"
 #include "index/dex/Dex.h"
 #include "index/dex/Iterator.h"
 #include "index/dex/Token.h"
 #include "index/dex/Trigram.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>

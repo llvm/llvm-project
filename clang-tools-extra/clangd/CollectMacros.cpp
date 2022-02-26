@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CollectMacros.h"
+#include "AST.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Lexer.h"
 
 namespace clang {
 namespace clangd {

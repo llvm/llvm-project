@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TWEAKS_TWEAKTESTING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TWEAKS_TWEAKTESTING_H
 
-#include "TestTU.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"

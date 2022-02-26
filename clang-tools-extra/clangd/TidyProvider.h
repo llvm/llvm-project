@@ -12,7 +12,6 @@
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {

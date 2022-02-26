@@ -25,7 +25,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SERIALIZATION_H
 
 #include "Headers.h"
-#include "Index.h"
+#include "index/Index.h"
 #include "index/Symbol.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"

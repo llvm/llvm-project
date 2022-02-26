@@ -27,11 +27,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 
-#include "ExpectedTypes.h"
 #include "FileDistance.h"
-#include "TUScheduler.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include <algorithm>
@@ -46,7 +43,7 @@ namespace clang {
 class CodeCompletionResult;
 
 namespace clangd {
-
+struct ASTSignals;
 struct Symbol;
 class URIDistance;
 

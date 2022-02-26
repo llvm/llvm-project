@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MEMINDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MEMINDEX_H
 
-#include "Index.h"
+#include "index/Index.h"
 #include "llvm/ADT/StringSet.h"
 #include <mutex>
 

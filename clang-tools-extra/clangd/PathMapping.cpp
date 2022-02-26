@@ -10,8 +10,6 @@
 #include "URI.h"
 #include "support/Logger.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>

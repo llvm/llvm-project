@@ -11,9 +11,7 @@
 
 #include "Path.h"
 #include "ThreadsafeFS.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 
 namespace clang {

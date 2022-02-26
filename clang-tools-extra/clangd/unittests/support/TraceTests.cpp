@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTracer.h"
-#include "support/Context.h"
 #include "support/Trace.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Threading.h"

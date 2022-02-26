@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "ClangdServer.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
-#include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"

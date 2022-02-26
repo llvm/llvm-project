@@ -5,12 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "AST.h"
 #include "Annotations.h"
 #include "CollectMacros.h"
-#include "Matchers.h"
 #include "SourceCode.h"
 #include "TestTU.h"
-#include "index/SymbolID.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
