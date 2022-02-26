@@ -12,7 +12,6 @@ target_link_libraries(cir-tool PRIVATE
   clangCIR
   MLIRAnalysis
   MLIRCIR
-  MLIRCIRAnalysis
   MLIRCIRTransforms
   MLIRDialect
   MLIRIR
