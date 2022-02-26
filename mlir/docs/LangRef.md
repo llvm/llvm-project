@@ -256,10 +256,10 @@ between, and within, different dialects.
 A few of the dialects supported by MLIR:
 
 *   [Affine dialect](Dialects/Affine.md)
+*   [Func dialect](Dialects/Func.md)
 *   [GPU dialect](Dialects/GPU.md)
 *   [LLVM dialect](Dialects/LLVM.md)
 *   [SPIR-V dialect](Dialects/SPIR-V.md)
-*   [Standard dialect](Dialects/Standard.md)
 *   [Vector dialect](Dialects/Vector.md)
 
 ### Target specific operations

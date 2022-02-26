@@ -71,9 +71,9 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
   // Populate conversion patterns
 
   // clang-format off
-  patterns.add<ForwardOperands<CallOp>,
-               ForwardOperands<CallIndirectOp>,
-               ForwardOperands<ReturnOp>>(converter,
+  patterns.add<ForwardOperands<func::CallOp>,
+               ForwardOperands<func::CallIndirectOp>,
+               ForwardOperands<func::ReturnOp>>(converter,
                                           &converter.getContext());
   patterns.add<SdotOpLowering,
                SmmlaOpLowering,

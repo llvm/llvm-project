@@ -14,11 +14,11 @@ add_mlir_dialect_library(MLIRAsyncTransforms
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRAsync
+  MLIRFunc
   MLIRIR
   MLIRPass
   MLIRSCF
   MLIRSCFToControlFlow
-  MLIRStandard
   MLIRTransforms
   MLIRTransformUtils
 )

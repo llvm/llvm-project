@@ -23,9 +23,9 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
@@ -158,7 +158,7 @@ public:
     });
     target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
                            mlir::arith::ArithmeticDialect,
-                           mlir::StandardOpsDialect>();
+                           mlir::func::FuncDialect>();
 
     if (mlir::failed(mlir::applyPartialConversion(function, target,
                                                   std::move(patterns)))) {

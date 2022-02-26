@@ -4,7 +4,7 @@
 func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() {status = "Success"}
   %result = "test.illegal_op_a"() : () -> (i32)
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %result : i32
 }
 
@@ -12,7 +12,7 @@ func @verifyDirectPattern() -> i32 {
 func @verifyLargerBenefit() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() {status = "Success"}
   %result = "test.illegal_op_c"() : () -> (i32)
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %result : i32
 }
 
@@ -29,7 +29,7 @@ func @remap_input_1_to_1(%arg0: i64) {
 func @remap_call_1_to_1(%arg0: i64) {
   // CHECK-NEXT: call @remap_input_1_to_1(%arg0) : (f64) -> ()
   call @remap_input_1_to_1(%arg0) : (i64) -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -78,7 +78,7 @@ func @no_remap_nested() {
       // CHECK-NEXT: "test.valid"{{.*}} : (i64, i64)
       "test.invalid"(%i0, %i1) : (i64, i64) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -92,7 +92,7 @@ func @remap_moved_region_args() {
     ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
       "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -106,7 +106,7 @@ func @remap_cloned_region_args() {
     ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
       "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
   }) {legalizer.should_clone} : () -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -118,7 +118,7 @@ func @remap_drop_region() {
     ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
       "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -135,7 +135,7 @@ func @up_to_date_replacement(%arg: i8) -> i8 {
   // CHECK-NEXT: return
   %repl_1 = "test.rewrite"(%arg) : (i8) -> i8
   %repl_2 = "test.rewrite"(%repl_1) : (i8) -> i8
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %repl_2 : i8
 }
 
@@ -146,7 +146,7 @@ func @remove_foldable_op(%arg0 : i32) -> (i32) {
   %0 = "test.op_with_region_fold"(%arg0) ({
     "foo.op_with_region_terminator"() : () -> ()
   }) : (i32) -> (i32)
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %0 : i32
 }
 
@@ -157,7 +157,7 @@ func @create_block() {
   // CHECK: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
   "test.create_block"() : () -> ()
 
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -165,7 +165,7 @@ func @create_block() {
 func @bounded_recursion() {
   // CHECK: test.recursive_rewrite 0
   test.recursive_rewrite 3
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -227,7 +227,7 @@ func @create_illegal_block() {
   // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
   "test.create_illegal_block"() : () -> ()
 
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -243,7 +243,7 @@ func @undo_block_arg_replace() {
 
     "test.return"(%arg0) : (i32) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -279,7 +279,7 @@ func @undo_block_erase() {
 func @undo_child_created_before_parent() {
   // expected-remark@+1 {{is not legalizable}}
   "test.illegal_op_with_region_anchor"() : () -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -291,7 +291,7 @@ func @undo_child_created_before_parent() {
 func @blackhole() {
   %input = "test.blackhole_producer"() : () -> (i32)
   "test.blackhole"(%input) : (i32) -> ()
-  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 

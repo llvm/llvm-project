@@ -262,7 +262,7 @@ public:
     mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
     target.addLegalDialect<mlir::arith::ArithmeticDialect, FIROpsDialect,
-                           FIRCodeGenDialect, mlir::StandardOpsDialect>();
+                           FIRCodeGenDialect, mlir::func::FuncDialect>();
     target.addIllegalOp<ArrayCoorOp>();
     target.addIllegalOp<ReboxOp>();
     target.addDynamicallyLegalOp<EmboxOp>([](EmboxOp embox) {

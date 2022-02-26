@@ -3,7 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects import builtin
-from mlir.dialects import std
+from mlir.dialects import func
 
 
 def constructAndPrintInModule(f):
@@ -85,10 +85,10 @@ def testFunctionCalls():
   qux.sym_visibility = StringAttr.get("private")
 
   with InsertionPoint(builtin.FuncOp("caller", ([], [])).add_entry_block()):
-    std.CallOp(foo, [])
-    std.CallOp([IndexType.get()], "bar", [])
-    std.CallOp([F32Type.get()], FlatSymbolRefAttr.get("qux"), [])
-    std.ReturnOp([])
+    func.CallOp(foo, [])
+    func.CallOp([IndexType.get()], "bar", [])
+    func.CallOp([F32Type.get()], FlatSymbolRefAttr.get("qux"), [])
+    func.ReturnOp([])
 
 
 # CHECK: func private @foo()

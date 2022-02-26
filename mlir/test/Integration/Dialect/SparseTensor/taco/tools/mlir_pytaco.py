@@ -34,8 +34,8 @@ from mlir import ir
 from mlir import runtime
 from mlir.dialects import arith
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects import linalg
-from mlir.dialects import std
 from mlir.dialects import sparse_tensor
 from mlir.dialects.linalg.opdsl import lang
 

@@ -2,7 +2,7 @@
 
 from mlir.ir import *
 import mlir.dialects.builtin as builtin
-import mlir.dialects.std as std
+import mlir.dialects.func as func
 
 
 def run(f):
@@ -92,7 +92,7 @@ def testFromPyFunc():
       # CHECK: return %arg1 : f64
       @builtin.FuncOp.from_py_func(f32, f64, results=[f64])
       def explicit_results(a, b):
-        std.ReturnOp([b])
+        func.ReturnOp([b])
 
   print(m)
 
@@ -125,42 +125,42 @@ def testBuildFuncOp():
     f32 = F32Type.get()
     tensor_type = RankedTensorType.get((2, 3, 4), f32)
     with InsertionPoint.at_block_begin(m.body):
-      func = builtin.FuncOp(name="some_func",
+      f = builtin.FuncOp(name="some_func",
                             type=FunctionType.get(
                                 inputs=[tensor_type, tensor_type],
                                 results=[tensor_type]),
                             visibility="nested")
       # CHECK: Name is: "some_func"
-      print("Name is: ", func.name)
+      print("Name is: ", f.name)
 
       # CHECK: Type is: (tensor<2x3x4xf32>, tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
-      print("Type is: ", func.type)
+      print("Type is: ", f.type)
 
       # CHECK: Visibility is: "nested"
-      print("Visibility is: ", func.visibility)
+      print("Visibility is: ", f.visibility)
 
       try:
-        entry_block = func.entry_block
+        entry_block = f.entry_block
       except IndexError as e:
         # CHECK: External function does not have a body
         print(e)
 
-      with InsertionPoint(func.add_entry_block()):
-        std.ReturnOp([func.entry_block.arguments[0]])
+      with InsertionPoint(f.add_entry_block()):
+        func.ReturnOp([f.entry_block.arguments[0]])
         pass
 
       try:
-        func.add_entry_block()
+        f.add_entry_block()
       except IndexError as e:
         # CHECK: The function already has an entry block!
         print(e)
 
       # Try the callback builder and passing type as tuple.
-      func = builtin.FuncOp(name="some_other_func",
+      f = builtin.FuncOp(name="some_other_func",
                             type=([tensor_type, tensor_type], [tensor_type]),
                             visibility="nested",
-                            body_builder=lambda func: std.ReturnOp(
-                                [func.entry_block.arguments[0]]))
+                            body_builder=lambda f: func.ReturnOp(
+                                [f.entry_block.arguments[0]]))
 
   # CHECK: module  {
   # CHECK:  func nested @some_func(%arg0: tensor<2x3x4xf32>, %arg1: tensor<2x3x4xf32>) -> tensor<2x3x4xf32> {
@@ -181,34 +181,34 @@ def testFuncArgumentAccess():
     f32 = F32Type.get()
     f64 = F64Type.get()
     with InsertionPoint(module.body):
-      func = builtin.FuncOp("some_func", ([f32, f32], [f32, f32]))
-      with InsertionPoint(func.add_entry_block()):
-        std.ReturnOp(func.arguments)
-      func.arg_attrs = ArrayAttr.get([
+      f = builtin.FuncOp("some_func", ([f32, f32], [f32, f32]))
+      with InsertionPoint(f.add_entry_block()):
+        func.ReturnOp(f.arguments)
+      f.arg_attrs = ArrayAttr.get([
           DictAttr.get({
               "custom_dialect.foo": StringAttr.get("bar"),
               "custom_dialect.baz": UnitAttr.get()
           }),
           DictAttr.get({"custom_dialect.qux": ArrayAttr.get([])})
       ])
-      func.result_attrs = ArrayAttr.get([
+      f.result_attrs = ArrayAttr.get([
           DictAttr.get({"custom_dialect.res1": FloatAttr.get(f32, 42.0)}),
           DictAttr.get({"custom_dialect.res2": FloatAttr.get(f64, 256.0)})
       ])
 
       other = builtin.FuncOp("other_func", ([f32, f32], []))
       with InsertionPoint(other.add_entry_block()):
-        std.ReturnOp([])
+        func.ReturnOp([])
       other.arg_attrs = [
           DictAttr.get({"custom_dialect.foo": StringAttr.get("qux")}),
           DictAttr.get()
       ]
 
   # CHECK: [{custom_dialect.baz, custom_dialect.foo = "bar"}, {custom_dialect.qux = []}]
-  print(func.arg_attrs)
+  print(f.arg_attrs)
 
   # CHECK: [{custom_dialect.res1 = 4.200000e+01 : f32}, {custom_dialect.res2 = 2.560000e+02 : f64}]
-  print(func.result_attrs)
+  print(f.result_attrs)
 
   # CHECK: func @some_func(
   # CHECK: %[[ARG0:.*]]: f32 {custom_dialect.baz, custom_dialect.foo = "bar"},

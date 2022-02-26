@@ -16,7 +16,7 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -317,7 +317,7 @@ AsyncRuntimeRefCountingPass::addAddRefBeforeFunctionCall(Value value) {
   Location loc = value.getLoc();
 
   for (Operation *user : value.getUsers()) {
-    if (!isa<CallOp>(user))
+    if (!isa<func::CallOp>(user))
       continue;
 
     // Add a reference before the function call to pass the value at `+1`

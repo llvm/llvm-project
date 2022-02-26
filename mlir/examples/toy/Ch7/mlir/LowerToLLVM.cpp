@@ -35,10 +35,10 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
@@ -91,8 +91,8 @@ public:
 
       // Insert a newline after each of the inner dimensions of the shape.
       if (i != e - 1)
-        rewriter.create<CallOp>(loc, printfRef, rewriter.getIntegerType(32),
-                                newLineCst);
+        rewriter.create<func::CallOp>(loc, printfRef,
+                                      rewriter.getIntegerType(32), newLineCst);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointToStart(loop.getBody());
     }
@@ -101,8 +101,9 @@ public:
     auto printOp = cast<toy::PrintOp>(op);
     auto elementLoad =
         rewriter.create<memref::LoadOp>(loc, printOp.input(), loopIvs);
-    rewriter.create<CallOp>(loc, printfRef, rewriter.getIntegerType(32),
-                            ArrayRef<Value>({formatSpecifierCst, elementLoad}));
+    rewriter.create<func::CallOp>(
+        loc, printfRef, rewriter.getIntegerType(32),
+        ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
     // Notify the rewriter that this operation has been removed.
     rewriter.eraseOp(op);

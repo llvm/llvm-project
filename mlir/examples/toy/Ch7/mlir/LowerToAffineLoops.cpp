@@ -17,8 +17,8 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
@@ -229,8 +229,8 @@ struct ReturnOpLowering : public OpRewritePattern<toy::ReturnOp> {
     if (op.hasOperand())
       return failure();
 
-    // We lower "toy.return" directly to "std.return".
-    rewriter.replaceOpWithNewOp<ReturnOp>(op);
+    // We lower "toy.return" directly to "func.return".
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op);
     return success();
   }
 };
@@ -279,7 +279,7 @@ namespace {
 struct ToyToAffineLoweringPass
     : public PassWrapper<ToyToAffineLoweringPass, OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
+    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect>();
   }
   void runOnOperation() final;
 };
@@ -305,9 +305,9 @@ void ToyToAffineLoweringPass::runOnOperation() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine`, `Arithmetic`, `MemRef`, and `Standard` dialects.
+  // `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects.
   target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
-                         memref::MemRefDialect, StandardOpsDialect>();
+                         func::FuncDialect, memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

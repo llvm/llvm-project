@@ -11,7 +11,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -149,14 +149,14 @@ public:
   }
 };
 
-class ReturnOpConversion : public mlir::OpRewritePattern<mlir::ReturnOp> {
+class ReturnOpConversion : public mlir::OpRewritePattern<mlir::func::ReturnOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   ReturnOpConversion(mlir::MLIRContext *context,
                      const AbstractResultOptions &opt)
       : OpRewritePattern(context), options{opt} {}
   mlir::LogicalResult
-  matchAndRewrite(mlir::ReturnOp ret,
+  matchAndRewrite(mlir::func::ReturnOp ret,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(ret);
     auto returnedValue = ret.getOperand(0);
@@ -177,7 +177,7 @@ public:
     if (!replacedStorage)
       rewriter.create<fir::StoreOp>(ret.getLoc(), returnedValue,
                                     options.newArg);
-    rewriter.replaceOpWithNewOp<mlir::ReturnOp>(ret);
+    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
     return mlir::success();
   }
 
@@ -239,8 +239,8 @@ public:
               rewriter.create<fir::BoxAddrOp>(loc, bufferType, options.newArg);
         }
         patterns.insert<ReturnOpConversion>(context, options);
-        target.addDynamicallyLegalOp<mlir::ReturnOp>(
-            [](mlir::ReturnOp ret) { return ret.operands().empty(); });
+        target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
+            [](mlir::func::ReturnOp ret) { return ret.operands().empty(); });
       }
     }
 
@@ -249,7 +249,7 @@ public:
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithmeticDialect,
-                           mlir::StandardOpsDialect>();
+                           mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {
       return !mustConvertCallOrFunc(call.getFunctionType());

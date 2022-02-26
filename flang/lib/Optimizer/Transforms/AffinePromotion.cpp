@@ -21,8 +21,8 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
@@ -595,7 +595,7 @@ public:
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<
         mlir::AffineDialect, FIROpsDialect, mlir::scf::SCFDialect,
-        mlir::arith::ArithmeticDialect, mlir::StandardOpsDialect>();
+        mlir::arith::ArithmeticDialect, mlir::func::FuncDialect>();
     target.addDynamicallyLegalOp<IfOp>([&functionAnalysis](fir::IfOp op) {
       return !(functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine());
     });

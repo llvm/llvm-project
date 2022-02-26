@@ -43,7 +43,7 @@ void testRunPassOnModule() {
   // CHECK-LABEL: Operations encountered:
   // CHECK: arith.addi        , 1
   // CHECK: builtin.func      , 1
-  // CHECK: std.return        , 1
+  // CHECK: func.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
@@ -85,7 +85,7 @@ void testRunPassOnNestedModule() {
   // CHECK-LABEL: Operations encountered:
   // CHECK: arith.addi        , 1
   // CHECK: builtin.func      , 1
-  // CHECK: std.return        , 1
+  // CHECK: func.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirOpPassManager nestedFuncPm = mlirPassManagerGetNestedUnder(
@@ -101,7 +101,7 @@ void testRunPassOnNestedModule() {
   // CHECK-LABEL: Operations encountered:
   // CHECK: arith.addf        , 1
   // CHECK: builtin.func      , 1
-  // CHECK: std.return        , 1
+  // CHECK: func.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirOpPassManager nestedModulePm = mlirPassManagerGetNestedUnder(

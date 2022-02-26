@@ -10,8 +10,8 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -107,8 +107,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 
-  rewriter.replaceOpWithNewOp<CallOp>(op, name, op.getType(),
-                                      op->getOperands());
+  rewriter.replaceOpWithNewOp<func::CallOp>(op, name, op.getType(),
+                                            op->getOperands());
 
   return success();
 }
@@ -142,7 +142,7 @@ void ConvertMathToLibmPass::runOnOperation() {
 
   ConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithmeticDialect, BuiltinDialect,
-                         StandardOpsDialect, vector::VectorDialect>();
+                         func::FuncDialect, vector::VectorDialect>();
   target.addIllegalDialect<math::MathDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

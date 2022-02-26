@@ -1,4 +1,4 @@
-//===- PassDetail.h - GPU Pass class details --------------------*- C++ -*-===//
+//===- PassDetail.h - Func Pass class details -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
-#define DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
+#ifndef DIALECT_FUNC_TRANSFORMS_PASSDETAIL_H_
+#define DIALECT_FUNC_TRANSFORMS_PASSDETAIL_H_
 
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Pass/Pass.h"
@@ -25,8 +25,8 @@ class MemRefDialect;
 } // namespace memref
 
 #define GEN_PASS_CLASSES
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h.inc"
+#include "mlir/Dialect/Func/Transforms/Passes.h.inc"
 
 } // namespace mlir
 
-#endif // DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
+#endif // DIALECT_FUNC_TRANSFORMS_PASSDETAIL_H_

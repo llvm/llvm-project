@@ -92,5 +92,5 @@ def testRunPipeline():
 # CHECK: Operations encountered:
 # CHECK: builtin.func      , 1
 # CHECK: builtin.module    , 1
-# CHECK: std.return        , 1
+# CHECK: func.return        , 1
 run(testRunPipeline)

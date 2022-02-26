@@ -16,6 +16,8 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRArithmeticTransforms
   MLIRBufferization
   MLIRBufferizationTransforms
+  MLIRFunc
+  MLIRFuncTransforms
   MLIRGPUTransforms
   MLIRLinalg
   MLIRLinalgTransforms
@@ -24,8 +26,6 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRPass
   MLIRSCF
   MLIRSCFTransforms
-  MLIRStandard
-  MLIRStandardOpsTransforms
   MLIRTensor
   MLIRTensorTransforms
   MLIRTransformUtils

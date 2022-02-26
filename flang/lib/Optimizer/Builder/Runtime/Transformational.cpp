@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/matmul.h"
 #include "flang/Runtime/transformational.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 using namespace Fortran::runtime;
 

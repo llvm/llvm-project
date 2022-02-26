@@ -13,7 +13,7 @@
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -107,7 +107,7 @@ public:
       mlir::ConversionTarget target(*context);
       target.addLegalDialect<mlir::AffineDialect, fir::FIROpsDialect,
                              mlir::arith::ArithmeticDialect,
-                             mlir::StandardOpsDialect>();
+                             mlir::func::FuncDialect>();
 
       // apply the patterns
       target.addIllegalOp<fir::CharConvertOp>();

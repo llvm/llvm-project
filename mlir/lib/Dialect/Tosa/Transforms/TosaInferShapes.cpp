@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlowAnalysis.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
@@ -224,7 +224,7 @@ void propagateShapesInRegion(Region &region) {
           // being replaceable if it is used by a ReturnOp or a TosaOp.
           bool replaceable = true;
           for (auto *user : result.getUsers()) {
-            if (isa<ReturnOp>(user))
+            if (isa<func::ReturnOp>(user))
               continue;
             if (user->getDialect()->getNamespace() ==
                 TosaDialect::getDialectNamespace())
@@ -287,7 +287,7 @@ public:
 
     // Insert UnrealizedConversionCasts to guarantee ReturnOp agress with
     // the FuncOp type.
-    func.walk([&](ReturnOp op) {
+    func.walk([&](func::ReturnOp op) {
       FuncOp parent = dyn_cast<FuncOp>(op->getParentOp());
       if (!parent)
         return;
@@ -315,7 +315,7 @@ public:
       }
 
       if (castAdded) {
-        rewriter.replaceOpWithNewOp<ReturnOp>(op, castedValues);
+        rewriter.replaceOpWithNewOp<func::ReturnOp>(op, castedValues);
       }
     });
   }

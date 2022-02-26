@@ -314,7 +314,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
 
     ```mlir
     // Define an instance with single range of operands.
-    %op = pdl.operation "std.return"(%allArgs : !pdl.range<value>)
+    %op = pdl.operation "func.return"(%allArgs : !pdl.range<value>)
     ```
 
     2) A variadic number of either !pdl.value or !pdl.range<value>:

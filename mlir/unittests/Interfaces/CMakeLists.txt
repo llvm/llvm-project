@@ -9,7 +9,7 @@ target_link_libraries(MLIRInterfacesTests
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRDLTI
+  MLIRFunc
   MLIRInferTypeOpInterface
   MLIRParser
-  MLIRStandard
 )

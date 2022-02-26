@@ -13,11 +13,13 @@
 
 namespace mlir {
 
-class StandardOpsDialect;
-
 namespace bufferization {
 class BufferizationDialect;
 } // namespace bufferization
+
+namespace func {
+class FuncDialect;
+} // namespace func
 
 namespace memref {
 class MemRefDialect;

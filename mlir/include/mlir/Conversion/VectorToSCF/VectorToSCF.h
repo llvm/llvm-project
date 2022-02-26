@@ -74,7 +74,7 @@ struct VectorTransferToSCFOptions {
   }
 };
 
-/// Collect a set of patterns to convert from the Vector dialect to SCF + std.
+/// Collect a set of patterns to convert from the Vector dialect to SCF + func.
 void populateVectorToSCFConversionPatterns(
     RewritePatternSet &patterns,
     const VectorTransferToSCFOptions &options = VectorTransferToSCFOptions());

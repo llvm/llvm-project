@@ -2,8 +2,8 @@
 
 from mlir.ir import *
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects import linalg
-from mlir.dialects import std
 
 from mlir.dialects.linalg.opdsl.lang import *
 

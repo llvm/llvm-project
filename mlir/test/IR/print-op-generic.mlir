@@ -9,5 +9,5 @@ func @pretty_names() {
   // GENERIC: %0 = "test.string_attr_pretty_name"()
   return
   // CHECK: return
-  // GENERIC: "std.return"()
+  // GENERIC: "func.return"()
 }

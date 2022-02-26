@@ -1,4 +1,4 @@
-//===- FuncConversions.h - Patterns for converting std.funcs ----*- C++ -*-===//
+//===- FuncConversions.h - Patterns for converting func.func ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files contains patterns for converting standard functions.
+// This files contains patterns for converting functions.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_
-#define MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_
+#ifndef MLIR_DIALECT_FUNC_TRANSFORMS_FUNCCONVERSIONS_H_
+#define MLIR_DIALECT_FUNC_TRANSFORMS_FUNCCONVERSIONS_H_
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -70,4 +70,4 @@ bool isLegalForReturnOpTypeConversionPattern(Operation *op,
 bool isNotBranchOpInterfaceOrReturnLikeOp(Operation *op);
 } // namespace mlir
 
-#endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_
+#endif // MLIR_DIALECT_FUNC_TRANSFORMS_FUNCCONVERSIONS_H_

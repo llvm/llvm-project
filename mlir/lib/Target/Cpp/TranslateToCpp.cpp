@@ -8,8 +8,8 @@
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -238,7 +238,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    mlir::ConstantOp constantOp) {
+                                    func::ConstantOp constantOp) {
   Operation *operation = constantOp.getOperation();
   Attribute value = constantOp.getValueAttr();
 
@@ -311,7 +311,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, mlir::CallOp callOp) {
+static LogicalResult printOperation(CppEmitter &emitter, func::CallOp callOp) {
   if (failed(emitter.emitAssignPrefix(*callOp.getOperation())))
     return failure();
 
@@ -545,7 +545,8 @@ static LogicalResult printOperation(CppEmitter &emitter, scf::YieldOp yieldOp) {
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, ReturnOp returnOp) {
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    func::ReturnOp returnOp) {
   raw_ostream &os = emitter.ostream();
   os << "return";
   switch (returnOp.getNumOperands()) {
@@ -909,16 +910,21 @@ LogicalResult CppEmitter::emitLabel(Block &block) {
 LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   LogicalResult status =
       llvm::TypeSwitch<Operation *, LogicalResult>(&op)
+          // Builtin ops.
+          .Case<FuncOp, ModuleOp>(
+              [&](auto op) { return printOperation(*this, op); })
+          // CF ops.
+          .Case<cf::BranchOp, cf::CondBranchOp>(
+              [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
           .Case<emitc::ApplyOp, emitc::CallOp, emitc::ConstantOp,
                 emitc::IncludeOp, emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
+          // Func ops.
+          .Case<func::CallOp, func::ConstantOp, func::ReturnOp>(
+              [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
           .Case<scf::ForOp, scf::IfOp, scf::YieldOp>(
-              [&](auto op) { return printOperation(*this, op); })
-          // Standard ops.
-          .Case<cf::BranchOp, mlir::CallOp, cf::CondBranchOp, mlir::ConstantOp,
-                FuncOp, ModuleOp, ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops.
           .Case<arith::ConstantOp>(

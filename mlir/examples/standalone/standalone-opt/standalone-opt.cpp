@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
   mlir::DialectRegistry registry;
   registry.insert<mlir::standalone::StandaloneDialect,
-                  mlir::arith::ArithmeticDialect, mlir::StandardOpsDialect>();
+                  mlir::arith::ArithmeticDialect, mlir::func::FuncDialect>();
   // Add the following to include *all* MLIR Core dialects, or selectively
   // include what you need like above. You only need to register dialects that
   // will be *parsed* by the tool, not the one generated

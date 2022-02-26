@@ -10,7 +10,7 @@
 #define FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 
 namespace fir {
@@ -25,7 +25,7 @@ inline bool nonVolatileLoad(mlir::Operation *op) {
 /// return true iff the Operation is a call
 inline bool isaCall(mlir::Operation *op) {
   return isa<fir::CallOp>(op) || isa<fir::DispatchOp>(op) ||
-         isa<mlir::CallOp>(op) || isa<mlir::CallIndirectOp>(op);
+         isa<mlir::func::CallOp>(op) || isa<mlir::func::CallIndirectOp>(op);
 }
 
 /// return true iff the Operation is a fir::CallOp, fir::DispatchOp,

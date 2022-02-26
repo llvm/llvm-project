@@ -10,11 +10,11 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -102,7 +102,7 @@ LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
 
   // TODO: Add support for more complex library call signatures that include
   // indices or captured values.
-  rewriter.replaceOpWithNewOp<mlir::CallOp>(
+  rewriter.replaceOpWithNewOp<func::CallOp>(
       op, libraryCallName.getValue(), TypeRange(),
       createTypeCanonicalizedMemRefOperands(rewriter, op->getLoc(),
                                             op->getOperands()));
@@ -129,9 +129,9 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   auto module = getOperation();
   ConversionTarget target(getContext());
   target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
-                         memref::MemRefDialect, scf::SCFDialect,
-                         StandardOpsDialect>();
-  target.addLegalOp<ModuleOp, FuncOp, ReturnOp>();
+                         func::FuncDialect, memref::MemRefDialect,
+                         scf::SCFDialect>();
+  target.addLegalOp<ModuleOp, FuncOp, func::ReturnOp>();
   RewritePatternSet patterns(&getContext());
   populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))

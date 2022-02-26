@@ -31,7 +31,7 @@ def ArithmeticBufferize : Pass<"arith-bufferize", "ModuleOp"> {
 def ArithmeticExpandOps : Pass<"arith-expand"> {
   let summary = "Legalize Arithmetic ops to be convertible to LLVM.";
   let constructor = "mlir::arith::createArithmeticExpandOpsPass()";
-  let dependentDialects = ["StandardOpsDialect"];
+  let dependentDialects = ["func::FuncDialect"];
 }
 
 #endif // MLIR_DIALECT_ARITHMETIC_TRANSFORMS_PASSES

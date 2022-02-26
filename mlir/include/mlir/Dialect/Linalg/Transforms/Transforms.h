@@ -541,9 +541,9 @@ makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
 /// operand_dim_1 = dim %operand, 1 : memref<50x100xf32>
 /// scf.for %k = %c0 to operand_dim_0 step %c10 {
 ///   scf.for %l = %c0 to operand_dim_1 step %c25 {
-///     %4 = std.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
+///     %4 = memref.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
 ///       : memref<50x100xf32> to memref<?x?xf32, #strided>
-///     %5 = std.subview %result[%k, %l][%c10, %c25][%c1, %c1]
+///     %5 = memref.subview %result[%k, %l][%c10, %c25][%c1, %c1]
 ///       : memref<50x100xf32> to memref<?x?xf32, #strided>
 ///     linalg.generic pointwise_2d_trait %4, %5 {
 ///     ^bb0(%operand_in: f32, %result_in: f32):

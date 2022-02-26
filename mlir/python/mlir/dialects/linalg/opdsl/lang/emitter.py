@@ -6,8 +6,8 @@ from typing import Callable, Dict, List, Sequence, Tuple, Union
 
 from .....ir import *
 
+from .... import func
 from .... import linalg
-from .... import std
 from .... import math
 from .... import arith
 from ...._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values

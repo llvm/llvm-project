@@ -12,7 +12,7 @@
 #include "TestTypes.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -368,8 +368,8 @@ struct FoldToCallOpPattern : public OpRewritePattern<FoldToCallOp> {
 
   LogicalResult matchAndRewrite(FoldToCallOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<CallOp>(op, TypeRange(), op.getCalleeAttr(),
-                                        ValueRange());
+    rewriter.replaceOpWithNewOp<func::CallOp>(op, TypeRange(),
+                                              op.getCalleeAttr(), ValueRange());
     return success();
   }
 };

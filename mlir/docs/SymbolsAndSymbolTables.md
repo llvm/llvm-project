@@ -33,7 +33,7 @@ result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
 [`builtin.func`](Dialects/Builtin.md/#func-mlirfuncop). `builtin.func` defines a
 symbol name, which is [referred to](#referencing-a-symbol) by operations like
-[`std.call`](Dialects/Standard.md/#stdcall-callop).
+[`func.call`](Dialects/Func.md/#funccall-callop).
 
 ### Defining or declaring a Symbol
 

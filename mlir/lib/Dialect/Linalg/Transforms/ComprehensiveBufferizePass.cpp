@@ -49,7 +49,7 @@ struct LinalgComprehensiveModuleBufferize
         .insert<bufferization::BufferizationDialect, linalg::LinalgDialect,
                 memref::MemRefDialect, tensor::TensorDialect,
                 vector::VectorDialect, scf::SCFDialect,
-                arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
+                arith::ArithmeticDialect, func::FuncDialect, AffineDialect>();
     affine_ext::registerBufferizableOpInterfaceExternalModels(registry);
     arith::registerBufferizableOpInterfaceExternalModels(registry);
     linalg::registerBufferizableOpInterfaceExternalModels(registry);

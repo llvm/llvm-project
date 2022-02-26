@@ -74,7 +74,7 @@ func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : index) -> index {
 
 // -----
 
-// Express `get_extent` as `std.tensor.extract`.
+// Express `get_extent` as `tensor.extract`.
 // CHECK-LABEL: @get_extent_from_extent_tensor
 // CHECK-SAME: (%[[EXTENTS:.*]]: tensor<?xindex>, %[[IDX:.*]]: index) -> index
 func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)

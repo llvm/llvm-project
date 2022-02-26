@@ -169,7 +169,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
 
     populateTensorBufferizePatterns(typeConverter, patterns);
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
-    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<func::FuncDialect>();
 
     if (failed(
             applyPartialConversion(getOperation(), target, std::move(patterns))))

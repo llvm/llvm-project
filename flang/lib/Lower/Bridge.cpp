@@ -427,7 +427,7 @@ private:
   /// Generate the cleanup block before the program exits
   void genExitRoutine() {
     if (blockIsUnterminated())
-      builder->create<mlir::ReturnOp>(toLocation());
+      builder->create<mlir::func::ReturnOp>(toLocation());
   }
   void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
 
@@ -459,7 +459,7 @@ private:
             TODO(loc, "Convert to actual type");
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
-    builder->create<mlir::ReturnOp>(loc, resultVal);
+    builder->create<mlir::func::ReturnOp>(loc, resultVal);
   }
 
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,

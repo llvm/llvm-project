@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file defines prototypes that expose pass constructors in the loop
+// This header file defines prototypes that expose pass constructors in the Func
 // transformation library.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
-#define MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
+#ifndef MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_H
+#define MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 
@@ -23,6 +23,7 @@ class BufferizeTypeConverter;
 
 class RewritePatternSet;
 
+namespace func {
 /// Creates an instance of func bufferization pass.
 std::unique_ptr<Pass> createFuncBufferizePass();
 
@@ -32,8 +33,9 @@ std::unique_ptr<Pass> createFuncBufferizePass();
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h.inc"
+#include "mlir/Dialect/Func/Transforms/Passes.h.inc"
 
+} // namespace func
 } // namespace mlir
 
-#endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
+#endif // MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_H

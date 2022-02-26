@@ -13,10 +13,10 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
@@ -35,14 +35,14 @@ struct TosaToLinalg : public TosaToLinalgBase<TosaToLinalg> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithmeticDialect, linalg::LinalgDialect,
-                    math::MathDialect, StandardOpsDialect,
-                    tensor::TensorDialect, scf::SCFDialect>();
+                    math::MathDialect, func::FuncDialect, tensor::TensorDialect,
+                    scf::SCFDialect>();
   }
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<linalg::LinalgDialect, StandardOpsDialect,
+    target.addLegalDialect<linalg::LinalgDialect, func::FuncDialect,
                            tensor::TensorDialect, scf::SCFDialect>();
     target.addIllegalDialect<tosa::TosaDialect>();
 

@@ -16,7 +16,6 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
-include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "flang/Optimizer/Dialect/FIROps.td"
 
 def IdenticalTypePred : Constraint<CPred<"$0.getType() == $1.getType()">>;

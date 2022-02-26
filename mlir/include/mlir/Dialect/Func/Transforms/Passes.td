@@ -1,4 +1,4 @@
-//===-- Passes.td - StandardOps pass definition file -------*- tablegen -*-===//
+//===-- Passes.td - Func pass definition file --------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES
-#define MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES
+#ifndef MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_TD
+#define MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_TD
 
 include "mlir/Pass/PassBase.td"
 
 def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
   let summary = "Bufferize func/call/return ops";
   let description = [{
-    A bufferize pass that bufferizes std.func and std.call ops.
+    A bufferize pass that bufferizes builtin.func and func.call ops.
 
-    Because this pass updates std.func ops, it must be a module pass. It is
+    Because this pass updates builtin.func ops, it must be a module pass. It is
     useful to keep this pass separate from other bufferizations so that the
     other ones can be run at function-level in parallel.
 
@@ -35,9 +35,9 @@ def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
     Finally, this pass fails for unknown terminators, as we cannot decide
     whether they need rewriting.
   }];
-  let constructor = "mlir::createFuncBufferizePass()";
+  let constructor = "mlir::func::createFuncBufferizePass()";
   let dependentDialects = ["bufferization::BufferizationDialect",
                            "memref::MemRefDialect"];
 }
 
-#endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES
+#endif // MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_TD

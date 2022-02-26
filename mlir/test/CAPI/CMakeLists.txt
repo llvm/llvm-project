@@ -34,7 +34,7 @@ _add_capi_test_executable(mlir-capi-ir-test
   ir.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
-    MLIRCAPIStandard
+    MLIRCAPIFunc
     MLIRCAPIRegistration
 )
 

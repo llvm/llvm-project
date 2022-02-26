@@ -903,7 +903,7 @@ def LoadOp : MemRef_Op<"load",
     In an `affine.if` or `affine.for` body, the indices of a load are restricted
     to SSA values bound to surrounding loop induction variables,
     [symbols](Affine.md/#dimensions-and-symbols), results of a
-    [`constant` operation](Standard.md/#stdconstant-constantop), or the result of an
+    constant operations, or the result of an
     `affine.apply` operation that can in turn take as arguments all of the
     aforementioned SSA values or the recursively result of such an
     `affine.apply` operation.

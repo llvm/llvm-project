@@ -58,6 +58,7 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     MLIRAnalysis
     MLIRArithmetic
     MLIRExecutionEngine
+    MLIRFunc
     MLIRGPUOps
     MLIRIR
     MLIRJitRunner
@@ -69,7 +70,6 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     MLIRParser
     MLIRSPIRV
     MLIRSPIRVTransforms
-    MLIRStandard
     MLIRSupport
     MLIRTargetLLVMIRExport
     MLIRTransforms

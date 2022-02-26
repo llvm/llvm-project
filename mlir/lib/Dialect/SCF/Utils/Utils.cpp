@@ -13,8 +13,8 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -147,8 +147,8 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
         outlinedFuncBlockArgs.take_front(numOriginalBlockArguments));
     // Explicitly set up a new ReturnOp terminator.
     rewriter.setInsertionPointToEnd(outlinedFuncBody);
-    rewriter.create<ReturnOp>(loc, originalTerminator->getResultTypes(),
-                              originalTerminator->getOperands());
+    rewriter.create<func::ReturnOp>(loc, originalTerminator->getResultTypes(),
+                                    originalTerminator->getOperands());
   }
 
   // Reconstruct the block that was deleted and add a
@@ -164,7 +164,8 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
     SmallVector<Value> callValues;
     llvm::append_range(callValues, newBlock->getArguments());
     llvm::append_range(callValues, outlinedValues);
-    Operation *call = rewriter.create<CallOp>(loc, outlinedFunc, callValues);
+    Operation *call =
+        rewriter.create<func::CallOp>(loc, outlinedFunc, callValues);
 
     // `originalTerminator` was moved to `outlinedFuncBody` and is still valid.
     // Clone `originalTerminator` to take the callOp results then erase it from

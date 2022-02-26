@@ -1,4 +1,4 @@
-//===-- mlir-c/Dialect/Standard.h - C API for Standard dialect ----*- C -*-===//
+//===-- mlir-c/Dialect/Func.h - C API for Func dialect ------------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -8,15 +8,15 @@
 //===----------------------------------------------------------------------===//
 //
 // This header declares the C interface for registering and accessing the
-// Standard dialect. A dialect should be registered with a context to make it
+// Func dialect. A dialect should be registered with a context to make it
 // available to users of the context. These users must load the dialect
 // before using any of its attributes, operations or types. Parser and pass
 // manager can load registered dialects automatically.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_DIALECT_STANDARD_H
-#define MLIR_C_DIALECT_STANDARD_H
+#ifndef MLIR_C_DIALECT_FUNC_H
+#define MLIR_C_DIALECT_FUNC_H
 
 #include "mlir-c/Registration.h"
 
@@ -24,10 +24,10 @@
 extern "C" {
 #endif
 
-MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Standard, std);
+MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Func, func);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // MLIR_C_DIALECT_STANDARD_H
+#endif // MLIR_C_DIALECT_FUNC_H

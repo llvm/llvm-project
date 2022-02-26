@@ -49,7 +49,7 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %gDimZ = gpu.grid_dim z
 
-    std.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
+    func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
                %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ
         : index, index, index, index, index, index,
           index, index, index, index, index, index
@@ -67,7 +67,7 @@ gpu.module @test_module {
     %0 = arith.addi %idx, %idx : index
     // CHECK: llvm.return %{{.*}} : i64
     // CHECK32: llvm.return %{{.*}} : i32
-    std.return %0 : index
+    func.return %0 : index
   }
 }
 
@@ -78,7 +78,7 @@ gpu.module @test_module {
   builtin.func @gpu_sync() {
     // CHECK: rocdl.barrier
     gpu.barrier
-    std.return
+    func.return
   }
 }
 
@@ -93,7 +93,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_fabs_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.abs %arg_f64 : f64
     // CHECK: llvm.call @__ocml_fabs_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -108,7 +108,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_ceil_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.ceil %arg_f64 : f64
     // CHECK: llvm.call @__ocml_ceil_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -123,7 +123,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_floor_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.floor %arg_f64 : f64
     // CHECK: llvm.call @__ocml_floor_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -138,7 +138,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_cos_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.cos %arg_f64 : f64
     // CHECK: llvm.call @__ocml_cos_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -155,7 +155,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.exp %arg_f64 : f64
     // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -172,7 +172,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_exp2_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.exp2 %arg_f64 : f64
     // CHECK: llvm.call @__ocml_exp2_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -192,7 +192,7 @@ gpu.module @test_module {
       // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
       %result64 = math.exp %arg_f64 : f64
       // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
-      std.return %result32, %result64 : f32, f64
+      func.return %result32, %result64 : f32, f64
     }
     "test.finish" () : () -> ()
   }) : () -> ()
@@ -211,7 +211,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_expm1_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.expm1 %arg_f64 : f64
     // CHECK: llvm.call @__ocml_expm1_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -226,7 +226,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_log_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.log %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -241,7 +241,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_log1p_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.log1p %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log1p_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -256,7 +256,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_log10_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.log10 %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log10_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -271,7 +271,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_log2_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.log2 %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log2_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -291,7 +291,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_rsqrt_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.rsqrt %arg_f64 : f64
     // CHECK: llvm.call @__ocml_rsqrt_f64(%{{.*}}) : (f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -311,7 +311,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_sqrt_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.sqrt %arg_f64 : f64
     // CHECK: llvm.call @__ocml_sqrt_f64(%{{.*}}) : (f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -326,7 +326,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_tanh_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.tanh %arg_f64 : f64
     // CHECK: llvm.call @__ocml_tanh_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -341,7 +341,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_atan_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.atan %arg_f64 : f64
     // CHECK: llvm.call @__ocml_atan_f64(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -356,7 +356,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_atan2_f32(%{{.*}}) : (f32, f32) -> f32
     %result64 = math.atan2 %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__ocml_atan2_f64(%{{.*}}) : (f64, f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -371,7 +371,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_pow_f32(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
     %result64 = math.powf %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__ocml_pow_f64(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 

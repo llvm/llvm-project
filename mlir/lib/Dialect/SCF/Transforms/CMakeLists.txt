@@ -24,12 +24,12 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRBufferization
   MLIRBufferizationTransforms
   MLIRDialectUtils
+  MLIRFunc
   MLIRIR
   MLIRMemRef
   MLIRPass
   MLIRSCF
   MLIRSCFUtils
-  MLIRStandard
   MLIRSupport
   MLIRTensor
   MLIRTransforms

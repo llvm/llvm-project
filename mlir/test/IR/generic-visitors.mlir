@@ -36,7 +36,7 @@ func @structured_cfg() {
 // CHECK: step 14 op 'use3' before all regions
 // CHECK: step 15 op 'scf.yield' before all regions
 // CHECK: step 16 op 'scf.for' after all regions
-// CHECK: step 17 op 'std.return' before all regions
+// CHECK: step 17 op 'func.return' before all regions
 // CHECK: step 18 op 'builtin.func' after all regions
 // CHECK: step 19 op 'builtin.module' after all regions
 

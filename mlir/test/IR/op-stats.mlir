@@ -31,6 +31,6 @@ func @main(tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32> {
 
 // CHECK-LABEL: Operations encountered
 // CHECK: arith.addf , 6
+// CHECK: func.return , 1
 // CHECK: long_op_name , 1
-// CHECK: std.return , 1
 // CHECK: xla.add , 17

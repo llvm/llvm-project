@@ -19,7 +19,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h.inc"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmSVE/ArmSVE.h.inc"

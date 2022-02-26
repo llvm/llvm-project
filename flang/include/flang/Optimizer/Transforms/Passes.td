@@ -25,7 +25,7 @@ def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::FuncOp"> {
   }];
   let constructor = "::fir::createAbstractResultOptPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
   let options = [
     Option<"passResultAsBox", "abstract-result-as-box",
@@ -56,7 +56,7 @@ def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::FuncOp"> {
   }];
   let constructor = "::fir::createPromoteToAffinePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
   ];
 }
 
@@ -70,7 +70,7 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::FuncOp"> {
   }];
   let constructor = "::fir::createAffineDemotionPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
   ];
 }
 
@@ -122,7 +122,7 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::FuncOp"> {
   }];
   let constructor = "::fir::createFirToCfgPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
   let options = [
     Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
@@ -148,7 +148,7 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::FuncOp"> {
   }];
   let constructor = "::fir::createMemDataFlowOptPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
 }
 

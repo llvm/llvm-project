@@ -903,8 +903,8 @@ func @test_constant() -> () {
   // CHECK: %c42_i32_0 = arith.constant 42 : i32
   %1 = arith.constant 42 : i32
 
-  // CHECK: %c43 = arith.constant {crazy = "std.foo"} 43 : index
-  %2 = arith.constant {crazy = "std.foo"} 43: index
+  // CHECK: %c43 = arith.constant {crazy = "func.foo"} 43 : index
+  %2 = arith.constant {crazy = "func.foo"} 43: index
 
   // CHECK: %cst = arith.constant 4.300000e+01 : bf16
   %3 = arith.constant 43.0 : bf16

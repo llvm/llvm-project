@@ -34,7 +34,6 @@ syn match mlirType /\<vector\ze\s*<.*>/
 syn match mlirType /x\s*\zsvector/
 
 " Operations.
-" Standard dialect ops.
 " TODO: this list is not exhaustive.
 syn keyword mlirOps alloc alloca addf addi and call call_indirect cmpf cmpi
 syn keyword mlirOps constant dealloc divf dma_start dma_wait dim exp

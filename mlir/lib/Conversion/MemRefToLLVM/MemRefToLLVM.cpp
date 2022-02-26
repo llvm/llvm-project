@@ -1753,7 +1753,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
 // AtomicRMWOpLowering
 //===----------------------------------------------------------------------===//
 
-/// Try to match the kind of a std.atomic_rmw to determine whether to use a
+/// Try to match the kind of a memref.atomic_rmw to determine whether to use a
 /// lowering to llvm.atomicrmw or fallback to llvm.cmpxchg.
 static Optional<LLVM::AtomicBinOp>
 matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {

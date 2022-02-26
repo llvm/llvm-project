@@ -10,13 +10,13 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -391,7 +391,7 @@ struct TestVectorToLoopPatterns
           type.getNumElements() % multiplicity != 0)
         return mlir::WalkResult::advance();
       auto filterAlloc = [](Operation *op) {
-        return !isa<arith::ConstantOp, memref::AllocOp, CallOp>(op);
+        return !isa<arith::ConstantOp, memref::AllocOp, func::CallOp>(op);
       };
       auto dependentOps = getSlice(op, filterAlloc);
       // Create a loop and move instructions from the Op slice into the loop.

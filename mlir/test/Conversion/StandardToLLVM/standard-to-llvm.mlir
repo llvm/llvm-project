@@ -454,7 +454,7 @@ func @dfs_block_order(%arg0: i32) -> (i32) {
 func @ceilf(%arg0 : f32) {
   // CHECK: "llvm.intr.ceil"(%arg0) : (f32) -> f32
   %0 = math.ceil %arg0 : f32
-  std.return
+  func.return
 }
 
 // -----
@@ -464,7 +464,7 @@ func @ceilf(%arg0 : f32) {
 func @floorf(%arg0 : f32) {
   // CHECK: "llvm.intr.floor"(%arg0) : (f32) -> f32
   %0 = math.floor %arg0 : f32
-  std.return
+  func.return
 }
 
 // -----
@@ -507,7 +507,7 @@ func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
   %0 = math.fma %arg0, %arg0, %arg0 : f32
   // CHECK: %[[V:.*]] = "llvm.intr.fma"(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
   %1 = math.fma %arg1, %arg1, %arg1 : vector<4xf32>
-  std.return
+  func.return
 }
 
 // -----
@@ -521,10 +521,10 @@ func @switchi8(%arg0 : i8) -> i32 {
   ]
 ^bb1:
   %c_1 = arith.constant 1 : i32
-  std.return %c_1 : i32
+  func.return %c_1 : i32
 ^bb3:
   %c_42 = arith.constant 42 : i32
-  std.return %c_42: i32
+  func.return %c_42: i32
 }
 // CHECK:     llvm.switch %arg0 : i8, ^bb1 [
 // CHECK-NEXT:       42: ^bb1,
