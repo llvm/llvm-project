@@ -116,22 +116,22 @@ Constraint Foo() -> {}
 // -----
 
 // CHECK: cannot create a single-element tuple with an element label
-Constraint Foo() -> result: Value;
+Constraint Foo() -> result: Value {}
 
 // -----
 
 // CHECK: cannot create a single-element tuple with an element label
-Constraint Foo() -> (result: Value);
+Constraint Foo() -> (result: Value) {}
 
 // -----
 
 // CHECK: expected identifier constraint
-Constraint Foo() -> ();
+Constraint Foo() -> () {}
 
 // -----
 
 // CHECK: expected `:` before result constraint
-Constraint Foo() -> (result{};
+Constraint Foo() -> (result {};
 
 // -----
 
@@ -141,7 +141,7 @@ Constraint Foo() -> (Op{};
 // -----
 
 // CHECK: inline `Attr`, `Value`, and `ValueRange` type constraints are not permitted on arguments or results
-Constraint Foo() -> Value<type>){}
+Constraint Foo() -> Value<type>) {}
 
 // -----
 
@@ -158,3 +158,8 @@ Pattern {
 
 // CHECK: expected `;` after native declaration
 Constraint Foo() [{}]
+
+// -----
+
+// CHECK: native Constraints currently do not support returning results
+Constraint Foo() -> Op;

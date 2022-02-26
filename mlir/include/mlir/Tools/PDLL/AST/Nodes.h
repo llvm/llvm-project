@@ -786,7 +786,7 @@ class ValueRangeConstraintDecl
     : public Node::NodeBase<ValueRangeConstraintDecl, CoreConstraintDecl> {
 public:
   static ValueRangeConstraintDecl *create(Context &ctx, SMRange loc,
-                                          Expr *typeExpr);
+                                          Expr *typeExpr = nullptr);
 
   /// Return the optional type the value range is constrained to.
   Expr *getTypeExpr() { return typeExpr; }
@@ -1239,8 +1239,8 @@ inline bool CoreConstraintDecl::classof(const Node *node) {
 }
 
 inline bool Expr::classof(const Node *node) {
-  return isa<AttributeExpr, DeclRefExpr, MemberAccessExpr, OperationExpr,
-             TupleExpr, TypeExpr>(node);
+  return isa<AttributeExpr, CallExpr, DeclRefExpr, MemberAccessExpr,
+             OperationExpr, TupleExpr, TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {

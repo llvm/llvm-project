@@ -42,11 +42,9 @@ protected:
   do {                                                                         \
     EXPECT_TOKEN_KIND(FormatTok, Kind);                                        \
     EXPECT_TOKEN_TYPE(FormatTok, Type);                                        \
-  } while (false);
+  } while (false)
 
-TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmpInMacroDefinition) {
-  // This is a regression test for mis-parsing the & after decltype as a binary
-  // operator instead of a reference (when inside a macro definition).
+TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   auto Tokens = annotate("auto x = [](const decltype(x) &ptr) {};");
   EXPECT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw_decltype, TT_Unknown);
@@ -54,13 +52,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmpInMacroDefinition) {
   EXPECT_TOKEN(Tokens[9], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
-  // Same again with * instead of &:
+
   Tokens = annotate("auto x = [](const decltype(x) *ptr) {};");
   EXPECT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_PointerOrReference);
 
-  // Also check that we parse correctly within a macro definition:
   Tokens = annotate("#define lambda [](const decltype(x) &ptr) {}");
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw_decltype, TT_Unknown);
@@ -68,7 +65,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmpInMacroDefinition) {
   EXPECT_TOKEN(Tokens[9], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
-  // Same again with * instead of &:
+
   Tokens = annotate("#define lambda [](const decltype(x) *ptr) {}");
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_TypeDeclarationParen);
