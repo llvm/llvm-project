@@ -1020,6 +1020,13 @@ LValue CIRGenModule::buildUnaryOpLValue(const UnaryOperator *E) {
     LValueBaseInfo BaseInfo;
     // TODO: add TBAAInfo
     Address Addr = buildPointerWithAlignment(E->getSubExpr(), &BaseInfo);
+
+    // Tag 'load' with deref attribute.
+    if (auto loadOp =
+            dyn_cast<::mlir::cir::LoadOp>(Addr.getPointer().getDefiningOp())) {
+      loadOp.setIsDerefAttr(mlir::UnitAttr::get(builder.getContext()));
+    }
+
     LValue LV = LValue::makeAddr(Addr, T, BaseInfo);
     // TODO: set addr space
     // TODO: ObjC/GC/__weak write barrier stuff.
