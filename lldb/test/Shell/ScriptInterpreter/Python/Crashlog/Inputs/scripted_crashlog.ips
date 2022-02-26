@@ -21,8 +21,8 @@
   "procExitAbsTime" : 6478056175721,
   "translated" : false,
   "cpuType" : "ARM-64",
-  "procName" : "scripted_crashlog_json.test.tmp.out",
-  "procPath" : "\/Users\/USER\/*\/scripted_crashlog_json.test.tmp.out",
+  "procName" : "@NAME@",
+  "procPath" : "@EXEC@",
   "parentProc" : "zsh",
   "parentPid" : 82132,
   "coalitionName" : "com.apple.Terminal",
@@ -47,8 +47,9 @@
     "base" : 4372692992,
     "size" : 16384,
     "uuid" : "b928ee77-9429-334f-ac88-41440bb3d4c7",
-    "path" : "\/Users\/USER\/*\/scripted_crashlog_json.test.tmp.out",
-    "name" : "scripted_crashlog_json.test.tmp.out"
+    "uuid" : "@UUID@",
+    "path" : "@EXEC@",
+    "name" : "@NAME@"
   },
   {
     "source" : "P",

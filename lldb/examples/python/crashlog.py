@@ -989,7 +989,10 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file):
         result.PutCString("error: python exception: %s" % e)
         return
 
-    target = crashlog.create_target()
+    if debugger.GetNumTargets() > 0:
+        target = debugger.GetTargetAtIndex(0)
+    else:
+        target = crashlog.create_target()
     if not target:
         result.PutCString("error: couldn't create target")
         return
