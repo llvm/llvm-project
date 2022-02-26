@@ -1,4 +1,4 @@
-;RUN: opt < %s -dot-cfg -cfg-weights -cfg-dot-filename-prefix=%t 2>/dev/null
+;RUN: opt < %s -dot-cfg -cfg-weights -cfg-dot-filename-prefix=%t 2>/dev/null > /dev/null
 ;RUN: FileCheck %s -input-file=%t.f.dot
 
 define void @f(i32) {
