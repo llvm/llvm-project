@@ -113,6 +113,10 @@ public:
   /// Removes identifiers in the column range [idStart, idLimit).
   virtual void removeIdRange(unsigned idStart, unsigned idLimit);
 
+  /// Returns true if both the spaces are equal i.e. if both spaces have the
+  /// same number of identifiers of each kind (excluding Local Identifiers).
+  bool isEqual(const PresburgerSpace &other) const;
+
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of dimensional identifiers immediately before
   /// the split become symbols, or some of the symbols immediately after the
@@ -193,6 +197,10 @@ protected:
   PresburgerLocalSpace(unsigned numDims, unsigned numSymbols,
                        unsigned numLocals)
       : PresburgerSpace(Set, /*numDomain=*/0, numDims, numSymbols, numLocals) {}
+
+  /// Returns true if both the spaces are equal i.e. if both spaces have the
+  /// same number of identifiers of each kind.
+  bool isEqual(const PresburgerLocalSpace &other) const;
 };
 
 } // namespace presburger

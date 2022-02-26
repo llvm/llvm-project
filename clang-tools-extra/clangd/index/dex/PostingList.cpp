@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PostingList.h"
-#include "Iterator.h"
-#include "Token.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
+#include "index/dex/Iterator.h"
+#include "index/dex/Token.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace clang {
@@ -186,7 +184,7 @@ std::vector<Chunk> encodeStream(llvm::ArrayRef<DocID> Documents) {
 /// the stream is terminated, return None.
 llvm::Optional<DocID> readVByte(llvm::ArrayRef<uint8_t> &Bytes) {
   if (Bytes.front() == 0 || Bytes.empty())
-    return None;
+    return llvm::None;
   DocID Result = 0;
   bool HasNextByte = true;
   for (size_t Length = 0; HasNextByte && !Bytes.empty(); ++Length) {

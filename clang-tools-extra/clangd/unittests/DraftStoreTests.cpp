@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Annotations.h"
 #include "DraftStore.h"
-#include "SourceCode.h"
-#include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

@@ -16,7 +16,6 @@
 
 #include "index/FileIndex.h"
 #include "index/Index.h"
-#include "llvm/Support/Threading.h"
 #include <cstddef>
 
 namespace clang {

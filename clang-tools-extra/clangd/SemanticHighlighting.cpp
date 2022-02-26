@@ -30,7 +30,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 

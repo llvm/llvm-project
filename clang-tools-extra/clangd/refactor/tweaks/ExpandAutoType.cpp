@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 #include "refactor/Tweak.h"
 
-#include "XRefs.h"
 #include "support/Logger.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include <AST.h>
 #include <climits>

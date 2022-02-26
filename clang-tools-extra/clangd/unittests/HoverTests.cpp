@@ -14,7 +14,6 @@
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/AST/Attr.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
