@@ -786,7 +786,7 @@ class ValueRangeConstraintDecl
     : public Node::NodeBase<ValueRangeConstraintDecl, CoreConstraintDecl> {
 public:
   static ValueRangeConstraintDecl *create(Context &ctx, SMRange loc,
-                                          Expr *typeExpr);
+                                          Expr *typeExpr = nullptr);
 
   /// Return the optional type the value range is constrained to.
   Expr *getTypeExpr() { return typeExpr; }

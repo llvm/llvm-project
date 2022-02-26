@@ -6,7 +6,7 @@
 
 // CHECK: pdl.pattern @AttrExpr
 // CHECK: %[[ATTR:.*]] = attribute 10
-// CHECK: operation {"attr" = %[[ATTR]]}
+// CHECK: operation({{.*}}) {"attr" = %[[ATTR]]}
 Pattern AttrExpr => erase op<> { attr = attr<"10"> };
 
 // -----
@@ -89,5 +89,5 @@ Pattern TupleMemberAccessName {
 
 // CHECK: pdl.pattern @TypeExpr
 // CHECK: %[[TYPE:.*]] = type : i32
-// CHECK: operation -> (%[[TYPE]] : !pdl.type)
+// CHECK: operation({{.*}}) -> (%[[TYPE]] : !pdl.type)
 Pattern TypeExpr => erase op<> -> (type<"i32">);
