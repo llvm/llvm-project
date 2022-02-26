@@ -56,6 +56,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iterator>
 #include <numeric>
 
 using namespace mlir::cir;
@@ -123,8 +124,16 @@ mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType T,
       namedVar->getName(),
       IsParam ? InitStyle::paraminit : InitStyle::uninitialized, alignIntAttr);
 
+  // Allocas are expected to be in the beginning of the entry block
+  // in whatever region they show up.
   auto *parentBlock = localVarAddr->getBlock();
-  localVarAddr->moveBefore(&parentBlock->front());
+  auto lastAlloca = std::find_if_not(
+      parentBlock->begin(), parentBlock->end(),
+      [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
+  if (lastAlloca != std::end(*parentBlock))
+    localVarAddr->moveBefore(&*lastAlloca);
+  else
+    localVarAddr->moveBefore(&parentBlock->front());
 
   // Insert into the symbol table, allocate some stack space in the
   // function entry block.
