@@ -179,8 +179,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
   const unsigned initialSnapshot = simplex.getSnapshot();
 
   auto restoreState = [&]() {
-    b.removeIdRange(IntegerPolyhedron::IdKind::Local, bInitNumLocals,
-                    b.getNumLocalIds());
+    b.removeIdRange(IdKind::Local, bInitNumLocals, b.getNumLocalIds());
     b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
     b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
     simplex.rollback(initialSnapshot);

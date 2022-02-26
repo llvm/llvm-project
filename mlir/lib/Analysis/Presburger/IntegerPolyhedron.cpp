@@ -111,18 +111,6 @@ IntegerPolyhedron::findIntegerLexMin() const {
   return maybeLexMin;
 }
 
-unsigned IntegerPolyhedron::insertDimId(unsigned pos, unsigned num) {
-  return insertId(IdKind::SetDim, pos, num);
-}
-
-unsigned IntegerPolyhedron::insertSymbolId(unsigned pos, unsigned num) {
-  return insertId(IdKind::Symbol, pos, num);
-}
-
-unsigned IntegerPolyhedron::insertLocalId(unsigned pos, unsigned num) {
-  return insertId(IdKind::Local, pos, num);
-}
-
 unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
@@ -132,22 +120,9 @@ unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   return insertPos;
 }
 
-unsigned IntegerPolyhedron::appendDimId(unsigned num) {
-  unsigned pos = getNumDimIds();
-  insertId(IdKind::SetDim, pos, num);
-  return pos;
-}
-
-unsigned IntegerPolyhedron::appendSymbolId(unsigned num) {
-  unsigned pos = getNumSymbolIds();
-  insertId(IdKind::Symbol, pos, num);
-  return pos;
-}
-
-unsigned IntegerPolyhedron::appendLocalId(unsigned num) {
-  unsigned pos = getNumLocalIds();
-  insertId(IdKind::Local, pos, num);
-  return pos;
+unsigned IntegerPolyhedron::appendId(IdKind kind, unsigned num) {
+  unsigned pos = getNumIdKind(kind);
+  return insertId(kind, pos, num);
 }
 
 void IntegerPolyhedron::addEquality(ArrayRef<int64_t> eq) {
@@ -1044,8 +1019,8 @@ void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
   // i.e. append local ids of `polyB` to `polyA` and insert local ids of `polyA`
   // to `polyB` at start of its local ids.
   unsigned initLocals = polyA.getNumLocalIds();
-  insertLocalId(polyA.getNumLocalIds(), polyB.getNumLocalIds());
-  polyB.insertLocalId(0, initLocals);
+  insertId(IdKind::Local, polyA.getNumLocalIds(), polyB.getNumLocalIds());
+  polyB.insertId(IdKind::Local, 0, initLocals);
 
   // Get division representations from each poly.
   std::vector<SmallVector<int64_t, 8>> divsA, divsB;
@@ -1133,7 +1108,7 @@ void IntegerPolyhedron::convertDimToLocal(unsigned dimStart,
   // Append new local variables corresponding to the dimensions to be converted.
   unsigned convertCount = dimLimit - dimStart;
   unsigned newLocalIdStart = getNumIds();
-  appendLocalId(convertCount);
+  appendId(IdKind::Local, convertCount);
 
   // Swap the new local variables with dimensions.
   for (unsigned i = 0; i < convertCount; ++i)
@@ -1178,7 +1153,7 @@ void IntegerPolyhedron::addLocalFloorDiv(ArrayRef<int64_t> dividend,
   assert(dividend.size() == getNumCols() && "incorrect dividend size");
   assert(divisor > 0 && "positive divisor expected");
 
-  appendLocalId();
+  appendId(IdKind::Local);
 
   // Add two constraints for this new identifier 'q'.
   SmallVector<int64_t, 8> bound(dividend.size() + 1);

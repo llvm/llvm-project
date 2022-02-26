@@ -22,6 +22,11 @@ namespace presburger {
 
 class PresburgerLocalSpace;
 
+/// Kind of identifier. Implementation wise SetDims are treated as Range
+/// ids, and spaces with no distinction between dimension ids are treated
+/// as relations with zero domain ids.
+enum class IdKind { Symbol, Local, Domain, Range, SetDim = Range };
+
 /// PresburgerSpace is the space of all possible values of a tuple of integer
 /// valued variables/identifiers. Each identifier has one of the three types:
 ///
@@ -65,11 +70,6 @@ class PresburgerSpace {
   friend PresburgerLocalSpace;
 
 public:
-  /// Kind of identifier. Implementation wise SetDims are treated as Range
-  /// ids, and spaces with no distinction between dimension ids are treated
-  /// as relations with zero domain ids.
-  enum IdKind { Symbol, Local, Domain, Range, SetDim = Range };
-
   static PresburgerSpace getRelationSpace(unsigned numDomain, unsigned numRange,
                                           unsigned numSymbols);
 
