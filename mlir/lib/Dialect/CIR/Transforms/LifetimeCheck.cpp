@@ -255,6 +255,10 @@ void LifetimeCheckPass::handleOperation(Operation *op) {
     // Only interested in checking deference on top of pointer types.
     if (!pmap.count(addr) || !ptrs.count(addr))
       return;
+
+    if (!loadOp.getIsDeref())
+      return;
+
     // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
     // invalid.
     if (!pmap[addr].count(State::getInvalid())) {
@@ -264,8 +268,11 @@ void LifetimeCheckPass::handleOperation(Operation *op) {
 
     // Looks like we found a invalid path leading to this deference point,
     // diagnose it.
+    //
+    // Note that usually the use of the invalid address happens at the
+    // load or store using the result of this loadOp.
     emitWarning(loadOp.getLoc())
-        << "Found invalid use of pointer '" << getVarNameFromValue(addr) << "'";
+        << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
     return;
   }
 
