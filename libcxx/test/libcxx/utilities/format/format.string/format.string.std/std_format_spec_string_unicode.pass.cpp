@@ -9,9 +9,6 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
-// UTF-32 doesn't work properly
-// XFAIL: windows
-
 // <format>
 
 // Tests the Unicode width support of the standard format specifiers.
