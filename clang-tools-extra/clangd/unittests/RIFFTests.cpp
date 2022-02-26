@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RIFF.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

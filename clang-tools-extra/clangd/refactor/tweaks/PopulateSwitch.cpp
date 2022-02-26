@@ -33,7 +33,6 @@
 #include "AST.h"
 #include "Selection.h"
 #include "refactor/Tweak.h"
-#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"

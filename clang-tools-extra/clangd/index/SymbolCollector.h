@@ -8,10 +8,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLCOLLECTOR_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLCOLLECTOR_H
 
-#include "CanonicalIncludes.h"
+#include "index/CanonicalIncludes.h"
 #include "CollectMacros.h"
-#include "Index.h"
-#include "SymbolOrigin.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Symbol.h"
+#include "index/SymbolOrigin.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
@@ -20,7 +22,6 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace clang {

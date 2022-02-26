@@ -11,12 +11,10 @@
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTFS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTFS_H
-#include "ClangdServer.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"

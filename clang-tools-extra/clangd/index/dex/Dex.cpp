@@ -10,11 +10,14 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Quality.h"
+#include "URI.h"
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
+#include "index/dex/Trigram.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <queue>

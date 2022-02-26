@@ -14,7 +14,6 @@
 #include "index/Index.h"
 #include "index/Relation.h"
 #include "index/Serialization.h"
-#include "index/dex/Dex.h"
 #include "index/remote/Client.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"

@@ -9,9 +9,7 @@
 #include "MemIndex.h"
 #include "FuzzyMatch.h"
 #include "Quality.h"
-#include "support/Logger.h"
 #include "support/Trace.h"
-#include "clang/Index/IndexSymbol.h"
 
 namespace clang {
 namespace clangd {

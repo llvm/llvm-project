@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestWorkspace.h"
+#include "index/FileIndex.h"
 #include "gtest/gtest.h"
 
 namespace clang {
