@@ -107,6 +107,28 @@ def XOrINotCmpI :
         (Arith_CmpIOp (InvertPredicate $pred), $a, $b)>;
 
 //===----------------------------------------------------------------------===//
+// CmpIOp
+//===----------------------------------------------------------------------===//
+
+// cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
+def CmpIExtSI :
+    Pat<(Arith_CmpIOp $pred,
+          (Arith_ExtSIOp $a),
+          (Arith_ExtSIOp $b)),
+        (Arith_CmpIOp $pred, $a, $b),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
+         (Constraint<CPred<"$0.getValue() == arith::CmpIPredicate::eq || $0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+
+// cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
+def CmpIExtUI :
+    Pat<(Arith_CmpIOp $pred,
+          (Arith_ExtUIOp $a),
+          (Arith_ExtUIOp $b)),
+        (Arith_CmpIOp $pred, $a, $b),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
+         (Constraint<CPred<"$0.getValue() == arith::CmpIPredicate::eq || $0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+
+//===----------------------------------------------------------------------===//
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 

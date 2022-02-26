@@ -1322,6 +1322,11 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   return BoolAttr::get(getContext(), val);
 }
 
+void arith::CmpIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.insert<CmpIExtSI, CmpIExtUI>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // CmpFOp
 //===----------------------------------------------------------------------===//
