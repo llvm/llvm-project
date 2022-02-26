@@ -343,8 +343,8 @@ llvm::Optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
                                                   SourceLocation Loc,
                                                   const LangOptions &LangOpts) {
   std::string Result;
-
-  SourceLocation NextLoc = Loc;
+  // Accept qualifier written within macro arguments, but not macro bodies.
+  SourceLocation NextLoc = SM.getTopMacroCallerLoc(Loc);
   while (auto CCTok = Lexer::findNextToken(NextLoc, SM, LangOpts)) {
     if (!CCTok->is(tok::coloncolon))
       break;
@@ -373,40 +373,46 @@ struct CheapUnresolvedName {
   llvm::Optional<std::string> UnresolvedScope;
 };
 
+llvm::Optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
+    const SourceManager &SM) {
+  // Support specifiers written within a single macro argument.
+  if (!SM.isWrittenInSameFile(SS.getBeginLoc(), SS.getEndLoc()))
+    return llvm::None;
+  SourceRange Range(SM.getTopMacroCallerLoc(SS.getBeginLoc()), SM.getTopMacroCallerLoc(SS.getEndLoc()));
+  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
+    return llvm::None;
+
+  return (toSourceCode(SM, Range) + "::").str();
+}
+
 // Extracts unresolved name and scope information around \p Unresolved.
 // FIXME: try to merge this with the scope-wrangling code in CodeComplete.
 llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
     const SourceManager &SM, const DeclarationNameInfo &Unresolved,
     CXXScopeSpec *SS, const LangOptions &LangOpts, bool UnresolvedIsSpecifier) {
-  bool Invalid = false;
-  llvm::StringRef Code = SM.getBufferData(
-      SM.getDecomposedLoc(Unresolved.getBeginLoc()).first, &Invalid);
-  if (Invalid)
-    return llvm::None;
   CheapUnresolvedName Result;
   Result.Name = Unresolved.getAsString();
   if (SS && SS->isNotEmpty()) { // "::" or "ns::"
     if (auto *Nested = SS->getScopeRep()) {
-      if (Nested->getKind() == NestedNameSpecifier::Global)
+      if (Nested->getKind() == NestedNameSpecifier::Global) {
         Result.ResolvedScope = "";
-      else if (const auto *NS = Nested->getAsNamespace()) {
-        auto SpecifiedNS = printNamespaceScope(*NS);
+      } else if (const auto *NS = Nested->getAsNamespace()) {
+        std::string SpecifiedNS = printNamespaceScope(*NS);
+        llvm::Optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
 
         // Check the specifier spelled in the source.
-        // If the resolved scope doesn't end with the spelled scope. The
-        // resolved scope can come from a sema typo correction. For example,
+        // If the resolved scope doesn't end with the spelled scope, the
+        // resolved scope may come from a sema typo correction. For example,
         // sema assumes that "clangd::" is a typo of "clang::" and uses
         // "clang::" as the specified scope in:
         //     namespace clang { clangd::X; }
         // In this case, we use the "typo" specifier as extra scope instead
         // of using the scope assumed by sema.
-        auto B = SM.getFileOffset(SS->getBeginLoc());
-        auto E = SM.getFileOffset(SS->getEndLoc());
-        std::string Spelling = (Code.substr(B, E - B) + "::").str();
-        if (llvm::StringRef(SpecifiedNS).endswith(Spelling))
-          Result.ResolvedScope = SpecifiedNS;
-        else
-          Result.UnresolvedScope = Spelling;
+        if (!Spelling || llvm::StringRef(SpecifiedNS).endswith(*Spelling)) {
+          Result.ResolvedScope = std::move(SpecifiedNS);
+        } else {
+          Result.UnresolvedScope = std::move(*Spelling);
+        }
       } else if (const auto *ANS = Nested->getAsNamespaceAlias()) {
         Result.ResolvedScope = printNamespaceScope(*ANS->getNamespace());
       } else {

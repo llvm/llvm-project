@@ -36,6 +36,7 @@ namespace {
 using ::testing::_;
 using ::testing::AllOf;
 using ::testing::Contains;
+using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::IsEmpty;
@@ -1092,6 +1093,24 @@ using Type = ns::$template[[Foo]]<int>;
                 diagName("expected_class_name"),
                 withFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
                             "Include \"x.h\" for symbol ns::X")))));
+}
+
+TEST(IncludeFixerTest, TypoInMacro) {
+  auto TU = TestTU::withCode(R"cpp(// error-ok
+#define ID(T) T
+X a1;
+ID(X a2);
+ns::X a3;
+ID(ns::X a4);
+namespace ns{};
+ns::X a5;
+ID(ns::X a6);
+)cpp");
+  auto Index = buildIndexWithSymbol(
+      {SymbolWithHeader{"X", "unittest:///x.h", "\"x.h\""},
+       SymbolWithHeader{"ns::X", "unittest:///ns.h", "\"x.h\""}});
+  TU.ExternalIndex = Index.get();
+  EXPECT_THAT(*TU.build().getDiagnostics(), Each(withFix(_)));
 }
 
 TEST(IncludeFixerTest, MultipleMatchedSymbols) {
