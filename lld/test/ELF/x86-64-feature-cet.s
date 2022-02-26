@@ -91,6 +91,17 @@
 # DISASM-NEXT:               jmpq    *0x2126(%rip)
 # DISASM-NEXT:               nopw    (%rax,%rax)
 
+## If there is no PLT entry, don't create .plt section.
+# RUN: ld.lld -e 0 %t1.o -o %t.noplt
+# RUN: llvm-readelf -S %t.noplt | FileCheck %s --check-prefix=NOPLT
+# RUN: ld.lld -r %t1.o -o %t.noplt
+# RUN: llvm-readelf -S %t.noplt | FileCheck %s --check-prefix=NOPLT
+
+# NOPLT:     [Nr] Name
+# NOPLT-NOT: .plt
+# NOPLT:     .note.gnu.property
+# NOPLT-NOT: .plt
+
 .section ".note.gnu.property", "a"
 .long 4
 .long 0x10
