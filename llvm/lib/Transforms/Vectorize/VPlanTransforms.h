@@ -23,6 +23,7 @@ class InductionDescriptor;
 class Instruction;
 class PHINode;
 class ScalarEvolution;
+class Loop;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
@@ -49,6 +50,10 @@ struct VPlanTransforms {
   /// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
   /// recipe, if it exists.
   static void removeRedundantCanonicalIVs(VPlan &Plan);
+
+  /// Try to remove dead recipes. At the moment, only dead header recipes are
+  /// removed.
+  static void removeDeadRecipes(VPlan &Plan, Loop &OrigLoop);
 };
 
 } // namespace llvm

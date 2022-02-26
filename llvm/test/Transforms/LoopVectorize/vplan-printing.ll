@@ -214,15 +214,8 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:     ir<%AB.0> = load from index 0
 ; CHECK-NEXT:     ir<%AB.1> = load from index 1
 ; CHECK-NEXT:     ir<%AB.3> = load from index 3
-; CHECK-NEXT:   CLONE ir<%iv.plus.1> = add ir<%iv>, ir<1>
-; CHECK-NEXT:   CLONE ir<%gep.AB.1> = getelementptr ir<@AB>, ir<0>, ir<%iv.plus.1>
-; CHECK-NEXT:   CLONE ir<%iv.plus.2> = add ir<%iv>, ir<2>
 ; CHECK-NEXT:   CLONE ir<%iv.plus.3> = add ir<%iv>, ir<3>
-; CHECK-NEXT:   CLONE ir<%gep.AB.3> = getelementptr ir<@AB>, ir<0>, ir<%iv.plus.3>
 ; CHECK-NEXT:   WIDEN ir<%add> = add ir<%AB.0>, ir<%AB.1>
-; CHECK-NEXT:   CLONE ir<%gep.CD.0> = getelementptr ir<@CD>, ir<0>, ir<%iv>
-; CHECK-NEXT:   CLONE ir<%gep.CD.1> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.1>
-; CHECK-NEXT:   CLONE ir<%gep.CD.2> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.2>
 ; CHECK-NEXT:   CLONE ir<%gep.CD.3> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.3>
 ; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.3>
 ; CHECK-NEXT:     store ir<%add> to index 0

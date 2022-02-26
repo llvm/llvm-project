@@ -256,12 +256,6 @@ bool IntegerPolyhedron::hasConsistentState() const {
     return false;
   if (!equalities.hasConsistentState())
     return false;
-
-  // Catches errors where numDims, numSymbols, numIds aren't consistent.
-  if (getNumDimIds() > getNumIds() || getNumSymbolIds() > getNumIds() ||
-      getNumDimAndSymbolIds() > getNumIds())
-    return false;
-
   return true;
 }
 
