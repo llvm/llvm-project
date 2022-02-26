@@ -9330,6 +9330,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   VPlanTransforms::sinkScalarOperands(*Plan);
   VPlanTransforms::mergeReplicateRegions(*Plan);
+  VPlanTransforms::removeDeadRecipes(*Plan, *OrigLoop);
 
   std::string PlanName;
   raw_string_ostream RSO(PlanName);
