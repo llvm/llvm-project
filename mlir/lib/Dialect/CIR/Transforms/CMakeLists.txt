@@ -12,6 +12,5 @@ add_mlir_dialect_library(MLIRCIRTransforms
   MLIRAnalysis
   MLIRIR
   MLIRCIR
-  MLIRCIRAnalysis
   MLIRPass
 )
