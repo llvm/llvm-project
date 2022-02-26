@@ -209,3 +209,41 @@ for.end.loopexit:
 for.end:
   ret void
 }
+
+; VF8-LABEL: @test_conv_in_latch_block
+; VF8: vector.body:
+; VF8-NEXT: %index = phi i64
+; VF8-NEXT: %vec.ind = phi <8 x i32>
+; VF8: store <8 x i32> %vec.ind
+; VF8: middle.block:
+;
+define void @test_conv_in_latch_block(i32 %n, i32 %step, i32* noalias %A, i32* noalias %B) {
+entry:
+  %wide.trip.count = zext i32 %n to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %p.09 = phi i32 [ 0, %entry ], [ %add, %latch ]
+  %B.gep = getelementptr inbounds i32, i32* %B, i64 %iv
+  %l = load i32, i32* %B.gep
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %then, label %latch
+
+then:
+  %A.gep = getelementptr inbounds i32, i32* %A, i64 %iv
+  store i32 0, i32* %A.gep
+  br label %latch
+
+latch:
+  %sext = shl i32 %p.09, 24
+  %conv = ashr exact i32 %sext, 24
+  %add = add nsw i32 %conv, %step
+  store i32 %conv, i32* %B.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
