@@ -31,10 +31,10 @@
 
 # EXE:      Machine: Advanced Micro Devices X86-64
 # EXE:      [Nr] Name         Type     Address          Off    Size   ES Flg Lk Inf Al
-# EXE:      [ 3] .data        PROGBITS {{.*}}                  00000c 00  WA  0   0  8
+# EXE:      [ 2] .data        PROGBITS {{.*}}                  00000c 00  WA  0   0  8
 # EXE:      Size Type    Bind   Vis      Ndx Name
-# EXE:         0 OBJECT  GLOBAL DEFAULT    3 _binary_d_t_txt_start
-# EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT    3 _binary_d_t_txt_end
+# EXE:         0 OBJECT  GLOBAL DEFAULT    2 _binary_d_t_txt_start
+# EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT    2 _binary_d_t_txt_end
 # EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT  ABS _binary_d_t_txt_size
 
 # RUN: not ld.lld -b foo 2>&1 | FileCheck --check-prefix=ERR %s

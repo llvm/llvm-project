@@ -20,15 +20,12 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_TWEAK_H
 
 #include "ParsedAST.h"
-#include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "support/Path.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <string>

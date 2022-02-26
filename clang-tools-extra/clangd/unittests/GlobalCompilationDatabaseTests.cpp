@@ -8,8 +8,8 @@
 
 #include "GlobalCompilationDatabase.h"
 
+#include "CompileCommands.h"
 #include "Config.h"
-#include "Matchers.h"
 #include "TestFS.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
@@ -17,13 +17,9 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>

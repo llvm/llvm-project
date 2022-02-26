@@ -925,7 +925,6 @@ define void @update_multiple_users(i16* noalias %src, i8* noalias %dst, i1 %c) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop.header:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT: Successor(s): loop.then
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.then:

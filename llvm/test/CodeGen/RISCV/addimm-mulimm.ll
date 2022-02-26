@@ -877,11 +877,20 @@ define i64 @mulneg3000_sub8990_c(i64 %x) {
 ; performed in RISCVISelLowering;:transformAddImmMulImm and
 ; DAGCombiner::visitMUL.
 define i1 @pr53831(i32 %x) {
+; RV32IMB-LABEL: pr53831:
+; RV32IMB:       # %bb.0:
+; RV32IMB-NEXT:    li a0, 0
+; RV32IMB-NEXT:    ret
+;
+; RV64IMB-LABEL: pr53831:
+; RV64IMB:       # %bb.0:
+; RV64IMB-NEXT:    li a0, 0
+; RV64IMB-NEXT:    ret
   %tmp0 = add i32 %x, 1
   %tmp1 = mul i32 %tmp0, 24
   %tmp2 = add i32 %tmp1, 1
   %tmp3 = mul i32 %x, 24
   %tmp4 = add i32 %tmp3, 2048
   %tmp5 = icmp eq i32 %tmp4, %tmp2
-	ret i1 %tmp5
+  ret i1 %tmp5
 }

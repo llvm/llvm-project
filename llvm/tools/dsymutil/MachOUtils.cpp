@@ -336,15 +336,6 @@ static bool isExecutable(const object::MachOObjectFile &Obj) {
     return Obj.getHeader().filetype != MachO::MH_OBJECT;
 }
 
-static bool hasLinkEditSegment(const object::MachOObjectFile &Obj) {
-  bool HasLinkEditSegment = false;
-  iterateOnSegments(Obj, [&](const MachO::segment_command_64 &Segment) {
-    if (StringRef("__LINKEDIT") == Segment.segname)
-      HasLinkEditSegment = true;
-  });
-  return HasLinkEditSegment;
-}
-
 static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
   if (Is64Bit)
     return sizeof(MachO::segment_command_64) +
@@ -396,7 +387,9 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
   unsigned LoadCommandSize = 0;
   unsigned NumLoadCommands = 0;
 
-  // Get LC_UUID and LC_BUILD_VERSION.
+  bool HasSymtab = false;
+
+  // Check LC_SYMTAB and get LC_UUID and LC_BUILD_VERSION.
   MachO::uuid_command UUIDCmd;
   SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
   memset(&UUIDCmd, 0, sizeof(UUIDCmd));
@@ -420,14 +413,16 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
       BuildVersionCmd.push_back(Cmd);
       break;
     }
+    case MachO::LC_SYMTAB:
+      HasSymtab = true;
+      break;
     default:
       break;
     }
   }
 
   // If we have a valid symtab to copy, do it.
-  bool ShouldEmitSymtab =
-      isExecutable(InputBinary) && hasLinkEditSegment(InputBinary);
+  bool ShouldEmitSymtab = HasSymtab && isExecutable(InputBinary);
   if (ShouldEmitSymtab) {
     LoadCommandSize += sizeof(MachO::symtab_command);
     ++NumLoadCommands;

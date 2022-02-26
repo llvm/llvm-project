@@ -9,6 +9,7 @@
 #include "Headers.h"
 #include "TestFS.h"
 #include "index/IndexAction.h"
+#include "index/Serialization.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

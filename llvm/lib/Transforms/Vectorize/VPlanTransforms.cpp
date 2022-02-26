@@ -295,14 +295,19 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
 }
 
 void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
-  SmallVector<std::pair<VPRecipeBase *, VPValue *>> CastsToRemove;
   for (auto &Phi : Plan.getEntry()->getEntryBasicBlock()->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (!IV || IV->getTruncInst())
       continue;
 
-    // Visit all casts connected to IV and in Casts. Collect them.
-    // remember them for removal.
+    // A sequence of IR Casts has potentially been recorded for IV, which
+    // *must be bypassed* when the IV is vectorized, because the vectorized IV
+    // will produce the desired casted value. This sequence forms a def-use
+    // chain and is provided in reverse order, ending with the cast that uses
+    // the IV phi. Search for the recipe of the last cast in the chain and
+    // replace it with the original IV. Note that only the final cast is
+    // expected to have users outside the cast-chain and the dead casts left
+    // over will be cleaned up later.
     auto &Casts = IV->getInductionDescriptor().getCastInsts();
     VPValue *FindMyCast = IV;
     for (Instruction *IRCast : reverse(Casts)) {
@@ -315,14 +320,9 @@ void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
           break;
         }
       }
-      assert(FoundUserCast && "Missing a cast to remove");
-      CastsToRemove.emplace_back(FoundUserCast, IV);
       FindMyCast = FoundUserCast->getVPSingleValue();
     }
-  }
-  for (auto &E : CastsToRemove) {
-    E.first->getVPSingleValue()->replaceAllUsesWith(E.second);
-    E.first->eraseFromParent();
+    FindMyCast->replaceAllUsesWith(IV);
   }
 }
 
@@ -356,5 +356,25 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
       WidenNewIV->eraseFromParent();
       return;
     }
+  }
+}
+
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // Remove dead recipes in header block. The recipes in the block are processed
+  // in reverse order, to catch chains of dead recipes.
+  // TODO: Remove dead recipes across whole plan.
+  for (VPRecipeBase &R : make_early_inc_range(reverse(*Header))) {
+    if (R.mayHaveSideEffects() ||
+        any_of(R.definedValues(),
+               [](VPValue *V) { return V->getNumUsers() > 0; }) ||
+        (R.getUnderlyingInstr() &&
+         any_of(R.getUnderlyingInstr()->users(), [&OrigLoop](User *U) {
+           // Check for live-out users currently not modeled in VPlan.
+           // TODO: Remove once live-outs are modeled in VPlan.
+           return !OrigLoop.contains(cast<Instruction>(U));
+         })))
+      continue;
+    R.eraseFromParent();
   }
 }

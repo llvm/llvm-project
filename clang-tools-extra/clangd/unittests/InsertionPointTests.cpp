@@ -10,7 +10,6 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TestTU.h"
-#include "TestWorkspace.h"
 #include "XRefs.h"
 #include "refactor/InsertionPoint.h"
 #include "clang/AST/DeclBase.h"

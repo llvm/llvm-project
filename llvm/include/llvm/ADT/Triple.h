@@ -824,6 +824,17 @@ public:
     return getArch() == Triple::riscv32 || getArch() == Triple::riscv64;
   }
 
+  /// Tests whether the target is 32-bit SPARC (little and big endian).
+  bool isSPARC32() const {
+    return getArch() == Triple::sparc || getArch() == Triple::sparcel;
+  }
+
+  /// Tests whether the target is 64-bit SPARC (big endian).
+  bool isSPARC64() const { return getArch() == Triple::sparcv9; }
+
+  /// Tests whether the target is SPARC.
+  bool isSPARC() const { return isSPARC32() || isSPARC64(); }
+
   /// Tests whether the target is SystemZ.
   bool isSystemZ() const {
     return getArch() == Triple::systemz;

@@ -35,31 +35,10 @@ PresburgerSet::getIntegerPolyhedron(unsigned index) const {
   return integerPolyhedrons[index];
 }
 
-/// Assert that the IntegerPolyhedron and PresburgerSet live in
-/// compatible spaces.
-static void assertDimensionsCompatible(const IntegerPolyhedron &poly,
-                                       const PresburgerSet &set) {
-  assert(poly.getNumDimIds() == set.getNumDimIds() &&
-         "Number of dimensions of the IntegerPolyhedron and PresburgerSet"
-         "do not match!");
-  assert(poly.getNumSymbolIds() == set.getNumSymbolIds() &&
-         "Number of symbols of the IntegerPolyhedron and PresburgerSet"
-         "do not match!");
-}
-
-/// Assert that the two PresburgerSets live in compatible spaces.
-static void assertDimensionsCompatible(const PresburgerSet &setA,
-                                       const PresburgerSet &setB) {
-  assert(setA.getNumDimIds() == setB.getNumDimIds() &&
-         "Number of dimensions of the PresburgerSets do not match!");
-  assert(setA.getNumSymbolIds() == setB.getNumSymbolIds() &&
-         "Number of symbols of the PresburgerSets do not match!");
-}
-
 /// Mutate this set, turning it into the union of this set and the given
 /// IntegerPolyhedron.
 void PresburgerSet::unionPolyInPlace(const IntegerPolyhedron &poly) {
-  assertDimensionsCompatible(poly, *this);
+  assert(PresburgerSpace::isEqual(poly) && "Spaces should match");
   integerPolyhedrons.push_back(poly);
 }
 
@@ -68,14 +47,14 @@ void PresburgerSet::unionPolyInPlace(const IntegerPolyhedron &poly) {
 /// This is accomplished by simply adding all the Poly of the given set to this
 /// set.
 void PresburgerSet::unionSetInPlace(const PresburgerSet &set) {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   for (const IntegerPolyhedron &poly : set.integerPolyhedrons)
     unionPolyInPlace(poly);
 }
 
 /// Return the union of this set and the given set.
 PresburgerSet PresburgerSet::unionSet(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   PresburgerSet result = *this;
   result.unionSetInPlace(set);
   return result;
@@ -108,7 +87,7 @@ PresburgerSet PresburgerSet::getEmptySet(unsigned numDims,
 // If S_i or T_j have local variables, then S_i and T_j contains the local
 // variables of both.
 PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
 
   PresburgerSet result(getNumDimIds(), getNumSymbolIds());
   for (const IntegerPolyhedron &csA : integerPolyhedrons) {
@@ -200,8 +179,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
   const unsigned initialSnapshot = simplex.getSnapshot();
 
   auto restoreState = [&]() {
-    b.removeIdRange(IntegerPolyhedron::IdKind::Local, bInitNumLocals,
-                    b.getNumLocalIds());
+    b.removeIdRange(IdKind::Local, bInitNumLocals, b.getNumLocalIds());
     b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
     b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
     simplex.rollback(initialSnapshot);
@@ -326,7 +304,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 /// from that function.
 PresburgerSet PresburgerSet::getSetDifference(IntegerPolyhedron poly,
                                               const PresburgerSet &set) {
-  assertDimensionsCompatible(poly, set);
+  assert(poly.PresburgerSpace::isEqual(set) && "Spaces should match");
   if (poly.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(poly.getNumDimIds(),
                                       poly.getNumSymbolIds());
@@ -346,7 +324,7 @@ PresburgerSet PresburgerSet::complement() const {
 /// Return the result of subtract the given set from this set, i.e.,
 /// return `this \ set`.
 PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   PresburgerSet result(getNumDimIds(), getNumSymbolIds());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const IntegerPolyhedron &poly : integerPolyhedrons)
@@ -363,7 +341,7 @@ bool PresburgerSet::isSubsetOf(const PresburgerSet &set) const {
 
 /// Two sets are equal iff they are subsets of each other.
 bool PresburgerSet::isEqual(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
 
@@ -444,6 +422,8 @@ LogicalResult coalescePair(unsigned i, unsigned j,
 
   IntegerPolyhedron &a = polyhedrons[i];
   IntegerPolyhedron &b = polyhedrons[j];
+  assert(a.getNumLocalIds() == 0 && b.getNumLocalIds() == 0 &&
+         "Locals are not yet supported!");
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
 
@@ -521,7 +501,7 @@ PresburgerSet PresburgerSet::coalesce() const {
   // When coalescing is successful, the contained IntegerPolyhedron is swapped
   // with the last element of `polyhedrons` and subsequently erased and
   // similarly for simplices.
-  for (unsigned i = 0; i < polyhedrons.size(); ++i) {
+  for (unsigned i = 0; i < polyhedrons.size();) {
 
     // TODO: This does some comparisons two times (index 0 with 1 and index 1
     // with 0).
