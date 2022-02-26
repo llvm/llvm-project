@@ -569,6 +569,18 @@ RUN lines:
 
    Expands to the path separator, i.e. ``:`` (or ``;`` on Windows).
 
+``${fs-src-root}``
+   Expands to the root component of file system paths for the source directory,
+   i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on Windows.
+
+``${fs-tmp-root}``
+   Expands to the root component of file system paths for the test's temporary
+   directory, i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on
+   Windows.
+
+``${fs-sep}``
+   Expands to the file system separator, i.e. ``/`` or ``\`` on Windows.
+
 ``%/s, %/S, %/t, %/T:``
 
   Act like the corresponding substitution above but replace any ``\``
