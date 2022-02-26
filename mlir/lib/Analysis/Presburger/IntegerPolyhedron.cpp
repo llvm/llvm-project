@@ -49,9 +49,7 @@ void IntegerPolyhedron::reset(unsigned newNumDims, unsigned newNumSymbols,
 }
 
 void IntegerPolyhedron::append(const IntegerPolyhedron &other) {
-  assert(other.getNumCols() == getNumCols());
-  assert(other.getNumDimIds() == getNumDimIds());
-  assert(other.getNumSymbolIds() == getNumSymbolIds());
+  assert(PresburgerLocalSpace::isEqual(other) && "Spaces must be equal.");
 
   inequalities.reserveRows(inequalities.getNumRows() +
                            other.getNumInequalities());
@@ -1037,10 +1035,7 @@ void IntegerPolyhedron::eliminateRedundantLocalId(unsigned posA,
 /// division representation for some local id cannot be obtained, and thus these
 /// local ids are not considered for detecting duplicates.
 void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
-  assert(getNumDimIds() == other.getNumDimIds() &&
-         "Number of dimension ids should match");
-  assert(getNumSymbolIds() == other.getNumSymbolIds() &&
-         "Number of symbol ids should match");
+  assert(PresburgerSpace::isEqual(other) && "Spaces should match.");
 
   IntegerPolyhedron &polyA = *this;
   IntegerPolyhedron &polyB = other;
@@ -1856,8 +1851,7 @@ static void getCommonConstraints(const IntegerPolyhedron &a,
 // lower bounds and the max of the upper bounds along each of the dimensions.
 LogicalResult
 IntegerPolyhedron::unionBoundingBox(const IntegerPolyhedron &otherCst) {
-  assert(otherCst.getNumDimIds() == getNumDimIds() && "dims mismatch");
-  assert(otherCst.getNumLocalIds() == 0 && "local ids not supported here");
+  assert(PresburgerLocalSpace::isEqual(otherCst) && "Spaces should match.");
   assert(getNumLocalIds() == 0 && "local ids not supported yet here");
 
   // Get the constraints common to both systems; these will be added as is to

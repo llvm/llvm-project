@@ -154,6 +154,17 @@ void PresburgerLocalSpace::removeIdRange(unsigned idStart, unsigned idLimit) {
   numLocals -= numLocalsEliminated;
 }
 
+bool PresburgerSpace::isEqual(const PresburgerSpace &other) const {
+  return getNumDomainIds() == other.getNumDomainIds() &&
+         getNumRangeIds() == other.getNumRangeIds() &&
+         getNumSymbolIds() == other.getNumSymbolIds();
+}
+
+bool PresburgerLocalSpace::isEqual(const PresburgerLocalSpace &other) const {
+  return PresburgerSpace::isEqual(other) &&
+         getNumLocalIds() == other.getNumLocalIds();
+}
+
 void PresburgerSpace::setDimSymbolSeparation(unsigned newSymbolCount) {
   assert(newSymbolCount <= getNumDimAndSymbolIds() &&
          "invalid separation position");
