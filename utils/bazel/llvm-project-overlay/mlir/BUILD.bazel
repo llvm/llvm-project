@@ -8394,6 +8394,26 @@ cc_library(
 )
 
 cc_library(
+    name = "PDLLCodeGen",
+    srcs = glob(
+        [
+            "lib/Tools/PDLL/CodeGen/*.cpp",
+            "lib/Tools/PDLL/CodeGen/*.h",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Tools/PDLL/CodeGen/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":PDLDialect",
+        ":PDLLAST",
+        ":Parser",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PDLLParser",
     srcs = glob(
         [
@@ -8417,7 +8437,9 @@ cc_binary(
         "tools/mlir-pdll/mlir-pdll.cpp",
     ],
     deps = [
+        ":IR",
         ":PDLLAST",
+        ":PDLLCodeGen",
         ":PDLLParser",
         ":Support",
         "//llvm:Support",
