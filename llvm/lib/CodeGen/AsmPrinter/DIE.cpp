@@ -198,6 +198,7 @@ const DIE *DIE::getUnitDie() const {
   const DIE *p = this;
   while (p) {
     if (p->getTag() == dwarf::DW_TAG_compile_unit ||
+        p->getTag() == dwarf::DW_TAG_skeleton_unit ||
         p->getTag() == dwarf::DW_TAG_type_unit)
       return p;
     p = p->getParent();
