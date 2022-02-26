@@ -26,7 +26,7 @@ script_name, include_path, detail_header_test_root = get_libcxx_paths()
 
 
 def generate_header_test(header, include_instead):
-    return f'''// -*- C++ -*-
+    return f'''
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -47,11 +47,11 @@ def generate_header_test(header, include_instead):
 
 #include <{header}>
 // expected-error@-1 {{{{header '<{header}>' is an implementation detail; #include {include_instead} instead}}}}
-'''
+'''[1:]
 
 
 def generate_module_test(header):
-    return f'''// -*- C++ -*-
+    return f'''
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -67,7 +67,7 @@ def generate_module_test(header):
 
 // expected-error@*:* {{{{use of private header from outside its module: '{header}'}}}}
 #include <{header}>
-'''
+'''[1:]
 
 
 def relative_path(path):
