@@ -252,7 +252,7 @@ TEST(DexIterators, StringRepresentation) {
   auto I2 = L1.iterator(&Tok);
   EXPECT_EQ(llvm::to_string(*I2), "T=L2");
 
-  auto Tree = C.limit(C.intersect(move(I1), move(I2)), 10);
+  auto Tree = C.limit(C.intersect(std::move(I1), std::move(I2)), 10);
   // AND reorders its children, we don't care which order it prints.
   EXPECT_THAT(llvm::to_string(*Tree), AnyOf("(LIMIT 10 (& [1 3 5] T=L2))",
                                             "(LIMIT 10 (& T=L2 [1 3 5]))"));

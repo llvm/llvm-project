@@ -1504,7 +1504,7 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
                          const Options &Opts,
                          std::unique_ptr<ParsingCallbacks> Callbacks)
     : CDB(CDB), Opts(Opts),
-      Callbacks(Callbacks ? move(Callbacks)
+      Callbacks(Callbacks ? std::move(Callbacks)
                           : std::make_unique<ParsingCallbacks>()),
       Barrier(Opts.AsyncThreadsCount), QuickRunBarrier(Opts.AsyncThreadsCount),
       IdleASTs(
