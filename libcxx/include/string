@@ -1436,12 +1436,35 @@ private:
         return !__libcpp_is_constant_evaluated() && (__sz < __min_cap);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
-    allocator_type& __alloc() _NOEXCEPT
-        {return __r_.second();}
-    _LIBCPP_INLINE_VISIBILITY
-    const allocator_type& __alloc() const _NOEXCEPT
-        {return __r_.second();}
+    template <class _ForwardIterator>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+    iterator __insert_from_safe_copy(size_type __n, size_type __ip, _ForwardIterator __first, _ForwardIterator __last) {
+        size_type __sz = size();
+        size_type __cap = capacity();
+        value_type* __p;
+        if (__cap - __sz >= __n)
+        {
+            __p = std::__to_address(__get_pointer());
+            size_type __n_move = __sz - __ip;
+            if (__n_move != 0)
+                traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
+        }
+        else
+        {
+            __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
+            __p = std::__to_address(__get_long_pointer());
+        }
+        __sz += __n;
+        __set_size(__sz);
+        traits_type::assign(__p[__sz], value_type());
+        for (__p += __ip; __first != __last; ++__p, ++__first)
+            traits_type::assign(*__p, *__first);
+
+        return begin() + __ip;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT { return __r_.second(); }
+    _LIBCPP_HIDE_FROM_ABI const allocator_type& __alloc() const _NOEXCEPT { return __r_.second(); }
 
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
@@ -2785,45 +2808,23 @@ __enable_if_t
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
 {
-  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-                       "string::insert(iterator, range) called with an iterator not"
-                       " referring to this string");
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                         "string::insert(iterator, range) called with an iterator not referring to this string");
 
     size_type __ip = static_cast<size_type>(__pos - begin());
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
-    if (__n)
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
+    if (__n == 0)
+        return begin() + __ip;
+
+    if (__string_is_trivial_iterator<_ForwardIterator>::value && !__addr_in_range(*__first))
     {
-        if (__string_is_trivial_iterator<_ForwardIterator>::value &&
-            !__addr_in_range(*__first))
-        {
-            size_type __sz = size();
-            size_type __cap = capacity();
-            value_type* __p;
-            if (__cap - __sz >= __n)
-            {
-                __p = _VSTD::__to_address(__get_pointer());
-                size_type __n_move = __sz - __ip;
-                if (__n_move != 0)
-                    traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
-            }
-            else
-            {
-                __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
-                __p = _VSTD::__to_address(__get_long_pointer());
-            }
-            __sz += __n;
-            __set_size(__sz);
-            traits_type::assign(__p[__sz], value_type());
-            for (__p += __ip; __first != __last; ++__p, (void) ++__first)
-                traits_type::assign(*__p, *__first);
-        }
-        else
-        {
-            const basic_string __temp(__first, __last, __alloc());
-            return insert(__pos, __temp.data(), __temp.data() + __temp.size());
-        }
+        return __insert_from_safe_copy(__n, __ip, __first, __last);
     }
-    return begin() + __ip;
+    else
+    {
+        const basic_string __temp(__first, __last, __alloc());
+        return __insert_from_safe_copy(__n, __ip, __temp.begin(), __temp.end());
+    }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
