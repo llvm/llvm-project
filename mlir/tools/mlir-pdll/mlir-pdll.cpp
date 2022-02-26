@@ -11,6 +11,7 @@
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
+#include "mlir/Tools/PDLL/CodeGen/CPPGen.h"
 #include "mlir/Tools/PDLL/CodeGen/MLIRGen.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,6 +30,7 @@ using namespace mlir::pdll;
 enum class OutputType {
   AST,
   MLIR,
+  CPP,
 };
 
 static LogicalResult
@@ -54,7 +56,12 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
   if (!pdlModule)
     return failure();
 
-  pdlModule->print(os, OpPrintingFlags().enableDebugInfo());
+  if (outputType == OutputType::MLIR) {
+    pdlModule->print(os, OpPrintingFlags().enableDebugInfo());
+    return success();
+  }
+
+  codegenPDLLToCPP(**module, *pdlModule, os);
   return success();
 }
 
@@ -82,7 +89,10 @@ int main(int argc, char **argv) {
       llvm::cl::values(clEnumValN(OutputType::AST, "ast",
                                   "generate the AST for the input file"),
                        clEnumValN(OutputType::MLIR, "mlir",
-                                  "generate the PDL MLIR for the input file")));
+                                  "generate the PDL MLIR for the input file"),
+                       clEnumValN(OutputType::CPP, "cpp",
+                                  "generate a C++ source file containing the "
+                                  "patterns for the input file")));
 
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL Frontend");
