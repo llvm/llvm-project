@@ -127,6 +127,18 @@ static cl::opt<std::string> OptimizerLastEPPipeline(
     cl::desc("A textual description of the module pass pipeline inserted at "
              "the OptimizerLast extension point into default pipelines"),
     cl::Hidden);
+static cl::opt<std::string> FullLinkTimeOptimizationEarlyEPPipeline(
+    "passes-ep-full-link-time-optimization-early",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the FullLinkTimeOptimizationEarly extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> FullLinkTimeOptimizationLastEPPipeline(
+    "passes-ep-full-link-time-optimization-last",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the FullLinkTimeOptimizationLast extension point into default "
+             "pipelines"),
+    cl::Hidden);
 
 // Individual pipeline tuning options.
 extern cl::opt<bool> DisableLoopUnrolling;
@@ -228,6 +240,23 @@ static void registerEPCallbacks(PassBuilder &PB) {
         [&PB](ModulePassManager &PM, OptimizationLevel) {
           ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, FullLinkTimeOptimizationEarlyEPPipeline))
+    PB.registerFullLinkTimeOptimizationEarlyEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse FullLinkTimeOptimizationEarlyEP pipeline: ");
+          Err(PB.parsePassPipeline(PM,
+                                   FullLinkTimeOptimizationEarlyEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, FullLinkTimeOptimizationLastEPPipeline))
+    PB.registerFullLinkTimeOptimizationLastEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse FullLinkTimeOptimizationLastEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, FullLinkTimeOptimizationLastEPPipeline));
         });
 }
 
