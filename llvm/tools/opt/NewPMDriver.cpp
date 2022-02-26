@@ -235,7 +235,7 @@ static void registerEPCallbacks(PassBuilder &PB) {
           ExitOnError Err("Unable to parse EarlySimplification pipeline: ");
           Err(PB.parsePassPipeline(PM, PipelineEarlySimplificationEPPipeline));
         });
-  if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
+  if (tryParsePipelineText<ModulePassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(
         [&PB](ModulePassManager &PM, OptimizationLevel) {
           ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
