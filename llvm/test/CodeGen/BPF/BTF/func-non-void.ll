@@ -42,7 +42,7 @@ define dso_local i32 @f1(i32 returned) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  ".text"                 # string offset=11
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=17
+; CHECK-NEXT:        .ascii  "/DNE/t.c"              # string offset=17
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
@@ -83,7 +83,7 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 8.0.0 (trunk 345562) (llvm/trunk 345560)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
-!1 = !DIFile(filename: "t.c", directory: "/tmp")
+!1 = !DIFile(filename: "t.c", directory: "/DNE")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
