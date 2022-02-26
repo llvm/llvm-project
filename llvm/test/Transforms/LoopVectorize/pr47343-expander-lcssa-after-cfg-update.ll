@@ -46,7 +46,6 @@ define void @f() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    store i32 0, i32* @f.e, align 1, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    store i32 0, i32* @f.e, align 1, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    store i8 10, i8* [[TMP0]], align 1

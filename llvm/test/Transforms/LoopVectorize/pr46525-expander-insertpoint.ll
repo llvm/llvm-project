@@ -30,9 +30,6 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE12:%.*]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[INC]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 0, [[INC]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], [[TMP4]]
 ; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = mul i64 [[INDEX]], [[INC]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[OFFSET_IDX3]] to i8
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[INC]] to i8
@@ -50,10 +47,10 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.if4:
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.continue5:
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i8 [[TMP10]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

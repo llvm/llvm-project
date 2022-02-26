@@ -34,12 +34,6 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* null, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
-; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, i8* null, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i32> [[TMP8]], <i32 24, i32 24, i32 24, i32 24>

@@ -26,8 +26,6 @@ define void @basic_loop(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[SIZE]], [[INDEX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[NEXT_GEP]], i32 1
@@ -94,8 +92,6 @@ define void @metadata(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[SIZE]], [[INDEX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[NEXT_GEP]], i32 1
