@@ -5345,18 +5345,12 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
                                            unsigned RegNo) {
 
-  for (MCRegAliasIterator R(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, &MRI, true);
-       R.isValid(); ++R) {
-    if (*R == RegNo)
-      return isGFX9Plus();
-  }
+  if (MRI.regsOverlap(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
+    return isGFX9Plus();
 
   // GFX10 has 2 more SGPRs 104 and 105.
-  for (MCRegAliasIterator R(AMDGPU::SGPR104_SGPR105, &MRI, true);
-       R.isValid(); ++R) {
-    if (*R == RegNo)
-      return hasSGPR104_SGPR105();
-  }
+  if (MRI.regsOverlap(AMDGPU::SGPR104_SGPR105, RegNo))
+    return hasSGPR104_SGPR105();
 
   switch (RegNo) {
   case AMDGPU::SRC_SHARED_BASE:
@@ -5401,11 +5395,8 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.
-  for (MCRegAliasIterator R(AMDGPU::SGPR102_SGPR103, &MRI, true);
-       R.isValid(); ++R) {
-    if (*R == RegNo)
-      return hasSGPR102_SGPR103();
-  }
+  if (MRI.regsOverlap(AMDGPU::SGPR102_SGPR103, RegNo))
+    return hasSGPR102_SGPR103();
 
   return true;
 }

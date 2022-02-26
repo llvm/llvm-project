@@ -72,15 +72,9 @@ bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
   if (!isAllocated(Reg))
     return false;
 
-  for (auto const &ValAssign : Locs) {
-    if (ValAssign.isRegLoc()) {
-      for (MCRegAliasIterator AI(ValAssign.getLocReg(), &TRI, true);
-           AI.isValid(); ++AI) {
-        if (*AI == Reg)
-          return false;
-      }
-    }
-  }
+  for (auto const &ValAssign : Locs)
+    if (ValAssign.isRegLoc() && TRI.regsOverlap(ValAssign.getLocReg(), Reg))
+      return false;
   return true;
 }
 
