@@ -9,6 +9,6 @@ int *basic() {
     p = &x;
     *p = 42;
   }
-  *p = 42;  // expected-warning {{Found invalid use of pointer 'p'}}
-  return p; // expected-warning {{Found invalid use of pointer 'p'}}
+  *p = 42; // expected-warning {{use of invalid pointer 'p'}}
+  return p;
 }
