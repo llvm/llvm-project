@@ -1044,6 +1044,7 @@ void foo() {
   // considered the unresolved type.
   $unqualified2[[X]]::Nested n;
 }
+struct S : $base[[X]] {};
 }
 void bar() {
   ns::$qualified1[[X]] x; // ns:: is valid.
@@ -1087,7 +1088,11 @@ using Type = ns::$template[[Foo]]<int>;
                      "no template named 'Foo' in namespace 'ns'"),
                 diagName("no_member_template"),
                 withFix(Fix(Test.range("insert"), "#include \"foo.h\"\n",
-                            "Include \"foo.h\" for symbol ns::Foo")))));
+                            "Include \"foo.h\" for symbol ns::Foo"))),
+          AllOf(Diag(Test.range("base"), "expected class name"),
+                diagName("expected_class_name"),
+                withFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Include \"x.h\" for symbol ns::X")))));
 }
 
 TEST(IncludeFixerTest, MultipleMatchedSymbols) {
