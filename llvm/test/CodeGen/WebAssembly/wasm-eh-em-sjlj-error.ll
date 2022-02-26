@@ -50,4 +50,6 @@ attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
 
-; CHECK: LLVM ERROR: When using Wasm EH with Emscripten SjLj, there is a restriction that `setjmp` function call and exception cannot be used within the same function
+; CHECK: LLVM ERROR: In function wasm_eh_emscripten_sjlj_error: When using Wasm EH with Emscripten SjLj, there is a restriction that `setjmp` function call and exception cannot be used within the same function
+; CHECK-NEXT: invoke void @foo()
+; CHECK-NEXT:         to label %try.cont unwind label %catch.dispatch

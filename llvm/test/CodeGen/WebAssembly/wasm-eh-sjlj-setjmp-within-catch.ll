@@ -28,7 +28,8 @@ catch:                                            ; preds = %catch.start
   %6 = bitcast i8* %5 to i32*
   %7 = load i32, i32* %6, align 4
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-; CHECK: LLVM ERROR: setjmp within a catch clause is not supported in Wasm EH
+; CHECK: LLVM ERROR: In function setjmp_within_catch: setjmp within a catch clause is not supported in Wasm EH
+; CHECK-NEXT: %call = invoke i32 @setjmp
   %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* noundef %arraydecay) #2 [ "funclet"(token %1) ]
           to label %invoke.cont1 unwind label %ehcleanup
 
@@ -48,7 +49,6 @@ ehcleanup:                                        ; preds = %catch
   call void @__cxa_end_catch() #0 [ "funclet"(token %8) ]
   cleanupret from %8 unwind to caller
 }
-
 
 declare void @foo()
 declare i32 @__gxx_wasm_personality_v0(...)
