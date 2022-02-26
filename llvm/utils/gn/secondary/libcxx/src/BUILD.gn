@@ -55,7 +55,10 @@ config("cxx_config") {
     "-std=c++20",
     "-nostdinc++",
   ]
-  defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
+  defines = [
+    "_LIBCPP_BUILDING_LIBRARY",
+    "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
+  ]
   if (target_os == "win") {
     cflags += [ "/Zl" ]
     defines += [
