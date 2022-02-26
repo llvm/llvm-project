@@ -24,5 +24,13 @@ indices, values = B.get_coordinates_and_values()
 passed = np.array_equal(indices, [[0, 1], [1, 2]])
 passed += np.array_equal(values, [30.0, 120.0])
 
-# CHECK: Number of passed: 2
+# Sum all the values in A.
+S[0] = A[i, j]
+passed += (S.get_scalar_value() == 50.0)
+
+indices, values = S.get_coordinates_and_values()
+passed += (len(indices)==0)
+passed += (values == 50.0)
+
+# CHECK: Number of passed: 5
 print("Number of passed:", passed)
