@@ -193,7 +193,8 @@ def LoadOp : CIR_Op<"load", [
 
   let summary = "load operation";
   let description = [{
-    `cir.load` reads a variable using a pointer type.
+    `cir.load` reads a variable (lvalue to rvalue conversion) given an address
+    backed up by a `cir.ptr` type.
 
     Example:
 
@@ -201,16 +202,20 @@ def LoadOp : CIR_Op<"load", [
 
     // Read from local variable, address in %0.
     %1 = cir.load %0 : !cir.ptr<i32>, i32
+
+    // Load address from memory at address %0. %3 provides
+    // the address used while dereferecing a pointer.
+    %3 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>
     ```
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr,
-                       UnitAttr:$conv);
+                           [MemRead]>:$addr, UnitAttr:$isDeref);
   let results = (outs AnyType:$result);
 
   let assemblyFormat = [{
-    $addr (`lvalue_to_rvalue` $conv^)? attr-dict `:` `cir.ptr` type($addr) `,` type($result)
+    (`deref` $isDeref^)? $addr `:` `cir.ptr` type($addr) `,`
+                                   type($result) attr-dict
   }];
 }
 
