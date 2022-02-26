@@ -26,6 +26,7 @@
 #include "index/dex/Token.h"
 #include "llvm/ADT/bit.h"
 
+#include <array>
 #include <string>
 
 namespace clang {
