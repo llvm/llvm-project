@@ -1607,9 +1607,11 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
     return MatchOperand_Success;
   case AsmToken::Plus:
     Opcode = MCBinaryExpr::Add;
+    getLexer().Lex();
     break;
   case AsmToken::Minus:
     Opcode = MCBinaryExpr::Sub;
+    getLexer().Lex();
     break;
   }
 
