@@ -233,6 +233,25 @@ FlatAffineValueConstraints::getHyperrectangular(ValueRange ivs, ValueRange lbs,
   return res;
 }
 
+void FlatAffineConstraints::reset(unsigned numReservedInequalities,
+                                  unsigned numReservedEqualities,
+                                  unsigned newNumReservedCols,
+                                  unsigned newNumDims, unsigned newNumSymbols,
+                                  unsigned newNumLocals) {
+  assert(newNumReservedCols >= newNumDims + newNumSymbols + newNumLocals + 1 &&
+         "minimum 1 column");
+  *this = FlatAffineConstraints(numReservedInequalities, numReservedEqualities,
+                                newNumReservedCols, newNumDims, newNumSymbols,
+                                newNumLocals);
+}
+
+void FlatAffineConstraints::reset(unsigned newNumDims, unsigned newNumSymbols,
+                                  unsigned newNumLocals) {
+  reset(/*numReservedInequalities=*/0, /*numReservedEqualities=*/0,
+        /*numReservedCols=*/newNumDims + newNumSymbols + newNumLocals + 1,
+        newNumDims, newNumSymbols, newNumLocals);
+}
+
 void FlatAffineValueConstraints::reset(unsigned numReservedInequalities,
                                        unsigned numReservedEqualities,
                                        unsigned newNumReservedCols,

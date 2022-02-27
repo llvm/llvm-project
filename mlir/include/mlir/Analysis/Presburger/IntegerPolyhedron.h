@@ -144,16 +144,6 @@ public:
   // Clones this object.
   std::unique_ptr<IntegerPolyhedron> clone() const;
 
-  /// Clears any existing data and reserves memory for the specified
-  /// constraints.
-  virtual void reset(unsigned numReservedInequalities,
-                     unsigned numReservedEqualities, unsigned numReservedCols,
-                     unsigned numDims, unsigned numSymbols,
-                     unsigned numLocals = 0);
-
-  void reset(unsigned numDims = 0, unsigned numSymbols = 0,
-             unsigned numLocals = 0);
-
   /// Appends constraints from `other` into `this`. This is equivalent to an
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerPolyhedron &other);

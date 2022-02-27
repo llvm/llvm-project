@@ -102,6 +102,15 @@ public:
     return cst->getKind() == Kind::FlatAffineConstraints;
   }
 
+  /// Clears any existing data and reserves memory for the specified
+  /// constraints.
+  virtual void reset(unsigned numReservedInequalities,
+                     unsigned numReservedEqualities, unsigned numReservedCols,
+                     unsigned numDims, unsigned numSymbols,
+                     unsigned numLocals = 0);
+  void reset(unsigned numDims = 0, unsigned numSymbols = 0,
+             unsigned numLocals = 0);
+
   // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;
 
