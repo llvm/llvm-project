@@ -2524,7 +2524,7 @@ struct FormatStyle {
   /// Indent the requires clause in a template. This only applies when
   /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
   ///
-  /// In clang-format 13 and 14 it was named ``IndentRequires``.
+  /// In clang-format 12, 13 and 14 it was named ``IndentRequires``.
   /// \code
   ///    true:
   ///    template <typename It>
