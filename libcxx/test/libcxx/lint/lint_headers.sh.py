@@ -15,9 +15,36 @@ def exclude_from_consideration(path):
         os.path.basename(path) == '__config' or
         os.path.basename(path) == '__config_site.in' or
         os.path.basename(path) == '__libcpp_version' or
-        os.path.basename(path) == '__locale' or
         not os.path.isfile(path)
     )
+
+
+def check_for_pragma_GCC_system_header(pretty_fname, lines):
+    if pretty_fname not in ['__undef_macros']:
+        if '#  pragma GCC system_header\n' not in lines:
+            print('FAILED TO FIND #  pragma GCC system_header in libcxx/include/%s!' % pretty_fname)
+            return False
+    return True
+
+def check_for_pragma_clang_include_instead(pretty_fname, lines):
+    expect_include_instead = pretty_fname.startswith('__') and pretty_fname not in [
+        '__assert',
+        '__bsd_locale_fallbacks.h',
+        '__bsd_locale_defaults.h',
+        '__availability',
+        '__debug',
+        '__errc',
+        '__mbstate_t.h',
+        '__undef_macros',
+    ]
+    found_include_instead = any(line.startswith('#  pragma clang include_instead') for line in lines)
+    if expect_include_instead and not found_include_instead:
+        print('FAILED TO FIND #  pragma clang include_instead in libcxx/include/%s!' % pretty_fname)
+        return False
+    elif found_include_instead and not expect_include_instead:
+        print('UNEXPECTEDLY FOUND #  pragma clang include_instead in libcxx/include/%s!' % pretty_fname)
+        return False
+    return True
 
 
 if __name__ == '__main__':
@@ -37,11 +64,11 @@ if __name__ == '__main__':
 
     okay = True
     for fname in all_headers:
+        pretty_fname = pretty(fname)
         with open(fname, 'r') as f:
             lines = f.readlines()
 
-        if '#  pragma GCC system_header\n' not in lines:
-            if pretty(fname) not in ['__undef_macros']:
-                okay = False
-                print('FAILED TO FIND #  pragma GCC system_header in libcxx/include/%s!' % pretty(fname))
+        okay = check_for_pragma_GCC_system_header(pretty_fname, lines) and okay
+        okay = check_for_pragma_clang_include_instead(pretty_fname, lines) and okay
+
     assert okay
