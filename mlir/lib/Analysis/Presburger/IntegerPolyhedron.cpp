@@ -31,23 +31,6 @@ std::unique_ptr<IntegerPolyhedron> IntegerPolyhedron::clone() const {
   return std::make_unique<IntegerPolyhedron>(*this);
 }
 
-void IntegerPolyhedron::reset(unsigned numReservedInequalities,
-                              unsigned numReservedEqualities,
-                              unsigned newNumReservedCols, unsigned newNumDims,
-                              unsigned newNumSymbols, unsigned newNumLocals) {
-  assert(newNumReservedCols >= newNumDims + newNumSymbols + newNumLocals + 1 &&
-         "minimum 1 column");
-  *this = IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
-                            newNumReservedCols, newNumDims, newNumSymbols,
-                            newNumLocals);
-}
-
-void IntegerPolyhedron::reset(unsigned newNumDims, unsigned newNumSymbols,
-                              unsigned newNumLocals) {
-  reset(0, 0, newNumDims + newNumSymbols + newNumLocals + 1, newNumDims,
-        newNumSymbols, newNumLocals);
-}
-
 void IntegerPolyhedron::append(const IntegerPolyhedron &other) {
   assert(PresburgerLocalSpace::isEqual(other) && "Spaces must be equal.");
 
@@ -1796,7 +1779,8 @@ static BoundCmpResult compareBounds(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
 static void getCommonConstraints(const IntegerPolyhedron &a,
                                  const IntegerPolyhedron &b,
                                  IntegerPolyhedron &c) {
-  c.reset(a.getNumDimIds(), a.getNumSymbolIds(), a.getNumLocalIds());
+  c = IntegerPolyhedron(a.getNumDimIds(), a.getNumSymbolIds(),
+                        a.getNumLocalIds());
   // a naive O(n^2) check should be enough here given the input sizes.
   for (unsigned r = 0, e = a.getNumInequalities(); r < e; ++r) {
     for (unsigned s = 0, f = b.getNumInequalities(); s < f; ++s) {
