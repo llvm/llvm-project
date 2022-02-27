@@ -383,7 +383,7 @@ public:
   llvm::ArrayRef<ExtParameterInfo> getExtParameterInfos() const {
     if (!HasExtParameterInfos)
       return {};
-    return llvm::makeArrayRef(getExtParameterInfosBuffer(), NumArgs);
+    return llvm::ArrayRef(getExtParameterInfosBuffer(), NumArgs);
   }
 
   /// getCallingConvention - REturn the user specified calling convention, which
