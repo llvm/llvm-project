@@ -1,5 +1,7 @@
-#include "CIRGenTypes.h"
+#include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
+#include "CIRGenTypes.h"
+#include "CallingConv.h"
 #include "TargetInfo.h"
 
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
@@ -14,6 +16,11 @@
 
 using namespace clang;
 using namespace cir;
+
+unsigned CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
+  assert(CC == CC_C && "No other calling conventions implemented.");
+  return cir::CallingConv::C;
+}
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &cgm)
     : Context(cgm.getASTContext()), Builder(cgm.getBuilder()), CGM{cgm},
@@ -413,3 +420,57 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   TypeCache[Ty] = ResultType;
   return ResultType;
 }
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType resultType, bool instanceMethod, bool chainCall,
+    llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+    llvm::ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+    RequiredArgs required) {
+  assert(llvm::all_of(argTypes,
+                      [](CanQualType T) { return T.isCanonicalAsParam(); }));
+
+  // Lookup or create unique function info.
+  llvm::FoldingSetNodeID ID;
+  CIRGenFunctionInfo::Profile(ID, instanceMethod, chainCall, info, paramInfos,
+                              required, resultType, argTypes);
+
+  void *insertPos = nullptr;
+  CIRGenFunctionInfo *FI = FunctionInfos.FindNodeOrInsertPos(ID, insertPos);
+  if (FI)
+    return *FI;
+
+  unsigned CC = ClangCallConvToCIRCallConv(info.getCC());
+
+  // Construction the function info. We co-allocate the ArgInfos.
+  FI = CIRGenFunctionInfo::create(CC, instanceMethod, chainCall, info,
+                                  paramInfos, resultType, argTypes, required);
+  FunctionInfos.InsertNode(FI, insertPos);
+
+  bool inserted = FunctionsBeingProcessed.insert(FI).second;
+  (void)inserted;
+  assert(inserted && "Recursively being processed?");
+
+  // Compute ABI inforamtion.
+  assert(info.getCC() != clang::CallingConv::CC_SpirFunction && "NYI");
+  assert(info.getCC() != CC_Swift && info.getCC() != CC_SwiftAsync &&
+         "Swift NYI");
+  getABIInfo().computeInfo(*FI);
+
+  // Loop over all of the computed argument and return value info. If any of
+  // them are direct or extend without a specified coerce type, specify the
+  // default now.
+  ABIArgInfo &retInfo = FI->getReturnInfo();
+  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
+    retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
+
+  for (auto &I : FI->arguments())
+    if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
+      I.info.setCoerceToType(ConvertType(I.type));
+
+  bool erased = FunctionsBeingProcessed.erase(FI);
+  (void)erased;
+  assert(erased && "Not in set?");
+
+  return *FI;
+}
+

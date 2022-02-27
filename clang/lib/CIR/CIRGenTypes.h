@@ -14,6 +14,13 @@
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
 #include "ABIInfo.h"
+#include "CIRGenFunctionInfo.h"
+
+#include "clang/Basic/ABI.h"
+#include "clang/AST/Type.h"
+
+#include "llvm/ADT/SmallPtrSet.h"
+
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -60,6 +67,7 @@ class StructType;
 namespace cir {
 class CIRGenCXXABI;
 class CIRGenModule;
+class CIRGenFunctionInfo;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
@@ -76,9 +84,16 @@ class CIRGenTypes {
   /// Contains the CIR type for any converted RecordDecl
   llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
 
+  /// Hold memoized CIRGenFunctionInfo results
+  llvm::FoldingSet<CIRGenFunctionInfo> FunctionInfos;
+
+  llvm::SmallPtrSet<const CIRGenFunctionInfo *, 4> FunctionsBeingProcessed;
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
+
+  /// Convert clang calling convention to LLVM calling convention.
+  unsigned ClangCallConvToCIRCallConv(clang::CallingConv CC);
 
   /// This map keeps cache of llvm::Types and maps clang::Type to
   /// corresponding llvm::Type.
@@ -107,6 +122,17 @@ public:
   /// memory representation is usually i8 or i32, depending on the target.
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
+  /// "Arrange" the LLVM information for a call or type with the given
+  /// signature. This is largely an internal method; other clients should use
+  /// one of the above routines, which ultimatley defer to this.
+  ///
+  /// \param argTypes - must all actually be canonical as params
+  const CIRGenFunctionInfo &arrangeCIRFunctionInfo(
+      clang::CanQualType returnType, bool instanceMethod, bool chainCall,
+      llvm::ArrayRef<clang::CanQualType> argTypes,
+      clang::FunctionType::ExtInfo info,
+      llvm::ArrayRef<clang::FunctionProtoType::ExtParameterInfo> paramInfos,
+      RequiredArgs args);
 };
 } // namespace cir
 
