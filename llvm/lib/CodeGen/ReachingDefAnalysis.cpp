@@ -34,12 +34,7 @@ static bool isValidRegUseOf(const MachineOperand &MO, MCRegister PhysReg,
                             const TargetRegisterInfo *TRI) {
   if (!isValidRegUse(MO))
     return false;
-  if (MO.getReg() == PhysReg)
-    return true;
-  for (MCRegAliasIterator R(PhysReg, TRI, false); R.isValid(); ++R)
-    if (MO.getReg() == *R)
-      return true;
-  return false;
+  return TRI->regsOverlap(MO.getReg(), PhysReg);
 }
 
 static bool isValidRegDef(const MachineOperand &MO) {
@@ -50,12 +45,7 @@ static bool isValidRegDefOf(const MachineOperand &MO, MCRegister PhysReg,
                             const TargetRegisterInfo *TRI) {
   if (!isValidRegDef(MO))
     return false;
-  if (MO.getReg() == PhysReg)
-    return true;
-  for (MCRegAliasIterator R(PhysReg, TRI, false); R.isValid(); ++R)
-    if (MO.getReg() == *R)
-      return true;
-  return false;
+  return TRI->regsOverlap(MO.getReg(), PhysReg);
 }
 
 void ReachingDefAnalysis::enterBasicBlock(MachineBasicBlock *MBB) {
