@@ -6407,7 +6407,7 @@ def ext_sizeof_alignof_void_type : Extension<
   "invalid application of '%0' to a void type">, InGroup<PointerArith>;
 def err_opencl_sizeof_alignof_type : Error<
   "invalid application of '%0' to a void type">;
-def err_sizeof_alignof_incomplete_or_sizeless_type : Error<
+def err_sizeof_alignof_incomplete_or_sizeless_type : Warning<
   "invalid application of '%0' to %select{an incomplete|sizeless}1 type %2">;
 def err_sizeof_alignof_function_type : Error<
   "invalid application of '%0' to a function type">;
