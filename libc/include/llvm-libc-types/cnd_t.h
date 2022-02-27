@@ -9,13 +9,12 @@
 #ifndef __LLVM_LIBC_TYPES_CND_T_H__
 #define __LLVM_LIBC_TYPES_CND_T_H__
 
+#include "mtx_t.h"
+
 typedef struct {
   void *__qfront;
   void *__qback;
-  struct {
-    unsigned char __w[4];
-    int __t;
-  } __qmtx;
+  mtx_t __qmtx;
 } cnd_t;
 
 #endif // __LLVM_LIBC_TYPES_CND_T_H__

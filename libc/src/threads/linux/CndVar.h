@@ -9,15 +9,15 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
-#include "Futex.h"
 #include "Mutex.h"
 
-#include "include/sys/syscall.h"          // For syscall numbers.
-#include "include/threads.h"              // For values like thrd_success etc.
+#include "include/sys/syscall.h" // For syscall numbers.
+#include "include/threads.h"     // For values like thrd_success etc.
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 
 #include <linux/futex.h> // For futex operations.
-#include <stdatomic.h>   // For atomic operations
+#include <stdint.h>
 
 namespace __llvm_libc {
 
@@ -28,7 +28,7 @@ struct CndVar {
   };
 
   struct CndWaiter {
-    FutexWord futex_word = WS_Waiting;
+    cpp::Atomic<uint32_t> futex_word = WS_Waiting;
     CndWaiter *next = nullptr;
   };
 
@@ -83,8 +83,8 @@ struct CndVar {
       }
     }
 
-    __llvm_libc::syscall(SYS_futex, &waiter.futex_word, FUTEX_WAIT, WS_Waiting,
-                         0, 0, 0);
+    __llvm_libc::syscall(SYS_futex, &waiter.futex_word.val, FUTEX_WAIT,
+                         WS_Waiting, 0, 0, 0);
 
     // At this point, if locking |m| fails, we can simply return as the
     // queued up waiter would have been removed from the queue.
@@ -105,17 +105,18 @@ struct CndVar {
     if (waitq_front == nullptr)
       waitq_back = nullptr;
 
-    atomic_store(&qmtx.futex_word, Mutex::MS_Free);
+    qmtx.futex_word = Mutex::MS_Free;
 
     __llvm_libc::syscall(
-        SYS_futex, &qmtx.futex_word, FUTEX_WAKE_OP, 1, 1, &first->futex_word,
+        SYS_futex, &qmtx.futex_word.val, FUTEX_WAKE_OP, 1, 1,
+        &first->futex_word.val,
         FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
     return thrd_success;
   }
 
   int broadcast() {
     MutexLock ml(&qmtx);
-    FutexWord dummy_futex_word;
+    uint32_t dummy_futex_word;
     CndWaiter *waiter = waitq_front;
     waitq_front = waitq_back = nullptr;
     while (waiter != nullptr) {
@@ -125,7 +126,7 @@ struct CndVar {
       // FUTEX_WAKE_OP.
       __llvm_libc::syscall(
           SYS_futex, &dummy_futex_word, FUTEX_WAKE_OP, 1, 1,
-          &waiter->futex_word,
+          &waiter->futex_word.val,
           FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
       waiter = waiter->next;
     }

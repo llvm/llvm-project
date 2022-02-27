@@ -32,6 +32,7 @@ add_header_library(
     .thread_start_args_h
     libc.include.sys_syscall
     libc.include.threads
+    libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
 )
 

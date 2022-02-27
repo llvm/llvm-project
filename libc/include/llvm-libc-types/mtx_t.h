@@ -10,7 +10,17 @@
 #define __LLVM_LIBC_TYPES_MTX_T_H__
 
 typedef struct {
-  unsigned char __internal_data[4];
+#if defined(__x86_64__) || defined(__aarch64__)
+  // Futex word should be aligned appropriately to allow target atomic
+  // instructions. This declaration mimics the internal setup.
+  struct {
+    _Alignas(sizeof(unsigned int) > _Alignof(unsigned int)
+                 ? sizeof(unsigned int)
+                 : _Alignof(unsigned int)) unsigned int __word;
+  } __futex_word;
+#else
+#error "Mutex type mtx_t is not available for the target architecture."
+#endif
   int __mtx_type;
 } mtx_t;
 
