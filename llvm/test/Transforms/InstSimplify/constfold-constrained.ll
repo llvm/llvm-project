@@ -438,6 +438,16 @@ entry:
   ret i1 %result
 }
 
+define <2 x i1> @cmp_eq_02a() #0 {
+; CHECK-LABEL: @cmp_eq_02a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 false>
+;
+entry:
+  %result = call <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double> <double 2.0, double 3.0>, <2 x double> <double 2.0, double 2.0>, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret <2 x i1> %result
+}
+
 define i1 @cmp_eq_03() #0 {
 ; CHECK-LABEL: @cmp_eq_03(
 ; CHECK-NEXT:  entry:
@@ -544,5 +554,6 @@ declare double @llvm.experimental.constrained.frem.f64(double, double, metadata,
 declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fmuladd.f64(double, double, double, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
+declare <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
 
