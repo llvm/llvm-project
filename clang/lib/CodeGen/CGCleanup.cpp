@@ -1330,6 +1330,25 @@ void CodeGenFunction::EmitCXXTemporary(const CXXTemporary *Temporary,
 static void EmitSehScope(CodeGenFunction &CGF,
                          llvm::FunctionCallee &SehCppScope) {
   llvm::BasicBlock *InvokeDest = CGF.getInvokeDest();
+  // [seh] fix some crash likes 'return in catch scope'
+  if (CGF.Builder.GetInsertBlock() == nullptr) {
+    auto SehCppScopeFunc = dyn_cast<llvm::Function>(SehCppScope.getCallee());
+    if (SehCppScopeFunc) {
+      llvm::outs() << "warning : EmitSehScope:CGF.Builder.GetInsertBlock() == "
+                      "nullptr,SehCppScopeFuncName:"
+                   << SehCppScopeFunc->getName().str() << "\n";
+    }
+    return;
+  }
+  if (InvokeDest == nullptr) {
+    auto SehCppScopeFunc = dyn_cast<llvm::Function>(SehCppScope.getCallee());
+    if (SehCppScopeFunc) {
+      llvm::outs() << "warning : EmitSehScope:CGF.Builder.InvokeDest == "
+                      "nullptr,SehCppScopeFuncName:"
+                   << SehCppScopeFunc->getName().str() << "\n";
+    }
+    return;
+  }
   assert(CGF.Builder.GetInsertBlock() && InvokeDest);
   llvm::BasicBlock *Cont = CGF.createBasicBlock("invoke.cont");
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
