@@ -378,8 +378,10 @@ int main(int Argc, const char **Argv) {
   for (auto Arg : Args) {
     if (std::string(Arg).find("--target=x86_64-pc-windows") !=
         std::string::npos) {
+      // details in function 'handleTargetFeatures'
       Args.push_back("-mssse3");
       Args.push_back("-msse4.1");
+      Args.push_back("-maes");
       break;
     }
   }
