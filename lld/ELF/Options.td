@@ -176,7 +176,7 @@ defm entry: Eq<"entry", "Name of entry point symbol">,
   MetaVarName<"<entry>">;
 
 defm error_limit:
-  Eq<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
+  EEq<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
 
 def error_unresolved_symbols: F<"error-unresolved-symbols">,
   HelpText<"Report unresolved symbols as errors">;
