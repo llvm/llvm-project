@@ -561,14 +561,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (Partition &part : partitions)
     setPhdrs(part);
 
-
-  // Handle --print-map(-M)/--Map, --why-extract=, --cref and
-  // --print-archive-stats=. Dump them before checkSections() because the files
-  // may be useful in case checkSections() or openFile() fails, for example, due
-  // to an erroneous file size.
+  // Handle --print-map(-M)/--Map and --cref. Dump them before checkSections()
+  // because the files may be useful in case checkSections() or openFile()
+  // fails, for example, due to an erroneous file size.
   writeMapAndCref();
-  writeWhyExtract();
-  writeArchiveStats();
 
   if (config->checkSections)
     checkSections();

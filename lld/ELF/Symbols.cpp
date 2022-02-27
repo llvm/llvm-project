@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Symbols.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
@@ -50,8 +51,6 @@ Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
 DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
     elf::backwardReferences;
-SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
-    elf::whyExtract;
 SmallVector<SymbolAux, 0> elf::symAux;
 
 static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
@@ -288,7 +287,7 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
 
 static void recordWhyExtract(const InputFile *reference,
                              const InputFile &extracted, const Symbol &sym) {
-  whyExtract.emplace_back(toString(reference), &extracted, sym);
+  driver->whyExtract.emplace_back(toString(reference), &extracted, sym);
 }
 
 void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {

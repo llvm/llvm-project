@@ -569,11 +569,6 @@ extern llvm::DenseMap<const Symbol *,
                       std::pair<const InputFile *, const InputFile *>>
     backwardReferences;
 
-// A tuple of (reference, extractedFile, sym). Used by --why-extract=.
-extern SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
-                   0>
-    whyExtract;
-
 } // namespace elf
 } // namespace lld
 
