@@ -514,6 +514,11 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     assert(ThisModule && "was expecting a module if building one");
   }
 
+  // In some cases we need to know if an entity was present in a directly-
+  // imported module (as opposed to a transitive import).  This avoids
+  // searching both Imports and Exports.
+  DirectModuleImports.insert(Mod);
+
   return Import;
 }
 
