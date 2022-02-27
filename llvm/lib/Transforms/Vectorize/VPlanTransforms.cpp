@@ -378,3 +378,39 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
     R.eraseFromParent();
   }
 }
+
+void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
+  SmallVector<VPRecipeBase *> ToRemove;
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IV || IV->needsVectorIV())
+      continue;
+
+    const InductionDescriptor &ID = IV->getInductionDescriptor();
+    const SCEV *StepSCEV = ID.getStep();
+    VPValue *Step = nullptr;
+    if (auto *E = dyn_cast<SCEVConstant>(StepSCEV)) {
+      Step = new VPValue(E->getValue());
+      Plan.addExternalDef(Step);
+    } else if (auto *E = dyn_cast<SCEVUnknown>(StepSCEV)) {
+      Step = new VPValue(E->getValue());
+      Plan.addExternalDef(Step);
+    } else {
+      Step = new VPExpandSCEVRecipe(StepSCEV, SE);
+    }
+
+    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
+        IV->getPHINode(), ID, Plan.getCanonicalIV(), IV->getStartValue(), Step,
+        IV->getTruncInst());
+
+    HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
+    if (Step->getDef()) {
+      // TODO: Place the step in the preheader, once it is explicitly modeled in
+      // VPlan.
+      HeaderVPBB->insert(cast<VPRecipeBase>(Step->getDef()),
+                         HeaderVPBB->getFirstNonPhi());
+    }
+    IV->replaceAllUsesWith(Steps);
+  }
+}
