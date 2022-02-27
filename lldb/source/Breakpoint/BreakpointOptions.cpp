@@ -60,13 +60,9 @@ std::unique_ptr<BreakpointOptions::CommandData>
 BreakpointOptions::CommandData::CreateFromStructuredData(
     const StructuredData::Dictionary &options_dict, Status &error) {
   std::unique_ptr<CommandData> data_up(new CommandData());
-  bool found_something = false;
 
   bool success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::StopOnError), data_up->stop_on_error);
-
-  if (success)
-    found_something = true;
 
   llvm::StringRef interpreter_str;
   ScriptLanguage interp_language;
@@ -78,7 +74,6 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
     return data_up;
   }
 
-  found_something = true;
   interp_language = ScriptInterpreter::StringToLanguage(interpreter_str);
   if (interp_language == eScriptLanguageUnknown) {
     error.SetErrorStringWithFormatv("Unknown breakpoint command language: {0}.",
@@ -91,7 +86,6 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsArray(GetKey(OptionNames::UserSource),
                                                user_source);
   if (success) {
-    found_something = true;
     size_t num_elems = user_source->GetSize();
     for (size_t i = 0; i < num_elems; i++) {
       llvm::StringRef elem_string;
@@ -101,10 +95,7 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
     }
   }
 
-  if (found_something)
-    return data_up;
-  else
-    return std::unique_ptr<BreakpointOptions::CommandData>();
+  return data_up;
 }
 
 const char *BreakpointOptions::g_option_names[(
