@@ -12,9 +12,6 @@ declare void @use32(i32)
 define i1 @rotl_eq_0(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: rotl_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    rolb %cl, %dil
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -32,8 +29,7 @@ define i1 @rotl_ne_0(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    roll %cl, %ebx
-; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    roll %cl, %edi
 ; CHECK-NEXT:    callq use32@PLT
 ; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    setne %al
@@ -48,9 +44,6 @@ define i1 @rotl_ne_0(i32 %x, i32 %y) nounwind {
 define i1 @rotl_eq_n1(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: rotl_eq_n1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    rolb %cl, %dil
 ; CHECK-NEXT:    cmpb $-1, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -64,21 +57,6 @@ define i1 @rotl_eq_n1(i8 %x, i8 %y) nounwind {
 define <4 x i1> @rotl_ne_n1(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: rotl_ne_n1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pslld $23, %xmm1
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,3,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm2, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-NEXT:    por %xmm3, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
@@ -88,24 +66,11 @@ define <4 x i1> @rotl_ne_n1(<4 x i32> %x, <4 x i32> %y) nounwind {
   ret <4 x i1> %r
 }
 
+; Undef is ok to propagate.
+
 define <4 x i1> @rotl_ne_n1_undef(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: rotl_ne_n1_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pslld $23, %xmm1
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,3,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm2, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-NEXT:    por %xmm3, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
@@ -122,8 +87,7 @@ define i1 @rotr_eq_0(i16 %x, i16 %y) nounwind {
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    rorw %cl, %bx
-; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    rorw %cl, %di
 ; CHECK-NEXT:    callq use16@PLT
 ; CHECK-NEXT:    testw %bx, %bx
 ; CHECK-NEXT:    sete %al
@@ -138,9 +102,6 @@ define i1 @rotr_eq_0(i16 %x, i16 %y) nounwind {
 define i1 @rotr_ne_0(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: rotr_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rcx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-NEXT:    rorq %cl, %rdi
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -152,9 +113,6 @@ define i1 @rotr_ne_0(i64 %x, i64 %y) nounwind {
 define i1 @rotr_eq_n1(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: rotr_eq_n1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rcx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-NEXT:    rorq %cl, %rdi
 ; CHECK-NEXT:    cmpq $-1, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -166,9 +124,6 @@ define i1 @rotr_eq_n1(i64 %x, i64 %y) nounwind {
 define i1 @rotr_ne_n1(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: rotr_ne_n1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    rorw %cl, %di
 ; CHECK-NEXT:    cmpw $-1, %di
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
