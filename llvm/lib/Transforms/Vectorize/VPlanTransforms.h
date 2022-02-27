@@ -54,10 +54,6 @@ struct VPlanTransforms {
   /// Try to remove dead recipes. At the moment, only dead header recipes are
   /// removed.
   static void removeDeadRecipes(VPlan &Plan, Loop &OrigLoop);
-
-  //  If all users of a vector IV need scalar values, provide them by building
-  //  scalar steps off of the canonical scalar IV, and remove the vector IV.
-  static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE);
 };
 
 } // namespace llvm
