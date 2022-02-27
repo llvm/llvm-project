@@ -146,7 +146,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     // Erase the S_AND and return.
     // Note: isVOPC is used instead of isCompare to catch V_CMP_CLASS
     if (A->getOpcode() == And && SReg == CondReg && !ModifiesExec &&
-        TII->isVOPC(*M) && TII->isVALU(*M)) {
+        TII->isVOPC(*M)) {
       A->eraseFromParent();
       return true;
     }
