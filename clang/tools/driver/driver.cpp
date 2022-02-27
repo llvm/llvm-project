@@ -384,6 +384,13 @@ int main(int Argc, const char **Argv) {
     }
   }
 
+  // [clang] Add print arguments
+  llvm::outs() << "Program arguments:";
+  for (auto Arg : Args) {
+    llvm::outs() << Arg << " ";
+  }
+  llvm::outs() << "\n";
+
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
   auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
