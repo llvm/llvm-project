@@ -29,10 +29,10 @@ BCSYM-NEXT: W foo
 ;; Check that the symbols are handled in the expected order.
 TRACE:      lib.a(obj.o): lazy definition of foo
 TRACE-NEXT: lib.a(obj.o): lazy definition of bar
+TRACE-NEXT: lib.a(bc.bc): definition of foo
 TRACE-NEXT: lib.a(bc.bc): reference to bar
 TRACE-NEXT: lib.a(obj.o): reference to foo
 TRACE-NEXT: lib.a(obj.o): definition of bar
-TRACE-NEXT: lib.a(bc.bc): definition of foo
 TRACE-NEXT: <internal>: reference to foo
 ;; The definition of "foo" is visible outside the LTO result.
 TRACE-NEXT: lto.tmp: definition of foo
