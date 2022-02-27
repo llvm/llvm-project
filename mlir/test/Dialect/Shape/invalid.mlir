@@ -98,8 +98,8 @@ func @shape_of(%value_arg : !shape.value_shape,
 // -----
 
 func @shape_of_incompatible_return_types(%value_arg : tensor<1x2xindex>) {
-  // expected-error@+1 {{'shape.shape_of' op inferred type(s) 'tensor<2xindex>' are incompatible with return type(s) of operation 'tensor<3xf32>'}}
-  %0 = shape.shape_of %value_arg : tensor<1x2xindex> -> tensor<3xf32>
+  // expected-error@+1 {{'shape.shape_of' op inferred type(s) 'tensor<2xindex>' are incompatible with return type(s) of operation 'tensor<3xindex>'}}
+  %0 = shape.shape_of %value_arg : tensor<1x2xindex> -> tensor<3xindex>
   return
 }
 

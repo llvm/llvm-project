@@ -780,3 +780,27 @@ func @cast_source(%arg0 : tensor<2x3x4xf32>, %arg1: tensor<2x3x4xf32>) -> tensor
     //  CHECK-SAME: ins(%[[ARG0]], %[[ARG1]] : tensor<2x3x4xf32>, tensor<2x3x4xf32>)
     //  CHECK-SAME: outs({{.*}} : tensor<2x3x4xf32>)
 }
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-LABEL: func @cast_dest
+// CHECK-SAME:  (%[[ARG0:.*]]: tensor<?x?x?xf32>, %[[ARG1:.*]]: tensor<1x?x?xf32>,
+func @cast_dest(%arg0: tensor<?x?x?xf32>, %arg1: tensor<1x?x?xf32>, %arg2: index, %arg3: index, %arg4: index) -> tensor<?x?x?xf32> {
+  %0 = linalg.init_tensor [%arg2, %arg3, %arg4] : tensor<?x?x?xf32>
+  %1 = tensor.cast %arg1 : tensor<1x?x?xf32> to tensor<?x?x?xf32>
+  %2 = linalg.generic {
+    indexing_maps = [#map, #map, #map],
+    iterator_types = ["parallel", "parallel", "parallel"]
+  } ins(%arg0, %arg1 : tensor<?x?x?xf32>, tensor<1x?x?xf32>)
+    outs(%0 : tensor<?x?x?xf32>) {
+  ^bb0(%arg5: f32, %arg6: f32, %arg7: f32):
+    %3 = arith.subf %arg5, %arg6 : f32
+    linalg.yield %3 : f32
+  } -> tensor<?x?x?xf32>
+  return %2 : tensor<?x?x?xf32>
+// CHECK:      %[[GENERIC_OP:.*]] = linalg.generic
+// CHECK-SAME: ins(%{{.*}}, %[[ARG1]] : tensor<1x?x?xf32>, tensor<1x?x?xf32>)
+// CHECK-SAME: outs(%{{.*}} : tensor<1x?x?xf32>)
+// CHECK: tensor.cast %[[GENERIC_OP]] : tensor<1x?x?xf32> to tensor<?x?x?xf32>
+}

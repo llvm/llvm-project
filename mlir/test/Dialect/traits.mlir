@@ -58,7 +58,7 @@ func @broadcast_tensor_tensor_tensor(tensor<8x1x?x1xi32>, tensor<7x1x5xi32>) -> 
 // Check incompatible vector and tensor result type
 func @broadcast_scalar_vector_vector(tensor<4xf32>, tensor<4xf32>) -> vector<4xf32> {
 ^bb0(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>):
-  // expected-error @+1 {{cannot broadcast vector with tensor}}
+  // expected-error @+1 {{op result #0 must be tensor of any type values, but got 'vector<4xf32>'}}
   %0 = "test.broadcastable"(%arg0, %arg1) : (tensor<4xf32>, tensor<4xf32>) -> vector<4xf32>
   return %0 : vector<4xf32>
 }

@@ -77,13 +77,13 @@ class TensorExpression:
     self.visit_tensor_exprs(visit_scalar_def)
 
   def __add__(self, rhs: "TensorExpression") -> "TensorExpression":
-    return ArithFn.add(self, rhs)
+    return BinaryFn.add(self, rhs)
 
   def __mul__(self, rhs) -> "TensorExpression":
-    return ArithFn.mul(self, rhs)
+    return BinaryFn.mul(self, rhs)
 
   def __sub__(self, rhs) -> "TensorExpression":
-    return ArithFn.sub(self, rhs)
+    return BinaryFn.sub(self, rhs)
 
   def __hash__(self):
     return hash(id(self))
@@ -111,7 +111,7 @@ class TensorUse(TensorExpression):
   @property
   def tensor_name(self) -> str:
     name = self.operand_def.name
-    assert name is not None, "TensorDef not attached"
+    assert name is not None, "TensorDef not registered with an op"
     return name
 
   def _compute_reduce_dims(self, rhs: TensorExpression) -> Set[DimDef]:
@@ -126,23 +126,33 @@ class TensorUse(TensorExpression):
     return rhs_dims - lhs_dims
 
   def __iadd__(self, rhs: TensorExpression) -> "TensorReduceFn":
-    return ReduceFnUse(ArithFn.add, *self._compute_reduce_dims(rhs))(rhs)
+    return ReduceFnUse(BinaryFn.add, *self._compute_reduce_dims(rhs))(rhs)
 
   def __repr__(self):
-    return f"{self.tensor_name}[{', '.join([repr(i) for i in self.indices])}]"
+    return (f"{self.operand_def.name}"
+            f"[{', '.join([repr(i) for i in self.indices])}]")
 
 
-class TensorArithFn(TensorExpression):
-  """Application of an arithmetic function."""
+class TensorFn(TensorExpression):
+  """Application of a tensor function."""
 
-  def __init__(self, arith_fn: "ArithFnType", args: Sequence[TensorExpression]):
-    self.arith_fn = arith_fn
-    self.args = tuple(args)
+  def __init__(self, kind: "FunctionKind", name: Optional[str],
+               operand_def: Optional["OperandDef"], type_var: Optional[TypeVar],
+               args: Sequence[TensorExpression]):
+    if bool(name) + bool(operand_def) != 1:
+      raise ValueError("One of 'name', 'operand_def' must be specified")
+    self.name = name
+    self.kind = kind
+    self.operand_def = operand_def
+    self.type_var = type_var
+    self.args = args
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarArithFn(self.arith_fn.fn_name,
-                         *[arg.to_scalar_expression() for arg in self.args
-                          ]).expr()
+    if self.operand_def:
+      assert self.operand_def.name, "TensorFn not registered with an op"
+    attr_name = self.operand_def.name if self.operand_def else None
+    args = [arg.to_scalar_expression() for arg in self.args]
+    return ScalarFn(self.kind, self.name, attr_name, self.type_var, args).expr()
 
   def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
     super().visit_tensor_exprs(callback)
@@ -150,28 +160,9 @@ class TensorArithFn(TensorExpression):
       arg.visit_tensor_exprs(callback)
 
   def __repr__(self):
-    return f"{repr(self.arith_fn)}({', '.join(repr(a) for a in self.args)})"
-
-
-class TensorTypeFn(TensorExpression):
-  """Application of a type conversion function."""
-
-  def __init__(self, type_fn: "TypeFn", type_var: TypeVar,
-               arg: TensorExpression):
-    self.type_fn = type_fn
-    self.type_var = type_var
-    self.arg = arg
-
-  def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarTypeFn(self.type_fn.fn_name, self.type_var,
-                        self.arg.to_scalar_expression()).expr()
-
-  def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
-    super().visit_tensor_exprs(callback)
-    self.arg.visit_tensor_exprs(callback)
-
-  def __repr__(self):
-    return f"{repr(self.type_fn)}({self.type_var}, {self.arg})"
+    name = self.operand_def.name if self.operand_def else self.name
+    return (f"{self.kind.name}.{name}(type_var={self.type_var}, "
+            f"args={', '.join(repr(a) for a in self.args)})")
 
 
 class TensorReduceFn(TensorExpression):
@@ -184,7 +175,7 @@ class TensorReduceFn(TensorExpression):
                args: Sequence[TensorExpression]):
     self.reduce_use = reduce_use
     self.lhs = None  # type: Optional[TensorUse]
-    self.args = tuple(args)
+    self.args = args
 
   def to_scalar_expression(self) -> ScalarExpression:
     if self.lhs is None:
@@ -192,7 +183,8 @@ class TensorReduceFn(TensorExpression):
                        f"bound to its lhs: {self}")
     full_args = [self.lhs.to_scalar_expression()
                 ] + [arg.to_scalar_expression() for arg in self.args]
-    return ScalarArithFn(self.reduce_use.arith_fn.fn_name, *full_args).expr()
+    return ScalarFn(FunctionKind.BINARY, self.reduce_use.binary_fn.fn_name,
+                    None, None, full_args).expr()
 
   def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
     for arg in self.args:
@@ -249,6 +241,72 @@ class index(TensorExpression):
 ###############################################################################
 
 
+class FunctionKind(Enum):
+  UNARY = 0
+  BINARY = 1
+  TYPE = 2
+
+
+class UnaryFnType:
+  """Unary function.
+
+  A unary function takes one tensor expression and returns the
+  function evaluation result.
+  """
+
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, exp: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.UNARY, self.fn_name, None, None, [exp])
+
+  def __repr__(self):
+    return f"{self.fn_name}"
+
+
+class UnaryFn:
+  """Unary function namespace."""
+  exp = UnaryFnType("exp")
+  log = UnaryFnType("log")
+
+
+class BinaryFnType:
+  """Binary function.
+
+  A binary function takes two tensor expressions and returns the
+  function evaluation result.
+  """
+
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, arg0: TensorExpression,
+               arg1: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.BINARY, self.fn_name, None, None, [arg0, arg1])
+
+  def __repr__(self):
+    return f"{self.fn_name}"
+
+
+class BinaryFn:
+  """Binary function namespace.
+
+  As the integer types are signless, signedness is implement by different
+  functions that treat integers as signed or unsigned values.
+
+  Examples:
+  - max -> `arith.MaxSIOp`
+  - max_unsinged -> `arith.MaxUIOp`
+  """
+  add = BinaryFnType("add")
+  mul = BinaryFnType("mul")
+  max = BinaryFnType("max")
+  min = BinaryFnType("min")
+  sub = BinaryFnType("sub")
+  max_unsigned = BinaryFnType("max_unsigned")
+  min_unsigned = BinaryFnType("min_unsigned")
+
+
 class TypeFnType:
   """Type conversion function.
 
@@ -259,8 +317,8 @@ class TypeFnType:
   def __init__(self, fn_name: str):
     self.fn_name = fn_name
 
-  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> "TypeFnType":
-    return TensorTypeFn(self, type_var, arg)
+  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.TYPE, self.fn_name, None, type_var, [arg])
 
   def __repr__(self):
     return f"{self.fn_name}"
@@ -281,87 +339,49 @@ class TypeFn:
   cast_unsigned = TypeFnType("cast_unsigned")
 
 
-class ArithFnType:
-  """Arithmetic function.
-
-  An arithmetic function takes one ore more tensor expressions and returns the
-  function evaluation result.
-  """
-
-  def __init__(self, fn_name: str):
-    self.fn_name = fn_name
-
-  def __call__(self, *args) -> "TensorArithFn":
-    return TensorArithFn(self, args)
-
-  def __repr__(self):
-    return f"{self.fn_name}"
-
-
-class ArithFn:
-  """Arithmetic function namespace.
-
-  As the integer types are signless, signedness is implement by different
-  functions that treat integers as signed or unsigned values.
-
-  Examples:
-  - max -> `arith.MaxSIOp`
-  - max_unsinged -> `arith.MaxUIOp`
-  """
-  add = ArithFnType("add")
-  exp = ArithFnType("exp")
-  log = ArithFnType("log")
-  mul = ArithFnType("mul")
-  max = ArithFnType("max")
-  min = ArithFnType("min")
-  sub = ArithFnType("sub")
-  max_unsigned = ArithFnType("max_unsigned")
-  min_unsigned = ArithFnType("min_unsigned")
-
-
 class ReduceFnUse:
   """Reduction function use.
 
   A reduction use specifies the reduction function and dimensions.
   """
 
-  def __init__(self, arith_fn: ArithFnType, *reduce_dims: DimDef):
-    self.arith_fn = arith_fn
+  def __init__(self, binary_fn: BinaryFnType, *reduce_dims: DimDef):
+    self.binary_fn = binary_fn
     self.reduce_dims = reduce_dims
 
-  def __call__(self, *args: TensorExpression):
+  def __call__(self, *args: TensorExpression) -> "TensorReduceFn":
     return TensorReduceFn(self, args)
 
   def __repr__(self):
-    return (f"reduce_{self.arith_fn.fn_name}"
+    return (f"reduce_{self.binary_fn.fn_name}"
             f"({', '.join(repr(d) for d in self.reduce_dims)})")
 
 
 class ReduceFnType:
   """Reduction function.
 
-  An arithmetic function that reduces its RHS into its LHS.
+  A binary function that reduces its RHS into its LHS.
   """
 
-  def __init__(self, arith_fn: ArithFnType):
-    if not isinstance(arith_fn, ArithFnType):
-      raise ValueError(f"Reduce expected a ArithFnType but got {arith_fn}")
-    self.arith_fn = arith_fn
+  def __init__(self, binary_fn: BinaryFnType):
+    if not isinstance(binary_fn, BinaryFnType):
+      raise ValueError(f"Reduce expected a BinaryFnType but got {binary_fn}")
+    self.binary_fn = binary_fn
 
   def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
-    return ReduceFnUse(self.arith_fn, *reduce_dims)
+    return ReduceFnUse(self.binary_fn, *reduce_dims)
 
   def __repr__(self):
-    return (f"reduce_{self.arith_fn.fn_name}")
+    return (f"reduce_{self.binary_fn.fn_name}")
 
 
 class ReduceFn:
-  add = ReduceFnType(ArithFn.add)
-  mul = ReduceFnType(ArithFn.mul)
-  max = ReduceFnType(ArithFn.max)
-  min = ReduceFnType(ArithFn.min)
-  max_unsigned = ReduceFnType(ArithFn.max_unsigned)
-  min_unsigned = ReduceFnType(ArithFn.min_unsigned)
+  add = ReduceFnType(BinaryFn.add)
+  mul = ReduceFnType(BinaryFn.mul)
+  max = ReduceFnType(BinaryFn.max)
+  min = ReduceFnType(BinaryFn.min)
+  max_unsigned = ReduceFnType(BinaryFn.max_unsigned)
+  min_unsigned = ReduceFnType(BinaryFn.min_unsigned)
 
 
 ###############################################################################
@@ -370,10 +390,11 @@ class ReduceFn:
 
 
 class OperandKind(Enum):
-  InputTensor = 0
-  Scalar = 1
-  OutputTensor = 2
-  IndexAttr = 3
+  INPUT_TENSOR = 0
+  SCALAR = 1
+  OUTPUT_TENSOR = 2
+  INDEX_ATTR = 3
+  TYPE_FN_ATTR = 4
 
 
 class OperandDef:
@@ -388,7 +409,8 @@ class OperandDef:
                type_var: Optional[TypeVar] = None,
                size_exprs: Optional[Sequence[AffineExprDef]] = None,
                index_dims: Optional[Sequence[DimDef]] = None,
-               default_vals: Optional[Sequence[int]] = None):
+               default_indices: Optional[Sequence[int]] = None,
+               default_fn: Optional[str] = None):
     if type_var and not isinstance(type_var, TypeVar):
       raise ValueError(
           f"OperandDef requires a TypeVar but got {repr(type_var)}")
@@ -396,25 +418,40 @@ class OperandDef:
     self.type_var = type_var
     self.size_exprs = size_exprs
     self.index_dims = index_dims
-    self.default_vals = default_vals
+    self.default_indices = default_indices
+    self.default_fn = default_fn
     self.kind = kind
     self.name = None  # type: Optional[str]
     self.registered_index = -1  # type: int
 
   def attach(self, index: int, name: str, owner: "LinalgOpDef"):
     if self.owner:
-      raise ValueError(f"OperandDef already registered with op: {self}")
+      raise ValueError(f"OperandDef already registered with an op: {self}")
     self.registered_index = index
     self.name = name
     self.owner = owner
+
+  def is_input(self) -> bool:
+    return (self.kind == OperandKind.SCALAR or
+            self.kind == OperandKind.INPUT_TENSOR)
+
+  def is_tensor(self) -> bool:
+    return (self.kind == OperandKind.INPUT_TENSOR or
+            self.kind == OperandKind.OUTPUT_TENSOR)
+
+  def is_attribute(self) -> bool:
+    return (self.kind == OperandKind.INDEX_ATTR or
+            self.kind == OperandKind.TYPE_FN_ATTR)
 
   def __hash__(self):
     return hash(id(self))
 
   def __repr__(self):
     return (f"{self.name}:OperandDef(kind={self.kind.name}, "
-            f"type={repr(self.type_var)}, size_exprs={self.size_exprs}), "
-            f"index_dims={self.index_dims}, default_vals={self.default_vals})")
+            f"type={repr(self.type_var)}, size_exprs={self.size_exprs}, "
+            f"index_dims={self.index_dims}, "
+            f"default_indices={self.default_indices}, "
+            f"default_fn={self.default_fn})")
 
 
 class TensorDef:
@@ -440,12 +477,12 @@ class TensorDef:
     if index_dims and any(not isinstance(dim, DimDef) for dim in index_dims):
       raise ValueError(f"TensorDef requires index dims of type DimDef but "
                        f"got {index_dims}")
-    kind = OperandKind.OutputTensor if output else OperandKind.InputTensor
+    kind = OperandKind.OUTPUT_TENSOR if output else OperandKind.INPUT_TENSOR
     self.operand_def = OperandDef(
         kind, type_var=type_var, size_exprs=shape, index_dims=index_dims)
 
   def __getitem__(self, dims: Sequence[AffineExprDef]) -> TensorUse:
-    assert self.operand_def.owner, "TensorDef is not attached to an op"
+    assert self.operand_def.owner, "TensorDef is not registered with an op"
     state = AffineBuildState(
         global_state=self.operand_def.owner._affine_state,
         allow_new_symbols=False)
@@ -486,12 +523,12 @@ class ScalarDef(TensorExpression):
   """
 
   def __init__(self, type_var: TypeVar):
-    self.operand_def = OperandDef(OperandKind.Scalar, type_var=type_var)
+    self.operand_def = OperandDef(OperandKind.SCALAR, type_var=type_var)
 
   @property
   def scalar_name(self) -> str:
     name = self.operand_def.name
-    assert name is not None, "ScalarDef not attached"
+    assert name is not None, "ScalarDef not registered with an op"
     return name
 
   def to_scalar_expression(self) -> ScalarExpression:
@@ -517,7 +554,26 @@ class IndexAttrDef:
       raise ValueError(f"IndexAttrDef expects {len(sizes)} default values "
                        f"but got {len(default)}")
     self.operand_def = OperandDef(
-        OperandKind.IndexAttr, size_exprs=sizes, default_vals=default)
+        OperandKind.INDEX_ATTR, size_exprs=sizes, default_indices=default)
+
+
+class TypeFnAttrDef:
+  """Type conversion function attribute definition.
+
+  Type conversion function attributes provide a way to make type conversions
+  parameterizable. Every attribute specifies a default type conversion function
+  that may be overwritten at operation instantiation time.
+  """
+
+  def __init__(self, default: "TypeFnType"):
+    if not isinstance(default, TypeFnType):
+      raise ValueError(f"TypeFnAttrDef requires default of type TypeFnType "
+                       f"but got {default}")
+    self.operand_def = OperandDef(
+        OperandKind.TYPE_FN_ATTR, default_fn=default.fn_name)
+
+  def __call__(self, type_var: TypeVar, arg: TensorExpression) -> TensorFn:
+    return TensorFn(FunctionKind.TYPE, None, self.operand_def, type_var, [arg])
 
 
 ###############################################################################
@@ -615,17 +671,21 @@ class LinalgOpDef:
     if name in self.registered_operands:
       raise ValueError(f"The operand {name} is already registered "
                        f"to {self.registered_operands['name']}")
+    structured_op_methods = [
+        "inputs", "outputs", "result_tensors", "region", "iterator_types",
+        "indexing_maps", "getRegionBuilder", "getLibraryCallName"
+    ]
+    if operand.is_attribute() and name in structured_op_methods:
+      raise ValueError(f"The attribute name {name} conflicts with a structured "
+                       f"op method name")
     # Ensure output tensors are registered after input tensors and scalars and
     # attributes are registered after all other operand types.
-    registered_kinds = [
-        operand.kind.value for operand in self.registered_operands.values()
-    ]
-    if registered_kinds:
-      maximum = max(registered_kinds)
-      if maximum > operand.kind.value and maximum > OperandKind.Scalar.value:
-        raise ValueError(
-            f"The operand {name} of kind {operand.kind.name} is registered "
-            f"after an operand of kind {OperandKind(maximum).name}")
+    if operand.is_input() and any(
+        not op_def.is_input() for op_def in self.registered_operands.values()):
+      raise ValueError(f"Input {name} registered after an output or attribute")
+    if operand.kind == OperandKind.OUTPUT_TENSOR and any(
+        op_def.is_attribute() for op_def in self.registered_operands.values()):
+      raise ValueError(f"Output {name} registered after an attribute")
     operand.attach(len(self.registered_operands), name, self)
     self.registered_operands[name] = operand
 

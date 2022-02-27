@@ -248,7 +248,8 @@ private:
   ///
   ///  `Type` must not be null.
   Value *createValueUnlessSelfReferential(QualType Type,
-                                          llvm::DenseSet<QualType> &Visited);
+                                          llvm::DenseSet<QualType> &Visited,
+                                          int Depth, int &CreatedValuesCount);
 
   StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
   const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
@@ -264,6 +265,12 @@ private:
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
   llvm::DenseMap<const StorageLocation *, Value *> LocToVal;
+
+  // Maps locations of struct members to symbolic values of the structs that own
+  // them and the decls of the struct members.
+  llvm::DenseMap<const StorageLocation *,
+                 std::pair<StructValue *, const ValueDecl *>>
+      MemberLocToStruct;
 
   // FIXME: Add flow condition constraints.
 };

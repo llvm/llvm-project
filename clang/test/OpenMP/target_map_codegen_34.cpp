@@ -35,10 +35,12 @@ public:
   void foo();
 };
 
+// CK34-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | IMPLICIT | TO = 0x1000000000201
 // CK34-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000201]]]
+// CK34-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | FROM = 0x1000000000002
 // MEMBER_OF_1 | IMPLICIT | FROM = 0x1000000000202
@@ -131,7 +133,6 @@ void default_mapper() {
 
   // CK34-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
-  // CK34-DAG: [[S3:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[MF3:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 3
 
   // CK34-DAG: [[BPC3:%.+]] = bitcast i8** [[BP3]] to %class.S**
@@ -139,8 +140,6 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC3]],
   // CK34-DAG: store %class.C* [[C_ADDR:%.+]], %class.C** [[PC3]],
-  // CK34-64-DAG: store i64 16, i64* [[S3]],
-  // CK34-32-DAG: store i64 8, i64* [[S3]],
   // CK34-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[C_DEFAULT_MAPPER:@.+]] to i8*), i8** [[MF3]],
 
   // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, %class.S* [[S_ADDR]], i32 0, i32 2
@@ -235,7 +234,6 @@ void default_mapper() {
 
   // CK34-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
-  // CK34-DAG: [[S3:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 3
   // CK34-DAG: [[MF3:%.+]] = getelementptr inbounds {{.+}}[[MF]], i{{.+}} 0, i{{.+}} 3
 
   // CK34-DAG: [[BPC3:%.+]] = bitcast i8** [[BP3]] to %class.S**
@@ -243,8 +241,6 @@ void default_mapper() {
 
   // CK34-DAG: store %class.S* [[S_ADDR]], %class.S** [[BPC3]],
   // CK34-DAG: store %class.C* [[C_ADDR:%.+]], %class.C** [[PC3]],
-  // CK34-64-DAG: store i64 16, i64* [[S3]],
-  // CK34-32-DAG: store i64 8, i64* [[S3]],
   // CK34-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[C_DEFAULT_MAPPER]] to i8*), i8** [[MF3]],
 
   // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, %class.S* [[S_ADDR]], i32 0, i32 2

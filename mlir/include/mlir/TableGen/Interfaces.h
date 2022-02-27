@@ -98,6 +98,10 @@ public:
   // Return the verify method body if it has one.
   llvm::Optional<StringRef> getVerify() const;
 
+  // If there's a verify method, return if it needs to access the ops in the
+  // regions.
+  bool verifyWithRegions() const;
+
   // Returns the Tablegen definition this interface was constructed from.
   const llvm::Record &getDef() const { return *def; }
 

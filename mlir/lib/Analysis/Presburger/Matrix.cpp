@@ -9,7 +9,8 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/Support/MathExtras.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
 Matrix::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
                unsigned reservedColumns)
@@ -203,6 +204,30 @@ void Matrix::negateColumn(unsigned column) {
     at(row, column) = -at(row, column);
 }
 
+void Matrix::negateRow(unsigned row) {
+  for (unsigned column = 0, e = getNumColumns(); column < e; ++column)
+    at(row, column) = -at(row, column);
+}
+
+uint64_t Matrix::normalizeRow(unsigned row, unsigned cols) {
+  if (cols == 0)
+    return 0;
+
+  int64_t gcd = std::abs(at(row, 0));
+  for (unsigned j = 1, e = cols; j < e; ++j)
+    gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(at(row, j)));
+
+  if (gcd > 1)
+    for (unsigned j = 0, e = cols; j < e; ++j)
+      at(row, j) /= gcd;
+
+  return gcd;
+}
+
+uint64_t Matrix::normalizeRow(unsigned row) {
+  return normalizeRow(row, getNumColumns());
+}
+
 SmallVector<int64_t, 8>
 Matrix::preMultiplyWithRow(ArrayRef<int64_t> rowVec) const {
   assert(rowVec.size() == getNumRows() && "Invalid row vector dimension!");
@@ -247,5 +272,3 @@ bool Matrix::hasConsistentState() const {
         return false;
   return true;
 }
-
-} // namespace mlir

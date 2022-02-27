@@ -6,17 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
-#include "Compiler.h"
-#include "Matchers.h"
 #include "ParsedAST.h"
-#include "SyncAPI.h"
-#include "TestFS.h"
 #include "TestTU.h"
 #include "XRefs.h"
-#include "index/FileIndex.h"
-#include "index/SymbolCollector.h"
-#include "clang/Index/IndexingAction.h"
-#include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

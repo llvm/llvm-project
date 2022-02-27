@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -triple i686-apple-darwin10 %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify -triple i686-apple-darwin10 %s
 
 // CC qualifier can be applied only to functions
 int __attribute__((stdcall)) var1; // expected-warning{{'stdcall' only applies to function types; type here is 'int'}}

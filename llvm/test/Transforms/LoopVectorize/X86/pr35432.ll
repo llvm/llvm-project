@@ -75,27 +75,19 @@ define i32 @main(i32* %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP24:%.*]] = trunc i32 [[INDEX]] to i8
-; CHECK-NEXT:    [[OFFSET_IDX4:%.*]] = sub i8 [[CONV3]], [[TMP24]]
-; CHECK-NEXT:    [[TMP25:%.*]] = add i8 [[OFFSET_IDX4]], 0
-; CHECK-NEXT:    [[TMP26:%.*]] = add i8 [[OFFSET_IDX4]], -4
-; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[TMP22]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP23]], 1
-; CHECK-NEXT:    [[TMP29:%.*]] = add i8 [[TMP25]], -1
-; CHECK-NEXT:    [[TMP30:%.*]] = add i8 [[TMP26]], -1
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[TMP27]]
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[TMP28]]
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, i32* [[TMP31]], i32 0
-; CHECK-NEXT:    [[TMP34:%.*]] = bitcast i32* [[TMP33]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP34]], align 4
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, i32* [[TMP31]], i32 4
-; CHECK-NEXT:    [[TMP36:%.*]] = bitcast i32* [[TMP35]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP36]], align 4
-; CHECK-NEXT:    [[TMP37:%.*]] = zext i8 [[TMP29]] to i32
-; CHECK-NEXT:    [[TMP38:%.*]] = zext i8 [[TMP30]] to i32
+; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], 1
+; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP23]], 1
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[TMP24]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[TMP25]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, i32* [[TMP26]], i32 0
+; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i32* [[TMP28]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, i32* [[TMP26]], i32 4
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast i32* [[TMP30]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP31]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP39]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP7]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]

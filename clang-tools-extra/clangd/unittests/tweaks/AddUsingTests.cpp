@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Config.h"
-#include "TestTU.h"
 #include "TweakTesting.h"
-#include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

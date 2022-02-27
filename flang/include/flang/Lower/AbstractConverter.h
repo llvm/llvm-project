@@ -99,6 +99,12 @@ public:
     return genExprValue(*someExpr, stmtCtx, &loc);
   }
 
+  /// Generate the address of the box describing the variable designated
+  /// by the expression. The expression must be an allocatable or pointer
+  /// designator.
+  virtual fir::MutableBoxValue genExprMutableBox(mlir::Location loc,
+                                                 const SomeExpr &) = 0;
+
   /// Get FoldingContext that is required for some expression
   /// analysis.
   virtual Fortran::evaluate::FoldingContext &getFoldingContext() = 0;

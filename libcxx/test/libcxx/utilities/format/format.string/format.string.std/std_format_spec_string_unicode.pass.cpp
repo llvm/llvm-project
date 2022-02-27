@@ -9,12 +9,6 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
-// Fails for 32-bit builds on AIX.
-// UNSUPPORTED: LIBCXX-AIX-FIXME
-
-// UTF-32 doesn't work properly
-// XFAIL: windows
-
 // <format>
 
 // Tests the Unicode width support of the standard format specifiers.

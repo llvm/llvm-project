@@ -36,6 +36,7 @@ class InputSectionBase;
 class SharedSymbol;
 class Symbol;
 class Undefined;
+class LazyObject;
 class InputFile;
 
 // Some index properties of a symbol are stored separately in this auxiliary
@@ -224,10 +225,10 @@ private:
   void resolveUndefined(const Undefined &other);
   void resolveCommon(const CommonSymbol &other);
   void resolveDefined(const Defined &other);
-  template <class LazyT> void resolveLazy(const LazyT &other);
+  void resolveLazy(const LazyObject &other);
   void resolveShared(const SharedSymbol &other);
 
-  int compare(const Symbol *other) const;
+  bool compare(const Defined &other) const;
 
   inline size_t getSymbolSize() const;
 
@@ -318,7 +319,7 @@ public:
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = config->shared || config->exportDynamic;
+    exportDynamic = config->exportDynamic;
   }
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
@@ -355,7 +356,7 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = config->shared || config->exportDynamic;
+    exportDynamic = config->exportDynamic;
   }
 
   static bool classof(const Symbol *s) { return s->isCommon(); }

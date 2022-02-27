@@ -447,27 +447,6 @@ def _mlir_tensor_type(
   return ir.RankedTensorType.get(shape, ir_type, attr)
 
 
-def _verify_and_normalize_indices(indices) -> Tuple[IndexVar, ...]:
-  """Verifies and normalizes the indices for a tensor access.
-
-  Args:
-    indices: The index expression used to access a tensor, which could be any
-      Python object from user inputs.
-
-  Returns:
-    A tuple of IndexVar.
-
-  Raises:
-    ValueError: If indices is not an IndexVar or a tuple of IndexVar.
-  """
-  if isinstance(indices, IndexVar):
-    return (indices,)
-  elif isinstance(indices, tuple) and _all_instance_of(indices, IndexVar):
-    return indices
-
-  raise ValueError(f"Expected IndexVars: {indices}")
-
-
 @dataclasses.dataclass(frozen=True)
 class _StructOpInfo:
   """Information for generating a structured op in the linalg dialect.
@@ -498,7 +477,7 @@ class _StructOpInfo:
 
   def emit_tensor_init(self) -> ir.RankedTensorType:
     """Returns an initialization for the destination tensor."""
-    if self.dst_format is None:
+    if self.dst_format is None or self.dst_format.rank() == 0:
       # Initialize the dense tensor.
       ir_type = _mlir_type_from_taco_type(self.dst_dtype)
       tensor = linalg.InitTensorOp(self.dst_dims, ir_type).result
@@ -713,7 +692,7 @@ class Tensor:
     rank, nse, shape, values, indices = utils.sparse_tensor_to_coo_tensor(
         self._packed_sparse_value, self._dtype.value)
     assert rank == self.order
-    assert np.allclose(self.shape, shape)
+    assert np.array_equal(self.shape, shape)
     assert nse == len(values)
     self._coords = indices
     self._values = values
@@ -761,7 +740,7 @@ class Tensor:
 
   def is_dense(self) -> bool:
     """Returns true if the tensor doesn't have sparsity annotation."""
-    return self._format is None
+    return self.order == 0 or self._format is None
 
   def to_array(self) -> np.ndarray:
     """Returns the numpy array for the Tensor.
@@ -918,6 +897,32 @@ class Tensor:
     """Returns the shape of the Tensor."""
     return self._shape
 
+  def _verify_and_normalize_indices(self, indices) -> Tuple[IndexVar, ...]:
+    """Verifies and normalizes the indices to access the tensor.
+
+    Args:
+      indices: The index expression used to access a tensor, which could be any
+        Python object from user inputs.
+
+    Returns:
+      A tuple of IndexVar.
+
+    Raises:
+      ValueError: If indices is not 0 for scalar tensors, or not an IndexVar or
+        a tuple of IndexVar for other tensors.
+    """
+    if self.order == 0:
+      if not isinstance(indices, int) or indices != 0:
+        raise ValueError(f"Expected 0 to index scalar tensors: {indices}")
+      return ()
+
+    if isinstance(indices, IndexVar):
+      return (indices,)
+    elif isinstance(indices, tuple) and _all_instance_of(indices, IndexVar):
+      return indices
+
+    raise ValueError(f"Expected IndexVars: {indices}")
+
   def __getitem__(self, key) -> "Access":
     """Verifies and processes a tensor access.
 
@@ -936,7 +941,7 @@ class Tensor:
     Raises:
       ValueError: If key is not an IndexVar or a tuple of IndexVar.
     """
-    indices = _verify_and_normalize_indices(key)
+    indices = self._verify_and_normalize_indices(key)
     return Access(self, indices)
 
   def __setitem__(self, key, value) -> None:
@@ -960,7 +965,7 @@ class Tensor:
         or a tuple of IndexVar, or the length of the indices is not the same as
         the rank of the tensor.
     """
-    indices = _verify_and_normalize_indices(key)
+    indices = self._verify_and_normalize_indices(key)
     if len(indices) != self.order:
       raise ValueError("Mismatch between indices and tensor rank: "
                        f"len({indices}) != {self.order}.")
@@ -985,8 +990,8 @@ class Tensor:
 
   def mlir_tensor_type(self) -> ir.RankedTensorType:
     """Returns the MLIR type for the tensor."""
-    mlir_attr = None if (
-        self._format is None) else self._format.mlir_tensor_attr()
+    mlir_attr = (None if (self._format is None or self.order == 0) else
+                 self._format.mlir_tensor_attr())
     return _mlir_tensor_type(self._dtype, tuple(self._shape), mlir_attr)
 
   def dense_dst_ctype_pointer(self) -> ctypes.pointer:
@@ -1018,11 +1023,26 @@ class Tensor:
 
     return ctypes.pointer(ctypes.cast(ptr, ctypes.c_void_p))
 
+  def get_scalar_value(self) -> _AnyRuntimeType:
+    """Returns the value for the scalar tensor.
+
+    This method also evaluates the assignment to the tensor.
+
+    Raises:
+      ValueError: If the tensor is not a scalar.
+    """
+    if self.order != 0:
+      raise ValueError(f"Expected a scalar tensor, got: rank={self.order}")
+
+    self._sync_value()
+    return self._dense_storage
+
+
   def get_coordinates_and_values(
       self) -> Tuple[List[Tuple[int, ...]], List[_AnyRuntimeType]]:
     """Returns the coordinates and values for the non-zero elements.
 
-    This method also evaluate the assignment to the tensor and unpack the
+    This method also evaluates the assignment to the tensor and unpack the
     sparse tensor.
     """
     self._sync_value()
@@ -1030,6 +1050,9 @@ class Tensor:
     if not self.is_dense():
       self.unpack()
       return (self._coords, self._values)
+
+    if self.order == 0:
+      return ([], self._dense_storage)
 
     # Coordinates for non-zero elements, grouped by dimensions.
     coords_by_dims = self._dense_storage.nonzero()
@@ -1258,7 +1281,7 @@ class IndexExpr(abc.ABC):
     value = self._emit_expression(expr_to_input_opnd, expr_to_info)
     # Emit the structured op representation for the destination tensor.
     dst_opnd = _emit_operand(op_def, op_info.dst_indices, op_info.dst_name,
-                             lang.OperandKind.OutputTensor)
+                             lang.OperandKind.OUTPUT_TENSOR)
     dst_dim_syms = _mlir_dimensions_from_index_vars(op_info.dst_indices)
     dst_use = lang.TensorUse(dst_opnd, dst_dim_syms)
 
@@ -1534,12 +1557,12 @@ def _gather_input_accesses_index_vars(
     input_accesses.append(expr)
 
 
-def _op_to_callable(op: _BinaryOp) -> lang.ArithFnType:
+def _op_to_callable(op: _BinaryOp) -> lang.BinaryFnType:
   """Returns the linalg dialect function object for the given operation."""
   op_to_callable = {
-      operator.add: lang.ArithFn.add,
-      operator.sub: lang.ArithFn.sub,
-      operator.mul: lang.ArithFn.mul,
+      operator.add: lang.BinaryFn.add,
+      operator.sub: lang.BinaryFn.sub,
+      operator.mul: lang.BinaryFn.mul,
   }
   return op_to_callable[op]
 
@@ -1893,6 +1916,6 @@ def _emit_structured_op_input(
     name = expr.tensor.name
 
   dim_sym = _mlir_symbols_from_index_vars(indices)
-  opnd = lang.OperandDef(lang.OperandKind.InputTensor, lang.T, dim_sym)
+  opnd = lang.OperandDef(lang.OperandKind.INPUT_TENSOR, lang.T, dim_sym)
   op_def.add_operand(name, opnd)
   return opnd

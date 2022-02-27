@@ -1759,24 +1759,22 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
     return;
 
   for (StringRef OffloadObject : CGOpts.OffloadObjects) {
-    if (OffloadObject.count(',') != 1) {
+    if (OffloadObject.count(',') != 1)
       Diags.Report(Diags.getCustomDiagID(
           DiagnosticsEngine::Error, "Invalid string pair for embedding '%0'"))
           << OffloadObject;
-      return;
-    }
     auto FilenameAndSection = OffloadObject.split(',');
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
-        llvm::MemoryBuffer::getFileOrSTDIN(std::get<0>(FilenameAndSection));
+        llvm::MemoryBuffer::getFileOrSTDIN(FilenameAndSection.first);
     if (std::error_code EC = ObjectOrErr.getError()) {
       auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                           "could not open '%0' for embedding");
-      Diags.Report(DiagID) << std::get<0>(FilenameAndSection);
+      Diags.Report(DiagID) << FilenameAndSection.first;
       return;
     }
 
     SmallString<128> SectionName(
-        {".llvm.offloading.", std::get<1>(FilenameAndSection)});
+        {".llvm.offloading.", FilenameAndSection.second});
     llvm::embedBufferInModule(*M, **ObjectOrErr, SectionName);
   }
 }

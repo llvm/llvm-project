@@ -13,7 +13,6 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 namespace clangd {

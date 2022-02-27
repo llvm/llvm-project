@@ -86,6 +86,19 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "X<Y> x;",
       },
       {
+          // https://github.com/clangd/clangd/issues/1036
+          R"cpp(
+            struct ^Base { void ^base(); };
+            template <int> struct ^Derived : Base {};
+          )cpp",
+          R"cpp(
+            class Holder {
+              void foo() { Member.base(); }
+              Derived<0> Member;
+            };
+          )cpp",
+      },
+      {
           "struct Foo; struct ^Foo{}; typedef Foo ^Bar;",
           "Bar b;",
       },
@@ -206,7 +219,8 @@ TEST(IncludeCleaner, ReferencedLocations) {
       {
           "enum class ^Color : char {};",
           "Color *c;",
-      }};
+      },
+  };
   for (const TestCase &T : Cases) {
     TestTU TU;
     TU.Code = T.MainCode;

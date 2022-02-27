@@ -567,10 +567,39 @@ _additional_ verification, you can use
 let hasVerifier = 1;
 ```
 
-This will generate a `LogicalResult verify()` method declaration on the op class
-that can be defined with any additional verification constraints. This method
-will be invoked after the auto-generated verification code. The order of trait
-verification excluding those of `hasVerifier` should not be relied upon.
+or
+
+```tablegen
+let hasRegionVerifier = 1;
+```
+
+This will generate either `LogicalResult verify()` or
+`LogicalResult verifyRegions()` method declaration on the op class
+that can be defined with any additional verification constraints. These method
+will be invoked on its verification order.
+
+#### Verification Ordering
+
+The verification of an operation involves several steps,
+
+1. StructuralOpTrait will be verified first, they can be run independently.
+1. `verifyInvariants` which is constructed by ODS, it verifies the type,
+   attributes, .etc.
+1. Other Traits/Interfaces that have marked their verifier as `verifyTrait` or
+   `verifyWithRegions=0`.
+1. Custom verifier which is defined in the op and has marked `hasVerifier=1`
+
+If an operation has regions, then it may have the second phase,
+
+1. Traits/Interfaces that have marked their verifier as `verifyRegionTrait` or
+   `verifyWithRegions=1`. This implies the verifier needs to access the
+   operations in its regions.
+1. Custom verifier which is defined in the op and has marked
+   `hasRegionVerifier=1`
+
+Note that the second phase will be run after the operations in the region are
+verified. Verifiers further down the order can rely on certain invariants being
+verified by a previous verifier and do not need to re-verify them.
 
 ### Declarative Assembly Format
 

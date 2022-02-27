@@ -110,9 +110,24 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // module state;
   ImportState = ModuleImportState::NotACXX20Module;
 
-  // A module implementation unit requires that we are not compiling a module
-  // of any kind. A module interface unit requires that we are not compiling a
-  // module map.
+  bool IsPartition = !Partition.empty();
+  if (IsPartition)
+    switch (MDK) {
+    case ModuleDeclKind::Implementation:
+      MDK = ModuleDeclKind::PartitionImplementation;
+      break;
+    case ModuleDeclKind::Interface:
+      MDK = ModuleDeclKind::PartitionInterface;
+      break;
+    default:
+      llvm_unreachable("how did we get a partition type set?");
+    }
+
+  // A (non-partition) module implementation unit requires that we are not
+  // compiling a module of any kind.  A partition implementation emits an
+  // interface (and the AST for the implementation), which will subsequently
+  // be consumed to emit a binary.
+  // A module interface unit requires that we are not compiling a module map.
   switch (getLangOpts().getCompilingModule()) {
   case LangOptions::CMK_None:
     // It's OK to compile a module interface as a normal translation unit.
@@ -123,7 +138,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       break;
 
     // We were asked to compile a module interface unit but this is a module
-    // implementation unit. That indicates the 'export' is missing.
+    // implementation unit.
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
       << FixItHint::CreateInsertion(ModuleLoc, "export ");
     MDK = ModuleDeclKind::Interface;
@@ -180,7 +195,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // modules, the dots here are just another character that can appear in a
   // module name.
   std::string ModuleName = stringFromPath(Path);
-  bool IsPartition = !Partition.empty();
   if (IsPartition) {
     ModuleName += ":";
     ModuleName += stringFromPath(Partition);
@@ -202,7 +216,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   Module *Mod;
 
   switch (MDK) {
-  case ModuleDeclKind::Interface: {
+  case ModuleDeclKind::Interface:
+  case ModuleDeclKind::PartitionInterface: {
     // We can't have parsed or imported a definition of this module or parsed a
     // module map defining it already.
     if (auto *M = Map.findModule(ModuleName)) {
@@ -219,36 +234,36 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // Create a Module for the module that we're defining.
     Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
                                            GlobalModuleFragment);
-    if (IsPartition)
+    if (MDK == ModuleDeclKind::PartitionInterface)
       Mod->Kind = Module::ModulePartitionInterface;
     assert(Mod && "module creation should not fail");
     break;
   }
 
-  case ModuleDeclKind::Implementation:
+  case ModuleDeclKind::Implementation: {
     std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
         PP.getIdentifierInfo(ModuleName), Path[0].second);
-    if (IsPartition) {
-      // Create an interface, but note that it is an implementation
-      // unit.
+    // C++20 A module-declaration that contains neither an export-
+    // keyword nor a module-partition implicitly imports the primary
+    // module interface unit of the module as if by a module-import-
+    // declaration.
+    Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
+                                       Module::AllVisible,
+                                       /*IsInclusionDirective=*/false);
+    if (!Mod) {
+      Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
+      // Create an empty module interface unit for error recovery.
       Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
                                              GlobalModuleFragment);
-      Mod->Kind = Module::ModulePartitionImplementation;
-    } else {
-      // C++20 A module-declaration that contains neither an export-
-      // keyword nor a module-partition implicitly imports the primary
-      // module interface unit of the module as if by a module-import-
-      // declaration.
-      Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
-                                         Module::AllVisible,
-                                         /*IsInclusionDirective=*/false);
-      if (!Mod) {
-        Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
-        // Create an empty module interface unit for error recovery.
-        Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
-                                               GlobalModuleFragment);
-      }
     }
+  } break;
+
+  case ModuleDeclKind::PartitionImplementation:
+    // Create an interface, but note that it is an implementation
+    // unit.
+    Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
+                                           GlobalModuleFragment);
+    Mod->Kind = Module::ModulePartitionImplementation;
     break;
   }
 
@@ -264,8 +279,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // Switch from the global module fragment (if any) to the named module.
   ModuleScopes.back().BeginLoc = StartLoc;
   ModuleScopes.back().Module = Mod;
-  ModuleScopes.back().ModuleInterface =
-      (MDK != ModuleDeclKind::Implementation || IsPartition);
+  ModuleScopes.back().ModuleInterface = MDK != ModuleDeclKind::Implementation;
   ModuleScopes.back().IsPartition = IsPartition;
   VisibleModules.setVisible(Mod, ModuleLoc);
 
@@ -389,10 +403,16 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   }
 
   // Diagnose self-import before attempting a load.
+  // [module.import]/9
+  // A module implementation unit of a module M that is not a module partition
+  // shall not contain a module-import-declaration nominating M.
+  // (for an implementation, the module interface is imported implicitly,
+  //  but that's handled in the module decl code).
+
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview() &&
       getCurrentModule()->Name == ModuleName) {
-    Diag(ImportLoc, diag::err_module_self_import)
-        << ModuleName << getLangOpts().CurrentModule;
+    Diag(ImportLoc, diag::err_module_self_import_cxx20)
+        << ModuleName << !ModuleScopes.back().ModuleInterface;
     return true;
   }
 
@@ -426,8 +446,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
   // FIXME: Should we warn on a redundant import of the current module?
-  if (!getLangOpts().CPlusPlusModules &&
-      Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
       (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS)) {
     Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import
@@ -468,7 +487,12 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (!ModuleScopes.empty())
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);
 
-  if (!ModuleScopes.empty() && ModuleScopes.back().ModuleInterface) {
+  // A module (partition) implementation unit shall not be exported.
+  if (getLangOpts().CPlusPlusModules && Mod && ExportLoc.isValid() &&
+      Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
+    Diag(ExportLoc, diag::err_export_partition_impl)
+        << SourceRange(ExportLoc, Path.back().second);
+  } else if (!ModuleScopes.empty() && ModuleScopes.back().ModuleInterface) {
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -480,7 +504,9 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // [module.interface]p1:
     // An export-declaration shall inhabit a namespace scope and appear in the
     // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+    Diag(ExportLoc, diag::err_export_not_in_module_interface)
+        << (!ModuleScopes.empty() &&
+            !ModuleScopes.back().ImplicitGlobalModuleFragment);
   } else if (getLangOpts().isCompilingModule()) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, ExportLoc, false, false);

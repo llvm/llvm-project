@@ -20,7 +20,6 @@
 #include "support/Path.h"
 #include "support/Threading.h"
 #include "support/ThreadsafeFS.h"
-#include "support/Trace.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"

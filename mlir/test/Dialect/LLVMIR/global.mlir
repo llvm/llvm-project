@@ -80,8 +80,8 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 
 // -----
 
-// expected-error @+1 {{requires string attribute 'sym_name'}}
-"llvm.mlir.global"() ({}) {type = i64, constant, value = 42 : i64} : () -> ()
+// expected-error @+1 {{op requires attribute 'sym_name'}}
+"llvm.mlir.global"() ({}) {type = i64, constant, global_type = i64, value = 42 : i64} : () -> ()
 
 // -----
 

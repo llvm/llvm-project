@@ -17,12 +17,8 @@
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "index/SymbolID.h"
-#include "index/SymbolLocation.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
-#include "clang/AST/Type.h"
-#include "clang/Format/Format.h"
-#include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>

@@ -125,6 +125,10 @@ llvm::Optional<StringRef> Interface::getVerify() const {
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
 
+bool Interface::verifyWithRegions() const {
+  return def->getValueAsBit("verifyWithRegions");
+}
+
 //===----------------------------------------------------------------------===//
 // AttrInterface
 //===----------------------------------------------------------------------===//

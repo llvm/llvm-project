@@ -118,7 +118,6 @@ done:
 ; Using a floating-point value in an integer compare will cause the compare to
 ; be selected for the SALU and then later moved to the VALU.
 ; GCN: v_cmp_ne_u32_e32 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], 5, [[CMP]]
-; GCN: s_and_b64 vcc, exec, [[COND]]
 ; GCN: s_cbranch_vccnz [[ENDIF_LABEL:.L[0-9_A-Za-z]+]]
 ; GCN: buffer_store_dword
 ; GCN: [[ENDIF_LABEL]]:
@@ -143,7 +142,6 @@ endif:
 ; Using a floating-point value in an integer compare will cause the compare to
 ; be selected for the SALU and then later moved to the VALU.
 ; GCN: v_cmp_gt_u32_e32 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], 6, [[CMP]]
-; GCN: s_and_b64 vcc, exec, [[COND]]
 ; GCN: s_cbranch_vccnz [[ENDIF_LABEL:.L[0-9_A-Za-z]+]]
 ; GCN: buffer_store_dword
 ; GCN: [[ENDIF_LABEL]]:

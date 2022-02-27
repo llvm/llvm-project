@@ -91,6 +91,7 @@
 // CK19-NOUSE: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE16:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE16:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
 // CK19-NOUSE: [[MTYPE16:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
@@ -107,6 +108,7 @@
 // CK19-NOUSE: [[MTYPE18:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE19:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE19:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 32]
 // CK19-NOUSE: [[MTYPE19:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
@@ -117,6 +119,7 @@
 // CK19-NOUSE: [[MTYPE20:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE21:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE21:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 // CK19-NOUSE: [[MTYPE21:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
@@ -162,6 +165,7 @@
 // CK19-NOUSE: [[MTYPE29:@.+]] = private {{.*}}constant [3 x i64] [i64 3, i64 16, i64 19]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE30:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE30:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[MTYPE30:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
@@ -196,18 +200,22 @@
 // CK19-NOUSE: [[MTYPE36:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE37:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE37:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[MTYPE37:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE38:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE38:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[MTYPE38:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE39:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE39:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[MTYPE39:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-USE: [[SIZE40:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 0]
 // CK19-USE: [[MTYPE40:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[MTYPE40:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
@@ -655,12 +663,10 @@ void explicit_maps_single (int ii){
 
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z:64|32]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] {{%.+}}, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] {{%.+}}, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i{{.+}} {{8|4}}, i{{.+}}* [[S0]]
 
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
@@ -773,12 +779,10 @@ void explicit_maps_single (int ii){
 
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] {{%.+}}, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] {{%.+}}, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i{{.+}} {{8|4}}, i{{.+}}* [[S0]]
 
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
@@ -856,12 +860,10 @@ void explicit_maps_single (int ii){
 
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] {{%.+}}, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] {{%.+}}, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i{{.+}} {{8|4}}, i{{.+}}* [[S0]]
 
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
@@ -1157,32 +1159,26 @@ void explicit_maps_single (int ii){
   //
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] 23, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] 23, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S0]]
   //
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-USE-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[Z]]*
   // CK19-USE-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] [[VAR1:%.+]], i[[Z]]* [[CBP1]]
   // CK19-USE-DAG: store i[[Z]] [[VAR11:%.+]], i[[Z]]* [[CP1]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S1]]
   // CK19-64-USE-DAG: [[VAR1]] = zext i32 %{{[^,]+}} to i64
   // CK19-64-USE-DAG: [[VAR11]] = zext i32 %{{[^,]+}} to i64
   //
   // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-  // CK19-USE-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
   // CK19-USE-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to i[[Z]]*
   // CK19-USE-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] [[VAR2:%.+]], i[[Z]]* [[CBP2]]
   // CK19-USE-DAG: store i[[Z]] [[VAR22:%.+]], i[[Z]]* [[CP2]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S2]]
   // CK19-64-USE-DAG: [[VAR2]] = zext i32 %{{[^,]+}} to i64
   // CK19-64-USE-DAG: [[VAR22]] = zext i32 %{{[^,]+}} to i64
   //
@@ -1404,21 +1400,17 @@ void explicit_maps_single (int ii){
   //
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S0]]
   //
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-USE-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[Z]]*
   // CK19-USE-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] [[VAR1:%.+]], i[[Z]]* [[CBP1]]
   // CK19-USE-DAG: store i[[Z]] [[VAR11:%.+]], i[[Z]]* [[CP1]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S1]]
   //
   // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
@@ -1457,21 +1449,17 @@ void explicit_maps_single (int ii){
   //
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S0]]
   //
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-USE-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[Z]]*
   // CK19-USE-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] [[VAR1:%.+]], i[[Z]]* [[CBP1]]
   // CK19-USE-DAG: store i[[Z]] [[VAR11:%.+]], i[[Z]]* [[CP1]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S1]]
   //
   // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
@@ -1514,21 +1502,17 @@ void explicit_maps_single (int ii){
   //
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S0]]
   //
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-USE-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[Z]]*
   // CK19-USE-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] [[VAR1:%.+]], i[[Z]]* [[CBP1]]
   // CK19-USE-DAG: store i[[Z]] [[VAR11:%.+]], i[[Z]]* [[CP1]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S1]]
   //
   // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
@@ -1571,21 +1555,17 @@ void explicit_maps_single (int ii){
   //
   // CK19-USE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK19-USE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
   // CK19-USE-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i[[Z]]*
   // CK19-USE-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CBP0]]
   // CK19-USE-DAG: store i[[Z]] 11, i[[Z]]* [[CP0]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S0]]
   //
   // CK19-USE-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK19-USE-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
   // CK19-USE-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[Z]]*
   // CK19-USE-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[Z]]*
   // CK19-USE-DAG: store i[[Z]] [[VAR1:%.+]], i[[Z]]* [[CBP1]]
   // CK19-USE-DAG: store i[[Z]] [[VAR11:%.+]], i[[Z]]* [[CP1]]
-  // CK19-USE-DAG: store i64 {{8|4}}, i64* [[S1]]
   //
   // CK19-USE-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK19-USE-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
@@ -1599,6 +1579,7 @@ void explicit_maps_single (int ii){
   // CK19-USE-DAG: [[SEC22]] = getelementptr {{.+}}[13 x double]* [[VAR2]], i[[Z]] [[SEC222:%[^,]+]]
   // CK19-USE-DAG: [[SEC222]] = mul nsw i[[Z]] 1, %{{[^,]+}}
 
+  // CK19-NOUSE-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
   // CK19-NOUSE-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK19-NOUSE-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK19-NOUSE-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0

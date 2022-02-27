@@ -21,6 +21,7 @@
 ! CHECK-NEXT: -cpp      Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c        Only run preprocess, compile, and assemble steps
 ! CHECK-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
+! CHECK-NEXT: -emit-llvm             Use the LLVM representation for assembler and object files
 ! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -falternative-parameter-statement
 ! CHECK-NEXT: Enable the old style PARAMETER statement
@@ -50,8 +51,11 @@
 ! CHECK-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! CHECK-NEXT: -o <file> Write output to <file>
 ! CHECK-NEXT: -pedantic              Warn on language extensions
+! CHECK-NEXT: -print-effective-triple Print the effective target triple
+! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -P                     Disable linemarker output in -E mode
 ! CHECK-NEXT: -std=<value>           Language standard to compile for
+! CHECK-NEXT: --target=<value>        Generate code for the given target
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
 ! CHECK-NEXT: -W<warning>            Enable the specified warning

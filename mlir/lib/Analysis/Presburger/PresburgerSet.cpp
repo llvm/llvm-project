@@ -14,7 +14,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
-using namespace presburger_utils;
+using namespace presburger;
 
 PresburgerSet::PresburgerSet(const IntegerPolyhedron &poly)
     : PresburgerSpace(poly) {
@@ -35,31 +35,10 @@ PresburgerSet::getIntegerPolyhedron(unsigned index) const {
   return integerPolyhedrons[index];
 }
 
-/// Assert that the IntegerPolyhedron and PresburgerSet live in
-/// compatible spaces.
-static void assertDimensionsCompatible(const IntegerPolyhedron &poly,
-                                       const PresburgerSet &set) {
-  assert(poly.getNumDimIds() == set.getNumDimIds() &&
-         "Number of dimensions of the IntegerPolyhedron and PresburgerSet"
-         "do not match!");
-  assert(poly.getNumSymbolIds() == set.getNumSymbolIds() &&
-         "Number of symbols of the IntegerPolyhedron and PresburgerSet"
-         "do not match!");
-}
-
-/// Assert that the two PresburgerSets live in compatible spaces.
-static void assertDimensionsCompatible(const PresburgerSet &setA,
-                                       const PresburgerSet &setB) {
-  assert(setA.getNumDimIds() == setB.getNumDimIds() &&
-         "Number of dimensions of the PresburgerSets do not match!");
-  assert(setA.getNumSymbolIds() == setB.getNumSymbolIds() &&
-         "Number of symbols of the PresburgerSets do not match!");
-}
-
 /// Mutate this set, turning it into the union of this set and the given
 /// IntegerPolyhedron.
 void PresburgerSet::unionPolyInPlace(const IntegerPolyhedron &poly) {
-  assertDimensionsCompatible(poly, *this);
+  assert(PresburgerSpace::isEqual(poly) && "Spaces should match");
   integerPolyhedrons.push_back(poly);
 }
 
@@ -68,14 +47,14 @@ void PresburgerSet::unionPolyInPlace(const IntegerPolyhedron &poly) {
 /// This is accomplished by simply adding all the Poly of the given set to this
 /// set.
 void PresburgerSet::unionSetInPlace(const PresburgerSet &set) {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   for (const IntegerPolyhedron &poly : set.integerPolyhedrons)
     unionPolyInPlace(poly);
 }
 
 /// Return the union of this set and the given set.
 PresburgerSet PresburgerSet::unionSet(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   PresburgerSet result = *this;
   result.unionSetInPlace(set);
   return result;
@@ -108,7 +87,7 @@ PresburgerSet PresburgerSet::getEmptySet(unsigned numDims,
 // If S_i or T_j have local variables, then S_i and T_j contains the local
 // variables of both.
 PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
 
   PresburgerSet result(getNumDimIds(), getNumSymbolIds());
   for (const IntegerPolyhedron &csA : integerPolyhedrons) {
@@ -200,8 +179,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
   const unsigned initialSnapshot = simplex.getSnapshot();
 
   auto restoreState = [&]() {
-    b.removeIdRange(IntegerPolyhedron::IdKind::Local, bInitNumLocals,
-                    b.getNumLocalIds());
+    b.removeIdRange(IdKind::Local, bInitNumLocals, b.getNumLocalIds());
     b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
     b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
     simplex.rollback(initialSnapshot);
@@ -326,7 +304,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 /// from that function.
 PresburgerSet PresburgerSet::getSetDifference(IntegerPolyhedron poly,
                                               const PresburgerSet &set) {
-  assertDimensionsCompatible(poly, set);
+  assert(poly.PresburgerSpace::isEqual(set) && "Spaces should match");
   if (poly.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(poly.getNumDimIds(),
                                       poly.getNumSymbolIds());
@@ -346,7 +324,7 @@ PresburgerSet PresburgerSet::complement() const {
 /// Return the result of subtract the given set from this set, i.e.,
 /// return `this \ set`.
 PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   PresburgerSet result(getNumDimIds(), getNumSymbolIds());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const IntegerPolyhedron &poly : integerPolyhedrons)
@@ -363,7 +341,7 @@ bool PresburgerSet::isSubsetOf(const PresburgerSet &set) const {
 
 /// Two sets are equal iff they are subsets of each other.
 bool PresburgerSet::isEqual(const PresburgerSet &set) const {
-  assertDimensionsCompatible(set, *this);
+  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
 
@@ -401,39 +379,151 @@ Optional<uint64_t> PresburgerSet::computeVolume() const {
   return result;
 }
 
+/// Types the inequalities of `p` according to their `IneqType` for `simp` into
+/// `redundantIneqs` and `cuttingIneqs`. Returns success, if no separate
+/// inequalities were encountered. Otherwise, returns failure.
+LogicalResult
+typeInequalities(const IntegerPolyhedron &p, Simplex &simp,
+                 SmallVectorImpl<ArrayRef<int64_t>> &redundantIneqs,
+                 SmallVectorImpl<ArrayRef<int64_t>> &cuttingIneqs) {
+  for (unsigned i = 0, e = p.getNumInequalities(); i < e; ++i) {
+    Simplex::IneqType type = simp.findIneqType(p.getInequality(i));
+    if (type == Simplex::IneqType::Redundant)
+      redundantIneqs.push_back(p.getInequality(i));
+    else if (type == Simplex::IneqType::Cut)
+      cuttingIneqs.push_back(p.getInequality(i));
+    else
+      return failure();
+  }
+  return success();
+}
+
+/// Replaces the element at position `i` with the last element and erases the
+/// last element for both `polyhedrons` and `simplices`.
+void erasePolyhedron(unsigned i,
+                     SmallVectorImpl<IntegerPolyhedron> &polyhedrons,
+                     SmallVectorImpl<Simplex> &simplices) {
+  assert(simplices.size() == polyhedrons.size() &&
+         "simplices and polyhedrons must be equally as long");
+  polyhedrons[i] = polyhedrons.back();
+  polyhedrons.pop_back();
+  simplices[i] = simplices.back();
+  simplices.pop_back();
+}
+
+/// Attempts to coalesce the two IntegerPolyhedrons at position `i` and `j` in
+/// `polyhedrons` in-place. Returns whether the polyhedrons were successfully
+/// coalesced. The simplices in `simplices` need to be the ones constructed from
+/// `polyhedrons`. At this point, there are no empty polyhedrons in
+/// `polyhedrons` left.
+LogicalResult coalescePair(unsigned i, unsigned j,
+                           SmallVectorImpl<IntegerPolyhedron> &polyhedrons,
+                           SmallVectorImpl<Simplex> &simplices) {
+
+  IntegerPolyhedron &a = polyhedrons[i];
+  IntegerPolyhedron &b = polyhedrons[j];
+  assert(a.getNumLocalIds() == 0 && b.getNumLocalIds() == 0 &&
+         "Locals are not yet supported!");
+  Simplex &simpA = simplices[i];
+  Simplex &simpB = simplices[j];
+
+  // Check that all equalities are redundant in a (and in b).
+  bool onlyRedundantEqsA = true;
+  for (unsigned k = 0, e = a.getNumEqualities(); k < e; ++k)
+    if (!simpB.isRedundantEquality(a.getEquality(k))) {
+      onlyRedundantEqsA = false;
+      break;
+    }
+
+  bool onlyRedundantEqsB = true;
+  for (unsigned k = 0, e = b.getNumEqualities(); k < e; ++k)
+    if (!simpA.isRedundantEquality(b.getEquality(k))) {
+      onlyRedundantEqsB = false;
+      break;
+    }
+
+  // If there are non-redundant equalities for both, exit early.
+  if (!onlyRedundantEqsB && !onlyRedundantEqsA)
+    return failure();
+
+  SmallVector<ArrayRef<int64_t>, 2> redundantIneqsA;
+  SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsA;
+
+  // Organize all inequalities of `a` according to their type for `b` into
+  // `redundantIneqsA` and `cuttingIneqsA` (and vice versa for all inequalities
+  // of `b` according to their type in `a`). If a separate inequality is
+  // encountered during typing, the two IntegerPolyhedrons cannot be coalesced.
+  if (typeInequalities(a, simpB, redundantIneqsA, cuttingIneqsA).failed())
+    return failure();
+
+  SmallVector<ArrayRef<int64_t>, 2> redundantIneqsB;
+  SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsB;
+
+  if (typeInequalities(b, simpA, redundantIneqsB, cuttingIneqsB).failed())
+    return failure();
+
+  // If there are no cutting inequalities of `a` and all equalities of `a` are
+  // redundant, then all constraints of `a` are redundant making `b` contained
+  // within a (and vice versa for `b`).
+  if (cuttingIneqsA.empty() && onlyRedundantEqsA) {
+    erasePolyhedron(j, polyhedrons, simplices);
+    return success();
+  }
+
+  if (cuttingIneqsB.empty() && onlyRedundantEqsB) {
+    erasePolyhedron(i, polyhedrons, simplices);
+    return success();
+  }
+
+  return failure();
+}
+
 PresburgerSet PresburgerSet::coalesce() const {
   PresburgerSet newSet =
       PresburgerSet::getEmptySet(getNumDimIds(), getNumSymbolIds());
-  llvm::SmallBitVector isRedundant(getNumPolys());
+  SmallVector<IntegerPolyhedron, 2> polyhedrons = integerPolyhedrons;
+  SmallVector<Simplex, 2> simplices;
 
-  for (unsigned i = 0, e = integerPolyhedrons.size(); i < e; ++i) {
-    if (isRedundant[i])
-      continue;
-    Simplex simplex(integerPolyhedrons[i]);
-
-    // Check whether the polytope of `simplex` is empty. If so, it is trivially
-    // redundant.
-    if (simplex.isEmpty()) {
-      isRedundant[i] = true;
+  simplices.reserve(getNumPolys());
+  // Note that polyhedrons.size() changes during the loop.
+  for (unsigned i = 0; i < polyhedrons.size();) {
+    Simplex simp(polyhedrons[i]);
+    if (simp.isEmpty()) {
+      polyhedrons[i] = polyhedrons[polyhedrons.size() - 1];
+      polyhedrons.pop_back();
       continue;
     }
+    ++i;
+    simplices.push_back(simp);
+  }
 
-    // Check whether `IntegerPolyhedron[i]` is contained in any Poly, that is
-    // different from itself and not yet marked as redundant.
-    for (unsigned j = 0, e = integerPolyhedrons.size(); j < e; ++j) {
-      if (j == i || isRedundant[j])
+  // For all tuples of IntegerPolyhedrons, check whether they can be coalesced.
+  // When coalescing is successful, the contained IntegerPolyhedron is swapped
+  // with the last element of `polyhedrons` and subsequently erased and
+  // similarly for simplices.
+  for (unsigned i = 0; i < polyhedrons.size();) {
+
+    // TODO: This does some comparisons two times (index 0 with 1 and index 1
+    // with 0).
+    bool broken = false;
+    for (unsigned j = 0, e = polyhedrons.size(); j < e; ++j) {
+      if (i == j)
         continue;
-
-      if (simplex.isRationalSubsetOf(integerPolyhedrons[j])) {
-        isRedundant[i] = true;
+      if (coalescePair(i, j, polyhedrons, simplices).succeeded()) {
+        broken = true;
         break;
       }
     }
+
+    // Only if the inner loop was not broken, i is incremented. This is
+    // required as otherwise, if a coalescing occurs, the IntegerPolyhedron
+    // now at position i is not compared.
+    if (!broken)
+      ++i;
   }
 
-  for (unsigned i = 0, e = integerPolyhedrons.size(); i < e; ++i)
-    if (!isRedundant[i])
-      newSet.unionPolyInPlace(integerPolyhedrons[i]);
+  for (unsigned i = 0, e = polyhedrons.size(); i < e; ++i)
+    newSet.unionPolyInPlace(polyhedrons[i]);
 
   return newSet;
 }

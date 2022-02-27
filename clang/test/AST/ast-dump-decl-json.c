@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump=json -ast-dump-filter Test %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-strict-prototypes -ast-dump=json -ast-dump-filter Test %s | FileCheck %s
 
 #include "Inputs/json-dump-include.h"
 
@@ -16,7 +16,7 @@ struct TestChildren {
   };
 };
 
-void testLabelDecl() {
+void testLabelDecl(void) {
   __label__ TestLabelDecl;
   TestLabelDecl: goto TestLabelDecl;
 }
@@ -74,8 +74,8 @@ int TestFunctionDecl(int x, enum { e } y) {
 int TestFunctionDecl2(enum Enum { e } x) { return x; }
 int TestFunctionDeclProto(int x);
 void TestFunctionDeclNoProto();
-extern int TestFunctionDeclSC();
-inline int TestFunctionDeclInline();
+extern int TestFunctionDeclSC(void);
+inline int TestFunctionDeclInline(void);
 
 struct testFieldDecl {
   int TestFieldDecl;
@@ -1574,14 +1574,14 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "offset": {{[0-9]+}},
-// CHECK-NEXT:    "col": 31,
+// CHECK-NEXT:    "col": 35,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDeclSC",
 // CHECK-NEXT:  "mangledName": "TestFunctionDeclSC",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "int ()"
+// CHECK-NEXT:   "qualType": "int (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "storageClass": "extern"
 // CHECK-NEXT: }
@@ -1604,14 +1604,14 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "offset": {{[0-9]+}},
-// CHECK-NEXT:    "col": 35,
+// CHECK-NEXT:    "col": 39,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDeclInline",
 // CHECK-NEXT:  "mangledName": "TestFunctionDeclInline",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "int ()"
+// CHECK-NEXT:   "qualType": "int (void)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inline": true
 // CHECK-NEXT: }

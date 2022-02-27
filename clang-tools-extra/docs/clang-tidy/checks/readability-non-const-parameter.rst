@@ -44,3 +44,8 @@ make the function interface safer.
   int f3(struct S *p) {
     *(p->a) = 0;
   }
+
+  // no warning; p is referenced by an lvalue.
+  void f4(int *p) {
+    int &x = *p;
+  }

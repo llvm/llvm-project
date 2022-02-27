@@ -75,6 +75,7 @@ enum NodeType : unsigned {
   //
   // FMV_H_X matches the semantics of the FMV.H.X.
   // FMV_X_ANYEXTH is similar to FMV.X.H but has an any-extended result.
+  // FMV_X_SIGNEXTH is similar to FMV.X.H and has a sign-extended result.
   // FMV_W_X_RV64 matches the semantics of the FMV.W.X.
   // FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
   //
@@ -82,6 +83,7 @@ enum NodeType : unsigned {
   // unnecessary GPR->FPR->GPR moves.
   FMV_H_X,
   FMV_X_ANYEXTH,
+  FMV_X_SIGNEXTH,
   FMV_W_X_RV64,
   FMV_X_ANYEXTW_RV64,
   // FP to XLen int conversions. Corresponds to fcvt.l(u).s/d/h on RV64 and

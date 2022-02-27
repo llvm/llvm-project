@@ -75,16 +75,18 @@ uptr StackDepotNode::allocated() {
 }
 
 static void CompressStackStore() {
-  u64 start = MonotonicNanoTime();
+  u64 start = Verbosity() >= 1 ? MonotonicNanoTime() : 0;
   uptr diff = stackStore.Pack(static_cast<StackStore::Compression>(
       Abs(common_flags()->compress_stack_depot)));
   if (!diff)
     return;
-  u64 finish = MonotonicNanoTime();
-  uptr total_before = theDepot.GetStats().allocated + diff;
-  VPrintf(1, "%s: StackDepot released %zu KiB out of %zu KiB in %llu ms\n",
-          SanitizerToolName, diff >> 10, total_before >> 10,
-          (finish - start) / 1000000);
+  if (Verbosity() >= 1) {
+    u64 finish = MonotonicNanoTime();
+    uptr total_before = theDepot.GetStats().allocated + diff;
+    VPrintf(1, "%s: StackDepot released %zu KiB out of %zu KiB in %llu ms\n",
+            SanitizerToolName, diff >> 10, total_before >> 10,
+            (finish - start) / 1000000);
+  }
 }
 
 namespace {

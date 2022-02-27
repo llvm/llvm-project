@@ -298,3 +298,39 @@ end
 ! CHECK:         %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[C0]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
 ! CHECK:         %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[C1]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
 ! CHECK:         fir.store %[[INS1]] to %[[A]] : !fir.ref<!fir.complex<4>>
+
+subroutine sub1_arr(a)
+  integer :: a(10)
+  a(2) = 10
+end
+
+! CHECK-LABEL: func @_QPsub1_arr(
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"})
+! CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : i32
+! CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : i64
+! CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i64
+! CHECK:         %[[ZERO_BASED_INDEX:.*]] = arith.subi %[[C2]], %[[C1]] : i64
+! CHECK:         %[[COORD:.*]] = fir.coordinate_of %[[A]], %[[ZERO_BASED_INDEX]] : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
+! CHECK:         fir.store %[[C10]] to %[[COORD]] : !fir.ref<i32>
+! CHECK:         return
+
+subroutine sub2_arr(a)
+  integer :: a(10)
+  a = 10
+end
+
+! CHECK-LABEL: func @_QPsub2_arr(
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"})
+! CHECK-DAG:     %[[C10_0:.*]] = arith.constant 10 : index
+! CHECK:         %[[SHAPE:.*]] = fir.shape %[[C10_0]] : (index) -> !fir.shape<1>
+! CHECK:         %[[LOAD:.*]] = fir.array_load %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.array<10xi32>
+! CHECK-DAG:     %[[C10_1:.*]] = arith.constant 10 : i32
+! CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+! CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+! CHECK-DAG:     %[[UB:.*]] = arith.subi %[[C10_0]], %c1 : index
+! CHECK:         %[[DO_RES:.*]] = fir.do_loop %[[ARG1:.*]] = %[[C0]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG2:.*]] = %[[LOAD]]) -> (!fir.array<10xi32>) {
+! CHECK:           %[[RES:.*]] = fir.array_update %[[ARG2]], %[[C10_1]], %[[ARG1]] : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
+! CHECK:           fir.result %[[RES]] : !fir.array<10xi32>
+! CHECK:         }
+! CHECK:         fir.array_merge_store %[[LOAD]], %[[DO_RES]] to %[[A]] : !fir.array<10xi32>, !fir.array<10xi32>, !fir.ref<!fir.array<10xi32>>
+! CHECK:         return

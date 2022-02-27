@@ -6,12 +6,12 @@
 #    -DCMAKE_TOOLCHAIN_FILE=/path/to/this/file
 #    -DHOST_ARCH=[aarch64|arm64|armv7|arm|i686|x86|x86_64|x64]
 #    -DLLVM_NATIVE_TOOLCHAIN=/path/to/llvm/installation
-#    -DMSVC_BASE=/path/to/MSVC/system/libraries/and/includes
-#    -DWINSDK_BASE=/path/to/windows-sdk
+#    -DLLVM_WINSYSROOT=/path/to/win/sysroot
+#    -DMSVC_VER=vc tools version folder name
 #    -DWINSDK_VER=windows sdk version folder name
 #
 # HOST_ARCH:
-#    The architecture to build for.
+#   The architecture to build for.
 #
 # LLVM_NATIVE_TOOLCHAIN:
 #   *Absolute path* to a folder containing the toolchain which will be used to
@@ -19,12 +19,15 @@
 #   copy of clang-cl, clang, clang++, and lld-link, as well as a lib directory
 #   containing clang's system resource directory.
 #
-# MSVC_BASE:
-#   *Absolute path* to the folder containing MSVC headers and system libraries.
-#   The layout of the folder matches that which is intalled by MSVC 2017 on
-#   Windows, and should look like this:
+# MSVC_VER/WINSDK_VER:
+#   (Optional) if not specified, highest version number is used if any.
 #
-# ${MSVC_BASE}
+# LLVM_WINSYSROOT and MSVC_VER work together to define a folder layout that 
+# containing MSVC headers and system libraries. The layout of the folder
+# matches that which is intalled by MSVC 2017 on Windows, and should look like
+# this:
+#
+# ${LLVM_WINSYSROOT}/VC/Tools/MSVC/${MSVC_VER}/
 #   include
 #     vector
 #     stdint.h
@@ -42,22 +45,14 @@
 # For versions of MSVC < 2017, or where you have a hermetic toolchain in a
 # custom format, you must use symlinks or restructure it to look like the above.
 #
-# WINSDK_BASE:
-#   Together with WINSDK_VER, determines the location of Windows SDK headers
-#   and libraries.
-#
-# WINSDK_VER:
-#   Together with WINSDK_BASE, determines the locations of Windows SDK headers
-#   and libraries.
-#
-# WINSDK_BASE and WINSDK_VER work together to define a folder layout that matches
-# that of the Windows SDK installation on a standard Windows machine.  It should
-# match the layout described below.
+# LLVM_WINSYSROOT and WINSDK_VER work together to define a folder layout that
+# matches that of the Windows SDK installation on a standard Windows machine.
+# It should match the layout described below.
 #
 # Note that if you install Windows SDK to a windows machine and simply copy the
 # files, it will already be in the correct layout.
 #
-# ${WINSDK_BASE}
+# ${LLVM_WINSYSROOT}/Windows Kits/10/
 #   Include
 #     ${WINSDK_VER}
 #       shared
@@ -161,14 +156,23 @@ function(generate_winsdk_lib_symlinks winsdk_um_lib_dir output_dir)
   endforeach()
 endfunction()
 
+function(get_highest_version the_dir the_ver)
+  file(GLOB entries LIST_DIRECTORIES true RELATIVE "${the_dir}" "${the_dir}/[0-9.]*")
+  foreach(entry ${entries})
+    if(IS_DIRECTORY "${the_dir}/${entry}")
+      set(${the_ver} "${entry}" PARENT_SCOPE)
+    endif()
+  endforeach()
+endfunction()
+
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_SYSTEM_VERSION 10.0)
 set(CMAKE_SYSTEM_PROCESSOR AMD64)
 
 init_user_prop(HOST_ARCH)
 init_user_prop(LLVM_NATIVE_TOOLCHAIN)
-init_user_prop(MSVC_BASE)
-init_user_prop(WINSDK_BASE)
+init_user_prop(LLVM_WINSYSROOT)
+init_user_prop(MSVC_VER)
 init_user_prop(WINSDK_VER)
 
 if(NOT HOST_ARCH)
@@ -190,13 +194,6 @@ else()
   message(SEND_ERROR "Unknown host architecture ${HOST_ARCH}. Must be aarch64 (or arm64), armv7 (or arm), i686 (or x86), or x86_64 (or x64).")
 endif()
 
-set(MSVC_INCLUDE "${MSVC_BASE}/include")
-set(ATLMFC_INCLUDE "${MSVC_BASE}/atlmfc/include")
-set(MSVC_LIB "${MSVC_BASE}/lib")
-set(ATLMFC_LIB "${MSVC_BASE}/atlmfc/lib")
-set(WINSDK_INCLUDE "${WINSDK_BASE}/Include/${WINSDK_VER}")
-set(WINSDK_LIB "${WINSDK_BASE}/Lib/${WINSDK_VER}")
-
 # Do some sanity checking to make sure we can find a native toolchain and
 # that the Windows SDK / MSVC STL directories look kosher.
 if(NOT EXISTS "${LLVM_NATIVE_TOOLCHAIN}/bin/clang-cl" OR
@@ -207,28 +204,35 @@ if(NOT EXISTS "${LLVM_NATIVE_TOOLCHAIN}/bin/clang-cl" OR
           "binaries")
 endif()
 
-if(NOT EXISTS "${MSVC_BASE}" OR
-   NOT EXISTS "${MSVC_INCLUDE}" OR
-   NOT EXISTS "${MSVC_LIB}")
-  message(SEND_ERROR
-          "CMake variable MSVC_BASE must point to a folder containing MSVC "
-          "system headers and libraries")
+if (NOT MSVC_VER)
+  get_highest_version("${LLVM_WINSYSROOT}/VC/Tools/MSVC" MSVC_VER)
 endif()
 
-# Try lowercase `include`/`lib` used by xwin/msvc-wine
-if(NOT EXISTS "${WINSDK_INCLUDE}")
-  set(WINSDK_INCLUDE "${WINSDK_BASE}/include/${WINSDK_VER}")
-endif()
-if(NOT EXISTS "${WINSDK_LIB}")
-  set(WINSDK_LIB "${WINSDK_BASE}/lib/${WINSDK_VER}")
+if (NOT WINSDK_VER)
+  get_highest_version("${LLVM_WINSYSROOT}/Windows Kits/10/Include" WINSDK_VER)
 endif()
 
-if(NOT EXISTS "${WINSDK_BASE}" OR
-   NOT EXISTS "${WINSDK_INCLUDE}" OR
-   NOT EXISTS "${WINSDK_LIB}")
+if (NOT LLVM_WINSYSROOT OR NOT MSVC_VER OR NOT WINSDK_VER)
   message(SEND_ERROR
-          "CMake variable WINSDK_BASE and WINSDK_VER must resolve to a valid "
-          "Windows SDK installation")
+          "Must specify CMake variable LLVM_WINSYSROOT, MSVC_VER and WINSDK_VER")
+endif()
+
+set(ATLMFC_LIB     "${LLVM_WINSYSROOT}/VC/Tools/MSVC/${MSVC_VER}/atlmfc/lib")
+set(MSVC_INCLUDE   "${LLVM_WINSYSROOT}/VC/Tools/MSVC/${MSVC_VER}/include")
+set(MSVC_LIB       "${LLVM_WINSYSROOT}/VC/Tools/MSVC/${MSVC_VER}/lib")
+set(WINSDK_INCLUDE "${LLVM_WINSYSROOT}/Windows Kits/10/Include/${WINSDK_VER}")
+set(WINSDK_LIB     "${LLVM_WINSYSROOT}/Windows Kits/10/Lib/${WINSDK_VER}")
+
+if (NOT EXISTS "${MSVC_INCLUDE}" OR NOT EXISTS "${MSVC_LIB}")
+  message(SEND_ERROR
+          "CMake variable LLVM_WINSYSROOT and MSVC_VER must point to a folder "
+          "containing MSVC system headers and libraries")
+endif()
+
+if(NOT EXISTS "${WINSDK_INCLUDE}" OR NOT EXISTS "${WINSDK_LIB}")
+  message(SEND_ERROR
+          "CMake variable LLVM_WINSYSROOT and WINSDK_VER must resolve to a "
+          "valid Windows SDK installation")
 endif()
 
 if(NOT EXISTS "${WINSDK_INCLUDE}/um/Windows.h")
@@ -260,12 +264,8 @@ set(COMPILE_FLAGS
     -D_CRT_SECURE_NO_WARNINGS
     --target=${TRIPLE_ARCH}-windows-msvc
     -fms-compatibility-version=19.20
-    -imsvc "${ATLMFC_INCLUDE}"
-    -imsvc "${MSVC_INCLUDE}"
-    -imsvc "${WINSDK_INCLUDE}/ucrt"
-    -imsvc "${WINSDK_INCLUDE}/shared"
-    -imsvc "${WINSDK_INCLUDE}/um"
-    -imsvc "${WINSDK_INCLUDE}/winrt")
+    -vctoolsversion ${MSVC_VER}
+    -winsdkversion ${WINSDK_VER})
 
 if(case_sensitive_filesystem)
   # Ensure all sub-configures use the top-level VFS overlay instead of generating their own.

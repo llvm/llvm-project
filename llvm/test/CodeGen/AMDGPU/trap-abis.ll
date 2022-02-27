@@ -363,7 +363,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; NOHSA-TRAP-GFX900-V2-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_waitcnt vmcnt(0)
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; NOHSA-TRAP-GFX900-V2-NEXT:    s_and_b64 vcc, exec, vcc
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_cbranch_vccz .LBB1_2
 ; NOHSA-TRAP-GFX900-V2-NEXT:  ; %bb.1: ; %ret
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v1, 3
@@ -381,7 +380,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; NOHSA-TRAP-GFX900-V3-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; NOHSA-TRAP-GFX900-V3-NEXT:    s_waitcnt vmcnt(0)
 ; NOHSA-TRAP-GFX900-V3-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; NOHSA-TRAP-GFX900-V3-NEXT:    s_and_b64 vcc, exec, vcc
 ; NOHSA-TRAP-GFX900-V3-NEXT:    s_cbranch_vccz .LBB1_2
 ; NOHSA-TRAP-GFX900-V3-NEXT:  ; %bb.1: ; %ret
 ; NOHSA-TRAP-GFX900-V3-NEXT:    v_mov_b32_e32 v1, 3
@@ -399,7 +397,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; NOHSA-TRAP-GFX900-V4-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; NOHSA-TRAP-GFX900-V4-NEXT:    s_waitcnt vmcnt(0)
 ; NOHSA-TRAP-GFX900-V4-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; NOHSA-TRAP-GFX900-V4-NEXT:    s_and_b64 vcc, exec, vcc
 ; NOHSA-TRAP-GFX900-V4-NEXT:    s_cbranch_vccz .LBB1_2
 ; NOHSA-TRAP-GFX900-V4-NEXT:  ; %bb.1: ; %ret
 ; NOHSA-TRAP-GFX900-V4-NEXT:    v_mov_b32_e32 v1, 3
@@ -486,7 +483,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-TRAP-GFX803-V2-NEXT:    flat_load_dword v0, v[0:1] glc
 ; HSA-TRAP-GFX803-V2-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX803-V2-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v0
-; HSA-TRAP-GFX803-V2-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-TRAP-GFX803-V2-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX803-V2-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX803-V2-NEXT:    v_mov_b32_e32 v0, s0
@@ -508,7 +504,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-TRAP-GFX803-V3-NEXT:    flat_load_dword v0, v[0:1] glc
 ; HSA-TRAP-GFX803-V3-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX803-V3-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v0
-; HSA-TRAP-GFX803-V3-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-TRAP-GFX803-V3-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX803-V3-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX803-V3-NEXT:    v_mov_b32_e32 v0, s0
@@ -530,7 +525,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-TRAP-GFX803-V4-NEXT:    flat_load_dword v0, v[0:1] glc
 ; HSA-TRAP-GFX803-V4-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX803-V4-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v0
-; HSA-TRAP-GFX803-V4-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-TRAP-GFX803-V4-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX803-V4-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX803-V4-NEXT:    v_mov_b32_e32 v0, s0
@@ -619,7 +613,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-TRAP-GFX900-V2-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; HSA-TRAP-GFX900-V2-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX900-V2-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; HSA-TRAP-GFX900-V2-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-TRAP-GFX900-V2-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX900-V2-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v1, 3
@@ -638,7 +631,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-TRAP-GFX900-V3-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; HSA-TRAP-GFX900-V3-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX900-V3-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; HSA-TRAP-GFX900-V3-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-TRAP-GFX900-V3-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX900-V3-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX900-V3-NEXT:    v_mov_b32_e32 v1, 3
@@ -657,7 +649,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-TRAP-GFX900-V4-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; HSA-TRAP-GFX900-V4-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX900-V4-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; HSA-TRAP-GFX900-V4-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-TRAP-GFX900-V4-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-TRAP-GFX900-V4-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX900-V4-NEXT:    v_mov_b32_e32 v1, 3
@@ -743,7 +734,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-NOTRAP-GFX900-V2-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; HSA-NOTRAP-GFX900-V2-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NOTRAP-GFX900-V2-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; HSA-NOTRAP-GFX900-V2-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-NOTRAP-GFX900-V2-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-NOTRAP-GFX900-V2-NEXT:  ; %bb.1: ; %ret
 ; HSA-NOTRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v1, 3
@@ -761,7 +751,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-NOTRAP-GFX900-V3-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; HSA-NOTRAP-GFX900-V3-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NOTRAP-GFX900-V3-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; HSA-NOTRAP-GFX900-V3-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-NOTRAP-GFX900-V3-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-NOTRAP-GFX900-V3-NEXT:  ; %bb.1: ; %ret
 ; HSA-NOTRAP-GFX900-V3-NEXT:    v_mov_b32_e32 v1, 3
@@ -779,7 +768,6 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-NOTRAP-GFX900-V4-NEXT:    global_load_dword v1, v0, s[0:1] glc
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NOTRAP-GFX900-V4-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v1
-; HSA-NOTRAP-GFX900-V4-NEXT:    s_and_b64 vcc, exec, vcc
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_cbranch_vccz .LBB1_2
 ; HSA-NOTRAP-GFX900-V4-NEXT:  ; %bb.1: ; %ret
 ; HSA-NOTRAP-GFX900-V4-NEXT:    v_mov_b32_e32 v1, 3

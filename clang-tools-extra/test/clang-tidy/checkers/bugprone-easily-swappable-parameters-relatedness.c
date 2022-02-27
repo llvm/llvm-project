@@ -7,7 +7,7 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 1}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold, value: 0} \
-// RUN:  ]}' -- -x c
+// RUN:  ]}' -- -Wno-strict-prototypes -x c
 
 int myprint();
 int add(int X, int Y);

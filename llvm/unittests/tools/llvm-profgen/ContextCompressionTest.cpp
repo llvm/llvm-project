@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "../tools/llvm-profgen/ProfileGenerator.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
