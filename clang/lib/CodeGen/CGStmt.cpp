@@ -657,7 +657,7 @@ void CodeGenFunction::LexicalScope::rescopeLabels() {
 void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitLabel(S.getDecl());
 
-  // IsEHa - emit eha.scope.begin if it's a side entry of a scope
+  // IsEHa - emit llvm.seh.scope.begin if it's a side entry of a scope
   if (getLangOpts().EHAsynch && S.isSideEntry())
     EmitSehCppScopeBegin();
 
