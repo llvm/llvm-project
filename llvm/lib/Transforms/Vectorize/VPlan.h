@@ -1720,6 +1720,36 @@ public:
   }
 };
 
+/// Recipe to expand a SCEV expression.
+/// TODO: Currently the recipe always expands the expression in the loop
+/// pre-header, but the recipe is currently placed in the header; place it in
+/// the pre-header once the latter is modeled in VPlan as a VPBasicBlock.
+class VPExpandSCEVRecipe : public VPRecipeBase, public VPValue {
+  const SCEV *Expr;
+  ScalarEvolution &SE;
+
+public:
+  VPExpandSCEVRecipe(const SCEV *Expr, ScalarEvolution &SE)
+      : VPRecipeBase(VPExpandSCEVSC, {}), VPValue(nullptr, this), Expr(Expr),
+        SE(SE) {}
+
+  ~VPExpandSCEVRecipe() override = default;
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPDef *D) {
+    return D->getVPDefID() == VPExpandSCEVSC;
+  }
+
+  /// Generate a canonical vector induction variable of the vector loop, with
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// Canonical scalar induction phi of the vector loop. Starting at the specified
 /// start value (either 0 or the resume value when vectorizing the epilogue
 /// loop). VPWidenCanonicalIVRecipe represents the vector version of the
