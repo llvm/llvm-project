@@ -21,6 +21,8 @@
 
 #include "llvm/ADT/SmallVector.h"
 
+#include "mlir/Dialect/CIR/IR/CIRDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 
 namespace cir {

@@ -15,7 +15,6 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
 
 #include "Address.h"
-#include "CIRGenFunction.h"
 
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
