@@ -15,8 +15,6 @@
 
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
-#include "llvm/ADT/DenseMap.h"
 
 #include <utility>
 
@@ -48,11 +46,6 @@ class Type;
 typedef CanQual<Type> CanQualType;
 class GlobalDecl;
 
-namespace CodeGen {
-class ABIInfo;
-class CGCXXABI;
-class RequiredArgs;
-} // end namespace CodeGen
 } // end namespace clang
 
 namespace mlir {
