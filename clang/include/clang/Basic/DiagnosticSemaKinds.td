@@ -7267,7 +7267,7 @@ def err_bad_cstyle_cast_overload : Error<
 def err_bad_cxx_cast_generic : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|"
   "C-style cast|functional-style cast|addrspace_cast}0 from %1 to %2 is not allowed">;
-def err_bad_cxx_cast_unrelated_class : Error<
+def err_bad_cxx_cast_unrelated_class : Warning<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
   "functional-style cast|}0 from %1 to %2, which are not related by "
   "inheritance, is not allowed">;
