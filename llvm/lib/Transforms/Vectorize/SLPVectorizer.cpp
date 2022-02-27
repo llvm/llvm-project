@@ -792,7 +792,7 @@ public:
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
           const DataLayout *DL, OptimizationRemarkEmitter *ORE)
-      : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), AA(Aa), LI(Li),
+      : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li),
         DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE), Builder(Se->getContext()) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
@@ -2933,7 +2933,6 @@ private:
   ScalarEvolution *SE;
   TargetTransformInfo *TTI;
   TargetLibraryInfo *TLI;
-  AAResults *AA;
   LoopInfo *LI;
   DominatorTree *DT;
   AssumptionCache *AC;
