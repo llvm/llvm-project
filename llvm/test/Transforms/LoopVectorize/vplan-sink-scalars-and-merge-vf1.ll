@@ -13,7 +13,7 @@ define void @sink_with_sideeffects(i1 %c, i8* %ptr) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   ir<%tmp0> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %tmp0 = phi %tmp6, 0
 ; CHECK-NEXT:   CLONE ir<%tmp2> = getelementptr ir<%ptr>, ir<%tmp0>
 ; CHECK-NEXT:   CLONE ir<%tmp3> = load ir<%tmp2>
 ; CHECK-NEXT:   CLONE store ir<0>, ir<%tmp2>
