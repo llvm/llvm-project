@@ -30,13 +30,20 @@
 # CHECK2-NEXT:main.o	a_b.a(a_b.o)	a
 # CHECK2-NEXT:a_b.a(a_b.o)	b.a(b.o)	b()
 
+## An undefined symbol error does not suppress the output.
+# RUN: not ld.lld main.o a_b.a -o /dev/null --why-extract=why3.txt
+# RUN: FileCheck %s --input-file=why3.txt --check-prefix=CHECK3 --match-full-lines --strict-whitespace
+
 ## Check that backward references are supported.
 ## - means stdout.
-# RUN: ld.lld b.a a_b.a main.o -o /dev/null --why-extract=- | FileCheck %s --check-prefix=CHECK3
+# RUN: ld.lld b.a a_b.a main.o -o /dev/null --why-extract=- | FileCheck %s --check-prefix=CHECK4
 
 #      CHECK3:reference	extracted	symbol
-# CHECK3-NEXT:a_b.a(a_b.o)	b.a(b.o)	b()
 # CHECK3-NEXT:main.o	a_b.a(a_b.o)	a
+
+#      CHECK4:reference	extracted	symbol
+# CHECK4-NEXT:a_b.a(a_b.o)	b.a(b.o)	b()
+# CHECK4-NEXT:main.o	a_b.a(a_b.o)	a
 
 # RUN: ld.lld main.o a_b.a b.a -o /dev/null --no-demangle --why-extract=- | FileCheck %s --check-prefix=MANGLED
 
