@@ -49,8 +49,6 @@ Defined *ElfSym::relaIpltStart;
 Defined *ElfSym::relaIpltEnd;
 Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
-DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
-    elf::backwardReferences;
 SmallVector<SymbolAux, 0> elf::symAux;
 
 static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
@@ -350,24 +348,6 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
   return true;
 }
 
-void elf::reportBackrefs() {
-  for (auto &it : backwardReferences) {
-    const Symbol &sym = *it.first;
-    std::string to = toString(it.second.second);
-    // Some libraries have known problems and can cause noise. Filter them out
-    // with --warn-backrefs-exclude=. to may look like *.o or *.a(*.o).
-    bool exclude = false;
-    for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
-      if (pat.match(to)) {
-        exclude = true;
-        break;
-      }
-    if (!exclude)
-      warn("backward reference detected: " + sym.getName() + " in " +
-           toString(it.second.first) + " refers to " + to);
-  }
-}
-
 static uint8_t getMinVisibility(uint8_t va, uint8_t vb) {
   if (va == STV_DEFAULT)
     return vb;
@@ -509,7 +489,8 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // definition. this->file needs to be saved because in the case of LTO it
     // may be reset to nullptr or be replaced with a file named lto.tmp.
     if (backref && !isWeak())
-      backwardReferences.try_emplace(this, std::make_pair(other.file, file));
+      driver->backwardReferences.try_emplace(this,
+                                             std::make_pair(other.file, file));
     return;
   }
 
@@ -633,7 +614,7 @@ void Symbol::resolveLazy(const LazyObject &other) {
   // should be extracted as the canonical definition instead.
   if (LLVM_UNLIKELY(isCommon()) && elf::config->fortranCommon &&
       other.file->shouldExtractForCommon(getName())) {
-    backwardReferences.erase(this);
+    driver->backwardReferences.erase(this);
     replace(other);
     other.extract();
     return;
@@ -642,7 +623,7 @@ void Symbol::resolveLazy(const LazyObject &other) {
   if (!isUndefined()) {
     // See the comment in resolveUndefined().
     if (isDefined())
-      backwardReferences.erase(this);
+      driver->backwardReferences.erase(this);
     return;
   }
 
