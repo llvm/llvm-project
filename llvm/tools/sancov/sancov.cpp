@@ -695,7 +695,7 @@ static uint64_t getPreviousInstructionPc(uint64_t PC,
                                          Triple TheTriple) {
   if (TheTriple.isARM())
     return (PC - 3) & (~1);
-  if (TheTriple.isMIPS())
+  if (TheTriple.isMIPS() || TheTriple.isSPARC())
     return PC - 8;
   if (TheTriple.isRISCV())
     return PC - 2;
