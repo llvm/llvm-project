@@ -2988,8 +2988,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         if (Instruction *R = foldSPFofSPF(cast<Instruction>(RHS), SPF2, LHS2,
                                           RHS2, SI, SPF, LHS))
           return R;
-      // TODO.
-      // ABS(-X) -> ABS(X)
     }
 
     if (SelectPatternResult::isMinOrMax(SPF)) {
@@ -3024,38 +3022,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *NewCast = Builder.CreateCast(CastOp, NewSI, SelType);
         return replaceInstUsesWith(SI, NewCast);
       }
-
-      // MAX(~a, ~b) -> ~MIN(a, b)
-      // MAX(~a, C)  -> ~MIN(a, ~C)
-      // MIN(~a, ~b) -> ~MAX(a, b)
-      // MIN(~a, C)  -> ~MAX(a, ~C)
-      auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
-        Value *A;
-        if (match(X, m_Not(m_Value(A))) && !X->hasNUsesOrMore(3) &&
-            !isFreeToInvert(A, A->hasOneUse()) &&
-            // Passing false to only consider m_Not and constants.
-            isFreeToInvert(Y, false)) {
-          Value *B = Builder.CreateNot(Y);
-          Value *NewMinMax = createMinMax(Builder, getInverseMinMaxFlavor(SPF),
-                                          A, B);
-          // Copy the profile metadata.
-          if (MDNode *MD = SI.getMetadata(LLVMContext::MD_prof)) {
-            cast<SelectInst>(NewMinMax)->setMetadata(LLVMContext::MD_prof, MD);
-            // Swap the metadata if the operands are swapped.
-            if (X == SI.getFalseValue() && Y == SI.getTrueValue())
-              cast<SelectInst>(NewMinMax)->swapProfMetadata();
-          }
-
-          return BinaryOperator::CreateNot(NewMinMax);
-        }
-
-        return nullptr;
-      };
-
-      if (Instruction *I = moveNotAfterMinMax(LHS, RHS))
-        return I;
-      if (Instruction *I = moveNotAfterMinMax(RHS, LHS))
-        return I;
 
       if (Instruction *I = moveAddAfterMinMax(SPF, LHS, RHS, Builder))
         return I;
