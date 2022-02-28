@@ -382,17 +382,10 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // We already checked that we are in a module purview in the parser.
     assert(!ModuleScopes.empty() && "in a module purview, but no module?");
     Module *NamedMod = ModuleScopes.back().Module;
-    if (ModuleScopes.back().IsPartition) {
-      // We're importing a partition into a partition, find the name of the
-      // owning named module.
-      size_t P = NamedMod->Name.find_first_of(":");
-      ModuleName = NamedMod->Name.substr(0, P + 1);
-    } else {
-      // We're importing a partition into the named module itself (either the
-      // interface or an implementation TU).
-      ModuleName = NamedMod->Name;
-      ModuleName += ":";
-    }
+    // If we are importing into a partition, find the owning named module,
+    // otherwise, the name of the importing named module.
+    ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
+    ModuleName += ":";
     ModuleName += stringFromPath(Partition);
     ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Partition[0].second};
     Partition = ModuleIdPath(ModuleNameLoc);
@@ -513,6 +506,11 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     (void)ThisModule;
     assert(ThisModule && "was expecting a module if building one");
   }
+
+  // In some cases we need to know if an entity was present in a directly-
+  // imported module (as opposed to a transitive import).  This avoids
+  // searching both Imports and Exports.
+  DirectModuleImports.insert(Mod);
 
   return Import;
 }

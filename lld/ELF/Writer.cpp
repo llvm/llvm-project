@@ -561,14 +561,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (Partition &part : partitions)
     setPhdrs(part);
 
-
-  // Handle --print-map(-M)/--Map, --why-extract=, --cref and
-  // --print-archive-stats=. Dump them before checkSections() because the files
-  // may be useful in case checkSections() or openFile() fails, for example, due
-  // to an erroneous file size.
+  // Handle --print-map(-M)/--Map and --cref. Dump them before checkSections()
+  // because the files may be useful in case checkSections() or openFile()
+  // fails, for example, due to an erroneous file size.
   writeMapAndCref();
-  writeWhyExtract();
-  writeArchiveStats();
 
   if (config->checkSections)
     checkSections();
@@ -1433,7 +1429,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   sortInputSections();
 
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *osec = dyn_cast_or_null<OutputSection>(cmd))
+    if (auto *osec = dyn_cast<OutputSection>(cmd))
       osec->sortRank = getSectionRank(osec);
   if (!script->hasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.

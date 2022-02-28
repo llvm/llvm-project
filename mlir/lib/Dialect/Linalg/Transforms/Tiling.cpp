@@ -271,8 +271,6 @@ mlir::linalg::tileLinalgOp(RewriterBase &b, LinalgOp op,
     return tileLinalgOpImpl<scf::ForOp>(b, op, options);
   case LinalgTilingLoopType::ParallelLoops:
     return tileLinalgOpImpl<scf::ParallelOp>(b, op, options);
-  case LinalgTilingLoopType::TiledLoops:
-    return tileLinalgOpImpl<linalg::TiledLoopOp>(b, op, options);
   default:;
   }
   return failure();
@@ -453,13 +451,10 @@ static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
 namespace {
 struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   LinalgTilingPass() = default;
-  LinalgTilingPass(ArrayRef<int64_t> tileSizes, LinalgTilingLoopType loopType,
-                   ArrayRef<StringRef> distributionTypes) {
+  LinalgTilingPass(ArrayRef<int64_t> tileSizes, LinalgTilingLoopType loopType) {
     this->tileSizes = tileSizes;
     this->loopType = "";
     this->loopTypeEnum = loopType;
-    this->distributionTypes = llvm::to_vector<2>(llvm::map_range(
-        distributionTypes, [](StringRef ref) { return ref.str(); }));
   }
 
   void runOnOperation() override {
@@ -469,14 +464,9 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
             .Case("for", LinalgTilingLoopType::Loops)
             .Case("affine", LinalgTilingLoopType::AffineLoops)
             .Case("parallel", LinalgTilingLoopType::ParallelLoops)
-            .Case("tiled_loop", LinalgTilingLoopType::TiledLoops)
             .Default(loopTypeEnum);
-    auto distTypes = llvm::to_vector<2>(llvm::map_range(
-        distributionTypes, [](std::string &str) { return StringRef(str); }));
-    auto options = LinalgTilingOptions()
-                       .setTileSizes(tileSizes)
-                       .setLoopType(type)
-                       .setDistributionTypes(distTypes);
+    auto options =
+        LinalgTilingOptions().setTileSizes(tileSizes).setLoopType(type);
     MLIRContext *ctx = funcOp.getContext();
     RewritePatternSet patterns(ctx);
     insertTilingPatterns(patterns, options);
@@ -501,8 +491,6 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes,
-                             linalg::LinalgTilingLoopType loopType,
-                             ArrayRef<StringRef> distributionTypes) {
-  return std::make_unique<LinalgTilingPass>(tileSizes, loopType,
-                                            distributionTypes);
+                             linalg::LinalgTilingLoopType loopType) {
+  return std::make_unique<LinalgTilingPass>(tileSizes, loopType);
 }

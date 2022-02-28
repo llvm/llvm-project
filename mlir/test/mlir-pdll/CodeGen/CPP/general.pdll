@@ -1,0 +1,105 @@
+// RUN: mlir-pdll %s -I %S -split-input-file -x cpp | FileCheck %s
+
+// Check that we generate a wrapper pattern for each PDL pattern. Also
+// add in a pattern awkwardly named the same as our generated patterns to
+// check that we handle overlap.
+
+// CHECK: struct GeneratedPDLLPattern0 : ::mlir::PDLPatternModule {
+// CHECK:  : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
+// CHECK:  R"mlir(
+// CHECK:    pdl.pattern
+// CHECK:      operation "test.op"
+// CHECK:  )mlir", context))
+
+// CHECK: struct NamedPattern : ::mlir::PDLPatternModule {
+// CHECK:  : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
+// CHECK:  R"mlir(
+// CHECK:    pdl.pattern
+// CHECK:      operation "test.op2"
+// CHECK:  )mlir", context))
+
+// CHECK: struct GeneratedPDLLPattern1 : ::mlir::PDLPatternModule {
+
+// CHECK: struct GeneratedPDLLPattern2 : ::mlir::PDLPatternModule {
+// CHECK:  : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
+// CHECK:  R"mlir(
+// CHECK:    pdl.pattern
+// CHECK:      operation "test.op3"
+// CHECK:  )mlir", context))
+
+// CHECK:      static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns(::mlir::RewritePatternSet &patterns) {
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern0>(patterns.getContext());
+// CHECK-NEXT:   patterns.add<NamedPattern>(patterns.getContext());
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern1>(patterns.getContext());
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern2>(patterns.getContext());
+// CHECK-NEXT: }
+
+Pattern => erase op<test.op>;
+Pattern NamedPattern => erase op<test.op2>;
+Pattern GeneratedPDLLPattern1 => erase op<>;
+Pattern => erase op<test.op3>;
+
+// -----
+
+// Check the generation of native constraints and rewrites.
+
+// CHECK:      static ::mlir::LogicalResult TestCstPDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, ::mlir::ArrayAttr constParams,
+// CHECK-SAME:                                           ::mlir::PatternRewriter &rewriter) {
+// CHECK:   ::mlir::Attribute attr = {};
+// CHECK:   if (values[0])
+// CHECK:     attr = values[0].cast<::mlir::Attribute>();
+// CHECK:   ::mlir::Operation * op = {};
+// CHECK:   if (values[1])
+// CHECK:     op = values[1].cast<::mlir::Operation *>();
+// CHECK:   ::mlir::Type type = {};
+// CHECK:   if (values[2])
+// CHECK:     type = values[2].cast<::mlir::Type>();
+// CHECK:   ::mlir::Value value = {};
+// CHECK:   if (values[3])
+// CHECK:     value = values[3].cast<::mlir::Value>();
+// CHECK:   ::mlir::TypeRange typeRange = {};
+// CHECK:   if (values[4])
+// CHECK:     typeRange = values[4].cast<::mlir::TypeRange>();
+// CHECK:   ::mlir::ValueRange valueRange = {};
+// CHECK:   if (values[5])
+// CHECK:     valueRange = values[5].cast<::mlir::ValueRange>();
+
+// CHECK:   return success();
+// CHECK: }
+
+// CHECK-NOT: TestUnusedCst
+
+// CHECK: static void TestRewritePDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, ::mlir::ArrayAttr constParams,
+// CHECK-SAME:                         ::mlir::PatternRewriter &rewriter, ::mlir::PDLResultList &results) {
+// CHECK:   ::mlir::Attribute attr = {};
+// CHECK:   ::mlir::Operation * op = {};
+// CHECK:   ::mlir::Type type = {};
+// CHECK:   ::mlir::Value value = {};
+// CHECK:   ::mlir::TypeRange typeRange = {};
+// CHECK:   ::mlir::ValueRange valueRange = {};
+
+// CHECK: foo;
+// CHECK: }
+
+// CHECK-NOT: TestUnusedRewrite
+
+// CHECK: struct TestCstAndRewrite : ::mlir::PDLPatternModule {
+// CHECK:   registerConstraintFunction("TestCst", TestCstPDLFn);
+// CHECK:   registerRewriteFunction("TestRewrite", TestRewritePDLFn);
+
+Constraint TestCst(attr: Attr, op: Op, type: Type, value: Value, typeRange: TypeRange, valueRange: ValueRange) [{
+  return success();
+}];
+Constraint TestUnusedCst() [{ return success(); }];
+
+Rewrite TestRewrite(attr: Attr, op: Op, type: Type, value: Value, typeRange: TypeRange, valueRange: ValueRange) [{ foo; }];
+Rewrite TestUnusedRewrite(op: Op) [{}];
+
+Pattern TestCstAndRewrite {
+  let root = op<>(operand: Value, operands: ValueRange) -> (type: Type, types: TypeRange);
+  TestCst(attr<"true">, root, type, operand, types, operands);
+  rewrite root with {
+    TestRewrite(attr<"true">, root, type, operand, types, operands);
+    erase root;
+  };
+}
