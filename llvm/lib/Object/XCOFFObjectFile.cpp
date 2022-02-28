@@ -709,6 +709,19 @@ bool XCOFFObjectFile::is64Bit() const {
   return Binary::ID_XCOFF64 == getType();
 }
 
+Expected<StringRef> XCOFFObjectFile::getRawData(const char *Start,
+                                                uint64_t Size,
+                                                StringRef Name) const {
+  uintptr_t StartPtr = reinterpret_cast<uintptr_t>(Start);
+  // TODO: this path is untested.
+  if (Error E = Binary::checkOffset(Data, StartPtr, Size))
+    return createError(toString(std::move(E)) + ": " + Name.data() +
+                       " data with offset 0x" + Twine::utohexstr(StartPtr) +
+                       " and size 0x" + Twine::utohexstr(Size) +
+                       " goes past the end of the file");
+  return StringRef(Start, Size);
+}
+
 uint16_t XCOFFObjectFile::getMagic() const {
   return is64Bit() ? fileHeader64()->Magic : fileHeader32()->Magic;
 }
