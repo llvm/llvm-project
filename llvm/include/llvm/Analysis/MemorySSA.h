@@ -73,7 +73,6 @@
 #define LLVM_ANALYSIS_MEMORYSSA_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist_node.h"
@@ -95,6 +94,7 @@
 
 namespace llvm {
 
+template <class GraphType> struct GraphTraits;
 class BasicBlock;
 class Function;
 class Instruction;

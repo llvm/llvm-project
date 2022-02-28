@@ -29,7 +29,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include <algorithm>
 #include <cassert>
 #include <type_traits>
 

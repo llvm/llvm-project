@@ -40,6 +40,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/Support/InstructionCost.h"
 #include <algorithm>
 #include <cassert>

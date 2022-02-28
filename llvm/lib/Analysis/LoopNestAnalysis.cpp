@@ -13,8 +13,7 @@
 
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/PostDominators.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/ValueTracking.h"
 
 using namespace llvm;

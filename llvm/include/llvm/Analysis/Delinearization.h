@@ -16,11 +16,11 @@
 #ifndef LLVM_ANALYSIS_DELINEARIZATION_H
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+class raw_ostream;
+template <typename T> class SmallVectorImpl;
 class GetElementPtrInst;
 class ScalarEvolution;
 class SCEV;

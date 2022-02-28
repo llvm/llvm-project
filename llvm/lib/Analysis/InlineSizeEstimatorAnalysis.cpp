@@ -15,21 +15,9 @@
 #ifdef LLVM_HAVE_TF_API
 #include "llvm/Analysis/Utils/TFUtils.h"
 #endif
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCAsmLayout.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <algorithm>
-#include <deque>
 
 using namespace llvm;
 

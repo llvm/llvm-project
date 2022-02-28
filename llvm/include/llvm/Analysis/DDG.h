@@ -18,9 +18,11 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/IR/Instructions.h"
 
 namespace llvm {
+class Function;
+class Loop;
+class LoopInfo;
 class DDGNode;
 class DDGEdge;
 using DDGNodeBase = DGNode<DDGNode, DDGEdge>;

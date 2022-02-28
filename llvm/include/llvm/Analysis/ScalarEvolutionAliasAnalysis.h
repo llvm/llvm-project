@@ -14,12 +14,13 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
 class Function;
+class ScalarEvolution;
+class SCEV;
 
 /// A simple alias analysis implementation that uses ScalarEvolution to answer
 /// queries.
