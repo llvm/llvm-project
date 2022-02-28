@@ -332,7 +332,7 @@ void OutputSection::writeHeaderTo(uint8_t *buf) {
   *hdr = header;
   if (stringTableOff) {
     // If name is too long, write offset into the string table as a name.
-    sprintf(hdr->Name, "/%d", stringTableOff);
+    encodeSectionName(hdr->Name, stringTableOff);
   } else {
     assert(!config->debug || name.size() <= COFF::NameSize ||
            (hdr->Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0);
