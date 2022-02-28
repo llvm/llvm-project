@@ -2217,43 +2217,6 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   return nullptr;
 }
 
-static Instruction *moveAddAfterMinMax(SelectPatternFlavor SPF, Value *X,
-                                       Value *Y,
-                                       InstCombiner::BuilderTy &Builder) {
-  assert(SelectPatternResult::isMinOrMax(SPF) && "Expected min/max pattern");
-  bool IsUnsigned = SPF == SelectPatternFlavor::SPF_UMIN ||
-                    SPF == SelectPatternFlavor::SPF_UMAX;
-  // TODO: If InstSimplify could fold all cases where C2 <= C1, we could change
-  // the constant value check to an assert.
-  Value *A;
-  const APInt *C1, *C2;
-  if (IsUnsigned && match(X, m_NUWAdd(m_Value(A), m_APInt(C1))) &&
-      match(Y, m_APInt(C2)) && C2->uge(*C1) && X->hasNUses(2)) {
-    // umin (add nuw A, C1), C2 --> add nuw (umin A, C2 - C1), C1
-    // umax (add nuw A, C1), C2 --> add nuw (umax A, C2 - C1), C1
-    Value *NewMinMax = createMinMax(Builder, SPF, A,
-                                    ConstantInt::get(X->getType(), *C2 - *C1));
-    return BinaryOperator::CreateNUW(BinaryOperator::Add, NewMinMax,
-                                     ConstantInt::get(X->getType(), *C1));
-  }
-
-  if (!IsUnsigned && match(X, m_NSWAdd(m_Value(A), m_APInt(C1))) &&
-      match(Y, m_APInt(C2)) && X->hasNUses(2)) {
-    bool Overflow;
-    APInt Diff = C2->ssub_ov(*C1, Overflow);
-    if (!Overflow) {
-      // smin (add nsw A, C1), C2 --> add nsw (smin A, C2 - C1), C1
-      // smax (add nsw A, C1), C2 --> add nsw (smax A, C2 - C1), C1
-      Value *NewMinMax = createMinMax(Builder, SPF, A,
-                                      ConstantInt::get(X->getType(), Diff));
-      return BinaryOperator::CreateNSW(BinaryOperator::Add, NewMinMax,
-                                       ConstantInt::get(X->getType(), *C1));
-    }
-  }
-
-  return nullptr;
-}
-
 /// Match a sadd_sat or ssub_sat which is using min/max to clamp the value.
 Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
   Type *Ty = MinMax1.getType();
@@ -3022,9 +2985,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *NewCast = Builder.CreateCast(CastOp, NewSI, SelType);
         return replaceInstUsesWith(SI, NewCast);
       }
-
-      if (Instruction *I = moveAddAfterMinMax(SPF, LHS, RHS, Builder))
-        return I;
 
       if (Instruction *I = matchSAddSubSat(SI))
         return I;
