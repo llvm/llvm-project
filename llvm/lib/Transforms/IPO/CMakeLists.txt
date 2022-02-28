@@ -1,3 +1,8 @@
+
+if (LLVM_ENABLE_PATCHMAN)
+	link_libraries(PatchManIRPass)
+endif()
+
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
   Annotation2Metadata.cpp
@@ -54,6 +59,11 @@ add_llvm_component_library(LLVMipo
 
   COMPONENT_NAME
   IPO
+
+if (LLVM_ENABLE_PATCHMAN)
+  LINK_LIBS
+  PatchManIRPass
+endif()
 
   LINK_COMPONENTS
   AggressiveInstCombine

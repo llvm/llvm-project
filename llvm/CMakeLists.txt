@@ -1261,3 +1261,11 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
+
+if (LLVM_ENABLE_PATCHMAN)
+  #Include PatchMan headers
+  include_directories(${CMAKE_SOURCE_DIR}/../PatchMan/include)
+
+  #Add PatchMan
+  add_subdirectory(../PatchMan ../PatchMan/build)
+endif()
