@@ -13,7 +13,7 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK-NEXT:    N1 [label =
 ; CHECK-NEXT:    "for.body:\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION\l" +
-; CHECK-NEXT:    "  WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:    "  ir\<%iv\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<0\>, ir\<1\>\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr ir\<%y\>, ir\<%iv\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load ir\<%arrayidx\>\l" +
 ; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>)\l" +

@@ -8,13 +8,13 @@ define void @foo(i64* %ptr, i32* %ptr.2) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 2, i64 3, i64 4, i64 5>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_TRUNC:%.+]] = phi <4 x i32> [ <i32 2, i32 3, i32 4, i32 5>, %vector.ph ], [ [[VEC_IND_TRUNC_NEXT:%.+]], %vector.body ]
-; CHECK-NEXT:    = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2, [[INDEX]]
 ; CHECK-NEXT:    [[TRUNC:%.+]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TRUNC]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TRUNC]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TRUNC]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TRUNC]], 3
+; CHECK-NEXT:    = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    store i32 [[TMP7]], i32* %ptr.2, align 4
 ; CHECK-NEXT:    store i32 [[TMP8]], i32* %ptr.2, align 4
 ; CHECK-NEXT:    store i32 [[TMP9]], i32* %ptr.2, align 4

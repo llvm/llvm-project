@@ -151,7 +151,7 @@ define void @pointer_induction_used_as_vector(i8** noalias %start.1, i8* noalias
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8*, i8** [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8** [[TMP4]] to <4 x i8*>*
 ; CHECK-NEXT:    store <4 x i8*> [[TMP3]], <4 x i8*>* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i8*> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i8*> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, i8* [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP8]], align 1
