@@ -23,8 +23,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRArithmetic
   MLIRBufferization
   MLIRBufferizationTransforms
-  MLIRDialectUtils
-  MLIRFunc
+  MLIRDialectUtils  
   MLIRIR
   MLIRMemRef
   MLIRPass

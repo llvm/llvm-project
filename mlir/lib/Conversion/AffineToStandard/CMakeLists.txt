@@ -14,7 +14,6 @@ add_mlir_conversion_library(MLIRAffineToStandard
   MLIRAffine
   MLIRAffineUtils
   MLIRArithmetic
-  MLIRFunc
   MLIRIR
   MLIRMemRef
   MLIRSCF

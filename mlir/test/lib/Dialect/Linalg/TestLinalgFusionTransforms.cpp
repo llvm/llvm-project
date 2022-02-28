@@ -114,8 +114,8 @@ struct TestLinalgFusionTransforms
     : public PassWrapper<TestLinalgFusionTransforms<LoopType>,
                          OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, func::FuncDialect, linalg::LinalgDialect,
-                    memref::MemRefDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect>();
   }
   TestLinalgFusionTransforms() = default;
   TestLinalgFusionTransforms(const TestLinalgFusionTransforms &pass) {}

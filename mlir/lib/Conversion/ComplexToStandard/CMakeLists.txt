@@ -10,7 +10,6 @@ add_mlir_conversion_library(MLIRComplexToStandard
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRComplex
-  MLIRFunc
   MLIRIR
   MLIRMath
   MLIRTransforms

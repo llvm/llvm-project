@@ -88,7 +88,6 @@ void LowerVectorToLLVMPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithmeticDialect>();
   target.addLegalDialect<memref::MemRefDialect>();
-  target.addLegalDialect<func::FuncDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
   if (armNeon) {
     // TODO: we may or may not want to include in-dialect lowering to

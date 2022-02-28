@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -23,6 +22,7 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Matchers.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 
@@ -368,7 +368,7 @@ HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
 }
 
 static bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
-  return outer.isDefinedOutsideOfLoop(v) || v.getDefiningOp<func::ConstantOp>();
+  return outer.isDefinedOutsideOfLoop(v) || matchPattern(v, m_Constant());
 }
 
 /// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
