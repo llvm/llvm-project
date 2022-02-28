@@ -17,8 +17,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<vector>)
-#  pragma clang include_instead(<deque>)
 #endif
 
 _LIBCPP_PUSH_MACROS

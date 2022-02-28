@@ -25,10 +25,6 @@
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
-#  pragma clang include_instead(<atomic>)
-#  pragma clang include_instead(<mutex>)
-#  pragma clang include_instead(<semaphore>)
-#  pragma clang include_instead(<thread>)
 #endif
 
 #if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
