@@ -3006,9 +3006,8 @@ define <2 x i32> @mul_select_eq_undef_vector_not_merging_to_zero(<2 x i32> %x, <
 
 define i8 @ne0_is_all_ones(i8 %x) {
 ; CHECK-LABEL: @ne0_is_all_ones(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i8 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[UGT1]], i8 -1, i8 [[NEGX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %negx = sub i8 0, %x
@@ -3021,8 +3020,8 @@ define i8 @ne0_is_all_ones_use1(i8 %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_use1(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use_i8(i8 [[NEGX]])
-; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i8 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[UGT1]], i8 -1, i8 [[NEGX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %negx = sub i8 0, %x
@@ -3031,6 +3030,8 @@ define i8 @ne0_is_all_ones_use1(i8 %x) {
   %r = select i1 %ugt1, i8 -1, i8 %negx
   ret i8 %r
 }
+
+; negative test
 
 define i8 @ne0_is_all_ones_use2(i8 %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_use2(
@@ -3047,6 +3048,8 @@ define i8 @ne0_is_all_ones_use2(i8 %x) {
   ret i8 %r
 }
 
+; negative test
+
 define i8 @ne0_is_all_ones_wrong_pred(i8 %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_wrong_pred(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
@@ -3060,6 +3063,8 @@ define i8 @ne0_is_all_ones_wrong_pred(i8 %x) {
   ret i8 %r
 }
 
+; negative test
+
 define i8 @ne0_is_all_ones_wrong_cmp(i8 %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_wrong_cmp(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
@@ -3072,6 +3077,8 @@ define i8 @ne0_is_all_ones_wrong_cmp(i8 %x) {
   %r = select i1 %ugt1, i8 -1, i8 %negx
   ret i8 %r
 }
+
+; negative test
 
 define i8 @ne0_is_all_ones_wrong_sel(i8 %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_wrong_sel(
@@ -3088,9 +3095,8 @@ define i8 @ne0_is_all_ones_wrong_sel(i8 %x) {
 
 define <2 x i8> @ne0_is_all_ones_swap_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_swap_vec(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[ULT2:%.*]] = icmp ult <2 x i8> [[X]], <i8 2, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ULT2]], <2 x i8> [[NEGX]], <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %negx = sub <2 x i8> zeroinitializer, %x
@@ -3101,9 +3107,8 @@ define <2 x i8> @ne0_is_all_ones_swap_vec(<2 x i8> %x) {
 
 define <2 x i8> @ne0_is_all_ones_swap_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @ne0_is_all_ones_swap_vec_poison(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> <i8 0, i8 poison>, [[X:%.*]]
-; CHECK-NEXT:    [[ULT2:%.*]] = icmp ult <2 x i8> [[X]], <i8 2, i8 poison>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ULT2]], <2 x i8> [[NEGX]], <2 x i8> <i8 -1, i8 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %negx = sub <2 x i8> <i8 0, i8 poison>, %x
