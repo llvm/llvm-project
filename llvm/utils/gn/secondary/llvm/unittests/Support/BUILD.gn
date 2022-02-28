@@ -25,6 +25,8 @@ unittest("SupportTests") {
     "CompressionTest.cpp",
     "ConvertUTFTest.cpp",
     "CrashRecoveryTest.cpp",
+    "CSKYAttributeParserTest.cpp",
+    "CSKYTargetParserTest.cpp",
     "DJBTest.cpp",
     "DataExtractorTest.cpp",
     "DebugCounterTest.cpp",

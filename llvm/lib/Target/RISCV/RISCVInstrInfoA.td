@@ -12,31 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// Operand and SDNode transformation definitions.
-//===----------------------------------------------------------------------===//
-
-// A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
-// Used for GNU as Compatibility.
-def AtomicMemOpOperand : AsmOperandClass {
-  let Name = "AtomicMemOpOperand";
-  let RenderMethod = "addRegOperands";
-  let PredicateMethod = "isGPR";
-  let ParserMethod = "parseAtomicMemOp";
-}
-
-def GPRMemAtomic : RegisterOperand<GPR> {
-  let ParserMatchClass = AtomicMemOpOperand;
-  let PrintMethod = "printAtomicMemOp";
-}
-
-//===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class LR_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
     : RVInstRAtomic<0b00010, aq, rl, funct3, OPC_AMO,
-                    (outs GPR:$rd), (ins GPRMemAtomic:$rs1),
+                    (outs GPR:$rd), (ins GPRMemZeroOffset:$rs1),
                     opcodestr, "$rd, $rs1"> {
   let rs2 = 0;
 }
@@ -51,7 +33,7 @@ multiclass LR_r_aq_rl<bits<3> funct3, string opcodestr> {
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 class AMO_rr<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr>
     : RVInstRAtomic<funct5, aq, rl, funct3, OPC_AMO,
-                    (outs GPR:$rd), (ins GPRMemAtomic:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPRMemZeroOffset:$rs1, GPR:$rs2),
                     opcodestr, "$rd, $rs2, $rs1">;
 
 multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
