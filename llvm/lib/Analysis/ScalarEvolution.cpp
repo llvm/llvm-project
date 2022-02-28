@@ -13410,6 +13410,25 @@ ScalarEvolution::getUsedLoops(const SCEV *S,
   SCEVTraversal<FindUsedLoops>(F).visitAll(S);
 }
 
+static void getReachableBlocks(SmallPtrSetImpl<BasicBlock *> &Reachable,
+                               Function &F) {
+  SmallVector<BasicBlock *> Worklist;
+  Worklist.push_back(&F.getEntryBlock());
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!Reachable.insert(BB).second)
+      continue;
+
+    const APInt *Cond;
+    BasicBlock *TrueBB, *FalseBB;
+    if (match(BB->getTerminator(),
+              m_Br(m_APInt(Cond), m_BasicBlock(TrueBB), m_BasicBlock(FalseBB))))
+      Worklist.push_back(Cond->isOne() ? TrueBB : FalseBB);
+    else
+      append_range(Worklist, successors(BB));
+  }
+}
+
 void ScalarEvolution::verify() const {
   ScalarEvolution &SE = *const_cast<ScalarEvolution *>(this);
   ScalarEvolution SE2(F, TLI, AC, DT, LI);
@@ -13434,10 +13453,17 @@ void ScalarEvolution::verify() const {
   };
 
   SCEVMapper SCM(SE2);
+  SmallPtrSet<BasicBlock *, 16> ReachableBlocks;
+  getReachableBlocks(ReachableBlocks, F);
 
   while (!LoopStack.empty()) {
     auto *L = LoopStack.pop_back_val();
     llvm::append_range(LoopStack, *L);
+
+    // Only verify BECounts in reachable loops. For an unreachable loop,
+    // any BECount is legal.
+    if (!ReachableBlocks.contains(L->getHeader()))
+      continue;
 
     auto *CurBECount = SCM.visit(
         const_cast<ScalarEvolution *>(this)->getBackedgeTakenCount(L));
