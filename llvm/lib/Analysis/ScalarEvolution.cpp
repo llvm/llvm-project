@@ -142,8 +142,11 @@ STATISTIC(NumTripCountsNotComputed,
 STATISTIC(NumBruteForceTripCountsComputed,
           "Number of loops with trip counts computed by force");
 
-// FIXME: Enable this with EXPENSIVE_CHECKS when the test suite is clean.
+#ifdef EXPENSIVE_CHECKS
+bool llvm::VerifySCEV = true;
+#else
 bool llvm::VerifySCEV = false;
+#endif
 
 static cl::opt<unsigned>
 MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
