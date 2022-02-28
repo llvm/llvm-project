@@ -6495,7 +6495,9 @@ void ResolveNamesVisitor::HandleProcedureName(
     if (!SetProcFlag(name, *symbol, flag)) {
       return; // reported error
     }
-    CheckImplicitNoneExternal(name.source, *symbol);
+    if (!symbol->has<GenericDetails>()) {
+      CheckImplicitNoneExternal(name.source, *symbol);
+    }
     if (symbol->has<SubprogramDetails>() &&
         symbol->attrs().test(Attr::ABSTRACT)) {
       Say(name, "Abstract interface '%s' may not be called"_err_en_US);
