@@ -186,10 +186,10 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = xor i32 [[TMP13]], -1
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = xor i32 [[TMP12]], -1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[N]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[TMP16]]
@@ -199,7 +199,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP20]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x float> [[WIDE_LOAD]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[REVERSE]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, float* [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast float* [[TMP23]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP21]], <4 x float>* [[TMP24]], align 4
@@ -222,10 +222,10 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[INDEX4]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX9:%.*]] = trunc i64 [[INDEX4]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[OFFSET_IDX9]], 0
-; CHECK-NEXT:    [[TMP28:%.*]] = xor i32 [[TMP27]], -1
+; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[OFFSET_IDX9]], 0
+; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[INDEX4]], 0
+; CHECK-NEXT:    [[TMP28:%.*]] = xor i32 [[TMP26]], -1
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], [[N]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = sext i32 [[TMP29]] to i64
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[TMP30]]
@@ -235,7 +235,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, <4 x float>* [[TMP34]], align 4
 ; CHECK-NEXT:    [[REVERSE11:%.*]] = shufflevector <4 x float> [[WIDE_LOAD10]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP35:%.*]] = fadd fast <4 x float> [[REVERSE11]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP26]]
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds float, float* [[TMP36]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = bitcast float* [[TMP37]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP35]], <4 x float>* [[TMP38]], align 4
