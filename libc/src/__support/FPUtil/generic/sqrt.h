@@ -31,47 +31,28 @@ template <> struct SpecialLongDouble<long double> {
 };
 #endif // SPECIAL_X86_LONG_DOUBLE
 
-template <typename T>
-static inline void normalize(int &exponent,
-                             typename FPBits<T>::UIntType &mantissa);
-
-template <> inline void normalize<float>(int &exponent, uint32_t &mantissa) {
-  // Use binary search to shift the leading 1 bit.
-  // With MantissaWidth<float> = 23, it will take
-  // ceil(log2(23)) = 5 steps checking the mantissa bits as followed:
-  // Step 1: 0000 0000 0000 XXXX XXXX XXXX
-  // Step 2: 0000 00XX XXXX XXXX XXXX XXXX
-  // Step 3: 000X XXXX XXXX XXXX XXXX XXXX
-  // Step 4: 00XX XXXX XXXX XXXX XXXX XXXX
-  // Step 5: 0XXX XXXX XXXX XXXX XXXX XXXX
-  constexpr int NSTEPS = 5; // = ceil(log2(MantissaWidth))
-  constexpr uint32_t BOUNDS[NSTEPS] = {1 << 12, 1 << 18, 1 << 21, 1 << 22,
-                                       1 << 23};
-  constexpr int SHIFTS[NSTEPS] = {12, 6, 3, 2, 1};
-
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mantissa < BOUNDS[i]) {
-      exponent -= SHIFTS[i];
-      mantissa <<= SHIFTS[i];
-    }
-  }
+// The following overloads are matched based on what is accepted by
+// __builtin_clz* rather than using the exactly-sized aliases from stdint.h.
+// This way, we can avoid making any assumptions about integer sizes and let the
+// compiler match for us.
+template <typename T> static inline int clz(T val);
+template <> inline int clz<unsigned int>(unsigned int val) {
+  return __builtin_clz(val);
+}
+template <> inline int clz<unsigned long int>(unsigned long int val) {
+  return __builtin_clzl(val);
+}
+template <> inline int clz<unsigned long long int>(unsigned long long int val) {
+  return __builtin_clzll(val);
 }
 
-template <> inline void normalize<double>(int &exponent, uint64_t &mantissa) {
-  // Use binary search to shift the leading 1 bit similar to float.
-  // With MantissaWidth<double> = 52, it will take
-  // ceil(log2(52)) = 6 steps checking the mantissa bits.
-  constexpr int NSTEPS = 6; // = ceil(log2(MantissaWidth))
-  constexpr uint64_t BOUNDS[NSTEPS] = {1ULL << 26, 1ULL << 39, 1ULL << 46,
-                                       1ULL << 49, 1ULL << 51, 1ULL << 52};
-  constexpr int SHIFTS[NSTEPS] = {27, 14, 7, 4, 2, 1};
-
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mantissa < BOUNDS[i]) {
-      exponent -= SHIFTS[i];
-      mantissa <<= SHIFTS[i];
-    }
-  }
+template <typename T>
+static inline void normalize(int &exponent,
+                             typename FPBits<T>::UIntType &mantissa) {
+  const int shift =
+      clz(mantissa) - (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
+  exponent -= shift;
+  mantissa <<= shift;
 }
 
 #ifdef LONG_DOUBLE_IS_DOUBLE
@@ -82,22 +63,11 @@ inline void normalize<long double>(int &exponent, uint64_t &mantissa) {
 #elif !defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
 inline void normalize<long double>(int &exponent, __uint128_t &mantissa) {
-  // Use binary search to shift the leading 1 bit similar to float.
-  // With MantissaWidth<long double> = 112, it will take
-  // ceil(log2(112)) = 7 steps checking the mantissa bits.
-  constexpr int NSTEPS = 7; // = ceil(log2(MantissaWidth))
-  constexpr __uint128_t BOUNDS[NSTEPS] = {
-      __uint128_t(1) << 56,  __uint128_t(1) << 84,  __uint128_t(1) << 98,
-      __uint128_t(1) << 105, __uint128_t(1) << 109, __uint128_t(1) << 111,
-      __uint128_t(1) << 112};
-  constexpr int SHIFTS[NSTEPS] = {57, 29, 15, 8, 4, 2, 1};
-
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mantissa < BOUNDS[i]) {
-      exponent -= SHIFTS[i];
-      mantissa <<= SHIFTS[i];
-    }
-  }
+  const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
+  const int shift = hi_bits ? (clz(hi_bits) - 15)
+                            : (clz(static_cast<uint64_t>(mantissa)) + 49);
+  exponent -= shift;
+  mantissa <<= shift;
 }
 #endif
 
