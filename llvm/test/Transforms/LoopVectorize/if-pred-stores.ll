@@ -463,14 +463,14 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
 ; UNROLL-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; UNROLL:       pred.store.if:
-; UNROLL-NEXT:    [[INDUCTION:%.*]] = add i64 [[INDEX]], 0
-; UNROLL-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* undef, i64 [[INDUCTION]]
+; UNROLL-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 0
+; UNROLL-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* undef, i64 [[INDUCTION3]]
 ; UNROLL-NEXT:    [[TMP1:%.*]] = load i8, i8* [[TMP0]], align 1
 ; UNROLL-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; UNROLL-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; UNROLL-NEXT:    store i8 [[TMP3]], i8* [[TMP0]], align 1
-; UNROLL-NEXT:    [[INDUCTION2:%.*]] = add i64 [[INDEX]], 1
-; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* undef, i64 [[INDUCTION2]]
+; UNROLL-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 1
+; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* undef, i64 [[INDUCTION4]]
 ; UNROLL-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 1
 ; UNROLL-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; UNROLL-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
@@ -511,8 +511,8 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; UNROLL-NOSIMPLIFY:       pred.store.if:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION:%.*]] = add i64 [[INDEX]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* undef, i64 [[INDUCTION]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* undef, i64 [[INDUCTION3]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = load i8, i8* [[TMP0]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
