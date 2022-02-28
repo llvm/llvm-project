@@ -17,9 +17,6 @@
 // UNSUPPORTED: libcpp-has-no-random-device
 // UNSUPPORTED: libcpp-has-no-localization
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // XFAIL: LIBCXX-AIX-FIXME
 
 // <charconv>
