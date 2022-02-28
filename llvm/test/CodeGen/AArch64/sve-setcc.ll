@@ -70,6 +70,51 @@ if.end:
   ret void
 }
 
+; Fold away the redundant setcc::
+;    setcc(ne, <all ones>, sext(nxvNi1 ...), splat(0))
+; -> nxvNi1 ...
+define <vscale x 16 x i1> @sve_cmpne_setcc_all_true_sext(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) {
+; CHECK-LABEL: sve_cmpne_setcc_all_true_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %alltrue.ins = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
+  %alltrue = shufflevector <vscale x 16 x i1> %alltrue.ins, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
+  %pg.sext = sext <vscale x 16 x i1> %pg to <vscale x 16 x i8>
+  %cmp2 = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %alltrue, <vscale x 16 x i8> %pg.sext, <vscale x 16 x i8> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp2
+}
+
+; Fold away the redundant setcc::
+;    setcc(ne, pred, sext(setcc(ne, pred, ..., splat(0))), splat(0))
+; -> setcc(ne, pred, ..., splat(0))
+define <vscale x 16 x i1> @sve_cmpne_setcc_equal_pred(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) {
+; CHECK-LABEL: sve_cmpne_setcc_equal_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %cmp1 = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %cmp1.sext = sext <vscale x 16 x i1> %cmp1 to <vscale x 16 x i8>
+  %cmp2 = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %cmp1.sext, <vscale x 16 x i8> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp2
+}
+
+; Combine:
+;    setcc(ne, pred1, sext(setcc(ne, pred2, ..., splat(0))), splat(0))
+; -> setcc(ne, and(pred1, pred2), ..., splat(0))
+define <vscale x 16 x i1> @sve_cmpne_setcc_different_pred(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg1, <vscale x 16 x i1> %pg2) {
+; CHECK-LABEL: sve_cmpne_setcc_different_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp1 = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg1, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %cmp1.sext = sext <vscale x 16 x i1> %cmp1 to <vscale x 16 x i8>
+  %cmp2 = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg2, <vscale x 16 x i8> %cmp1.sext, <vscale x 16 x i8> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp2
+}
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+
 declare i1 @llvm.aarch64.sve.ptest.any.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>)
 declare i1 @llvm.aarch64.sve.ptest.last.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>)
 
