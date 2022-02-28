@@ -58,6 +58,13 @@ API Changes
   namespace ``std``, it might be because one of your source files now needs to
   ``#include <algorithm>`` and/or ``#include <chrono>``.
 
+- The integer distributions ``binomial_distribution``, ``discrete_distribution``,
+  ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
+  and ``uniform_int_distribution`` now conform to the Standard by rejecting
+  template parameter types other than ``short``, ``int``, ``long``, ``long long``,
+  (as an extension) ``__int128_t``, and the unsigned versions thereof.
+  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
+
 ABI Changes
 -----------
 
