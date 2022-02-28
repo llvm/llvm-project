@@ -550,8 +550,27 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{"getchar"}, TR::Source({{ReturnValueIndex}})},
       {{"getchar_unlocked"}, TR::Source({{ReturnValueIndex}})},
       {{"gets"}, TR::Source({{0}, ReturnValueIndex})},
+      {{"gets_s"}, TR::Source({{0}, ReturnValueIndex})},
       {{"scanf"}, TR::Source({{}, 1})},
+      {{"scanf_s"}, TR::Source({{}, {1}})},
       {{"wgetch"}, TR::Source({{}, ReturnValueIndex})},
+      // Sometimes the line between taint sources and propagators is blurry.
+      // _IO_getc is choosen to be a source, but could also be a propagator.
+      // This way it is simpler, as modeling it as a propagator would require
+      // to model the possible sources of _IO_FILE * values, which the _IO_getc
+      // function takes as parameters.
+      {{"_IO_getc"}, TR::Source({{ReturnValueIndex}})},
+      {{"getcwd"}, TR::Source({{0, ReturnValueIndex}})},
+      {{"getwd"}, TR::Source({{0, ReturnValueIndex}})},
+      {{"readlink"}, TR::Source({{1, ReturnValueIndex}})},
+      {{"readlinkat"}, TR::Source({{2, ReturnValueIndex}})},
+      {{"get_current_dir_name"}, TR::Source({{ReturnValueIndex}})},
+      {{"gethostname"}, TR::Source({{0}})},
+      {{"getnameinfo"}, TR::Source({{2, 4}})},
+      {{"getseuserbyname"}, TR::Source({{1, 2}})},
+      {{"getgroups"}, TR::Source({{1, ReturnValueIndex}})},
+      {{"getlogin"}, TR::Source({{ReturnValueIndex}})},
+      {{"getlogin_r"}, TR::Source({{0}})},
 
       // Props
       {{"atoi"}, TR::Prop({{0}}, {{ReturnValueIndex}})},

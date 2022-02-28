@@ -286,22 +286,10 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
 
-  let skipDefaultBuilders = 1;
-
   let builders = [
     OpBuilder<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
                "ValueRange":$step,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$lowerBound,
-               "ValueRange":$upperBound, "ValueRange":$step,
-               "ValueRange":$linear_vars, "ValueRange":$linear_step_vars,
-               "ValueRange":$reduction_vars, "StringAttr":$schedule_val,
-               "Value":$schedule_chunk_var, "IntegerAttr":$collapse_val,
-               "UnitAttr":$nowait, "IntegerAttr":$ordered_val,
-               "StringAttr":$order_val, "UnitAttr":$inclusive,
-               CArg<"bool", "true">:$buildBody)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
 
   let regions = (region AnyRegion:$region);

@@ -125,7 +125,6 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
 template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
 template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
 template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
-template struct mlir::linalg::GenerateLoopNest<TiledLoopOp>;
 
 /// Given a list of subview ranges, extract individual values for lower, upper
 /// bounds and steps and put them into the corresponding vectors.
@@ -535,39 +534,6 @@ void GenerateLoopNest<AffineForOp>::doit(
                                   linalgOp.getInputAndOutputOperands();
                               bodyBuilderFn(b, loc, ivs, operandValuesToUse);
                             });
-}
-
-/// Specialization to build an linalg.tiled_loop
-template <>
-void GenerateLoopNest<TiledLoopOp>::doit(
-    OpBuilder &b, Location loc, ArrayRef<Range> loopRanges, LinalgOp linalgOp,
-    ArrayRef<Attribute> iteratorTypes,
-    function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
-                                  ValueRange)>
-        bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
-  SmallVector<ProcInfo, 2> procInfo;
-  SmallVector<Value, 4> lbs, ubs, steps;
-  unpackRanges(loopRanges, lbs, ubs, steps);
-
-  auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                              ValueRange ivs, ValueRange inputs,
-                              ValueRange outputs) {
-    SmallVector<Value> operandValuesToUse = inputs;
-    operandValuesToUse.append(outputs.begin(), outputs.end());
-    scf::ValueVector results =
-        bodyBuilderFn(nestedBuilder, nestedLoc, ivs, operandValuesToUse);
-    nestedBuilder.create<linalg::YieldOp>(nestedLoc, results);
-  };
-
-  SmallVector<Value> inputOperands = linalgOp.getInputOperands();
-  SmallVector<Value> outputOperands = linalgOp.getOutputOperands();
-  auto tiledLoop =
-      b.create<TiledLoopOp>(loc, lbs, ubs, steps, inputOperands, outputOperands,
-                            b.getArrayAttr(iteratorTypes), wrappedBuilderFn);
-  if (!distributionTypes.empty())
-    tiledLoop.setDistributionTypes(b, distributionTypes);
 }
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.

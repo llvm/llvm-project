@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the machine model for the ARM Cortex-A55 processors.
+// This file defines the machine model for the ARM Cortex-A55 processors. Note
+// that this schedule is currently used as the default for -mcpu=generic. As a
+// result, some of the modelling decision made do not precisely model the
+// Cortex-A55, instead aiming to be a good compromise between different cpus.
 //
 //===----------------------------------------------------------------------===//
 
@@ -158,10 +161,6 @@ class CortexA55WriteVq<int n, ProcResourceKind res> : SchedWriteRes<[res, res]> 
   let Latency = n;
   let BeginGroup = 1;
 }
-class CortexA55WriteVqL<int n, ProcResourceKind res> : SchedWriteRes<[res, res, res, res]> {
-  let Latency = n;
-  let BeginGroup = 1;
-}
 def CortexA55WriteDotScVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
 def CortexA55WriteDotVq_4 : CortexA55WriteVq<4, CortexA55UnitFPALU>;
 def CortexA55WriteDotVd_4 : CortexA55WriteVd<4, CortexA55UnitFPALU>;
@@ -176,7 +175,6 @@ def CortexA55WriteAluVd_2 : CortexA55WriteVd<2, CortexA55UnitFPALU>;
 def CortexA55WriteAluVq_2 : CortexA55WriteVq<2, CortexA55UnitFPALU>;
 def CortexA55WriteAluVd_1 : CortexA55WriteVd<1, CortexA55UnitFPALU>;
 def CortexA55WriteAluVq_1 : CortexA55WriteVq<1, CortexA55UnitFPALU>;
-def CortexA55WriteAluVqL_4 : CortexA55WriteVqL<4, CortexA55UnitFPALU>;
 def : SchedAlias<WriteVd, CortexA55WriteVd<4, CortexA55UnitFPALU>>;
 def : SchedAlias<WriteVq, CortexA55WriteVq<4, CortexA55UnitFPALU>>;
 
@@ -256,13 +254,6 @@ def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
                               WriteISReg, WriteIEReg,WriteIS,
                               WriteID32,WriteID64,
                               WriteIM32,WriteIM64]>;
-
-// NEON ALU/MAC forwarding paths
-def CortexA55ReadMla : SchedReadAdvance<3, [CortexA55WriteMlaVd_4, CortexA55WriteMlaVq_4]>;
-def CortexA55ReadMlaIx : SchedReadAdvance<3, [CortexA55WriteMlaIxVq_4]>;
-def CortexA55ReadMlaL : SchedReadAdvance<3, [CortexA55WriteMlaLVq_4]>;
-def CortexA55ReadDot : SchedReadAdvance<3, [CortexA55WriteDotVd_4, CortexA55WriteDotVq_4]>;
-def CortexA55ReadDotSc : SchedReadAdvance<3, [CortexA55WriteDotScVq_4]>;
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific InstRWs.
@@ -398,7 +389,7 @@ def : InstRW<[CortexA55WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
 def : InstRW<[CortexA55WriteAluVd_3], (instregex "[SU]ABDv(2i32|4i16|8i8)")>;
 def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]ABDv(16i8|4i32|8i16)")>;
 // ASIMD absolute diff accum
-def : InstRW<[CortexA55WriteAluVqL_4], (instregex "[SU]ABAL?v")>;
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU]ABAL?v")>;
 // ASIMD absolute diff long
 def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]ABDLv")>;
 // ASIMD arith #1
@@ -419,7 +410,7 @@ def : InstRW<[CortexA55WriteAluVq_3], (instregex "ABSv(2i64|4i32|8i16|16i8)$",
 def : InstRW<[CortexA55WriteAluVq_3], (instregex  "SADDLv", "UADDLv", "SADDWv",
   "UADDWv", "SSUBLv", "USUBLv", "SSUBWv", "USUBWv", "ADDHNv", "SUBHNv")>;
 // ASIMD arith #5
-def : InstRW<[CortexA55WriteAluVqL_4], (instregex "RADDHNv", "RSUBHNv")>;
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "RADDHNv", "RSUBHNv")>;
 // ASIMD arith, reduce
 def : InstRW<[CortexA55WriteAluVq_3], (instregex  "ADDVv", "SADDLVv", "UADDLVv")>;
 // ASIMD compare #1
@@ -445,31 +436,31 @@ def : InstRW<[CortexA55WriteAluVq_4], (instregex "MULv(2i32|4i16|4i32|8i16)_inde
 def : InstRW<[CortexA55WriteAluVd_3], (instrs PMULv8i8)>;
 def : InstRW<[CortexA55WriteAluVq_3], (instrs PMULv16i8)>;
 // ASIMD multiply accumulate
-def : InstRW<[CortexA55WriteMlaVd_4, CortexA55ReadMla], (instregex "ML[AS]v(2i32|4i16|8i8)$")>;
-def : InstRW<[CortexA55WriteMlaVq_4, CortexA55ReadMla], (instregex "ML[AS]v(16i8|4i32|8i16)$")>;
-def : InstRW<[CortexA55WriteMlaIxVq_4, CortexA55ReadMlaIx], (instregex "ML[AS]v(2i32|4i16|4i32|8i16)_indexed$")>;
+def : InstRW<[CortexA55WriteMlaVd_4], (instregex "ML[AS]v(2i32|4i16|8i8)$")>;
+def : InstRW<[CortexA55WriteMlaVq_4], (instregex "ML[AS]v(16i8|4i32|8i16)$")>;
+def : InstRW<[CortexA55WriteMlaIxVq_4], (instregex "ML[AS]v(2i32|4i16|4i32|8i16)_indexed$")>;
 // ASIMD multiply accumulate half
 def : InstRW<[CortexA55WriteAluVq_4], (instregex "SQRDML[AS]H[vi]")>;
 // ASIMD multiply accumulate long
-def : InstRW<[CortexA55WriteMlaLVq_4, CortexA55ReadMlaL], (instregex "[SU]ML[AS]Lv")>;
+def : InstRW<[CortexA55WriteMlaLVq_4], (instregex "[SU]ML[AS]Lv")>;
 // ASIMD multiply accumulate long #2
 def : InstRW<[CortexA55WriteAluVq_4], (instregex "SQDML[AS]L[iv]")>;
 // ASIMD dot product
-def : InstRW<[CortexA55WriteDotVd_4, CortexA55ReadDot], (instregex "[SU]DOTv8i8")>;
-def : InstRW<[CortexA55WriteDotVq_4, CortexA55ReadDot], (instregex "[SU]DOTv16i8")>;
+def : InstRW<[CortexA55WriteDotVd_4], (instregex "[SU]DOTv8i8")>;
+def : InstRW<[CortexA55WriteDotVq_4], (instregex "[SU]DOTv16i8")>;
 // ASIMD dot product, by scalar
-def : InstRW<[CortexA55WriteDotScVq_4, CortexA55ReadDotSc], (instregex "[SU]DOTlanev")>;
+def : InstRW<[CortexA55WriteDotScVq_4], (instregex "[SU]DOTlanev")>;
 // ASIMD multiply long
 def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU]MULLv", "SQDMULL[iv]")>;
 // ASIMD polynomial (8x8) multiply long
 def : InstRW<[CortexA55WriteAluVq_3], (instrs PMULLv8i8, PMULLv16i8)>;
 // ASIMD pairwise add and accumulate
-def : InstRW<[CortexA55WriteAluVqL_4], (instregex "[SU]ADALPv")>;
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU]ADALPv")>;
 // ASIMD shift accumulate
 def : InstRW<[CortexA55WriteAluVd_3], (instregex "[SU]SRA(d|v2i32|v4i16|v8i8)")>;
 def : InstRW<[CortexA55WriteAluVq_3], (instregex "[SU]SRAv(16i8|2i64|4i32|8i16)")>;
 // ASIMD shift accumulate #2
-def : InstRW<[CortexA55WriteAluVqL_4], (instregex "[SU]RSRA[vd]")>;
+def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU]RSRA[vd]")>;
 // ASIMD shift by immed
 def : InstRW<[CortexA55WriteAluVd_2], (instregex "SHLd$", "SHLv",
   "SLId$", "SRId$", "[SU]SHR[vd]", "SHRNv")>;
