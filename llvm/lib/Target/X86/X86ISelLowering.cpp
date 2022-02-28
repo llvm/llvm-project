@@ -43009,10 +43009,11 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 
   SDLoc DL(ExtElt);
   unsigned NumElts = VecVT.getVectorNumElements();
+  unsigned EltSizeInBits = VecVT.getScalarSizeInBits();
 
   // Extend v4i8/v8i8 vector to v16i8, with undef upper 64-bits.
   auto WidenToV16I8 = [&](SDValue V, bool ZeroExtend) {
-    if (VecVT == MVT::v4i8) {
+    if (V.getValueType() == MVT::v4i8) {
       if (ZeroExtend && Subtarget.hasSSE41()) {
         V = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v4i32,
                         DAG.getConstant(0, DL, MVT::v4i32),
@@ -43092,6 +43093,48 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
                       getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+  }
+
+  // See if we can use vXi8 PSADBW add reduction for larger zext types.
+  // If the source vector values are 0-255, then we can use PSADBW to
+  // sum+zext v8i8 subvectors to vXi64, then perform the reduction.
+  // TODO: See if its worth avoiding vXi16/i32 truncations?
+  if (Opc == ISD::ADD && NumElts >= 4 && EltSizeInBits >= 16 &&
+      DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
+      (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
+       Subtarget.hasAVX512())) {
+    EVT ByteVT = VecVT.changeVectorElementType(MVT::i8);
+    Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
+    if (ByteVT.getSizeInBits() < 128)
+      Rdx = WidenToV16I8(Rdx, true);
+
+    // Build the PSADBW, split as 128/256/512 bits for SSE/AVX2/AVX512BW.
+    auto PSADBWBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                            ArrayRef<SDValue> Ops) {
+      MVT VT = MVT::getVectorVT(MVT::i64, Ops[0].getValueSizeInBits() / 64);
+      SDValue Zero = DAG.getConstant(0, DL, Ops[0].getValueType());
+      return DAG.getNode(X86ISD::PSADBW, DL, VT, Ops[0], Zero);
+    };
+    MVT SadVT = MVT::getVectorVT(MVT::i64, Rdx.getValueSizeInBits() / 64);
+    Rdx = SplitOpsAndApply(DAG, Subtarget, DL, SadVT, {Rdx}, PSADBWBuilder);
+
+    // TODO: We could truncate to vXi16/vXi32 before performing the reduction.
+    while (Rdx.getValueSizeInBits() > 128) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = splitVector(Rdx, DAG, DL);
+      VecVT = Lo.getValueType();
+      Rdx = DAG.getNode(ISD::ADD, DL, VecVT, Lo, Hi);
+    }
+    assert(Rdx.getValueType() == MVT::v2i64 && "v2i64 reduction expected");
+
+    if (NumElts > 8) {
+      SDValue RdxHi = DAG.getVectorShuffle(MVT::v2i64, DL, Rdx, Rdx, {1, -1});
+      Rdx = DAG.getNode(ISD::ADD, DL, MVT::v2i64, Rdx, RdxHi);
+    }
+
+    VecVT = MVT::getVectorVT(VT.getSimpleVT(), 128 / VT.getSizeInBits());
+    Rdx = DAG.getBitcast(VecVT, Rdx);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
   }
 

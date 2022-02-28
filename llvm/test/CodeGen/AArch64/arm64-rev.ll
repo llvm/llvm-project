@@ -645,3 +645,38 @@ fail:
   ret void
 }
 declare i16 @llvm.bswap.i16(i16)
+
+; Reduced regression from D120192
+define void @test_bswap32_narrow(i32* %p0, i16* %p1) nounwind {
+; CHECK-LABEL: test_bswap32_narrow:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    ldrh w8, [x0, #2]
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    rev w0, w8
+; CHECK-NEXT:    bl gid_tbl_len
+; CHECK-NEXT:    strh wzr, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_bswap32_narrow:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; GISEL-NEXT:    ldr w8, [x0]
+; GISEL-NEXT:    mov x19, x1
+; GISEL-NEXT:    and w8, w8, #0xffff0000
+; GISEL-NEXT:    rev w0, w8
+; GISEL-NEXT:    bl gid_tbl_len
+; GISEL-NEXT:    strh wzr, [x19]
+; GISEL-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; GISEL-NEXT:    ret
+  %ld = load i32, i32* %p0, align 4
+  %and = and i32 %ld, -65536
+  %bswap = tail call i32 @llvm.bswap.i32(i32 %and)
+  %and16 = zext i32 %bswap to i64
+  %call17 = tail call i32 bitcast (i32 (...)* @gid_tbl_len to i32 (i64)*)(i64 %and16)
+  store i16 0, i16* %p1, align 4
+  ret void
+}
+declare i32 @gid_tbl_len(...)
