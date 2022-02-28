@@ -104,63 +104,8 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
   llvm_unreachable("Expect to be able to extract a shape defining loop range");
 }
 
-// Return tiled operands for the fused producer op. When fusing into
-// `linalg.tiled_loop` one has to update `input` and `output` arguments of the
-// loop correspondingly.
-// Each input tensor of the producer op has to be added to `inputs` of the
-// `tiled_loop` if it is not present there already. Each output tensor has to
-// be added either to `inputs` or to `outputs` of `linalg.tiled_loop` depending
-// on whether the correponding result is an input or an output to the loop.
-//
-// NOTE: This way of updating the arguments of the `tiled_loop` assumes that the
-// intermediate result is not used by any other operation but the consumer. A
-// more generic way is to append all missing output tensors of the producer to
-// the tiled loop outputs and hence modify the number of the results, since we
-// would need to add the intermediate results to `linalg.yield`. After that a
-// canonicalization pass would move the unused output args of the `tiled_loop`
-// to the `input` section.
-static SmallVector<Value> getTiledOperands(OpBuilder &b, LinalgOp producer) {
-  auto tiledLoop = dyn_cast<TiledLoopOp>(b.getBlock()->getParentOp());
-  if (!tiledLoop)
-    return producer.getInputAndOutputOperands();
-
-  SmallVector<Value> tiledOperands;
-  assert(producer.hasTensorSemantics() &&
-         "only fusion on tensors is currently supported for TiledLinalgOp");
-
-  for (OpOperand *producerInput : producer.getInputOperands()) {
-    OpOperand *addedInput = tiledLoop.findInputOperand(producerInput->get());
-    if (addedInput == nullptr)
-      addedInput = &tiledLoop.appendInputOperand(b, producerInput->get());
-    BlockArgument addedBlockArg = tiledLoop.getTiedBlockArgument(*addedInput);
-    tiledOperands.push_back(addedBlockArg);
-  }
-  for (OpOperand *producerOutput : producer.getOutputOperands()) {
-    OpResult result = producer.getTiedOpResult(producerOutput);
-    OpOperand *resultInputOperand = tiledLoop.findInputOperand(result);
-    OpOperand *resultOutputOperand = tiledLoop.findOutputOperand(result);
-    assert((resultInputOperand != nullptr) ^ (resultOutputOperand != nullptr) &&
-           "The result should be present in `input` or `output` args of "
-           "`tiled_loop");
-
-    bool isInput = resultInputOperand;
-    int opNumber = isInput ? resultInputOperand->getOperandNumber()
-                           : resultOutputOperand->getOperandNumber();
-
-    OpOperand *addedOutput = tiledLoop.findOutputOperand(producerOutput->get());
-    if (addedOutput == nullptr)
-      addedOutput =
-          isInput ? &tiledLoop.appendInputOperand(b, producerOutput->get())
-                  : &tiledLoop.appendOutputOperand(b, producerOutput->get());
-
-    OpOperand &resultOperand = tiledLoop->getOpOperand(opNumber);
-    auto addedBlockArg = tiledLoop.getTiedBlockArgument(*addedOutput);
-    auto resultOperandBlockArg = tiledLoop.getTiedBlockArgument(resultOperand);
-    resultOperandBlockArg.replaceAllUsesWith(addedBlockArg);
-    tiledLoop.eraseOperand(b, resultOperand);
-    tiledOperands.push_back(addedBlockArg);
-  }
-  return tiledOperands;
+static SmallVector<Value> getTiledOperands(LinalgOp producer) {
+  return producer.getInputAndOutputOperands();
 }
 
 /// Fuses the producer by cloning the `producer`. The `fusedLoopsAndRanges`
@@ -198,7 +143,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
 
   // Compute subranges for all tensor input/output operands.
   clonedShapes.append(makeTiledShapes(b, loc, producer,
-                                      getTiledOperands(b, producer), ivs,
+                                      getTiledOperands(producer), ivs,
                                       tileSizes, sizeBounds));
 
   // Iterate over the results in order.
