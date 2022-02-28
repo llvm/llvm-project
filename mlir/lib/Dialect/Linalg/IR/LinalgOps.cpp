@@ -444,13 +444,71 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
   }
 };
 
+/// Fold tensor.insert_slice(tensor.pad(<input>), linalg.fill) into
+/// tensor.insert_slice(<input>, linalg.fill) if the padding value and the
+/// filling value are the same.
+struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcPadOp = insertOp.source().getDefiningOp<tensor::PadOp>();
+    if (!srcPadOp)
+      return failure();
+
+    auto dstFillOp = insertOp.dest().getDefiningOp<linalg::FillOp>();
+    if (!dstFillOp)
+      return failure();
+
+    // We can only fold if the padding value is the same as the original
+    // filling value.
+    Value padValue = srcPadOp.getConstantPaddingValue();
+    if (!padValue || dstFillOp.value() != padValue)
+      return failure();
+
+    SmallVector<OpFoldResult> lowPads = srcPadOp.getMixedLowPad();
+    SmallVector<OpFoldResult> oldOffsets = insertOp.getMixedOffsets();
+
+    Location loc = insertOp.getLoc();
+    MLIRContext *context = getContext();
+
+    AffineExpr sym0, sym1;
+    bindSymbols(context, sym0, sym1);
+    auto addMap = AffineMap::get(0, 2, {sym0 + sym1}, context);
+
+    // Calculate the new offsets for the insert. It should be the old offsets
+    // plus low padding sizes.
+    SmallVector<OpFoldResult, 4> newOffsets;
+    for (const auto &p : llvm::zip(lowPads, oldOffsets)) {
+      Value padValue = getValueOrCreateConstantIndexOp(
+          rewriter, srcPadOp.getLoc(), std::get<0>(p));
+      Value offsetValue = getValueOrCreateConstantIndexOp(
+          rewriter, insertOp.getLoc(), std::get<1>(p));
+      newOffsets.push_back(
+          applyMapToValues(rewriter, loc, addMap, {offsetValue, padValue})[0]);
+    }
+
+    SmallVector<OpFoldResult, 4> newSizes;
+    for (int i = 0, e = srcPadOp.getSourceType().getRank(); i < e; ++i) {
+      newSizes.push_back(
+          rewriter.create<tensor::DimOp>(loc, srcPadOp.source(), i).result());
+    }
+
+    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+        insertOp, srcPadOp.source(), insertOp.dest(), newOffsets, newSizes,
+        insertOp.getMixedStrides());
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
   results
       .add<FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-           FoldFillWithTensorReshape<tensor::ExpandShapeOp>>(context);
+           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+           FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//
