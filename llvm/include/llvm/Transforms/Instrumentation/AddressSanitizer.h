@@ -98,26 +98,6 @@ struct AddressSanitizerOptions {
       AsanDetectStackUseAfterReturnMode::Runtime;
 };
 
-/// Public interface to the address sanitizer pass for instrumenting code to
-/// check for various memory errors at runtime.
-///
-/// The sanitizer itself is a function pass that works by inserting various
-/// calls to the ASan runtime library functions. The runtime library essentially
-/// replaces malloc() and free() with custom implementations that allow regions
-/// surrounding requested memory to be checked for invalid accesses.
-class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
-public:
-  AddressSanitizerPass(const AddressSanitizerOptions &Options)
-      : Options(Options){};
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
-  static bool isRequired() { return true; }
-
-private:
-  AddressSanitizerOptions Options;
-};
-
 /// Public interface to the address sanitizer module pass for instrumenting code
 /// to check for various memory errors.
 ///
