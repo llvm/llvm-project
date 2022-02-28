@@ -157,9 +157,6 @@ char *llvm::rustDemangle(const char *MangledName) {
     return nullptr;
 
   Demangler D;
-  if (!initializeOutputBuffer(nullptr, nullptr, D.Output, 1024))
-    return nullptr;
-
   if (!D.demangle(Mangled)) {
     std::free(D.Output.getBuffer());
     return nullptr;
