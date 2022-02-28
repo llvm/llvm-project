@@ -33,6 +33,14 @@ struct CreateUseColor {
 static ManagedStatic<cl::opt<cl::boolOrDefault>, CreateUseColor> UseColor;
 void llvm::initWithColorOptions() { *UseColor; }
 
+static bool DefaultAutoDetectFunction(const raw_ostream &OS) {
+  return *UseColor == cl::BOU_UNSET ? OS.has_colors()
+                                    : *UseColor == cl::BOU_TRUE;
+}
+
+WithColor::AutoDetectFunctionType WithColor::AutoDetectFunction =
+    DefaultAutoDetectFunction;
+
 WithColor::WithColor(raw_ostream &OS, HighlightColor Color, ColorMode Mode)
     : OS(OS), Mode(Mode) {
   // Detect color from terminal type unless the user passed the --color option.
@@ -127,8 +135,7 @@ bool WithColor::colorsEnabled() {
   case ColorMode::Disable:
     return false;
   case ColorMode::Auto:
-    return *UseColor == cl::BOU_UNSET ? OS.has_colors()
-                                      : *UseColor == cl::BOU_TRUE;
+    return AutoDetectFunction(OS);
   }
   llvm_unreachable("All cases handled above.");
 }
@@ -158,4 +165,13 @@ void WithColor::defaultWarningHandler(Error Warning) {
   handleAllErrors(std::move(Warning), [](ErrorInfoBase &Info) {
     WithColor::warning() << Info.message() << '\n';
   });
+}
+
+WithColor::AutoDetectFunctionType WithColor::defaultAutoDetectFunction() {
+  return DefaultAutoDetectFunction;
+}
+
+void WithColor::setAutoDetectFunction(
+    AutoDetectFunctionType NewAutoDetectFunction) {
+  AutoDetectFunction = NewAutoDetectFunction;
 }
