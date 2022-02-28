@@ -45,8 +45,11 @@
 // CHECK-INVALID-ARG-SAME:        that expects an argument number for propagation
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
+typedef long long rsize_t;
+
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
+char *gets_s(char *str, rsize_t n);
 int getchar(void);
 
 typedef struct _FILE FILE;
@@ -197,6 +200,12 @@ void testGets(void) {
   system(str); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
+void testGets_s(void) {
+  char str[50];
+  gets_s(str, 49);
+  system(str); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
 void testTaintedBufferSize(void) {
   size_t ts;
   scanf("%zd", &ts);
@@ -343,15 +352,115 @@ void constraintManagerShouldTreatAsOpaque(int rhs) {
     *(volatile int *) 0; // no-warning
 }
 
-int sprintf_is_not_a_source(char *buf, char *msg) {
+int testSprintf_is_not_a_source(char *buf, char *msg) {
   int x = sprintf(buf, "%s", msg); // no-warning
-  return 1 / x; // no-warning: 'sprintf' is not a taint source
+  return 1 / x;                    // no-warning: 'sprintf' is not a taint source
 }
 
-int sprintf_propagates_taint(char *buf, char *msg) {
+int testSprintf_propagates_taint(char *buf, char *msg) {
   scanf("%s", msg);
   int x = sprintf(buf, "%s", msg); // propagate taint!
-  return 1 / x; // expected-warning {{Division by a tainted value, possibly zero}}
+  return 1 / x;                    // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+int scanf_s(const char *format, ...);
+int testScanf_s_(int *out) {
+  scanf_s("%d", out);
+  return 1 / *out; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+#define _IO_FILE FILE
+int _IO_getc(_IO_FILE *__fp);
+int testUnderscoreIO_getc(_IO_FILE *fp) {
+  char c = _IO_getc(fp);
+  return 1 / c; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+char *getcwd(char *buf, size_t size);
+int testGetcwd(char *buf, size_t size) {
+  char *c = getcwd(buf, size);
+  return system(c); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+char *getwd(char *buf);
+int testGetwd(char *buf) {
+  char *c = getwd(buf);
+  return system(c); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+typedef signed long long ssize_t;
+ssize_t readlink(const char *path, char *buf, size_t bufsiz);
+int testReadlink(char *path, char *buf, size_t bufsiz) {
+  ssize_t s = readlink(path, buf, bufsiz);
+  system(buf); // expected-warning {{Untrusted data is passed to a system call}}
+  // readlink never returns 0
+  return 1 / (s + 1); // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz);
+int testReadlinkat(int dirfd, char *path, char *buf, size_t bufsiz) {
+  ssize_t s = readlinkat(dirfd, path, buf, bufsiz);
+  system(buf);        // expected-warning {{Untrusted data is passed to a system call}}
+  (void)(1 / dirfd);  // arg 0 is not tainted
+  system(path);       // arg 1 is not tainted
+  (void)(1 / bufsiz); // arg 3 is not tainted
+  // readlinkat never returns 0
+  return 1 / (s + 1); // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+char *get_current_dir_name(void);
+int testGet_current_dir_name() {
+  char *d = get_current_dir_name();
+  return system(d); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+int gethostname(char *name, size_t len);
+int testGethostname(char *name, size_t len) {
+  gethostname(name, len);
+  return system(name); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+struct sockaddr;
+typedef size_t socklen_t;
+int getnameinfo(const struct sockaddr *restrict addr, socklen_t addrlen,
+                char *restrict host, socklen_t hostlen,
+                char *restrict serv, socklen_t servlen, int flags);
+int testGetnameinfo(const struct sockaddr *restrict addr, socklen_t addrlen,
+                    char *restrict host, socklen_t hostlen,
+                    char *restrict serv, socklen_t servlen, int flags) {
+  getnameinfo(addr, addrlen, host, hostlen, serv, servlen, flags);
+
+  system(host);        // expected-warning {{Untrusted data is passed to a system call}}
+  return system(serv); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+int getseuserbyname(const char *linuxuser, char **selinuxuser, char **level);
+int testGetseuserbyname(const char *linuxuser, char **selinuxuser, char **level) {
+  getseuserbyname(linuxuser, selinuxuser, level);
+  system(selinuxuser[0]);  // expected-warning {{Untrusted data is passed to a system call}}
+  return system(level[0]); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+typedef int gid_t;
+int getgroups(int size, gid_t list[]);
+int testGetgroups(int size, gid_t list[], bool flag) {
+  int result = getgroups(size, list);
+  if (flag)
+    return 1 / list[0]; // expected-warning {{Division by a tainted value, possibly zero}}
+
+  return 1 / (result + 1); // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+char *getlogin(void);
+int testGetlogin() {
+  char *n = getlogin();
+  return system(n); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+int getlogin_r(char *buf, size_t bufsize);
+int testGetlogin_r(char *buf, size_t bufsize) {
+  getlogin_r(buf, bufsize);
+  return system(buf); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
 // Test configuration

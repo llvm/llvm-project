@@ -618,9 +618,6 @@ static void applyTilePattern(FuncOp funcOp, const std::string &loopType,
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
-static constexpr char kPeeledLoopsLabel[] = "__peeled_loops__";
-static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
-
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   auto lambda = [&](void *) {
