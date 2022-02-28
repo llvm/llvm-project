@@ -1977,9 +1977,9 @@ unsigned RAGreedy::tryLastChanceRecoloring(const LiveInterval &VirtReg,
       continue;
     }
 
-    // RecoloringCandidates contains all the virtual registers that interfer
-    // with VirtReg on PhysReg (or one of its aliases).
-    // Enqueue them for recoloring and perform the actual recoloring.
+    // RecoloringCandidates contains all the virtual registers that interfere
+    // with VirtReg on PhysReg (or one of its aliases). Enqueue them for
+    // recoloring and perform the actual recoloring.
     PQueue RecoloringQueue;
     for (const LiveInterval *RC : RecoloringCandidates) {
       Register ItVirtReg = RC->reg();
