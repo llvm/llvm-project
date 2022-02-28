@@ -118,3 +118,10 @@
 // RUN: %clang -target powerpc-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC-SECUREPLT %s
 // CHECK-POWERPC-SECUREPLT: "-target-feature" "+secure-plt"
+
+// Check that unwind tables are enabled
+// RUN: %clang -target arm-unknown-openbsd -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// RUN: %clang -target mips64-unknown-openbsd -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// UNWIND-TABLES: "-funwind-tables=2"
