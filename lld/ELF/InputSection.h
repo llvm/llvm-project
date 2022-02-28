@@ -43,7 +43,7 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, EHFrame, Merge, Synthetic, Output };
+  enum Kind { Regular, Synthetic, EHFrame, Merge, Output };
 
   Kind kind() const { return (Kind)sectionKind; }
 
