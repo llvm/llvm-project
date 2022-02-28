@@ -148,6 +148,17 @@ static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
 // Math runtime description and matching utility
 //===----------------------------------------------------------------------===//
 
+/// Command line option to modify math runtime version used to implement
+/// intrinsics.
+enum MathRuntimeVersion { fastVersion, llvmOnly };
+llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
+    "math-runtime", llvm::cl::desc("Select math runtime version:"),
+    llvm::cl::values(
+        clEnumValN(fastVersion, "fast", "use pgmath fast runtime"),
+        clEnumValN(llvmOnly, "llvm",
+                   "only use LLVM intrinsics (may be incomplete)")),
+    llvm::cl::init(fastVersion));
+
 struct RuntimeFunction {
   // llvm::StringRef comparison operator are not constexpr, so use string_view.
   using Key = std::string_view;
@@ -176,12 +187,24 @@ static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
+static mlir::FunctionType genF32F32F32FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF32(context);
+  return mlir::FunctionType::get(context, {t, t}, {t});
+}
+
+static mlir::FunctionType genF64F64F64FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF64(context);
+  return mlir::FunctionType::get(context, {t, t}, {t});
+}
+
 // TODO : Fill-up this table with more intrinsic.
 // Note: These are also defined as operations in LLVM dialect. See if this
 // can be use and has advantages.
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
+    {"pow", "llvm.pow.f32", genF32F32F32FuncType},
+    {"pow", "llvm.pow.f64", genF64F64F64FuncType},
 };
 
 // This helper class computes a "distance" between two function types.
@@ -373,8 +396,12 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
   using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
   static constexpr RtMap pgmathF(pgmathFast);
   static_assert(pgmathF.Verify() && "map must be sorted");
-  match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
-                                  &bestNearMatch, bestMatchDistance);
+  if (mathRuntimeVersion == fastVersion) {
+    match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
+                                    &bestNearMatch, bestMatchDistance);
+  } else {
+    assert(mathRuntimeVersion == llvmOnly && "unknown math runtime");
+  }
   if (match)
     return match;
 
@@ -601,4 +628,10 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::ArrayRef<fir::ExtendedValue> args) {
   return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
                                                          args);
+}
+
+mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Type type,
+                                   mlir::Value x, mlir::Value y) {
+  return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow", type, {x, y});
 }
