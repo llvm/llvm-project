@@ -573,6 +573,15 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
            << ") to be equal to the number of output tensors ("
            << linalgOp.getOutputTensorOperands().size() << ")";
 
+  // Check all iterator types are known.
+  auto iteratorTypesRange =
+      linalgOp.iterator_types().getAsValueRange<StringAttr>();
+  for (StringRef iteratorType : iteratorTypesRange) {
+    if (!llvm::is_contained(getAllIteratorTypeNames(), iteratorType))
+      return op->emitOpError("unexpected iterator_type (")
+             << iteratorType << ")";
+  }
+
   // Before checking indexing maps, we need to make sure the attributes
   // referenced by it are valid.
   if (linalgOp.hasDynamicIndexingMaps())

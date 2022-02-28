@@ -95,6 +95,19 @@ func @generic_wrong_dim_in_map(%arg0: memref<1xi32>) {
 
 // -----
 
+func @generic_wrong_iterator(%arg0: memref<1xi32>) {
+  // expected-error @+1 {{op unexpected iterator_type (random)}}
+  linalg.generic {
+    indexing_maps =  [ affine_map<(i) -> (i)> ],
+    iterator_types = ["random"]}
+      outs(%arg0 : memref<1xi32>) {
+    ^bb(%i : i32):
+    linalg.yield %i : i32
+  }
+}
+
+// -----
+
 func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{expected operand rank (1) to match the result rank of indexing_map #0 (2)}}
   linalg.generic {
