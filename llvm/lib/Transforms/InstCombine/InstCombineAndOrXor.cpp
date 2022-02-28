@@ -3465,51 +3465,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     }
   }
 
-  // TODO: Remove folds if we canonicalize to intrinsics (see above).
-  // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
-  //
-  //   %notx = xor i32 %x, -1
-  //   %cmp1 = icmp sgt i32 %notx, %y
-  //   %smax = select i1 %cmp1, i32 %notx, i32 %y
-  //   %res = xor i32 %smax, -1
-  // =>
-  //   %noty = xor i32 %y, -1
-  //   %cmp2 = icmp slt %x, %noty
-  //   %res = select i1 %cmp2, i32 %x, i32 %noty
-  //
-  // Same is applicable for smin/umax/umin.
   if (NotOp->hasOneUse()) {
-    Value *LHS, *RHS;
-    SelectPatternFlavor SPF = matchSelectPattern(NotOp, LHS, RHS).Flavor;
-    if (SelectPatternResult::isMinOrMax(SPF)) {
-      // It's possible we get here before the not has been simplified, so make
-      // sure the input to the not isn't freely invertible.
-      if (match(LHS, m_Not(m_Value(X))) && !isFreeToInvert(X, X->hasOneUse())) {
-        Value *NotY = Builder.CreateNot(RHS);
-        return SelectInst::Create(
-            Builder.CreateICmp(getInverseMinMaxPred(SPF), X, NotY), X, NotY);
-      }
-
-      // It's possible we get here before the not has been simplified, so make
-      // sure the input to the not isn't freely invertible.
-      if (match(RHS, m_Not(m_Value(Y))) && !isFreeToInvert(Y, Y->hasOneUse())) {
-        Value *NotX = Builder.CreateNot(LHS);
-        return SelectInst::Create(
-            Builder.CreateICmp(getInverseMinMaxPred(SPF), NotX, Y), NotX, Y);
-      }
-
-      // If both sides are freely invertible, then we can get rid of the xor
-      // completely.
-      if (isFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
-          isFreeToInvert(RHS, !RHS->hasNUsesOrMore(3))) {
-        Value *NotLHS = Builder.CreateNot(LHS);
-        Value *NotRHS = Builder.CreateNot(RHS);
-        return SelectInst::Create(
-            Builder.CreateICmp(getInverseMinMaxPred(SPF), NotLHS, NotRHS),
-            NotLHS, NotRHS);
-      }
-    }
-
     // Pull 'not' into operands of select if both operands are one-use compares
     // or one is one-use compare and the other one is a constant.
     // Inverting the predicates eliminates the 'not' operation.

@@ -19,6 +19,7 @@ struct ELFConfig;
 struct COFFConfig;
 struct MachOConfig;
 struct WasmConfig;
+struct XCOFFConfig;
 
 class MultiFormatConfig {
 public:
@@ -29,6 +30,7 @@ public:
   virtual Expected<const COFFConfig &> getCOFFConfig() const = 0;
   virtual Expected<const MachOConfig &> getMachOConfig() const = 0;
   virtual Expected<const WasmConfig &> getWasmConfig() const = 0;
+  virtual Expected<const XCOFFConfig &> getXCOFFConfig() const = 0;
 };
 
 } // namespace objcopy

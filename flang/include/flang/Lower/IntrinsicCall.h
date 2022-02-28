@@ -78,6 +78,17 @@ ArgLoweringRule lowerIntrinsicArgumentAs(mlir::Location,
 
 /// Return place-holder for absent intrinsic arguments.
 fir::ExtendedValue getAbsentIntrinsicArgument();
+
+//===----------------------------------------------------------------------===//
+// Direct access to intrinsics that may be used by lowering outside
+// of intrinsic call lowering.
+//===----------------------------------------------------------------------===//
+
+/// Generate power function x**y with the given expected
+/// result type.
+mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,
+                   mlir::Value x, mlir::Value y);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_INTRINSICCALL_H

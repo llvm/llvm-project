@@ -351,22 +351,21 @@ define void @masked_scatter_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; VBITS_EQ_256-NEXT:    punpklo p1.h, p0.b
-; VBITS_EQ_256-NEXT:    mov z4.s, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_EQ_256-NEXT:    mov z1.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_EQ_256-NEXT:    ptrue p1.d, vl4
-; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p1/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p1/z, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p1/z, [x1]
-; VBITS_EQ_256-NEXT:    ext z4.b, z4.b, z4.b, #16
-; VBITS_EQ_256-NEXT:    cmpne p0.d, p1/z, z1.d, #0
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z0.s
-; VBITS_EQ_256-NEXT:    sunpklo z4.d, z4.s
+; VBITS_EQ_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; VBITS_EQ_256-NEXT:    uunpklo z4.d, z0.s
+; VBITS_EQ_256-NEXT:    mov z2.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    punpklo p0.h, p0.b
+; VBITS_EQ_256-NEXT:    ext z2.b, z2.b, z2.b, #16
 ; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z4.d, #0
+; VBITS_EQ_256-NEXT:    sunpklo z2.d, z2.s
+; VBITS_EQ_256-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    st1w { z1.d }, p0, [z3.d]
-; VBITS_EQ_256-NEXT:    st1w { z0.d }, p1, [z2.d]
+; VBITS_EQ_256-NEXT:    st1w { z4.d }, p0, [z3.d]
+; VBITS_EQ_256-NEXT:    st1w { z0.d }, p1, [z1.d]
 ; VBITS_EQ_256-NEXT:    ret
 ; VBITS_GE_512-LABEL: masked_scatter_v8i32:
 ; VBITS_GE_512:       // %bb.0:

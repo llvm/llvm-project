@@ -148,8 +148,8 @@ define void @stg_alloca17() {
 ; CHECK-LABEL: stg_alloca17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
-; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 288
+; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, #256
 ; CHECK-NEXT:  .LBB11_1: // %entry
