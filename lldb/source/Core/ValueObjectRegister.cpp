@@ -269,26 +269,30 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
   // The new value will be in the m_data.  Copy that into our register value.
   error =
       m_reg_value.SetValueFromString(&m_reg_info, llvm::StringRef(value_str));
-  if (error.Success()) {
-    if (m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-      SetNeedsUpdate();
-      return true;
-    } else
-      return false;
-  } else
+  if (!error.Success())
     return false;
+
+  if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
+    error.SetErrorString("unable to write back to register");
+    return false;
+  }
+
+  SetNeedsUpdate();
+  return true;
 }
 
 bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
   error = m_reg_value.SetValueFromData(&m_reg_info, data, 0, false);
-  if (error.Success()) {
-    if (m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-      SetNeedsUpdate();
-      return true;
-    } else
-      return false;
-  } else
+  if (!error.Success())
     return false;
+
+  if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
+    error.SetErrorString("unable to write back to register");
+    return false;
+  }
+
+  SetNeedsUpdate();
+  return true;
 }
 
 bool ValueObjectRegister::ResolveValue(Scalar &scalar) {
