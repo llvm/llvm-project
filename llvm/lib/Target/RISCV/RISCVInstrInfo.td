@@ -105,6 +105,19 @@ def ImmZeroAsmOperand : AsmOperandClass {
   let DiagnosticType = !strconcat("Invalid", Name);
 }
 
+// A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
+def ZeroOffsetMemOpOperand : AsmOperandClass {
+  let Name = "ZeroOffsetMemOpOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isGPR";
+  let ParserMethod = "parseZeroOffsetMemOp";
+}
+
+def GPRMemZeroOffset : RegisterOperand<GPR> {
+  let ParserMatchClass = ZeroOffsetMemOpOperand;
+  let PrintMethod = "printZeroOffsetMemOp";
+}
+
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
 }
