@@ -401,3 +401,13 @@ void returnInitListFromVoid() {
   // CHECK-NEXT:   |-IntegerLiteral {{.*}} 'int' 7
   // CHECK-NEXT:   `-IntegerLiteral {{.*}} 'int' 8
 }
+
+void RecoveryExprForInvalidDecls(Unknown InvalidDecl) {
+  InvalidDecl + 1;
+  // CHECK:      BinaryOperator {{.*}}
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  InvalidDecl();
+  // CHECK:      CallExpr {{.*}}
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+}
