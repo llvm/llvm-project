@@ -359,7 +359,16 @@ std::string getSubDirectoryPath(SubDirectoryType Type, ToolsetLayout VSLayout,
   switch (Type) {
   case SubDirectoryType::Bin:
     if (VSLayout == ToolsetLayout::VS2017OrNewer) {
-      const bool HostIsX64 = Triple(sys::getProcessTriple()).isArch64Bit();
+      // MSVC ships with two linkers: a 32-bit x86 and 64-bit x86 linker.
+      // On x86, pick the linker that corresponds to the current process.
+      // On ARM64, pick the 32-bit x86 linker; the 64-bit one doesn't run
+      // on Windows 10.
+      //
+      // FIXME: Consider using IsWow64GuestMachineSupported to figure out
+      // if we can invoke the 64-bit linker. It's generally preferable
+      // because it won't run out of address-space.
+      const bool HostIsX64 =
+          Triple(sys::getProcessTriple()).getArch() == Triple::x86_64;
       const char *const HostName = HostIsX64 ? "Hostx64" : "Hostx86";
       sys::path::append(Path, "bin", HostName, SubdirName);
     } else { // OlderVS or DevDivInternal
