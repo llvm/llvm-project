@@ -2105,6 +2105,11 @@ bool Type::hasUnsignedIntegerRepresentation() const {
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
   if (const auto *VT = dyn_cast<MatrixType>(CanonicalType))
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+  if (CanonicalType->isVLSTBuiltinType()) {
+    const auto *VT = cast<BuiltinType>(CanonicalType);
+    return VT->getKind() >= BuiltinType::SveUint8 &&
+           VT->getKind() <= BuiltinType::SveUint64;
+  }
   return isUnsignedIntegerOrEnumerationType();
 }
 
