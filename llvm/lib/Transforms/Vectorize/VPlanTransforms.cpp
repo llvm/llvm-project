@@ -368,9 +368,12 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
     if (R.mayHaveSideEffects() ||
         any_of(R.definedValues(),
                [](VPValue *V) { return V->getNumUsers() > 0; }) ||
-        (R.getUnderlyingInstr() &&
+        (R.getUnderlyingInstr() && !isa<VPWidenIntOrFpInductionRecipe>(&R) &&
          any_of(R.getUnderlyingInstr()->users(), [&OrigLoop](User *U) {
            // Check for live-out users currently not modeled in VPlan.
+           // Note that exit values of VPWidenIntOrFpInductionRecipes are
+           // generated independent of the recipe. Such recipes can be removed,
+           // independent of uses outside the loop.
            // TODO: Remove once live-outs are modeled in VPlan.
            return !OrigLoop.contains(cast<Instruction>(U));
          })))
