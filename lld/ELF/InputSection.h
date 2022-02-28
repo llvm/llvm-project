@@ -43,7 +43,7 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, EHFrame, Merge, Synthetic, Output };
+  enum Kind { Regular, Synthetic, EHFrame, Merge, Output };
 
   Kind kind() const { return (Kind)sectionKind; }
 
@@ -339,6 +339,11 @@ public:
   InputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                StringRef name);
 
+  static bool classof(const SectionBase *s) {
+    return s->kind() == SectionBase::Regular ||
+           s->kind() == SectionBase::Synthetic;
+  }
+
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
   template <class ELFT> void writeTo(uint8_t *buf);
@@ -350,8 +355,6 @@ public:
   // sections. After assignAddresses is called, it represents the offset from
   // the beginning of the output section this section was assigned to.
   uint64_t outSecOff = 0;
-
-  static bool classof(const SectionBase *s);
 
   InputSectionBase *getRelocatedSection() const;
 

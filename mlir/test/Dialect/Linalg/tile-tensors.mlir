@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3,4" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3,4 loop-type=tiled_loop distribution-types=block_x,block_y,none" -split-input-file | FileCheck %s -check-prefix=TLOOP
 
 // CHECK-LABEL: func @matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
@@ -27,39 +26,6 @@ func @matmul_tensors(
 //      CHECK: return %[[TD0]] : tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
-
-// TLOOP-LABEL: func @matmul_tensors
-// TLOOP-SAME: (%[[ARG_0:.*]]: [[TY:.*]], %[[ARG_1:.*]]: [[TY]],
-// TLOOP-SAME: %[[ARG_2:.*]]: [[TY]]) -> [[TY]] {
-
-// TLOOP-DAG: %[[C0:.*]] = arith.constant 0 : index
-// TLOOP-DAG: %[[C1:.*]] = arith.constant 1 : index
-// TLOOP-DAG: %[[C2:.*]] = arith.constant 2 : index
-// TLOOP-DAG: %[[C3:.*]] = arith.constant 3 : index
-// TLOOP-DAG: %[[C4:.*]] = arith.constant 4 : index
-
-// TLOOP: %[[ARG_0_X:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : [[TY]]
-// TLOOP: %[[ARG_0_Y:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : [[TY]]
-// TLOOP: %[[ARG_1_Y:.*]] = tensor.dim %[[ARG_1]], %[[C1]] : [[TY]]
-
-// TLOOP: %{{.*}} = linalg.tiled_loop (%[[I:.*]], %[[J:.*]], %[[K:.*]]) =
-// TLOOP-SAME: (%[[C0]], %[[C0]], %[[C0]])
-// TLOOP-SAME: to (%[[ARG_0_X]], %[[ARG_1_Y]], %[[ARG_0_Y]])
-// TLOOP-SAME: step (%[[C2]], %[[C3]], %[[C4]])
-// TLOOP-SAME: ins (%[[A0:.*]] = %[[ARG_0]]: [[TY]], %[[A1:.*]] = %[[ARG_1]]: [[TY]])
-// TLOOP-SAME: outs (%[[A2:.*]] = %[[ARG_2]]: [[TY]])
-// TLOOP-SAME: iterators["parallel", "parallel", "reduction"]
-// TLOOP-SAME: distribution["block_x", "block_y", "none"] {
-
-// TLOOP: %[[SUB_ARG_0:.*]] = tensor.extract_slice %[[A0]][%[[I]], %[[K]]]
-// TLOOP: %[[SUB_ARG_1:.*]] = tensor.extract_slice %[[A1]][%[[K]], %[[J]]]
-// TLOOP: %[[SUB_ARG_2:.*]] = tensor.extract_slice %[[A2]][%[[I]], %[[J]]]
-
-// TLOOP: %[[PROD:.*]] = linalg.matmul ins(%[[SUB_ARG_0]], %[[SUB_ARG_1]]
-// TLOOP-SE: outs(%[[SUB_ARG_2]] : [[TY]]) -> [[TY]]
-
-// TLOOP: %[[O:.*]] = tensor.insert_slice %[[PROD]] into %[[A2]][%[[I]], %[[J]]]
-// TLOOP: linalg.yield %[[O]] : [[TY]]
 
 // -----
 
@@ -107,29 +73,6 @@ func @generic_op_tensors(
 //       CHECK:   scf.yield %[[TD1]]
 //       CHECK: }
 //       CHECK: return %[[TD0]]
-
-// TLOOP-LABEL: func @generic_op_tensors(
-// TLOOP-SAME:    %[[ARG_0:.*]]: [[TY:.*]],
-// TLOOP-SAME:    %[[ARG_1:.*]]: [[TY]]) -> [[TY]] {
-
-// TLOOP-DAG: %[[C0:.*]] = arith.constant 0 : index
-// TLOOP-DAG: %[[C1:.*]] = arith.constant 1 : index
-// TLOOP-DAG: %[[C2:.*]] = arith.constant 2 : index
-// TLOOP-DAG: %[[C3:.*]] = arith.constant 3 : index
-// TLOOP-DAG: %[[C4:.*]] = arith.constant 4 : index
-
-// TLOOP:     %[[INIT:.*]] = linalg.init_tensor
-// TLOOP:     %[[ARG_0_X:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : [[TY]]
-// TLOOP:     %[[ARG_0_Y:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : [[TY]]
-// TLOOP:     %[[ARG_0_Z:.*]] = tensor.dim %[[ARG_0]], %[[C2]] : [[TY]]
-
-// TLOOP:     %{{.*}} = linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) =
-// TLOOP-SAME: (%[[C0]], %[[C0]], %[[C0]])
-// TLOOP-SAME: to (%[[ARG_0_X]], %[[ARG_0_Y]], %[[ARG_0_Z]])
-// TLOOP-SAME: step (%[[C2]], %[[C3]], %[[C4]])
-// TLOOP-SAME: ins (%{{.*}} = %[[ARG_0]]: [[TY]], %{{.*}} = %[[ARG_1]]: [[TY]])
-// TLOOP-SAME: outs (%{{.*}} = %[[INIT]]: [[TY]])
-// TLOOP-SAME: distribution["block_x", "block_y", "none"] {
 
 // -----
 
