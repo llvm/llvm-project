@@ -133,7 +133,8 @@
 // RUN:     --sysroot %S/Inputs/basic_ve_tree \
 // RUN:     -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
-// RUN:     --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=DEF %s
+// RUN:     --unwindlib=none \
+// RUN:     --stdlib=libc++ %s 2>&1 | FileCheck -check-prefix=DEF %s
 
 // DEF:      clang{{.*}}" "-cc1"
 // DEF-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
