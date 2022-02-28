@@ -2089,6 +2089,10 @@ private:
       return TT_UnaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
+
+    if (InTemplateArgument && NextToken && NextToken->is(tok::kw_noexcept))
+      return TT_BinaryOperator;
+
     if (!NextToken ||
         NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept) ||
         NextToken->canBePointerOrReferenceQualifier() ||
