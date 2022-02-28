@@ -1,5 +1,5 @@
 ; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
-; RUN: opt -S -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK,INTERLEAVE %s
+; RUN: opt -S -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; CHECK-LABEL: @postinc
 ; CHECK-LABEL: scalar.ph:
@@ -208,12 +208,7 @@ define i32 @iv_2_dead_in_loop_only_used_outside(i64* %ptr) {
 ; VEC-NEXT:     [[VEC_IND:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IND_NEXT:%.+]], %vector.body ]
 ; CHECK-NEXT:   [[IV_0:%.+]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:   [[IV_1:%.+]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:   [[INDEX_TRUNC:%.+]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:   [[IV_2_OFFSET:%.+]] = mul i32 [[INDEX_TRUNC]], 2
-; CHECK-NEXT:   [[IV_2_0:%.+]] = add i32 %offset.idx, 0
-; INTERLEAVE-NEXT: [[IV_2_1:%.+]] = add i32 %offset.idx, 2
-; CHECK-NOT:    [[IV_2_0]]
-; INTERLEAVE-NOT:  [[IV_2_1]]
+; CHECK-NOT:    [[IV_2_0:%.+]] = add i32 %offset.idx, 0
 ; CHECK-LABEL: scalar.ph:
 ; CHECK-NEXT:    {{.+}} = phi i64 [ 1002, %middle.block ], [ 0, %entry ]
 ; CHECK-NEXT:    {{.+}} = phi i32 [ 2004, %middle.block ], [ 0, %entry ]
