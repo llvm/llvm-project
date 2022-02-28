@@ -1,3 +1,5 @@
+include(crt-config-ix)
+
 set(CRT_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CRT_TESTSUITES)
