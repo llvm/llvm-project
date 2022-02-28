@@ -119,7 +119,7 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 
 endif()
 
-if(MLIR_ENABLE_ROCM_RUNNER)
+if(MLIR_ENABLE_ROCM_CONVERSIONS)
   if (NOT ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD))
     message(SEND_ERROR
       "Building mlir with ROCm support requires the AMDGPU backend")
