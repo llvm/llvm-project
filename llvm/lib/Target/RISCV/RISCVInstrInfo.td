@@ -105,6 +105,19 @@ def ImmZeroAsmOperand : AsmOperandClass {
   let DiagnosticType = !strconcat("Invalid", Name);
 }
 
+// A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
+def ZeroOffsetMemOpOperand : AsmOperandClass {
+  let Name = "ZeroOffsetMemOpOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isGPR";
+  let ParserMethod = "parseZeroOffsetMemOp";
+}
+
+def GPRMemZeroOffset : RegisterOperand<GPR> {
+  let ParserMatchClass = ZeroOffsetMemOpOperand;
+  let PrintMethod = "printZeroOffsetMemOp";
+}
+
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
 }
@@ -437,19 +450,34 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
   let isTerminator = 1;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class Load_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_LOAD, (outs GPR:$rd), (ins GPR:$rs1, simm12:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
+class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
+    : RVInstR<funct7, 0b100, OPC_SYSTEM, (outs GPR:$rd),
+              (ins GPRMemZeroOffset:$rs1), opcodestr, "$rd, $rs1"> {
+  let rs2 = funct5;
+}
+}
+
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_STORE, (outs),
               (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
+
+class HStore_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b100, OPC_SYSTEM, (outs),
+              (ins GPR:$rs2, GPRMemZeroOffset:$rs1),
+               opcodestr, "$rs2, $rs1"> {
+  let rd = 0;
+}
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_ri<bits<3> funct3, string opcodestr>
@@ -498,6 +526,13 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv<string opcodestr, bits<7> funct7>
     : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1, GPR:$rs2),
               opcodestr, "">;
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class Priv_rr<string opcodestr, bits<7> funct7>
+    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1, GPR:$rs2),
+              opcodestr, "$rs1, $rs2"> {
+  let rd = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -684,11 +719,40 @@ def WFI : Priv<"wfi", 0b0001000>, Sched<[]> {
   let rs2 = 0b00101;
 }
 
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-def SFENCE_VMA : RVInstR<0b0001001, 0b000, OPC_SYSTEM, (outs),
-                         (ins GPR:$rs1, GPR:$rs2),
-                         "sfence.vma", "$rs1, $rs2">, Sched<[]> {
+def SFENCE_W_INVAL : Priv<"sfence.w.inval", 0b0001100>, Sched<[]> {
   let rd = 0;
+  let rs1 = 0;
+  let rs2 = 0;
+}
+
+def SFENCE_INVAL_IR : Priv<"sfence.inval.ir", 0b0001100>, Sched<[]> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = 0b00001;
+}
+
+def SFENCE_VMA  : Priv_rr<"sfence.vma", 0b0001001>, Sched<[]>;
+def SINVAL_VMA  : Priv_rr<"sinval.vma", 0b0001011>, Sched<[]>;
+def HFENCE_VVMA : Priv_rr<"hfence.vvma", 0b0010001>, Sched<[]>;
+def HFENCE_GVMA : Priv_rr<"hfence.gvma", 0b0110001>, Sched<[]>;
+def HINVAL_VVMA : Priv_rr<"hinval.vvma", 0b0010011>, Sched<[]>;
+def HINVAL_GVMA : Priv_rr<"hinval.gvma", 0b0110011>, Sched<[]>;
+
+def HLV_B   : HLoad_r<0b0110000, 0b00000, "hlv.b">, Sched<[]>;
+def HLV_BU  : HLoad_r<0b0110000, 0b00001, "hlv.bu">, Sched<[]>;
+def HLV_H   : HLoad_r<0b0110010, 0b00000, "hlv.h">, Sched<[]>;
+def HLV_HU  : HLoad_r<0b0110010, 0b00001, "hlv.hu">, Sched<[]>;
+def HLVX_HU : HLoad_r<0b0110010, 0b00011, "hlvx.hu">, Sched<[]>;
+def HLV_W   : HLoad_r<0b0110100, 0b00000, "hlv.w">, Sched<[]>;
+def HLVX_WU : HLoad_r<0b0110100, 0b00011, "hlvx.wu">, Sched<[]>;
+def HSV_B   : HStore_rr<0b0110001, "hsv.b">, Sched<[]>;
+def HSV_H   : HStore_rr<0b0110011, "hsv.h">, Sched<[]>;
+def HSV_W   : HStore_rr<0b0110101, "hsv.w">, Sched<[]>;
+
+let Predicates = [IsRV64] in {
+def HLV_WU  : HLoad_r<0b0110100, 0b00001, "hlv.wu">, Sched<[]>;
+def HLV_D   : HLoad_r<0b0110110, 0b00000, "hlv.d">, Sched<[]>;
+def HSV_D   : HStore_rr<0b0110111, "hsv.d">, Sched<[]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -833,6 +897,9 @@ def : InstAlias<"csrrc $rd, $csr, $imm", (CSRRCI GPR:$rd, csr_sysreg:$csr, uimm5
 
 def : InstAlias<"sfence.vma",     (SFENCE_VMA      X0, X0)>;
 def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
+
+def : InstAlias<"hfence.gvma",     (HFENCE_GVMA      X0, X0)>;
+def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",

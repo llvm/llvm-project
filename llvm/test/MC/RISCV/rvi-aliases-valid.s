@@ -256,6 +256,12 @@ sfence.vma
 # CHECK-S-OBJ-NOALIAS: sfence.vma a0, zero
 # CHECK-S-OBJ: sfence.vma a0
 sfence.vma a0
+# CHECK-S-OBJ-NOALIAS: hfence.gvma zero, zero
+# CHECK-S-OBJ: hfence.gvma
+hfence.gvma
+# CHECK-S-OBJ-NOALIAS: hfence.gvma a0, zero
+# CHECK-S-OBJ: hfence.gvma a0
+hfence.gvma a0
 
 # The following aliases are accepted as input but the canonical form
 # of the instruction will always be printed.

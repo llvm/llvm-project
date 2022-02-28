@@ -527,13 +527,19 @@ TEST(TypeHints, Lambda) {
   assertTypeHints(R"cpp(
     void f() {
       int cap = 42;
-      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a) { 
+      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a$ret[[)]] { 
         return a + cap + init; 
       };
     }
   )cpp",
                   ExpectedHint{": (lambda)", "L"},
-                  ExpectedHint{": int", "init"});
+                  ExpectedHint{": int", "init"}, ExpectedHint{"-> int", "ret"});
+
+  // Lambda return hint shown even if no param list.
+  // (The digraph :> is just a ] that doesn't conflict with the annotations).
+  assertTypeHints("auto $L[[x]] = <:$ret[[:>]]{return 42;};",
+                  ExpectedHint{": (lambda)", "L"},
+                  ExpectedHint{"-> int", "ret"});
 }
 
 // Structured bindings tests.
@@ -616,6 +622,11 @@ TEST(TypeHints, ReturnTypeDeduction) {
     // Do not hint `auto` for trailing return type.
     auto f3() -> int;
 
+    // Do not hint when a trailing return type is specified.
+    auto f4() -> auto* { return "foo"; }
+
+    auto f5($noreturn[[)]] {}
+
     // `auto` conversion operator
     struct A {
       operator auto($retConv[[)]] { return 42; }
@@ -628,7 +639,8 @@ TEST(TypeHints, ReturnTypeDeduction) {
     };
   )cpp",
       ExpectedHint{"-> int", "ret1a"}, ExpectedHint{"-> int", "ret1b"},
-      ExpectedHint{"-> int &", "ret2"}, ExpectedHint{"-> int", "retConv"});
+      ExpectedHint{"-> int &", "ret2"}, ExpectedHint{"-> void", "noreturn"},
+      ExpectedHint{"-> int", "retConv"});
 }
 
 TEST(TypeHints, DependentType) {

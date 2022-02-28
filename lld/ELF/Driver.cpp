@@ -102,8 +102,6 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
     lazyBitcodeFiles.clear();
     objectFiles.clear();
     sharedFiles.clear();
-    backwardReferences.clear();
-    whyExtract.clear();
     symAux.clear();
 
     tar = nullptr;
@@ -116,7 +114,7 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   };
   ctx->e.logName = args::getFilenameWithoutExe(args[0]);
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "-error-limit=0 to see all errors)";
+                                 "--error-limit=0 to see all errors)";
 
   config = std::make_unique<Configuration>();
   driver = std::make_unique<LinkerDriver>();
@@ -1697,7 +1695,7 @@ static void handleUndefined(Symbol *sym, const char *option) {
     return;
   sym->extract();
   if (!config->whyExtract.empty())
-    whyExtract.emplace_back(option, sym->file, *sym);
+    driver->whyExtract.emplace_back(option, sym->file, *sym);
 }
 
 // As an extension to GNU linkers, lld supports a variant of `-u`
@@ -1731,6 +1729,74 @@ static void handleLibcall(StringRef name) {
 
   if (isBitcode(mb))
     sym->extract();
+}
+
+void LinkerDriver::writeArchiveStats() const {
+  if (config->printArchiveStats.empty())
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os(config->printArchiveStats, ec, sys::fs::OF_None);
+  if (ec) {
+    error("--print-archive-stats=: cannot open " + config->printArchiveStats +
+          ": " + ec.message());
+    return;
+  }
+
+  os << "members\textracted\tarchive\n";
+
+  SmallVector<StringRef, 0> archives;
+  DenseMap<CachedHashStringRef, unsigned> all, extracted;
+  for (ELFFileBase *file : objectFiles)
+    if (file->archiveName.size())
+      ++extracted[CachedHashStringRef(file->archiveName)];
+  for (BitcodeFile *file : bitcodeFiles)
+    if (file->archiveName.size())
+      ++extracted[CachedHashStringRef(file->archiveName)];
+  for (std::pair<StringRef, unsigned> f : archiveFiles) {
+    unsigned &v = extracted[CachedHashString(f.first)];
+    os << f.second << '\t' << v << '\t' << f.first << '\n';
+    // If the archive occurs multiple times, other instances have a count of 0.
+    v = 0;
+  }
+}
+
+void LinkerDriver::writeWhyExtract() const {
+  if (config->whyExtract.empty())
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os(config->whyExtract, ec, sys::fs::OF_None);
+  if (ec) {
+    error("cannot open --why-extract= file " + config->whyExtract + ": " +
+          ec.message());
+    return;
+  }
+
+  os << "reference\textracted\tsymbol\n";
+  for (auto &entry : whyExtract) {
+    os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
+       << toString(std::get<2>(entry)) << '\n';
+  }
+}
+
+void LinkerDriver::reportBackrefs() const {
+  for (auto &ref : backwardReferences) {
+    const Symbol &sym = *ref.first;
+    std::string to = toString(ref.second.second);
+    // Some libraries have known problems and can cause noise. Filter them out
+    // with --warn-backrefs-exclude=. The value may look like (for --start-lib)
+    // *.o or (archive member) *.a(*.o).
+    bool exclude = false;
+    for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
+      if (pat.match(to)) {
+        exclude = true;
+        break;
+      }
+    if (!exclude)
+      warn("backward reference detected: " + sym.getName() + " in " +
+           toString(ref.second.first) + " refers to " + to);
+  }
 }
 
 // Handle --dependency-file=<path>. If that option is given, lld creates a
@@ -2436,8 +2502,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
   const size_t numObjsBeforeLTO = objectFiles.size();
   invokeELFT(compileBitcodeFiles, skipLinkedOutput);
 
-  // Symbol resolution finished. Report backward reference problems.
+  // Symbol resolution finished. Report backward reference problems,
+  // --print-archive-stats=, and --why-extract=.
   reportBackrefs();
+  writeArchiveStats();
+  writeWhyExtract();
   if (errorCount())
     return;
 

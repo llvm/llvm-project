@@ -75,11 +75,38 @@ Pattern {
 // OperationExpr
 //===----------------------------------------------------------------------===//
 
+// Test a non-constrained operation expression, and ensure that we don't treat
+// unconstrained as "not present"(e.g. zero operands).
+
 // CHECK: Module
 // CHECK: `-OperationExpr {{.*}} Type<Op>
 // CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     `-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:       `-VariableDecl {{.*}} Name<_> Type<ValueRange>
+// CHECK:         `Constraints`
+// CHECK:           `-ValueRangeConstraintDecl
+// CHECK:   `Result Types`
+// CHECK:     `-DeclRefExpr {{.*}} Type<TypeRange>
+// CHECK:       `-VariableDecl {{.*}} Name<_> Type<TypeRange>
+// CHECK:         `Constraints`
+// CHECK:           `-TypeRangeConstraintDecl
 Pattern {
   erase op<>;
+}
+
+// -----
+
+// Test explicitly empty operand/result/etc. lists, which are different from the 
+// "unconstrained" examples above.
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK-NOT: `Operands`
+// CHECK-NOT: `Result Types`
+Pattern {
+  erase op<>() -> ();
 }
 
 // -----

@@ -955,6 +955,12 @@ FailureOr<T *> Parser::parseUserNativeConstraintOrRewriteDecl(
   if (failed(parseToken(Token::semicolon,
                         "expected `;` after native declaration")))
     return failure();
+  // TODO: PDL should be able to support constraint results in certain
+  // situations, we should revise this.
+  if (std::is_same<ast::UserConstraintDecl, T>::value && !results.empty()) {
+    return emitError(
+        "native Constraints currently do not support returning results");
+  }
   return T::createNative(ctx, name, arguments, results, optCodeStr, resultType);
 }
 
@@ -1588,9 +1594,28 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
   if (failed(opNameDecl))
     return failure();
 
+  // Functor used to create an implicit range variable, used for implicit "all"
+  // operand or results variables.
+  auto createImplicitRangeVar = [&](ast::ConstraintDecl *cst, ast::Type type) {
+    FailureOr<ast::VariableDecl *> rangeVar =
+        defineVariableDecl("_", loc, type, ast::ConstraintRef(cst, loc));
+    assert(succeeded(rangeVar) && "expected range variable to be valid");
+    return ast::DeclRefExpr::create(ctx, loc, *rangeVar, type);
+  };
+
   // Check for the optional list of operands.
   SmallVector<ast::Expr *> operands;
-  if (consumeIf(Token::l_paren)) {
+  if (!consumeIf(Token::l_paren)) {
+    // If the operand list isn't specified and we are in a match context, define
+    // an inplace unconstrained operand range corresponding to all of the
+    // operands of the operation. This avoids treating zero operands the same
+    // way as "unconstrained operands".
+    if (parserContext != ParserContext::Rewrite) {
+      operands.push_back(createImplicitRangeVar(
+          ast::ValueRangeConstraintDecl::create(ctx, loc), valueRangeTy));
+    }
+  } else if (!consumeIf(Token::r_paren)) {
+    // If the operand list was specified and non-empty, parse the operands.
     do {
       FailureOr<ast::Expr *> operand = parseExpr();
       if (failed(operand))
@@ -1625,16 +1650,26 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
                           "expected `(` before operation result type list")))
       return failure();
 
-    do {
-      FailureOr<ast::Expr *> resultTypeExpr = parseExpr();
-      if (failed(resultTypeExpr))
-        return failure();
-      resultTypes.push_back(*resultTypeExpr);
-    } while (consumeIf(Token::comma));
+    // Handle the case of an empty result list.
+    if (!consumeIf(Token::r_paren)) {
+      do {
+        FailureOr<ast::Expr *> resultTypeExpr = parseExpr();
+        if (failed(resultTypeExpr))
+          return failure();
+        resultTypes.push_back(*resultTypeExpr);
+      } while (consumeIf(Token::comma));
 
-    if (failed(parseToken(Token::r_paren,
-                          "expected `)` after operation result type list")))
-      return failure();
+      if (failed(parseToken(Token::r_paren,
+                            "expected `)` after operation result type list")))
+        return failure();
+    }
+  } else if (parserContext != ParserContext::Rewrite) {
+    // If the result list isn't specified and we are in a match context, define
+    // an inplace unconstrained result range corresponding to all of the results
+    // of the operation. This avoids treating zero results the same way as
+    // "unconstrained results".
+    resultTypes.push_back(createImplicitRangeVar(
+        ast::TypeRangeConstraintDecl::create(ctx, loc), typeRangeTy));
   }
 
   return createOperationExpr(loc, *opNameDecl, operands, attributes,

@@ -19,7 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"
-#include "Driver.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
@@ -211,25 +210,6 @@ static void writeMapFile(raw_fd_ostream &os) {
   }
 }
 
-void elf::writeWhyExtract() {
-  if (config->whyExtract.empty())
-    return;
-
-  std::error_code ec;
-  raw_fd_ostream os(config->whyExtract, ec, sys::fs::OF_None);
-  if (ec) {
-    error("cannot open --why-extract= file " + config->whyExtract + ": " +
-          ec.message());
-    return;
-  }
-
-  os << "reference\textracted\tsymbol\n";
-  for (auto &entry : whyExtract) {
-    os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
-       << toString(std::get<2>(entry)) << '\n';
-  }
-}
-
 // Output a cross reference table to stdout. This is for --cref.
 //
 // For each global symbol, we print out a file that defines the symbol
@@ -293,34 +273,4 @@ void elf::writeMapAndCref() {
     writeMapFile(os);
   if (config->cref)
     writeCref(os);
-}
-
-void elf::writeArchiveStats() {
-  if (config->printArchiveStats.empty())
-    return;
-
-  std::error_code ec;
-  raw_fd_ostream os(config->printArchiveStats, ec, sys::fs::OF_None);
-  if (ec) {
-    error("--print-archive-stats=: cannot open " + config->printArchiveStats +
-          ": " + ec.message());
-    return;
-  }
-
-  os << "members\textracted\tarchive\n";
-
-  SmallVector<StringRef, 0> archives;
-  DenseMap<CachedHashStringRef, unsigned> all, extracted;
-  for (ELFFileBase *file : objectFiles)
-    if (file->archiveName.size())
-      ++extracted[CachedHashStringRef(file->archiveName)];
-  for (BitcodeFile *file : bitcodeFiles)
-    if (file->archiveName.size())
-      ++extracted[CachedHashStringRef(file->archiveName)];
-  for (std::pair<StringRef, unsigned> f : driver->archiveFiles) {
-    unsigned &v = extracted[CachedHashString(f.first)];
-    os << f.second << '\t' << v << '\t' << f.first << '\n';
-    // If the archive occurs multiple times, other instances have a count of 0.
-    v = 0;
-  }
 }

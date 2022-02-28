@@ -8,7 +8,7 @@
 # CHECK-NEXT: >>> defined at {{.*}}1.o:(.text+0x0)
 # CHECK-NEXT: >>> defined at {{.*}}1.o:(.text+0x0)
 # CHECK-EMPTY:
-# CHECK-NEXT: ld.lld: error: too many errors emitted, stopping now (use -error-limit=0 to see all errors)
+# CHECK-NEXT: ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
 ## Ensure that there isn't an additional newline before the next message:
 # CHECK-NEXT: END
 .globl _start
