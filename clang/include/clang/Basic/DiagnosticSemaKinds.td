@@ -2891,9 +2891,14 @@ def warn_auto_var_is_id : Warning<
   InGroup<DiagGroup<"auto-var-id">>;
 
 // Attributes
-def warn_nomerge_attribute_ignored_in_stmt: Warning<
+def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
+  InGroup<IgnoredAttributes>;
+
+def warn_function_attribute_ignored_in_stmt : Warning<
+  "attribute is ignored on this statement as it only applies to functions; "
+  "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
 def err_musttail_needs_trivial_args : Error<
@@ -4032,6 +4037,10 @@ def warn_attribute_nonnull_no_pointers : Warning<
   InGroup<IgnoredAttributes>;
 def warn_attribute_nonnull_parm_no_args : Warning<
   "'nonnull' attribute when used on parameters takes no arguments">,
+  InGroup<IgnoredAttributes>;
+def warn_function_stmt_attribute_precedence : Warning<
+  "statement attribute %0 has higher precedence than function attribute "
+  "'%select{always_inline|flatten}1'">,
   InGroup<IgnoredAttributes>;
 def note_declared_nonnull : Note<
   "declared %select{'returns_nonnull'|'nonnull'}0 here">;
