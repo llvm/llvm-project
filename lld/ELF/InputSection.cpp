@@ -323,11 +323,6 @@ InputSection::InputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                            StringRef name)
     : InputSectionBase(f, header, name, InputSectionBase::Regular) {}
 
-bool InputSection::classof(const SectionBase *s) {
-  return s->kind() == SectionBase::Regular ||
-         s->kind() == SectionBase::Synthetic;
-}
-
 OutputSection *InputSection::getParent() const {
   return cast_or_null<OutputSection>(parent);
 }
