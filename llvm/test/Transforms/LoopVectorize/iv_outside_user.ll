@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck %s
+; RUN: opt -S -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck %s
 
 ; CHECK-LABEL: @postinc
 ; CHECK-LABEL: scalar.ph:
@@ -173,4 +174,27 @@ BB4:
   %tmp14 = add i32 %tmp13, -8
   %tmp15 = icmp sgt i32 %tmp14, 0
   br i1 %tmp15, label %BB4, label %BB1
+}
+
+; CHECK-LABEL: @iv_scalar_steps_and_outside_users
+; CHECK-LABEL: scalar.ph:
+; CHECK-NEXT:    %bc.resume.val = phi i64 [ 1002, %middle.block ], [ 0, %entry ]
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    %iv.lcssa = phi i64 [ %iv, %loop ], [ 1001, %middle.block ]
+;
+define i64 @iv_scalar_steps_and_outside_users(i64* %ptr) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds i64, i64* %ptr, i64 %iv
+  store i64 %iv, i64* %gep.ptr
+  %exitcond = icmp ugt i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %iv.lcssa = phi i64 [ %iv, %loop ]
+  ret i64 %iv.lcssa
 }
