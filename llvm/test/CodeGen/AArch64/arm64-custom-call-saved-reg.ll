@@ -72,6 +72,7 @@ define dso_local void @callee() {
 ; CHECK-SAVED-X18: str x18, [sp
 
 ; CHECK-SAVED-ALL: str x18, [sp
+; CHECK-SAVED-ALL-NEXT: .cfi_def_cfa_offset
 ; CHECK-SAVED-ALL-NEXT: stp x15, x14, [sp
 ; CHECK-SAVED-ALL-NEXT: stp x13, x12, [sp
 ; CHECK-SAVED-ALL-NEXT: stp x11, x10, [sp
