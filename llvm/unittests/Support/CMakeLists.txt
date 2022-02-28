@@ -22,6 +22,8 @@ add_llvm_unittest(SupportTests
   CompressionTest.cpp
   ConvertUTFTest.cpp
   CRCTest.cpp
+  CSKYAttributeParserTest.cpp
+  CSKYTargetParserTest.cpp
   DataExtractorTest.cpp
   DebugTest.cpp
   DebugCounterTest.cpp
