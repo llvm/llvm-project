@@ -27,6 +27,7 @@ entry:
 
 ; CHECK-LABEL: b:
 ; CHECK:       str     d8, [sp, #-32]!
+; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT:  stp     x29, x30, [sp, #8]
 ; CHECK-NEXT:  str     x19, [sp, #24]
 ; CHECK-NEXT:  add     x29, sp, #8

@@ -9,11 +9,11 @@ define dso_local void @run_test() local_unnamed_addr #0 {
 ; CHECK-LABEL: run_test:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset b8, -8
 ; CHECK-NEXT:    .cfi_offset b9, -16
 ; CHECK-NEXT:    .cfi_offset b10, -24
@@ -176,6 +176,7 @@ define dso_local void @run_test() local_unnamed_addr #0 {
 ; CHECK-NEXT:    str q0, [x8, #496]
 ; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
+; CH`ECK-NEXT:    .cfi_offset b9, -16
 entry:
   br label %for.cond1.preheader
 

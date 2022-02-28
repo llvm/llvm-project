@@ -27,6 +27,7 @@ entry:
 ;
 ; CHECK-LABEL: caller_meta_leaf
 ; CHECK:       sub sp, sp, #48
+; CHECK-NEXT: .cfi_def_cfa_offset 48
 ; CHECK-NEXT:  stp x29, x30, [sp, #32]
 ; CHECK-NEXT:  add x29, sp, #32
 ; CHECK:       Ltmp
