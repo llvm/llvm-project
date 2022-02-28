@@ -31,13 +31,13 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-LABEL: test_musttail_variadic_spill:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #224
+; CHECK-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-NEXT:    stp x28, x27, [sp, #128] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #144] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #160] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #176] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #192] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #208] ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -103,13 +103,13 @@ define void @f_thunk(i8* %this, ...) {
 ; CHECK-LABEL: f_thunk:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #256
+; CHECK-NEXT:    .cfi_def_cfa_offset 256
 ; CHECK-NEXT:    stp x28, x27, [sp, #160] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #176] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #192] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #208] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #224] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #240] ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 256
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24

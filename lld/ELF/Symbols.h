@@ -228,7 +228,7 @@ private:
   void resolveLazy(const LazyObject &other);
   void resolveShared(const SharedSymbol &other);
 
-  bool compare(const Defined &other) const;
+  bool shouldReplace(const Defined &other) const;
 
   inline size_t getSymbolSize() const;
 

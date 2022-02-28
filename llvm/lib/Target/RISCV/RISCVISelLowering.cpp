@@ -303,6 +303,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
     setOperationAction(ISD::CTPOP, XLenVT, Expand);
+
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
   if (Subtarget.hasStdExtZbt()) {
@@ -6620,6 +6623,34 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
     // promotion for UADDO/USUBO.
     Results.push_back(expandAddSubSat(N, DAG));
+    return;
+  }
+  case ISD::ABS: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+
+    // Expand abs to Y = (sraiw X, 31); subw(xor(X, Y), Y)
+
+    SDValue Src = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+
+    // Freeze the source so we can increase it's use count.
+    Src = DAG.getFreeze(Src);
+
+    // Copy sign bit to all bits using the sraiw pattern.
+    SDValue SignFill = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Src,
+                                   DAG.getValueType(MVT::i32));
+    SignFill = DAG.getNode(ISD::SRA, DL, MVT::i64, SignFill,
+                           DAG.getConstant(31, DL, MVT::i64));
+
+    SDValue NewRes = DAG.getNode(ISD::XOR, DL, MVT::i64, Src, SignFill);
+    NewRes = DAG.getNode(ISD::SUB, DL, MVT::i64, NewRes, SignFill);
+
+    // NOTE: The result is only required to be anyextended, but sext is
+    // consistent with type legalization of sub.
+    NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewRes,
+                         DAG.getValueType(MVT::i32));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
     return;
   }
   case ISD::BITCAST: {

@@ -15,6 +15,7 @@
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
 #include "llvm/ObjCopy/wasm/WasmConfig.h"
+#include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
 
 namespace llvm {
 namespace objcopy {
@@ -32,12 +33,15 @@ struct ConfigManager : public MultiFormatConfig {
 
   Expected<const WasmConfig &> getWasmConfig() const override;
 
+  Expected<const XCOFFConfig &> getXCOFFConfig() const override;
+
   // All configs.
   CommonConfig Common;
   ELFConfig ELF;
   COFFConfig COFF;
   MachOConfig MachO;
   WasmConfig Wasm;
+  XCOFFConfig XCOFF;
 };
 
 } // namespace objcopy

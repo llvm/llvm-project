@@ -451,9 +451,6 @@ private:
   const void *SymbolTblPtr = nullptr;
   XCOFFStringTable StringTable = {0, nullptr};
 
-  const XCOFFFileHeader32 *fileHeader32() const;
-  const XCOFFFileHeader64 *fileHeader64() const;
-
   const XCOFFSectionHeader32 *sectionHeaderTable32() const;
   const XCOFFSectionHeader64 *sectionHeaderTable64() const;
   template <typename T> const T *sectionHeaderTable() const;
@@ -551,6 +548,8 @@ public:
 
   // Below here is the non-inherited interface.
   bool is64Bit() const;
+  Expected<StringRef> getRawData(const char *Start, uint64_t Size,
+                                 StringRef Name) const;
 
   const XCOFFAuxiliaryHeader32 *auxiliaryHeader32() const;
   const XCOFFAuxiliaryHeader64 *auxiliaryHeader64() const;
@@ -562,6 +561,8 @@ public:
   XCOFFSymbolRef toSymbolRef(DataRefImpl Ref) const;
 
   // File header related interfaces.
+  const XCOFFFileHeader32 *fileHeader32() const;
+  const XCOFFFileHeader64 *fileHeader64() const;
   uint16_t getMagic() const;
   uint16_t getNumberOfSections() const;
   int32_t getTimeStamp() const;
@@ -689,6 +690,9 @@ public:
     else
       Entry32 = reinterpret_cast<const XCOFFSymbolEntry32 *>(SymEntDataRef.p);
   }
+
+  const XCOFFSymbolEntry32 *getSymbol32() { return Entry32; }
+  const XCOFFSymbolEntry64 *getSymbol64() { return Entry64; }
 
   uint64_t getValue() const { return Entry32 ? getValue32() : getValue64(); }
 

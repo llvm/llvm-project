@@ -1,4 +1,5 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck %s
+; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
+; RUN: opt -S -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; CHECK-LABEL: @postinc
 ; CHECK-LABEL: scalar.ph:
@@ -173,4 +174,61 @@ BB4:
   %tmp14 = add i32 %tmp13, -8
   %tmp15 = icmp sgt i32 %tmp14, 0
   br i1 %tmp15, label %BB4, label %BB1
+}
+
+; CHECK-LABEL: @iv_scalar_steps_and_outside_users
+; CHECK-LABEL: scalar.ph:
+; CHECK-NEXT:    %bc.resume.val = phi i64 [ 1002, %middle.block ], [ 0, %entry ]
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    %iv.lcssa = phi i64 [ %iv, %loop ], [ 1001, %middle.block ]
+;
+define i64 @iv_scalar_steps_and_outside_users(i64* %ptr) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds i64, i64* %ptr, i64 %iv
+  store i64 %iv, i64* %gep.ptr
+  %exitcond = icmp ugt i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %iv.lcssa = phi i64 [ %iv, %loop ]
+  ret i64 %iv.lcssa
+}
+
+
+; %iv.2 is dead in the vector loop and only used outside the loop.
+define i32 @iv_2_dead_in_loop_only_used_outside(i64* %ptr) {
+; CHECK-LABEL: @iv_2_dead_in_loop_only_used_outside
+; CHECK-LABEL: vector.body:
+; CHECK-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.+]], %vector.body ]
+; VEC-NEXT:     [[VEC_IND:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IND_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:   [[IV_0:%.+]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:   [[IV_1:%.+]] = add i64 [[INDEX]], 1
+; CHECK-NOT:    [[IV_2_0:%.+]] = add i32 %offset.idx, 0
+; CHECK-LABEL: scalar.ph:
+; CHECK-NEXT:    {{.+}} = phi i64 [ 1002, %middle.block ], [ 0, %entry ]
+; CHECK-NEXT:    {{.+}} = phi i32 [ 2004, %middle.block ], [ 0, %entry ]
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    %iv.2.lcssa = phi i32 [ %iv.2, %loop ], [ 2002, %middle.block ]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.2 = phi i32 [ 0, %entry ], [ %iv.2.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %iv.2.next = add nuw i32 %iv.2, 2
+  %gep.ptr = getelementptr inbounds i64, i64* %ptr, i64 %iv
+  store i64 %iv, i64* %gep.ptr
+  %exitcond = icmp ugt i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %iv.2.lcssa = phi i32 [ %iv.2, %loop ]
+  ret i32 %iv.2.lcssa
 }

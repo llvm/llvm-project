@@ -136,7 +136,8 @@ Lexer::Lexer(FileID FID, const llvm::MemoryBufferRef &InputFile,
              Preprocessor &PP, bool IsFirstIncludeOfFile)
     : PreprocessorLexer(&PP, FID),
       FileLoc(PP.getSourceManager().getLocForStartOfFile(FID)),
-      LangOpts(PP.getLangOpts()), IsFirstTimeLexingFile(IsFirstIncludeOfFile) {
+      LangOpts(PP.getLangOpts()), LineComment(LangOpts.LineComment),
+      IsFirstTimeLexingFile(IsFirstIncludeOfFile) {
   InitLexer(InputFile.getBufferStart(), InputFile.getBufferStart(),
             InputFile.getBufferEnd());
 
@@ -149,7 +150,7 @@ Lexer::Lexer(FileID FID, const llvm::MemoryBufferRef &InputFile,
 Lexer::Lexer(SourceLocation fileloc, const LangOptions &langOpts,
              const char *BufStart, const char *BufPtr, const char *BufEnd,
              bool IsFirstIncludeOfFile)
-    : FileLoc(fileloc), LangOpts(langOpts),
+    : FileLoc(fileloc), LangOpts(langOpts), LineComment(LangOpts.LineComment),
       IsFirstTimeLexingFile(IsFirstIncludeOfFile) {
   InitLexer(BufStart, BufPtr, BufEnd);
 
@@ -2376,13 +2377,13 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
                             bool &TokAtPhysicalStartOfLine) {
   // If Line comments aren't explicitly enabled for this language, emit an
   // extension warning.
-  if (!LangOpts.LineComment) {
+  if (!LineComment) {
     if (!isLexingRawMode()) // There's no PP in raw mode, so can't emit diags.
       Diag(BufferPtr, diag::ext_line_comment);
 
     // Mark them enabled so we only emit one warning for this translation
     // unit.
-    LangOpts.LineComment = true;
+    LineComment = true;
   }
 
   // Scan over the body of the comment.  The common case, when scanning, is that
@@ -3433,8 +3434,7 @@ LexNextToken:
     // If the next token is obviously a // or /* */ comment, skip it efficiently
     // too (without going through the big switch stmt).
     if (CurPtr[0] == '/' && CurPtr[1] == '/' && !inKeepCommentMode() &&
-        LangOpts.LineComment &&
-        (LangOpts.CPlusPlus || !LangOpts.TraditionalCPP)) {
+        LineComment && (LangOpts.CPlusPlus || !LangOpts.TraditionalCPP)) {
       if (SkipLineComment(Result, CurPtr+2, TokAtPhysicalStartOfLine))
         return true; // There is a token to return.
       goto SkipIgnoredUnits;
@@ -3741,8 +3741,8 @@ LexNextToken:
       // "foo".  Check to see if the character after the second slash is a '*'.
       // If so, we will lex that as a "/" instead of the start of a comment.
       // However, we never do this if we are just preprocessing.
-      bool TreatAsComment = LangOpts.LineComment &&
-                            (LangOpts.CPlusPlus || !LangOpts.TraditionalCPP);
+      bool TreatAsComment =
+          LineComment && (LangOpts.CPlusPlus || !LangOpts.TraditionalCPP);
       if (!TreatAsComment)
         if (!(PP && PP->isPreprocessedOutput()))
           TreatAsComment = getCharAndSize(CurPtr+SizeTmp, SizeTmp2) != '*';

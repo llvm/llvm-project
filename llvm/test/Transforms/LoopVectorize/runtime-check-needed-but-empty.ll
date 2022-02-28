@@ -12,18 +12,18 @@ define void @test(float* %A, i32 %x) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP7]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[X]]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP9]] to <4 x float>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP2]], [[X]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, float* [[TMP13]], i32 0
