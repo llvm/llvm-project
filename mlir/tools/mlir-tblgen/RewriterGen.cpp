@@ -322,7 +322,7 @@ private:
   int staticMatcherCounter = 0;
 
   // The DagLeaf which contains type or attr constraint.
-  DenseSet<DagLeaf> constraints;
+  SetVector<DagLeaf> constraints;
 
   // Static type/attribute verification function emitter.
   StaticVerifierFunctionEmitter staticVerifierEmitter;
@@ -1708,7 +1708,7 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
 }
 
 void StaticMatcherHelper::populateStaticConstraintFunctions(raw_ostream &os) {
-  staticVerifierEmitter.emitPatternConstraints(constraints);
+  staticVerifierEmitter.emitPatternConstraints(constraints.getArrayRef());
 }
 
 void StaticMatcherHelper::addPattern(Record *record) {
