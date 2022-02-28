@@ -65,10 +65,10 @@ define amdgpu_kernel void @test_mad_legacy_f32(float addrspace(1)* %out, float %
 }
 
 ; GCN-LABEL: {{^}}test_mad_legacy_f32_imm:
-; GFX6: v_mac_legacy_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX6: v_mad_legacy_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX8: v_mad_legacy_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_mad_legacy_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX101: v_mac_legacy_f32_e64 v{{[0-9]+}}, 0x41200000, s{{[0-9]+}}
+; GFX101: v_mad_legacy_f32 v{{[0-9]+}}, 0x41200000, s{{[0-9]+}}
 ; GFX103: v_mul_legacy_f32_e64 v{{[0-9]+}}, 0x41200000, s{{[0-9]+}}
 ; GFX103: v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @test_mad_legacy_f32_imm(float addrspace(1)* %out, float %a, float %c) #2 {
