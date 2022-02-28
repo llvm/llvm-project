@@ -948,3 +948,35 @@ func @test7(%arg0: i32) -> i1 {
   // CHECK: %[[c3:.+]] = arith.constant 3 : i32
   // CHECK: arith.cmpi ugt, %[[arg0]], %[[c3]] : i32
 }
+
+// -----
+
+// CHECK-LABEL: @foldShl(
+// CHECK: %[[res:.+]] = arith.constant 4294967296 : i64
+// CHECK: return %[[res]]
+func @foldShl() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c32 = arith.constant 32 : i64
+  %r = arith.shli %c1, %c32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShl(
+// CHECK: %[[res:.+]] = arith.shli
+// CHECK: return %[[res]]
+func @nofoldShl() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c132 = arith.constant 132 : i64
+  %r = arith.shli %c1, %c132 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShl2(
+// CHECK: %[[res:.+]] = arith.shli
+// CHECK: return %[[res]]
+func @nofoldShl2() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %cm32 = arith.constant -32 : i64
+  %r = arith.shli %c1, %cm32 : i64
+  return %r : i64
+}

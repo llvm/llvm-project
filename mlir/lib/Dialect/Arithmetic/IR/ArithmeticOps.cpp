@@ -1850,6 +1850,20 @@ LogicalResult arith::SelectOp::verify() {
   }
   return success();
 }
+//===----------------------------------------------------------------------===//
+// ShLIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
+  // Don't fold if shifting more than the bit width.
+  bool bounded = false;
+  auto result =
+      constFoldBinaryOp<IntegerAttr>(operands, [&](APInt a, const APInt &b) {
+        bounded = b.ule(b.getBitWidth());
+        return std::move(a).shl(b);
+      });
+  return bounded ? result : Attribute();
+}
 
 //===----------------------------------------------------------------------===//
 // Atomic Enum
