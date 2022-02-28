@@ -945,10 +945,9 @@ declare i32 @llvm.abs.i32(i32, i1 immarg)
 define i32 @abs_i32(i32 %x) {
 ; RV64I-LABEL: abs_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    srai a1, a0, 63
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs_i32:
@@ -965,7 +964,7 @@ define i32 @abs_i32(i32 %x) {
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srai a1, a0, 63
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
