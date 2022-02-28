@@ -31,20 +31,16 @@ std::unique_ptr<Pass> createFoldReshapeOpsByLinearizationPass();
 
 std::unique_ptr<Pass> createLinalgNamedOpConversionPass();
 
-std::unique_ptr<OperationPass<FuncOp>> createLinalgTilingPass(
-    ArrayRef<int64_t> tileSizes = {},
-    linalg::LinalgTilingLoopType loopType = linalg::LinalgTilingLoopType::Loops,
-    ArrayRef<StringRef> distributionTypes = {});
+std::unique_ptr<OperationPass<FuncOp>>
+createLinalgTilingPass(ArrayRef<int64_t> tileSizes = {},
+                       linalg::LinalgTilingLoopType loopType =
+                           linalg::LinalgTilingLoopType::Loops);
 
 std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca);
 std::unique_ptr<OperationPass<FuncOp>> createLinalgPromotionPass();
 
 std::unique_ptr<OperationPass<FuncOp>> createLinalgInlineScalarOperandsPass();
-
-/// Create a pass to convert Linalg tiled loops to `scf.for` and `scf.parallel`
-/// loops and memref.load/memref.store accesses.
-std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgTiledLoopsToSCFPass();
 
 /// Create a pass to convert Linalg operations to scf.for loops and
 /// memref.load/memref.store accesses.

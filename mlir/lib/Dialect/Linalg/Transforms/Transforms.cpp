@@ -299,18 +299,6 @@ static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter, Operation *op) {
       .Default([&](Operation *op) { return op->getResults(); });
 }
 
-/// Try to peel a TiledLoopOp and return the new result.
-static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter,
-                                      TiledLoopOp tiledLoop, int64_t idx) {
-  assert(idx < static_cast<int64_t>(tiledLoop.iterator_types().size()) &&
-         "requested peeling of non-existing loop");
-  TiledLoopOp result;
-  if (succeeded(peelAndCanonicalizeTiledLoop(rewriter, tiledLoop, idx, result)))
-    return result->getResults();
-  assert(!result && "expected that loop was not peeled");
-  return tiledLoop->getResults();
-}
-
 /// Peel loops after tiling.
 void mlir::linalg::peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
                                      ArrayRef<int64_t> peeledLoops,
@@ -320,17 +308,7 @@ void mlir::linalg::peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
            "requested peeling of non-existing loop");
     SmallVector<Value, 4> loopResults;
     Operation *loopOp = res.loops[loop];
-    if (loopType == LinalgTilingLoopType::TiledLoops) {
-      assert(llvm::all_of(
-                 res.loops,
-                 [&](Operation *op) { return op == res.loops.front(); }) &&
-             "expected that all loop ops are the same TiledLoopOp");
-      auto tiledLoopOp = dyn_cast<TiledLoopOp>(loopOp);
-      assert(tiledLoopOp && "expected TiledLoopOp");
-      loopResults = peelLoop(rewriter, tiledLoopOp, loop);
-    } else {
-      loopResults = peelLoop(rewriter, loopOp);
-    }
+    loopResults = peelLoop(rewriter, loopOp);
 
     // The result of the loop nest may change with peeling.
     if (res.tensorResults.size() == loopOp->getNumResults() &&

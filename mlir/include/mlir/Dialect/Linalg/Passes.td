@@ -121,17 +121,6 @@ def LinalgNamedOpConversion: Pass<"linalg-named-op-conversion"> {
   let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
 }
 
-def LinalgLowerTiledLoopsToSCF
-    : Pass<"convert-linalg-tiled-loops-to-scf", "FuncOp"> {
-  let summary = "Lower linalg tiled loops to SCF loops and parallel loops";
-  let constructor = "mlir::createConvertLinalgTiledLoopsToSCFPass()";
-  let dependentDialects = [
-    "linalg::LinalgDialect",
-    "scf::SCFDialect",
-    "AffineDialect"
-  ];
-}
-
 def LinalgInlineScalarOperands : Pass<"linalg-inline-scalar-operands", "FuncOp"> {
   let summary = "Inline scalar operands into linalg generic ops";
   let constructor = "mlir::createLinalgInlineScalarOperandsPass()";
@@ -207,12 +196,7 @@ def LinalgTiling : Pass<"linalg-tile", "FuncOp"> {
     ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
     Option<"loopType", "loop-type", "std::string", /*default=*/"\"for\"",
-           "Specify the type of loops to generate: for, parallel or "
-           "tiled_loop">,
-    ListOption<"distributionTypes", "distribution-types", "std::string",
-               "DistributionTypes (if loop-type=tiled_loop)",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
-
+           "Specify the type of loops to generate: for, parallel">
   ];
 }
 

@@ -639,7 +639,7 @@ func @scf_for_deps(
     %lb : index,
     %ub : index,
     %step : index)
-  -> (tensor<?xf32>, tensor<?xf32>)
+  -> (tensor<?xf32>)
 {
   // %r0 must be out of place because one use of %t in the subsequent production
   // of %r1 is read.
@@ -666,38 +666,9 @@ func @scf_for_deps(
     scf.yield %t : tensor<?xf32>
   }
 
-  // %r2 must be out of place because one use of %t in the subsequent production
-  // of %r3 is read.
-  //      CHECK: linalg.tiled_loop
-  // CHECK-NEXT: call
-  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
-  // CHECK-NEXT: linalg.yield
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
-  //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "false"]}
-  %r2 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
-        ins()
-        outs(%t = %B: tensor<?xf32>) {
-    call @some_use(%t) : (tensor<?xf32>) -> ()
-    linalg.yield %t : tensor<?xf32>
-  }
-
-  // %r3 bufferizes inplace fine.
-  //      CHECK: linalg.tiled_loop
-  // CHECK-NEXT: call
-  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
-  // CHECK-NEXT: linalg.yield
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
-  //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true"]}
-  %r3 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
-        ins()
-        outs(%t = %B: tensor<?xf32>) {
-    call @some_use(%t) : (tensor<?xf32>) -> ()
-    linalg.yield %t : tensor<?xf32>
-  }
-
   //      CHECK: return
-  // CHECK-SAME: __equivalent_func_args__ = [0, 1]
-  return %r1, %r3: tensor<?xf32>, tensor<?xf32>
+  // CHECK-SAME: __equivalent_func_args__ = [0]
+  return %r1: tensor<?xf32>
 }
 
 // -----
