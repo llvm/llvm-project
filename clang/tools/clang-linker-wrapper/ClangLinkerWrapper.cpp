@@ -164,6 +164,15 @@ Expected<Optional<std::string>>
 extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
                   SmallVectorImpl<DeviceFile> &DeviceFiles);
 
+void printCommands(ArrayRef<StringRef> CmdArgs) {
+  if (CmdArgs.empty())
+    return;
+
+  llvm::errs() << " \"" << CmdArgs.front() << "\" ";
+  for (auto IC = CmdArgs.begin() + 1, IE = CmdArgs.end(); IC != IE; ++IC)
+    llvm::errs() << *IC << (IC + 1 != IE ? " " : "\n");
+}
+
 static StringRef getDeviceFileExtension(StringRef DeviceTriple,
                                         bool IsBitcode = false) {
   Triple TheTriple(DeviceTriple);
@@ -209,6 +218,9 @@ Error runLinker(std::string &LinkerPath, SmallVectorImpl<std::string> &Args) {
   LinkerArgs.push_back(LinkerPath);
   for (auto &Arg : Args)
     LinkerArgs.push_back(Arg);
+
+  if (Verbose)
+    printCommands(LinkerArgs);
 
   if (sys::ExecuteAndWait(LinkerPath, LinkerArgs))
     return createStringError(inconvertibleErrorCode(), "'linker' failed");
@@ -337,6 +349,9 @@ extractFromBinary(const ObjectFile &Obj,
   }
   StripArgs.push_back("-o");
   StripArgs.push_back(TempFile);
+
+  if (Verbose)
+    printCommands(StripArgs);
 
   if (sys::ExecuteAndWait(*StripPath, StripArgs))
     return createStringError(inconvertibleErrorCode(), "'llvm-strip' failed");
@@ -560,6 +575,9 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 
   CmdArgs.push_back(InputFile);
 
+  if (Verbose)
+    printCommands(CmdArgs);
+
   if (sys::ExecuteAndWait(*PtxasPath, CmdArgs))
     return createStringError(inconvertibleErrorCode(), "'ptxas' failed");
 
@@ -601,6 +619,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
+  if (Verbose)
+    printCommands(CmdArgs);
+
   if (sys::ExecuteAndWait(*NvlinkPath, CmdArgs))
     return createStringError(inconvertibleErrorCode(), "'nvlink' failed");
 
@@ -638,6 +659,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   // Add extracted input files.
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
+
+  if (Verbose)
+    printCommands(CmdArgs);
 
   if (sys::ExecuteAndWait(*LLDPath, CmdArgs))
     return createStringError(inconvertibleErrorCode(), "'lld' failed");
@@ -715,6 +739,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   // Add extracted input files.
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
+
+  if (Verbose)
+    printCommands(CmdArgs);
 
   if (sys::ExecuteAndWait(LinkerUserPath, CmdArgs))
     return createStringError(inconvertibleErrorCode(), "'linker' failed");
