@@ -450,19 +450,34 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
   let isTerminator = 1;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class Load_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_LOAD, (outs GPR:$rd), (ins GPR:$rs1, simm12:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
+class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
+    : RVInstR<funct7, 0b100, OPC_SYSTEM, (outs GPR:$rd),
+              (ins GPRMemZeroOffset:$rs1), opcodestr, "$rd, $rs1"> {
+  let rs2 = funct5;
+}
+}
+
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_STORE, (outs),
               (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
+
+class HStore_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b100, OPC_SYSTEM, (outs),
+              (ins GPR:$rs2, GPRMemZeroOffset:$rs1),
+               opcodestr, "$rs2, $rs1"> {
+  let rd = 0;
+}
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_ri<bits<3> funct3, string opcodestr>
@@ -722,6 +737,23 @@ def HFENCE_VVMA : Priv_rr<"hfence.vvma", 0b0010001>, Sched<[]>;
 def HFENCE_GVMA : Priv_rr<"hfence.gvma", 0b0110001>, Sched<[]>;
 def HINVAL_VVMA : Priv_rr<"hinval.vvma", 0b0010011>, Sched<[]>;
 def HINVAL_GVMA : Priv_rr<"hinval.gvma", 0b0110011>, Sched<[]>;
+
+def HLV_B   : HLoad_r<0b0110000, 0b00000, "hlv.b">, Sched<[]>;
+def HLV_BU  : HLoad_r<0b0110000, 0b00001, "hlv.bu">, Sched<[]>;
+def HLV_H   : HLoad_r<0b0110010, 0b00000, "hlv.h">, Sched<[]>;
+def HLV_HU  : HLoad_r<0b0110010, 0b00001, "hlv.hu">, Sched<[]>;
+def HLVX_HU : HLoad_r<0b0110010, 0b00011, "hlvx.hu">, Sched<[]>;
+def HLV_W   : HLoad_r<0b0110100, 0b00000, "hlv.w">, Sched<[]>;
+def HLVX_WU : HLoad_r<0b0110100, 0b00011, "hlvx.wu">, Sched<[]>;
+def HSV_B   : HStore_rr<0b0110001, "hsv.b">, Sched<[]>;
+def HSV_H   : HStore_rr<0b0110011, "hsv.h">, Sched<[]>;
+def HSV_W   : HStore_rr<0b0110101, "hsv.w">, Sched<[]>;
+
+let Predicates = [IsRV64] in {
+def HLV_WU  : HLoad_r<0b0110100, 0b00001, "hlv.wu">, Sched<[]>;
+def HLV_D   : HLoad_r<0b0110110, 0b00000, "hlv.d">, Sched<[]>;
+def HSV_D   : HStore_rr<0b0110111, "hsv.d">, Sched<[]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Debug instructions
