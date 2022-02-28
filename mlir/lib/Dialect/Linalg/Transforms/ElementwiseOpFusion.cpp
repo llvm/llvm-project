@@ -1205,14 +1205,14 @@ static bool isDimSequencePreserved(AffineMap indexingMap,
   sequenceElements.insert(dimSequence.begin(), dimSequence.end());
 
   unsigned dimSequenceStart = dimSequence[0];
-  for (auto expr : enumerate(indexingMap.getResults())) {
+  for (const auto &expr : enumerate(indexingMap.getResults())) {
     unsigned dimInMapStart = expr.value().cast<AffineDimExpr>().getPosition();
     // 1.  Check if this start of the sequence.
     if (dimInMapStart == dimSequenceStart) {
       if (expr.index() + dimSequence.size() > indexingMap.getNumResults())
         return false;
       // 1a. Check if sequence is preserved.
-      for (auto dimInSequence : enumerate(dimSequence)) {
+      for (const auto &dimInSequence : enumerate(dimSequence)) {
         unsigned dimInMap =
             indexingMap.getResult(expr.index() + dimInSequence.index())
                 .cast<AffineDimExpr>()
@@ -1289,7 +1289,7 @@ class CollapsingInfo {
 public:
   CollapsingInfo(SmallVector<ReassociationIndices> &&reassociation) {
     iterationReassociation = std::move(reassociation);
-    for (auto foldedIterDims : enumerate(iterationReassociation)) {
+    for (const auto &foldedIterDims : enumerate(iterationReassociation)) {
       foldedDimStartToSequenceMap[foldedIterDims.value()[0]] =
           foldedIterDims.index();
     }
@@ -1534,7 +1534,7 @@ fuseWithReshapeByCollapsing(GenericOp genericOp, Operation *reshapeOp,
   // Insert expanding reshape for the result to get back the original result
   // type.
   SmallVector<Value> results;
-  for (auto originalResult : llvm::enumerate(genericOp->getResults())) {
+  for (const auto &originalResult : llvm::enumerate(genericOp->getResults())) {
     Value collapsedOpResult =
         collapsedGenericOp->getResult(originalResult.index());
     auto originalResultType =
