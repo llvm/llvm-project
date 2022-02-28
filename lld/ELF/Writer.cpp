@@ -1429,7 +1429,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   sortInputSections();
 
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *osec = dyn_cast_or_null<OutputSection>(cmd))
+    if (auto *osec = dyn_cast<OutputSection>(cmd))
       osec->sortRank = getSectionRank(osec);
   if (!script->hasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.
