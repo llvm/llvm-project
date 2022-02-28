@@ -803,7 +803,7 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
   # this ad-hoc part can be removed.
   if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-    archive_aix_libatomic(clang_rt.atomic
+    archive_aix_libatomic(clang_rt.atomic libatomic
                           ARCHS ${BUILTIN_SUPPORTED_ARCH}
                           PARENT_TARGET builtins-standalone-atomic)
   endif()
