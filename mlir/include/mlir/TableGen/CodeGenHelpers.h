@@ -114,7 +114,7 @@ public:
   ///
   /// Constraints that do not meet the restriction that they can only reference
   /// `$_self`, `$_op`, and `$_builder` are not uniqued.
-  void emitPatternConstraints(const DenseSet<DagLeaf> &constraints);
+  void emitPatternConstraints(const ArrayRef<DagLeaf> constraints);
 
   /// Get the name of the static function used for the given type constraint.
   /// These functions are used for operand and result constraints and have the
@@ -178,7 +178,7 @@ private:
   /// Collect and unique all the constraints used by operations.
   void collectOpConstraints(ArrayRef<llvm::Record *> opDefs);
   /// Collect and unique all pattern constraints.
-  void collectPatternConstraints(const DenseSet<DagLeaf> &constraints);
+  void collectPatternConstraints(ArrayRef<DagLeaf> constraints);
 
   /// The output stream.
   raw_ostream &os;
