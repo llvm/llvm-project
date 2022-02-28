@@ -532,14 +532,20 @@ public:
   template <Fortran::common::TypeCategory TC, int KIND>
   ExtValue genval(
       const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &op) {
-    TODO(getLoc(), "genval Power");
+    mlir::Type ty = converter.genType(TC, KIND);
+    mlir::Value lhs = genunbox(op.left());
+    mlir::Value rhs = genunbox(op.right());
+    return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
   template <Fortran::common::TypeCategory TC, int KIND>
   ExtValue genval(
       const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
           &op) {
-    TODO(getLoc(), "genval RealToInt");
+    mlir::Type ty = converter.genType(TC, KIND);
+    mlir::Value lhs = genunbox(op.left());
+    mlir::Value rhs = genunbox(op.right());
+    return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
   template <int KIND>
