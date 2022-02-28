@@ -2089,36 +2089,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateSub(X, Not);
   }
 
-  // TODO: This is the same logic as above but handles the cmp-select idioms
-  //       for min/max, so the use checks are increased to account for the
-  //       extra instructions. If we canonicalize to intrinsics, this block
-  //       can likely be removed.
-  {
-    Value *LHS, *RHS, *A;
-    Value *NotA = Op0, *MinMax = Op1;
-    SelectPatternFlavor SPF = matchSelectPattern(MinMax, LHS, RHS).Flavor;
-    if (!SelectPatternResult::isMinOrMax(SPF)) {
-      NotA = Op1;
-      MinMax = Op0;
-      SPF = matchSelectPattern(MinMax, LHS, RHS).Flavor;
-    }
-    if (SelectPatternResult::isMinOrMax(SPF) &&
-        match(NotA, m_Not(m_Value(A))) && (NotA == LHS || NotA == RHS)) {
-      if (NotA == LHS)
-        std::swap(LHS, RHS);
-      // LHS is now Y above and expected to have at least 2 uses (the min/max)
-      // NotA is expected to have 2 uses from the min/max and 1 from the sub.
-      if (isFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
-          !NotA->hasNUsesOrMore(4)) {
-        Value *Not = Builder.CreateNot(MinMax);
-        if (NotA == Op0)
-          return BinaryOperator::CreateSub(Not, A);
-        else
-          return BinaryOperator::CreateSub(A, Not);
-      }
-    }
-  }
-
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;
