@@ -10,5 +10,5 @@ define i32 @bfp32(i32 %a, i32 %b) nounwind {
 ; RV32ZBF-NEXT:    bfp a0, a0, a1
 ; RV32ZBF-NEXT:    ret
   %tmp = call i32 @llvm.riscv.bfp.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }

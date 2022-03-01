@@ -10,7 +10,7 @@ define signext i32 @grev32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBP-NEXT:    grevw a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @grev32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
@@ -31,7 +31,7 @@ define signext i32 @grevi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    greviw a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 13)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i32 @llvm.riscv.gorc.i32(i32 %a, i32 %b)
@@ -42,7 +42,7 @@ define signext i32 @gorc32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBP-NEXT:    gorcw a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @gorc32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
@@ -63,7 +63,7 @@ define signext i32 @gorci32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    gorciw a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 13)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i32 @llvm.riscv.shfl.i32(i32 %a, i32 %b)
@@ -74,7 +74,7 @@ define signext i32 @shfl32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBP-NEXT:    shflw a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @shfl32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
@@ -95,7 +95,7 @@ define signext i32 @zipni32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip.n a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 1)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zip2bi32(i32 signext %a) nounwind {
@@ -104,7 +104,7 @@ define signext i32 @zip2bi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip2.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 2)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zipbi32(i32 signext %a) nounwind {
@@ -113,7 +113,7 @@ define signext i32 @zipbi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 3)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zip4hi32(i32 signext %a) nounwind {
@@ -122,7 +122,7 @@ define signext i32 @zip4hi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip4.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 4)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zip2hi32(i32 signext %a) nounwind {
@@ -131,7 +131,7 @@ define signext i32 @zip2hi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip2.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 6)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @ziphi32(i32 signext %a) nounwind {
@@ -140,7 +140,7 @@ define signext i32 @ziphi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 7)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @shfli32(i32 signext %a) nounwind {
@@ -149,7 +149,7 @@ define signext i32 @shfli32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    shfli a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 13)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zip4wi32(i32 signext %a) nounwind {
@@ -158,7 +158,7 @@ define signext i32 @zip4wi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip4.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 12)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zip2wi32(i32 signext %a) nounwind {
@@ -167,7 +167,7 @@ define signext i32 @zip2wi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip2.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 14)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zipwi32(i32 signext %a) nounwind {
@@ -176,7 +176,7 @@ define signext i32 @zipwi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 15)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @zip8wi32(i32 signext %a) nounwind {
@@ -185,7 +185,7 @@ define signext i32 @zip8wi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    zip8.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 8)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i32 @llvm.riscv.unshfl.i32(i32 %a, i32 %b)
@@ -196,7 +196,7 @@ define signext i32 @unshfl32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBP-NEXT:    unshflw a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unshfl32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
@@ -217,7 +217,7 @@ define signext i32 @unzipni32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.n a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 1)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzip2bi32(i32 signext %a) nounwind {
@@ -226,7 +226,7 @@ define signext i32 @unzip2bi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 2)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzipbi32(i32 signext %a) nounwind {
@@ -235,7 +235,7 @@ define signext i32 @unzipbi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 3)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzip4hi32(i32 signext %a) nounwind {
@@ -244,7 +244,7 @@ define signext i32 @unzip4hi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip4.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 4)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzip2hi32(i32 signext %a) nounwind {
@@ -253,7 +253,7 @@ define signext i32 @unzip2hi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 6)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unziphi32(i32 signext %a) nounwind {
@@ -262,7 +262,7 @@ define signext i32 @unziphi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 7)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unshfli32(i32 signext %a) nounwind {
@@ -271,7 +271,7 @@ define signext i32 @unshfli32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unshfli a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 13)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzip4wi32(i32 signext %a) nounwind {
@@ -280,7 +280,7 @@ define signext i32 @unzip4wi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip4.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 12)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzip2wi32(i32 signext %a) nounwind {
@@ -289,7 +289,7 @@ define signext i32 @unzip2wi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 14)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzipwi32(i32 signext %a) nounwind {
@@ -298,7 +298,7 @@ define signext i32 @unzipwi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 15)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 define signext i32 @unzip8wi32(i32 signext %a) nounwind {
@@ -307,7 +307,7 @@ define signext i32 @unzip8wi32(i32 signext %a) nounwind {
 ; RV64ZBP-NEXT:    unzip8.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 8)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i64 @llvm.riscv.grev.i64(i64 %a, i64 %b)
@@ -318,7 +318,7 @@ define i64 @grev64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    grev a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @grev64_demandedbits(i64 %a, i64 %b) nounwind {
@@ -337,7 +337,7 @@ define i64 @grevi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    grevi a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 13)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 ; FIXME: This is miscompiled. We can't fold the rotate with the grev.
@@ -348,7 +348,7 @@ define i64 @grevi64_24_rotl_16(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 24)
   %tmp1 = call i64 @llvm.fshl.i64(i64 %tmp, i64 %tmp, i64 16)
- ret i64 %tmp1
+  ret i64 %tmp1
 }
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 
@@ -360,7 +360,7 @@ define i64 @grevi64_24_rotr_16(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 24)
   %tmp1 = call i64 @llvm.fshr.i64(i64 %tmp, i64 %tmp, i64 16)
- ret i64 %tmp1
+  ret i64 %tmp1
 }
 declare i64 @llvm.fshr.i64(i64, i64, i64)
 
@@ -370,7 +370,7 @@ define i64 @revhwi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 15)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev16wi64(i64 %a) nounwind {
@@ -379,7 +379,7 @@ define i64 @rev16wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev16.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 16)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev8wi64(i64 %a) nounwind {
@@ -388,7 +388,7 @@ define i64 @rev8wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev8.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 24)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev4wi64(i64 %a) nounwind {
@@ -397,7 +397,7 @@ define i64 @rev4wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev4.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 28)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev2wi64(i64 %a) nounwind {
@@ -406,7 +406,7 @@ define i64 @rev2wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev2.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 30)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @revwi64(i64 %a) nounwind {
@@ -415,7 +415,7 @@ define i64 @revwi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 31)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev32i64(i64 %a) nounwind {
@@ -424,7 +424,7 @@ define i64 @rev32i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev32 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 32)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev16i64(i64 %a) nounwind {
@@ -433,7 +433,7 @@ define i64 @rev16i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev16 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 48)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev8i64(i64 %a) nounwind {
@@ -442,7 +442,7 @@ define i64 @rev8i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev8 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 56)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev4i64(i64 %a) nounwind {
@@ -451,7 +451,7 @@ define i64 @rev4i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev4 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 60)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @rev2i64(i64 %a) nounwind {
@@ -460,7 +460,7 @@ define i64 @rev2i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev2 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 62)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @revi64(i64 %a) nounwind {
@@ -469,7 +469,7 @@ define i64 @revi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    rev a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 63)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.gorc.i64(i64 %a, i64 %b)
@@ -480,7 +480,7 @@ define i64 @gorc64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    gorc a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @gorc64_demandedbits(i64 %a, i64 %b) nounwind {
@@ -499,7 +499,7 @@ define i64 @gorci64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    gorci a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 13)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orchi64(i64 %a) nounwind {
@@ -508,7 +508,7 @@ define i64 @orchi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 15)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc16wi64(i64 %a) nounwind {
@@ -517,7 +517,7 @@ define i64 @orc16wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc16.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 16)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc8wi64(i64 %a) nounwind {
@@ -526,7 +526,7 @@ define i64 @orc8wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc8.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 24)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc4wi64(i64 %a) nounwind {
@@ -535,7 +535,7 @@ define i64 @orc4wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc4.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 28)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc2wi64(i64 %a) nounwind {
@@ -544,7 +544,7 @@ define i64 @orc2wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc2.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 30)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orcwi64(i64 %a) nounwind {
@@ -553,7 +553,7 @@ define i64 @orcwi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 31)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc32i64(i64 %a) nounwind {
@@ -562,7 +562,7 @@ define i64 @orc32i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc32 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 32)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc16i64(i64 %a) nounwind {
@@ -571,7 +571,7 @@ define i64 @orc16i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc16 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 48)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc8i64(i64 %a) nounwind {
@@ -580,7 +580,7 @@ define i64 @orc8i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc8 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 56)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc4i64(i64 %a) nounwind {
@@ -589,7 +589,7 @@ define i64 @orc4i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc4 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 60)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orc2i64(i64 %a) nounwind {
@@ -598,7 +598,7 @@ define i64 @orc2i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc2 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 62)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @orci64(i64 %a) nounwind {
@@ -607,7 +607,7 @@ define i64 @orci64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    orc a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 63)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.shfl.i64(i64 %a, i64 %b)
@@ -618,7 +618,7 @@ define i64 @shfl64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    shfl a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @shfl64_demandedbits(i64 %a, i64 %b) nounwind {
@@ -637,7 +637,7 @@ define i64 @shfli64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    shfli a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 13)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip4wi64(i64 %a) nounwind {
@@ -646,7 +646,7 @@ define i64 @zip4wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip4.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 12)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip2wi64(i64 %a) nounwind {
@@ -655,7 +655,7 @@ define i64 @zip2wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip2.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 14)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zipwi64(i64 %a) nounwind {
@@ -664,7 +664,7 @@ define i64 @zipwi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 15)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip8i64(i64 %a) nounwind {
@@ -673,7 +673,7 @@ define i64 @zip8i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip8 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 24)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip4i64(i64 %a) nounwind {
@@ -682,7 +682,7 @@ define i64 @zip4i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip4 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 28)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip2i64(i64 %a) nounwind {
@@ -691,7 +691,7 @@ define i64 @zip2i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip2 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 30)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zipi64(i64 %a) nounwind {
@@ -700,7 +700,7 @@ define i64 @zipi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 31)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zipni64(i64 %a) nounwind {
@@ -709,7 +709,7 @@ define i64 @zipni64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip.n a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 1)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip2bi64(i64 %a) nounwind {
@@ -718,7 +718,7 @@ define i64 @zip2bi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip2.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 2)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zipbi64(i64 %a) nounwind {
@@ -727,7 +727,7 @@ define i64 @zipbi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 3)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip4hi64(i64 %a) nounwind {
@@ -736,7 +736,7 @@ define i64 @zip4hi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip4.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 4)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @zip2hi64(i64 %a) nounwind {
@@ -745,7 +745,7 @@ define i64 @zip2hi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip2.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 6)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @ziphi64(i64 %a) nounwind {
@@ -754,7 +754,7 @@ define i64 @ziphi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    zip.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 7)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.unshfl.i64(i64 %a, i64 %b)
@@ -765,7 +765,7 @@ define i64 @unshfl64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    unshfl a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unshfl64_demandedbits(i64 %a, i64 %b) nounwind {
@@ -784,7 +784,7 @@ define i64 @unshfli64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unshfli a0, a0, 13
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 13)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip4wi64(i64 %a) nounwind {
@@ -793,7 +793,7 @@ define i64 @unzip4wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip4.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 12)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip2wi64(i64 %a) nounwind {
@@ -802,7 +802,7 @@ define i64 @unzip2wi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 14)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzipwi64(i64 %a) nounwind {
@@ -811,7 +811,7 @@ define i64 @unzipwi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 15)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip8i64(i64 %a) nounwind {
@@ -820,7 +820,7 @@ define i64 @unzip8i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip8 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 24)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip4i64(i64 %a) nounwind {
@@ -829,7 +829,7 @@ define i64 @unzip4i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip4 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 28)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip2i64(i64 %a) nounwind {
@@ -838,7 +838,7 @@ define i64 @unzip2i64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2 a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 30)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzipi64(i64 %a) nounwind {
@@ -847,7 +847,7 @@ define i64 @unzipi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 31)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzipni64(i64 %a) nounwind {
@@ -856,7 +856,7 @@ define i64 @unzipni64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.n a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 1)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip2bi64(i64 %a) nounwind {
@@ -865,7 +865,7 @@ define i64 @unzip2bi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 2)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzipbi64(i64 %a) nounwind {
@@ -874,7 +874,7 @@ define i64 @unzipbi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 3)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip4hi64(i64 %a) nounwind {
@@ -883,7 +883,7 @@ define i64 @unzip4hi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip4.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 4)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unzip2hi64(i64 %a) nounwind {
@@ -892,7 +892,7 @@ define i64 @unzip2hi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip2.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 6)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 define i64 @unziphi64(i64 %a) nounwind {
@@ -901,7 +901,7 @@ define i64 @unziphi64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    unzip.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 7)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.xperm.n.i64(i64 %a, i64 %b)
@@ -912,7 +912,7 @@ define i64 @xpermn64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    xperm.n a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.xperm.n.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.xperm.b.i64(i64 %a, i64 %b)
@@ -923,7 +923,7 @@ define i64 @xpermb64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    xperm.b a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.xperm.b.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.xperm.h.i64(i64 %a, i64 %b)
@@ -934,7 +934,7 @@ define i64 @xpermh64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    xperm.h a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.xperm.h.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.xperm.w.i64(i64 %a, i64 %b)
@@ -945,5 +945,5 @@ define i64 @xpermw64(i64 %a, i64 %b) nounwind {
 ; RV64ZBP-NEXT:    xperm.w a0, a0, a1
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.xperm.w.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }

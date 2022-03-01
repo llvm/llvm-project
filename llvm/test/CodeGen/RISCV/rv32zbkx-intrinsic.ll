@@ -9,7 +9,7 @@ define i32 @xperm8(i32 %a, i32 %b) nounwind {
 ; RV32ZBKX-NEXT:    xperm8 a0, a0, a1
 ; RV32ZBKX-NEXT:    ret
   %tmp = call i32 @llvm.riscv.xperm8.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i32 @llvm.riscv.xperm4.i32(i32 %a, i32 %b)
@@ -20,5 +20,5 @@ define i32 @xperm4(i32 %a, i32 %b) nounwind {
 ; RV32ZBKX-NEXT:    xperm4 a0, a0, a1
 ; RV32ZBKX-NEXT:    ret
   %tmp = call i32 @llvm.riscv.xperm4.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }

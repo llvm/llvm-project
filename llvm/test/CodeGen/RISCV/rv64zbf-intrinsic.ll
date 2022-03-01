@@ -10,7 +10,7 @@ define signext i32 @bfp32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBF-NEXT:    bfpw a0, a0, a1
 ; RV64ZBF-NEXT:    ret
   %tmp = call i32 @llvm.riscv.bfp.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i64 @llvm.riscv.bfp.i64(i64 %a, i64 %b)
@@ -21,5 +21,5 @@ define i64 @bfp64(i64 %a, i64 %b) nounwind {
 ; RV64ZBF-NEXT:    bfp a0, a0, a1
 ; RV64ZBF-NEXT:    ret
   %tmp = call i64 @llvm.riscv.bfp.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }
