@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
+#include "llvm/Analysis/ReleaseModeModelRunner.h"
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
 

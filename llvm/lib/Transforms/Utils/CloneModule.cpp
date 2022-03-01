@@ -11,12 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 using namespace llvm;
+
+namespace llvm {
+class Constant;
+}
 
 static void copyComdat(GlobalObject *Dst, const GlobalObject *Src) {
   const Comdat *SC = Src->getComdat();

@@ -56,7 +56,6 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 
@@ -65,6 +64,7 @@ namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class Function;
+class Value;
 class IntrinsicInst;
 class raw_ostream;
 

@@ -368,8 +368,8 @@ struct AllocaScopeHoister : public OpRewritePattern<AllocaScopeOp> {
           !lastNonTerminatorInRegion(lastParentWithoutScope))
         return failure();
     }
-    Operation *scope = lastParentWithoutScope->getParentOp();
-    assert(scope->hasTrait<OpTrait::AutomaticAllocationScope>());
+    assert(lastParentWithoutScope->getParentOp()
+               ->hasTrait<OpTrait::AutomaticAllocationScope>());
 
     Region *containingRegion = nullptr;
     for (auto &r : lastParentWithoutScope->getRegions()) {
