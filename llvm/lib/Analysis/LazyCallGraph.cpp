@@ -35,10 +35,6 @@
 #include <tuple>
 #include <utility>
 
-#ifdef EXPENSIVE_CHECKS
-#include "llvm/ADT/ScopeExit.h"
-#endif
-
 using namespace llvm;
 
 #define DEBUG_TYPE "lcg"
