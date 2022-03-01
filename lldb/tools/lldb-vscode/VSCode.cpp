@@ -34,8 +34,8 @@ VSCode::VSCode()
       exception_breakpoints(
           {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
            {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
-           {"objc_catch", "Objective C Catch", lldb::eLanguageTypeObjC},
-           {"objc_throw", "Objective C Throw", lldb::eLanguageTypeObjC},
+           {"objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC},
+           {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC},
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
