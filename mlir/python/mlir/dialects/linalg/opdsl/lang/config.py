@@ -309,8 +309,8 @@ class LinalgStructuredOpConfig(YAMLObject):
   def add_operand(self, operand_def: OperandDef):
     if operand_def in self.operands:
       return
-    if (operand_def.kind == OperandKind.SCALAR or
-        operand_def.kind == OperandKind.TYPE_FN_ATTR):
+    if not (operand_def.is_tensor() or
+            operand_def.kind == OperandKind.INDEX_ATTR):
       self.operands[operand_def] = OperandDefConfig(operand_def)
       return
     with self.context:

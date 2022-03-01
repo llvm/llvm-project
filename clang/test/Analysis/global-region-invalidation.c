@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -analyzer-checker=core,deadcode,alpha.security.taint,debug.TaintTest,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -verify %s \
+// RUN:   -analyzer-checker=core,deadcode,alpha.security.taint,debug.TaintTest,debug.ExprInspection
 
 void clang_analyzer_eval(int);
 
@@ -33,33 +34,6 @@ int stdinTest(void) {
   fscanf(stdin, "%d", &i);
   int j = i; // expected-warning + {{tainted}}
   return m + j; // expected-warning + {{tainted}}
-}
-
-// Test errno gets invalidated by a system call.
-int testErrnoSystem(void) {
-  int i;
-  int *p = 0;
-  fscanf(stdin, "%d", &i);
-  if (errno == 0) {
-    fscanf(stdin, "%d", &i); // errno gets invalidated here.
-    return 5 / errno; // no-warning
-  }
-
-  errno = 0;
-  fscanf(stdin, "%d", &i); // errno gets invalidated here.
-  return 5 / errno; // no-warning
-}
-
-// Test that errno gets invalidated by internal calls.
-int testErrnoInternal(void) {
-  int i;
-  int *p = 0;
-  fscanf(stdin, "%d", &i);
-  if (errno == 0) {
-    foo(); // errno gets invalidated here.
-    return 5 / errno; // no-warning
-  }
-  return 0;
 }
 
 // Test that const integer does not get invalidated.
@@ -124,4 +98,3 @@ void SetToNonZero(void) {
   static int g = 5;
   clang_analyzer_eval(g == 5); // expected-warning{{TRUE}}
 }
-
