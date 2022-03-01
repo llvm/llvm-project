@@ -3525,10 +3525,14 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl();
 
   // Get overall information about the record type for the debug info.
-  llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
-  const unsigned Line =
-      getLineNumber(RD->getLocation().isValid() ? RD->getLocation() : CurLoc);
   StringRef RDName = getClassName(RD);
+  const SourceLocation Loc = RD->getLocation();
+  llvm::DIFile *DefUnit = nullptr;
+  unsigned Line = 0;
+  if (Loc.isValid()) {
+    DefUnit = getOrCreateFile(Loc);
+    Line = getLineNumber(Loc);
+  }
 
   llvm::DIScope *RDContext = getDeclContextDescriptor(RD);
 
@@ -5277,6 +5281,7 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
     return false;
   });
 }
+
 namespace {
 struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool Reconstitutable = true;
@@ -5460,10 +5465,8 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
 
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
                                      const VarDecl *D) {
-  if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
-    EmitGlobalVariableForHeterogeneousDwarf(Var, D);
-    return;
-  }
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return EmitGlobalVariableForHeterogeneousDwarf(Var, D);
 
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (D->hasAttr<NoDebugAttr>())
@@ -5507,7 +5510,15 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 
     SmallVector<uint64_t, 4> Expr;
     unsigned AddressSpace =
-        CGM.getContext().getTargetAddressSpace(CGM.GetGlobalVarAddressSpace(D));
+        CGM.getContext().getTargetAddressSpace(D->getType());
+    if (CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) {
+      if (D->hasAttr<CUDASharedAttr>())
+        AddressSpace =
+            CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared);
+      else if (D->hasAttr<CUDAConstantAttr>())
+        AddressSpace =
+            CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
+    }
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
@@ -5601,10 +5612,9 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
-  if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
-    EmitGlobalVariableForHeterogeneousDwarf(VD, Init);
-    return;
-  }
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return EmitGlobalVariableForHeterogeneousDwarf(VD, Init);
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
     return;

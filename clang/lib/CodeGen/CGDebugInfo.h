@@ -607,6 +607,7 @@ private:
                                  llvm::Optional<unsigned> ArgNo,
                                  CGBuilderTy &Builder,
                                  const bool UsePointerValue = false);
+
   /// Emit call to llvm.dbg.declare for a binding declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
@@ -614,6 +615,8 @@ private:
                                      llvm::Optional<unsigned> ArgNo,
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
+
+  // FIXME: EmitDef(const BindingDecl *...
 
   struct BlockByRefType {
     /// The wrapper struct used inside the __block_literal struct.

@@ -48,9 +48,9 @@ namespace llvm {
     Function *DeclareFn;     ///< llvm.dbg.declare
     Function *ValueFn;       ///< llvm.dbg.value
     Function *LabelFn;       ///< llvm.dbg.label
+    Function *AddrFn;        ///< llvm.dbg.addr
     Function *DefFn;         ///< llvm.dbg.def
     Function *KillFn;        ///< llvm.dbg.kill
-    Function *AddrFn;        ///< llvm.dbg.addr
 
     SmallVector<Metadata *, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.

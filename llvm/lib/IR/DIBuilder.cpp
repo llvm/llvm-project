@@ -32,8 +32,8 @@ static cl::opt<bool>
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr), DefFn(nullptr), KillFn(nullptr),
-      AddrFn(nullptr), AllowUnresolvedNodes(AllowUnresolvedNodes) {
+      ValueFn(nullptr), LabelFn(nullptr), AddrFn(nullptr), DefFn(nullptr),
+      KillFn(nullptr), AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
       AllEnumTypes.assign(ETs.begin(), ETs.end());

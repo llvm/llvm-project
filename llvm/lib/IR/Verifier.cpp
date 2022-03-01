@@ -937,6 +937,7 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
       break;
     }
   }
+
   switch (MD.getMetadataID()) {
   default:
     llvm_unreachable("Invalid MDNode subclass");
