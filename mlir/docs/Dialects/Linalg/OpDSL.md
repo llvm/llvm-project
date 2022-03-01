@@ -56,7 +56,8 @@ def matmul(A=TensorDef(T1, S.M, S.K),
   """
   domain(D.m, D.n, D.k)
   implements(ContractionOpInterface)
-  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast_signed(
+      U, A[D.m, D.k]) * TypeFn.cast_signed(U, B[D.k, D.n])
 ```
 
 Here we have a simple type polymorphic contraction that takes arguments `A` and
@@ -107,12 +108,12 @@ copy_and_scale(val, in_tensor, outs=[out_tensor])
 
 ## Index Attributes
 
-Attributes are compile-time constant parameters only accessible in index
+Index attributes are compile-time constant parameters only accessible in index
 expressions. They can be used to parameterize the access pattern of a structured
 operation, for example, by setting its strides. They cannot take part in the
 actual computation.
 
-The following example demonstrates the use of attributes:
+The following example demonstrates the use of index attributes:
 
 ```python
 @linalg_structured_op
@@ -136,9 +137,9 @@ The `strides` vector elements substitute the symbols `S.SH` and `S.SW` in the
 index expressions of the operation instance. If no strides are provided the
 `default` vector elements are used instead.
 
-Attributes are currently limited to integer vectors and only accessible in index
-expressions. An operation may have multiple attributes all of them placed at the
-end of the parameter list after the output tensors.
+Index attributes are currently limited to integer vectors and only accessible in
+index expressions. An operation may have multiple attributes all of them placed
+at the end of the parameter list after the output tensors.
 
 ## Shape-Only Tensors
 
@@ -160,7 +161,7 @@ def pooling_poly(
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
     dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
-  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast(U,
+  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast_signed(U,
           I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
 ```
 
@@ -182,8 +183,8 @@ A number of unary and binary arithmetic functions are supported:
 
 *   `BinaryFn.add(a, b)` (also via overloading the binary `+` operator)
 *   `BinaryFn.mul(a, b)` (also via overloading the binary `*` operator)
-*   `BinaryFn.max(a, b)`
-*   `BinaryFn.min(a, b)`
+*   `BinaryFn.max_signed(a, b)`
+*   `BinaryFn.min_signed(a, b)`
 *   `BinaryFn.sub(a, b)` (also via overloading the binary `-` operator)
 *   `BinaryFn.max_unsigned(a, b)`
 *   `BinaryFn.min_unsigned(a, b)`
@@ -198,8 +199,8 @@ reduction functions can appear as the outermost function on the RHS:
 
 *   `ReduceFn.add` (also overloading the inplace `+=` on a LHS)
 *   `ReduceFn.mul`
-*   `ReduceFn.max`
-*   `ReduceFn.min`
+*   `ReduceFn.max_signed`
+*   `ReduceFn.min_signed`
 *   `ReduceFn.max_unsigned`
 *   `ReduceFn.min_unsigned`
 
@@ -208,17 +209,54 @@ functions that treat integers as signed or unsigned values.
 
 Additionally, type conversion functions cast an operand to a target type:
 
-*   `TypeFn.cast(TypeVar, operand)`
+*   `TypeFn.cast_signed(TypeVar, operand)`
 *   `TypeFn.cast_unsigned(TypeVar, operand)`
 
 As the integer types are signless, signedness is implement by different
-functions that treat integers as signed (`TypeFn.cast`) or unsigned
+functions that treat integers as signed (`TypeFn.cast_signed`) or unsigned
 (`TypeFn.cast_unsigned`) values.
 
 There are also special forms:
 
 *   `const(value)` returns a constant value.
 *   `index(dim)` returns the iteration index in the given dimension `dim`.
+
+## Function Attributes
+
+Function attributes are compile-time constant function parameters. They can be
+used to parameterize the computation performed by a structured operation, for
+example, to support signed and unsigned computations.
+
+The following example demonstrates the use of function attributes:
+
+```python
+@linalg_structured_op
+def elemwise_binary(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T2),
+    O=TensorDef(U, output=True),
+    fun=BinaryFnAttrDef(default=BinaryFn.add),
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
+  O[None] = fun(cast(U, lhs[None]), cast(U, rhs[None]))
+```
+
+The `fun` and `cast` function attributes by default are aliases for their
+default values `BinaryFn.add` and `TypeFn.cast_signed`, respectively. When
+instantiating the operation, the function attributes may be set to other
+functions using optional named arguments:
+
+```python
+elemwise_binary(lhs, rhs, outs=[out_tensor],
+                fun=BinaryFn.mul, cast=TypeFn.cast_unsigned)
+```
+
+In the example, the `fun` and `cast` arguments adapt the body of the operation
+to implement multiplication and unsigned casts instead of addition and signed
+casts.
+
+OpDSL supports unary, binary, and type conversion function attributes. An
+operation can take multiple attributes of different kinds placed at the end of
+the parameter list.
 
 ## Types
 
@@ -228,26 +266,27 @@ output types of constructed ops. An exception are predefined types such as
 computations with a type that is independent of the input and output types. For
 example, parts of floating point computation may require double precision
 arithmetic despite all inputs and outputs being single precision values.
-Assignment expressions with no `TypeFn.cast` calls will generally require
+Assignment expressions with no `TypeFn.cast_signed` calls will generally require
 uniform types throughout and will fail to verify if violated. The presence of a
-`TypeFn.cast` or `TypeFn.cast_unsigned` allows for a limited form of numeric
-type conversion between element types that can be derived from inputs and
-outputs (and in the future, attributes). `TypeFn.cast` calls with a `TypeVar`
-first argument are emitted as `type_fn` primitives in the YAML definition.
+`TypeFn.cast_signed` or `TypeFn.cast_unsigned` allows for a limited form of
+numeric type conversion between element types that can be derived from inputs
+and outputs (and in the future, attributes). `TypeFn.cast_signed` calls with a
+`TypeVar` first argument are emitted as `type_fn` primitives in the YAML
+definition.
 
 Casting will perform `int<->float` and `index->int` type conversions and will
 perform any necessary extension or truncation within the type family. The
 integer types themselves are signless and signedness is implemented by
-functions/operations. The `TypeFn.cast` function treats all integers as signed,
-while `TypeFn.cast_unsigned` treats them as unsigned.
+functions/operations. The `TypeFn.cast_signed` function treats all integers as
+signed, while `TypeFn.cast_unsigned` treats them as unsigned.
 
 The following examples illustrate the lowering of signed and unsigned functions:
 
-*   cast(I32 -> I64) -> `arith.ExtSIOp`
-*   cast(F32 -> I32) -> `arith.FPToSIOp`
+*   cast_signed(I32 -> I64) -> `arith.ExtSIOp`
+*   cast_signed(F32 -> I32) -> `arith.FPToSIOp`
 *   cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
 *   cast_unsigned(F32 -> I32) -> `arith.FPToUIOp`
-*   max -> `arith.MaxSIOp`
+*   max_signed -> `arith.MaxSIOp`
 *   max_unsinged -> `arith.MaxUIOp`
 
 Not all functions are applicable for all numeric types, and on mismatch, op
@@ -265,7 +304,7 @@ An example for a rank polymorphic operation is `fill`:
 @linalg_structured_op
 def fill(value=ScalarDef(T1),
          O=TensorDef(U, output=True)):
-  O[None] = TypeFn.cast(U, value)
+  O[None] = TypeFn.cast_signed(U, value)
 ```
 
 The operation sets the elements of the output tensor `O` to `value`. All
