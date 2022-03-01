@@ -27,10 +27,6 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkBlock(Block &block);
   void checkRegion(Region &region);
 
-  void checkOperation(mlir::cir::AllocaOp *allocaOp);
-  void checkOperation(mlir::cir::StoreOp *storeOp);
-  void checkOperation(mlir::cir::LoadOp *loadOp);
-
   struct State {
     using DataTy = enum { Invalid, NullPtr, LocalValue };
     DataTy data = Invalid;
@@ -173,100 +169,116 @@ void LifetimeCheckPass::checkRegion(Region &region) {
     checkBlock(block);
 }
 
-void LifetimeCheckPass::checkOperation(mlir::cir::AllocaOp *allocaOp) {
-  auto addr = allocaOp->getAddr();
-  assert(!pmap.count(addr) && "only one alloca for any given address");
-
-  pmap[addr] = {};
-  if (!allocaOp->isPointerType()) {
-    // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
-    pmap[addr].insert(State::getLocalValue(addr));
-    currScope->localValues.push_back(addr);
-    return;
-  }
-
-  // 2.4.2 - When a non-parameter non-member Pointer p is declared, add
-  // (p, {invalid}) to pmap.
-  ptrs.insert(addr);
-  pmap[addr].insert(State::getInvalid());
-
-  // If other styles of initialization gets added, required to add support
-  // here.
-  assert(allocaOp->getInitAttr().getValue() == mlir::cir::InitStyle::cinit &&
-         "other init styles tbd");
-}
-
-void LifetimeCheckPass::checkOperation(mlir::cir::StoreOp *storeOp) {
-  auto addr = storeOp->getAddr();
-
-  // We only care about stores that change local pointers, local values
-  // are not interesting here (just yet).
-  if (!ptrs.count(addr))
-    return;
-
-  auto data = storeOp->getValue();
-  // 2.4.2 - If the declaration includes an initialization, the
-  // initialization is treated as a separate operation
-  if (auto cstOp = dyn_cast<::mlir::cir::ConstantOp>(data.getDefiningOp())) {
-    assert(cstOp.isNullPtr() && "not implemented");
-    // 2.4.2 - If the initialization is default initialization or zero
-    // initialization, set pset(p) = {null}; for example:
-    //  int* p; => pset(p) == {invalid}
-    //  int* p{}; or string_view p; => pset(p) == {null}.
-    //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
-    pmap[addr] = {};
-    pmap[addr].insert(State::getNullPtr());
-    return;
-  }
-
-  if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(data.getDefiningOp())) {
-    // p = &x;
-    pmap[addr] = {};
-    pmap[addr].insert(State::getLocalValue(data));
-    return;
-  }
-
-  storeOp->dump();
-  // FIXME: asserts here should become remarks for non-implemented parts.
-  assert(0 && "not implemented");
-}
-
-void LifetimeCheckPass::checkOperation(mlir::cir::LoadOp *loadOp) {
-  auto addr = loadOp->getAddr();
-  // Only interested in checking deference on top of pointer types.
-  if (!pmap.count(addr) || !ptrs.count(addr))
-    return;
-
-  if (!loadOp->getIsDeref())
-    return;
-
-  // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
-  // invalid.
-  if (!pmap[addr].count(State::getInvalid())) {
-    // FIXME: perhaps add a remark that we got a valid dereference
-    return;
-  }
-
-  // Looks like we found a invalid path leading to this deference point,
-  // diagnose it.
-  //
-  // Note that usually the use of the invalid address happens at the
-  // load or store using the result of this loadOp.
-  emitWarning(loadOp->getLoc())
-      << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
-  return;
-}
-
 void LifetimeCheckPass::checkOperation(Operation *op) {
+  // FIXME: allow "isScopeLike" queries so that we can unify this type
+  // of handling in a generic way.
   if (isa<::mlir::ModuleOp>(op)) {
     for (Region &region : op->getRegions())
       checkRegion(region);
     return;
   }
 
-  bool isLexicalScopeOp =
-      isa<::mlir::FuncOp>(op) || isa<::mlir::cir::ScopeOp>(op);
-  if (isLexicalScopeOp) {
+  if (isa<::mlir::FuncOp>(op)) {
+    // Add a new scope. Note that as part of the scope cleanup process
+    // we apply section 2.3 KILL(x) functionality, turning relevant
+    // references invalid.
+    {
+      LexicalScopeContext lexScope{};
+      LexicalScopeGuard scopeGuard{*this, &lexScope};
+      for (Region &region : op->getRegions())
+        checkRegion(region);
+    }
+    return;
+  }
+
+  if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(op)) {
+    auto addr = allocaOp.getAddr();
+    assert(!pmap.count(addr) && "only one alloca for any given address");
+
+    pmap[addr] = {};
+    if (!allocaOp.isPointerType()) {
+      // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
+      pmap[addr].insert(State::getLocalValue(addr));
+      currScope->localValues.push_back(addr);
+      return;
+    }
+
+    // 2.4.2 - When a non-parameter non-member Pointer p is declared, add
+    // (p, {invalid}) to pmap.
+    ptrs.insert(addr);
+    pmap[addr].insert(State::getInvalid());
+
+    // If other styles of initialization gets added, required to add support
+    // here.
+    assert(allocaOp.getInitAttr().getValue() == mlir::cir::InitStyle::cinit &&
+           "other init styles tbd");
+    return;
+  }
+
+  if (auto storeOp = dyn_cast<::mlir::cir::StoreOp>(op)) {
+    auto addr = storeOp.getAddr();
+
+    // We only care about stores that change local pointers, local values
+    // are not interesting here (just yet).
+    if (!ptrs.count(addr))
+      return;
+
+    auto data = storeOp.getValue();
+    // 2.4.2 - If the declaration includes an initialization, the
+    // initialization is treated as a separate operation
+    if (auto cstOp = dyn_cast<::mlir::cir::ConstantOp>(data.getDefiningOp())) {
+      assert(cstOp.isNullPtr() && "not implemented");
+      // 2.4.2 - If the initialization is default initialization or zero
+      // initialization, set pset(p) = {null}; for example:
+      //  int* p; => pset(p) == {invalid}
+      //  int* p{}; or string_view p; => pset(p) == {null}.
+      //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
+      pmap[addr] = {};
+      pmap[addr].insert(State::getNullPtr());
+      return;
+    }
+
+    if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(data.getDefiningOp())) {
+      // p = &x;
+      pmap[addr] = {};
+      pmap[addr].insert(State::getLocalValue(data));
+      return;
+    }
+
+    storeOp.dump();
+    // FIXME: asserts here should become remarks for non-implemented parts.
+    assert(0 && "not implemented");
+  }
+
+  if (auto loadOp = dyn_cast<::mlir::cir::LoadOp>(op)) {
+    auto addr = loadOp.getAddr();
+    // Only interested in checking deference on top of pointer types.
+    if (!pmap.count(addr) || !ptrs.count(addr))
+      return;
+
+    if (!loadOp.getIsDeref())
+      return;
+
+    // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
+    // invalid.
+    if (!pmap[addr].count(State::getInvalid())) {
+      // FIXME: perhaps add a remark that we got a valid dereference
+      return;
+    }
+
+    // Looks like we found a invalid path leading to this deference point,
+    // diagnose it.
+    //
+    // Note that usually the use of the invalid address happens at the
+    // load or store using the result of this loadOp.
+    emitWarning(loadOp.getLoc())
+        << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
+    return;
+  }
+
+  // FIXME: allow "isScopeLike" queries so that we can unify this type
+  // of handling in a generic way.
+  if (auto ScopeOp = dyn_cast<::mlir::cir::ScopeOp>(op)) {
     // Add a new scope. Note that as part of the scope cleanup process
     // we apply section 2.3 KILL(x) functionality, turning relevant
     // references invalid.
@@ -274,6 +286,7 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     LexicalScopeGuard scopeGuard{*this, &lexScope};
     for (Region &region : op->getRegions())
       checkRegion(region);
+    return;
   }
 }
 
