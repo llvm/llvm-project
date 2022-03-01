@@ -749,6 +749,7 @@ enum BasicType {
   eBasicTypeUnsignedWChar,
   eBasicTypeChar16,
   eBasicTypeChar32,
+  eBasicTypeChar8,
   eBasicTypeShort,
   eBasicTypeUnsignedShort,
   eBasicTypeInt,

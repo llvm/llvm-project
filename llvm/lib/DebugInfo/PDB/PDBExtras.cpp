@@ -63,6 +63,7 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, HResult, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char16, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char32, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char8, OS)
   }
   return OS;
 }

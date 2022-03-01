@@ -1826,6 +1826,7 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
     break;
   case dwarf::DW_ATE_UTF:
     switch (ByteSize) {
+    case 1: STK = SimpleTypeKind::Character8; break;
     case 2: STK = SimpleTypeKind::Character16; break;
     case 4: STK = SimpleTypeKind::Character32; break;
     }

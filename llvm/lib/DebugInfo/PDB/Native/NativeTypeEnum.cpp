@@ -205,6 +205,8 @@ PDB_BuiltinType NativeTypeEnum::getBuiltinType() const {
     return PDB_BuiltinType::Char16;
   case SimpleTypeKind::Character32:
     return PDB_BuiltinType::Char32;
+  case SimpleTypeKind::Character8:
+    return PDB_BuiltinType::Char8;
   case SimpleTypeKind::Int128:
   case SimpleTypeKind::Int128Oct:
   case SimpleTypeKind::Int16:
