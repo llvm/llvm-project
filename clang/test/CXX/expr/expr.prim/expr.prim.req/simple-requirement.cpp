@@ -72,7 +72,7 @@ struct E {
 };
 
 template<typename T> requires requires(T t) { typename E<T>::non_default_constructible{}; }
-// expected-note@-1 {{because 'typename E<T>::non_default_constructible({})' would be invalid: no matching constructor for initialization of 'typename E<int>::non_default_constructible'}}
+// expected-note@-1 {{because 'typename E<T>::non_default_constructible{}' would be invalid: no matching constructor for initialization of 'typename E<int>::non_default_constructible'}}
 struct r6 {};
 
 using r6i1 = r6<int>;
