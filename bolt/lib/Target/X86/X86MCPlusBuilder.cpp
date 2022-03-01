@@ -3030,21 +3030,13 @@ public:
     if (NumFound != 1)
       return false;
 
-    // Iterate backwards to replace the src register before the src/dest
-    // register as in AND, ADD, and SUB Only iterate through src operands that
-    // arent also dest operands
-    for (unsigned Index = InstDesc.getNumOperands() - 1,
-                  E = InstDesc.getNumDefs() + (I.HasLHS ? 0 : -1);
-         Index != E; --Index) {
-      if (!Inst.getOperand(Index).isReg() ||
-          Inst.getOperand(Index).getReg() != Register)
-        continue;
-      MCOperand NewOperand = MCOperand::createImm(Imm);
-      Inst.getOperand(Index) = NewOperand;
-      break;
-    }
-
+    MCOperand TargetOp = Inst.getOperand(0);
+    Inst.clear();
     Inst.setOpcode(NewOpcode);
+    Inst.addOperand(TargetOp);
+    if (I.HasLHS)
+      Inst.addOperand(TargetOp);
+    Inst.addOperand(MCOperand::createImm(Imm));
 
     return true;
   }
