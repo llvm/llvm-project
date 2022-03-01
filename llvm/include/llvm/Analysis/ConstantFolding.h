@@ -24,7 +24,6 @@ class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
 class Constant;
-class ConstantExpr;
 class DSOLocalEquivalent;
 class DataLayout;
 class Function;
