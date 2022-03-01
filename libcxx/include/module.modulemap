@@ -1020,7 +1020,7 @@ module std [system] {
       header "experimental/algorithm"
       export *
     }
-     module coroutine {
+    module coroutine {
       requires coroutines
       header "experimental/coroutine"
       export *
