@@ -11,7 +11,7 @@
 // YkLocation loc = ...;
 // pc = 0;
 // while (...) {
-//     yk_control_point(mt, loc); // <- dummy control point
+//     yk_mt_control_point(mt, loc); // <- dummy control point
 //     bc = program[pc];
 //     switch (bc) {
 //         // bytecode handlers here.
@@ -75,12 +75,12 @@ using namespace llvm;
 /// could not be found.
 /// YKFIXME: For now assumes there's only one control point.
 CallInst *findControlPointCall(Module &M) {
-  // Find the declaration of `yk_control_point()`.
+  // Find the declaration of `yk_mt_control_point()`.
   Function *CtrlPoint = M.getFunction(YK_DUMMY_CONTROL_POINT);
   if (CtrlPoint == nullptr)
     return nullptr;
 
-  // Find the call site of `yk_control_point()`.
+  // Find the call site of `yk_mt_control_point()`.
   Value::user_iterator U = CtrlPoint->user_begin();
   if (U == CtrlPoint->user_end())
     return nullptr;
@@ -124,7 +124,7 @@ public:
     CallInst *OldCtrlPointCall = findControlPointCall(M);
     if (OldCtrlPointCall == nullptr) {
       Context.emitError(
-          "ykllvm couldn't find the call to `yk_control_point()`");
+          "ykllvm couldn't find the call to `yk_mt_control_point()`");
       return false;
     }
 
@@ -138,7 +138,7 @@ public:
           return L->contains(OldCtrlPointCall);
         })) {
       ;
-      Context.emitError("yk_control_point() must be called inside a loop.");
+      Context.emitError("yk_mt_control_point() must be called inside a loop.");
       return false;
     }
 

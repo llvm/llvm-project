@@ -273,7 +273,7 @@ static cl::opt<bool> YkBlockDisambiguate(
 static cl::opt<bool>
 YkPatchCtrlPoint("yk-patch-control-point",
   cl::init(false), cl::NotHidden,
-  cl::desc("Patch yk_control_point()"));
+  cl::desc("Patch yk_mt_control_point()"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
