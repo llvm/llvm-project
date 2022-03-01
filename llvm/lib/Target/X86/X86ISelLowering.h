@@ -787,6 +787,9 @@ namespace llvm {
     LOR,
     LXOR,
     LAND,
+    LBTS,
+    LBTC,
+    LBTR,
 
     // Load, scalar_to_vector, and zero extend.
     VZEXT_LOAD,
@@ -1640,6 +1643,9 @@ namespace llvm {
     bool shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    TargetLoweringBase::AtomicExpansionKind
+    shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const;
+    void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

@@ -253,7 +253,9 @@ public:
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic, // Use a target-specific intrinsic for the LL/SC loop.
+    MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
+    BitTestIntrinsic, // Use a target-specific intrinsic for special bit
+                      // operations; used by X86.
   };
 
   /// Enum that specifies when a multiplication should be expanded.
@@ -1949,6 +1951,14 @@ public:
                                               Value *Mask, Value *ShiftAmt,
                                               AtomicOrdering Ord) const {
     llvm_unreachable("Masked atomicrmw expansion unimplemented on this target");
+  }
+
+  /// Perform a bit test atomicrmw using a target-specific intrinsic. This
+  /// represents the combined bit test intrinsic which will be lowered at a late
+  /// stage by the backend.
+  virtual void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
+    llvm_unreachable(
+        "Bit test atomicrmw expansion unimplemented on this target");
   }
 
   /// Perform a masked cmpxchg using a target-specific intrinsic. This
