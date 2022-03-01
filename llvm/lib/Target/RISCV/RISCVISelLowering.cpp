@@ -675,6 +675,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
       }
 
+      // Splice
+      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+
       // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if we have a floating point
       // type that can represent the value exactly.
       if (VT.getVectorElementType() != MVT::i64) {
@@ -753,6 +756,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
       for (unsigned VPOpc : FloatingPointVPOps)
         setOperationAction(VPOpc, VT, Custom);
@@ -3507,6 +3511,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSTEP_VECTOR(Op, DAG);
   case ISD::VECTOR_REVERSE:
     return lowerVECTOR_REVERSE(Op, DAG);
+  case ISD::VECTOR_SPLICE:
+    return lowerVECTOR_SPLICE(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::SPLAT_VECTOR:
@@ -5626,6 +5632,43 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
       DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID, Mask, VL);
 
   return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices, Mask, VL);
+}
+
+SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue V1 = Op.getOperand(0);
+  SDValue V2 = Op.getOperand(1);
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT VecVT = Op.getSimpleValueType();
+
+  unsigned MinElts = VecVT.getVectorMinNumElements();
+  SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
+                              DAG.getConstant(MinElts, DL, XLenVT));
+
+  int64_t ImmValue = cast<ConstantSDNode>(Op.getOperand(2))->getSExtValue();
+  SDValue DownOffset, UpOffset;
+  if (ImmValue >= 0) {
+    // The operand is a TargetConstant, we need to rebuild it as a regular
+    // constant.
+    DownOffset = DAG.getConstant(ImmValue, DL, XLenVT);
+    UpOffset = DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, DownOffset);
+  } else {
+    // The operand is a TargetConstant, we need to rebuild it as a regular
+    // constant rather than negating the original operand.
+    UpOffset = DAG.getConstant(-ImmValue, DL, XLenVT);
+    DownOffset = DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, UpOffset);
+  }
+
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
+  SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VLMax);
+
+  SDValue SlideDown =
+      DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT, DAG.getUNDEF(VecVT), V1,
+                  DownOffset, TrueMask, UpOffset);
+  return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VecVT, SlideDown, V2, UpOffset,
+                     TrueMask,
+                     DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
 }
 
 SDValue
