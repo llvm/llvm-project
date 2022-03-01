@@ -9,6 +9,7 @@ add_flang_library(FortranLower
   ConvertType.cpp
   ConvertVariable.cpp
   IntrinsicCall.cpp
+  IO.cpp
   ComponentPath.cpp
   DumpEvaluateExpr.cpp
   IterationSpace.cpp
