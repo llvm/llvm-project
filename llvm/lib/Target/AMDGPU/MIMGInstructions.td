@@ -964,6 +964,8 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
 //===----------------------------------------------------------------------===//
 // MIMG Instructions
 //===----------------------------------------------------------------------===//
+let OtherPredicates = [HasImageInsts] in {
+
 defm IMAGE_LOAD                 : MIMG_NoSampler <mimgopc<0x00>, "image_load", 1>;
 defm IMAGE_LOAD_MIP             : MIMG_NoSampler <mimgopc<0x01>, "image_load_mip", 1, 1>;
 defm IMAGE_LOAD_PCK             : MIMG_NoSampler <mimgopc<0x02>, "image_load_pck", 0>;
@@ -1091,6 +1093,8 @@ defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 0, 1>;
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0xe7>, "image_bvh64_intersect_ray", 1, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0xe7>, "image_bvh64_intersect_ray", 1, 1>;
+
+} // End let OtherPredicates = [HasImageInsts]
 
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/
