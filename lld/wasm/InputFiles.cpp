@@ -87,7 +87,12 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
   if (magic == file_magic::bitcode)
     return make<BitcodeFile>(mb, archiveName, offsetInArchive);
 
-  fatal("unknown file type: " + mb.getBufferIdentifier());
+  std::string name = mb.getBufferIdentifier().str();
+  if (!archiveName.empty()) {
+    name = archiveName.str() + "(" + name + ")";
+  }
+
+  fatal("unknown file type: " + name);
 }
 
 // Relocations contain either symbol or type indices.  This function takes a
