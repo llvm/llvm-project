@@ -28,7 +28,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,12 +37,10 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <limits>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;

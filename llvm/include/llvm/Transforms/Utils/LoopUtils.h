@@ -13,17 +13,17 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
 template <typename T> class DomTreeNodeBase;
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
+class StringRef;
+class AnalysisUsage;
+class TargetTransformInfo;
 class AAResults;
-class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
 class BlockFrequencyInfo;
@@ -49,8 +49,6 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
 
 template <typename T> class Optional;
 template <typename T, unsigned N> class SmallSetVector;
-template <typename T, unsigned N> class SmallVector;
-template <typename T> class SmallVectorImpl;
 template <typename T, unsigned N> class SmallPriorityWorklist;
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,

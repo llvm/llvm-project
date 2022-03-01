@@ -15,12 +15,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
+class DominatorTree;
+class AllocaInst;
+class Instruction;
 namespace memtag {
 // For an alloca valid between lifetime markers Start and Ends, call the
 // Callback for all possible exits out of the lifetime in the containing
