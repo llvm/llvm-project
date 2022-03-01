@@ -580,7 +580,9 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{"fgetln"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"fgets"}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
       {{"fscanf"}, TR::Prop({{0}}, {{}, 2})},
+      {{"fscanf_s"}, TR::Prop({{0}}, {{}, {2}})},
       {{"sscanf"}, TR::Prop({{0}}, {{}, 2})},
+
       {{"getc"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"getc_unlocked"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"getdelim"}, TR::Prop({{3}}, {{0}})},
@@ -592,6 +594,78 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{"strrchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"tolower"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"toupper"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"fread"}, TR::Prop({{3}}, {{0, ReturnValueIndex}})},
+      {{"recv"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{"recvfrom"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+
+      {{"ttyname"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"ttyname_r"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+
+      {{"basename"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"dirname"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"fnmatch"}, TR::Prop({{1}}, {{ReturnValueIndex}})},
+      {{"memchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"memrchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"rawmemchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      {{"mbtowc"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{"wctomb"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{"wcwidth"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      {{"memcmp"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{"memcpy"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{"memmove"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      // If memmem was called with a tainted needle and the search was
+      // successful, that would mean that the value pointed by the return value
+      // has the same content as the needle. If we choose to go by the policy of
+      // content equivalence implies taintedness equivalence, that would mean
+      // haystack should be considered a propagation source argument.
+      {{"memmem"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      // The comment for memmem above also applies to strstr.
+      {{"strstr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"strcasestr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      {{"strchrnul"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      {{"index"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"rindex"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      // FIXME: In case of arrays, only the first element of the array gets
+      // tainted.
+      {{"qsort"}, TR::Prop({{0}}, {{0}})},
+      {{"qsort_r"}, TR::Prop({{0}}, {{0}})},
+
+      {{"strcmp"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{"strcasecmp"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{"strncmp"}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{"strncasecmp"}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{"strspn"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{"strcspn"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{"strpbrk"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"strndup"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"strndupa"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"strlen"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"strnlen"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"strtol"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{"strtoll"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{"strtoul"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{"strtoull"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+
+      {{"isalnum"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isalpha"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isascii"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isblank"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"iscntrl"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isdigit"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isgraph"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"islower"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isprint"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"ispunct"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isspace"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isupper"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{"isxdigit"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
       {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrncat)}},
        TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrlcpy)}},
@@ -927,7 +1001,6 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
 }
 
 /// Checker registration
-
 void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<GenericTaintChecker>();
 }
