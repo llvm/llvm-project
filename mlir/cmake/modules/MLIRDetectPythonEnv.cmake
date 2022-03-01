@@ -23,11 +23,14 @@ macro(mlir_configure_python_dev_packages)
     )
     set(_python_development_component Development)
   else()
-    # Prime the search for python to see if there is a full
-    # development package. This seems to work around cmake bugs
-    # searching only for Development.Module in some environments.
-    find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
-      COMPONENTS Development)
+    if(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH)
+      # Prime the search for python to see if there is a full development
+      # package. This seems to work around cmake bugs searching only for
+      # Development.Module in some environments. However, in other environments
+      # it may interfere with the subsequent search for Development.Module.
+      find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+        COMPONENTS Development)
+    endif()
     set(_python_development_component Development.Module)
   endif()
   find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
