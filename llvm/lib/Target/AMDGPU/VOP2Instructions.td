@@ -1436,6 +1436,13 @@ multiclass VOP2_Real_MADK_vi <bits<6> op> {
             VOP2_MADKe<op{5-0}, !cast<VOP2_Pseudo>(NAME).Pfl>;
 }
 
+multiclass VOP2_Real_MADK_gfx940 <bits<6> op> {
+  def _gfx940 : VOP2_Real<!cast<VOP2_Pseudo>(NAME), SIEncodingFamily.GFX940>,
+                VOP2_MADKe<op{5-0}, !cast<VOP2_Pseudo>(NAME).Pfl> {
+    let DecoderNamespace = "GFX9";
+  }
+}
+
 multiclass VOP2_Real_e32_vi <bits<6> op> {
   def _e32_vi :
     VOP2_Real<!cast<VOP2_Pseudo>(NAME#"_e32"), SIEncodingFamily.VI>,
@@ -1735,6 +1742,11 @@ let SubtargetPredicate = isGFX90APlus in {
     defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
   }
 } // End SubtargetPredicate = isGFX90APlus
+
+let SubtargetPredicate = HasFmaakFmamkF32Insts in {
+defm V_FMAMK_F32        : VOP2_Real_MADK_gfx940 <0x17>;
+defm V_FMAAK_F32        : VOP2_Real_MADK_gfx940 <0x18>;
+}
 
 multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {
   def _dpp_vi : VOP2_DPP<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;

@@ -2,7 +2,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,GFX10-MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,FMA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,FMA,GFX10-FMA %s
+; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX9,GFX8_9_10,FMA,GFX940-FMA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
@@ -135,7 +136,8 @@ define amdgpu_kernel void @madak_inline_imm_f32(float addrspace(1)* noalias %out
 ; GCN-NOT:      v_madak_f32
 ; GFX6_8_9:     v_mac_f32_e32 [[VK]], [[SB]], [[VA]]
 ; GFX10-MAD:    v_mad_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
-; FMA:          v_fma_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
+; GFX10-FMA:    v_fma_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
+; GFX940-FMA:   v_fmac_f32_e32 v{{[0-9]+}}, [[SB]], [[VA]]
 define amdgpu_kernel void @s_v_madak_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float %b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, float addrspace(1)* %in.a, i32 %tid
@@ -156,7 +158,8 @@ define amdgpu_kernel void @s_v_madak_f32(float addrspace(1)* noalias %out, float
 ; GFX6_8_9-NOT:  v_madak_f32
 ; GFX6_8_9:      v_mac_f32_e32 [[VK]], [[SB]], [[VA]]
 ; GFX10-MAD:     v_madak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
-; FMA:           v_fmaak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
+; GFX10-FMA:     v_fmaak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
+; GFX940-FMA:    v_fmac_f32_e32 v{{[0-9]+}}, [[SB]], [[VA]]
 define amdgpu_kernel void @v_s_madak_f32(float addrspace(1)* noalias %out, float %a, float addrspace(1)* noalias %in.b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.b.gep = getelementptr float, float addrspace(1)* %in.b, i32 %tid
@@ -174,7 +177,8 @@ define amdgpu_kernel void @v_s_madak_f32(float addrspace(1)* noalias %out, float
 ; GCN-NOT: v_madak_f32
 ; GFX8_9:  v_mac_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GFX10-MAD: v_mac_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
-; FMA:       v_fmac_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
+; GFX10-FMA: v_fmac_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
+; GFX940-FMA: v_fmac_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @s_s_madak_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %mul = fmul float %a, %b
   %madak = fadd float %mul, 10.0
@@ -189,7 +193,8 @@ define amdgpu_kernel void @s_s_madak_f32(float addrspace(1)* %out, float %a, flo
 ; GFX8_9_10: {{flat|global}}_load_dword [[VA:v[0-9]+]]
 ; GFX6_8_9:  v_mad_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, {{[sv][0-9]+}}
 ; GFX10-MAD: v_mad_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, 0x41200000
-; FMA:       v_fma_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, 0x41200000
+; GFX10-FMA: v_fma_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, 0x41200000
+; GFX940-FMA: v_fma_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, {{s[0-9]+}}
 ; GCN:       s_endpgm
 define amdgpu_kernel void @no_madak_src0_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -215,7 +220,8 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(float addrspace(1)* noalia
 ; GFX8_9_10: {{flat|global}}_load_dword [[VA:v[0-9]+]]
 ; GFX6_8_9:  v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, {{[sv][0-9]+}}
 ; GFX10-MAD: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, 0x41200000
-; FMA:       v_fma_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, 0x41200000
+; GFX10-FMA: v_fma_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, 0x41200000
+; GFX940-FMA: v_fma_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, {{s[0-9]+}}
 ; GCN:       s_endpgm
 define amdgpu_kernel void @no_madak_src1_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -245,7 +251,8 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(float addrspace(1)* noalia
 ; MAD:       v_mac_f32_e64 [[MADAK]], [[SGPR0]], 0.5
 ; GFX10:     v_mov_b32_e32 [[SGPR0_VCOPY:v[0-9]+]], [[SGPR0]]
 ; GFX10-MAD: v_madak_f32 [[MADAK:v[0-9]+]], 0.5, [[SGPR0_VCOPY]], 0x42280000
-; FMA:       v_fmaak_f32 [[MADAK:v[0-9]+]], 0.5, [[SGPR0_VCOPY]], 0x42280000
+; GFX10-FMA: v_fmaak_f32 [[MADAK:v[0-9]+]], 0.5, [[SGPR0_VCOPY]], 0x42280000
+; GFX940-FMA: v_fmac_f32_e64 [[MADAK:v[0-9]+]], [[SGPR0]], 0.5
 ; GCN:       v_mul_f32_e32 [[MUL:v[0-9]+]], [[MADAK]], [[VGPR]]
 ; GFX6:      buffer_store_dword [[MUL]]
 ; GFX8_9_10: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[MUL]]
