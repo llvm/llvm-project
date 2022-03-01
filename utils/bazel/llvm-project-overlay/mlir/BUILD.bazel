@@ -5542,6 +5542,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":DLTIDialect",
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
@@ -5725,6 +5726,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AllToLLVMIRTranslations",
+        ":DLTIDialect",
         ":IR",
         ":ToLLVMIRTranslation",
         ":Translation",
@@ -5745,6 +5747,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":DLTIDialect",
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
