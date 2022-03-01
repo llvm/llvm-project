@@ -1251,7 +1251,8 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     if (LHS->getOperand(0) == RHS->getOperand(0) &&
         LHS->getOperand(1) == RHS->getOperand(1)) {
       Value *Op0 = LHS->getOperand(0), *Op1 = LHS->getOperand(1);
-      unsigned Code = getICmpCode(LHS) & getICmpCode(RHS);
+      unsigned Code =
+          getICmpCode(LHS->getPredicate()) & getICmpCode(RHS->getPredicate());
       bool IsSigned = LHS->isSigned() || RHS->isSigned();
       return getNewICmpValue(Code, IsSigned, Op0, Op1, Builder);
     }
@@ -2570,7 +2571,8 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     if (LHS0 == RHS1 && LHS1 == RHS0)
       LHS->swapOperands();
     if (LHS0 == RHS0 && LHS1 == RHS1) {
-      unsigned Code = getICmpCode(LHS) | getICmpCode(RHS);
+      unsigned Code =
+          getICmpCode(LHS->getPredicate()) | getICmpCode(RHS->getPredicate());
       bool IsSigned = LHS->isSigned() || RHS->isSigned();
       return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
@@ -3094,7 +3096,8 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         LHS->getOperand(1) == RHS->getOperand(1)) {
       // (icmp1 A, B) ^ (icmp2 A, B) --> (icmp3 A, B)
       Value *Op0 = LHS->getOperand(0), *Op1 = LHS->getOperand(1);
-      unsigned Code = getICmpCode(LHS) ^ getICmpCode(RHS);
+      unsigned Code =
+          getICmpCode(LHS->getPredicate()) ^ getICmpCode(RHS->getPredicate());
       bool IsSigned = LHS->isSigned() || RHS->isSigned();
       return getNewICmpValue(Code, IsSigned, Op0, Op1, Builder);
     }

@@ -18,9 +18,7 @@
 
 using namespace llvm;
 
-unsigned llvm::getICmpCode(const ICmpInst *ICI, bool InvertPred) {
-  ICmpInst::Predicate Pred = InvertPred ? ICI->getInversePredicate()
-                                        : ICI->getPredicate();
+unsigned llvm::getICmpCode(CmpInst::Predicate Pred) {
   switch (Pred) {
       // False -> 0
     case ICmpInst::ICMP_UGT: return 1;  // 001

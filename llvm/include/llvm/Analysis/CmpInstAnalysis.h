@@ -17,7 +17,6 @@
 #include "llvm/IR/InstrTypes.h"
 
 namespace llvm {
-  class ICmpInst;
   class Type;
   class Value;
 
@@ -44,7 +43,7 @@ namespace llvm {
   /// 110     6   A <= B
   /// 111     7   Always true
   ///
-  unsigned getICmpCode(const ICmpInst *ICI, bool InvertPred = false);
+  unsigned getICmpCode(CmpInst::Predicate Pred);
 
   /// This is the complement of getICmpCode. It turns a predicate code into
   /// either a constant true or false or the predicate for a new ICmp.
