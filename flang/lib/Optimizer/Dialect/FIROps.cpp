@@ -1416,6 +1416,13 @@ void fir::FieldIndexOp::build(mlir::OpBuilder &builder,
   result.addOperands(operands);
 }
 
+llvm::SmallVector<mlir::Attribute> fir::FieldIndexOp::getAttributes() {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  attrs.push_back(getFieldIdAttr());
+  attrs.push_back(getOnTypeAttr());
+  return attrs;
+}
+
 //===----------------------------------------------------------------------===//
 // InsertOnRangeOp
 //===----------------------------------------------------------------------===//

@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Common/Fortran.h"
+#include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -75,6 +76,12 @@ public:
   /// Get the mlir instance of a symbol.
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
+  /// Get the label set associated with a symbol.
+  virtual bool lookupLabelSet(SymbolRef sym, pft::LabelSet &labelSet) = 0;
+
+  /// Get the code defined by a label
+  virtual pft::Evaluation *lookupLabel(pft::Label label) = 0;
+
   //===--------------------------------------------------------------------===//
   // Expressions
   //===--------------------------------------------------------------------===//
@@ -98,6 +105,12 @@ public:
                                   mlir::Location loc) {
     return genExprValue(*someExpr, stmtCtx, &loc);
   }
+
+  /// Generate or get a fir.box describing the expression. If SomeExpr is
+  /// a Designator, the fir.box describes an entity over the Designator base
+  /// storage without making a temporary.
+  virtual fir::ExtendedValue genExprBox(const SomeExpr &, StatementContext &,
+                                        mlir::Location) = 0;
 
   /// Generate the address of the box describing the variable designated
   /// by the expression. The expression must be an allocatable or pointer
@@ -125,8 +138,10 @@ public:
   virtual mlir::Type genType(SymbolRef) = 0;
   /// Generate the type from a category
   virtual mlir::Type genType(Fortran::common::TypeCategory tc) = 0;
-  /// Generate the type from a category and kind
-  virtual mlir::Type genType(Fortran::common::TypeCategory tc, int kind) = 0;
+  /// Generate the type from a category and kind and length parameters.
+  virtual mlir::Type
+  genType(Fortran::common::TypeCategory tc, int kind,
+          llvm::ArrayRef<std::int64_t> lenParameters = llvm::None) = 0;
   /// Generate the type from a Variable
   virtual mlir::Type genType(const pft::Variable &) = 0;
 

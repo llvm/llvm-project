@@ -75,6 +75,15 @@ static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
   return {};
 }
 
+static mlir::Type genCharacterType(
+    mlir::MLIRContext *context, int KIND,
+    Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+          Fortran::common::TypeCategory::Character, KIND))
+    return fir::CharacterType::get(context, KIND, len);
+  return {};
+}
+
 static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Complex, KIND))
@@ -82,8 +91,10 @@ static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
   return {};
 }
 
-static mlir::Type genFIRType(mlir::MLIRContext *context,
-                             Fortran::common::TypeCategory tc, int kind) {
+static mlir::Type
+genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
+           int kind,
+           llvm::ArrayRef<Fortran::lower::LenParameterTy> lenParameters) {
   switch (tc) {
   case Fortran::common::TypeCategory::Real:
     return genRealType(context, kind);
@@ -94,7 +105,9 @@ static mlir::Type genFIRType(mlir::MLIRContext *context,
   case Fortran::common::TypeCategory::Logical:
     return genLogicalType(context, kind);
   case Fortran::common::TypeCategory::Character:
-    TODO_NOLOC("genFIRType Character");
+    if (!lenParameters.empty())
+      return genCharacterType(context, kind, lenParameters[0]);
+    return genCharacterType(context, kind);
   default:
     break;
   }
@@ -129,7 +142,9 @@ public:
       TODO(converter.getCurrentLocation(), "genExprType derived");
     } else {
       // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
-      baseType = genFIRType(context, category, dynamicType->kind());
+      llvm::SmallVector<Fortran::lower::LenParameterTy> params;
+      translateLenParameters(params, category, expr);
+      baseType = genFIRType(context, category, dynamicType->kind(), params);
     }
     std::optional<Fortran::evaluate::Shape> shapeExpr =
         Fortran::evaluate::GetShape(converter.getFoldingContext(), expr);
@@ -211,7 +226,9 @@ public:
       if (const Fortran::semantics::IntrinsicTypeSpec *tySpec =
               type->AsIntrinsic()) {
         int kind = toInt64(Fortran::common::Clone(tySpec->kind())).value();
-        ty = genFIRType(context, tySpec->category(), kind);
+        llvm::SmallVector<Fortran::lower::LenParameterTy> params;
+        translateLenParameters(params, tySpec->category(), ultimate);
+        ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (type->IsPolymorphic()) {
         TODO(loc, "genSymbolType polymorphic types");
       } else if (type->AsDerived()) {
@@ -246,6 +263,65 @@ public:
     return ty;
   }
 
+  // To get the character length from a symbol, make an fold a designator for
+  // the symbol to cover the case where the symbol is an assumed length named
+  // constant and its length comes from its init expression length.
+  template <int Kind>
+  fir::SequenceType::Extent
+  getCharacterLengthHelper(const Fortran::semantics::Symbol &symbol) {
+    using TC =
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, Kind>;
+    auto designator = Fortran::evaluate::Fold(
+        converter.getFoldingContext(),
+        Fortran::evaluate::Expr<TC>{Fortran::evaluate::Designator<TC>{symbol}});
+    if (auto len = toInt64(std::move(designator.LEN())))
+      return *len;
+    return fir::SequenceType::getUnknownExtent();
+  }
+
+  template <typename T>
+  void translateLenParameters(
+      llvm::SmallVectorImpl<Fortran::lower::LenParameterTy> &params,
+      Fortran::common::TypeCategory category, const T &exprOrSym) {
+    if (category == Fortran::common::TypeCategory::Character)
+      params.push_back(getCharacterLength(exprOrSym));
+    else if (category == Fortran::common::TypeCategory::Derived)
+      TODO(converter.getCurrentLocation(),
+           "lowering derived type length parameters");
+    return;
+  }
+  Fortran::lower::LenParameterTy
+  getCharacterLength(const Fortran::semantics::Symbol &symbol) {
+    const Fortran::semantics::DeclTypeSpec *type = symbol.GetType();
+    if (!type ||
+        type->category() != Fortran::semantics::DeclTypeSpec::Character ||
+        !type->AsIntrinsic())
+      llvm::report_fatal_error("not a character symbol");
+    int kind =
+        toInt64(Fortran::common::Clone(type->AsIntrinsic()->kind())).value();
+    switch (kind) {
+    case 1:
+      return getCharacterLengthHelper<1>(symbol);
+    case 2:
+      return getCharacterLengthHelper<2>(symbol);
+    case 4:
+      return getCharacterLengthHelper<4>(symbol);
+    }
+    llvm_unreachable("unknown character kind");
+  }
+  Fortran::lower::LenParameterTy
+  getCharacterLength(const Fortran::lower::SomeExpr &expr) {
+    // Do not use dynamic type length here. We would miss constant
+    // lengths opportunities because dynamic type only has the length
+    // if it comes from a declaration.
+    auto charExpr =
+        std::get<Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
+            expr.u);
+    if (auto constantLen = toInt64(charExpr.LEN()))
+      return *constantLen;
+    return fir::SequenceType::getUnknownExtent();
+  }
+
   mlir::Type genVariableType(const Fortran::lower::pft::Variable &var) {
     return genSymbolType(var.getSymbol(), var.isHeapAlloc(), var.isPointer());
   }
@@ -259,8 +335,9 @@ private:
 
 mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,
                                       Fortran::common::TypeCategory tc,
-                                      int kind) {
-  return genFIRType(context, tc, kind);
+                                      int kind,
+                                      llvm::ArrayRef<LenParameterTy> params) {
+  return genFIRType(context, tc, kind, params);
 }
 
 mlir::Type Fortran::lower::translateSomeExprToFIRType(

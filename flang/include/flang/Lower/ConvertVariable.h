@@ -17,7 +17,9 @@
 #ifndef FORTRAN_LOWER_CONVERT_VARIABLE_H
 #define FORTRAN_LOWER_CONVERT_VARIABLE_H
 
+#include "flang/Lower/Support/Utils.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace Fortran ::lower {
 class AbstractConverter;
@@ -28,12 +30,19 @@ namespace pft {
 struct Variable;
 }
 
+/// AggregateStoreMap is used to keep track of instantiated aggregate stores
+/// when lowering a scope containing equivalences (aliases). It must only be
+/// owned by the code lowering a scope and provided to instantiateVariable.
+using AggregateStoreKey =
+    std::tuple<const Fortran::semantics::Scope *, std::size_t>;
+using AggregateStoreMap = llvm::DenseMap<AggregateStoreKey, mlir::Value>;
+
 /// Instantiate variable \p var and add it to \p symMap.
 /// The AbstractConverter builder must be set.
 /// The AbstractConverter own symbol mapping is not used during the
 /// instantiation and can be different form \p symMap.
 void instantiateVariable(AbstractConverter &, const pft::Variable &var,
-                         SymMap &symMap);
+                         SymMap &symMap, AggregateStoreMap &storeMap);
 
 /// Lower a symbol attributes given an optional storage \p and add it to the
 /// provided symbol map. If \preAlloc is not provided, a temporary storage will
@@ -48,6 +57,12 @@ void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
 void mapCallInterfaceSymbols(AbstractConverter &,
                              const Fortran::lower::CallerInterface &caller,
                              SymMap &symMap);
+
+/// Create initial-data-target fir.box in a global initializer region.
+/// This handles the local instantiation of the target variable.
+mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
+                                 mlir::Location, mlir::Type boxType,
+                                 const SomeExpr &initialTarget);
 
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

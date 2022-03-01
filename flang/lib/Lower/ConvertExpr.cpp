@@ -250,6 +250,16 @@ bool isElementalProcWithArrayArgs(const Fortran::lower::SomeExpr &x) {
   return false;
 }
 
+/// Some auxiliary data for processing initialization in ScalarExprLowering
+/// below. This is currently used for generating dense attributed global
+/// arrays.
+struct InitializerData {
+  explicit InitializerData(bool getRawVals = false) : genRawVals{getRawVals} {}
+  llvm::SmallVector<mlir::Attribute> rawVals; // initialization raw values
+  mlir::Type rawType; // Type of elements processed for rawVals vector.
+  bool genRawVals;    // generate the rawVals vector if set.
+};
+
 /// If \p arg is the address of a function with a denoted host-association tuple
 /// argument, then return the host-associations tuple value of the current
 /// procedure. Otherwise, return nullptr.
@@ -275,7 +285,8 @@ public:
   explicit ScalarExprLowering(mlir::Location loc,
                               Fortran::lower::AbstractConverter &converter,
                               Fortran::lower::SymMap &symMap,
-                              Fortran::lower::StatementContext &stmtCtx)
+                              Fortran::lower::StatementContext &stmtCtx,
+                              InitializerData *initializer = nullptr)
       : location{loc}, converter{converter},
         builder{converter.getFirOpBuilder()}, stmtCtx{stmtCtx}, symMap{symMap} {
   }
@@ -1762,6 +1773,30 @@ public:
                                   takeLboundsIfRealloc, realloc);
   }
 
+  /// Entry point for when an array expression appears in a context where the
+  /// result must be boxed. (BoxValue semantics.)
+  static ExtValue
+  lowerBoxedArrayExpression(Fortran::lower::AbstractConverter &converter,
+                            Fortran::lower::SymMap &symMap,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            const Fortran::lower::SomeExpr &expr) {
+    ArrayExprLowering ael{converter, stmtCtx, symMap,
+                          ConstituentSemantics::BoxValue};
+    return ael.lowerBoxedArrayExpr(expr);
+  }
+
+  ExtValue lowerBoxedArrayExpr(const Fortran::lower::SomeExpr &exp) {
+    return std::visit(
+        [&](const auto &e) {
+          auto f = genarr(e);
+          ExtValue exv = f(IterationSpace{});
+          if (fir::getBase(exv).getType().template isa<fir::BoxType>())
+            return exv;
+          fir::emitFatalError(getLoc(), "array must be emboxed");
+        },
+        exp.u);
+  }
+
   /// Entry point into lowering an expression with rank. This entry point is for
   /// lowering a rhs expression, for example. (RefTransparent semantics.)
   static ExtValue
@@ -2659,12 +2694,68 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
   return ScalarExprLowering{loc, converter, symMap, stmtCtx}.genval(expr);
 }
 
+fir::GlobalOp Fortran::lower::createDenseGlobal(
+    mlir::Location loc, mlir::Type symTy, llvm::StringRef globalName,
+    mlir::StringAttr linkage, bool isConst,
+    const Fortran::lower::SomeExpr &expr,
+    Fortran::lower::AbstractConverter &converter) {
+
+  Fortran::lower::StatementContext stmtCtx(/*prohibited=*/true);
+  Fortran::lower::SymMap emptyMap;
+  InitializerData initData(/*genRawVals=*/true);
+  ScalarExprLowering sel(loc, converter, emptyMap, stmtCtx,
+                         /*initializer=*/&initData);
+  sel.genval(expr);
+
+  size_t sz = initData.rawVals.size();
+  llvm::ArrayRef<mlir::Attribute> ar = {initData.rawVals.data(), sz};
+
+  mlir::RankedTensorType tensorTy;
+  auto &builder = converter.getFirOpBuilder();
+  mlir::Type iTy = initData.rawType;
+  if (!iTy)
+    return 0; // array extent is probably 0 in this case, so just return 0.
+  tensorTy = mlir::RankedTensorType::get(sz, iTy);
+  auto init = mlir::DenseElementsAttr::get(tensorTy, ar);
+  return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst);
+}
+
+fir::ExtendedValue Fortran::lower::createSomeInitializerExpression(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "expr: ") << '\n');
+  InitializerData initData; // needed for initializations
+  return ScalarExprLowering{loc, converter, symMap, stmtCtx,
+                            /*initializer=*/&initData}
+      .genval(expr);
+}
+
 fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "address: ") << '\n');
   return ScalarExprLowering{loc, converter, symMap, stmtCtx}.gen(expr);
+}
+
+fir::ExtendedValue Fortran::lower::createInitializerAddress(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "address: ") << '\n');
+  InitializerData init;
+  return ScalarExprLowering(loc, converter, symMap, stmtCtx, &init).gen(expr);
+}
+
+fir::ExtendedValue
+Fortran::lower::createSomeArrayBox(Fortran::lower::AbstractConverter &converter,
+                                   const Fortran::lower::SomeExpr &expr,
+                                   Fortran::lower::SymMap &symMap,
+                                   Fortran::lower::StatementContext &stmtCtx) {
+  LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "box designator: ") << '\n');
+  return ArrayExprLowering::lowerBoxedArrayExpression(converter, symMap,
+                                                      stmtCtx, expr);
 }
 
 fir::MutableBoxValue Fortran::lower::createMutableBox(

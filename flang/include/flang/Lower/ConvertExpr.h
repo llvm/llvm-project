@@ -49,6 +49,22 @@ fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
                                                 SymMap &symMap,
                                                 StatementContext &stmtCtx);
 
+/// Create a global array symbol with the Dense attribute
+fir::GlobalOp createDenseGlobal(mlir::Location loc, mlir::Type symTy,
+                                llvm::StringRef globalName,
+                                mlir::StringAttr linkage, bool isConst,
+                                const SomeExpr &expr,
+                                Fortran::lower::AbstractConverter &converter);
+
+/// Create the IR for the expression \p expr in an initialization context.
+/// Expressions that appear in initializers may not allocate temporaries, do not
+/// have a stack, etc.
+fir::ExtendedValue createSomeInitializerExpression(mlir::Location loc,
+                                                   AbstractConverter &converter,
+                                                   const SomeExpr &expr,
+                                                   SymMap &symMap,
+                                                   StatementContext &stmtCtx);
+
 /// Create an extended expression address.
 fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
                                              AbstractConverter &converter,
@@ -56,11 +72,26 @@ fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
                                              SymMap &symMap,
                                              StatementContext &stmtCtx);
 
+/// Create an address in an initializer context. Must be a constant or a symbol
+/// to be resolved at link-time. Expressions that appear in initializers may not
+/// allocate temporaries, do not have a stack, etc.
+fir::ExtendedValue createInitializerAddress(mlir::Location loc,
+                                            AbstractConverter &converter,
+                                            const SomeExpr &expr,
+                                            SymMap &symMap,
+                                            StatementContext &stmtCtx);
+
 /// Create the address of the box.
 /// \p expr must be the designator of an allocatable/pointer entity.
 fir::MutableBoxValue createMutableBox(mlir::Location loc,
                                       AbstractConverter &converter,
                                       const SomeExpr &expr, SymMap &symMap);
+
+/// Lower an array expression to a value of type box. The expression must be a
+/// variable.
+fir::ExtendedValue createSomeArrayBox(AbstractConverter &converter,
+                                      const SomeExpr &expr, SymMap &symMap,
+                                      StatementContext &stmtCtx);
 
 /// Lower a subroutine call. This handles both elemental and non elemental
 /// subroutines. \p isUserDefAssignment must be set if this is called in the
