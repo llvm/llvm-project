@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 // Necessary for llvm::DebugCompressionType::None
 #include "llvm/Target/TargetOptions.h"
@@ -186,6 +187,16 @@ struct NewSymbolInfo {
   std::vector<StringRef> BeforeSyms;
 };
 
+// Specify section name and section body for newly added or updated section.
+struct NewSectionInfo {
+  NewSectionInfo() = default;
+  NewSectionInfo(StringRef Name, std::unique_ptr<MemoryBuffer> &&Buffer)
+      : SectionName(Name), SectionData(std::move(Buffer)) {}
+
+  StringRef SectionName;
+  std::shared_ptr<MemoryBuffer> SectionData;
+};
+
 // Configuration for copying/stripping a single file.
 struct CommonConfig {
   // Main input/output options
@@ -208,9 +219,9 @@ struct CommonConfig {
   DiscardType DiscardMode = DiscardType::None;
 
   // Repeated options
-  std::vector<StringRef> AddSection;
+  std::vector<NewSectionInfo> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<StringRef> UpdateSection;
+  std::vector<NewSectionInfo> UpdateSection;
 
   // Section matchers
   NameMatcher KeepSection;
