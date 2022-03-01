@@ -85,6 +85,19 @@ DEFAULT_FEATURES = [
             }
           """)),
 
+  # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.19041.0).
+  # https://developercommunity.visualstudio.com/t/printf-formatting-with-g-outputs-too/1660837
+  Feature(name='win32-broken-printf-g-precision',
+          when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
+            #include <stdio.h>
+            #include <string.h>
+            int main(int, char**) {
+              char buf[100];
+              snprintf(buf, sizeof(buf), "%#.*g", 0, 0.0);
+              return strcmp(buf, "0.");
+            }
+          """)),
+
   # Whether Bash can run on the executor.
   # This is not always the case, for example when running on embedded systems.
   #
