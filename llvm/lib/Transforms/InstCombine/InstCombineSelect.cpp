@@ -1107,7 +1107,7 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
   SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
   if (SPF == SelectPatternFlavor::SPF_ABS ||
       SPF == SelectPatternFlavor::SPF_NABS) {
-    if (!Cmp.hasOneUse())
+    if (!Cmp.hasOneUse() && !RHS->hasOneUse())
       return nullptr; // TODO: Relax this restriction.
 
     // Note that NSW flag can only be propagated for normal, non-negated abs!

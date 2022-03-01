@@ -6528,48 +6528,47 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; IND:       vector.scevcheck:
 ; IND-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; IND-NEXT:    [[TMP1:%.*]] = trunc i32 [[STEP:%.*]] to i8
-; IND-NEXT:    [[TMP2:%.*]] = sub i8 0, [[TMP1]]
-; IND-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP1]], 0
-; IND-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[TMP1]]
-; IND-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP0]] to i8
-; IND-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
+; IND-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 0
+; IND-NEXT:    [[TMP3:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 false)
+; IND-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP0]] to i8
+; IND-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; IND-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; IND-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; IND-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; IND-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
-; IND-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 [[TMP6]]
-; IND-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
-; IND-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP0]], 255
-; IND-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP1]], 0
-; IND-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; IND-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
-; IND-NEXT:    [[TMP14:%.*]] = add i32 [[STEP]], -128
-; IND-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], -256
-; IND-NEXT:    [[TMP16:%.*]] = or i1 [[TMP13]], [[TMP15]]
-; IND-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; IND-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; IND-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
+; IND-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 [[TMP5]]
+; IND-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
+; IND-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
+; IND-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
+; IND-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
+; IND-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
+; IND-NEXT:    [[TMP13:%.*]] = add i32 [[STEP]], -128
+; IND-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13]], -256
+; IND-NEXT:    [[TMP15:%.*]] = or i1 [[TMP12]], [[TMP14]]
+; IND-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; IND-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
 ; IND-NEXT:    [[IND_END:%.*]] = mul i32 [[CAST_CRD]], [[STEP]]
 ; IND-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
 ; IND-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; IND-NEXT:    [[TMP17:%.*]] = mul nuw <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
-; IND-NEXT:    [[TMP18:%.*]] = shl i32 [[STEP]], 1
-; IND-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
+; IND-NEXT:    [[TMP16:%.*]] = mul nuw <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
+; IND-NEXT:    [[TMP17:%.*]] = shl i32 [[STEP]], 1
+; IND-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i64 0
 ; IND-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IND-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[VEC_IND:%.*]], [[VECTOR_BODY]] ]
-; IND-NEXT:    [[VEC_IND]] = phi <2 x i32> [ [[TMP17]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IND-NEXT:    [[TMP19:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
-; IND-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[INDEX]]
-; IND-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <2 x i32>*
-; IND-NEXT:    store <2 x i32> [[TMP19]], <2 x i32>* [[TMP21]], align 4
+; IND-NEXT:    [[VEC_IND]] = phi <2 x i32> [ [[TMP16]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IND-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
+; IND-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[INDEX]]
+; IND-NEXT:    [[TMP20:%.*]] = bitcast i32* [[TMP19]] to <2 x i32>*
+; IND-NEXT:    store <2 x i32> [[TMP18]], <2 x i32>* [[TMP20]], align 4
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IND-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], [[DOTSPLAT3]]
-; IND-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IND-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP54:![0-9]+]]
+; IND-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IND-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP54:![0-9]+]]
 ; IND:       middle.block:
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; IND-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[VEC_IND]], i64 1
@@ -6601,53 +6600,52 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL:       vector.scevcheck:
 ; UNROLL-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; UNROLL-NEXT:    [[TMP1:%.*]] = trunc i32 [[STEP:%.*]] to i8
-; UNROLL-NEXT:    [[TMP2:%.*]] = sub i8 0, [[TMP1]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP1]], 0
-; UNROLL-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[TMP1]]
-; UNROLL-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP0]] to i8
-; UNROLL-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
+; UNROLL-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 0
+; UNROLL-NEXT:    [[TMP3:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 false)
+; UNROLL-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP0]] to i8
+; UNROLL-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; UNROLL-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; UNROLL-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; UNROLL-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; UNROLL-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
-; UNROLL-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 [[TMP6]]
-; UNROLL-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
-; UNROLL-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP0]], 255
-; UNROLL-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP1]], 0
-; UNROLL-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; UNROLL-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
-; UNROLL-NEXT:    [[TMP14:%.*]] = add i32 [[STEP]], -128
-; UNROLL-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], -256
-; UNROLL-NEXT:    [[TMP16:%.*]] = or i1 [[TMP13]], [[TMP15]]
-; UNROLL-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; UNROLL-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
+; UNROLL-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 [[TMP5]]
+; UNROLL-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
+; UNROLL-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
+; UNROLL-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
+; UNROLL-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
+; UNROLL-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
+; UNROLL-NEXT:    [[TMP13:%.*]] = add i32 [[STEP]], -128
+; UNROLL-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13]], -256
+; UNROLL-NEXT:    [[TMP15:%.*]] = or i1 [[TMP12]], [[TMP14]]
+; UNROLL-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; UNROLL-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NEXT:    [[IND_END:%.*]] = mul i32 [[CAST_CRD]], [[STEP]]
 ; UNROLL-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
 ; UNROLL-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NEXT:    [[TMP17:%.*]] = mul nuw <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
-; UNROLL-NEXT:    [[TMP18:%.*]] = shl i32 [[STEP]], 1
-; UNROLL-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
+; UNROLL-NEXT:    [[TMP16:%.*]] = mul nuw <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
+; UNROLL-NEXT:    [[TMP17:%.*]] = shl i32 [[STEP]], 1
+; UNROLL-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i64 0
 ; UNROLL-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP17]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; UNROLL-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP16]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[STEP_ADD]] = add <2 x i32> [[VEC_IND]], [[DOTSPLAT3]]
-; UNROLL-NEXT:    [[TMP19:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
-; UNROLL-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i32> [[VEC_IND]], <2 x i32> [[STEP_ADD]], <2 x i32> <i32 1, i32 2>
-; UNROLL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP22:%.*]] = bitcast i32* [[TMP21]] to <2 x i32>*
-; UNROLL-NEXT:    store <2 x i32> [[TMP19]], <2 x i32>* [[TMP22]], align 4
-; UNROLL-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[TMP21]], i64 2
-; UNROLL-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <2 x i32>*
-; UNROLL-NEXT:    store <2 x i32> [[TMP20]], <2 x i32>* [[TMP24]], align 4
+; UNROLL-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
+; UNROLL-NEXT:    [[TMP19:%.*]] = shufflevector <2 x i32> [[VEC_IND]], <2 x i32> [[STEP_ADD]], <2 x i32> <i32 1, i32 2>
+; UNROLL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <2 x i32>*
+; UNROLL-NEXT:    store <2 x i32> [[TMP18]], <2 x i32>* [[TMP21]], align 4
+; UNROLL-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, i32* [[TMP20]], i64 2
+; UNROLL-NEXT:    [[TMP23:%.*]] = bitcast i32* [[TMP22]] to <2 x i32>*
+; UNROLL-NEXT:    store <2 x i32> [[TMP19]], <2 x i32>* [[TMP23]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], [[DOTSPLAT3]]
-; UNROLL-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNROLL-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP54:![0-9]+]]
+; UNROLL-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; UNROLL-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP54:![0-9]+]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; UNROLL-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[STEP_ADD]], i64 1
@@ -6765,53 +6763,52 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; INTERLEAVE:       vector.scevcheck:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = trunc i32 [[STEP:%.*]] to i8
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = sub i8 0, [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP1]], 0
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP0]] to i8
-; INTERLEAVE-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 0
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 false)
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP0]] to i8
+; INTERLEAVE-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; INTERLEAVE-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; INTERLEAVE-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 [[TMP6]]
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
-; INTERLEAVE-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP0]], 255
-; INTERLEAVE-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP1]], 0
-; INTERLEAVE-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; INTERLEAVE-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
-; INTERLEAVE-NEXT:    [[TMP14:%.*]] = add i32 [[STEP]], -128
-; INTERLEAVE-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], -256
-; INTERLEAVE-NEXT:    [[TMP16:%.*]] = or i1 [[TMP13]], [[TMP15]]
-; INTERLEAVE-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 [[TMP5]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
+; INTERLEAVE-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
+; INTERLEAVE-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
+; INTERLEAVE-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
+; INTERLEAVE-NEXT:    [[TMP13:%.*]] = add i32 [[STEP]], -128
+; INTERLEAVE-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13]], -256
+; INTERLEAVE-NEXT:    [[TMP15:%.*]] = or i1 [[TMP12]], [[TMP14]]
+; INTERLEAVE-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; INTERLEAVE-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = mul i32 [[CAST_CRD]], [[STEP]]
 ; INTERLEAVE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
 ; INTERLEAVE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; INTERLEAVE-NEXT:    [[TMP17:%.*]] = mul <4 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3>
-; INTERLEAVE-NEXT:    [[TMP18:%.*]] = shl i32 [[STEP]], 2
-; INTERLEAVE-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP18]], i64 0
+; INTERLEAVE-NEXT:    [[TMP16:%.*]] = mul <4 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3>
+; INTERLEAVE-NEXT:    [[TMP17:%.*]] = shl i32 [[STEP]], 2
+; INTERLEAVE-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i64 0
 ; INTERLEAVE-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP17]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP16]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[STEP_ADD]] = add <4 x i32> [[VEC_IND]], [[DOTSPLAT3]]
-; INTERLEAVE-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; INTERLEAVE-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; INTERLEAVE-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP22:%.*]] = bitcast i32* [[TMP21]] to <4 x i32>*
-; INTERLEAVE-NEXT:    store <4 x i32> [[TMP19]], <4 x i32>* [[TMP22]], align 4
-; INTERLEAVE-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[TMP21]], i64 4
-; INTERLEAVE-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <4 x i32>*
-; INTERLEAVE-NEXT:    store <4 x i32> [[TMP20]], <4 x i32>* [[TMP24]], align 4
+; INTERLEAVE-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; INTERLEAVE-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[INDEX]]
+; INTERLEAVE-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <4 x i32>*
+; INTERLEAVE-NEXT:    store <4 x i32> [[TMP18]], <4 x i32>* [[TMP21]], align 4
+; INTERLEAVE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, i32* [[TMP20]], i64 4
+; INTERLEAVE-NEXT:    [[TMP23:%.*]] = bitcast i32* [[TMP22]] to <4 x i32>*
+; INTERLEAVE-NEXT:    store <4 x i32> [[TMP19]], <4 x i32>* [[TMP23]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], [[DOTSPLAT3]]
-; INTERLEAVE-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; INTERLEAVE-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP54:![0-9]+]]
+; INTERLEAVE-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; INTERLEAVE-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP54:![0-9]+]]
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; INTERLEAVE-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i64 3

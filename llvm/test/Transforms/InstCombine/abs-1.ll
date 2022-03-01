@@ -591,9 +591,8 @@ define i8 @abs_extra_use_icmp(i8 %x) {
 ; CHECK-LABEL: @abs_extra_use_icmp(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @extra_use_i1(i1 [[C]])
-; CHECK-NEXT:    [[N:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[N]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %c = icmp slt i8 %x, 0
   call void @extra_use_i1(i1 %c)
@@ -637,8 +636,8 @@ define i8 @nabs_extra_use_icmp(i8 %x) {
 ; CHECK-LABEL: @nabs_extra_use_icmp(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @extra_use_i1(i1 [[C]])
-; CHECK-NEXT:    [[N:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[X]], i8 [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
+; CHECK-NEXT:    [[S:%.*]] = sub i8 0, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %c = icmp slt i8 %x, 0
