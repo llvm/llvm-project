@@ -3401,7 +3401,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // Convert 0 - abs(x).
-    if (N1->getOpcode() == ISD::ABS &&
+    if (N1.getOpcode() == ISD::ABS && N1.hasOneUse() &&
         !TLI.isOperationLegalOrCustom(ISD::ABS, VT))
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
