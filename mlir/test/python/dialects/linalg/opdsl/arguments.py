@@ -26,7 +26,7 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK:     default_fn: exp
 # CHECK:     name: cast
 # CHECK:     kind: type_fn_attr
-# CHECK:     default_fn: cast
+# CHECK:     default_fn: cast_signed
 @linalg_structured_op
 def matmul(
     A=TensorDef(T, S.M, S.K),
@@ -34,7 +34,7 @@ def matmul(
     C=TensorDef(U, S.M, S.N, output=True),
     bfn=BinaryFnAttrDef(default=BinaryFn.mul),
     ufn=UnaryFnAttrDef(default=UnaryFn.exp),
-    cast=TypeFnAttrDef(default=TypeFn.cast)):
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
   C[D.m, D.n] += bfn(cast(U, A[D.m, D.k]), cast(U, B[D.k, D.n]))
 
 

@@ -305,10 +305,10 @@ class BinaryFn:
   - max_unsinged -> `arith.MaxUIOp`
   """
   add = BinaryFnType("add")
-  mul = BinaryFnType("mul")
-  max = BinaryFnType("max")
-  min = BinaryFnType("min")
   sub = BinaryFnType("sub")
+  mul = BinaryFnType("mul")
+  max_signed = BinaryFnType("max_signed")
+  min_signed = BinaryFnType("min_signed")
   max_unsigned = BinaryFnType("max_unsigned")
   min_unsigned = BinaryFnType("min_unsigned")
 
@@ -334,14 +334,14 @@ class TypeFn:
   """Type conversion function namespace.
 
   As the integer types are signless, signedness is implement by different cast
-  functions that treat integers as signed (`cast`) or unsigned
+  functions that treat integers as signed (`cast_signed`) or unsigned
   (`cast_unsigned`) values.
 
   Examples:
-  - cast(I32 -> I64) -> `arith.ExtSIOp`
+  - cast_signed(I32 -> I64) -> `arith.ExtSIOp`
   - cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
   """
-  cast = TypeFnType("cast")
+  cast_signed = TypeFnType("cast_signed")
   cast_unsigned = TypeFnType("cast_unsigned")
 
 
@@ -389,8 +389,8 @@ class ReduceFnType:
 class ReduceFn:
   add = ReduceFnType(BinaryFn.add)
   mul = ReduceFnType(BinaryFn.mul)
-  max = ReduceFnType(BinaryFn.max)
-  min = ReduceFnType(BinaryFn.min)
+  max_signed = ReduceFnType(BinaryFn.max_signed)
+  min_signed = ReduceFnType(BinaryFn.min_signed)
   max_unsigned = ReduceFnType(BinaryFn.max_unsigned)
   min_unsigned = ReduceFnType(BinaryFn.min_unsigned)
 

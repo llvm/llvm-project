@@ -160,22 +160,22 @@ public:
       if (allFloatingPoint)
         return builder.create<arith::AddFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::AddIOp>(arg0.getLoc(), arg0, arg1);
-    case BinaryFn::mul:
-      if (allFloatingPoint)
-        return builder.create<arith::MulFOp>(arg0.getLoc(), arg0, arg1);
-      return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
-    case BinaryFn::max:
-      if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
-      return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
-    case BinaryFn::min:
-      if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
-      return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::sub:
       if (allFloatingPoint)
         return builder.create<arith::SubFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::SubIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::mul:
+      if (allFloatingPoint)
+        return builder.create<arith::MulFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max_signed:
+      if (allFloatingPoint)
+        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min_signed:
+      if (allFloatingPoint)
+        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_unsigned:
       if (allFloatingPoint)
         return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
@@ -191,7 +191,7 @@ public:
   // Build the type functions defined by OpDSL.
   Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
     switch (typeFn) {
-    case TypeFn::cast:
+    case TypeFn::cast_signed:
       return cast(toType, operand, false);
     case TypeFn::cast_unsigned:
       return cast(toType, operand, true);

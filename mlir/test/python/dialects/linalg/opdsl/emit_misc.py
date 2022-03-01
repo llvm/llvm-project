@@ -21,22 +21,23 @@ def fill_rng_poly(
     max=ScalarDef(F64),
     seed=ScalarDef(I32),
     O=TensorDef(T, S.M, S.N, output=True)):
-  multiplier = TypeFn.cast(I32, const(1103515245))
-  increment = TypeFn.cast(I32, const(12345))
-  rand1 = (TypeFn.cast(I32, index(D.m)) + seed) * multiplier + increment
-  rand2 = (TypeFn.cast(I32, index(D.n)) + rand1) * multiplier + increment
-  inv_range = TypeFn.cast(F64, const(2.3283064e-10))
-  offset = TypeFn.cast(F64, const(2147483647))
+  multiplier = TypeFn.cast_signed(I32, const(1103515245))
+  increment = TypeFn.cast_signed(I32, const(12345))
+  rand1 = (TypeFn.cast_signed(I32, index(D.m)) + seed) * multiplier + increment
+  rand2 = (TypeFn.cast_signed(I32, index(D.n)) + rand1) * multiplier + increment
+  inv_range = TypeFn.cast_signed(F64, const(2.3283064e-10))
+  offset = TypeFn.cast_signed(F64, const(2147483647))
   scaling = (max - min) * inv_range
-  O[D.m, D.n] = TypeFn.cast(T,
-                            (offset + TypeFn.cast(F64, rand2)) * scaling + min)
+  O[D.m, D.n] = TypeFn.cast_signed(
+      T, (offset + TypeFn.cast_signed(F64, rand2)) * scaling + min)
 
 
 @linalg_structured_op
 def soft_plus_poly(
     I=TensorDef(T, S.M, S.N), O=TensorDef(U, S.M, S.N, output=True)):
   O[D.m, D.n] = UnaryFn.log(
-      TypeFn.cast(U, const(1.0)) + TypeFn.cast(U, UnaryFn.exp(I[D.m, D.n])))
+      TypeFn.cast_signed(U, const(1.0)) +
+      TypeFn.cast_signed(U, UnaryFn.exp(I[D.m, D.n])))
 
 
 @linalg_structured_op(op_name="custom_op_name")

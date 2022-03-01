@@ -370,7 +370,7 @@ class _BodyBuilder:
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
-  def _type_cast(self, type_var_name: str, operand: Value) -> Value:
+  def _type_cast_signed(self, type_var_name: str, operand: Value) -> Value:
     return self._cast(type_var_name, operand, False)
 
   def _type_cast_unsigned(self, type_var_name: str, operand: Value) -> Value:
@@ -407,7 +407,7 @@ class _BodyBuilder:
       return arith.MulIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operands: {lhs}, {rhs}")
 
-  def _binary_max(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_max_signed(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
@@ -422,7 +422,7 @@ class _BodyBuilder:
     raise NotImplementedError(
         "Unsupported 'max_unsigned' operands: {lhs}, {rhs}")
 
-  def _binary_min(self, lhs: Value, rhs: Value) -> Value:
+  def _binary_min_signed(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
