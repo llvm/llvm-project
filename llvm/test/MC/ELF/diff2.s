@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2> %t > /dev/null
+// RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2> %t
 // RUN: FileCheck -input-file %t %s
 
 .global zed
