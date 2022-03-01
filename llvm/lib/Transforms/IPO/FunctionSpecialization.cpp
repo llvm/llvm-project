@@ -302,6 +302,9 @@ public:
         continue;
       }
 
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
+                        << F->getName() << " is " << Cost << "\n");
+
       auto ConstArgs = calculateGains(F, Cost);
       if (ConstArgs.empty()) {
         LLVM_DEBUG(dbgs() << "FnSpecialization: no possible constants found\n");
@@ -390,8 +393,6 @@ private:
     // argument can take on. If specialization is not profitable, we continue
     // on to the next argument.
     for (Argument &FormalArg : F->args()) {
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing arg: "
-                        << FormalArg.getName() << "\n");
       // Determine if this argument is interesting. If we know the argument can
       // take on any constant values, they are collected in Constants. If the
       // argument can only ever equal a constant value in Constants, the
@@ -401,7 +402,9 @@ private:
       bool IsPartial = true;
       SmallVector<Constant *> ActualArgs;
       if (!isArgumentInteresting(&FormalArg, ActualArgs, IsPartial)) {
-        LLVM_DEBUG(dbgs() << "FnSpecialization: Argument is not interesting\n");
+        LLVM_DEBUG(dbgs() << "FnSpecialization: Argument "
+                          << FormalArg.getNameOrAsOperand()
+                          << " is not interesting\n");
         continue;
       }
 
@@ -427,10 +430,10 @@ private:
       // Truncate the worklist to 'MaxClonesThreshold' candidates if
       // necessary.
       if (Worklist.size() > MaxClonesThreshold) {
-        LLVM_DEBUG(dbgs() << "FnSpecialization: number of candidates exceed "
-                    << "the maximum number of clones threshold.\n"
-                    << "Truncating worklist to " << MaxClonesThreshold
-                    << " candidates.\n");
+        LLVM_DEBUG(dbgs() << "FnSpecialization: Number of candidates exceed "
+                          << "the maximum number of clones threshold.\n"
+                          << "FnSpecialization: Truncating worklist to "
+                          << MaxClonesThreshold << " candidates.\n");
         Worklist.erase(Worklist.begin() + MaxClonesThreshold,
                        Worklist.end());
       }
@@ -439,14 +442,16 @@ private:
         for (auto &ActualArg : Worklist)
           ActualArg.Partial = true;
 
-      LLVM_DEBUG(dbgs() << "Sorted list of candidates by gain:\n";
-                 for (auto &C
-                      : Worklist) {
-                   dbgs() << "- Function = " << C.Fn->getName() << ", ";
-                   dbgs() << "FormalArg = " << C.Formal->getName() << ", ";
-                   dbgs() << "ActualArg = " << C.Actual->getName() << ", ";
-                   dbgs() << "Gain = " << C.Gain << "\n";
-                 });
+      LLVM_DEBUG(
+        dbgs() << "FnSpecialization: Specializations for function "
+               << F->getName() << "\n";
+        for (auto &C : Worklist) {
+          dbgs() << "FnSpecialization:   FormalArg = "
+                 << C.Formal->getNameOrAsOperand() << ", ActualArg = "
+                 << C.Actual->getNameOrAsOperand() << ", Gain = "
+                 << C.Gain << "\n";
+        }
+      );
 
       // FIXME: Only one argument per function.
       break;
@@ -556,13 +561,13 @@ private:
     DominatorTree DT(*F);
     LoopInfo LI(DT);
     auto &TTI = (GetTTI)(*F);
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for: " << *A
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
+                      << C->getNameOrAsOperand() << "\n");
 
     InstructionCost TotalCost = 0;
     for (auto *U : A->users()) {
       TotalCost += getUserBonus(U, TTI, LI);
-      LLVM_DEBUG(dbgs() << "FnSpecialization: User cost ";
+      LLVM_DEBUG(dbgs() << "FnSpecialization:   User cost ";
                  TotalCost.print(dbgs()); dbgs() << " for: " << *U << "\n");
     }
 
@@ -620,6 +625,9 @@ private:
         Bonus += Params.DefaultThreshold;
       else if (IC.isVariable() && IC.getCostDelta() > 0)
         Bonus += IC.getCostDelta();
+
+      LLVM_DEBUG(dbgs() << "FnSpecialization:   Inlining bonus " << Bonus
+                        << " for user " << *U << "\n");
     }
 
     return TotalCost + Bonus;
@@ -649,8 +657,9 @@ private:
     // If the argument isn't overdefined, there's nothing to do. It should
     // already be constant.
     if (!Solver.getLatticeValueFor(A).isOverdefined()) {
-      LLVM_DEBUG(dbgs() << "FnSpecialization: nothing to do, arg is already "
-                        << "constant?\n");
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Nothing to do, argument "
+                        << A->getNameOrAsOperand()
+                        << " is already constant?\n");
       return false;
     }
 
@@ -668,7 +677,8 @@ private:
     // TODO 2: this currently does not support constants, i.e. integer ranges.
     //
     IsPartial = !getPossibleConstants(A, Constants);
-    LLVM_DEBUG(dbgs() << "FnSpecialization: interesting arg: " << *A << "\n");
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
+                      << A->getNameOrAsOperand() << "\n");
     return true;
   }
 
@@ -753,7 +763,15 @@ private:
         continue;
       CallSitesToRewrite.push_back(&CS);
     }
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Replacing call sites of "
+                      << F->getName() << " with "
+                      << Clone->getName() << "\n");
+
     for (auto *CS : CallSitesToRewrite) {
+      LLVM_DEBUG(dbgs() << "FnSpecialization:   "
+                        << CS->getFunction()->getName() << " ->"
+                        << *CS << "\n");
       if ((CS->getFunction() == Clone && CS->getArgOperand(ArgNo) == &Arg) ||
           CS->getArgOperand(ArgNo) == C) {
         CS->setCalledFunction(Clone);
@@ -779,7 +797,7 @@ private:
       for (Argument &Arg : F->args())
         if (!Arg.use_empty() && tryToReplaceWithConstant(&Arg))
           LLVM_DEBUG(dbgs() << "FnSpecialization: Replaced constant argument: "
-                            << Arg.getName() << "\n");
+                            << Arg.getNameOrAsOperand() << "\n");
     }
   }
 };
@@ -890,6 +908,7 @@ bool llvm::runFunctionSpecialization(
   unsigned I = 0;
   while (FuncSpecializationMaxIters != I++ &&
          FS.specializeFunctions(FuncDecls, WorkList)) {
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Finished iteration " << I << "\n");
 
     // Run the solver for the specialized functions.
     RunSCCPSolver(WorkList);
@@ -900,6 +919,9 @@ bool llvm::runFunctionSpecialization(
     WorkList.clear();
     Changed = true;
   }
+
+  LLVM_DEBUG(dbgs() << "FnSpecialization: Number of specializations = "
+                    << NumFuncSpecialized <<"\n");
 
   // Clean up the IR by removing dead instructions and ssa_copy intrinsics.
   FS.removeDeadInstructions();
