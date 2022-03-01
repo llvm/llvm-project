@@ -95,7 +95,7 @@ def ConvertArithmeticToLLVM : Pass<"convert-arith-to-llvm", "FuncOp"> {
 // ArithmeticToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertArithmeticToSPIRV : Pass<"convert-arith-to-spirv", "FuncOp"> {
+def ConvertArithmeticToSPIRV : Pass<"convert-arith-to-spirv", "ModuleOp"> {
   let summary = "Convert Arithmetic dialect to SPIR-V dialect";
   let constructor = "mlir::arith::createConvertArithmeticToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -199,6 +199,38 @@ def ConvertControlFlowToLLVM : Pass<"convert-cf-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// ControlFlowToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv", "ModuleOp"> {
+  let summary = "Convert ControlFlow dialect to SPIR-V dialect";
+  let constructor = "mlir::createConvertControlFlowToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+  let options = [
+    Option<"emulateNon32BitScalarTypes", "emulate-non-32-bit-scalar-types",
+           "bool", /*default=*/"true",
+           "Emulate non-32-bit scalar types with 32-bit ones if "
+           "missing native support">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// FuncToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertFuncToSPIRV : Pass<"convert-func-to-spirv", "ModuleOp"> {
+  let summary = "Convert Func dialect to SPIR-V dialect";
+  let constructor = "mlir::createConvertFuncToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+  let options = [
+    Option<"emulateNon32BitScalarTypes", "emulate-non-32-bit-scalar-types",
+           "bool", /*default=*/"true",
+           "Emulate non-32-bit scalar types with 32-bit ones if "
+           "missing native support">
   ];
 }
 
@@ -637,12 +669,12 @@ def ConvertStandardToLLVM : Pass<"convert-std-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// StandardToSPIRV
+// TensorToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv", "ModuleOp"> {
-  let summary = "Convert Standard dialect to SPIR-V dialect";
-  let constructor = "mlir::createConvertStandardToSPIRVPass()";
+def ConvertTensorToSPIRV : Pass<"convert-tensor-to-spirv", "ModuleOp"> {
+  let summary = "Convert Tensor dialect to SPIR-V dialect";
+  let constructor = "mlir::createConvertTensorToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
   let options = [
     Option<"emulateNon32BitScalarTypes", "emulate-non-32-bit-scalar-types",

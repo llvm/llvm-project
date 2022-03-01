@@ -1,6 +1,6 @@
-add_mlir_conversion_library(MLIRControlFlowToSPIRV
-  ControlFlowToSPIRV.cpp
-  ControlFlowToSPIRVPass.cpp
+add_mlir_conversion_library(MLIRTensorToSPIRV
+  TensorToSPIRV.cpp
+  TensorToSPIRVPass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
@@ -10,11 +10,13 @@ add_mlir_conversion_library(MLIRControlFlowToSPIRV
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmeticToSPIRV
+  MLIRFuncToSPIRV
   MLIRIR
-  MLIRControlFlow
   MLIRPass
   MLIRSPIRV
   MLIRSPIRVConversion
   MLIRSupport
   MLIRTransformUtils
+  MLIRTensor
   )

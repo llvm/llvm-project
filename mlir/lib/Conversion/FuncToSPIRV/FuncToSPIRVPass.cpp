@@ -1,4 +1,4 @@
-//===- SCFToSPIRVPass.cpp - SCF to SPIR-V Passes --------------------------===//
+//===- FuncToSPIRVPass.cpp - Func to SPIR-V Passes ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,30 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to convert SCF dialect into SPIR-V dialect.
+// This file implements a pass to convert Func dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SCFToSPIRV/SCFToSPIRVPass.h"
-
+#include "mlir/Conversion/FuncToSPIRV/FuncToSPIRVPass.h"
 #include "../PassDetail.h"
-#include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
-#include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
-#include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
-#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 using namespace mlir;
 
 namespace {
-struct SCFToSPIRVPass : public SCFToSPIRVBase<SCFToSPIRVPass> {
+/// A pass converting MLIR Func operations into the SPIR-V dialect.
+class ConvertFuncToSPIRVPass
+    : public ConvertFuncToSPIRVBase<ConvertFuncToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
 
-void SCFToSPIRVPass::runOnOperation() {
+void ConvertFuncToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
 
@@ -37,22 +34,18 @@ void SCFToSPIRVPass::runOnOperation() {
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
-  SPIRVTypeConverter typeConverter(targetAttr);
-  ScfToSPIRVContext scfContext;
-  RewritePatternSet patterns(context);
-  populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
+  SPIRVTypeConverter::Options options;
+  options.emulateNon32BitScalarTypes = this->emulateNon32BitScalarTypes;
+  SPIRVTypeConverter typeConverter(targetAttr, options);
 
-  // TODO: Change SPIR-V conversion to be progressive and remove the following
-  // patterns.
-  mlir::arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
+  RewritePatternSet patterns(context);
   populateFuncToSPIRVPatterns(typeConverter, patterns);
-  populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
   if (failed(applyPartialConversion(module, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToSPIRVPass() {
-  return std::make_unique<SCFToSPIRVPass>();
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertFuncToSPIRVPass() {
+  return std::make_unique<ConvertFuncToSPIRVPass>();
 }

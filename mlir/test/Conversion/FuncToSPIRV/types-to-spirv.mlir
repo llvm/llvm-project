@@ -1,5 +1,5 @@
-// RUN: mlir-opt -split-input-file -convert-std-to-spirv %s -o - | FileCheck %s
-// RUN: mlir-opt -split-input-file -convert-std-to-spirv="emulate-non-32-bit-scalar-types=false" %s -o - | FileCheck %s --check-prefix=NOEMU
+// RUN: mlir-opt -split-input-file -convert-func-to-spirv %s -o - | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-func-to-spirv="emulate-non-32-bit-scalar-types=false" %s -o - | FileCheck %s --check-prefix=NOEMU
 
 //===----------------------------------------------------------------------===//
 // Integer types

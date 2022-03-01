@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "../PassDetail.h"
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -843,7 +844,14 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    SelectOpPattern
+    SelectOpPattern,
+
+    spirv::ElementwiseOpPattern<arith::MaxFOp, spirv::GLSLFMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSLSMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLSLUMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MinFOp, spirv::GLSLFMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSLSMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLSLUMinOp>
   >(typeConverter, patterns.getContext());
   // clang-format on
 
@@ -861,7 +869,7 @@ namespace {
 struct ConvertArithmeticToSPIRVPass
     : public ConvertArithmeticToSPIRVBase<ConvertArithmeticToSPIRVPass> {
   void runOnOperation() override {
-    auto module = getOperation()->getParentOfType<ModuleOp>();
+    auto module = getOperation();
     auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
     auto target = SPIRVConversionTarget::get(targetAttr);
 
@@ -870,10 +878,11 @@ struct ConvertArithmeticToSPIRVPass
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
     RewritePatternSet patterns(&getContext());
-    mlir::arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
+    arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
+    populateFuncToSPIRVPatterns(typeConverter, patterns);
+    populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
-    if (failed(applyPartialConversion(getOperation(), *target,
-                                      std::move(patterns))))
+    if (failed(applyPartialConversion(module, *target, std::move(patterns))))
       signalPassFailure();
   }
 };

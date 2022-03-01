@@ -1141,12 +1141,12 @@ in a few places:
 *   From GPU dialect: headers are at
     [include/mlir/Conversion/GPUTOSPIRV][MlirGpuToSpirvHeaders]; libraries are
     at [lib/Conversion/GPUToSPIRV][MlirGpuToSpirvLibs].
-*   From standard dialect: headers are at
-    [include/mlir/Conversion/StandardTOSPIRV][MlirStdToSpirvHeaders]; libraries
-    are at [lib/Conversion/StandardToSPIRV][MlirStdToSpirvLibs].
+*   From Func dialect: headers are at
+    [include/mlir/Conversion/FuncToSPIRV][MlirFuncToSpirvHeaders]; libraries
+    are at [lib/Conversion/FuncToSPIRV][MlirFuncToSpirvLibs].
 
 These dialect to dialect conversions have their dedicated libraries,
-`MLIRGPUToSPIRV` and `MLIRStandardToSPIRV`, respectively.
+`MLIRGPUToSPIRV` and `MLIRFuncToSPIRV`, respectively.
 
 There are also common utilities when targeting SPIR-V from any dialect:
 
@@ -1406,8 +1406,8 @@ dialect.
 [MlirSpirvUnittests]: https://github.com/llvm/llvm-project/tree/main/mlir/unittests/Dialect/SPIRV
 [MlirGpuToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Conversion/GPUToSPIRV
 [MlirGpuToSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Conversion/GPUToSPIRV
-[MlirStdToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Conversion/StandardToSPIRV
-[MlirStdToSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Conversion/StandardToSPIRV
+[MlirFuncToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Conversion/FuncToSPIRV
+[MlirFuncToSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Conversion/FuncToSPIRV
 [MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVDialect.h
 [MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVTypes.h
 [MlirSpirvOpsH]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVOps.h
