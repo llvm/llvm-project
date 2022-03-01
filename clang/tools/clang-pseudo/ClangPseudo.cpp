@@ -24,6 +24,7 @@ using llvm::cl::opt;
 
 static opt<std::string>
     Grammar("grammar", desc("Parse and check a BNF grammar file."), init(""));
+static opt<bool> PrintGrammar("print-grammar", desc("Print the grammar."));
 static opt<bool> PrintGraph("print-graph",
                             desc("Print the LR graph for the grammar"));
 static opt<bool> PrintTable("print-table",
@@ -60,6 +61,8 @@ int main(int argc, char *argv[]) {
     }
     llvm::outs() << llvm::formatv("grammar file {0} is parsed successfully\n",
                                   Grammar);
+    if (PrintGrammar)
+      llvm::outs() << G->dump();
     if (PrintGraph)
       llvm::outs() << clang::syntax::pseudo::LRGraph::buildLR0(*G).dumpForTests(
           *G);
