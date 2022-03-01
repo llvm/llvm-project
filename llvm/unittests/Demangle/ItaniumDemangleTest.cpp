@@ -53,7 +53,8 @@ TEST(ItaniumDemangle, MethodOverride) {
 }
 
 static std::string toString(OutputBuffer &OB) {
-  return {OB.getBuffer(), OB.getCurrentPosition()};
+  StringView SV = OB;
+  return {SV.begin(), SV.end()};
 }
 
 TEST(ItaniumDemangle, HalfType) {
