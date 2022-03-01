@@ -1972,7 +1972,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
 }
 
 TEST_P(OpenMPIRBuilderTestWithIVBits, StaticChunkedWorkshareLoop) {
-  int IVBits = GetParam();
+  unsigned IVBits = GetParam();
 
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
