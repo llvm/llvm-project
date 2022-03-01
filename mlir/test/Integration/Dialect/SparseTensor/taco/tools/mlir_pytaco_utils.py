@@ -133,7 +133,8 @@ def sparse_tensor_to_coo_tensor(
 
 
 def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
-                                np_indices: np.ndarray) -> int:
+                                np_indices: np.ndarray, np_perm: np.ndarray,
+                                np_sparse: np.ndarray) -> int:
   """Converts a COO-flavored format sparse tensor to an MLIR sparse tensor.
 
   Args:
@@ -141,6 +142,10 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
      np_values: A 1D numpy array, for the non-zero values in the tensor.
      np_indices: A 2D numpy array of integers, representing the indices for the
        non-zero values in the tensor.
+     np_perm: A 1D numpy array of integers, representing the storage ordering
+       for the dimensions.
+     np_sparse: A 1D numpy array of uint8, representing the sparsity values
+       for the dimensions.
 
   Returns:
      An integer for the non-null ctypes.c_void_p to the MLIR sparse tensor
@@ -159,8 +164,6 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
       ctypes.POINTER(np.ctypeslib.as_ctypes_type(np_values.dtype)))
   indices = np_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
 
-  np_perm = np.arange(r, dtype=np.ulonglong)
-  np_sparse = np.full(r, 1, dtype=np.uint8)
   perm = np_perm.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
   sparse = np_sparse.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
 
