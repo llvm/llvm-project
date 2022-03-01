@@ -515,12 +515,14 @@ public:
   }
 
   /// Is this a module partition.
-  bool isModulePartition() const { return Name.find(':') != std::string::npos; }
+  bool isModulePartition() const {
+    return Kind == ModulePartitionInterface ||
+           Kind == ModulePartitionImplementation;
+  }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {
-    if (Kind == ModulePartitionInterface ||
-        Kind == ModulePartitionImplementation) {
+    if (isModulePartition()) {
       auto pos = Name.find(':');
       return StringRef(Name.data(), pos);
     }
