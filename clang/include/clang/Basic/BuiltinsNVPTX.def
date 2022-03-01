@@ -17,6 +17,7 @@
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#pragma push_macro("SM_53")
 #pragma push_macro("SM_70")
 #pragma push_macro("SM_72")
 #pragma push_macro("SM_75")
@@ -30,7 +31,9 @@
 
 #pragma push_macro("SM_60")
 #define SM_60 "sm_60|sm_61|sm_62|" SM_70
+#define SM_53 "sm_53|" SM_60
 
+#pragma push_macro("PTX42")
 #pragma push_macro("PTX60")
 #pragma push_macro("PTX61")
 #pragma push_macro("PTX63")
@@ -53,6 +56,7 @@
 #define PTX63 "ptx63|" PTX64
 #define PTX61 "ptx61|" PTX63
 #define PTX60 "ptx60|" PTX61
+#define PTX42 "ptx42|" PTX60
 
 #pragma push_macro("AND")
 #define AND(a, b) "(" a "),(" b ")"
@@ -293,6 +297,22 @@ BUILTIN(__nvvm_cos_approx_f, "ff", "")
 
 // Fma
 
+TARGET_BUILTIN(__nvvm_fma_rn_f16, "hhhh", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_ftz_f16, "hhhh", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_sat_f16, "hhhh", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_ftz_sat_f16, "hhhh", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_relu_f16, "hhhh", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_ftz_relu_f16, "hhhh", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_f16x2, "V2hV2hV2hV2h", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_ftz_f16x2, "V2hV2hV2hV2h", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_sat_f16x2, "V2hV2hV2hV2h", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_ftz_sat_f16x2, "V2hV2hV2hV2h", "", AND(SM_53, PTX42))
+TARGET_BUILTIN(__nvvm_fma_rn_relu_f16x2, "V2hV2hV2hV2h", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_ftz_relu_f16x2, "V2hV2hV2hV2h", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_bf16, "UsUsUsUs", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_relu_bf16, "UsUsUsUs", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_bf16x2, "ZUiZUiZUiZUi", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_relu_bf16x2, "ZUiZUiZUiZUi", "", AND(SM_80, PTX70))
 BUILTIN(__nvvm_fma_rn_ftz_f, "ffff", "")
 BUILTIN(__nvvm_fma_rn_f, "ffff", "")
 BUILTIN(__nvvm_fma_rz_ftz_f, "ffff", "")
@@ -913,12 +933,14 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #pragma pop_macro("AND")
+#pragma pop_macro("SM_53")
 #pragma pop_macro("SM_60")
 #pragma pop_macro("SM_70")
 #pragma pop_macro("SM_72")
 #pragma pop_macro("SM_75")
 #pragma pop_macro("SM_80")
 #pragma pop_macro("SM_86")
+#pragma pop_macro("PTX42")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
 #pragma pop_macro("PTX63")

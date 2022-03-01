@@ -866,6 +866,22 @@ __device__ void nvvm_min_max_sm80() {
 #endif
   // CHECK: ret void
 }
+
+// CHECK-LABEL: nvvm_fma_bf16_bf16x2_sm80
+__device__ void nvvm_fma_bf16_bf16x2_sm80() {
+#if __CUDA_ARCH__ >= 800
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fma.rn.bf16
+  __nvvm_fma_rn_bf16(0x1234, 0x7FBF, 0x1234);
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fma.rn.relu.bf16
+  __nvvm_fma_rn_relu_bf16(0x1234, 0x7FBF, 0x1234);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fma.rn.bf16x2
+  __nvvm_fma_rn_bf16x2(0x7FBFFFFF, 0xFFFFFFFF, 0x7FBFFFFF);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fma.rn.relu.bf16x2
+  __nvvm_fma_rn_relu_bf16x2(0x7FBFFFFF, 0xFFFFFFFF, 0x7FBFFFFF);
+#endif
+  // CHECK: ret void
+}
+
 // CHECK-LABEL: nvvm_min_max_sm86
 __device__ void nvvm_min_max_sm86() {
 #if __CUDA_ARCH__ >= 860
