@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: broken-utf8-wchar-ctype
+// XFAIL: win32-broken-utf8-wchar-ctype
 
 // <locale>
 
