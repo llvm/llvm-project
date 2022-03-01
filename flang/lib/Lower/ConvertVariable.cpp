@@ -728,6 +728,86 @@ void Fortran::lower::mapSymbolAttributes(
     }
   }
 
+  // Helper to generate scalars for the symbol properties.
+  auto genValue = [&](const Fortran::lower::SomeExpr &expr) {
+    return genScalarValue(converter, loc, expr, symMap, stmtCtx);
+  };
+
+  // For symbols reaching this point, all properties are constant and can be
+  // read/computed already into ssa values.
+
+  // The origin must be \vec{1}.
+  auto populateShape = [&](auto &shapes, const auto &bounds, mlir::Value box) {
+    for (auto iter : llvm::enumerate(bounds)) {
+      auto *spec = iter.value();
+      assert(spec->lbound().GetExplicit() &&
+             "lbound must be explicit with constant value 1");
+      if (auto high = spec->ubound().GetExplicit()) {
+        Fortran::lower::SomeExpr highEx{*high};
+        mlir::Value ub = genValue(highEx);
+        shapes.emplace_back(builder.createConvert(loc, idxTy, ub));
+      } else if (spec->ubound().isColon()) {
+        assert(box && "assumed bounds require a descriptor");
+        mlir::Value dim =
+            builder.createIntegerConstant(loc, idxTy, iter.index());
+        auto dimInfo =
+            builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+        shapes.emplace_back(dimInfo.getResult(1));
+      } else if (spec->ubound().isStar()) {
+        shapes.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
+      } else {
+        llvm::report_fatal_error("unknown bound category");
+      }
+    }
+  };
+
+  // The origin is not \vec{1}.
+  auto populateLBoundsExtents = [&](auto &lbounds, auto &extents,
+                                    const auto &bounds, mlir::Value box) {
+    for (auto iter : llvm::enumerate(bounds)) {
+      auto *spec = iter.value();
+      fir::BoxDimsOp dimInfo;
+      mlir::Value ub, lb;
+      if (spec->lbound().isColon() || spec->ubound().isColon()) {
+        // This is an assumed shape because allocatables and pointers extents
+        // are not constant in the scope and are not read here.
+        assert(box && "deferred bounds require a descriptor");
+        mlir::Value dim =
+            builder.createIntegerConstant(loc, idxTy, iter.index());
+        dimInfo =
+            builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+        extents.emplace_back(dimInfo.getResult(1));
+        if (auto low = spec->lbound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*low};
+          mlir::Value lb = builder.createConvert(loc, idxTy, genValue(expr));
+          lbounds.emplace_back(lb);
+        } else {
+          // Implicit lower bound is 1 (Fortran 2018 section 8.5.8.3 point 3.)
+          lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, 1));
+        }
+      } else {
+        if (auto low = spec->lbound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*low};
+          lb = builder.createConvert(loc, idxTy, genValue(expr));
+        } else {
+          TODO(loc, "assumed rank lowering");
+        }
+
+        if (auto high = spec->ubound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*high};
+          ub = builder.createConvert(loc, idxTy, genValue(expr));
+          lbounds.emplace_back(lb);
+          extents.emplace_back(computeExtent(builder, loc, lb, ub));
+        } else {
+          // An assumed size array. The extent is not computed.
+          assert(spec->ubound().isStar() && "expected assumed size");
+          lbounds.emplace_back(lb);
+          extents.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
+        }
+      }
+    }
+  };
+
   // For symbols reaching this point, all properties are constant and can be
   // read/computed already into ssa values.
 
@@ -827,7 +907,48 @@ void Fortran::lower::mapSymbolAttributes(
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::DynamicArray &x) {
-        TODO(loc, "DynamicArray variable lowering");
+        // cast to the known constant parts from the declaration
+        mlir::Type varType = converter.genType(var);
+        mlir::Value addr = symMap.lookupSymbol(sym).getAddr();
+        mlir::Value argBox;
+        mlir::Type castTy = builder.getRefType(varType);
+        if (addr) {
+          if (auto boxTy = addr.getType().dyn_cast<fir::BoxType>()) {
+            argBox = addr;
+            mlir::Type refTy = builder.getRefType(boxTy.getEleTy());
+            addr = builder.create<fir::BoxAddrOp>(loc, refTy, argBox);
+          }
+          addr = builder.createConvert(loc, castTy, addr);
+        }
+        if (x.lboundAllOnes()) {
+          // if lower bounds are all ones, build simple shaped object
+          llvm::SmallVector<mlir::Value> shapes;
+          populateShape(shapes, x.bounds, argBox);
+          if (isDummy) {
+            symMap.addSymbolWithShape(sym, addr, shapes, true);
+            return;
+          }
+          // local array with computed bounds
+          assert(Fortran::lower::isExplicitShape(sym) ||
+                 Fortran::semantics::IsAllocatableOrPointer(sym));
+          mlir::Value local =
+              createNewLocal(converter, loc, var, preAlloc, shapes);
+          symMap.addSymbolWithShape(sym, local, shapes);
+          return;
+        }
+        // if object is an array process the lower bound and extent values
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
+        populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
+        if (isDummy) {
+          symMap.addSymbolWithBounds(sym, addr, extents, lbounds, true);
+          return;
+        }
+        // local array with computed bounds
+        assert(Fortran::lower::isExplicitShape(sym));
+        mlir::Value local =
+            createNewLocal(converter, loc, var, preAlloc, extents);
+        symMap.addSymbolWithBounds(sym, local, extents, lbounds);
       },
 
       //===--------------------------------------------------------------===//
