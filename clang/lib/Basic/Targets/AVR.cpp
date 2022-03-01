@@ -24,7 +24,8 @@ namespace targets {
 struct LLVM_LIBRARY_VISIBILITY MCUInfo {
   const char *Name;
   const char *DefineName;
-  const int NumFlashBanks; // -1 means the device does not support LPM/ELPM.
+  const int NumFlashBanks; // Set to 0 for the devices do not support LPM/ELPM.
+  bool IsTiny; // Set to true for the devices belong to the avrtiny family.
 };
 
 // This list should be kept up-to-date with AVRDevices.td in LLVM.
@@ -267,14 +268,14 @@ static MCUInfo AVRMcus[] = {
     {"atxmega128a1", "__AVR_ATxmega128A1__", 2},
     {"atxmega128a1u", "__AVR_ATxmega128A1U__", 2},
     {"atxmega128a4u", "__AVR_ATxmega128A4U__", 2},
-    {"attiny4", "__AVR_ATtiny4__", 0},
-    {"attiny5", "__AVR_ATtiny5__", 0},
-    {"attiny9", "__AVR_ATtiny9__", 0},
-    {"attiny10", "__AVR_ATtiny10__", 0},
-    {"attiny20", "__AVR_ATtiny20__", 0},
-    {"attiny40", "__AVR_ATtiny40__", 0},
-    {"attiny102", "__AVR_ATtiny102__", 0},
-    {"attiny104", "__AVR_ATtiny104__", 0},
+    {"attiny4", "__AVR_ATtiny4__", 0, true},
+    {"attiny5", "__AVR_ATtiny5__", 0, true},
+    {"attiny9", "__AVR_ATtiny9__", 0, true},
+    {"attiny10", "__AVR_ATtiny10__", 0, true},
+    {"attiny20", "__AVR_ATtiny20__", 0, true},
+    {"attiny40", "__AVR_ATtiny40__", 0, true},
+    {"attiny102", "__AVR_ATtiny102__", 0, true},
+    {"attiny104", "__AVR_ATtiny104__", 0, true},
     {"attiny202", "__AVR_ATtiny202__", 1},
     {"attiny402", "__AVR_ATtiny402__", 1},
     {"attiny204", "__AVR_ATtiny204__", 1},
@@ -323,6 +324,27 @@ void AVRTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidFamilyNames), std::end(ValidFamilyNames));
   for (const MCUInfo &Info : AVRMcus)
     Values.push_back(Info.Name);
+}
+
+bool AVRTargetInfo::setCPU(const std::string &Name) {
+  // Set the ABI and CPU fields if parameter Name is a family name.
+  if (llvm::is_contained(ValidFamilyNames, Name)) {
+    CPU = Name;
+    ABI = Name == "avrtiny" ? "avrtiny" : "avr";
+    return true;
+  }
+
+  // Set the ABI field if parameter Name is a device name.
+  auto It = llvm::find_if(
+      AVRMcus, [&](const MCUInfo &Info) { return Info.Name == Name; });
+  if (It != std::end(AVRMcus)) {
+    CPU = Name;
+    ABI = It->IsTiny ? "avrtiny" : "avr";
+    return true;
+  }
+
+  // Parameter Name is neither valid family name nor valid device name.
+  return false;
 }
 
 void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,

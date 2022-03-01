@@ -19,9 +19,9 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -33,6 +33,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm> // std::sort
 
@@ -8272,32 +8273,93 @@ void M68kTargetCodeGenInfo::setTargetAttributes(
 
 namespace {
 class AVRABIInfo : public DefaultABIInfo {
-public:
-  AVRABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+private:
+  // The total amount of registers can be used to pass parameters. It is 18 on
+  // AVR, or 6 on AVRTiny.
+  const unsigned ParamRegs;
+  // The total amount of registers can be used to pass return value. It is 8 on
+  // AVR, or 4 on AVRTiny.
+  const unsigned RetRegs;
 
-  ABIArgInfo classifyReturnType(QualType Ty) const {
-    // A return struct with size less than or equal to 8 bytes is returned
-    // directly via registers R18-R25.
-    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) <= 64)
-      return ABIArgInfo::getDirect();
-    else
-      return DefaultABIInfo::classifyReturnType(Ty);
+public:
+  AVRABIInfo(CodeGenTypes &CGT, unsigned NPR, unsigned NRR)
+      : DefaultABIInfo(CGT), ParamRegs(NPR), RetRegs(NRR) {}
+
+  ABIArgInfo classifyReturnType(QualType Ty, bool &LargeRet) const {
+    if (isAggregateTypeForABI(Ty)) {
+      // On AVR, a return struct with size less than or equals to 8 bytes is
+      // returned directly via registers R18-R25. On AVRTiny, a return struct
+      // with size less than or equals to 4 bytes is returned directly via
+      // registers R22-R25.
+      if (getContext().getTypeSize(Ty) <= RetRegs * 8)
+        return ABIArgInfo::getDirect();
+      // A return struct with larger size is returned via a stack
+      // slot, along with a pointer to it as the function's implicit argument.
+      LargeRet = true;
+      return getNaturalAlignIndirect(Ty);
+    }
+    // Otherwise we follow the default way which is compatible.
+    return DefaultABIInfo::classifyReturnType(Ty);
   }
 
-  // Just copy the original implementation of DefaultABIInfo::computeInfo(),
-  // since DefaultABIInfo::classify{Return,Argument}Type() are not virtual.
+  ABIArgInfo classifyArgumentType(QualType Ty, unsigned &NumRegs) const {
+    unsigned TySize = getContext().getTypeSize(Ty);
+
+    // An int8 type argument always costs two registers like an int16.
+    if (TySize == 8 && NumRegs >= 2) {
+      NumRegs -= 2;
+      return ABIArgInfo::getExtend(Ty);
+    }
+
+    // If the argument size is an odd number of bytes, round up the size
+    // to the next even number.
+    TySize = llvm::alignTo(TySize, 16);
+
+    // Any type including an array/struct type can be passed in rgisters,
+    // if there are enough registers left.
+    if (TySize <= NumRegs * 8) {
+      NumRegs -= TySize / 8;
+      return ABIArgInfo::getDirect();
+    }
+
+    // An argument is passed either completely in registers or completely in
+    // memory. Since there are not enough registers left, current argument
+    // and all other unprocessed arguments should be passed in memory.
+    // However we still need to return `ABIArgInfo::getDirect()` other than
+    // `ABIInfo::getNaturalAlignIndirect(Ty)`, otherwise an extra stack slot
+    // will be allocated, so the stack frame layout will be incompatible with
+    // avr-gcc.
+    NumRegs = 0;
+    return ABIArgInfo::getDirect();
+  }
+
   void computeInfo(CGFunctionInfo &FI) const override {
+    // Decide the return type.
+    bool LargeRet = false;
     if (!getCXXABI().classifyReturnType(FI))
-      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType(), LargeRet);
+
+    // Decide each argument type. The total number of registers can be used for
+    // arguments depends on several factors:
+    // 1. Arguments of varargs functions are passed on the stack. This applies
+    //    even to the named arguments. So no register can be used.
+    // 2. Total 18 registers can be used on avr and 6 ones on avrtiny.
+    // 3. If the return type is a struct with too large size, two registers
+    //    (out of 18/6) will be cost as an implicit pointer argument.
+    unsigned NumRegs = ParamRegs;
+    if (FI.isVariadic())
+      NumRegs = 0;
+    else if (LargeRet)
+      NumRegs -= 2;
     for (auto &I : FI.arguments())
-      I.info = classifyArgumentType(I.type);
+      I.info = classifyArgumentType(I.type, NumRegs);
   }
 };
 
 class AVRTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  AVRTargetCodeGenInfo(CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<AVRABIInfo>(CGT)) {}
+  AVRTargetCodeGenInfo(CodeGenTypes &CGT, unsigned NPR, unsigned NRR)
+      : TargetCodeGenInfo(std::make_unique<AVRABIInfo>(CGT, NPR, NRR)) {}
 
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override {
@@ -11270,8 +11332,14 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::mips64el:
     return SetCGInfo(new MIPSTargetCodeGenInfo(Types, false));
 
-  case llvm::Triple::avr:
-    return SetCGInfo(new AVRTargetCodeGenInfo(Types));
+  case llvm::Triple::avr: {
+    // For passing parameters, R8~R25 are used on avr, and R18~R25 are used
+    // on avrtiny. For passing return value, R18~R25 are used on avr, and
+    // R22~R25 are used on avrtiny.
+    unsigned NPR = getTarget().getABI() == "avrtiny" ? 6 : 18;
+    unsigned NRR = getTarget().getABI() == "avrtiny" ? 4 : 8;
+    return SetCGInfo(new AVRTargetCodeGenInfo(Types, NPR, NRR));
+  }
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
