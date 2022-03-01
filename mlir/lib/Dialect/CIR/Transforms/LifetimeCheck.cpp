@@ -33,28 +33,37 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkLoad(LoadOp op);
 
   struct State {
-    using DataTy = enum { Invalid, NullPtr, LocalValue };
-    DataTy data = Invalid;
-    State() = default;
-    State(DataTy d) : data(d) {}
-    State(mlir::Value v) : data(LocalValue), value(v) {}
-    // FIXME: use int/ptr pair to save space
-    std::optional<mlir::Value> value = std::nullopt;
+    using DataTy = enum {
+      Invalid,
+      NullPtr,
+      Global,
+      LocalValue,
+      NumKindsMinusOne = LocalValue
+    };
+    State() { val.setInt(Invalid); }
+    State(DataTy d) { val.setInt(d); }
+    State(mlir::Value v) { val.setPointerAndInt(v, LocalValue); }
+
+    static constexpr int KindBits = 2;
+    static_assert((1 << KindBits) > NumKindsMinusOne,
+                  "Not enough room for kind!");
+    llvm::PointerIntPair<mlir::Value, KindBits> val;
 
     /// Provide less/equal than operator for sorting / set ops.
     bool operator<(const State &RHS) const {
       // FIXME: note that this makes the ordering non-deterministic, do
       // we really care?
-      if (data == LocalValue && RHS.data == LocalValue)
-        return value->getAsOpaquePointer() < RHS.value->getAsOpaquePointer();
+      if (val.getInt() == LocalValue && RHS.val.getInt() == LocalValue)
+        return val.getPointer().getAsOpaquePointer() <
+               RHS.val.getPointer().getAsOpaquePointer();
       else
-        return data < RHS.data;
+        return val.getInt() < RHS.val.getInt();
     }
     bool operator==(const State &RHS) const {
-      if (data == LocalValue && RHS.data == LocalValue)
-        return *value == *RHS.value;
+      if (val.getInt() == LocalValue && RHS.val.getInt() == LocalValue)
+        return val.getPointer() == RHS.val.getPointer();
       else
-        return data == RHS.data;
+        return val.getInt() == RHS.val.getInt();
     }
 
     void dump();
@@ -309,15 +318,18 @@ void LifetimeCheckPass::LexicalScopeContext::dumpLocalValues() {
 }
 
 void LifetimeCheckPass::State::dump() {
-  switch (data) {
+  switch (val.getInt()) {
   case Invalid:
     llvm::errs() << "invalid";
     break;
   case NullPtr:
     llvm::errs() << "nullptr";
     break;
+  case Global:
+    llvm::errs() << "global";
+    break;
   case LocalValue:
-    llvm::errs() << getVarNameFromValue(*value);
+    llvm::errs() << getVarNameFromValue(val.getPointer());
     break;
   }
 }
