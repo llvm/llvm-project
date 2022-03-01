@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/threads/thrd_create.h"
+#include "Futex.h"
+
 #include "include/errno.h"                // For E* error values.
 #include "include/sys/mman.h"             // For PROT_* and MAP_* definitions.
 #include "include/sys/syscall.h"          // For syscall numbers.
@@ -16,8 +17,8 @@
 #include "src/errno/llvmlibc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
-#include "src/threads/linux/Futex.h"
 #include "src/threads/linux/Thread.h"
+#include "src/threads/thrd_create.h"
 
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
@@ -61,8 +62,7 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   thread->__stack = stack;
   thread->__stack_size = ThreadParams::DEFAULT_STACK_SIZE;
   thread->__retval = -1;
-  FutexWord *clear_tid_address =
-      reinterpret_cast<FutexWord *>(thread->__clear_tid);
+  FutexWordType *clear_tid_address = &thread->__clear_tid.__word;
   *clear_tid_address = ThreadParams::CLEAR_TID_VALUE;
 
   // When the new thread is spawned by the kernel, the new thread gets the

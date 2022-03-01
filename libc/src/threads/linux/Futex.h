@@ -9,19 +9,22 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H
 
-#include <stdatomic.h>
+#include "src/__support/architectures.h" // Architecture macros
 
 namespace __llvm_libc {
 
+#if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86_64))
 // The futex data has to be exactly 4 bytes long. However, we use a uint type
-// here as we do not want to use `_Atomic uint32_t` as the _Atomic keyword which
-// is C only. The header stdatomic.h does not define an atomic type
-// corresponding to `uint32_t` or to something which is exactly 4 bytes wide.
-using FutexWord = atomic_uint;
-static_assert(sizeof(atomic_uint) == 4,
-              "Size of the `atomic_uint` type is not 4 bytes on your platform. "
-              "The implementation of the standard threads library for linux "
-              "requires that size of `atomic_uint` be 4 bytes.");
+// here as we do not want to use `uint32_t` type to match the public definitions
+// of types which include a field for a futex word. With public definitions, we
+// cannot include <stdint.h> so we stick to the `unsigned int` type for x86_64
+// and aarch64
+using FutexWordType = unsigned int;
+static_assert(sizeof(FutexWordType) == 4,
+              "Unexpected size of unsigned int type.");
+#else
+#error "Futex word base type not defined for the target architecture."
+#endif
 
 } // namespace __llvm_libc
 

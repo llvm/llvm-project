@@ -9,17 +9,13 @@
 #ifndef __LLVM_LIBC_TYPES_MTX_T_H__
 #define __LLVM_LIBC_TYPES_MTX_T_H__
 
+#include <llvm-libc-types/__futex_word.h>
+
 typedef struct {
-#if defined(__x86_64__) || defined(__aarch64__)
-  // Futex word should be aligned appropriately to allow target atomic
-  // instructions. This declaration mimics the internal setup.
-  struct {
-    _Alignas(sizeof(unsigned int) > _Alignof(unsigned int)
-                 ? sizeof(unsigned int)
-                 : _Alignof(unsigned int)) unsigned int __word;
-  } __futex_word;
+#ifdef __unix__
+  __futex_word __ftxw;
 #else
-#error "Mutex type mtx_t is not available for the target architecture."
+#error "mtx_t type not defined for the target platform."
 #endif
   int __mtx_type;
 } mtx_t;

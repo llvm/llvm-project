@@ -43,6 +43,8 @@ public:
   // operations should be performed using the atomic methods however.
   alignas(ALIGNMENT) value_type val;
 
+  constexpr Atomic() = default;
+
   // Intializes the value without using atomic operations.
   constexpr Atomic(value_type v) : val(v) {}
 
@@ -71,6 +73,18 @@ public:
                                MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
     return __atomic_compare_exchange_n(&val, &expected, desired, false,
                                        int(mem_ord), int(mem_ord));
+  }
+
+  T exchange(T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
+    return __atomic_exchange_n(&val, desired, int(mem_ord));
+  }
+
+  T fetch_add(T increment, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
+    return __atomic_fetch_add(&val, increment, int(mem_ord));
+  }
+
+  T fetch_sub(T decrement, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
+    return __atomic_fetch_sub(&val, decrement, int(mem_ord));
   }
 
   // Set the value without using an atomic operation. This is useful

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_MUTEX_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_MUTEX_H
 
+#include "Futex.h"
+
 #include "include/sys/syscall.h"          // For syscall numbers.
 #include "include/threads.h"              // For values like thrd_success etc.
 #include "src/__support/CPP/atomic.h"     // For atomics support
@@ -17,14 +19,6 @@
 #include <linux/futex.h> // For futex operations.
 
 namespace __llvm_libc {
-
-#if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86_64))
-static_assert(sizeof(unsigned int) == 4,
-              "Unexpected size of unsigned int type.");
-typedef unsigned int FutexWordType;
-#else
-#error "Futex word base type not defined for the target architecture."
-#endif
 
 struct Mutex {
   enum Status : FutexWordType {

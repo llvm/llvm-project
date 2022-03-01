@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdatomic.h>
-
 #include "include/threads.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/threads/cnd_broadcast.h"
 #include "src/threads/cnd_destroy.h"
 #include "src/threads/cnd_init.h"
@@ -34,15 +33,15 @@ namespace wait_notify_broadcast_test {
 // |broadcast_count| by 1 before they start waiting on |broadcast_cnd|, and
 // decrement it by 1 after getting signalled on |broadcast_cnd|.
 
-constexpr int THRD_COUNT = 10000;
+constexpr unsigned int THRD_COUNT = 10000;
 
-static atomic_uint broadcast_count = 0;
+static __llvm_libc::cpp::Atomic<unsigned int> broadcast_count(0);
 static cnd_t broadcast_cnd, threads_ready_cnd;
 static mtx_t broadcast_mtx, threads_ready_mtx;
 
 int broadcast_thread_func(void *) {
   __llvm_libc::mtx_lock(&broadcast_mtx);
-  int oldval = atomic_fetch_add(&broadcast_count, 1);
+  int oldval = broadcast_count.fetch_add(1);
   if (oldval == THRD_COUNT - 1) {
     __llvm_libc::mtx_lock(&threads_ready_mtx);
     __llvm_libc::cnd_signal(&threads_ready_cnd);
@@ -51,7 +50,7 @@ int broadcast_thread_func(void *) {
 
   __llvm_libc::cnd_wait(&broadcast_cnd, &broadcast_mtx);
   __llvm_libc::mtx_unlock(&broadcast_mtx);
-  atomic_fetch_sub(&broadcast_count, 1);
+  broadcast_count.fetch_sub(1);
   return 0;
 }
 
@@ -70,7 +69,7 @@ TEST(LlvmLibcCndVarTest, WaitNotifyBroadcastTest) {
   __llvm_libc::mtx_unlock(&threads_ready_mtx);
 
   __llvm_libc::mtx_lock(&broadcast_mtx);
-  ASSERT_EQ(int(broadcast_count), THRD_COUNT);
+  ASSERT_EQ(broadcast_count.val, THRD_COUNT);
   __llvm_libc::cnd_broadcast(&broadcast_cnd);
   __llvm_libc::mtx_unlock(&broadcast_mtx);
 
@@ -80,7 +79,7 @@ TEST(LlvmLibcCndVarTest, WaitNotifyBroadcastTest) {
     ASSERT_EQ(retval, 0);
   }
 
-  ASSERT_EQ(int(broadcast_count), 0);
+  ASSERT_EQ(broadcast_count.val, 0U);
 
   __llvm_libc::cnd_destroy(&broadcast_cnd);
   __llvm_libc::cnd_destroy(&threads_ready_cnd);
