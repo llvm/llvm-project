@@ -2063,12 +2063,11 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
 
   // If the input also splits, handle it directly for a compile time speedup.
   // Otherwise split it by hand.
-  unsigned OpNo = N->isStrictFPOpcode() ? 1 : 0;
-  EVT InVT = N->getOperand(OpNo).getValueType();
+  EVT InVT = N->getOperand(0).getValueType();
   if (getTypeAction(InVT) == TargetLowering::TypeSplitVector)
-    GetSplitVector(N->getOperand(OpNo), Lo, Hi);
+    GetSplitVector(N->getOperand(0), Lo, Hi);
   else
-    std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, OpNo);
+    std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
 
   if (N->getOpcode() == ISD::FP_ROUND) {
     Lo = DAG.getNode(N->getOpcode(), dl, LoVT, Lo, N->getOperand(1),
