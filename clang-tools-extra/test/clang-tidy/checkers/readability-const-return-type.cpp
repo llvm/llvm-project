@@ -271,3 +271,17 @@ const int n14();
 
 int **const * n_multiple_ptr();
 int *const & n_pointer_ref();
+
+class PVBase {
+public:
+  virtual const int getC() = 0;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
+  // CHECK-NOT-FIXES: virtual int getC() = 0;
+};
+
+class PVDerive : public PVBase {
+public:
+  const int getC() { return 1; }
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
+  // CHECK-NOT-FIXES: int getC() { return 1; }
+};
