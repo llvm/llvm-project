@@ -2524,7 +2524,7 @@ class sve_int_arith_vl<bit opc, string asm, bit streaming_sve = 0b0>
   let Inst{4-0}   = Rd;
 }
 
-class sve_int_read_vl_a<bit op, bits<5> opc2, string asm>
+class sve_int_read_vl_a<bit op, bits<5> opc2, string asm, bit streaming_sve = 0b0>
 : I<(outs GPR64:$Rd), (ins simm6_32b:$imm6),
   asm, "\t$Rd, $imm6",
   "",
@@ -2535,7 +2535,8 @@ class sve_int_read_vl_a<bit op, bits<5> opc2, string asm>
   let Inst{22}    = op;
   let Inst{21}    = 0b1;
   let Inst{20-16} = opc2{4-0};
-  let Inst{15-11} = 0b01010;
+  let Inst{15-12} = 0b0101;
+  let Inst{11}    = streaming_sve;
   let Inst{10-5}  = imm6;
   let Inst{4-0}   = Rd;
 }
