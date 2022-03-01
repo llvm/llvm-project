@@ -13,12 +13,12 @@
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
 
@@ -106,6 +106,16 @@ public:
 
   LogicalResult
   matchAndRewrite(gpu::ReturnOp returnOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a gpu.barrier op into a spv.ControlBarrier op.
+class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -327,14 +337,33 @@ LogicalResult GPUReturnOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// Barrier.
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUBarrierConversion::matchAndRewrite(
+    gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  MLIRContext *context = getContext();
+  // Both execution and memory scope should be workgroup.
+  auto scope = spirv::ScopeAttr::get(context, spirv::Scope::Workgroup);
+  // Require acquire and release memory semantics for workgroup memory.
+  auto memorySemantics = spirv::MemorySemanticsAttr::get(
+      context, spirv::MemorySemantics::WorkgroupMemory |
+                   spirv::MemorySemantics::AcquireRelease);
+  rewriter.replaceOpWithNewOp<spirv::ControlBarrierOp>(barrierOp, scope, scope,
+                                                       memorySemantics);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
 void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
-      GPUFuncOpConversion, GPUModuleConversion, GPUModuleEndConversion,
-      GPUReturnOpConversion,
+      GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
+      GPUModuleEndConversion, GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::ThreadIdOp,
