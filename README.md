@@ -1,3 +1,6 @@
+# Why do we make this project?
+We want to use clang/llvm as comfortable as msvc.
+
 # How to compile
 
 ```batch
