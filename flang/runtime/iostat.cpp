@@ -55,6 +55,20 @@ const char *IostatErrorString(int iostat) {
     return "REWIND on non-sequential file";
   case IostatWriteAfterEndfile:
     return "WRITE after ENDFILE";
+  case IostatFormattedIoOnUnformattedUnit:
+    return "Formatted I/O on unformatted file";
+  case IostatUnformattedIoOnFormattedUnit:
+    return "Unformatted I/O on formatted file";
+  case IostatListIoOnDirectAccessUnit:
+    return "List-directed or NAMELIST I/O on direct-access file";
+  case IostatUnformattedChildOnFormattedParent:
+    return "Unformatted child I/O on formatted parent unit";
+  case IostatFormattedChildOnUnformattedParent:
+    return "Formatted child I/O on unformatted parent unit";
+  case IostatChildInputFromOutputParent:
+    return "Child input from output parent unit";
+  case IostatChildOutputToInputParent:
+    return "Child output to input parent unit";
   default:
     return nullptr;
   }
