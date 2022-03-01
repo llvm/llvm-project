@@ -29,6 +29,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkRegion(Region &region);
 
   void checkAlloca(AllocaOp op);
+  void checkStore(StoreOp op);
+  void checkLoad(LoadOp op);
 
   struct State {
     using DataTy = enum { Invalid, NullPtr, LocalValue };
@@ -195,6 +197,67 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
          "other init styles tbd");
 }
 
+void LifetimeCheckPass::checkStore(StoreOp storeOp) {
+  auto addr = storeOp.getAddr();
+
+  // We only care about stores that change local pointers, local values
+  // are not interesting here (just yet).
+  if (!ptrs.count(addr))
+    return;
+
+  auto data = storeOp.getValue();
+  // 2.4.2 - If the declaration includes an initialization, the
+  // initialization is treated as a separate operation
+  if (auto cstOp = dyn_cast<::mlir::cir::ConstantOp>(data.getDefiningOp())) {
+    assert(cstOp.isNullPtr() && "not implemented");
+    // 2.4.2 - If the initialization is default initialization or zero
+    // initialization, set pset(p) = {null}; for example:
+    //
+    //  int* p; => pset(p) == {invalid}
+    //  int* p{}; or string_view p; => pset(p) == {null}.
+    //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
+    pmap[addr] = {};
+    pmap[addr].insert(State::getNullPtr());
+    return;
+  }
+
+  if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(data.getDefiningOp())) {
+    // p = &x;
+    pmap[addr] = {};
+    pmap[addr].insert(State::getLocalValue(data));
+    return;
+  }
+
+  storeOp.dump();
+  // FIXME: asserts here should become remarks for non-implemented parts.
+  assert(0 && "not implemented");
+}
+
+void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
+  auto addr = loadOp.getAddr();
+  // Only interested in checking deference on top of pointer types.
+  if (!pmap.count(addr) || !ptrs.count(addr))
+    return;
+
+  if (!loadOp.getIsDeref())
+    return;
+
+  // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
+  // invalid.
+  if (!pmap[addr].count(State::getInvalid())) {
+    // FIXME: perhaps add a remark that we got a valid dereference
+    return;
+  }
+
+  // Looks like we found a invalid path leading to this deference point,
+  // diagnose it.
+  //
+  // Note that usually the use of the invalid address happens at the
+  // load or store using the result of this loadOp.
+  emitWarning(loadOp.getLoc())
+      << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
+}
+
 void LifetimeCheckPass::checkOperation(Operation *op) {
   if (isa<::mlir::ModuleOp>(op)) {
     for (Region &region : op->getRegions())
@@ -217,67 +280,10 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
 
   if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(op))
     return checkAlloca(allocaOp);
-
-  if (auto storeOp = dyn_cast<::mlir::cir::StoreOp>(op)) {
-    auto addr = storeOp.getAddr();
-
-    // We only care about stores that change local pointers, local values
-    // are not interesting here (just yet).
-    if (!ptrs.count(addr))
-      return;
-
-    auto data = storeOp.getValue();
-    // 2.4.2 - If the declaration includes an initialization, the
-    // initialization is treated as a separate operation
-    if (auto cstOp = dyn_cast<::mlir::cir::ConstantOp>(data.getDefiningOp())) {
-      assert(cstOp.isNullPtr() && "not implemented");
-      // 2.4.2 - If the initialization is default initialization or zero
-      // initialization, set pset(p) = {null}; for example:
-      //  int* p; => pset(p) == {invalid}
-      //  int* p{}; or string_view p; => pset(p) == {null}.
-      //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
-      pmap[addr] = {};
-      pmap[addr].insert(State::getNullPtr());
-      return;
-    }
-
-    if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(data.getDefiningOp())) {
-      // p = &x;
-      pmap[addr] = {};
-      pmap[addr].insert(State::getLocalValue(data));
-      return;
-    }
-
-    storeOp.dump();
-    // FIXME: asserts here should become remarks for non-implemented parts.
-    assert(0 && "not implemented");
-  }
-
-  if (auto loadOp = dyn_cast<::mlir::cir::LoadOp>(op)) {
-    auto addr = loadOp.getAddr();
-    // Only interested in checking deference on top of pointer types.
-    if (!pmap.count(addr) || !ptrs.count(addr))
-      return;
-
-    if (!loadOp.getIsDeref())
-      return;
-
-    // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
-    // invalid.
-    if (!pmap[addr].count(State::getInvalid())) {
-      // FIXME: perhaps add a remark that we got a valid dereference
-      return;
-    }
-
-    // Looks like we found a invalid path leading to this deference point,
-    // diagnose it.
-    //
-    // Note that usually the use of the invalid address happens at the
-    // load or store using the result of this loadOp.
-    emitWarning(loadOp.getLoc())
-        << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
-    return;
-  }
+  if (auto storeOp = dyn_cast<::mlir::cir::StoreOp>(op))
+    return checkStore(storeOp);
+  if (auto loadOp = dyn_cast<::mlir::cir::LoadOp>(op))
+    return checkLoad(loadOp);
 }
 
 void LifetimeCheckPass::runOnOperation() {
