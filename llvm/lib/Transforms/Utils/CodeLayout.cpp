@@ -40,7 +40,6 @@
 
 #include "llvm/Transforms/Utils/CodeLayout.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "code-layout"
@@ -147,7 +146,6 @@ private:
   MergeTypeTy MergeType{MergeTypeTy::X_Y};
 };
 
-class Block;
 class Jump;
 class Chain;
 class ChainEdge;

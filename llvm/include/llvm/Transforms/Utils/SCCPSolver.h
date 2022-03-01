@@ -16,16 +16,25 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueLattice.h"
-#include "llvm/Analysis/ValueLatticeUtils.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
-#include <cassert>
-#include <utility>
 #include <vector>
 
 namespace llvm {
+class Argument;
+class BasicBlock;
+class CallInst;
+class Constant;
+class DataLayout;
+class DominatorTree;
+class Function;
+class GlobalVariable;
+class Instruction;
+class LLVMContext;
+class PostDominatorTree;
+class StructType;
+class TargetLibraryInfo;
+class Value;
+class ValueLatticeElement;
 
 /// Helper struct for bundling up the analysis results per function for IPSCCP.
 struct AnalysisResultsForFn {

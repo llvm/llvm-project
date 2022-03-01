@@ -16,20 +16,14 @@
 #define LLVM_TRANSFORMS_UTILS_SAMPLEPROFILELOADERBASEUTIL_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/Function.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 namespace llvm {
 using namespace sampleprof;
 
 class ProfileSummaryInfo;
+class Module;
 
 extern cl::opt<unsigned> SampleProfileMaxPropagateIterations;
 extern cl::opt<unsigned> SampleProfileRecordCoverage;

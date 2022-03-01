@@ -18,21 +18,20 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Dominators.h"
 #include <cassert>
 
 namespace llvm {
-
+class BranchInst;
+class LandingPadInst;
+class Loop;
+class PHINode;
+template <typename PtrType> class SmallPtrSetImpl;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
-class DominatorTree;
 class DomTreeUpdater;
 class Function;
-class Instruction;
 class LoopInfo;
 class MDNode;
 class MemoryDependenceResults;

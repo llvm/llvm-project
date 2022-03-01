@@ -24,7 +24,6 @@
 
 namespace llvm {
 
-class BasicBlock;
 class Function;
 class MachineBasicBlock;
 class MachineFunction;
