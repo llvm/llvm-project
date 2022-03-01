@@ -292,6 +292,11 @@ def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
 def AArch64fabd_p : PatFrag<(ops node:$pg, node:$op1, node:$op2),
                             (AArch64fabs_mt node:$pg, (AArch64fsub_p node:$pg, node:$op1, node:$op2), undef)>;
 
+// FMAs with a negated multiplication operand can be commuted.
+def AArch64fmls_p : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
+                          [(AArch64fma_p node:$pred, (AArch64fneg_mt node:$pred, node:$op1, (undef)), node:$op2, node:$op3),
+                           (AArch64fma_p node:$pred, node:$op2, (AArch64fneg_mt node:$pred, node:$op1, (undef)), node:$op3)]>;
+
 def AArch64fneg_mt_nsz : PatFrag<(ops node:$pred, node:$op, node:$pt),
                                  (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
   return N->getFlags().hasNoSignedZeros();
@@ -552,7 +557,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
               (!cast<Instruction>("FMLA_ZPZZZ_UNDEF_"#Suffix) $P, ZPR:$Za, ZPR:$Zn, ZPR:$Zm)>;
 
     // Zd = Za + -Zn * Zm
-    def : Pat<(Ty (AArch64fma_p PredTy:$P, (AArch64fneg_mt PredTy:$P, Ty:$Zn, (Ty (undef))), Ty:$Zm, Ty:$Za)),
+    def : Pat<(Ty (AArch64fmls_p PredTy:$P, Ty:$Zn, Ty:$Zm, Ty:$Za)),
               (!cast<Instruction>("FMLS_ZPZZZ_UNDEF_"#Suffix) $P, ZPR:$Za, ZPR:$Zn, ZPR:$Zm)>;
 
     // Zd = -Za + Zn * Zm
