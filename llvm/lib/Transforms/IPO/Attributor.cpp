@@ -384,7 +384,7 @@ bool AA::getPotentialCopiesOfStoredValue(
 
     auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
                                          DepClassTy::NONE);
-    if (!PI.forallInterferingAccesses(SI, CheckAccess)) {
+    if (!PI.forallInterferingAccesses(A, QueryingAA, SI, CheckAccess)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "

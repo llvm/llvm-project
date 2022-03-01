@@ -1114,7 +1114,6 @@ define void @align4_caller(i8* %p) {
 
 declare void @align4_callee(i8* align(4) %p)
 
-
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
 attributes #2 = { null_pointer_is_valid }

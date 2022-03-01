@@ -144,12 +144,17 @@ define i32 @visible_local_2() {
 }
 
 define internal i32 @noalias_args_argmem_rn(i32* %A, i32* %B) #1 {
-; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
-; CHECK-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
-; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[T0:%.*]] = load i32, i32* [[B]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[B]], align 4
-; CHECK-NEXT:    ret i32 [[T0]]
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
+; IS__TUNIT____-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
+; IS__TUNIT____-SAME: (i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-NEXT:    [[T0:%.*]] = load i32, i32* [[B]], align 4
+; IS__TUNIT____-NEXT:    ret i32 [[T0]]
+;
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
+; IS__CGSCC____-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
+; IS__CGSCC____-SAME: (i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+; IS__CGSCC____-NEXT:    [[T0:%.*]] = load i32, i32* undef, align 4
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %t0 = load i32, i32* %B, align 4
   store i32 0, i32* %B
@@ -170,8 +175,7 @@ define i32 @visible_local_3() {
 ; IS__CGSCC____-SAME: () #[[ATTR3]] {
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR6:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
+; IS__CGSCC____-NEXT:    ret i32 5
 ;
   %B = alloca i32, align 4
   store i32 5, i32* %B, align 4
@@ -194,5 +198,4 @@ attributes #1 = { argmemonly noinline nounwind uwtable willreturn}
 ; IS__CGSCC____: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind readonly }
 ; IS__CGSCC____: attributes #[[ATTR5]] = { nosync nounwind readonly }
-; IS__CGSCC____: attributes #[[ATTR6]] = { nounwind willreturn }
 ;.
