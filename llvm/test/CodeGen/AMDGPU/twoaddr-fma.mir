@@ -164,7 +164,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f32
-# GCN: %2:vgpr_32 = V_FMAC_F32_e32 1120403456, %0, %2, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_FMAMK_F32 %0, 1120403456, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_otherimm_src0_f32
