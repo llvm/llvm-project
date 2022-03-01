@@ -3484,6 +3484,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":ArithmeticToLLVM",
+        ":ControlFlowOps",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":GPUCommonTransforms",
