@@ -415,7 +415,7 @@ func @pointwise_add(memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf
 Which, after lowering to LLVM resembles:
 
 ```mlir
-// Run: mlir-opt example4.mlir -convert-linalg-to-std | mlir-opt -convert-std-to-llvm
+// Run: mlir-opt example4.mlir -convert-linalg-to-std | mlir-opt -convert-func-to-llvm
 // Some generated code are omitted here.
 func @example(%arg0: !llvm<"float*">, ...) {
   ...

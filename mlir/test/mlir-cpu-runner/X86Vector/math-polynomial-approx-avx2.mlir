@@ -2,7 +2,7 @@
 // RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-vector-to-llvm="enable-x86vector"               \
 // RUN:               -convert-math-to-llvm                                    \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \

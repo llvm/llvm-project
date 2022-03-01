@@ -7,7 +7,7 @@
 // RUN:               -convert-linalg-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-arith-to-llvm                                   \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \

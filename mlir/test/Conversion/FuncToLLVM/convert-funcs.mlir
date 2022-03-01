@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //CHECK: llvm.func @second_order_arg(!llvm.ptr<func<void ()>>)
 func private @second_order_arg(%arg0 : () -> ())

@@ -21,8 +21,8 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -3306,7 +3306,7 @@ public:
         UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
         XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
                                                                   options);
-    mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,

@@ -3,7 +3,7 @@
 // RUN:             -convert-arith-to-llvm               \
 // RUN:             -convert-linalg-to-llvm              \
 // RUN:             -convert-memref-to-llvm              \
-// RUN:             -convert-std-to-llvm                 \
+// RUN:             -convert-func-to-llvm                 \
 // RUN:             -reconcile-unrealized-casts |        \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s

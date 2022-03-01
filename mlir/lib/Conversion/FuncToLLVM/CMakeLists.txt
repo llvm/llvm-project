@@ -1,8 +1,8 @@
-add_mlir_conversion_library(MLIRStandardToLLVM
-  StandardToLLVM.cpp
+add_mlir_conversion_library(MLIRFuncToLLVM
+  FuncToLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/StandardToLLVM
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/FuncToLLVM
 
   DEPENDS
   MLIRConversionPassIncGen
@@ -19,6 +19,5 @@ add_mlir_conversion_library(MLIRStandardToLLVM
   MLIRFunc
   MLIRLLVMCommonConversion
   MLIRLLVMIR
-  MLIRMath
-  MLIRTransforms
+  MLIRTransformUtils
   )

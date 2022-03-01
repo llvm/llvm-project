@@ -64,7 +64,7 @@ run(testInvalidModule)
 def lowerToLLVM(module):
   import mlir.conversions
   pm = PassManager.parse(
-      "convert-memref-to-llvm,convert-std-to-llvm,reconcile-unrealized-casts")
+      "convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts")
   pm.run(module)
   return module
 

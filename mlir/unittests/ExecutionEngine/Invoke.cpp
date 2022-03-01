@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -47,7 +47,7 @@ static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   PassManager pm(module.getContext());
   pm.addPass(mlir::createMemRefToLLVMPass());
   pm.addNestedPass<FuncOp>(mlir::arith::createConvertArithmeticToLLVMPass());
-  pm.addPass(mlir::createLowerToLLVMPass());
+  pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }

@@ -7,7 +7,7 @@
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -23,7 +23,7 @@
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -42,7 +42,7 @@
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
