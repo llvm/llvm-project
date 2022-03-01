@@ -335,16 +335,6 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
-    // Replace SCF yield with OpenMP yield.
-    {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToEnd(parallelOp.getBody());
-      assert(llvm::hasSingleElement(parallelOp.getRegion()) &&
-             "expected scf.parallel to have one block");
-      rewriter.replaceOpWithNewOp<omp::YieldOp>(
-          parallelOp.getBody()->getTerminator(), ValueRange());
-    }
-
     // Declare reductions.
     // TODO: consider checking it here is already a compatible reduction
     // declaration and use it instead of redeclaring.
@@ -394,22 +384,31 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.createBlock(&ompParallel.region());
 
+      // Replace the loop.
       {
-        auto scope = rewriter.create<memref::AllocaScopeOp>(parallelOp.getLoc(),
-                                                            TypeRange());
-        rewriter.create<omp::TerminatorOp>(loc);
         OpBuilder::InsertionGuard allocaGuard(rewriter);
-        rewriter.createBlock(&scope.getBodyRegion());
-        rewriter.setInsertionPointToStart(&scope.getBodyRegion().front());
-
-        // Replace the loop.
         auto loop = rewriter.create<omp::WsLoopOp>(
             parallelOp.getLoc(), parallelOp.getLowerBound(),
             parallelOp.getUpperBound(), parallelOp.getStep());
-        rewriter.create<memref::AllocaScopeReturnOp>(loc);
+        rewriter.create<omp::TerminatorOp>(loc);
 
         rewriter.inlineRegionBefore(parallelOp.getRegion(), loop.region(),
                                     loop.region().begin());
+
+        Block *ops = rewriter.splitBlock(&*loop.region().begin(),
+                                         loop.region().begin()->begin());
+
+        rewriter.setInsertionPointToStart(&*loop.region().begin());
+
+        auto scope = rewriter.create<memref::AllocaScopeOp>(parallelOp.getLoc(),
+                                                            TypeRange());
+        rewriter.create<omp::YieldOp>(loc, ValueRange());
+        Block *scopeBlock = rewriter.createBlock(&scope.getBodyRegion());
+        rewriter.mergeBlocks(ops, scopeBlock);
+        auto oldYield = cast<scf::YieldOp>(scopeBlock->getTerminator());
+        rewriter.setInsertionPointToEnd(&*scope.getBodyRegion().begin());
+        rewriter.replaceOpWithNewOp<memref::AllocaScopeReturnOp>(
+            oldYield, oldYield->getOperands());
         if (!reductionVariables.empty()) {
           loop.reductionsAttr(
               ArrayAttr::get(rewriter.getContext(), reductionDeclSymbols));
