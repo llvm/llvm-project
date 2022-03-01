@@ -32,6 +32,8 @@ merge:
   ret i64 %tmp2
 }
 
+; CHECK-NOT: define internal i64 @compute(
+;
 ; CHECK-LABEL: define internal i64 @compute.1(i64 %x, i64 (i64)* %binop) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.+]] = call i64 @plus(i64 %x)

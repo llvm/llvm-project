@@ -29,6 +29,7 @@ return:
   ret i32 %retval.0
 }
 
+; CHECK-NOT: define internal i32 @foo(
 define internal i32 @foo(i32 %x, i32* %b, i32* %c) {
 entry:
   %0 = load i32, i32* %b, align 4

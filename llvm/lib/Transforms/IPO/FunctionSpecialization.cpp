@@ -275,7 +275,8 @@ class FunctionSpecializer {
   std::function<TargetTransformInfo &(Function &)> GetTTI;
   std::function<TargetLibraryInfo &(Function &)> GetTLI;
 
-  SmallPtrSet<Function *, 2> SpecializedFuncs;
+  SmallPtrSet<Function *, 4> SpecializedFuncs;
+  SmallPtrSet<Function *, 4> FullySpecialized;
   SmallVector<Instruction *> ReplacedWithConstant;
 
 public:
@@ -284,6 +285,12 @@ public:
                       std::function<TargetTransformInfo &(Function &)> GetTTI,
                       std::function<TargetLibraryInfo &(Function &)> GetTLI)
       : Solver(Solver), GetAC(GetAC), GetTTI(GetTTI), GetTLI(GetTLI) {}
+
+  ~FunctionSpecializer() {
+    // Eliminate dead code.
+    removeDeadInstructions();
+    removeDeadFunctions();
+  }
 
   /// Attempt to specialize functions in the module to enable constant
   /// propagation across function boundaries.
@@ -329,6 +336,15 @@ public:
       I->eraseFromParent();
     }
     ReplacedWithConstant.clear();
+  }
+
+  void removeDeadFunctions() {
+    for (auto *F : FullySpecialized) {
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Removing dead function "
+                        << F->getName() << "\n");
+      F->eraseFromParent();
+    }
+    FullySpecialized.clear();
   }
 
   bool tryToReplaceWithConstant(Value *V) {
@@ -501,8 +517,15 @@ private:
 
     // If the function has been completely specialized, the original function
     // is no longer needed. Mark it unreachable.
-    if (!AI.Partial)
+    if (AI.Fn->getNumUses() == 0 ||
+        all_of(AI.Fn->users(), [&AI](User *U) {
+          if (auto *CS = dyn_cast<CallBase>(U))
+            return CS->getFunction() == AI.Fn;
+          return false;
+        })) {
       Solver.markFunctionUnreachable(AI.Fn);
+      FullySpecialized.insert(AI.Fn);
+    }
   }
 
   /// Compute and return the cost of specializing function \p F.
@@ -923,8 +946,7 @@ bool llvm::runFunctionSpecialization(
   LLVM_DEBUG(dbgs() << "FnSpecialization: Number of specializations = "
                     << NumFuncSpecialized <<"\n");
 
-  // Clean up the IR by removing dead instructions and ssa_copy intrinsics.
-  FS.removeDeadInstructions();
+  // Remove any ssa_copy intrinsics that may have been introduced.
   removeSSACopy(M);
   return Changed;
 }
