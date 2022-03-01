@@ -163,7 +163,6 @@ public:
 template <class T> class SwapAndRestore {
   T &Restore;
   T OriginalValue;
-  bool ShouldRestore = true;
 
 public:
   SwapAndRestore(T &Restore_) : SwapAndRestore(Restore_, Restore_) {}
@@ -172,20 +171,7 @@ public:
       : Restore(Restore_), OriginalValue(Restore) {
     Restore = std::move(NewVal);
   }
-  ~SwapAndRestore() {
-    if (ShouldRestore)
-      Restore = std::move(OriginalValue);
-  }
-
-  void shouldRestore(bool ShouldRestore_) { ShouldRestore = ShouldRestore_; }
-
-  void restoreNow(bool Force) {
-    if (!Force && !ShouldRestore)
-      return;
-
-    Restore = std::move(OriginalValue);
-    ShouldRestore = false;
-  }
+  ~SwapAndRestore() { Restore = std::move(OriginalValue); }
 
   SwapAndRestore(const SwapAndRestore &) = delete;
   SwapAndRestore &operator=(const SwapAndRestore &) = delete;
