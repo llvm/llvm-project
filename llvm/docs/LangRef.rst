@@ -1783,6 +1783,9 @@ example:
     trap or generate asynchronous exceptions. Exception handling schemes
     that are recognized by LLVM to handle asynchronous exceptions, such
     as SEH, will still provide their implementation defined semantics.
+``nosanitize_bounds``
+    This attribute indicates that bounds checking sanitizer instrumentation
+    is disabled for this function.
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.

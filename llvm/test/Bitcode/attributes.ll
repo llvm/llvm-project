@@ -526,6 +526,12 @@ define void @f85() uwtable(async) {
         ret void;
 }
 
+; CHECK: define void @f86() #52
+define void @f86() nosanitize_bounds
+{
+        ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -578,4 +584,5 @@ define void @f85() uwtable(async) {
 ; CHECK: attributes #49 = { noprofile }
 ; CHECK: attributes #50 = { disable_sanitizer_instrumentation }
 ; CHECK: attributes #51 = { uwtable(sync) }
+; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

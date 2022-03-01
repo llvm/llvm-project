@@ -1493,6 +1493,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoProfile;
   case bitc::ATTR_KIND_NO_UNWIND:
     return Attribute::NoUnwind;
+  case bitc::ATTR_KIND_NO_SANITIZE_BOUNDS:
+    return Attribute::NoSanitizeBounds;
   case bitc::ATTR_KIND_NO_SANITIZE_COVERAGE:
     return Attribute::NoSanitizeCoverage;
   case bitc::ATTR_KIND_NULL_POINTER_IS_VALID:

@@ -688,6 +688,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_PROFILE;
   case Attribute::NoUnwind:
     return bitc::ATTR_KIND_NO_UNWIND;
+  case Attribute::NoSanitizeBounds:
+    return bitc::ATTR_KIND_NO_SANITIZE_BOUNDS;
   case Attribute::NoSanitizeCoverage:
     return bitc::ATTR_KIND_NO_SANITIZE_COVERAGE;
   case Attribute::NullPointerIsValid:

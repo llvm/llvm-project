@@ -49,3 +49,12 @@ int f5(union U *u, int i) {
   return u->c[i];
   // CHECK: }
 }
+
+__attribute__((no_sanitize("bounds")))
+int f6(int i) {
+	int b[64];
+	// CHECK-NOT: call void @llvm.trap()
+	// CHECK-NOT: trap:
+	// CHECK-NOT: cont:
+	return b[i];
+}

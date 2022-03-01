@@ -1510,7 +1510,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #48
+  ; CHECK: call void @f.nobuiltin() #49
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1930,6 +1930,9 @@ declare void @f.allocsize_two(i32, i32) allocsize(1, 0)
 ; CHECK: Function Attrs: allocsize(1,0)
 ; CHECK: declare void @f.allocsize_two(i32, i32)
 
+declare void @f.nosanitize_bounds() nosanitize_bounds
+; CHECK: declare void @f.nosanitize_bounds() #48
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -1978,7 +1981,8 @@ declare void @f.allocsize_two(i32, i32) allocsize(1, 0)
 ; CHECK: attributes #45 = { disable_sanitizer_instrumentation }
 ; CHECK: attributes #46 = { allocsize(0) }
 ; CHECK: attributes #47 = { allocsize(1,0) }
-; CHECK: attributes #48 = { builtin }
+; CHECK: attributes #48 = { nosanitize_bounds }
+; CHECK: attributes #49 = { builtin }
 
 ;; Metadata
 
