@@ -1443,7 +1443,32 @@ public:
       }
 
       if (arg.passBy == PassBy::MutableBox) {
-        TODO(loc, "arg passby MutableBox");
+        if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+                *expr)) {
+          // If expr is NULL(), the mutableBox created must be a deallocated
+          // pointer with the dummy argument characteristics (see table 16.5
+          // in Fortran 2018 standard).
+          // No length parameters are set for the created box because any non
+          // deferred type parameters of the dummy will be evaluated on the
+          // callee side, and it is illegal to use NULL without a MOLD if any
+          // dummy length parameters are assumed.
+          mlir::Type boxTy = fir::dyn_cast_ptrEleTy(argTy);
+          assert(boxTy && boxTy.isa<fir::BoxType>() &&
+                 "must be a fir.box type");
+          mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+          mlir::Value nullBox = fir::factory::createUnallocatedBox(
+              builder, loc, boxTy, /*nonDeferredParams=*/{});
+          builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+          caller.placeInput(arg, boxStorage);
+          continue;
+        }
+        fir::MutableBoxValue mutableBox = genMutableBoxValue(*expr);
+        mlir::Value irBox =
+            fir::factory::getMutableIRBox(builder, loc, mutableBox);
+        caller.placeInput(arg, irBox);
+        if (arg.mayBeModifiedByCall())
+          mutableModifiedByCall.emplace_back(std::move(mutableBox));
+        continue;
       }
       const bool actualArgIsVariable = Fortran::evaluate::IsVariable(*expr);
       if (arg.passBy == PassBy::BaseAddress || arg.passBy == PassBy::BoxChar) {
