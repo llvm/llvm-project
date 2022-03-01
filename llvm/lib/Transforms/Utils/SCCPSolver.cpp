@@ -536,19 +536,24 @@ void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
 
   // For the remaining arguments in the new function, copy the lattice state
   // over from the old function.
-  for (auto I = F->arg_begin(), J = A->getParent()->arg_begin(),
-            E = F->arg_end();
-       I != E; ++I, ++J)
-    if (J != A && ValueState.count(I)) {
+  for (Argument *OldArg = F->arg_begin(), *NewArg = A->getParent()->arg_begin(),
+                *End = F->arg_end();
+       OldArg != End; ++OldArg, ++NewArg) {
+
+    LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
+                      << NewArg->getNameOrAsOperand() << "\n");
+
+    if (NewArg != A && ValueState.count(OldArg)) {
       // Note: This previously looked like this:
-      // ValueState[J] = ValueState[I];
+      // ValueState[NewArg] = ValueState[OldArg];
       // This is incorrect because the DenseMap class may resize the underlying
-      // memory when inserting `J`, which will invalidate the reference to `I`.
-      // Instead, we make sure `J` exists, then set it to `I` afterwards.
-      auto &NewValue = ValueState[J];
-      NewValue = ValueState[I];
-      pushToWorkList(NewValue, J);
+      // memory when inserting `NewArg`, which will invalidate the reference to
+      // `OldArg`. Instead, we make sure `NewArg` exists before setting it.
+      auto &NewValue = ValueState[NewArg];
+      NewValue = ValueState[OldArg];
+      pushToWorkList(NewValue, NewArg);
     }
+  }
 }
 
 void SCCPInstVisitor::visitInstruction(Instruction &I) {

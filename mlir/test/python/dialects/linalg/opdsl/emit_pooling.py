@@ -12,55 +12,18 @@ T2 = TV.T2
 
 
 @linalg_structured_op
-def pooling_max_poly(
+def pooling_poly(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
+    reduce=BinaryFnAttrDef(default=BinaryFn.max_signed),
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
     strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
     dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max[D.kh, D.kw](
-      TypeFn.cast(
-          U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
-
-
-@linalg_structured_op
-def pooling_max_unsigned_poly(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
-    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
-    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
-    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
-    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max_unsigned[D.kh, D.kw](
-      TypeFn.cast_unsigned(
-          U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
-
-
-@linalg_structured_op
-def pooling_min_poly(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
-    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
-    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
-    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
-    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min[D.kh, D.kw](
-      TypeFn.cast(
-          U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
-
-
-@linalg_structured_op
-def pooling_min_unsigned_poly(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
-    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
-    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
-    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
-    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min_unsigned[D.kh, D.kw](
-      TypeFn.cast_unsigned(
-          U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
+  O[D.n, D.oh, D.ow, D.c] = reduce[D.kh, D.kw](
+      cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                D.c]))
 
 
 with Context() as ctx, Location.unknown():
@@ -88,7 +51,7 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
     def test_f32i32_max_pooling(input, shape, init_result):
-      return pooling_max_poly(
+      return pooling_poly(
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32i32_max_unsigned_pooling
@@ -99,8 +62,14 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
     def test_f32i32_max_unsigned_pooling(input, shape, init_result):
-      return pooling_max_unsigned_poly(
-          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+      return pooling_poly(
+          input,
+          shape,
+          outs=[init_result],
+          reduce=BinaryFn.max_unsigned,
+          cast=TypeFn.cast_unsigned,
+          strides=[2, 4],
+          dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32f32_max_pooling
     # CHECK: linalg.generic
@@ -115,7 +84,7 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), f32))
     def test_f32f32_max_pooling(input, shape, init_result):
-      return pooling_max_poly(
+      return pooling_poly(
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32i32_min_pooling
@@ -126,8 +95,13 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
     def test_f32i32_min_pooling(input, shape, init_result):
-      return pooling_min_poly(
-          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+      return pooling_poly(
+          input,
+          shape,
+          outs=[init_result],
+          reduce=BinaryFn.min_signed,
+          strides=[2, 4],
+          dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32i32_min_unsigned_pooling
     # CHECK:   = arith.fptoui
@@ -137,8 +111,14 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
     def test_f32i32_min_unsigned_pooling(input, shape, init_result):
-      return pooling_min_unsigned_poly(
-          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+      return pooling_poly(
+          input,
+          shape,
+          outs=[init_result],
+          reduce=BinaryFn.min_unsigned,
+          cast=TypeFn.cast_unsigned,
+          strides=[2, 4],
+          dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32f32_min_pooling
     # CHECK:   = arith.minf
@@ -147,8 +127,13 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), f32))
     def test_f32f32_min_pooling(input, shape, init_result):
-      return pooling_min_poly(
-          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+      return pooling_poly(
+          input,
+          shape,
+          outs=[init_result],
+          reduce=BinaryFn.min_signed,
+          strides=[2, 4],
+          dilations=[1, 2])
 
 
 print(module)

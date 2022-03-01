@@ -473,11 +473,11 @@ TARGET_BUILTIN(__nvvm_vote_uni_sync, "bUib", "", PTX60)
 TARGET_BUILTIN(__nvvm_vote_ballot_sync, "UiUib", "", PTX60)
 
 // Match
-TARGET_BUILTIN(__nvvm_match_any_sync_i32, "UiUiUi", "", PTX60)
-TARGET_BUILTIN(__nvvm_match_any_sync_i64, "WiUiWi", "", PTX60)
+TARGET_BUILTIN(__nvvm_match_any_sync_i32, "UiUiUi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__nvvm_match_any_sync_i64, "UiUiWi", "", AND(SM_70,PTX60))
 // These return a pair {value, predicate}, which requires custom lowering.
-TARGET_BUILTIN(__nvvm_match_all_sync_i32p, "UiUiUii*", "", PTX60)
-TARGET_BUILTIN(__nvvm_match_all_sync_i64p, "WiUiWii*", "", PTX60)
+TARGET_BUILTIN(__nvvm_match_all_sync_i32p, "UiUiUii*", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__nvvm_match_all_sync_i64p, "UiUiWii*", "", AND(SM_70,PTX60))
 
 // Redux
 TARGET_BUILTIN(__nvvm_redux_sync_add, "iii", "", AND(SM_80,PTX70))

@@ -2556,6 +2556,63 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
 
   Node *parseAbiTags(Node *N);
 
+  struct OperatorInfo {
+    enum OIKind : unsigned char {
+      Prefix,      // Prefix unary: @ expr
+      Postfix,     // Postfix unary: expr @
+      Binary,      // Binary: lhs @ rhs
+      Array,       // Array index:  lhs [ rhs ]
+      Member,      // Member access: lhs @ rhs
+      New,         // New
+      Del,         // Delete
+      Call,        // Function call: expr (expr*)
+      CCast,       // C cast: (type)expr
+      Conditional, // Conditional: expr ? expr : expr
+      NameOnly,    // Overload only, not allowed in expression.
+      // Below do not have operator names
+      NamedCast, // Named cast, @<type>(expr)
+      OfIdOp,    // alignof, sizeof, typeid
+
+      Unnameable = NamedCast,
+    };
+    char Enc[2];      // Encoding
+    OIKind Kind;      // Kind of operator
+    bool Flag : 1;    // Entry-specific flag
+    const char *Name; // Spelling
+
+  public:
+    constexpr OperatorInfo(const char (&E)[3], OIKind K, bool F, const char *N)
+        : Enc{E[0], E[1]}, Kind{K}, Flag{F}, Name{N} {}
+
+  public:
+    bool operator<(const OperatorInfo &Other) const {
+      return *this < Other.Enc;
+    }
+    bool operator<(const char *Peek) const {
+      return Enc[0] < Peek[0] || (Enc[0] == Peek[0] && Enc[1] < Peek[1]);
+    }
+    bool operator==(const char *Peek) const {
+      return Enc[0] == Peek[0] && Enc[1] == Peek[1];
+    }
+    bool operator!=(const char *Peek) const { return !this->operator==(Peek); }
+
+  public:
+    StringView getSymbol() const {
+      StringView Res = Name;
+      if (Kind < Unnameable) {
+        assert(Res.startsWith("operator") &&
+               "operator name does not start with 'operator'");
+        Res = Res.dropFront(sizeof("operator") - 1);
+        Res.consumeFront(' ');
+      }
+      return Res;
+    }
+    StringView getName() const { return Name; }
+    OIKind getKind() const { return Kind; }
+    bool getFlag() const { return Flag; }
+  };
+  const OperatorInfo *parseOperatorEncoding();
+
   /// Parse the <unresolved-name> production.
   Node *parseUnresolvedName(bool Global);
   Node *parseSimpleId();
@@ -2808,92 +2865,112 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSourceName(NameState *) {
   return make<NameType>(Name);
 }
 
-//   <operator-name> ::= aa    # &&
-//                   ::= ad    # & (unary)
-//                   ::= an    # &
-//                   ::= aN    # &=
-//                   ::= aS    # =
-//                   ::= cl    # ()
-//                   ::= cm    # ,
-//                   ::= co    # ~
-//                   ::= cv <type>    # (cast)
-//                   ::= da    # delete[]
-//                   ::= de    # * (unary)
-//                   ::= dl    # delete
-//                   ::= dv    # /
-//                   ::= dV    # /=
-//                   ::= eo    # ^
-//                   ::= eO    # ^=
-//                   ::= eq    # ==
-//                   ::= ge    # >=
-//                   ::= gt    # >
-//                   ::= ix    # []
-//                   ::= le    # <=
+// If the next 2 chars are an operator encoding, consume them and return their
+// OperatorInfo.  Otherwise return nullptr.
+template <typename Derived, typename Alloc>
+const typename AbstractManglingParser<Derived, Alloc>::OperatorInfo *
+AbstractManglingParser<Derived, Alloc>::parseOperatorEncoding() {
+  static const OperatorInfo Ops[] = {
+      // Keep ordered by encoding
+      {"aN", OperatorInfo::Binary, false, "operator&="},
+      {"aS", OperatorInfo::Binary, false, "operator="},
+      {"aa", OperatorInfo::Binary, false, "operator&&"},
+      {"ad", OperatorInfo::Prefix, false, "operator&"},
+      {"an", OperatorInfo::Binary, false, "operator&"},
+      {"at", OperatorInfo::OfIdOp, /*Type*/ true, "alignof ("},
+      {"aw", OperatorInfo::NameOnly, false, "operator co_await"},
+      {"az", OperatorInfo::OfIdOp, /*Type*/ false, "alignof ("},
+      {"cc", OperatorInfo::NamedCast, false, "const_cast"},
+      {"cl", OperatorInfo::Call, false, "operator()"},
+      {"cm", OperatorInfo::Binary, false, "operator,"},
+      {"co", OperatorInfo::Prefix, false, "operator~"},
+      {"cv", OperatorInfo::CCast, false, "operator"}, // C Cast
+      {"dV", OperatorInfo::Binary, false, "operator/="},
+      {"da", OperatorInfo::Del, /*Ary*/ true, "operator delete[]"},
+      {"dc", OperatorInfo::NamedCast, false, "dynamic_cast"},
+      {"de", OperatorInfo::Prefix, false, "operator*"},
+      {"dl", OperatorInfo::Del, /*Ary*/ false, "operator delete"},
+      {"ds", OperatorInfo::Member, /*Named*/ false, "operator.*"},
+      {"dt", OperatorInfo::Member, /*Named*/ false, "operator."},
+      {"dv", OperatorInfo::Binary, false, "operator/"},
+      {"eO", OperatorInfo::Binary, false, "operator^="},
+      {"eo", OperatorInfo::Binary, false, "operator^"},
+      {"eq", OperatorInfo::Binary, false, "operator=="},
+      {"ge", OperatorInfo::Binary, false, "operator>="},
+      {"gt", OperatorInfo::Binary, false, "operator>"},
+      {"ix", OperatorInfo::Array, false, "operator[]"},
+      {"lS", OperatorInfo::Binary, false, "operator<<="},
+      {"le", OperatorInfo::Binary, false, "operator<="},
+      {"ls", OperatorInfo::Binary, false, "operator<<"},
+      {"lt", OperatorInfo::Binary, false, "operator<"},
+      {"mI", OperatorInfo::Binary, false, "operator-="},
+      {"mL", OperatorInfo::Binary, false, "operator*="},
+      {"mi", OperatorInfo::Binary, false, "operator-"},
+      {"ml", OperatorInfo::Binary, false, "operator*"},
+      {"mm", OperatorInfo::Postfix, false, "operator--"},
+      {"na", OperatorInfo::New, /*Ary*/ true, "operator new[]"},
+      {"ne", OperatorInfo::Binary, false, "operator!="},
+      {"ng", OperatorInfo::Prefix, false, "operator-"},
+      {"nt", OperatorInfo::Prefix, false, "operator!"},
+      {"nw", OperatorInfo::New, /*Ary*/ false, "operator new"},
+      {"oR", OperatorInfo::Binary, false, "operator|="},
+      {"oo", OperatorInfo::Binary, false, "operator||"},
+      {"or", OperatorInfo::Binary, false, "operator|"},
+      {"pL", OperatorInfo::Binary, false, "operator+="},
+      {"pl", OperatorInfo::Binary, false, "operator+"},
+      {"pm", OperatorInfo::Member, /*Named*/ false, "operator->*"},
+      {"pp", OperatorInfo::Postfix, false, "operator++"},
+      {"ps", OperatorInfo::Prefix, false, "operator+"},
+      {"pt", OperatorInfo::Member, /*Named*/ true, "operator->"},
+      {"qu", OperatorInfo::Conditional, false, "operator?"},
+      {"rM", OperatorInfo::Binary, false, "operator%="},
+      {"rS", OperatorInfo::Binary, false, "operator>>="},
+      {"rc", OperatorInfo::NamedCast, false, "reinterpret_cast"},
+      {"rm", OperatorInfo::Binary, false, "operator%"},
+      {"rs", OperatorInfo::Binary, false, "operator>>"},
+      {"sc", OperatorInfo::NamedCast, false, "static_cast"},
+      {"ss", OperatorInfo::Binary, false, "operator<=>"},
+      {"st", OperatorInfo::OfIdOp, /*Type*/ true, "sizeof ("},
+      {"sz", OperatorInfo::OfIdOp, /*Type*/ false, "sizeof ("},
+      {"te", OperatorInfo::OfIdOp, /*Type*/ false, "typeid ("},
+      {"ti", OperatorInfo::OfIdOp, /*Type*/ true, "typeid ("},
+  };
+  const auto NumOps = sizeof(Ops) / sizeof(Ops[0]);
+
+#ifndef NDEBUG
+  {
+    // Verify table order.
+    static bool Done;
+    if (!Done) {
+      Done = true;
+      for (const auto *Op = &Ops[0]; Op != &Ops[NumOps - 1]; Op++)
+        assert(Op[0] < Op[1] && "Operator table is not ordered");
+    }
+  }
+#endif
+
+  if (numLeft() < 2)
+    return nullptr;
+
+  auto Op = std::lower_bound(
+      &Ops[0], &Ops[NumOps], First,
+      [](const OperatorInfo &Op_, const char *Enc_) { return Op_ < Enc_; });
+  if (Op == &Ops[NumOps] || *Op != First)
+    return nullptr;
+
+  First += 2;
+  return Op;
+}
+
+//   <operator-name> ::= See parseOperatorEncoding()
 //                   ::= li <source-name>  # operator ""
-//                   ::= ls    # <<
-//                   ::= lS    # <<=
-//                   ::= lt    # <
-//                   ::= mi    # -
-//                   ::= mI    # -=
-//                   ::= ml    # *
-//                   ::= mL    # *=
-//                   ::= mm    # -- (postfix in <expression> context)
-//                   ::= na    # new[]
-//                   ::= ne    # !=
-//                   ::= ng    # - (unary)
-//                   ::= nt    # !
-//                   ::= nw    # new
-//                   ::= oo    # ||
-//                   ::= or    # |
-//                   ::= oR    # |=
-//                   ::= pm    # ->*
-//                   ::= pl    # +
-//                   ::= pL    # +=
-//                   ::= pp    # ++ (postfix in <expression> context)
-//                   ::= ps    # + (unary)
-//                   ::= pt    # ->
-//                   ::= qu    # ?
-//                   ::= rm    # %
-//                   ::= rM    # %=
-//                   ::= rs    # >>
-//                   ::= rS    # >>=
-//                   ::= ss    # <=> C++2a
-//                   ::= v <digit> <source-name>        # vendor extended operator
+//                   ::= v <digit> <source-name>  # vendor extended operator
 template <typename Derived, typename Alloc>
 Node *
 AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
-  switch (look()) {
-  case 'a':
-    switch (look(1)) {
-    case 'a':
-      First += 2;
-      return make<NameType>("operator&&");
-    case 'd':
-    case 'n':
-      First += 2;
-      return make<NameType>("operator&");
-    case 'N':
-      First += 2;
-      return make<NameType>("operator&=");
-    case 'S':
-      First += 2;
-      return make<NameType>("operator=");
-    }
-    return nullptr;
-  case 'c':
-    switch (look(1)) {
-    case 'l':
-      First += 2;
-      return make<NameType>("operator()");
-    case 'm':
-      First += 2;
-      return make<NameType>("operator,");
-    case 'o':
-      First += 2;
-      return make<NameType>("operator~");
-    //                   ::= cv <type>    # (cast)
-    case 'v': {
-      First += 2;
+  if (const auto *Op = parseOperatorEncoding()) {
+    if (Op->getKind() == OperatorInfo::CCast) {
+      //              ::= cv <type>    # (cast)
       SwapAndRestore<bool> SaveTemplate(TryToParseTemplateArgs, false);
       // If we're parsing an encoding, State != nullptr and the conversion
       // operators' <type> could have a <template-param> that refers to some
@@ -2907,185 +2984,29 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
       if (State) State->CtorDtorConversion = true;
       return make<ConversionOperatorType>(Ty);
     }
-    }
-    return nullptr;
-  case 'd':
-    switch (look(1)) {
-    case 'a':
-      First += 2;
-      return make<NameType>("operator delete[]");
-    case 'e':
-      First += 2;
-      return make<NameType>("operator*");
-    case 'l':
-      First += 2;
-      return make<NameType>("operator delete");
-    case 'v':
-      First += 2;
-      return make<NameType>("operator/");
-    case 'V':
-      First += 2;
-      return make<NameType>("operator/=");
-    }
-    return nullptr;
-  case 'e':
-    switch (look(1)) {
-    case 'o':
-      First += 2;
-      return make<NameType>("operator^");
-    case 'O':
-      First += 2;
-      return make<NameType>("operator^=");
-    case 'q':
-      First += 2;
-      return make<NameType>("operator==");
-    }
-    return nullptr;
-  case 'g':
-    switch (look(1)) {
-    case 'e':
-      First += 2;
-      return make<NameType>("operator>=");
-    case 't':
-      First += 2;
-      return make<NameType>("operator>");
-    }
-    return nullptr;
-  case 'i':
-    if (look(1) == 'x') {
-      First += 2;
-      return make<NameType>("operator[]");
-    }
-    return nullptr;
-  case 'l':
-    switch (look(1)) {
-    case 'e':
-      First += 2;
-      return make<NameType>("operator<=");
+
+    if (Op->getKind() >= OperatorInfo::Unnameable)
+      /* Not a nameable operator.  */
+      return nullptr;
+    if (Op->getKind() == OperatorInfo::Member && !Op->getFlag())
+      /* Not a nameable MemberExpr */
+      return nullptr;
+
+    return make<NameType>(Op->getName());
+  }
+
+  if (consumeIf("li")) {
     //                   ::= li <source-name>  # operator ""
-    case 'i': {
-      First += 2;
-      Node *SN = getDerived().parseSourceName(State);
-      if (SN == nullptr)
-        return nullptr;
-      return make<LiteralOperator>(SN);
-    }
-    case 's':
-      First += 2;
-      return make<NameType>("operator<<");
-    case 'S':
-      First += 2;
-      return make<NameType>("operator<<=");
-    case 't':
-      First += 2;
-      return make<NameType>("operator<");
-    }
-    return nullptr;
-  case 'm':
-    switch (look(1)) {
-    case 'i':
-      First += 2;
-      return make<NameType>("operator-");
-    case 'I':
-      First += 2;
-      return make<NameType>("operator-=");
-    case 'l':
-      First += 2;
-      return make<NameType>("operator*");
-    case 'L':
-      First += 2;
-      return make<NameType>("operator*=");
-    case 'm':
-      First += 2;
-      return make<NameType>("operator--");
-    }
-    return nullptr;
-  case 'n':
-    switch (look(1)) {
-    case 'a':
-      First += 2;
-      return make<NameType>("operator new[]");
-    case 'e':
-      First += 2;
-      return make<NameType>("operator!=");
-    case 'g':
-      First += 2;
-      return make<NameType>("operator-");
-    case 't':
-      First += 2;
-      return make<NameType>("operator!");
-    case 'w':
-      First += 2;
-      return make<NameType>("operator new");
-    }
-    return nullptr;
-  case 'o':
-    switch (look(1)) {
-    case 'o':
-      First += 2;
-      return make<NameType>("operator||");
-    case 'r':
-      First += 2;
-      return make<NameType>("operator|");
-    case 'R':
-      First += 2;
-      return make<NameType>("operator|=");
-    }
-    return nullptr;
-  case 'p':
-    switch (look(1)) {
-    case 'm':
-      First += 2;
-      return make<NameType>("operator->*");
-    case 'l':
-      First += 2;
-      return make<NameType>("operator+");
-    case 'L':
-      First += 2;
-      return make<NameType>("operator+=");
-    case 'p':
-      First += 2;
-      return make<NameType>("operator++");
-    case 's':
-      First += 2;
-      return make<NameType>("operator+");
-    case 't':
-      First += 2;
-      return make<NameType>("operator->");
-    }
-    return nullptr;
-  case 'q':
-    if (look(1) == 'u') {
-      First += 2;
-      return make<NameType>("operator?");
-    }
-    return nullptr;
-  case 'r':
-    switch (look(1)) {
-    case 'm':
-      First += 2;
-      return make<NameType>("operator%");
-    case 'M':
-      First += 2;
-      return make<NameType>("operator%=");
-    case 's':
-      First += 2;
-      return make<NameType>("operator>>");
-    case 'S':
-      First += 2;
-      return make<NameType>("operator>>=");
-    }
-    return nullptr;
-  case 's':
-    if (look(1) == 's') {
-      First += 2;
-      return make<NameType>("operator<=>");
-    }
-    return nullptr;
-  // ::= v <digit> <source-name>        # vendor extended operator
-  case 'v':
-    if (std::isdigit(look(1))) {
-      First += 2;
+    Node *SN = getDerived().parseSourceName(State);
+    if (SN == nullptr)
+      return nullptr;
+    return make<LiteralOperator>(SN);
+  }
+
+  if (consumeIf('v')) {
+    // ::= v <digit> <source-name>        # vendor extended operator
+    if (look() >= '0' && look() <= '9') {
+      First++;
       Node *SN = getDerived().parseSourceName(State);
       if (SN == nullptr)
         return nullptr;
@@ -3093,6 +3014,7 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
     }
     return nullptr;
   }
+
   return nullptr;
 }
 
@@ -4374,55 +4296,34 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFoldExpr() {
   if (!consumeIf('f'))
     return nullptr;
 
-  char FoldKind = look();
-  bool IsLeftFold, HasInitializer;
-  HasInitializer = FoldKind == 'L' || FoldKind == 'R';
-  if (FoldKind == 'l' || FoldKind == 'L')
-    IsLeftFold = true;
-  else if (FoldKind == 'r' || FoldKind == 'R')
-    IsLeftFold = false;
-  else
+  bool IsLeftFold = false, HasInitializer = false;
+  switch (look()) {
+  default:
     return nullptr;
+  case 'L':
+    IsLeftFold = true;
+    HasInitializer = true;
+    break;
+  case 'R':
+    HasInitializer = true;
+    break;
+  case 'l':
+    IsLeftFold = true;
+    break;
+  case 'r':
+    break;
+  }
   ++First;
 
-  // FIXME: This map is duplicated in parseOperatorName and parseExpr.
-  StringView OperatorName;
-  if      (consumeIf("aa")) OperatorName = "&&";
-  else if (consumeIf("an")) OperatorName = "&";
-  else if (consumeIf("aN")) OperatorName = "&=";
-  else if (consumeIf("aS")) OperatorName = "=";
-  else if (consumeIf("cm")) OperatorName = ",";
-  else if (consumeIf("ds")) OperatorName = ".*";
-  else if (consumeIf("dv")) OperatorName = "/";
-  else if (consumeIf("dV")) OperatorName = "/=";
-  else if (consumeIf("eo")) OperatorName = "^";
-  else if (consumeIf("eO")) OperatorName = "^=";
-  else if (consumeIf("eq")) OperatorName = "==";
-  else if (consumeIf("ge")) OperatorName = ">=";
-  else if (consumeIf("gt")) OperatorName = ">";
-  else if (consumeIf("le")) OperatorName = "<=";
-  else if (consumeIf("ls")) OperatorName = "<<";
-  else if (consumeIf("lS")) OperatorName = "<<=";
-  else if (consumeIf("lt")) OperatorName = "<";
-  else if (consumeIf("mi")) OperatorName = "-";
-  else if (consumeIf("mI")) OperatorName = "-=";
-  else if (consumeIf("ml")) OperatorName = "*";
-  else if (consumeIf("mL")) OperatorName = "*=";
-  else if (consumeIf("ne")) OperatorName = "!=";
-  else if (consumeIf("oo")) OperatorName = "||";
-  else if (consumeIf("or")) OperatorName = "|";
-  else if (consumeIf("oR")) OperatorName = "|=";
-  else if (consumeIf("pl")) OperatorName = "+";
-  else if (consumeIf("pL")) OperatorName = "+=";
-  else if (consumeIf("rm")) OperatorName = "%";
-  else if (consumeIf("rM")) OperatorName = "%=";
-  else if (consumeIf("rs")) OperatorName = ">>";
-  else if (consumeIf("rS")) OperatorName = ">>=";
-  else return nullptr;
+  const auto *Op = parseOperatorEncoding();
+  if (!Op || Op->getKind() != OperatorInfo::Binary)
+    return nullptr;
 
-  Node *Pack = getDerived().parseExpr(), *Init = nullptr;
+  Node *Pack = getDerived().parseExpr();
   if (Pack == nullptr)
     return nullptr;
+
+  Node *Init = nullptr;
   if (HasInitializer) {
     Init = getDerived().parseExpr();
     if (Init == nullptr)
@@ -4432,7 +4333,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFoldExpr() {
   if (IsLeftFold && Init)
     std::swap(Pack, Init);
 
-  return make<FoldExpr>(IsLeftFold, OperatorName, Pack, Init);
+  return make<FoldExpr>(IsLeftFold, Op->getSymbol(), Pack, Init);
 }
 
 // <expression> ::= mc <parameter type> <expr> [<offset number>] E
@@ -4526,249 +4427,52 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSubobjectExpr() {
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   bool Global = consumeIf("gs");
-  if (numLeft() < 2)
-    return nullptr;
 
-  switch (*First) {
-  case 'L':
-    return getDerived().parseExprPrimary();
-  case 'T':
-    return getDerived().parseTemplateParam();
-  case 'f': {
-    // Disambiguate a fold expression from a <function-param>.
-    if (look(1) == 'p' || (look(1) == 'L' && std::isdigit(look(2))))
-      return getDerived().parseFunctionParam();
-    return getDerived().parseFoldExpr();
-  }
-  case 'a':
-    switch (First[1]) {
-    case 'a':
-      First += 2;
-      return getDerived().parseBinaryExpr("&&");
-    case 'd':
-      First += 2;
-      return getDerived().parsePrefixExpr("&");
-    case 'n':
-      First += 2;
-      return getDerived().parseBinaryExpr("&");
-    case 'N':
-      First += 2;
-      return getDerived().parseBinaryExpr("&=");
-    case 'S':
-      First += 2;
-      return getDerived().parseBinaryExpr("=");
-    case 't': {
-      First += 2;
-      Node *Ty = getDerived().parseType();
-      if (Ty == nullptr)
-        return nullptr;
-      return make<EnclosingExpr>("alignof (", Ty, ")");
-    }
-    case 'z': {
-      First += 2;
-      Node *Ty = getDerived().parseExpr();
-      if (Ty == nullptr)
-        return nullptr;
-      return make<EnclosingExpr>("alignof (", Ty, ")");
-    }
-    }
-    return nullptr;
-  case 'c':
-    switch (First[1]) {
-    // cc <type> <expression>                               # const_cast<type>(expression)
-    case 'c': {
-      First += 2;
-      Node *Ty = getDerived().parseType();
-      if (Ty == nullptr)
-        return Ty;
+  const auto *Op = parseOperatorEncoding();
+  if (Op) {
+    auto Sym = Op->getSymbol();
+    switch (Op->getKind()) {
+    case OperatorInfo::Binary:
+      // Binary operator: lhs @ rhs
+      return getDerived().parseBinaryExpr(Sym);
+    case OperatorInfo::Prefix:
+      // Prefix unary operator: @ expr
+      return getDerived().parsePrefixExpr(Sym);
+    case OperatorInfo::Postfix: {
+      // Postfix unary operator: expr @
+      if (consumeIf('_'))
+        return getDerived().parsePrefixExpr(Sym);
       Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
-        return Ex;
-      return make<CastExpr>("const_cast", Ty, Ex);
-    }
-    // cl <expression>+ E                                   # call
-    case 'l': {
-      First += 2;
-      Node *Callee = getDerived().parseExpr();
-      if (Callee == nullptr)
-        return Callee;
-      size_t ExprsBegin = Names.size();
-      while (!consumeIf('E')) {
-        Node *E = getDerived().parseExpr();
-        if (E == nullptr)
-          return E;
-        Names.push_back(E);
-      }
-      return make<CallExpr>(Callee, popTrailingNodeArray(ExprsBegin));
-    }
-    case 'm':
-      First += 2;
-      return getDerived().parseBinaryExpr(",");
-    case 'o':
-      First += 2;
-      return getDerived().parsePrefixExpr("~");
-    case 'v':
-      return getDerived().parseConversionExpr();
-    }
-    return nullptr;
-  case 'd':
-    switch (First[1]) {
-    case 'a': {
-      First += 2;
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
-        return Ex;
-      return make<DeleteExpr>(Ex, Global, /*is_array=*/true);
-    }
-    case 'c': {
-      First += 2;
-      Node *T = getDerived().parseType();
-      if (T == nullptr)
-        return T;
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
-        return Ex;
-      return make<CastExpr>("dynamic_cast", T, Ex);
-    }
-    case 'e':
-      First += 2;
-      return getDerived().parsePrefixExpr("*");
-    case 'l': {
-      First += 2;
-      Node *E = getDerived().parseExpr();
-      if (E == nullptr)
-        return E;
-      return make<DeleteExpr>(E, Global, /*is_array=*/false);
-    }
-    case 'n':
-      return getDerived().parseUnresolvedName(Global);
-    case 's': {
-      First += 2;
-      Node *LHS = getDerived().parseExpr();
-      if (LHS == nullptr)
         return nullptr;
-      Node *RHS = getDerived().parseExpr();
-      if (RHS == nullptr)
-        return nullptr;
-      return make<MemberExpr>(LHS, ".*", RHS);
+      return make<PostfixExpr>(Ex, Sym);
     }
-    case 't': {
-      First += 2;
-      Node *LHS = getDerived().parseExpr();
-      if (LHS == nullptr)
-        return LHS;
-      Node *RHS = getDerived().parseExpr();
-      if (RHS == nullptr)
-        return nullptr;
-      return make<MemberExpr>(LHS, ".", RHS);
-    }
-    case 'v':
-      First += 2;
-      return getDerived().parseBinaryExpr("/");
-    case 'V':
-      First += 2;
-      return getDerived().parseBinaryExpr("/=");
-    }
-    return nullptr;
-  case 'e':
-    switch (First[1]) {
-    case 'o':
-      First += 2;
-      return getDerived().parseBinaryExpr("^");
-    case 'O':
-      First += 2;
-      return getDerived().parseBinaryExpr("^=");
-    case 'q':
-      First += 2;
-      return getDerived().parseBinaryExpr("==");
-    }
-    return nullptr;
-  case 'g':
-    switch (First[1]) {
-    case 'e':
-      First += 2;
-      return getDerived().parseBinaryExpr(">=");
-    case 't':
-      First += 2;
-      return getDerived().parseBinaryExpr(">");
-    }
-    return nullptr;
-  case 'i':
-    switch (First[1]) {
-    case 'x': {
-      First += 2;
+    case OperatorInfo::Array: {
+      // Array Index:  lhs [ rhs ]
       Node *Base = getDerived().parseExpr();
       if (Base == nullptr)
         return nullptr;
       Node *Index = getDerived().parseExpr();
       if (Index == nullptr)
-        return Index;
+        return nullptr;
       return make<ArraySubscriptExpr>(Base, Index);
     }
-    case 'l': {
-      First += 2;
-      size_t InitsBegin = Names.size();
-      while (!consumeIf('E')) {
-        Node *E = getDerived().parseBracedExpr();
-        if (E == nullptr)
-          return nullptr;
-        Names.push_back(E);
-      }
-      return make<InitListExpr>(nullptr, popTrailingNodeArray(InitsBegin));
-    }
-    }
-    return nullptr;
-  case 'l':
-    switch (First[1]) {
-    case 'e':
-      First += 2;
-      return getDerived().parseBinaryExpr("<=");
-    case 's':
-      First += 2;
-      return getDerived().parseBinaryExpr("<<");
-    case 'S':
-      First += 2;
-      return getDerived().parseBinaryExpr("<<=");
-    case 't':
-      First += 2;
-      return getDerived().parseBinaryExpr("<");
-    }
-    return nullptr;
-  case 'm':
-    switch (First[1]) {
-    case 'c':
-      First += 2;
-      return parsePointerToMemberConversionExpr();
-    case 'i':
-      First += 2;
-      return getDerived().parseBinaryExpr("-");
-    case 'I':
-      First += 2;
-      return getDerived().parseBinaryExpr("-=");
-    case 'l':
-      First += 2;
-      return getDerived().parseBinaryExpr("*");
-    case 'L':
-      First += 2;
-      return getDerived().parseBinaryExpr("*=");
-    case 'm':
-      First += 2;
-      if (consumeIf('_'))
-        return getDerived().parsePrefixExpr("--");
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
+    case OperatorInfo::Member: {
+      // Member access lhs @ rhs
+      Node *LHS = getDerived().parseExpr();
+      if (LHS == nullptr)
         return nullptr;
-      return make<PostfixExpr>(Ex, "--");
+      Node *RHS = getDerived().parseExpr();
+      if (RHS == nullptr)
+        return nullptr;
+      return make<MemberExpr>(LHS, Sym, RHS);
     }
-    return nullptr;
-  case 'n':
-    switch (First[1]) {
-    case 'a':
-    case 'w': {
-      // [gs] nw <expression>* _ <type> [pi <expression>*] E   # new (expr-list) type [(init)]
-      // [gs] na <expression>* _ <type> [pi <expression>*] E   # new[] (expr-list) type [(init)]
-      bool IsArray = First[1] == 'a';
-      First += 2;
+    case OperatorInfo::New: {
+      // New
+      // # new (expr-list) type [(init)]
+      // [gs] nw <expression>* _ <type> [pi <expression>*] E
+      // # new[] (expr-list) type [(init)]
+      // [gs] na <expression>* _ <type> [pi <expression>*] E
       size_t Exprs = Names.size();
       while (!consumeIf('_')) {
         Node *Ex = getDerived().parseExpr();
@@ -4791,85 +4495,57 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
         Names.push_back(Init);
       }
       NodeArray Inits = popTrailingNodeArray(InitsBegin);
-      return make<NewExpr>(ExprList, Ty, Inits, Global, IsArray);
+      return make<NewExpr>(ExprList, Ty, Inits, Global,
+                           /*IsArray=*/Op->getFlag());
     }
-    case 'e':
-      First += 2;
-      return getDerived().parseBinaryExpr("!=");
-    case 'g':
-      First += 2;
-      return getDerived().parsePrefixExpr("-");
-    case 't':
-      First += 2;
-      return getDerived().parsePrefixExpr("!");
-    case 'x':
-      First += 2;
+    case OperatorInfo::Del: {
+      // Delete
       Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
-        return Ex;
-      return make<EnclosingExpr>("noexcept (", Ex, ")");
-    }
-    return nullptr;
-  case 'o':
-    switch (First[1]) {
-    case 'n':
-      return getDerived().parseUnresolvedName(Global);
-    case 'o':
-      First += 2;
-      return getDerived().parseBinaryExpr("||");
-    case 'r':
-      First += 2;
-      return getDerived().parseBinaryExpr("|");
-    case 'R':
-      First += 2;
-      return getDerived().parseBinaryExpr("|=");
-    }
-    return nullptr;
-  case 'p':
-    switch (First[1]) {
-    case 'm': {
-      First += 2;
-      Node *LHS = getDerived().parseExpr();
-      if (LHS == nullptr)
-        return LHS;
-      Node *RHS = getDerived().parseExpr();
-      if (RHS == nullptr)
         return nullptr;
-      return make<MemberExpr>(LHS, "->*", RHS);
+      return make<DeleteExpr>(Ex, Global, /*IsArray=*/Op->getFlag());
     }
-    case 'l':
-      First += 2;
-      return getDerived().parseBinaryExpr("+");
-    case 'L':
-      First += 2;
-      return getDerived().parseBinaryExpr("+=");
-    case 'p': {
-      First += 2;
-      if (consumeIf('_'))
-        return getDerived().parsePrefixExpr("++");
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
-        return Ex;
-      return make<PostfixExpr>(Ex, "++");
-    }
-    case 's':
-      First += 2;
-      return getDerived().parsePrefixExpr("+");
-    case 't': {
-      First += 2;
-      Node *L = getDerived().parseExpr();
-      if (L == nullptr)
+    case OperatorInfo::Call: {
+      // Function Call
+      Node *Callee = getDerived().parseExpr();
+      if (Callee == nullptr)
         return nullptr;
-      Node *R = getDerived().parseExpr();
-      if (R == nullptr)
+      size_t ExprsBegin = Names.size();
+      while (!consumeIf('E')) {
+        Node *E = getDerived().parseExpr();
+        if (E == nullptr)
+          return nullptr;
+        Names.push_back(E);
+      }
+      return make<CallExpr>(Callee, popTrailingNodeArray(ExprsBegin));
+    }
+    case OperatorInfo::CCast: {
+      // C Cast: (type)expr
+      Node *Ty;
+      {
+        SwapAndRestore<bool> SaveTemp(TryToParseTemplateArgs, false);
+        Ty = getDerived().parseType();
+      }
+      if (Ty == nullptr)
         return nullptr;
-      return make<MemberExpr>(L, "->", R);
+
+      size_t ExprsBegin = Names.size();
+      bool IsMany = consumeIf('_');
+      while (!consumeIf('E')) {
+        Node *E = getDerived().parseExpr();
+        if (E == nullptr)
+          return E;
+        Names.push_back(E);
+        if (!IsMany)
+          break;
+      }
+      NodeArray Exprs = popTrailingNodeArray(ExprsBegin);
+      if (!IsMany && Exprs.size() != 1)
+        return nullptr;
+      return make<ConversionExpr>(Ty, Exprs);
     }
-    }
-    return nullptr;
-  case 'q':
-    if (First[1] == 'u') {
-      First += 2;
+    case OperatorInfo::Conditional: {
+      // Conditional operator: expr ? expr : expr
       Node *Cond = getDerived().parseExpr();
       if (Cond == nullptr)
         return nullptr;
@@ -4881,145 +4557,118 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
         return nullptr;
       return make<ConditionalExpr>(Cond, LHS, RHS);
     }
-    return nullptr;
-  case 'r':
-    switch (First[1]) {
-    case 'c': {
-      First += 2;
-      Node *T = getDerived().parseType();
-      if (T == nullptr)
-        return T;
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
-        return Ex;
-      return make<CastExpr>("reinterpret_cast", T, Ex);
-    }
-    case 'm':
-      First += 2;
-      return getDerived().parseBinaryExpr("%");
-    case 'M':
-      First += 2;
-      return getDerived().parseBinaryExpr("%=");
-    case 's':
-      First += 2;
-      return getDerived().parseBinaryExpr(">>");
-    case 'S':
-      First += 2;
-      return getDerived().parseBinaryExpr(">>=");
-    }
-    return nullptr;
-  case 's':
-    switch (First[1]) {
-    case 'c': {
-      First += 2;
-      Node *T = getDerived().parseType();
-      if (T == nullptr)
-        return T;
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
-        return Ex;
-      return make<CastExpr>("static_cast", T, Ex);
-    }
-    case 'o':
-      First += 2;
-      return parseSubobjectExpr();
-    case 'p': {
-      First += 2;
-      Node *Child = getDerived().parseExpr();
-      if (Child == nullptr)
-        return nullptr;
-      return make<ParameterPackExpansion>(Child);
-    }
-    case 'r':
-      return getDerived().parseUnresolvedName(Global);
-    case 't': {
-      First += 2;
+    case OperatorInfo::NamedCast: {
+      // Named cast operation, @<type>(expr)
       Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
-        return Ty;
-      return make<EnclosingExpr>("sizeof (", Ty, ")");
-    }
-    case 'z': {
-      First += 2;
+        return nullptr;
       Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
-        return Ex;
-      return make<EnclosingExpr>("sizeof (", Ex, ")");
+        return nullptr;
+      return make<CastExpr>(Sym, Ty, Ex);
     }
-    case 'Z':
-      First += 2;
-      if (look() == 'T') {
-        Node *R = getDerived().parseTemplateParam();
-        if (R == nullptr)
-          return nullptr;
-        return make<SizeofParamPackExpr>(R);
-      } else if (look() == 'f') {
-        Node *FP = getDerived().parseFunctionParam();
-        if (FP == nullptr)
-          return nullptr;
-        return make<EnclosingExpr>("sizeof... (", FP, ")");
-      }
+    case OperatorInfo::OfIdOp: {
+      // [sizeof/alignof/typeid] ( <type>|<expr> )
+      Node *Arg =
+          Op->getFlag() ? getDerived().parseType() : getDerived().parseExpr();
+      if (!Arg)
+        return nullptr;
+      return make<EnclosingExpr>(Sym, Arg, ")");
+    }
+    case OperatorInfo::NameOnly: {
+      // Not valid as an expression operand.
       return nullptr;
-    case 'P': {
-      First += 2;
-      size_t ArgsBegin = Names.size();
-      while (!consumeIf('E')) {
-        Node *Arg = getDerived().parseTemplateArg();
-        if (Arg == nullptr)
-          return nullptr;
-        Names.push_back(Arg);
-      }
-      auto *Pack = make<NodeArrayNode>(popTrailingNodeArray(ArgsBegin));
-      if (!Pack)
-        return nullptr;
-      return make<EnclosingExpr>("sizeof... (", Pack, ")");
     }
     }
+    DEMANGLE_UNREACHABLE;
+  }
+
+  if (numLeft() < 2)
     return nullptr;
-  case 't':
-    switch (First[1]) {
-    case 'e': {
-      First += 2;
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
-        return Ex;
-      return make<EnclosingExpr>("typeid (", Ex, ")");
-    }
-    case 'i': {
-      First += 2;
-      Node *Ty = getDerived().parseType();
-      if (Ty == nullptr)
-        return Ty;
-      return make<EnclosingExpr>("typeid (", Ty, ")");
-    }
-    case 'l': {
-      First += 2;
-      Node *Ty = getDerived().parseType();
-      if (Ty == nullptr)
+
+  if (look() == 'L')
+    return getDerived().parseExprPrimary();
+  if (look() == 'T')
+    return getDerived().parseTemplateParam();
+  if (look() == 'f') {
+    // Disambiguate a fold expression from a <function-param>.
+    if (look(1) == 'p' || (look(1) == 'L' && std::isdigit(look(2))))
+      return getDerived().parseFunctionParam();
+    return getDerived().parseFoldExpr();
+  }
+  if (consumeIf("il")) {
+    size_t InitsBegin = Names.size();
+    while (!consumeIf('E')) {
+      Node *E = getDerived().parseBracedExpr();
+      if (E == nullptr)
         return nullptr;
-      size_t InitsBegin = Names.size();
-      while (!consumeIf('E')) {
-        Node *E = getDerived().parseBracedExpr();
-        if (E == nullptr)
-          return nullptr;
-        Names.push_back(E);
-      }
-      return make<InitListExpr>(Ty, popTrailingNodeArray(InitsBegin));
+      Names.push_back(E);
     }
-    case 'r':
-      First += 2;
-      return make<NameType>("throw");
-    case 'w': {
-      First += 2;
-      Node *Ex = getDerived().parseExpr();
-      if (Ex == nullptr)
+    return make<InitListExpr>(nullptr, popTrailingNodeArray(InitsBegin));
+  }
+  if (consumeIf("mc"))
+    return parsePointerToMemberConversionExpr();
+  if (consumeIf("nx")) {
+    Node *Ex = getDerived().parseExpr();
+    if (Ex == nullptr)
+      return Ex;
+    return make<EnclosingExpr>("noexcept (", Ex, ")");
+  }
+  if (consumeIf("so"))
+    return parseSubobjectExpr();
+  if (consumeIf("sp")) {
+    Node *Child = getDerived().parseExpr();
+    if (Child == nullptr)
+      return nullptr;
+    return make<ParameterPackExpansion>(Child);
+  }
+  if (consumeIf("sZ")) {
+    if (look() == 'T') {
+      Node *R = getDerived().parseTemplateParam();
+      if (R == nullptr)
         return nullptr;
-      return make<ThrowExpr>(Ex);
+      return make<SizeofParamPackExpr>(R);
     }
+    Node *FP = getDerived().parseFunctionParam();
+    if (FP == nullptr)
+      return nullptr;
+    return make<EnclosingExpr>("sizeof... (", FP, ")");
+  }
+  if (consumeIf("sP")) {
+    size_t ArgsBegin = Names.size();
+    while (!consumeIf('E')) {
+      Node *Arg = getDerived().parseTemplateArg();
+      if (Arg == nullptr)
+        return nullptr;
+      Names.push_back(Arg);
     }
-    return nullptr;
-  case 'u': {
-    ++First;
+    auto *Pack = make<NodeArrayNode>(popTrailingNodeArray(ArgsBegin));
+    if (!Pack)
+      return nullptr;
+    return make<EnclosingExpr>("sizeof... (", Pack, ")");
+  }
+  if (consumeIf("tl")) {
+    Node *Ty = getDerived().parseType();
+    if (Ty == nullptr)
+      return nullptr;
+    size_t InitsBegin = Names.size();
+    while (!consumeIf('E')) {
+      Node *E = getDerived().parseBracedExpr();
+      if (E == nullptr)
+        return nullptr;
+      Names.push_back(E);
+    }
+    return make<InitListExpr>(Ty, popTrailingNodeArray(InitsBegin));
+  }
+  if (consumeIf("tr"))
+    return make<NameType>("throw");
+  if (consumeIf("tw")) {
+    Node *Ex = getDerived().parseExpr();
+    if (Ex == nullptr)
+      return nullptr;
+    return make<ThrowExpr>(Ex);
+  }
+  if (consumeIf('u')) {
     Node *Name = getDerived().parseSourceName(/*NameState=*/nullptr);
     if (!Name)
       return nullptr;
@@ -5054,18 +4703,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     }
     return make<CallExpr>(Name, popTrailingNodeArray(ExprsBegin));
   }
-  case '1':
-  case '2':
-  case '3':
-  case '4':
-  case '5':
-  case '6':
-  case '7':
-  case '8':
-  case '9':
-    return getDerived().parseUnresolvedName(Global);
-  }
-  return nullptr;
+
+  // Only unresolved names remain.
+  return getDerived().parseUnresolvedName(Global);
 }
 
 // <call-offset> ::= h <nv-offset> _

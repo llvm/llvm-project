@@ -1468,18 +1468,19 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
   return true;
 }
 
-// Check if we can find a physical register for renaming. This register must:
-// * not be defined up to FirstMI (checking DefinedInBB)
-// * not used between the MI and the defining instruction of the register to
-//   rename (checked using UsedInBetween).
+// Check if we can find a physical register for renaming \p Reg. This register
+// must:
+// * not be defined already in \p DefinedInBB; DefinedInBB must contain all
+//   defined registers up to the point where the renamed register will be used,
+// * not used in \p UsedInBetween; UsedInBetween must contain all accessed
+//   registers in the range the rename register will be used,
 // * is available in all used register classes (checked using RequiredClasses).
 static Optional<MCPhysReg> tryToFindRegisterToRename(
-    MachineInstr &FirstMI, MachineInstr &MI, LiveRegUnits &DefinedInBB,
+    const MachineFunction &MF, Register Reg, LiveRegUnits &DefinedInBB,
     LiveRegUnits &UsedInBetween,
     SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
     const TargetRegisterInfo *TRI) {
-  auto &MF = *FirstMI.getParent()->getParent();
-  MachineRegisterInfo &RegInfo = MF.getRegInfo();
+  const MachineRegisterInfo &RegInfo = MF.getRegInfo();
 
   // Checks if any sub- or super-register of PR is callee saved.
   auto AnySubOrSuperRegCalleePreserved = [&MF, TRI](MCPhysReg PR) {
@@ -1500,7 +1501,7 @@ static Optional<MCPhysReg> tryToFindRegisterToRename(
     });
   };
 
-  auto *RegClass = TRI->getMinimalPhysRegClass(getLdStRegOp(FirstMI).getReg());
+  auto *RegClass = TRI->getMinimalPhysRegClass(Reg);
   for (const MCPhysReg &PR : *RegClass) {
     if (DefinedInBB.available(PR) && UsedInBetween.available(PR) &&
         !RegInfo.isReserved(PR) && !AnySubOrSuperRegCalleePreserved(PR) &&
@@ -1723,8 +1724,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
             if (*MaybeCanRename) {
               Optional<MCPhysReg> MaybeRenameReg = tryToFindRegisterToRename(
-                  FirstMI, MI, DefinedInBB, UsedInBetween, RequiredClasses,
-                  TRI);
+                  *FirstMI.getParent()->getParent(), Reg, DefinedInBB,
+                  UsedInBetween, RequiredClasses, TRI);
               if (MaybeRenameReg) {
                 Flags.setRenameReg(*MaybeRenameReg);
                 Flags.setMergeForward(true);

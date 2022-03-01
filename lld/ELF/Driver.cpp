@@ -442,23 +442,54 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
   return STV_PROTECTED;
 }
 
+constexpr const char *knownZFlags[] = {
+    "combreloc",
+    "copyreloc",
+    "defs",
+    "execstack",
+    "force-bti",
+    "force-ibt",
+    "global",
+    "hazardplt",
+    "ifunc-noplt",
+    "initfirst",
+    "interpose",
+    "keep-text-section-prefix",
+    "lazy",
+    "muldefs",
+    "nocombreloc",
+    "nocopyreloc",
+    "nodefaultlib",
+    "nodelete",
+    "nodlopen",
+    "noexecstack",
+    "nognustack",
+    "nokeep-text-section-prefix",
+    "norelro",
+    "noseparate-code",
+    "nostart-stop-gc",
+    "notext",
+    "now",
+    "origin",
+    "pac-plt",
+    "rel",
+    "rela",
+    "relro",
+    "retpolineplt",
+    "rodynamic",
+    "separate-code",
+    "separate-loadable-segments",
+    "shstk",
+    "start-stop-gc",
+    "text",
+    "undefs",
+    "wxneeded",
+};
+
 static bool isKnownZFlag(StringRef s) {
-  return s == "combreloc" || s == "copyreloc" || s == "defs" ||
-         s == "execstack" || s == "force-bti" || s == "force-ibt" ||
-         s == "global" || s == "hazardplt" || s == "ifunc-noplt" ||
-         s == "initfirst" || s == "interpose" ||
-         s == "keep-text-section-prefix" || s == "lazy" || s == "muldefs" ||
-         s == "separate-code" || s == "separate-loadable-segments" ||
-         s == "start-stop-gc" || s == "nocombreloc" || s == "nocopyreloc" ||
-         s == "nodefaultlib" || s == "nodelete" || s == "nodlopen" ||
-         s == "noexecstack" || s == "nognustack" ||
-         s == "nokeep-text-section-prefix" || s == "norelro" ||
-         s == "noseparate-code" || s == "nostart-stop-gc" || s == "notext" ||
-         s == "now" || s == "origin" || s == "pac-plt" || s == "rel" ||
-         s == "rela" || s == "relro" || s == "retpolineplt" ||
-         s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
-         s == "wxneeded" || s.startswith("common-page-size=") ||
-         s.startswith("bti-report=") || s.startswith("cet-report=") ||
+  return llvm::is_contained(knownZFlags, s) ||
+         s.startswith("common-page-size=") || s.startswith("bti-report=") ||
+         s.startswith("cet-report=") ||
          s.startswith("dead-reloc-in-nonalloc=") ||
          s.startswith("max-page-size=") || s.startswith("stack-size=") ||
          s.startswith("start-stop-visibility=");
