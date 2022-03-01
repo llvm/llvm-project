@@ -142,18 +142,6 @@ libunwind specific options
 
   Build libunwind with threading support.
 
-.. option:: LIBUNWIND_TARGET_TRIPLE:STRING
-
-  Target triple for cross compiling
-
-.. option:: LIBUNWIND_GCC_TOOLCHAIN:PATH
-
-  GCC toolchain for cross compiling
-
-.. option:: LIBUNWIND_SYSROOT
-
-  Sysroot for cross compiling
-
 .. option:: LIBUNWIND_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib${LIBUNWIND_LIBDIR_SUFFIX}``

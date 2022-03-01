@@ -11,6 +11,7 @@
 
 #include <__bits>
 #include <__config>
+#include <__random/is_valid.h>
 #include <__random/log2.h>
 #include <bit>
 #include <cstddef>
@@ -21,7 +22,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<random>)
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -156,9 +156,10 @@ __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
     return _Sp;
 }
 
-template<class _IntType = int> // __int128_t is also supported as an extension here
+template<class _IntType = int>
 class uniform_int_distribution
 {
+    static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be an integer type larger than char");
 public:
     // types
     typedef _IntType result_type;

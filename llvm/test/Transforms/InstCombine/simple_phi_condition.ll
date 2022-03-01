@@ -134,3 +134,111 @@ merge:
   %ret = phi i1 [false, %if.true.end], [true, %if.false]
   ret i1 %ret
 }
+
+define i1 @test_multiple_predecessors(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_predecessors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK:       if2.true:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if2.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[IF_TRUE]] ], [ false, [[IF2_TRUE]] ], [ false, [[IF2_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br i1 %cond2, label %if2.true, label %if2.false
+
+if2.true:
+  br label %merge
+
+if2.false:
+  br label %merge
+
+merge:
+  %ret = phi i1 [ true, %if.true ], [ false, %if2.true ], [ false, %if2.false ]
+  ret i1 %ret
+}
+
+define i1 @test_multiple_predecessors_wrong_value(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_predecessors_wrong_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK:       if2.true:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if2.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[IF_TRUE]] ], [ true, [[IF2_TRUE]] ], [ false, [[IF2_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br i1 %cond2, label %if2.true, label %if2.false
+
+if2.true:
+  br label %merge
+
+if2.false:
+  br label %merge
+
+merge:
+  %ret = phi i1 [ true, %if.true ], [ true, %if2.true ], [ false, %if2.false ]
+  ret i1 %ret
+}
+
+define i1 @test_multiple_predecessors_no_edge_domination(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_predecessors_no_edge_domination(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[MERGE:%.*]], label [[IF_FALSE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND2]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK:       if2.true:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if2.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[IF_TRUE]] ], [ false, [[IF2_TRUE]] ], [ false, [[IF2_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %merge, label %if.false
+
+if.false:
+  br i1 %cond2, label %if2.true, label %if2.false
+
+if2.true:
+  br label %merge
+
+if2.false:
+  br label %merge
+
+merge:
+  %ret = phi i1 [ true, %if.true ], [ false, %if2.true ], [ false, %if2.false ]
+  ret i1 %ret
+}

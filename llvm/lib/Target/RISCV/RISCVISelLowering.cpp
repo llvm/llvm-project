@@ -1031,8 +1031,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
-  setTargetDAGCombine(ISD::ROTL);
-  setTargetDAGCombine(ISD::ROTR);
+  if (Subtarget.hasStdExtZbp()) {
+    setTargetDAGCombine(ISD::ROTL);
+    setTargetDAGCombine(ISD::ROTR);
+  }
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
   if (Subtarget.hasStdExtZfh())
@@ -7305,10 +7307,18 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
 // ROTL ((GREV x, 24), 16) -> (GREVI x, 8)
 // RORW ((GREVW x, 24), 16) -> (GREVIW x, 8)
 // ROLW ((GREVW x, 24), 16) -> (GREVIW x, 8)
-static SDValue combineROTR_ROTL_RORW_ROLW(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineROTR_ROTL_RORW_ROLW(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget) {
+  assert((N->getOpcode() == ISD::ROTR || N->getOpcode() == ISD::ROTL ||
+          N->getOpcode() == RISCVISD::RORW ||
+          N->getOpcode() == RISCVISD::ROLW) &&
+         "Unexpected opcode!");
   SDValue Src = N->getOperand(0);
   SDLoc DL(N);
   unsigned Opc;
+
+  if (!Subtarget.hasStdExtZbp())
+    return SDValue();
 
   if ((N->getOpcode() == ISD::ROTR || N->getOpcode() == ISD::ROTL) &&
       Src.getOpcode() == RISCVISD::GREV)
@@ -8058,19 +8068,27 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case RISCVISD::SLLW:
   case RISCVISD::SRAW:
-  case RISCVISD::SRLW:
-  case RISCVISD::ROLW:
-  case RISCVISD::RORW: {
+  case RISCVISD::SRLW: {
     // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
     if (SimplifyDemandedLowBitsHelper(0, 32) ||
         SimplifyDemandedLowBitsHelper(1, 5))
       return SDValue(N, 0);
 
-    return combineROTR_ROTL_RORW_ROLW(N, DAG);
+    break;
   }
   case ISD::ROTR:
   case ISD::ROTL:
-    return combineROTR_ROTL_RORW_ROLW(N, DAG);
+  case RISCVISD::RORW:
+  case RISCVISD::ROLW: {
+    if (N->getOpcode() == RISCVISD::RORW || N->getOpcode() == RISCVISD::ROLW) {
+      // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
+      if (SimplifyDemandedLowBitsHelper(0, 32) ||
+          SimplifyDemandedLowBitsHelper(1, 5))
+        return SDValue(N, 0);
+    }
+
+    return combineROTR_ROTL_RORW_ROLW(N, DAG, Subtarget);
+  }
   case RISCVISD::CLZW:
   case RISCVISD::CTZW: {
     // Only the lower 32 bits of the first operand are read

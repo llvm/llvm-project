@@ -74,6 +74,106 @@ static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
 }
 #endif
 
+/// Make \p Source branch to \p Target.
+///
+/// Handles two situations:
+/// * \p Source already has an unconditional branch.
+/// * \p Source is a degenerate block (no terminator because the BB is
+///             the current head of the IR construction).
+static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
+  if (Instruction *Term = Source->getTerminator()) {
+    auto *Br = cast<BranchInst>(Term);
+    assert(!Br->isConditional() &&
+           "BB's terminator must be an unconditional branch (or degenerate)");
+    BasicBlock *Succ = Br->getSuccessor(0);
+    Succ->removePredecessor(Source, /*KeepOneInputPHIs=*/true);
+    Br->setSuccessor(0, Target);
+    return;
+  }
+
+  auto *NewBr = BranchInst::Create(Target, Source);
+  NewBr->setDebugLoc(DL);
+}
+
+/// Move the instruction after an InsertPoint to the beginning of another
+/// BasicBlock.
+///
+/// The instructions after \p IP are moved to the beginning of \p New which must
+/// not have any PHINodes. If \p CreateBranch is true, a branch instruction to
+/// \p New will be added such that there is no semantic change. Otherwise, the
+/// \p IP insert block remains degenerate and it is up to the caller to insert a
+/// terminator.
+static void spliceBB(OpenMPIRBuilder::InsertPointTy IP, BasicBlock *New,
+                     bool CreateBranch) {
+  assert(New->getFirstInsertionPt() == New->begin() &&
+         "Target BB must not have PHI nodes");
+
+  // Move instructions to new block.
+  BasicBlock *Old = IP.getBlock();
+  New->getInstList().splice(New->begin(), Old->getInstList(), IP.getPoint(),
+                            Old->end());
+
+  if (CreateBranch)
+    BranchInst::Create(New, Old);
+}
+
+/// Splice a BasicBlock at an IRBuilder's current insertion point. Its new
+/// insert location will stick to after the instruction before the insertion
+/// point (instead of moving with the instruction the InsertPoint stores
+/// internally).
+static void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
+  DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
+
+  spliceBB(Builder.saveIP(), New, CreateBranch);
+  if (CreateBranch)
+    Builder.SetInsertPoint(Old->getTerminator());
+  else
+    Builder.SetInsertPoint(Old);
+
+  // SetInsertPoint also updates the Builder's debug location, but we want to
+  // keep the one the Builder was configured to use.
+  Builder.SetCurrentDebugLocation(DebugLoc);
+}
+
+/// Split a BasicBlock at an InsertPoint, even if the block is degenerate
+/// (missing the terminator).
+///
+/// llvm::SplitBasicBlock and BasicBlock::splitBasicBlock require a well-formed
+/// BasicBlock. \p Name is used for the new successor block. If \p CreateBranch
+/// is true, a branch to the new successor will new created such that
+/// semantically there is no change; otherwise the block of the insertion point
+/// remains degenerate and it is the caller's responsibility to insert a
+/// terminator. Returns the new successor block.
+static BasicBlock *splitBB(OpenMPIRBuilder::InsertPointTy IP, bool CreateBranch,
+                           llvm::Twine Name = {}) {
+  BasicBlock *Old = IP.getBlock();
+  BasicBlock *New = BasicBlock::Create(
+      Old->getContext(), Name.isTriviallyEmpty() ? Old->getName() : Name,
+      Old->getParent(), Old->getNextNode());
+  spliceBB(IP, New, CreateBranch);
+  New->replaceSuccessorsPhiUsesWith(Old, New);
+  return New;
+}
+
+/// Split a BasicBlock at \p Builder's insertion point, even if the block is
+/// degenerate (missing the terminator).  Its new insert location will stick to
+/// after the instruction before the insertion point (instead of moving with the
+/// instruction the InsertPoint stores internally).
+static BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch,
+                           llvm::Twine Name = {}) {
+  DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  if (CreateBranch)
+    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+  else
+    Builder.SetInsertPoint(Builder.GetInsertBlock());
+  // SetInsertPoint also updates the Builder's debug location, but we want to
+  // keep the one the Builder was configured to use.
+  Builder.SetCurrentDebugLocation(DebugLoc);
+  return New;
+}
+
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
 
@@ -1402,10 +1502,8 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
     // Split the loop at the insertion point: Branch to the preheader and move
     // every following instruction to after the loop (the After BB). Also, the
     // new successor is the loop's after block.
+    spliceBB(Builder, After, /*CreateBranch=*/false);
     Builder.CreateBr(CL->getPreheader());
-    After->getInstList().splice(After->begin(), BB->getInstList(),
-                                Builder.GetInsertPoint(), BB->end());
-    After->replaceSuccessorsPhiUsesWith(BB, After);
   }
 
   // Emit the body content. We do it after connecting the loop to the CFG to
@@ -1506,20 +1604,10 @@ static FunctionCallee getKmpcForStaticInitForType(Type *Ty, Module &M,
   llvm_unreachable("unknown OpenMP loop iterator bitwidth");
 }
 
-// Sets the number of loop iterations to the given value. This value must be
-// valid in the condition block (i.e., defined in the preheader) and is
-// interpreted as an unsigned integer.
-void setCanonicalLoopTripCount(CanonicalLoopInfo *CLI, Value *TripCount) {
-  Instruction *CmpI = &CLI->getCond()->front();
-  assert(isa<CmpInst>(CmpI) && "First inst must compare IV with TripCount");
-  CmpI->setOperand(1, TripCount);
-  CLI->assertOK();
-}
-
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
                                           InsertPointTy AllocaIP,
-                                          bool NeedsBarrier, Value *Chunk) {
+                                          bool NeedsBarrier) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");
@@ -1559,10 +1647,6 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   Builder.CreateStore(UpperBound, PUpperBound);
   Builder.CreateStore(One, PStride);
 
-  // FIXME: schedule(static) is NOT the same as schedule(static,1)
-  if (!Chunk)
-    Chunk = One;
-
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
 
   Constant *SchedulingType =
@@ -1572,25 +1656,22 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   // value it produced.
   Builder.CreateCall(StaticInit,
                      {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound,
-                      PUpperBound, PStride, One, Chunk});
+                      PUpperBound, PStride, One, Zero});
   Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
   Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
   Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One);
-  setCanonicalLoopTripCount(CLI, TripCount);
+  CLI->setTripCount(TripCount);
 
   // Update all uses of the induction variable except the one in the condition
   // block that compares it with the actual upper bound, and the increment in
   // the latch block.
-  // TODO: this can eventually move to CanonicalLoopInfo or to a new
-  // CanonicalLoopInfoUpdater interface.
-  Builder.SetInsertPoint(CLI->getBody(), CLI->getBody()->getFirstInsertionPt());
-  Value *UpdatedIV = Builder.CreateAdd(IV, LowerBound);
-  IV->replaceUsesWithIf(UpdatedIV, [&](Use &U) {
-    auto *Instr = dyn_cast<Instruction>(U.getUser());
-    return !Instr ||
-           (Instr->getParent() != CLI->getCond() &&
-            Instr->getParent() != CLI->getLatch() && Instr != UpdatedIV);
+
+  CLI->mapIndVar([&](Instruction *OldIV) -> Value * {
+    Builder.SetInsertPoint(CLI->getBody(),
+                           CLI->getBody()->getFirstInsertionPt());
+    Builder.SetCurrentDebugLocation(DL);
+    return Builder.CreateAdd(OldIV, LowerBound);
   });
 
   // In the "exit" block, call the "fini" function.
@@ -1610,11 +1691,184 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   return AfterIP;
 }
 
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    bool NeedsBarrier, Value *ChunkSize) {
+  assert(CLI->isValid() && "Requires a valid canonical loop");
+  assert(ChunkSize && "Chunk size is required");
+
+  LLVMContext &Ctx = CLI->getFunction()->getContext();
+  Value *IV = CLI->getIndVar();
+  Value *OrigTripCount = CLI->getTripCount();
+  Type *IVTy = IV->getType();
+  assert(IVTy->getIntegerBitWidth() <= 64 &&
+         "Max supported tripcount bitwidth is 64 bits");
+  Type *InternalIVTy = IVTy->getIntegerBitWidth() <= 32 ? Type::getInt32Ty(Ctx)
+                                                        : Type::getInt64Ty(Ctx);
+  Type *I32Type = Type::getInt32Ty(M.getContext());
+  Constant *Zero = ConstantInt::get(InternalIVTy, 0);
+  Constant *One = ConstantInt::get(InternalIVTy, 1);
+
+  // Declare useful OpenMP runtime functions.
+  FunctionCallee StaticInit =
+      getKmpcForStaticInitForType(InternalIVTy, M, *this);
+  FunctionCallee StaticFini =
+      getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
+
+  // Allocate space for computed loop bounds as expected by the "init" function.
+  Builder.restoreIP(AllocaIP);
+  Builder.SetCurrentDebugLocation(DL);
+  Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
+  Value *PLowerBound =
+      Builder.CreateAlloca(InternalIVTy, nullptr, "p.lowerbound");
+  Value *PUpperBound =
+      Builder.CreateAlloca(InternalIVTy, nullptr, "p.upperbound");
+  Value *PStride = Builder.CreateAlloca(InternalIVTy, nullptr, "p.stride");
+
+  // Set up the source location value for the OpenMP runtime.
+  Builder.restoreIP(CLI->getPreheaderIP());
+  Builder.SetCurrentDebugLocation(DL);
+
+  // TODO: Detect overflow in ubsan or max-out with current tripcount.
+  Value *CastedChunkSize =
+      Builder.CreateZExtOrTrunc(ChunkSize, InternalIVTy, "chunksize");
+  Value *CastedTripCount =
+      Builder.CreateZExt(OrigTripCount, InternalIVTy, "tripcount");
+
+  Constant *SchedulingType = ConstantInt::get(
+      I32Type, static_cast<int>(OMPScheduleType::StaticChunked));
+  Builder.CreateStore(Zero, PLowerBound);
+  Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
+  Builder.CreateStore(OrigUpperBound, PUpperBound);
+  Builder.CreateStore(One, PStride);
+
+  // Call the "init" function and update the trip count of the loop with the
+  // value it produced.
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+  Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *ThreadNum = getOrCreateThreadID(SrcLoc);
+  Builder.CreateCall(StaticInit,
+                     {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
+                      /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
+                      /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
+                      /*pstride=*/PStride, /*incr=*/One,
+                      /*chunk=*/CastedChunkSize});
+
+  // Load values written by the "init" function.
+  Value *FirstChunkStart =
+      Builder.CreateLoad(InternalIVTy, PLowerBound, "omp_firstchunk.lb");
+  Value *FirstChunkStop =
+      Builder.CreateLoad(InternalIVTy, PUpperBound, "omp_firstchunk.ub");
+  Value *FirstChunkEnd = Builder.CreateAdd(FirstChunkStop, One);
+  Value *ChunkRange =
+      Builder.CreateSub(FirstChunkEnd, FirstChunkStart, "omp_chunk.range");
+  Value *NextChunkStride =
+      Builder.CreateLoad(InternalIVTy, PStride, "omp_dispatch.stride");
+
+  // Create outer "dispatch" loop for enumerating the chunks.
+  BasicBlock *DispatchEnter = splitBB(Builder, true);
+  Value *DispatchCounter;
+  CanonicalLoopInfo *DispatchCLI = createCanonicalLoop(
+      {Builder.saveIP(), DL},
+      [&](InsertPointTy BodyIP, Value *Counter) { DispatchCounter = Counter; },
+      FirstChunkStart, CastedTripCount, NextChunkStride,
+      /*IsSigned=*/false, /*InclusiveStop=*/false, /*ComputeIP=*/{},
+      "dispatch");
+
+  // Remember the BasicBlocks of the dispatch loop we need, then invalidate to
+  // not have to preserve the canonical invariant.
+  BasicBlock *DispatchBody = DispatchCLI->getBody();
+  BasicBlock *DispatchLatch = DispatchCLI->getLatch();
+  BasicBlock *DispatchExit = DispatchCLI->getExit();
+  BasicBlock *DispatchAfter = DispatchCLI->getAfter();
+  DispatchCLI->invalidate();
+
+  // Rewire the original loop to become the chunk loop inside the dispatch loop.
+  redirectTo(DispatchAfter, CLI->getAfter(), DL);
+  redirectTo(CLI->getExit(), DispatchLatch, DL);
+  redirectTo(DispatchBody, DispatchEnter, DL);
+
+  // Prepare the prolog of the chunk loop.
+  Builder.restoreIP(CLI->getPreheaderIP());
+  Builder.SetCurrentDebugLocation(DL);
+
+  // Compute the number of iterations of the chunk loop.
+  Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
+  Value *ChunkEnd = Builder.CreateAdd(DispatchCounter, ChunkRange);
+  Value *IsLastChunk =
+      Builder.CreateICmpUGE(ChunkEnd, CastedTripCount, "omp_chunk.is_last");
+  Value *CountUntilOrigTripCount =
+      Builder.CreateSub(CastedTripCount, DispatchCounter);
+  Value *ChunkTripCount = Builder.CreateSelect(
+      IsLastChunk, CountUntilOrigTripCount, ChunkRange, "omp_chunk.tripcount");
+  Value *BackcastedChunkTC =
+      Builder.CreateTrunc(ChunkTripCount, IVTy, "omp_chunk.tripcount.trunc");
+  CLI->setTripCount(BackcastedChunkTC);
+
+  // Update all uses of the induction variable except the one in the condition
+  // block that compares it with the actual upper bound, and the increment in
+  // the latch block.
+  Value *BackcastedDispatchCounter =
+      Builder.CreateTrunc(DispatchCounter, IVTy, "omp_dispatch.iv.trunc");
+  CLI->mapIndVar([&](Instruction *) -> Value * {
+    Builder.restoreIP(CLI->getBodyIP());
+    return Builder.CreateAdd(IV, BackcastedDispatchCounter);
+  });
+
+  // In the "exit" block, call the "fini" function.
+  Builder.SetInsertPoint(DispatchExit, DispatchExit->getFirstInsertionPt());
+  Builder.CreateCall(StaticFini, {SrcLoc, ThreadNum});
+
+  // Add the barrier if requested.
+  if (NeedsBarrier)
+    createBarrier(LocationDescription(Builder.saveIP(), DL), OMPD_for,
+                  /*ForceSimpleCall=*/false, /*CheckCancelFlag=*/false);
+
+#ifndef NDEBUG
+  // Even though we currently do not support applying additional methods to it,
+  // the chunk loop should remain a canonical loop.
+  CLI->assertOK();
+#endif
+
+  return {DispatchAfter, DispatchAfter->getFirstInsertionPt()};
+}
+
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::applyWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                    InsertPointTy AllocaIP, bool NeedsBarrier) {
-  // Currently only supports static schedules.
-  return applyStaticWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier);
+                                    InsertPointTy AllocaIP, bool NeedsBarrier,
+                                    llvm::omp::ScheduleKind SchedKind,
+                                    llvm::Value *ChunkSize) {
+  switch (SchedKind) {
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Default:
+    assert(!ChunkSize && "No chunk size with default schedule (which for clang "
+                         "is static non-chunked)");
+    LLVM_FALLTHROUGH;
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Static:
+    if (ChunkSize)
+      return applyStaticChunkedWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier,
+                                             ChunkSize);
+    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Auto:
+    assert(!ChunkSize && "Chunk size with auto scheduling not user-defined");
+    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, OMPScheduleType::Auto,
+                                     NeedsBarrier, nullptr);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Dynamic:
+    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP,
+                                     OMPScheduleType::DynamicChunked,
+                                     NeedsBarrier, ChunkSize);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Guided:
+    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP,
+                                     OMPScheduleType::GuidedChunked,
+                                     NeedsBarrier, ChunkSize);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Runtime:
+    assert(!ChunkSize &&
+           "Chunk size with runtime scheduling implied to be one");
+    return applyDynamicWorkshareLoop(
+        DL, CLI, AllocaIP, OMPScheduleType::Runtime, NeedsBarrier, nullptr);
+  }
+
+  llvm_unreachable("Unknown/unimplemented schedule kind");
 }
 
 /// Returns an LLVM function to call for initializing loop bounds using OpenMP
@@ -1761,27 +2015,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
 
   CLI->invalidate();
   return AfterIP;
-}
-
-/// Make \p Source branch to \p Target.
-///
-/// Handles two situations:
-/// * \p Source already has an unconditional branch.
-/// * \p Source is a degenerate block (no terminator because the BB is
-///             the current head of the IR construction).
-static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
-  if (Instruction *Term = Source->getTerminator()) {
-    auto *Br = cast<BranchInst>(Term);
-    assert(!Br->isConditional() &&
-           "BB's terminator must be an unconditional branch (or degenerate)");
-    BasicBlock *Succ = Br->getSuccessor(0);
-    Succ->removePredecessor(Source, /*KeepOneInputPHIs=*/true);
-    Br->setSuccessor(0, Target);
-    return;
-  }
-
-  auto *NewBr = BranchInst::Create(Target, Source);
-  NewBr->setDebugLoc(DL);
 }
 
 /// Redirect all edges that branch to \p OldTarget to \p NewTarget. That is,
@@ -3595,6 +3828,51 @@ BasicBlock *CanonicalLoopInfo::getPreheader() const {
       return Pred;
   }
   llvm_unreachable("Missing preheader");
+}
+
+void CanonicalLoopInfo::setTripCount(Value *TripCount) {
+  assert(isValid() && "Requires a valid canonical loop");
+
+  Instruction *CmpI = &getCond()->front();
+  assert(isa<CmpInst>(CmpI) && "First inst must compare IV with TripCount");
+  CmpI->setOperand(1, TripCount);
+
+#ifndef NDEBUG
+  assertOK();
+#endif
+}
+
+void CanonicalLoopInfo::mapIndVar(
+    llvm::function_ref<Value *(Instruction *)> Updater) {
+  assert(isValid() && "Requires a valid canonical loop");
+
+  Instruction *OldIV = getIndVar();
+
+  // Record all uses excluding those introduced by the updater. Uses by the
+  // CanonicalLoopInfo itself to keep track of the number of iterations are
+  // excluded.
+  SmallVector<Use *> ReplacableUses;
+  for (Use &U : OldIV->uses()) {
+    auto *User = dyn_cast<Instruction>(U.getUser());
+    if (!User)
+      continue;
+    if (User->getParent() == getCond())
+      continue;
+    if (User->getParent() == getLatch())
+      continue;
+    ReplacableUses.push_back(&U);
+  }
+
+  // Run the updater that may introduce new uses
+  Value *NewIV = Updater(OldIV);
+
+  // Replace the old uses with the value returned by the updater.
+  for (Use *U : ReplacableUses)
+    U->set(NewIV);
+
+#ifndef NDEBUG
+  assertOK();
+#endif
 }
 
 void CanonicalLoopInfo::assertOK() const {

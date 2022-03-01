@@ -34,7 +34,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<string>)
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -680,7 +679,7 @@ char_traits<char8_t>::find(const char_type* __s, size_t __n, const char_type& __
     return nullptr;
 }
 
-#endif // #_LIBCPP_HAS_NO_CHAR8_T
+#endif // _LIBCPP_HAS_NO_CHAR8_T
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 

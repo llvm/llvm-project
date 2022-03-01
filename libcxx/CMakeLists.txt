@@ -282,24 +282,10 @@ if (LIBCXX_BUILD_32_BITS)
   message(FATAL_ERROR "LIBCXX_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
 endif()
 
-if(NOT CMAKE_SYSROOT AND LIBCXX_SYSROOT)
-  message(WARNING "LIBCXX_SYSROOT is deprecated, please use CMAKE_SYSROOT instead")
+# TODO: Remove this after branching for LLVM 15
+if(LIBCXX_SYSROOT OR LIBCXX_TARGET_TRIPLE OR LIBCXX_GCC_TOOLCHAIN)
+  message(WARNING "LIBCXX_SYSROOT, LIBCXX_TARGET_TRIPLE and LIBCXX_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
-if(NOT CMAKE_CXX_COMPILER_TARGET AND LIBCXX_TARGET_TRIPLE)
-  message(WARNING "LIBCXX_TARGET_TRIPLE is deprecated, please use CMAKE_CXX_COMPILER_TARGET instead")
-endif()
-if(NOT CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN AND LIBCXX_GCC_TOOLCHAIN)
-  message(WARNING "LIBCXX_GCC_TOOLCHAIN is deprecated, please use CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN instead")
-endif()
-
-if(CMAKE_CXX_COMPILER_TARGET)
-  set(LIBCXX_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
-else()
-  set(LIBCXX_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
-endif()
-set(LIBCXX_TARGET_TRIPLE "${LIBCXX_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Use alternate target triple.")
-set(LIBCXX_SYSROOT "${CMAKE_SYSROOT}" CACHE STRING "Use alternate sysroot.")
-set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE STRING "Use alternate GCC toolchain.")
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
@@ -493,15 +479,6 @@ include(HandleLibcxxFlags)
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 if(ZOS)
   add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
-endif()
-if(LIBCXX_TARGET_TRIPLE)
-  add_target_flags_if_supported("--target=${LIBCXX_TARGET_TRIPLE}")
-endif()
-if(LIBCXX_SYSROOT)
-  add_target_flags_if_supported("--sysroot=${LIBCXX_SYSROOT}")
-endif()
-if(LIBCXX_GCC_TOOLCHAIN)
-  add_target_flags_if_supported("--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
 endif()
 
 # Configure compiler.

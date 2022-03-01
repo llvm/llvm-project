@@ -121,21 +121,19 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
 
   removeSections(Config, Obj);
 
-  for (StringRef Flag : Config.AddSection) {
-    StringRef SecName, FileName;
-    std::tie(SecName, FileName) = Flag.split("=");
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-        MemoryBuffer::getFile(FileName);
-    if (!BufOrErr)
-      return createFileError(FileName, errorCodeToError(BufOrErr.getError()));
+  for (const NewSectionInfo &NewSection : Config.AddSection) {
     Section Sec;
     Sec.SectionType = llvm::wasm::WASM_SEC_CUSTOM;
-    Sec.Name = SecName;
-    std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+    Sec.Name = NewSection.SectionName;
+
+    std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
+        NewSection.SectionData->getBufferStart(),
+        NewSection.SectionData->getBufferIdentifier());
     Sec.Contents = makeArrayRef<uint8_t>(
-        reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
-        Buf->getBufferSize());
-    Obj.addSectionWithOwnedContents(Sec, std::move(Buf));
+        reinterpret_cast<const uint8_t *>(BufferCopy->getBufferStart()),
+        BufferCopy->getBufferSize());
+
+    Obj.addSectionWithOwnedContents(Sec, std::move(BufferCopy));
   }
 
   return Error::success();

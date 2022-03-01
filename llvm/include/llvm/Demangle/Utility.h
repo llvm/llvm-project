@@ -37,10 +37,10 @@ class OutputBuffer {
   void grow(size_t N) {
     size_t Need = N + CurrentPosition;
     if (Need > BufferCapacity) {
-      // Avoid many reallocations during startup, with a bit of hysteresis.
-      constexpr size_t MinInitAlloc = 1024;
-      if (Need < MinInitAlloc)
-        Need = MinInitAlloc;
+      // Reduce the number of reallocations, with a bit of hysteresis. The
+      // number here is chosen so the first allocation will more-than-likely not
+      // allocate more than 1K.
+      Need += 1024 - 32;
       BufferCapacity *= 2;
       if (BufferCapacity < Need)
         BufferCapacity = Need;
@@ -163,7 +163,6 @@ public:
 template <class T> class SwapAndRestore {
   T &Restore;
   T OriginalValue;
-  bool ShouldRestore = true;
 
 public:
   SwapAndRestore(T &Restore_) : SwapAndRestore(Restore_, Restore_) {}
@@ -172,20 +171,7 @@ public:
       : Restore(Restore_), OriginalValue(Restore) {
     Restore = std::move(NewVal);
   }
-  ~SwapAndRestore() {
-    if (ShouldRestore)
-      Restore = std::move(OriginalValue);
-  }
-
-  void shouldRestore(bool ShouldRestore_) { ShouldRestore = ShouldRestore_; }
-
-  void restoreNow(bool Force) {
-    if (!Force && !ShouldRestore)
-      return;
-
-    Restore = std::move(OriginalValue);
-    ShouldRestore = false;
-  }
+  ~SwapAndRestore() { Restore = std::move(OriginalValue); }
 
   SwapAndRestore(const SwapAndRestore &) = delete;
   SwapAndRestore &operator=(const SwapAndRestore &) = delete;

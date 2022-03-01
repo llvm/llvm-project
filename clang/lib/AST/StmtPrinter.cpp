@@ -1940,14 +1940,23 @@ void StmtPrinter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Node) {
 }
 
 void StmtPrinter::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *Node) {
-  Node->getType().print(OS, Policy);
-  // If there are no parens, this is list-initialization, and the braces are
-  // part of the syntax of the inner construct.
-  if (Node->getLParenLoc().isValid())
-    OS << "(";
+  auto TargetType = Node->getType();
+  auto *Auto = TargetType->getContainedDeducedType();
+  bool Bare = Auto && Auto->isDeduced();
+
+  // Parenthesize deduced casts.
+  if (Bare)
+    OS << '(';
+  TargetType.print(OS, Policy);
+  if (Bare)
+    OS << ')';
+
+  // No extra braces surrounding the inner construct.
+  if (!Node->isListInitialization())
+    OS << '(';
   PrintExpr(Node->getSubExpr());
-  if (Node->getLParenLoc().isValid())
-    OS << ")";
+  if (!Node->isListInitialization())
+    OS << ')';
 }
 
 void StmtPrinter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *Node) {
@@ -2144,11 +2153,13 @@ void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
     OS << ")";
 
   CXXNewExpr::InitializationStyle InitStyle = E->getInitializationStyle();
-  if (InitStyle) {
-    if (InitStyle == CXXNewExpr::CallInit)
+  if (InitStyle != CXXNewExpr::NoInit) {
+    bool Bare = InitStyle == CXXNewExpr::CallInit &&
+                !isa<ParenListExpr>(E->getInitializer());
+    if (Bare)
       OS << "(";
     PrintExpr(E->getInitializer());
-    if (InitStyle == CXXNewExpr::CallInit)
+    if (Bare)
       OS << ")";
   }
 }
@@ -2210,19 +2221,19 @@ void StmtPrinter::VisitExprWithCleanups(ExprWithCleanups *E) {
   PrintExpr(E->getSubExpr());
 }
 
-void
-StmtPrinter::VisitCXXUnresolvedConstructExpr(
-                                           CXXUnresolvedConstructExpr *Node) {
+void StmtPrinter::VisitCXXUnresolvedConstructExpr(
+    CXXUnresolvedConstructExpr *Node) {
   Node->getTypeAsWritten().print(OS, Policy);
-  OS << "(";
-  for (CXXUnresolvedConstructExpr::arg_iterator Arg = Node->arg_begin(),
-                                             ArgEnd = Node->arg_end();
-       Arg != ArgEnd; ++Arg) {
+  if (!Node->isListInitialization())
+    OS << '(';
+  for (auto Arg = Node->arg_begin(), ArgEnd = Node->arg_end(); Arg != ArgEnd;
+       ++Arg) {
     if (Arg != Node->arg_begin())
       OS << ", ";
     PrintExpr(*Arg);
   }
-  OS << ")";
+  if (!Node->isListInitialization())
+    OS << ')';
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(

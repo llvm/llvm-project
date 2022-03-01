@@ -208,3 +208,38 @@ body:             |
 
 ...
 
+# GCN-LABEL: name: test_mad_src0mods
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_mad_src0mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MAC_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: test_mad_src1mods
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_mad_src1mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MAC_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: test_mad_src2mods
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_mad_src2mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MAC_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
+...

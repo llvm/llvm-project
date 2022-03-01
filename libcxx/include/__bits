@@ -14,14 +14,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<algorithm>)
-#  pragma clang include_instead(<bit>)
-#  pragma clang include_instead(<bitset>)
-#  pragma clang include_instead(<numeric>)
-#  pragma clang include_instead(<random>)
-#  pragma clang include_instead(<unordered_map>)
-#  pragma clang include_instead(<unordered_set>)
-#  pragma clang include_instead(<vector>)
 #endif
 
 _LIBCPP_PUSH_MACROS

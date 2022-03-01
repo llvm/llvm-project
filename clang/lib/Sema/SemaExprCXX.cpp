@@ -1468,12 +1468,50 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   // C++1z [expr.type.conv]p1:
   //   If the type is a placeholder for a deduced class type, [...perform class
   //   template argument deduction...]
+  // C++2b:
+  //   Otherwise, if the type contains a placeholder type, it is replaced by the
+  //   type determined by placeholder type deduction.
   DeducedType *Deduced = Ty->getContainedDeducedType();
   if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
     Ty = DeduceTemplateSpecializationFromInitializer(TInfo, Entity,
                                                      Kind, Exprs);
     if (Ty.isNull())
       return ExprError();
+    Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
+  } else if (Deduced) {
+    MultiExprArg Inits = Exprs;
+    if (ListInitialization) {
+      auto *ILE = cast<InitListExpr>(Exprs[0]);
+      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
+    }
+
+    if (Inits.empty())
+      return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
+                       << Ty << FullRange);
+    if (Inits.size() > 1) {
+      Expr *FirstBad = Inits[1];
+      return ExprError(Diag(FirstBad->getBeginLoc(),
+                            diag::err_auto_expr_init_multiple_expressions)
+                       << Ty << FullRange);
+    }
+    if (getLangOpts().CPlusPlus2b) {
+      if (Ty->getAs<AutoType>())
+        Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
+    }
+    Expr *Deduce = Inits[0];
+    if (isa<InitListExpr>(Deduce))
+      return ExprError(
+          Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
+          << ListInitialization << Ty << FullRange);
+    QualType DeducedType;
+    if (DeduceAutoType(TInfo, Deduce, DeducedType) == DAR_Failed)
+      return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_deduction_failure)
+                       << Ty << Deduce->getType() << FullRange
+                       << Deduce->getSourceRange());
+    if (DeducedType.isNull())
+      return ExprError();
+
+    Ty = DeducedType;
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
   }
 
@@ -1937,12 +1975,10 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     initStyle = CXXNewExpr::NoInit;
   }
 
-  Expr **Inits = &Initializer;
-  unsigned NumInits = Initializer ? 1 : 0;
+  MultiExprArg Exprs(&Initializer, Initializer ? 1 : 0);
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
     assert(initStyle == CXXNewExpr::CallInit && "paren init for non-call init");
-    Inits = List->getExprs();
-    NumInits = List->getNumExprs();
+    Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
   }
 
   // C++11 [expr.new]p15:
@@ -1978,23 +2014,21 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     InitializedEntity Entity
       = InitializedEntity::InitializeNew(StartLoc, AllocType);
     AllocType = DeduceTemplateSpecializationFromInitializer(
-        AllocTypeInfo, Entity, Kind, MultiExprArg(Inits, NumInits));
+        AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
       return ExprError();
   } else if (Deduced) {
+    MultiExprArg Inits = Exprs;
     bool Braced = (initStyle == CXXNewExpr::ListInit);
-    if (NumInits == 1) {
-      if (auto p = dyn_cast_or_null<InitListExpr>(Inits[0])) {
-        Inits = p->getInits();
-        NumInits = p->getNumInits();
-        Braced = true;
-      }
+    if (Braced) {
+      auto *ILE = cast<InitListExpr>(Exprs[0]);
+      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
-    if (initStyle == CXXNewExpr::NoInit || NumInits == 0)
+    if (initStyle == CXXNewExpr::NoInit || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
-    if (NumInits > 1) {
+    if (Inits.size() > 1) {
       Expr *FirstBad = Inits[1];
       return ExprError(Diag(FirstBad->getBeginLoc(),
                             diag::err_auto_new_ctor_multiple_expressions)
@@ -2004,6 +2038,10 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       Diag(Initializer->getBeginLoc(), diag::ext_auto_new_list_init)
           << AllocType << TypeRange;
     Expr *Deduce = Inits[0];
+    if (isa<InitListExpr>(Deduce))
+      return ExprError(
+          Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
+          << Braced << AllocType << TypeRange);
     QualType DeducedType;
     if (DeduceAutoType(AllocTypeInfo, Deduce, DeducedType) == DAR_Failed)
       return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
@@ -2304,8 +2342,8 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
   if (ArraySize && !isLegalArrayNewInitializer(initStyle, Initializer)) {
-    SourceRange InitRange(Inits[0]->getBeginLoc(),
-                          Inits[NumInits - 1]->getEndLoc());
+    SourceRange InitRange(Exprs.front()->getBeginLoc(),
+                          Exprs.back()->getEndLoc());
     Diag(StartLoc, diag::err_new_array_init_args) << InitRange;
     return ExprError();
   }
@@ -2313,8 +2351,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // If we can perform the initialization, and we've not already done so,
   // do it now.
   if (!AllocType->isDependentType() &&
-      !Expr::hasAnyTypeDependentArguments(
-          llvm::makeArrayRef(Inits, NumInits))) {
+      !Expr::hasAnyTypeDependentArguments(Exprs)) {
     // The type we initialize is the complete type, including the array bound.
     QualType InitType;
     if (KnownArraySize)
@@ -2331,10 +2368,8 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     InitializedEntity Entity
       = InitializedEntity::InitializeNew(StartLoc, InitType);
-    InitializationSequence InitSeq(*this, Entity, Kind,
-                                   MultiExprArg(Inits, NumInits));
-    ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind,
-                                          MultiExprArg(Inits, NumInits));
+    InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
+    ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
       return ExprError();
 

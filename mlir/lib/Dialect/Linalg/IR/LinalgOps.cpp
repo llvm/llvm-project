@@ -108,17 +108,9 @@ static LogicalResult foldMemRefCast(Operation *op) {
 //===----------------------------------------------------------------------===//
 // Region builder helper.
 // TODO: Move this to a utility library.
-// The public methods on this class are referenced directly from generated code
-// and bind by name to math functions in the DSL as:
-//   `unary__{fnName}`
-//   `binary__{fnName}`
-// Examples:
-//   `binary__add`
-//   `binary__mul`
-//   `unary__exp`
-//   `unary__log`
-// The naming convention is intentional in order to match snake-cased DSL names.
-// See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
+// The public methods on this class are referenced directly from generated code.
+// Helper build the unary, binary, and type conversion functions defined by the
+// DSL. See mlir-linalg-ods-yaml-gen.cpp for the code that uses this class.
 //
 // Implementations of the math functions must be polymorphic over numeric types,
 // internally performing necessary casts. If the function application makes no
@@ -142,6 +134,98 @@ public:
   RegionBuilderHelper(MLIRContext *context, Block &block)
       : context(context), block(block) {}
 
+  // Build the unary functions defined by OpDSL.
+  Value buildUnaryFn(UnaryFn unaryFn, Value arg) {
+    if (!isFloatingPoint(arg))
+      llvm_unreachable("unsupported non numeric type");
+    OpBuilder builder = getBuilder();
+    switch (unaryFn) {
+    case UnaryFn::exp:
+      return builder.create<math::ExpOp>(arg.getLoc(), arg);
+    case UnaryFn::log:
+      return builder.create<math::LogOp>(arg.getLoc(), arg);
+    }
+    llvm_unreachable("unsupported unary function");
+  }
+
+  // Build the binary functions defined by OpDSL.
+  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1) {
+    bool allFloatingPoint = isFloatingPoint(arg0) && isFloatingPoint(arg1);
+    bool allInteger = isInteger(arg0) && isInteger(arg1);
+    if (!allFloatingPoint && !allInteger)
+      llvm_unreachable("unsupported non numeric type");
+    OpBuilder builder = getBuilder();
+    switch (binaryFn) {
+    case BinaryFn::add:
+      if (allFloatingPoint)
+        return builder.create<arith::AddFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::AddIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::sub:
+      if (allFloatingPoint)
+        return builder.create<arith::SubFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::SubIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::mul:
+      if (allFloatingPoint)
+        return builder.create<arith::MulFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max_signed:
+      if (allFloatingPoint)
+        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min_signed:
+      if (allFloatingPoint)
+        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max_unsigned:
+      if (allFloatingPoint)
+        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxUIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min_unsigned:
+      if (allFloatingPoint)
+        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
+    }
+    llvm_unreachable("unsupported binary function");
+  }
+
+  // Build the type functions defined by OpDSL.
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+    switch (typeFn) {
+    case TypeFn::cast_signed:
+      return cast(toType, operand, false);
+    case TypeFn::cast_unsigned:
+      return cast(toType, operand, true);
+    }
+    llvm_unreachable("unsupported type conversion function");
+  }
+
+  void yieldOutputs(ValueRange values) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    builder.create<YieldOp>(loc, values);
+  }
+
+  Value constant(const std::string &value) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    Attribute valueAttr = parseAttribute(value, builder.getContext());
+    return builder.create<arith::ConstantOp>(loc, valueAttr.getType(),
+                                             valueAttr);
+  }
+
+  Value index(int64_t dim) {
+    OpBuilder builder = getBuilder();
+    return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
+  }
+
+  Type getIntegerType(unsigned width) {
+    return IntegerType::get(context, width);
+  }
+
+  Type getFloat32Type() { return Float32Type::get(context); }
+  Type getFloat64Type() { return Float64Type::get(context); }
+
+private:
   // Generates operations to cast the given operand to a specified type.
   // If the cast cannot be performed, a warning will be issued and the
   // operand returned as-is (which will presumably yield a verification
@@ -193,136 +277,6 @@ public:
     return operand;
   }
 
-  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
-    switch (typeFn) {
-    case TypeFn::cast:
-      return cast(toType, operand, false);
-    case TypeFn::cast_unsigned:
-      return cast(toType, operand, true);
-    }
-    llvm_unreachable("unsupported type conversion function");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__add(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::AddFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::AddIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value unary__exp(Value x) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(x))
-      return builder.create<math::ExpOp>(x.getLoc(), x);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value unary__log(Value x) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(x))
-      return builder.create<math::LogOp>(x.getLoc(), x);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__sub(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::SubFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::SubIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__mul(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MulFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MulIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__max(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MaxSIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__max_unsigned(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MaxUIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__min(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MinSIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__min_unsigned(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MinUIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  void yieldOutputs(ValueRange values) {
-    assert(!values.empty() && "linalg ops must yield outputs");
-    if (values.empty())
-      return;
-    Value first = values.front();
-    OpBuilder builder = getBuilder();
-    builder.create<YieldOp>(first.getLoc(), values);
-  }
-
-  Value constant(const std::string &value) {
-    OpBuilder builder = getBuilder();
-    Location loc = builder.getUnknownLoc();
-    Attribute valueAttr = parseAttribute(value, builder.getContext());
-    return builder.create<arith::ConstantOp>(loc, valueAttr.getType(),
-                                             valueAttr);
-  }
-
-  Value index(int64_t dim) {
-    OpBuilder builder = getBuilder();
-    return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
-  }
-
-  Type getIntegerType(unsigned width) {
-    return IntegerType::get(context, width);
-  }
-
-  Type getFloat32Type() { return Float32Type::get(context); }
-
-  Type getFloat64Type() { return Float64Type::get(context); }
-
-private:
-  MLIRContext *context;
-  Block &block;
-
   bool isFloatingPoint(Value value) { return value.getType().isa<FloatType>(); }
   bool isInteger(Value value) { return value.getType().isa<IntegerType>(); }
 
@@ -331,6 +285,9 @@ private:
     builder.setInsertionPointToEnd(&block);
     return builder;
   }
+
+  MLIRContext *context;
+  Block &block;
 };
 
 } // namespace
@@ -444,13 +401,112 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
   }
 };
 
+/// Fold tensor.insert_slice(tensor.pad(<input>), linalg.fill) into
+/// tensor.insert_slice(<input>, linalg.fill) if the padding value and the
+/// filling value are the same.
+struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcPadOp = insertOp.source().getDefiningOp<tensor::PadOp>();
+    if (!srcPadOp)
+      return failure();
+
+    if (insertOp.getType().getRank() != insertOp.getSourceType().getRank())
+      return failure();
+
+    // Walk back the tensor.insert_slice chain and find the first destination
+    // value at the start of the chain.
+    Value firstDest = insertOp.dest();
+    while (auto prevOp = firstDest.getDefiningOp<tensor::InsertSliceOp>()) {
+      if (prevOp.getType().getRank() != prevOp.getSourceType().getRank())
+        return failure();
+
+      // Make sure the range of values accessed are disjoint. Without this, we
+      // cannot fold tensor.pad away.
+      bool disjoint = false;
+      for (int i = 0, e = prevOp.getType().getRank(); i < e; ++i) {
+        // If the dimension has dynamic offset/size, we cannot guarantee
+        // disjoint. So just skip it.
+        if (insertOp.isDynamicOffset(i) || insertOp.isDynamicSize(i) ||
+            insertOp.isDynamicStride(i) || prevOp.isDynamicOffset(i) ||
+            prevOp.isDynamicSize(i) || prevOp.isDynamicStride(i))
+          continue;
+
+        // Get the range start and end, inclusively for both.
+        int64_t prevStart = prevOp.getStaticOffset(i);
+        int64_t prevEnd = prevStart + (prevOp.getStaticSize(i) - 1) *
+                                          prevOp.getStaticStride(i);
+        int64_t nextStart = insertOp.getStaticOffset(i);
+        int64_t nextEnd = nextStart + (insertOp.getStaticSize(i) - 1) *
+                                          insertOp.getStaticStride(i);
+        if (prevEnd < nextStart || nextEnd < prevStart) {
+          disjoint = true;
+          break;
+        }
+      }
+
+      if (!disjoint)
+        break;
+      firstDest = prevOp.dest();
+    }
+
+    // Check whether the first destination is a fill op. For overlapped cases,
+    // this also cannot be true.
+    auto dstFillOp = firstDest.getDefiningOp<linalg::FillOp>();
+    if (!dstFillOp)
+      return failure();
+
+    // We can only fold if the padding value is the same as the original
+    // filling value.
+    Value padValue = srcPadOp.getConstantPaddingValue();
+    if (!padValue || dstFillOp.value() != padValue)
+      return failure();
+
+    SmallVector<OpFoldResult> lowPads = srcPadOp.getMixedLowPad();
+    SmallVector<OpFoldResult> oldOffsets = insertOp.getMixedOffsets();
+
+    Location loc = insertOp.getLoc();
+    MLIRContext *context = getContext();
+
+    AffineExpr sym0, sym1;
+    bindSymbols(context, sym0, sym1);
+    auto addMap = AffineMap::get(0, 2, {sym0 + sym1}, context);
+
+    // Calculate the new offsets for the insert. It should be the old offsets
+    // plus low padding sizes.
+    SmallVector<OpFoldResult, 4> newOffsets;
+    for (const auto &p : llvm::zip(lowPads, oldOffsets)) {
+      Value padValue = getValueOrCreateConstantIndexOp(
+          rewriter, srcPadOp.getLoc(), std::get<0>(p));
+      Value offsetValue = getValueOrCreateConstantIndexOp(
+          rewriter, insertOp.getLoc(), std::get<1>(p));
+      newOffsets.push_back(
+          applyMapToValues(rewriter, loc, addMap, {offsetValue, padValue})[0]);
+    }
+
+    SmallVector<OpFoldResult, 4> newSizes;
+    for (int i = 0, e = srcPadOp.getSourceType().getRank(); i < e; ++i) {
+      newSizes.push_back(
+          rewriter.create<tensor::DimOp>(loc, srcPadOp.source(), i).result());
+    }
+
+    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+        insertOp, srcPadOp.source(), insertOp.dest(), newOffsets, newSizes,
+        insertOp.getMixedStrides());
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
   results
       .add<FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-           FoldFillWithTensorReshape<tensor::ExpandShapeOp>>(context);
+           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+           FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//

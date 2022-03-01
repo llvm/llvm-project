@@ -29,7 +29,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<ranges>)
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -112,22 +111,22 @@ namespace ranges {
   namespace views {
   namespace __reverse {
     template<class _Tp>
-    constexpr bool __is_reverse_view = false;
+    inline constexpr bool __is_reverse_view = false;
 
     template<class _Tp>
-    constexpr bool __is_reverse_view<reverse_view<_Tp>> = true;
+    inline constexpr bool __is_reverse_view<reverse_view<_Tp>> = true;
 
     template<class _Tp>
-    constexpr bool __is_sized_reverse_subrange = false;
+    inline constexpr bool __is_sized_reverse_subrange = false;
 
     template<class _Iter>
-    constexpr bool __is_sized_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, subrange_kind::sized>> = true;
+    inline constexpr bool __is_sized_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, subrange_kind::sized>> = true;
 
     template<class _Tp>
-    constexpr bool __is_unsized_reverse_subrange = false;
+    inline constexpr bool __is_unsized_reverse_subrange = false;
 
     template<class _Iter, subrange_kind _Kind>
-    constexpr bool __is_unsized_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, _Kind>> = _Kind == subrange_kind::unsized;
+    inline constexpr bool __is_unsized_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, _Kind>> = _Kind == subrange_kind::unsized;
 
     template<class _Tp>
     struct __unwrapped_reverse_subrange {

@@ -18,21 +18,11 @@ namespace fputil {
 namespace x86 {
 
 inline void normalize(int &exponent, __uint128_t &mantissa) {
-  // Use binary search to shift the leading 1 bit similar to float.
-  // With MantissaWidth<long double> = 63, it will take
-  // ceil(log2(63)) = 6 steps checking the mantissa bits.
-  constexpr int NSTEPS = 6; // = ceil(log2(MantissaWidth))
-  constexpr __uint128_t BOUNDS[NSTEPS] = {
-      __uint128_t(1) << 32, __uint128_t(1) << 48, __uint128_t(1) << 56,
-      __uint128_t(1) << 60, __uint128_t(1) << 62, __uint128_t(1) << 63};
-  constexpr int SHIFTS[NSTEPS] = {32, 16, 8, 4, 2, 1};
-
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mantissa < BOUNDS[i]) {
-      exponent -= SHIFTS[i];
-      mantissa <<= SHIFTS[i];
-    }
-  }
+  const int shift =
+      __builtin_clzll(static_cast<uint64_t>(mantissa)) -
+      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE);
+  exponent -= shift;
+  mantissa <<= shift;
 }
 
 // if constexpr statement in sqrt.h still requires x86::sqrt to be declared

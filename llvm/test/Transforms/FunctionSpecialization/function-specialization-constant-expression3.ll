@@ -18,11 +18,6 @@ declare i32 @quux()
 declare i32 @eggs()
 
 define internal void @wombat(i8* %arg, i64 %arg1, i64 %arg2, i32 (i8*, i8*)* %arg3) {
-; CHECK-LABEL: @wombat(
-; CHECK-NEXT:  bb4:
-; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 [[ARG3:%.*]](i8* undef, i8* undef)
-; CHECK-NEXT:    ret void
-;
 bb4:
   %tmp = tail call i32 %arg3(i8* undef, i8* undef)
   ret void

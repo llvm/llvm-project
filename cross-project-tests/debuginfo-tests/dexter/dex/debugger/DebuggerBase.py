@@ -167,10 +167,10 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def delete_breakpoint(self, id):
-        """Delete a breakpoint by id.
+    def delete_breakpoints(self, ids):
+        """Delete a set of breakpoints by ids.
 
-        Raises a KeyError if no breakpoint with this id exists.
+        Raises a KeyError if, for any id, no breakpoint with that id exists.
         """
         pass
 
