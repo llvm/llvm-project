@@ -11,6 +11,8 @@
 
 #include "llvm/Support/raw_ostream.h"
 
+#include <functional>
+
 namespace llvm {
 
 class Error;
@@ -53,6 +55,9 @@ enum class ColorMode {
 class WithColor {
   raw_ostream &OS;
   ColorMode Mode;
+
+  using AutoDetectFunctionType = std::function<bool(const raw_ostream &OS)>;
+  static AutoDetectFunctionType AutoDetectFunction;
 
 public:
   /// To be used like this: WithColor(OS, HighlightColor::String) << "text";
@@ -132,6 +137,13 @@ public:
   /// Implement default handling for Warning.
   /// Print "warning: " to stderr.
   static void defaultWarningHandler(Error Warning);
+
+  /// Retrieve the default color auto detection function.
+  static AutoDetectFunctionType defaultAutoDetectFunction();
+
+  /// Change the global auto detection function.
+  static void
+  setAutoDetectFunction(AutoDetectFunctionType NewAutoDetectFunction);
 };
 
 } // end namespace llvm
