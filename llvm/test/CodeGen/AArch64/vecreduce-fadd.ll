@@ -236,6 +236,207 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
   ret float %r
 }
 
+; FIXME: The faddp.4s in the loop should not use v0.4s as second operand,
+; because this introduces an unnecessary cross-iteration dependency.
+define float @fadd_reduction_v4f32_in_loop(float* %ptr.start) {
+; CHECK-LABEL: fadd_reduction_v4f32_in_loop:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB9_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp w8, #112
+; CHECK-NEXT:    faddp v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    faddp s1, v1.2s
+; CHECK-NEXT:    fadd s0, s1, s0
+; CHECK-NEXT:    b.ne .LBB9_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
+  %ptr = phi float* [ %ptr.start, %entry ], [ %ptr.next, %loop ]
+  %red = phi float [ 0.000000e+00, %entry ], [ %red.next, %loop ]
+  %ptr.bc = bitcast float* %ptr to <4 x float>*
+  %lv = load <4 x float>, <4 x float>* %ptr.bc, align 4
+  %r = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %lv)
+  %red.next = fadd fast float %r, %red
+  %ec = icmp eq i32 %iv, 7
+  %ptr.next = getelementptr inbounds float, float* %ptr, i64 4
+  %iv.next= add nuw nsw i32 %iv, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %red.next
+}
+
+; FIXME: The faddp.4h in the loop should not use v0.4h as second operand,
+; because this introduces an unnecessary cross-iteration dependency.
+define half @fadd_reduction_v4f16_in_loop(half* %ptr.start) {
+; FULLFP16-LABEL: fadd_reduction_v4f16_in_loop:
+; FULLFP16:       // %bb.0: // %entry
+; FULLFP16-NEXT:    movi d0, #0000000000000000
+; FULLFP16-NEXT:    mov x8, xzr
+; FULLFP16-NEXT:  .LBB10_1: // %loop
+; FULLFP16-NEXT:    // =>This Inner Loop Header: Depth=1
+; FULLFP16-NEXT:    ldr d1, [x0, x8]
+; FULLFP16-NEXT:    add x8, x8, #8
+; FULLFP16-NEXT:    cmp w8, #56
+; FULLFP16-NEXT:    faddp v1.4h, v1.4h, v0.4h
+; FULLFP16-NEXT:    faddp h1, v1.2h
+; FULLFP16-NEXT:    fadd h0, h1, h0
+; FULLFP16-NEXT:    b.ne .LBB10_1
+; FULLFP16-NEXT:  // %bb.2: // %exit
+; FULLFP16-NEXT:    ret
+;
+; CHECKNOFP16-LABEL: fadd_reduction_v4f16_in_loop:
+; CHECKNOFP16:       // %bb.0: // %entry
+; CHECKNOFP16-NEXT:    adrp x9, .LCPI10_0
+; CHECKNOFP16-NEXT:    mov x8, xzr
+; CHECKNOFP16-NEXT:    ldr h0, [x9, :lo12:.LCPI10_0]
+; CHECKNOFP16-NEXT:  .LBB10_1: // %loop
+; CHECKNOFP16-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECKNOFP16-NEXT:    ldr d1, [x0, x8]
+; CHECKNOFP16-NEXT:    fcvt s0, h0
+; CHECKNOFP16-NEXT:    add x8, x8, #8
+; CHECKNOFP16-NEXT:    cmp w8, #56
+; CHECKNOFP16-NEXT:    mov h2, v1.h[1]
+; CHECKNOFP16-NEXT:    fcvt s3, h1
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s3, s2
+; CHECKNOFP16-NEXT:    mov h3, v1.h[2]
+; CHECKNOFP16-NEXT:    mov h1, v1.h[3]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s1, h1
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s1, s2, s1
+; CHECKNOFP16-NEXT:    fcvt h1, s1
+; CHECKNOFP16-NEXT:    fcvt s1, h1
+; CHECKNOFP16-NEXT:    fadd s0, s1, s0
+; CHECKNOFP16-NEXT:    fcvt h0, s0
+; CHECKNOFP16-NEXT:    b.ne .LBB10_1
+; CHECKNOFP16-NEXT:  // %bb.2: // %exit
+; CHECKNOFP16-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
+  %ptr = phi half* [ %ptr.start, %entry ], [ %ptr.next, %loop ]
+  %red = phi half [ 0.000000e+00, %entry ], [ %red.next, %loop ]
+  %ptr.bc = bitcast half* %ptr to <4 x half>*
+  %lv = load <4 x half>, <4 x half>* %ptr.bc, align 4
+  %r = call fast half @llvm.vector.reduce.fadd.f16.v4f16(half -0.0, <4 x half> %lv)
+  %red.next = fadd fast half %r, %red
+  %ec = icmp eq i32 %iv, 7
+  %ptr.next = getelementptr inbounds half, half* %ptr, i64 4
+  %iv.next= add nuw nsw i32 %iv, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret half %red.next
+}
+
+; FIXME: The faddp.8h in the loop should not use v0.8h as second operand,
+; because this introduces an unnecessary cross-iteration dependency.
+define half @fadd_reduction_v8f16_in_loop(half* %ptr.start) {
+; FULLFP16-LABEL: fadd_reduction_v8f16_in_loop:
+; FULLFP16:       // %bb.0: // %entry
+; FULLFP16-NEXT:    movi d0, #0000000000000000
+; FULLFP16-NEXT:    mov x8, xzr
+; FULLFP16-NEXT:  .LBB11_1: // %loop
+; FULLFP16-NEXT:    // =>This Inner Loop Header: Depth=1
+; FULLFP16-NEXT:    ldr q1, [x0, x8]
+; FULLFP16-NEXT:    add x8, x8, #8
+; FULLFP16-NEXT:    cmp w8, #56
+; FULLFP16-NEXT:    faddp v1.8h, v1.8h, v0.8h
+; FULLFP16-NEXT:    faddp v1.8h, v1.8h, v0.8h
+; FULLFP16-NEXT:    faddp h1, v1.2h
+; FULLFP16-NEXT:    fadd h0, h1, h0
+; FULLFP16-NEXT:    b.ne .LBB11_1
+; FULLFP16-NEXT:  // %bb.2: // %exit
+; FULLFP16-NEXT:    ret
+;
+; CHECKNOFP16-LABEL: fadd_reduction_v8f16_in_loop:
+; CHECKNOFP16:       // %bb.0: // %entry
+; CHECKNOFP16-NEXT:    adrp x9, .LCPI11_0
+; CHECKNOFP16-NEXT:    mov x8, xzr
+; CHECKNOFP16-NEXT:    ldr h0, [x9, :lo12:.LCPI11_0]
+; CHECKNOFP16-NEXT:  .LBB11_1: // %loop
+; CHECKNOFP16-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECKNOFP16-NEXT:    ldr q1, [x0, x8]
+; CHECKNOFP16-NEXT:    fcvt s0, h0
+; CHECKNOFP16-NEXT:    add x8, x8, #8
+; CHECKNOFP16-NEXT:    cmp w8, #56
+; CHECKNOFP16-NEXT:    mov h2, v1.h[1]
+; CHECKNOFP16-NEXT:    fcvt s3, h1
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s3, s2
+; CHECKNOFP16-NEXT:    mov h3, v1.h[2]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    mov h3, v1.h[3]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    mov h3, v1.h[4]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    mov h3, v1.h[5]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    mov h3, v1.h[6]
+; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt s1, h1
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    fcvt h2, s2
+; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fadd s1, s2, s1
+; CHECKNOFP16-NEXT:    fcvt h1, s1
+; CHECKNOFP16-NEXT:    fcvt s1, h1
+; CHECKNOFP16-NEXT:    fadd s0, s1, s0
+; CHECKNOFP16-NEXT:    fcvt h0, s0
+; CHECKNOFP16-NEXT:    b.ne .LBB11_1
+; CHECKNOFP16-NEXT:  // %bb.2: // %exit
+; CHECKNOFP16-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
+  %ptr = phi half* [ %ptr.start, %entry ], [ %ptr.next, %loop ]
+  %red = phi half [ 0.000000e+00, %entry ], [ %red.next, %loop ]
+  %ptr.bc = bitcast half* %ptr to <8 x half>*
+  %lv = load <8 x half>, <8 x half>* %ptr.bc, align 4
+  %r = call fast half @llvm.vector.reduce.fadd.f16.v8f16(half -0.0, <8 x half> %lv)
+  %red.next = fadd fast half %r, %red
+  %ec = icmp eq i32 %iv, 7
+  %ptr.next = getelementptr inbounds half, half* %ptr, i64 4
+  %iv.next= add nuw nsw i32 %iv, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret half %red.next
+}
+
 ; Function Attrs: nounwind readnone
 declare half @llvm.vector.reduce.fadd.f16.v4f16(half, <4 x half>)
 declare half @llvm.vector.reduce.fadd.f16.v8f16(half, <8 x half>)
