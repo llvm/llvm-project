@@ -499,6 +499,61 @@ exit:
   ret void
 }
 
+; Variation of @instruction_with_2_FOR_operands_and_multiple_other_uses, with
+; multiple instructions in a chain from for.1 to %used.by.both.
+define void @instruction_with_2_FOR_operands_and_multiple_other_uses_chain(float* noalias %dst.1, float* noalias %dst.2, float* noalias %dst.3, float* noalias %for.ptr.1, float* noalias %for.ptr.2) {
+; CHECK-LABEL: @instruction_with_2_FOR_operands_and_multiple_other_uses_chain(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi float [ 0.000000e+00, [[BB:%.*]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[BB]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1_USE_1:%.*]] = fmul fast float [[FOR_1]], 2.000000e+00
+; CHECK-NEXT:    [[FOR_1_USE_C:%.*]] = fmul fast float [[FOR_1_USE_1]], 2.000000e+00
+; CHECK-NEXT:    [[USED_BY_BOTH:%.*]] = fmul fast float [[FOR_1_USE_C]], [[FOR_2]]
+; CHECK-NEXT:    [[FOR_2_NEXT]] = load float, float* [[FOR_PTR_2:%.*]], align 4
+; CHECK-NEXT:    [[FOR_1_USE_3:%.*]] = fadd fast float [[FOR_1]], 1.000000e+00
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[FOR_1_NEXT]] = load float, float* [[FOR_PTR_1:%.*]], align 4
+; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds float, float* [[DST_1:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store float [[USED_BY_BOTH]], float* [[GEP_DST_1]], align 4
+; CHECK-NEXT:    [[GEP_DST_2:%.*]] = getelementptr inbounds float, float* [[DST_2:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store float [[FOR_1_USE_1]], float* [[GEP_DST_2]], align 4
+; CHECK-NEXT:    [[GEP_DST_3:%.*]] = getelementptr inbounds float, float* [[DST_3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store float [[FOR_1_USE_3]], float* [[GEP_DST_3]], align 4
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br label %loop
+
+loop:
+  %for.1 = phi float [ 0.0, %bb ], [ %for.1.next, %loop]
+  %for.2 = phi float [ 0.0, %bb ], [ %for.2.next, %loop]
+  %iv = phi i64 [ 0, %bb ], [ %iv.next, %loop ]
+  %for.1.use.1  = fmul fast float %for.1, 2.0
+  %for.1.use.c  = fmul fast float %for.1.use.1, 2.0
+  %used.by.both = fmul fast float %for.1.use.c, %for.2
+  %for.2.next = load float, float* %for.ptr.2, align 4
+  %for.1.use.3 = fadd fast float %for.1, 1.0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %for.1.next = load float, float* %for.ptr.1, align 4
+  %gep.dst.1 = getelementptr inbounds float, float* %dst.1, i64 %iv
+  store float %used.by.both, float* %gep.dst.1
+  %gep.dst.2 = getelementptr inbounds float, float* %dst.2, i64 %iv
+  store float %for.1.use.1, float* %gep.dst.2
+  %gep.dst.3 = getelementptr inbounds float, float* %dst.3, i64 %iv
+  store float %for.1.use.3, float* %gep.dst.3
+  %ec = icmp slt i64 %iv, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 ; The (first) reason `%first_time.1` cannot be sunk is because it appears outside
 ; the header and is not dominated by Previous. The fact that it feeds Previous
 ; is a second sinking-preventing reason.
