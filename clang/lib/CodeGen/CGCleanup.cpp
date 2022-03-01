@@ -206,10 +206,10 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   if (IsLifetimeMarker)
     Scope->setLifetimeMarker();
 
-  // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
-  if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
-      CGF->getTarget().getCXXABI().isMicrosoft())
-    CGF->EmitSehCppScopeBegin();
+  // // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
+  // if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
+  //     CGF->getTarget().getCXXABI().isMicrosoft())
+  //   CGF->EmitSehCppScopeBegin();
 
   return Scope->getCleanupBuffer();
 }
@@ -782,10 +782,10 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
     //   per Windows ABI which is "normally" Cleanup in callee
-    if (IsEHa && getInvokeDest()) {
-      if (Personality.isMSVCXXPersonality())
-        EmitSehCppScopeEnd();
-    }
+    // if (IsEHa && getInvokeDest()) {
+    //   if (Personality.isMSVCXXPersonality())
+    //     EmitSehCppScopeEnd();
+    // }
     destroyOptimisticNormalEntry(*this, Scope);
     EHStack.popCleanup();
   } else {
@@ -795,12 +795,12 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         !HasExistingBranches) {
 
       // mark SEH scope end for fall-through flow
-      if (IsEHa && getInvokeDest()) {
-        if (Personality.isMSVCXXPersonality())
-          EmitSehCppScopeEnd();
-        else
-          EmitSehTryScopeEnd();
-      }
+      // if (IsEHa && getInvokeDest()) {
+      //   if (Personality.isMSVCXXPersonality())
+      //     EmitSehCppScopeEnd();
+      //   else
+      //     EmitSehTryScopeEnd();
+      // }
 
       destroyOptimisticNormalEntry(*this, Scope);
       EHStack.popCleanup();
@@ -836,12 +836,12 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       EmitBlock(NormalEntry);
 
       // intercept normal cleanup to mark SEH scope end
-      if (IsEHa) {
-        if (Personality.isMSVCXXPersonality())
-          EmitSehCppScopeEnd();
-        else
-          EmitSehTryScopeEnd();
-      }
+      // if (IsEHa) {
+      //   if (Personality.isMSVCXXPersonality())
+      //     EmitSehCppScopeEnd();
+      //   else
+      //     EmitSehTryScopeEnd();
+      // }
 
       // III.  Figure out where we're going and build the cleanup
       // epilogue.
@@ -1330,25 +1330,6 @@ void CodeGenFunction::EmitCXXTemporary(const CXXTemporary *Temporary,
 static void EmitSehScope(CodeGenFunction &CGF,
                          llvm::FunctionCallee &SehCppScope) {
   llvm::BasicBlock *InvokeDest = CGF.getInvokeDest();
-  // [seh] fix some crash likes 'return in catch scope'
-  if (CGF.Builder.GetInsertBlock() == nullptr) {
-    auto SehCppScopeFunc = dyn_cast<llvm::Function>(SehCppScope.getCallee());
-    if (SehCppScopeFunc) {
-      llvm::outs() << "warning : EmitSehScope:CGF.Builder.GetInsertBlock() == "
-                      "nullptr,SehCppScopeFuncName:"
-                   << SehCppScopeFunc->getName().str() << "\n";
-    }
-    return;
-  }
-  if (InvokeDest == nullptr) {
-    auto SehCppScopeFunc = dyn_cast<llvm::Function>(SehCppScope.getCallee());
-    if (SehCppScopeFunc) {
-      llvm::outs() << "warning : EmitSehScope:CGF.Builder.InvokeDest == "
-                      "nullptr,SehCppScopeFuncName:"
-                   << SehCppScopeFunc->getName().str() << "\n";
-    }
-    return;
-  }
   assert(CGF.Builder.GetInsertBlock() && InvokeDest);
   llvm::BasicBlock *Cont = CGF.createBasicBlock("invoke.cont");
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
