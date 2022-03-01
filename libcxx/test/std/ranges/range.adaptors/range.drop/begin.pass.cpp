@@ -52,11 +52,11 @@ constexpr bool test() {
 
   // !random_access_range<const V>
   std::ranges::drop_view dropView2(ForwardView(), 4);
-  assert(dropView2.begin().base() == globalBuff + 4);
+  assert(base(dropView2.begin()) == globalBuff + 4);
 
   // !random_access_range<const V>
   std::ranges::drop_view dropView3(InputView(), 4);
-  assert(dropView3.begin().base() == globalBuff + 4);
+  assert(base(dropView3.begin()) == globalBuff + 4);
 
   // random_access_range<const V> && sized_range<const V>
   std::ranges::drop_view dropView4(MoveOnlyView(), 8);

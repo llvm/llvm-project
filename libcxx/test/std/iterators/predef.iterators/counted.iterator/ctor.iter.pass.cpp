@@ -35,7 +35,7 @@ constexpr bool test() {
 
   {
     std::counted_iterator iter(cpp20_input_iterator<int*>{buffer}, 8);
-    assert(iter.base().base() == buffer);
+    assert(base(iter.base()) == buffer);
     assert(iter.count() == 8);
   }
 
@@ -59,7 +59,7 @@ constexpr bool test() {
 
   {
     const std::counted_iterator iter(cpp20_input_iterator<int*>{buffer}, 8);
-    assert(iter.base().base() == buffer);
+    assert(base(iter.base()) == buffer);
     assert(iter.count() == 8);
   }
 

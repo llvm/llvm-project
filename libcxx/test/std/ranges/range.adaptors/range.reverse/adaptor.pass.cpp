@@ -60,24 +60,24 @@ constexpr bool test() {
       BidirRange view(buf, buf + 3);
       ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)), /* size */3);
       std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(result.begin().base() == buf);
-      assert(result.end().base() == buf + 3);
+      assert(base(result.begin()) == buf);
+      assert(base(result.end()) == buf + 3);
     }
     {
       // std::move into views::reverse
       BidirRange view(buf, buf + 3);
       ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)), /* size */3);
       std::same_as<Subrange> auto result = std::views::reverse(std::move(subrange));
-      assert(result.begin().base() == buf);
-      assert(result.end().base() == buf + 3);
+      assert(base(result.begin()) == buf);
+      assert(base(result.end()) == buf + 3);
     }
     {
       // with a const subrange
       BidirRange view(buf, buf + 3);
       ReverseSubrange const subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)), /* size */3);
       std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(result.begin().base() == buf);
-      assert(result.end().base() == buf + 3);
+      assert(base(result.begin()) == buf);
+      assert(base(result.end()) == buf + 3);
     }
   }
 
@@ -94,24 +94,24 @@ constexpr bool test() {
       BidirRange view(buf, buf + 3);
       ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)));
       std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(result.begin().base() == buf);
-      assert(result.end().base() == buf + 3);
+      assert(base(result.begin()) == buf);
+      assert(base(result.end()) == buf + 3);
     }
     {
       // std::move into views::reverse
       BidirRange view(buf, buf + 3);
       ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)));
       std::same_as<Subrange> auto result = std::views::reverse(std::move(subrange));
-      assert(result.begin().base() == buf);
-      assert(result.end().base() == buf + 3);
+      assert(base(result.begin()) == buf);
+      assert(base(result.end()) == buf + 3);
     }
     {
       // with a const subrange
       BidirRange view(buf, buf + 3);
       ReverseSubrange const subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)));
       std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(result.begin().base() == buf);
-      assert(result.end().base() == buf + 3);
+      assert(base(result.begin()) == buf);
+      assert(base(result.end()) == buf + 3);
     }
   }
 
@@ -119,8 +119,8 @@ constexpr bool test() {
   {
     BidirRange view(buf, buf + 3);
     std::same_as<std::ranges::reverse_view<BidirRange>> auto result = std::views::reverse(view);
-    assert(result.begin().base().base() == buf + 3);
-    assert(result.end().base().base() == buf);
+    assert(base(result.begin().base()) == buf + 3);
+    assert(base(result.end().base()) == buf);
   }
 
   // Test that std::views::reverse is a range adaptor
@@ -129,8 +129,8 @@ constexpr bool test() {
     {
       BidirRange view(buf, buf + 3);
       std::same_as<std::ranges::reverse_view<BidirRange>> auto result = view | std::views::reverse;
-      assert(result.begin().base().base() == buf + 3);
-      assert(result.end().base().base() == buf);
+      assert(base(result.begin().base()) == buf + 3);
+      assert(base(result.end().base()) == buf);
     }
 
     // Test `adaptor | views::reverse`
@@ -140,8 +140,8 @@ constexpr bool test() {
       auto const partial = std::views::transform(f) | std::views::reverse;
       using Result = std::ranges::reverse_view<std::ranges::transform_view<BidirRange, decltype(f)>>;
       std::same_as<Result> auto result = partial(view);
-      assert(result.begin().base().base().base() == buf + 3);
-      assert(result.end().base().base().base() == buf);
+      assert(base(result.begin().base().base()) == buf + 3);
+      assert(base(result.end().base().base()) == buf);
     }
 
     // Test `views::reverse | adaptor`
@@ -151,8 +151,8 @@ constexpr bool test() {
       auto const partial = std::views::reverse | std::views::transform(f);
       using Result = std::ranges::transform_view<std::ranges::reverse_view<BidirRange>, decltype(f)>;
       std::same_as<Result> auto result = partial(view);
-      assert(result.begin().base().base().base() == buf + 3);
-      assert(result.end().base().base().base() == buf);
+      assert(base(result.begin().base().base()) == buf + 3);
+      assert(base(result.end().base().base()) == buf);
     }
 
     // Check SFINAE friendliness

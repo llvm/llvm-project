@@ -41,7 +41,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'a');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_wday == 1);
         assert(err == std::ios_base::eofbit);
     }
@@ -50,7 +50,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'A');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_wday == 3);
         assert(err == std::ios_base::eofbit);
     }
@@ -59,7 +59,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'b');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mon == 5);
         assert(err == std::ios_base::eofbit);
     }
@@ -68,7 +68,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'B');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mon == 6);
         assert(err == std::ios_base::eofbit);
     }
@@ -77,7 +77,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'c');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_wday == 4);
         assert(t.tm_mon == 5);
         assert(t.tm_mday == 6);
@@ -92,7 +92,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'd');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mday == 11);
         assert(err == std::ios_base::eofbit);
     }
@@ -101,7 +101,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'D');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mon == 1);
         assert(t.tm_mday == 1);
         assert(t.tm_year == 101);
@@ -112,7 +112,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'e');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mday == 11);
         assert(err == std::ios_base::eofbit);
     }
@@ -121,7 +121,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'h');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mon == 5);
         assert(err == std::ios_base::eofbit);
     }
@@ -130,7 +130,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'H');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 19);
         assert(err == std::ios_base::eofbit);
     }
@@ -139,7 +139,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'm');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mon == 11);
         assert(err == std::ios_base::eofbit);
     }
@@ -148,7 +148,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'M');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_min == 59);
         assert(err == std::ios_base::eofbit);
     }
@@ -157,7 +157,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'n');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(err == std::ios_base::eofbit);
     }
     {
@@ -165,7 +165,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 21);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 10);
@@ -176,7 +176,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 9);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 10);
@@ -187,7 +187,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 0);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 10);
@@ -198,7 +198,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 12);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 10);
@@ -209,7 +209,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'R');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 9);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 0);
@@ -220,7 +220,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'S');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 0);
         assert(t.tm_min == 0);
         assert(t.tm_sec == 60);
@@ -231,7 +231,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 't');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(err == std::ios_base::eofbit);
     }
     {
@@ -239,7 +239,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'T');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 21);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 10);
@@ -250,7 +250,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'w');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_wday == 3);
         assert(err == std::ios_base::eofbit);
     }
@@ -259,7 +259,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'x');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_mon == 5);
         assert(t.tm_mday == 6);
         assert(t.tm_year == 109);
@@ -270,7 +270,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'X');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_hour == 21);
         assert(t.tm_min == 49);
         assert(t.tm_sec == 10);
@@ -281,7 +281,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'y');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_year == 168);
         assert(err == std::ios_base::eofbit);
     }
@@ -290,7 +290,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'Y');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(t.tm_year == -1832);
         assert(err == std::ios_base::eofbit);
     }
@@ -299,7 +299,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, '%');
-        assert(i.base() == in+sizeof(in)-1);
+        assert(base(i) == in+sizeof(in)-1);
         assert(err == std::ios_base::eofbit);
     }
 

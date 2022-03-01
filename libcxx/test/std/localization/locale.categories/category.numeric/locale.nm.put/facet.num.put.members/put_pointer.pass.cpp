@@ -37,7 +37,7 @@ int main(int, char**)
         void* v = 0;
         char str[50];
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, iter.base());
+        std::string ex(str, base(iter));
         char expected_str[32] = {};
         // num_put::put uses %p for pointer types, but the exact format of %p is
         // implementation defined behavior for the C library. Compare output to
