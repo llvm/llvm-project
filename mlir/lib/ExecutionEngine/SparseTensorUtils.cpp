@@ -756,7 +756,7 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
   // Verify that perm is a permutation of 0..(rank-1).
   std::vector<uint64_t> order(perm, perm + rank);
   std::sort(order.begin(), order.end());
-  for (int i = 0; i < rank; ++i) {
+  for (uint64_t i = 0; i < rank; ++i) {
     if (i != order[i]) {
       fprintf(stderr, "Permutation is not a permutation of 0..%lu\n", rank);
       exit(1);
@@ -764,7 +764,7 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
   }
 
   // Verify that the sparsity values are supported.
-  for (int i = 0; i < rank; ++i) {
+  for (uint64_t i = 0; i < rank; ++i) {
     if (sparsity[i] != DimLevelType::kDense &&
         sparsity[i] != DimLevelType::kCompressed) {
       fprintf(stderr, "Unsupported sparsity value %d\n",
