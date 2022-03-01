@@ -28,7 +28,8 @@ config.host_triple = '@LLVM_HOST_TRIPLE@'
 
 config.substitutions.append(('%{cxx}', '@CMAKE_CXX_COMPILER@'))
 config.substitutions.append(('%{libcxx}', '@LIBCXXABI_LIBCXX_PATH@'))
-config.substitutions.append(('%{include}', '@LIBCXXABI_HEADER_DIR@/include/c++/v1'))
-config.substitutions.append(('%{target-include}', '@LIBCXXABI_HEADER_DIR@/%{triple}/include/c++/v1'))
+config.substitutions.append(('%{include}', '@LIBCXXABI_SOURCE_DIR@/include'))
+config.substitutions.append(('%{cxx-include}', '@LIBCXXABI_HEADER_DIR@/include/c++/v1'))
+config.substitutions.append(('%{cxx-target-include}', '@LIBCXXABI_HEADER_DIR@/%{triple}/include/c++/v1'))
 config.substitutions.append(('%{lib}', '@LIBCXXABI_LIBRARY_DIR@'))
 config.substitutions.append(('%{executor}', '@LIBCXXABI_EXECUTOR@'))

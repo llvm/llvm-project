@@ -612,7 +612,8 @@ endforeach()
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})
+target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
+add_dependencies(cxx-headers generate-cxx-headers)
 # TODO: Use target_include_directories once we figure out why that breaks the runtimes build
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
   target_compile_options(cxx-headers INTERFACE /I${LIBCXX_GENERATED_INCLUDE_DIR}

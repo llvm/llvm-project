@@ -239,24 +239,24 @@ set(LIBCXX_LIBCPPABI_VERSION "2" CACHE STRING "Version of libc++abi's ABI to re-
                                                Note that this is not related to the version of libc++'s ABI itself!")
 
 # ABI Library options ---------------------------------------------------------
-set(LIBCXX_CXX_ABI "default" CACHE STRING "Specify C++ ABI library to use.")
-set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
-set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
-
-# Setup the default options if LIBCXX_CXX_ABI is not specified.
-if (LIBCXX_CXX_ABI STREQUAL "default")
-  if (LIBCXX_TARGETING_MSVC)
-    # FIXME: Figure out how to configure the ABI library on Windows.
-    set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
-  elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    set(LIBCXX_CXX_ABI_LIBNAME "libcxxrt")
-  elseif (NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI)
-    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-  else()
-    set(LIBCXX_CXX_ABI_LIBNAME "default")
-  endif()
+if (LIBCXX_TARGETING_MSVC)
+  set(LIBCXX_DEFAULT_ABI_LIBRARY "vcruntime")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+  set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxrt")
 else()
-  set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")
+  set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxabi")
+endif()
+
+set(LIBCXX_SUPPORTED_ABI_LIBRARIES none libcxxabi system-libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
+set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING "Specify C++ ABI library to use. Supported values are ${LIBCXX_SUPPORTED_ABI_LIBRARIES}.")
+
+# Temporary to still accept existing CMake caches that contain "default" as the value
+if (LIBCXX_CXX_ABI STREQUAL "default")
+  set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}")
+endif()
+
+if (NOT "${LIBCXX_CXX_ABI}" IN_LIST LIBCXX_SUPPORTED_ABI_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C++ ABI library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_ABI_LIBRARIES}.")
 endif()
 
 option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
@@ -278,8 +278,7 @@ cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 # or is specified to be "none".
 set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-      AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"
-      AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"
+      AND NOT LIBCXX_CXX_ABI STREQUAL "none"
       AND Python3_EXECUTABLE
       AND LIBCXX_ENABLE_SHARED)
     set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)

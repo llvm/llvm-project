@@ -412,7 +412,7 @@ class Configuration(object):
             # The compiler normally links in oldnames.lib too, but we've
             # specified -nostdlib above, so we need to specify it manually.
             self.cxx.link_flags += ['-loldnames']
-        elif cxx_abi == 'none' or cxx_abi == 'default':
+        elif cxx_abi == 'none':
             if self.target_info.is_windows():
                 debug_suffix = 'd' if self.debug_build else ''
                 self.cxx.link_flags += ['-lmsvcrt%s' % debug_suffix]
