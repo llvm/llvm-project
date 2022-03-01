@@ -8,11 +8,7 @@ func @unsupported_attribute() {
 
 // -----
 
-func @return_i32_f32() -> (i32, f32) {
-  %0 = arith.constant 1 : i32
-  %1 = arith.constant 1. : f32
-  return %0, %1 : i32, f32
-}
+func @return_i32_f32() -> (i32, f32)
 
 func @call() {
   // expected-error @+3 {{op result type mismatch at index 0}}
