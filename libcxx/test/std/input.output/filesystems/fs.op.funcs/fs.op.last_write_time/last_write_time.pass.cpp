@@ -22,9 +22,6 @@
 // void last_write_time(const path& p, file_time_type new_type,
 //                      std::error_code& ec) noexcept;
 
-// Disable min() and max() macros in <windows.h> on Windows.
-// ADDITIONAL_COMPILE_FLAGS: -DNOMINMAX
-
 #include "filesystem_include.h"
 #include <chrono>
 #include <cstdio>
