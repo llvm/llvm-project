@@ -59,9 +59,6 @@ int feof(FILE *stream);
 int ferror(FILE *stream);
 int fileno(FILE *stream);
 
-// Note, on some platforms errno macro gets replaced with a function call.
-extern int errno;
-
 size_t strlen(const char *);
 
 char *strcpy(char *restrict, const char *restrict);
