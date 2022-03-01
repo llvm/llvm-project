@@ -1194,11 +1194,11 @@ static char GetTrigraphCharForLetter(char Letter) {
 /// prefixed with ??, emit a trigraph warning.  If trigraphs are enabled,
 /// return the result character.  Finally, emit a warning about trigraph use
 /// whether trigraphs are enabled or not.
-static char DecodeTrigraphChar(const char *CP, Lexer *L) {
+static char DecodeTrigraphChar(const char *CP, Lexer *L, bool Trigraphs) {
   char Res = GetTrigraphCharForLetter(*CP);
   if (!Res || !L) return Res;
 
-  if (!L->getLangOpts().Trigraphs) {
+  if (!Trigraphs) {
     if (!L->isLexingRawMode())
       L->Diag(CP-2, diag::trigraph_ignored);
     return 0;
@@ -1372,7 +1372,8 @@ Slash:
   if (Ptr[0] == '?' && Ptr[1] == '?') {
     // If this is actually a legal trigraph (not something like "??x"), emit
     // a trigraph warning.  If so, and if trigraphs are enabled, return it.
-    if (char C = DecodeTrigraphChar(Ptr+2, Tok ? this : nullptr)) {
+    if (char C = DecodeTrigraphChar(Ptr + 2, Tok ? this : nullptr,
+                                    LangOpts.Trigraphs)) {
       // Remember that this token needs to be cleaned.
       if (Tok) Tok->setFlag(Token::NeedsCleaning);
 
@@ -2543,8 +2544,8 @@ bool Lexer::SaveLineComment(Token &Result, const char *CurPtr) {
 /// isBlockCommentEndOfEscapedNewLine - Return true if the specified newline
 /// character (either \\n or \\r) is part of an escaped newline sequence.  Issue
 /// a diagnostic if so.  We know that the newline is inside of a block comment.
-static bool isEndOfBlockCommentWithEscapedNewLine(const char *CurPtr,
-                                                  Lexer *L) {
+static bool isEndOfBlockCommentWithEscapedNewLine(const char *CurPtr, Lexer *L,
+                                                  bool Trigraphs) {
   assert(CurPtr[0] == '\n' || CurPtr[0] == '\r');
 
   // Position of the first trigraph in the ending sequence.
@@ -2595,7 +2596,7 @@ static bool isEndOfBlockCommentWithEscapedNewLine(const char *CurPtr,
   if (TrigraphPos) {
     // If no trigraphs are enabled, warn that we ignored this trigraph and
     // ignore this * character.
-    if (!L->getLangOpts().Trigraphs) {
+    if (!Trigraphs) {
       if (!L->isLexingRawMode())
         L->Diag(TrigraphPos, diag::trigraph_ignored_block_comment);
       return false;
@@ -2725,7 +2726,8 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr,
         break;
 
       if ((CurPtr[-2] == '\n' || CurPtr[-2] == '\r')) {
-        if (isEndOfBlockCommentWithEscapedNewLine(CurPtr-2, this)) {
+        if (isEndOfBlockCommentWithEscapedNewLine(CurPtr - 2, this,
+                                                  LangOpts.Trigraphs)) {
           // We found the final */, though it had an escaped newline between the
           // * and /.  We're done!
           break;

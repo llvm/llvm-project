@@ -1625,7 +1625,7 @@ retry:
     SpellingBuffer.resize(LToken.getLength() + 1);
     const char *Start = SpellingBuffer.data();
     unsigned Length =
-        Lexer::getSpelling(LToken, Start, SourceMgr, L.getLangOpts());
+        Lexer::getSpelling(LToken, Start, SourceMgr, Map.LangOpts);
     uint64_t Value;
     if (StringRef(Start, Length).getAsInteger(0, Value)) {
       Diags.Report(Tok.getLocation(), diag::err_mmap_unknown_token);

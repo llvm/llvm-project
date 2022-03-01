@@ -183,10 +183,6 @@ public:
                                    SourceLocation ExpansionLocEnd,
                                    unsigned TokLen, Preprocessor &PP);
 
-  /// getLangOpts - Return the language features currently enabled.
-  /// NOTE: this lexer modifies features as a file is parsed!
-  const LangOptions &getLangOpts() const { return LangOpts; }
-
   /// getFileLoc - Return the File Location for the file we are lexing out of.
   /// The physical location encodes the location where the characters come from,
   /// the virtual location encodes where we should *claim* the characters came
