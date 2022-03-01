@@ -95,7 +95,7 @@ Vectors) are welcome future extensions.
 
 ### Virtual Vector Ops
 
-Some existing Standard and Vector Dialect on `n-D` `vector` types comprise:
+Some existing Arithmetic and Vector Dialect on `n-D` `vector` types comprise:
 
 ```mlir
 %2 = arith.addf %0, %1 : vector<3x7x8xf32> // -> vector<3x7x8xf32> %2 =
