@@ -1264,9 +1264,6 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   if (!PN.getType()->isIntegerTy(1))
     return nullptr;
 
-  if (PN.getNumOperands() != 2)
-    return nullptr;
-
   // Make sure all inputs are constants.
   if (!all_of(PN.operands(), [](Value *V) { return isa<ConstantInt>(V); }))
     return nullptr;
@@ -1276,22 +1273,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   if (!DT.isReachableFromEntry(BB))
     return nullptr;
 
-  // Same inputs.
-  if (PN.getOperand(0) == PN.getOperand(1))
-    return PN.getOperand(0);
-
-  BasicBlock *TruePred = nullptr, *FalsePred = nullptr;
-  for (auto *Pred : predecessors(BB)) {
-    auto *Input = cast<ConstantInt>(PN.getIncomingValueForBlock(Pred));
-    if (Input->isAllOnesValue())
-      TruePred = Pred;
-    else
-      FalsePred = Pred;
-  }
-  assert(TruePred && FalsePred && "Must be!");
-
-  // Check which edge of the dominator dominates the true input. If it is the
-  // false edge, we should invert the condition.
+  // Check that the immediate dominator has a conditional branch.
   auto *IDom = DT.getNode(BB)->getIDom()->getBlock();
   auto *BI = dyn_cast<BranchInst>(IDom->getTerminator());
   if (!BI || BI->isUnconditional())
@@ -1302,24 +1284,40 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   BasicBlockEdge TrueOutEdge(IDom, BI->getSuccessor(0));
   BasicBlockEdge FalseOutEdge(IDom, BI->getSuccessor(1));
 
-  BasicBlockEdge TrueIncEdge(TruePred, BB);
-  BasicBlockEdge FalseIncEdge(FalsePred, BB);
+  Optional<bool> Invert;
+  for (auto Pair : zip(PN.incoming_values(), PN.blocks())) {
+    auto *Input = cast<ConstantInt>(std::get<0>(Pair));
+    BasicBlock *Pred = std::get<1>(Pair);
+    BasicBlockEdge Edge(Pred, BB);
+
+    // The input needs to be dominated by one of the edges of the idom.
+    // Depending on the constant, the condition may need to be inverted.
+    bool NeedsInvert;
+    if (DT.dominates(TrueOutEdge, Edge))
+      NeedsInvert = Input->isZero();
+    else if (DT.dominates(FalseOutEdge, Edge))
+      NeedsInvert = Input->isOne();
+    else
+      return nullptr;
+
+    // Make sure the inversion requirement is always the same.
+    if (Invert && *Invert != NeedsInvert)
+      return nullptr;
+
+    Invert = NeedsInvert;
+  }
 
   auto *Cond = BI->getCondition();
-  if (DT.dominates(TrueOutEdge, TrueIncEdge) &&
-      DT.dominates(FalseOutEdge, FalseIncEdge))
-    // This Phi is actually equivalent to branching condition of IDom.
+  if (!*Invert)
     return Cond;
-  if (DT.dominates(TrueOutEdge, FalseIncEdge) &&
-      DT.dominates(FalseOutEdge, TrueIncEdge)) {
-    // This Phi is actually opposite to branching condition of IDom. We invert
-    // the condition that will potentially open up some opportunities for
-    // sinking.
-    auto InsertPt = BB->getFirstInsertionPt();
-    if (InsertPt != BB->end()) {
-      Self.Builder.SetInsertPoint(&*InsertPt);
-      return Self.Builder.CreateNot(Cond);
-    }
+
+  // This Phi is actually opposite to branching condition of IDom. We invert
+  // the condition that will potentially open up some opportunities for
+  // sinking.
+  auto InsertPt = BB->getFirstInsertionPt();
+  if (InsertPt != BB->end()) {
+    Self.Builder.SetInsertPoint(&*InsertPt);
+    return Self.Builder.CreateNot(Cond);
   }
 
   return nullptr;

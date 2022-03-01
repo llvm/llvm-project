@@ -168,8 +168,7 @@ define i1 @test_multiple_predecessors(i1 %cond, i1 %cond2) {
 ; CHECK:       if2.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[IF_TRUE]] ], [ false, [[IF2_TRUE]] ], [ false, [[IF2_FALSE]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
