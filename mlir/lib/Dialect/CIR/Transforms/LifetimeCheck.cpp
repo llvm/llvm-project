@@ -170,24 +170,22 @@ void LifetimeCheckPass::checkRegion(Region &region) {
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
-  // FIXME: allow "isScopeLike" queries so that we can unify this type
-  // of handling in a generic way.
   if (isa<::mlir::ModuleOp>(op)) {
     for (Region &region : op->getRegions())
       checkRegion(region);
     return;
   }
 
-  if (isa<::mlir::FuncOp>(op)) {
+  bool isLexicalScopeOp =
+      isa<::mlir::FuncOp>(op) || isa<::mlir::cir::ScopeOp>(op);
+  if (isLexicalScopeOp) {
     // Add a new scope. Note that as part of the scope cleanup process
     // we apply section 2.3 KILL(x) functionality, turning relevant
     // references invalid.
-    {
-      LexicalScopeContext lexScope{};
-      LexicalScopeGuard scopeGuard{*this, &lexScope};
-      for (Region &region : op->getRegions())
-        checkRegion(region);
-    }
+    LexicalScopeContext lexScope{};
+    LexicalScopeGuard scopeGuard{*this, &lexScope};
+    for (Region &region : op->getRegions())
+      checkRegion(region);
     return;
   }
 
@@ -273,19 +271,6 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     // load or store using the result of this loadOp.
     emitWarning(loadOp.getLoc())
         << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
-    return;
-  }
-
-  // FIXME: allow "isScopeLike" queries so that we can unify this type
-  // of handling in a generic way.
-  if (auto ScopeOp = dyn_cast<::mlir::cir::ScopeOp>(op)) {
-    // Add a new scope. Note that as part of the scope cleanup process
-    // we apply section 2.3 KILL(x) functionality, turning relevant
-    // references invalid.
-    LexicalScopeContext lexScope{};
-    LexicalScopeGuard scopeGuard{*this, &lexScope};
-    for (Region &region : op->getRegions())
-      checkRegion(region);
     return;
   }
 }
