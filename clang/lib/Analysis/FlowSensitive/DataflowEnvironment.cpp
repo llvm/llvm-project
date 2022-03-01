@@ -453,5 +453,24 @@ const StorageLocation &Environment::skip(const StorageLocation &Loc,
   return skip(*const_cast<StorageLocation *>(&Loc), SP);
 }
 
+void Environment::addToFlowCondition(BoolValue &Val) {
+  FlowConditionConstraints.insert(&Val);
+}
+
+bool Environment::flowConditionImplies(BoolValue &Val) {
+  // Returns true if and only if truth assignment of the flow condition implies
+  // that `Val` is also true. We prove whether or not this property holds by
+  // reducing the problem to satisfiability checking. In other words, we attempt
+  // to show that assuming `Val` is false makes the constraints induced by the
+  // flow condition unsatisfiable.
+  llvm::DenseSet<BoolValue *> Constraints = {
+      &makeNot(Val), &getBoolLiteralValue(true),
+      &makeNot(getBoolLiteralValue(false))};
+  Constraints.insert(FlowConditionConstraints.begin(),
+                     FlowConditionConstraints.end());
+  return DACtx->getSolver().solve(std::move(Constraints)) ==
+         Solver::Result::Unsatisfiable;
+}
+
 } // namespace dataflow
 } // namespace clang

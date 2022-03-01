@@ -23,6 +23,7 @@
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -104,7 +105,7 @@ llvm::Error checkDataflow(
   if (!CFCtx)
     return CFCtx.takeError();
 
-  DataflowAnalysisContext DACtx;
+  DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
   Environment Env(DACtx, *F);
   auto Analysis = MakeAnalysis(Context, Env);
 
