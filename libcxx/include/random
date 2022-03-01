@@ -1694,6 +1694,7 @@ class piecewise_linear_distribution
 #include <__random/geometric_distribution.h>
 #include <__random/independent_bits_engine.h>
 #include <__random/is_seed_sequence.h>
+#include <__random/is_valid.h>
 #include <__random/knuth_b.h>
 #include <__random/linear_congruential_engine.h>
 #include <__random/log2.h>

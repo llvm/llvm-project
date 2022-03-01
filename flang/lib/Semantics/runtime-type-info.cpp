@@ -74,8 +74,8 @@ private:
       const Symbol &specificOrBinding, bool isAssignment, bool isFinal,
       std::optional<GenericKind::DefinedIo>);
   void IncorporateDefinedIoGenericInterfaces(
-      std::map<int, evaluate::StructureConstructor> &, SourceName,
-      GenericKind::DefinedIo, const Scope *);
+      std::map<int, evaluate::StructureConstructor> &, GenericKind::DefinedIo,
+      const Scope *);
 
   // Instantiated for ParamValue and Bound
   template <typename A>
@@ -523,18 +523,14 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       DescribeSpecialProc(
           specials, *pair.second, false /*!isAssignment*/, true, std::nullopt);
     }
-    IncorporateDefinedIoGenericInterfaces(specials,
-        SourceName{"read(formatted)", 15},
-        GenericKind::DefinedIo::ReadFormatted, &scope);
-    IncorporateDefinedIoGenericInterfaces(specials,
-        SourceName{"read(unformatted)", 17},
-        GenericKind::DefinedIo::ReadUnformatted, &scope);
-    IncorporateDefinedIoGenericInterfaces(specials,
-        SourceName{"write(formatted)", 16},
-        GenericKind::DefinedIo::WriteFormatted, &scope);
-    IncorporateDefinedIoGenericInterfaces(specials,
-        SourceName{"write(unformatted)", 18},
-        GenericKind::DefinedIo::WriteUnformatted, &scope);
+    IncorporateDefinedIoGenericInterfaces(
+        specials, GenericKind::DefinedIo::ReadFormatted, &scope);
+    IncorporateDefinedIoGenericInterfaces(
+        specials, GenericKind::DefinedIo::ReadUnformatted, &scope);
+    IncorporateDefinedIoGenericInterfaces(
+        specials, GenericKind::DefinedIo::WriteFormatted, &scope);
+    IncorporateDefinedIoGenericInterfaces(
+        specials, GenericKind::DefinedIo::WriteUnformatted, &scope);
     // Pack the special procedure bindings in ascending order of their "which"
     // code values, and compile a little-endian bit-set of those codes for
     // use in O(1) look-up at run time.
@@ -1072,8 +1068,9 @@ void RuntimeTableBuilder::DescribeSpecialProc(
 }
 
 void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
-    std::map<int, evaluate::StructureConstructor> &specials, SourceName name,
+    std::map<int, evaluate::StructureConstructor> &specials,
     GenericKind::DefinedIo definedIo, const Scope *scope) {
+  SourceName name{GenericKind::AsFortran(definedIo)};
   for (; !scope->IsGlobal(); scope = &scope->parent()) {
     if (auto asst{scope->find(name)}; asst != scope->end()) {
       const Symbol &generic{asst->second->GetUltimate()};

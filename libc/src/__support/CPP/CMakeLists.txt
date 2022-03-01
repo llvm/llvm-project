@@ -20,3 +20,9 @@ add_header_library(
   DEPENDS
     libc.include.stdlib
 )
+
+add_header_library(
+  atomic
+  HDRS
+    atomic.h
+)

@@ -508,7 +508,7 @@ void Symbol::resolveUndefined(const Undefined &other) {
 }
 
 // Compare two symbols. Return true if the new symbol should win.
-bool Symbol::compare(const Defined &other) const {
+bool Symbol::shouldReplace(const Defined &other) const {
   if (LLVM_UNLIKELY(isCommon())) {
     if (config->warnCommon)
       warn("common " + getName() + " is overridden");
@@ -605,7 +605,7 @@ void Symbol::resolveCommon(const CommonSymbol &other) {
 }
 
 void Symbol::resolveDefined(const Defined &other) {
-  if (compare(other))
+  if (shouldReplace(other))
     replace(other);
 }
 

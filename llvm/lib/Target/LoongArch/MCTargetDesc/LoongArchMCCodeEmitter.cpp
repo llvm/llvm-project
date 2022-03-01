@@ -66,7 +66,6 @@ LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     return static_cast<unsigned>(MO.getImm());
 
   llvm_unreachable("Unhandled expression!");
-  return 0;
 }
 
 void LoongArchMCCodeEmitter::encodeInstruction(

@@ -2320,13 +2320,23 @@ def ext_auto_new_list_init : Extension<
   "type %0 to use list-initialization">, InGroup<CXX17>;
 def err_auto_var_init_no_expression : Error<
   "initializer for variable %0 with type %1 is empty">;
+def err_auto_expr_init_no_expression : Error<
+  "initializer for functional-style cast to %0 is empty">;
 def err_auto_var_init_multiple_expressions : Error<
   "initializer for variable %0 with type %1 contains multiple expressions">;
+def err_auto_expr_init_multiple_expressions : Error<
+  "initializer for functional-style cast to %0 contains multiple expressions">;
 def err_auto_var_init_paren_braces : Error<
   "cannot deduce type for variable %1 with type %2 from "
   "%select{parenthesized|nested}0 initializer list">;
 def err_auto_new_ctor_multiple_expressions : Error<
   "new expression for type %0 contains multiple constructor arguments">;
+def err_auto_expr_init_paren_braces : Error<
+  "cannot deduce actual type for %1 from "
+  "%select{parenthesized|nested}0 initializer list">;
+def warn_cxx20_compat_auto_expr : Warning<
+  "'auto' as a functional-style cast is incompatible with C++ standards "
+  "before C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
 def err_auto_missing_trailing_return : Error<
   "'auto' return without trailing return type; deduced return types are a "
   "C++14 extension">;
@@ -2340,6 +2350,8 @@ def err_auto_var_deduction_failure : Error<
   "variable %0 with type %1 has incompatible initializer of type %2">;
 def err_auto_var_deduction_failure_from_init_list : Error<
   "cannot deduce actual type for variable %0 with type %1 from initializer list">;
+def err_auto_expr_deduction_failure : Error<
+  "functional-style cast to %0 has incompatible initializer of type %1">;
 def err_auto_new_deduction_failure : Error<
   "new expression for type %0 has incompatible constructor argument of type %1">;
 def err_auto_inconsistent_deduction : Error<
@@ -2891,9 +2903,14 @@ def warn_auto_var_is_id : Warning<
   InGroup<DiagGroup<"auto-var-id">>;
 
 // Attributes
-def warn_nomerge_attribute_ignored_in_stmt: Warning<
+def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
+  InGroup<IgnoredAttributes>;
+
+def warn_function_attribute_ignored_in_stmt : Warning<
+  "attribute is ignored on this statement as it only applies to functions; "
+  "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
 def err_musttail_needs_trivial_args : Error<
@@ -4032,6 +4049,10 @@ def warn_attribute_nonnull_no_pointers : Warning<
   InGroup<IgnoredAttributes>;
 def warn_attribute_nonnull_parm_no_args : Warning<
   "'nonnull' attribute when used on parameters takes no arguments">,
+  InGroup<IgnoredAttributes>;
+def warn_function_stmt_attribute_precedence : Warning<
+  "statement attribute %0 has higher precedence than function attribute "
+  "'%select{always_inline|flatten}1'">,
   InGroup<IgnoredAttributes>;
 def note_declared_nonnull : Note<
   "declared %select{'returns_nonnull'|'nonnull'}0 here">;

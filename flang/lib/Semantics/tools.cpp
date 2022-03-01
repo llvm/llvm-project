@@ -1273,6 +1273,12 @@ UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
   return std::find_if(ultimates.begin(), ultimates.end(), IsAllocatable);
 }
 
+DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
+    const DerivedTypeSpec &derived) {
+  DirectComponentIterator directs{derived};
+  return std::find_if(directs.begin(), directs.end(), IsAllocatableOrPointer);
+}
+
 UltimateComponentIterator::const_iterator
 FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
@@ -1456,6 +1462,77 @@ std::optional<ArraySpec> ToArraySpec(
 std::optional<ArraySpec> ToArraySpec(evaluate::FoldingContext &context,
     const std::optional<evaluate::Shape> &shape) {
   return shape ? ToArraySpec(context, *shape) : std::nullopt;
+}
+
+bool HasDefinedIo(GenericKind::DefinedIo which, const DerivedTypeSpec &derived,
+    const Scope *scope) {
+  if (const Scope * dtScope{derived.scope()}) {
+    for (const auto &pair : *dtScope) {
+      const Symbol &symbol{*pair.second};
+      if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+        GenericKind kind{generic->kind()};
+        if (const auto *io{std::get_if<GenericKind::DefinedIo>(&kind.u)}) {
+          if (*io == which) {
+            return true; // type-bound GENERIC exists
+          }
+        }
+      }
+    }
+  }
+  if (scope) {
+    SourceName name{GenericKind::AsFortran(which)};
+    evaluate::DynamicType dyDerived{derived};
+    for (; scope && !scope->IsGlobal(); scope = &scope->parent()) {
+      auto iter{scope->find(name)};
+      if (iter != scope->end()) {
+        const auto &generic{iter->second->GetUltimate().get<GenericDetails>()};
+        for (auto ref : generic.specificProcs()) {
+          const Symbol &procSym{ref->GetUltimate()};
+          if (const auto *subp{procSym.detailsIf<SubprogramDetails>()}) {
+            if (!subp->dummyArgs().empty()) {
+              if (const Symbol * first{subp->dummyArgs().at(0)}) {
+                if (const DeclTypeSpec * dtSpec{first->GetType()}) {
+                  if (auto dyDummy{evaluate::DynamicType::From(*dtSpec)}) {
+                    if (dyDummy->IsTkCompatibleWith(dyDerived)) {
+                      return true; // GENERIC or INTERFACE not in type
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope *scope) {
+  if (HasDefinedIo(which, derived, scope)) {
+    return nullptr;
+  }
+  if (const Scope * dtScope{derived.scope()}) {
+    for (const auto &pair : *dtScope) {
+      const Symbol &symbol{*pair.second};
+      if (IsAllocatableOrPointer(symbol)) {
+        return &symbol;
+      }
+      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (const DeclTypeSpec * type{details->type()}) {
+          if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+            if (const Symbol *
+                bad{FindUnsafeIoDirectComponent(
+                    which, type->derivedTypeSpec(), scope)}) {
+              return bad;
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 } // namespace Fortran::semantics
