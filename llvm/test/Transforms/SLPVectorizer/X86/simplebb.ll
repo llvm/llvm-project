@@ -33,12 +33,12 @@ define void @test1(double* %a, double* %b, double* %c) {
 ; Simple 3-pair chain with loads and stores, obfuscated with bitcasts
 define void @test2(double* %a, double* %b, i8* %e) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[E:%.*]] to double*
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[E:%.*]] to double*
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[C]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret void
@@ -62,11 +62,11 @@ define void @test2(double* %a, double* %b, i8* %e) {
 ; Don't vectorize volatile loads.
 define void @test_volatile_load(double* %a, double* %b, double* %c) {
 ; CHECK-LABEL: @test_volatile_load(
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[I0:%.*]] = load volatile double, double* [[A]], align 8
-; CHECK-NEXT:    [[I1:%.*]] = load volatile double, double* [[B]], align 8
+; CHECK-NEXT:    [[I0:%.*]] = load volatile double, double* [[A:%.*]], align 8
+; CHECK-NEXT:    [[I1:%.*]] = load volatile double, double* [[B:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A]], i64 1
 ; CHECK-NEXT:    [[I3:%.*]] = load double, double* [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B]], i64 1
 ; CHECK-NEXT:    [[I4:%.*]] = load double, double* [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[I0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[I3]], i32 1

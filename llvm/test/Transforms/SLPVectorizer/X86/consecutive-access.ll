@@ -21,9 +21,9 @@ define void @foo_3double(i32 %u) #0 {
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM12:%.*]] = sext i32 [[ADD11]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM12]]
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX4]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
@@ -85,9 +85,9 @@ define void @foo_2double(i32 %u) #0 {
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM12:%.*]] = sext i32 [[ADD11]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM12]]
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX4]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
@@ -139,9 +139,9 @@ define void @foo_4float(i32 %u) #0 {
 ; CHECK-NEXT:    [[ADD37:%.*]] = add nsw i32 [[MUL]], 3
 ; CHECK-NEXT:    [[IDXPROM38:%.*]] = sext i32 [[ADD37]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX39:%.*]] = getelementptr inbounds [2000 x float], [2000 x float]* @C, i32 0, i64 [[IDXPROM38]]
-; CHECK-NEXT:    [[ARRAYIDX43:%.*]] = getelementptr inbounds [2000 x float], [2000 x float]* @D, i32 0, i64 [[IDXPROM38]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[ARRAYIDX43:%.*]] = getelementptr inbounds [2000 x float], [2000 x float]* @D, i32 0, i64 [[IDXPROM38]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[ARRAYIDX4]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP1]], [[TMP3]]
@@ -295,9 +295,9 @@ define void @foo_2double_non_power_of_2(i32 %u) #0 {
 ; CHECK-NEXT:    [[ADD7:%.*]] = add i32 [[MUL]], 7
 ; CHECK-NEXT:    [[IDXPROM12:%.*]] = sext i32 [[ADD7]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM12]]
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX4]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
@@ -343,9 +343,9 @@ define void @foo_2double_non_power_of_2_zext(i32 %u) #0 {
 ; CHECK-NEXT:    [[ADD7:%.*]] = add i32 [[MUL]], 7
 ; CHECK-NEXT:    [[IDXPROM12:%.*]] = zext i32 [[ADD7]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM12]]
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX4]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]

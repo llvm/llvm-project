@@ -26,19 +26,19 @@ define void @PR28457(double* noalias nocapture align 32 %q, double* noalias noca
 ; SSE-NEXT:    [[Q5:%.*]] = getelementptr inbounds double, double* [[Q]], i64 5
 ; SSE-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <2 x double>*
 ; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
-; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00>
-; SSE-NEXT:    [[TMP4:%.*]] = bitcast double* [[Q0]] to <2 x double>*
-; SSE-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
-; SSE-NEXT:    [[TMP5:%.*]] = bitcast double* [[P2]] to <2 x double>*
+; SSE-NEXT:    [[TMP3:%.*]] = bitcast double* [[P2]] to <2 x double>*
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
+; SSE-NEXT:    [[TMP5:%.*]] = bitcast double* [[P4]] to <2 x double>*
 ; SSE-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
-; SSE-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
-; SSE-NEXT:    [[TMP8:%.*]] = bitcast double* [[Q2]] to <2 x double>*
-; SSE-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP8]], align 8
-; SSE-NEXT:    [[TMP9:%.*]] = bitcast double* [[P4]] to <2 x double>*
-; SSE-NEXT:    [[TMP10:%.*]] = load <2 x double>, <2 x double>* [[TMP9]], align 8
-; SSE-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP10:%.*]] = bitcast double* [[Q0]] to <2 x double>*
+; SSE-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP10]], align 8
+; SSE-NEXT:    [[TMP11:%.*]] = bitcast double* [[Q2]] to <2 x double>*
+; SSE-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP11]], align 8
 ; SSE-NEXT:    [[TMP12:%.*]] = bitcast double* [[Q4]] to <2 x double>*
-; SSE-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP12]], align 8
+; SSE-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[TMP12]], align 8
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @PR28457(
@@ -56,14 +56,14 @@ define void @PR28457(double* noalias nocapture align 32 %q, double* noalias noca
 ; AVX-NEXT:    [[Q5:%.*]] = getelementptr inbounds double, double* [[Q]], i64 5
 ; AVX-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <4 x double>*
 ; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* [[TMP1]], align 8
-; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; AVX-NEXT:    [[TMP4:%.*]] = bitcast double* [[Q0]] to <4 x double>*
-; AVX-NEXT:    store <4 x double> [[TMP3]], <4 x double>* [[TMP4]], align 8
-; AVX-NEXT:    [[TMP5:%.*]] = bitcast double* [[P4]] to <2 x double>*
-; AVX-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
-; AVX-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
+; AVX-NEXT:    [[TMP3:%.*]] = bitcast double* [[P4]] to <2 x double>*
+; AVX-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
+; AVX-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+; AVX-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00>
+; AVX-NEXT:    [[TMP7:%.*]] = bitcast double* [[Q0]] to <4 x double>*
+; AVX-NEXT:    store <4 x double> [[TMP5]], <4 x double>* [[TMP7]], align 8
 ; AVX-NEXT:    [[TMP8:%.*]] = bitcast double* [[Q4]] to <2 x double>*
-; AVX-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP8]], align 8
+; AVX-NEXT:    store <2 x double> [[TMP6]], <2 x double>* [[TMP8]], align 8
 ; AVX-NEXT:    ret void
 ;
   %p0 = getelementptr inbounds double, double* %p, i64 0

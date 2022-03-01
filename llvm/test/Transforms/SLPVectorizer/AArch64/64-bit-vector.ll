@@ -9,11 +9,11 @@ define void @f(float* %r, float* %w) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[R0:%.*]] = getelementptr inbounds float, float* [[R:%.*]], i64 0
 ; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds float, float* [[R]], i64 1
-; CHECK-NEXT:    [[W0:%.*]] = getelementptr inbounds float, float* [[W:%.*]], i64 0
-; CHECK-NEXT:    [[W1:%.*]] = getelementptr inbounds float, float* [[W]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[R0]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[W0:%.*]] = getelementptr inbounds float, float* [[W:%.*]], i64 0
+; CHECK-NEXT:    [[W1:%.*]] = getelementptr inbounds float, float* [[W]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[W0]] to <2 x float>*
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void

@@ -13,14 +13,14 @@ define void @test1(double* %a, double* %b, double* %c) #0 personality i32 (...)*
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [i8* null, i32 64, i8* null]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[A]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[B]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, <2 x double>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.floor.v2f64(<2 x double> [[TMP6]]) [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double* [[C]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP8]], align 8
 ; CHECK-NEXT:    catchret from [[TMP1]] to label [[TRY_CONT:%.*]]
