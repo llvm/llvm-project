@@ -501,7 +501,8 @@ def ConvertSCFToOpenMP : Pass<"convert-scf-to-openmp", "ModuleOp"> {
   let summary = "Convert SCF parallel loop to OpenMP parallel + workshare "
                 "constructs.";
   let constructor = "mlir::createConvertSCFToOpenMPPass()";
-  let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect"];
+  let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",
+                           "memref::MemRefDialect"];
 }
 
 //===----------------------------------------------------------------------===//
