@@ -20,3 +20,6 @@ cmake .. -G "Visual Studio 16 2019" -A X64 -DLLVM_ENABLE_PROJECTS="clang;lld" -D
 msbuild /m -p:Configuration=RelWithDebInfo INSTALL.vcxproj 
 
 ```
+
+# Coming soon
+
