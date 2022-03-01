@@ -20,7 +20,8 @@ define dso_local noundef i32 @_ZN4llvm18ConvertUTF8toUTF16EPPKhS1_PPtS3_NS_15Con
 ; CHECK-NEXT:    [[SOURCE_0184:%.*]] = phi i8* [ [[SOURCE_6:%.*]], [[CLEANUP]] ], [ [[I]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[I2:%.*]] = load i8, i8* [[SOURCE_0184]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[I2]] to i32
-; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[TMP1]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i8], [256 x i8]* @_ZN4llvmL20trailingBytesForUTF8E, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[I3:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[I3]] to i64
@@ -53,9 +54,9 @@ define dso_local noundef i32 @_ZN4llvm18ConvertUTF8toUTF16EPPKhS1_PPtS3_NS_15Con
 ; CHECK-NEXT:    [[SRCPTR_1_I:%.*]] = phi i8* [ [[ADD_PTR_I]], [[IF_END]] ], [ [[INCDEC_PTR4_I]], [[SW_BB3_I]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR13_I:%.*]] = getelementptr inbounds i8, i8* [[SRCPTR_1_I]], i64 -1
 ; CHECK-NEXT:    [[I10:%.*]] = load i8, i8* [[INCDEC_PTR13_I]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[I10]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-; CHECK-NEXT:    [[I11:%.*]] = icmp sgt i8 [[TMP2]], -65
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[I10]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[I11:%.*]] = icmp sgt i8 [[TMP3]], -65
 ; CHECK-NEXT:    br i1 [[I11]], label [[WHILE_END]], label [[IF_END20_I:%.*]]
 ; CHECK:       if.end20.i:
 ; CHECK-NEXT:    switch i32 [[TMP0]], label [[SW_BB47_I]] [
@@ -65,20 +66,20 @@ define dso_local noundef i32 @_ZN4llvm18ConvertUTF8toUTF16EPPKhS1_PPtS3_NS_15Con
 ; CHECK-NEXT:    i32 244, label [[SW_BB37_I:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb22.i:
-; CHECK-NEXT:    [[CMP24_I:%.*]] = icmp ult i32 [[TMP1]], 160
+; CHECK-NEXT:    [[CMP24_I:%.*]] = icmp ult i32 [[TMP2]], 160
 ; CHECK-NEXT:    br i1 [[CMP24_I]], label [[WHILE_END]], label [[IF_END5:%.*]]
 ; CHECK:       sw.bb27.i:
-; CHECK-NEXT:    [[CMP29_I:%.*]] = icmp ugt i32 [[TMP1]], 159
+; CHECK-NEXT:    [[CMP29_I:%.*]] = icmp ugt i32 [[TMP2]], 159
 ; CHECK-NEXT:    br i1 [[CMP29_I]], label [[WHILE_END]], label [[IF_END5]]
 ; CHECK:       sw.bb32.i:
-; CHECK-NEXT:    [[CMP34_I:%.*]] = icmp ult i32 [[TMP1]], 144
+; CHECK-NEXT:    [[CMP34_I:%.*]] = icmp ult i32 [[TMP2]], 144
 ; CHECK-NEXT:    br i1 [[CMP34_I]], label [[WHILE_END]], label [[IF_END5]]
 ; CHECK:       sw.bb37.i:
-; CHECK-NEXT:    [[CMP39_I:%.*]] = icmp ugt i32 [[TMP1]], 143
+; CHECK-NEXT:    [[CMP39_I:%.*]] = icmp ugt i32 [[TMP2]], 143
 ; CHECK-NEXT:    br i1 [[CMP39_I]], label [[WHILE_END]], label [[IF_END5]]
 ; CHECK:       sw.bb47.i:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP0]] to i8
-; CHECK-NEXT:    [[I12:%.*]] = icmp slt i8 [[TMP3]], -62
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[I12:%.*]] = icmp slt i8 [[TMP4]], -62
 ; CHECK-NEXT:    [[CMP56_I:%.*]] = icmp ugt i32 [[TMP0]], 244
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[I12]], [[CMP56_I]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[WHILE_END]], label [[IF_END5]]
@@ -94,30 +95,30 @@ define dso_local noundef i32 @_ZN4llvm18ConvertUTF8toUTF16EPPKhS1_PPtS3_NS_15Con
 ; CHECK-NEXT:    [[CONV16:%.*]] = zext i8 [[I2]] to i32
 ; CHECK-NEXT:    [[SHL18:%.*]] = shl nuw nsw i32 [[CONV16]], 6
 ; CHECK-NEXT:    [[DOTPRE232:%.*]] = load i8, i8* [[INCDEC_PTR15]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[DOTPRE232]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[DOTPRE232]] to i32
 ; CHECK-NEXT:    br label [[SW_BB19]]
 ; CHECK:       sw.bb19:
-; CHECK-NEXT:    [[I13:%.*]] = phi i32 [ [[TMP0]], [[IF_END5]] ], [ [[TMP4]], [[SW_BB14]] ]
+; CHECK-NEXT:    [[I13:%.*]] = phi i32 [ [[TMP0]], [[IF_END5]] ], [ [[TMP5]], [[SW_BB14]] ]
 ; CHECK-NEXT:    [[SOURCE_3:%.*]] = phi i8* [ [[SOURCE_0184]], [[IF_END5]] ], [ [[INCDEC_PTR15]], [[SW_BB14]] ]
 ; CHECK-NEXT:    [[CH_2:%.*]] = phi i32 [ 0, [[IF_END5]] ], [ [[SHL18]], [[SW_BB14]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR20:%.*]] = getelementptr inbounds i8, i8* [[SOURCE_3]], i64 1
 ; CHECK-NEXT:    [[ADD22:%.*]] = add nuw nsw i32 [[CH_2]], [[I13]]
 ; CHECK-NEXT:    [[SHL23:%.*]] = shl nsw i32 [[ADD22]], 6
 ; CHECK-NEXT:    [[DOTPRE233:%.*]] = load i8, i8* [[INCDEC_PTR20]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[DOTPRE233]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[DOTPRE233]] to i32
 ; CHECK-NEXT:    br label [[SW_BB24]]
 ; CHECK:       sw.bb24:
-; CHECK-NEXT:    [[I14:%.*]] = phi i32 [ [[TMP0]], [[IF_END5]] ], [ [[TMP5]], [[SW_BB19]] ]
+; CHECK-NEXT:    [[I14:%.*]] = phi i32 [ [[TMP0]], [[IF_END5]] ], [ [[TMP6]], [[SW_BB19]] ]
 ; CHECK-NEXT:    [[SOURCE_4:%.*]] = phi i8* [ [[SOURCE_0184]], [[IF_END5]] ], [ [[INCDEC_PTR20]], [[SW_BB19]] ]
 ; CHECK-NEXT:    [[CH_3:%.*]] = phi i32 [ 0, [[IF_END5]] ], [ [[SHL23]], [[SW_BB19]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR25:%.*]] = getelementptr inbounds i8, i8* [[SOURCE_4]], i64 1
 ; CHECK-NEXT:    [[ADD27:%.*]] = add nsw i32 [[CH_3]], [[I14]]
 ; CHECK-NEXT:    [[SHL28:%.*]] = shl i32 [[ADD27]], 6
 ; CHECK-NEXT:    [[DOTPRE234:%.*]] = load i8, i8* [[INCDEC_PTR25]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[DOTPRE234]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[DOTPRE234]] to i32
 ; CHECK-NEXT:    br label [[SW_BB29]]
 ; CHECK:       sw.bb29:
-; CHECK-NEXT:    [[I15:%.*]] = phi i32 [ [[TMP0]], [[IF_END5]] ], [ [[TMP6]], [[SW_BB24]] ]
+; CHECK-NEXT:    [[I15:%.*]] = phi i32 [ [[TMP0]], [[IF_END5]] ], [ [[TMP7]], [[SW_BB24]] ]
 ; CHECK-NEXT:    [[SOURCE_5:%.*]] = phi i8* [ [[SOURCE_0184]], [[IF_END5]] ], [ [[INCDEC_PTR25]], [[SW_BB24]] ]
 ; CHECK-NEXT:    [[CH_4:%.*]] = phi i32 [ 0, [[IF_END5]] ], [ [[SHL28]], [[SW_BB24]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR30:%.*]] = getelementptr inbounds i8, i8* [[SOURCE_5]], i64 1
