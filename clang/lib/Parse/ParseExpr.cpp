@@ -1524,6 +1524,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw___float128:
   case tok::kw___ibm128:
   case tok::kw_void:
+  case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
   case tok::kw___vector:
