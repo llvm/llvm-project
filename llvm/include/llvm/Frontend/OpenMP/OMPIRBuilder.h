@@ -353,14 +353,6 @@ public:
   /// the current thread, updates the relevant instructions in the canonical
   /// loop and calls to an OpenMP runtime finalization function after the loop.
   ///
-  /// TODO: Workshare loops with static scheduling may contain up to two loops
-  /// that fulfill the requirements of an OpenMP canonical loop. One for
-  /// iterating over all iterations of a chunk and another one for iterating
-  /// over all chunks that are executed on the same thread. Returning
-  /// CanonicalLoopInfo objects representing them may eventually be useful for
-  /// the apply clause planned in OpenMP 6.0, but currently whether these are
-  /// canonical loops is irrelevant.
-  ///
   /// \param DL       Debug location for instructions added for the
   ///                 workshare-loop construct itself.
   /// \param CLI      A descriptor of the canonical loop to workshare.
@@ -368,14 +360,30 @@ public:
   ///                 preheader of the loop.
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
-  /// \param Chunk    The size of loop chunk considered as a unit when
-  ///                 scheduling. If \p nullptr, defaults to 1.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
-                                         bool NeedsBarrier,
-                                         Value *Chunk = nullptr);
+                                         bool NeedsBarrier);
+
+  /// Modifies the canonical loop a statically-scheduled workshare loop with a
+  /// user-specified chunk size.
+  ///
+  /// \param DL           Debug location for instructions added for the
+  ///                     workshare-loop construct itself.
+  /// \param CLI          A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP     An insertion point for Alloca instructions usable in
+  ///                     the preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after the
+  ///                     loop.
+  /// \param ChunkSize    The user-specified chunk size.
+  ///
+  /// \returns Point where to insert code after the workshare construct.
+  InsertPointTy applyStaticChunkedWorkshareLoop(DebugLoc DL,
+                                                CanonicalLoopInfo *CLI,
+                                                InsertPointTy AllocaIP,
+                                                bool NeedsBarrier,
+                                                Value *ChunkSize);
 
   /// Modifies the canonical loop to be a dynamically-scheduled workshare loop.
   ///
@@ -412,6 +420,10 @@ public:
   /// the current thread, updates the relevant instructions in the canonical
   /// loop and calls to an OpenMP runtime finalization function after the loop.
   ///
+  /// The concrete transformation is done by applyStaticWorkshareLoop,
+  /// applyStaticChunkedWorkshareLoop, or applyDynamicWorkshareLoop, depending
+  /// on the value of \p SchedKind and \p ChunkSize.
+  ///
   /// \param DL       Debug location for instructions added for the
   ///                 workshare-loop construct itself.
   /// \param CLI      A descriptor of the canonical loop to workshare.
@@ -419,10 +431,15 @@ public:
   ///                 preheader of the loop.
   /// \param NeedsBarrier Indicates whether a barrier must be insterted after
   ///                     the loop.
+  /// \param SchedKind Scheduling algorithm to use.
+  /// \param ChunkSize The chunk size for the inner loop.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                   InsertPointTy AllocaIP, bool NeedsBarrier);
+  InsertPointTy applyWorkshareLoop(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      bool NeedsBarrier,
+      llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default,
+      Value *ChunkSize = nullptr);
 
   /// Tile a loop nest.
   ///
@@ -1516,6 +1533,27 @@ private:
   /// their content is (mostly) not under CanonicalLoopInfo's control.
   /// Re-evaluated whether this makes sense.
   void collectControlBlocks(SmallVectorImpl<BasicBlock *> &BBs);
+
+  /// Sets the number of loop iterations to the given value. This value must be
+  /// valid in the condition block (i.e., defined in the preheader) and is
+  /// interpreted as an unsigned integer.
+  void setTripCount(Value *TripCount);
+
+  /// Replace all uses of the canonical induction variable in the loop body with
+  /// a new one.
+  ///
+  /// The intended use case is to update the induction variable for an updated
+  /// iteration space such that it can stay normalized in the 0...tripcount-1
+  /// range.
+  ///
+  /// The \p Updater is called with the (presumable updated) current normalized
+  /// induction variable and is expected to return the value that uses of the
+  /// pre-updated induction values should use instead, typically dependent on
+  /// the new induction variable. This is a lambda (instead of e.g. just passing
+  /// the new value) to be able to distinguish the uses of the pre-updated
+  /// induction variable and uses of the induction varible to compute the
+  /// updated induction variable value.
+  void mapIndVar(llvm::function_ref<Value *(Instruction *)> Updater);
 
 public:
   /// Returns whether this object currently represents the IR of a loop. If

@@ -76,10 +76,17 @@ struct IntrinsicLibrary {
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
 
+  /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
+  /// the llvm::ArrayRef. The ABS intrinsic is lowered into MLIR/FIR operation
+  /// if the argument is an integer, into llvm intrinsics if the argument is
+  /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
+  /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Define the different FIR generators that can be mapped to intrinsic to
-  /// generate the related code.
+  /// generate the related code. The intrinsic is lowered into an MLIR
+  /// arith::AndIOp.
   using ElementalGenerator = decltype(&IntrinsicLibrary::genAbs);
   using Generator = std::variant<ElementalGenerator>;
 
@@ -178,12 +185,12 @@ static constexpr RuntimeFunction pgmathFast[] = {
 };
 
 static mlir::FunctionType genF32F32FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF32(context);
+  mlir::Type t = mlir::FloatType::getF32(context);
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
 static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF64(context);
+  mlir::Type t = mlir::FloatType::getF64(context);
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
@@ -227,9 +234,9 @@ public:
     if (nResults != to.getNumResults() || nInputs != to.getNumInputs()) {
       infinite = true;
     } else {
-      for (decltype(nInputs) i{0}; i < nInputs && !infinite; ++i)
+      for (decltype(nInputs) i = 0; i < nInputs && !infinite; ++i)
         addArgumentDistance(from.getInput(i), to.getInput(i));
-      for (decltype(nResults) i{0}; i < nResults && !infinite; ++i)
+      for (decltype(nResults) i = 0; i < nResults && !infinite; ++i)
         addResultDistance(to.getResult(i), from.getResult(i));
     }
   }
@@ -300,20 +307,22 @@ private:
   }
 
   static Conversion conversionBetweenTypes(mlir::Type from, mlir::Type to) {
-    if (from == to) {
+    if (from == to)
       return Conversion::None;
-    }
+
     if (auto fromIntTy{from.dyn_cast<mlir::IntegerType>()}) {
       if (auto toIntTy{to.dyn_cast<mlir::IntegerType>()}) {
         return fromIntTy.getWidth() > toIntTy.getWidth() ? Conversion::Narrow
                                                          : Conversion::Extend;
       }
     }
+
     if (fir::isa_real(from) && fir::isa_real(to)) {
       return getFloatingPointWidth(from) > getFloatingPointWidth(to)
                  ? Conversion::Narrow
                  : Conversion::Extend;
     }
+
     if (auto fromCplxTy{from.dyn_cast<fir::ComplexType>()}) {
       if (auto toCplxTy{to.dyn_cast<fir::ComplexType>()}) {
         return getFloatingPointWidth(fromCplxTy) >
@@ -341,8 +350,8 @@ private:
     dataSize
   };
 
-  std::array<int, dataSize> conversions{/* zero init*/};
-  bool infinite{false}; // When forbidden conversion or wrong argument number
+  std::array<int, dataSize> conversions = {};
+  bool infinite = false; // When forbidden conversion or wrong argument number
 };
 
 /// Build mlir::FuncOp from runtime symbol description and add
@@ -365,18 +374,18 @@ mlir::FuncOp searchFunctionInLibrary(
     llvm::StringRef name, mlir::FunctionType funcType,
     const RuntimeFunction **bestNearMatch,
     FunctionDistance &bestMatchDistance) {
-  auto range = lib.equal_range(name);
-  for (auto iter{range.first}; iter != range.second && iter; ++iter) {
-    const auto &impl = *iter;
-    auto implType = impl.typeGenerator(builder.getContext());
-    if (funcType == implType) {
+  std::pair<const RuntimeFunction *, const RuntimeFunction *> range =
+      lib.equal_range(name);
+  for (auto iter = range.first; iter != range.second && iter; ++iter) {
+    const RuntimeFunction &impl = *iter;
+    mlir::FunctionType implType = impl.typeGenerator(builder.getContext());
+    if (funcType == implType)
       return getFuncOp(loc, builder, impl); // exact match
-    } else {
-      FunctionDistance distance(funcType, implType);
-      if (distance.isSmallerThan(bestMatchDistance)) {
-        *bestNearMatch = &impl;
-        bestMatchDistance = std::move(distance);
-      }
+
+    FunctionDistance distance(funcType, implType);
+    if (distance.isSmallerThan(bestMatchDistance)) {
+      *bestNearMatch = &impl;
+      bestMatchDistance = std::move(distance);
     }
   }
   return {};
@@ -562,8 +571,8 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
   mlir::Value arg = args[0];
   mlir::Type type = arg.getType();
   if (fir::isa_real(type)) {
-    // Runtime call to fp abs. An alternative would be to use mlir math::AbsFOp
-    // but it does not support all fir floating point types.
+    // Runtime call to fp abs. An alternative would be to use mlir
+    // math::AbsFOp but it does not support all fir floating point types.
     return genRuntimeCall("abs", resultType, args);
   }
   if (auto intType = type.dyn_cast<mlir::IntegerType>()) {
