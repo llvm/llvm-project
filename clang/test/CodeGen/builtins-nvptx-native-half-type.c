@@ -1,4 +1,9 @@
 // REQUIRES: nvptx-registered-target
+//
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu \
+// RUN:   sm_75 -target-feature +ptx70 -fcuda-is-device -fnative-half-type -S \
+// RUN:   -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM75 %s
 
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu \
 // RUN:   sm_80 -target-feature +ptx70 -fcuda-is-device -fnative-half-type -S \
@@ -31,6 +36,16 @@
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX42_SM53 %s
 
 #define __device__ __attribute__((device))
+
+__device__ void nvvm_ex2_sm75() {
+#if __CUDA_ARCH__ >= 750
+  // CHECK_PTX70_SM75: call half @llvm.nvvm.ex2.approx.f16
+  __nvvm_ex2_approx_f16(0.1f16);
+  // CHECK_PTX70_SM75: call <2 x half> @llvm.nvvm.ex2.approx.f16x2
+  __nvvm_ex2_approx_f16x2({0.1f16, 0.7f16});
+#endif
+  // CHECK: ret void
+}
 
 // CHECK-LABEL: nvvm_min_max_sm80
 __device__ void nvvm_min_max_sm80() {
