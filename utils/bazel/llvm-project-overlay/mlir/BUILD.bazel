@@ -5015,6 +5015,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":IR",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":OpenMPDialect",
         ":Pass",
         ":SCFDialect",
