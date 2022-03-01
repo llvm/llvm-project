@@ -67,7 +67,6 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
   }];
   let constructor = "mlir::createLowerAffinePass()";
   let dependentDialects = [
-    "func::FuncDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "vector::VectorDialect"
@@ -227,7 +226,7 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
   let dependentDialects = [
-    "func::FuncDialect",
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "NVVM::NVVMDialect",
   ];
@@ -553,7 +552,6 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
                 "dialect";
   let constructor = "mlir::createConvertShapeToStandardPass()";
   let dependentDialects = [
-    "func::FuncDialect",
     "scf::SCFDialect",
   ];
 }
@@ -705,7 +703,6 @@ def TosaToStandard : Pass<"tosa-to-standard"> {
   let summary = "Lower TOSA to the Standard dialect";
   let dependentDialects = [
     "arith::ArithmeticDialect",
-    "func::FuncDialect",
     "tensor::TensorDialect",
   ];
   let description = [{

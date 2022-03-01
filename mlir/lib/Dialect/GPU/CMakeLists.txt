@@ -69,7 +69,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRArithmetic
   MLIRAsync
   MLIRDataLayoutInterfaces
-  MLIRFunc
   MLIRGPUOps
   MLIRIR
   MLIRLLVMIR

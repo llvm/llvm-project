@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -39,7 +38,6 @@ struct TestLinalgTransforms
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
     registry.insert<AffineDialect,
-                    func::FuncDialect,
                     memref::MemRefDialect,
                     scf::SCFDialect,
                     linalg::LinalgDialect,

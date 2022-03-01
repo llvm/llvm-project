@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
-#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -180,8 +179,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
 
     // Mark certain operations legal.
     target.addLegalDialect<arith::ArithmeticDialect, AffineDialect,
-                           func::FuncDialect, memref::MemRefDialect,
-                           tensor::TensorDialect>();
+                           memref::MemRefDialect, tensor::TensorDialect>();
     target.addIllegalOp<InitTensorOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.

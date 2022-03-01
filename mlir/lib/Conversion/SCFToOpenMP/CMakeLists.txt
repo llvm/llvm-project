@@ -13,7 +13,6 @@ add_mlir_conversion_library(MLIRSCFToOpenMP
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRArithmetic
-  MLIRFunc
   MLIRLLVMIR
   MLIROpenMP
   MLIRSCF

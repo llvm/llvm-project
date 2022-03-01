@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRSCF
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRBufferization
-  MLIRFunc
+  MLIRControlFlow
   MLIRIR
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces

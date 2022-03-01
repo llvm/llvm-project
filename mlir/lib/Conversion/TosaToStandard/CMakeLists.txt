@@ -11,7 +11,6 @@ add_mlir_conversion_library(MLIRTosaToStandard
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
-  MLIRFunc
   MLIRIR
   MLIRPass
   MLIRTosa

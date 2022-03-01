@@ -13,8 +13,9 @@ add_mlir_conversion_library(MLIRMathToLibm
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRDialectUtils
-  MLIRFuncTransforms
+  MLIRFunc
   MLIRMath
+  MLIRTransformUtils
   MLIRVector
   MLIRVectorUtils
   )
