@@ -538,7 +538,11 @@ void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
   // over from the old function.
   for (Argument *OldArg = F->arg_begin(), *NewArg = A->getParent()->arg_begin(),
                 *End = F->arg_end();
-       OldArg != End; ++OldArg, ++NewArg)
+       OldArg != End; ++OldArg, ++NewArg) {
+
+    LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
+                      << NewArg->getNameOrAsOperand() << "\n");
+
     if (NewArg != A && ValueState.count(OldArg)) {
       // Note: This previously looked like this:
       // ValueState[NewArg] = ValueState[OldArg];
@@ -549,6 +553,7 @@ void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
       NewValue = ValueState[OldArg];
       pushToWorkList(NewValue, NewArg);
     }
+  }
 }
 
 void SCCPInstVisitor::visitInstruction(Instruction &I) {
