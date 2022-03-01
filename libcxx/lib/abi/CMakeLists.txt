@@ -50,8 +50,13 @@ function(cxx_abi_list_identifier result triple abi_library abi_version unstable 
   set(${result} "${tmp}" PARENT_SCOPE)
 endfunction()
 
+if (CMAKE_CXX_COMPILER_TARGET)
+  set(triple "${CMAKE_CXX_COMPILER_TARGET}")
+else()
+  set(triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
+endif()
 cxx_abi_list_identifier(abi_list_identifier
-  "${LIBCXX_TARGET_TRIPLE}"
+  "${triple}"
   "${LIBCXX_CXX_ABI_LIBNAME}"
   "${LIBCXX_ABI_VERSION}"
   "${LIBCXX_ABI_UNSTABLE}"

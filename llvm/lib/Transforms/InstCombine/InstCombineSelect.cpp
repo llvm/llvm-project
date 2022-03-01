@@ -1107,7 +1107,7 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
   SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
   if (SPF == SelectPatternFlavor::SPF_ABS ||
       SPF == SelectPatternFlavor::SPF_NABS) {
-    if (!Cmp.hasOneUse())
+    if (!Cmp.hasOneUse() && !RHS->hasOneUse())
       return nullptr; // TODO: Relax this restriction.
 
     // Note that NSW flag can only be propagated for normal, non-negated abs!
@@ -2353,17 +2353,16 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   // (bitcast X) <  0 ?  TC : -TC --> copysign(TC, -X)
   // (bitcast X) >= 0 ? -TC :  TC --> copysign(TC, -X)
   // (bitcast X) >= 0 ?  TC : -TC --> copysign(TC,  X)
+  // Note: FMF from the select can not be propagated to the new instructions.
   if (IsTrueIfSignSet ^ TC->isNegative())
-    X = Builder.CreateFNegFMF(X, &Sel);
+    X = Builder.CreateFNeg(X);
 
   // Canonicalize the magnitude argument as the positive constant since we do
   // not care about its sign.
   Value *MagArg = TC->isNegative() ? FVal : TVal;
   Function *F = Intrinsic::getDeclaration(Sel.getModule(), Intrinsic::copysign,
                                           Sel.getType());
-  Instruction *CopySign = CallInst::Create(F, { MagArg, X });
-  CopySign->setFastMathFlags(Sel.getFastMathFlags());
-  return CopySign;
+  return CallInst::Create(F, { MagArg, X });
 }
 
 Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {

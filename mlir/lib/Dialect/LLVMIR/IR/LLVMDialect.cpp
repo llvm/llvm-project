@@ -1798,6 +1798,13 @@ LogicalResult GlobalOp::verify() {
              << *ret.operand_type_begin() << " does not match global type "
              << getType();
 
+    for (Operation &op : *b) {
+      auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+      if (!iface || !iface.hasNoEffect())
+        return op.emitError()
+               << "ops with side effects not allowed in global initializers";
+    }
+
     if (getValueOrNull())
       return emitOpError("cannot have both initializer value and region");
   }

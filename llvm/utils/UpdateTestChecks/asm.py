@@ -388,21 +388,6 @@ def scrub_asm_csky(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def get_triple_from_march(march):
-  triples = {
-      'amdgcn': 'amdgcn',
-      'r600': 'r600',
-      'mips': 'mips',
-      'sparc': 'sparc',
-      'hexagon': 'hexagon',
-      've': 've',
-  }
-  for prefix, triple in triples.items():
-    if march.startswith(prefix):
-      return triple
-  print("Cannot find a triple. Assume 'x86'", file=sys.stderr)
-  return 'x86'
-
 def get_run_handler(triple):
   target_handlers = {
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
@@ -456,7 +441,7 @@ def get_run_handler(triple):
 
 ##### Generator of assembly CHECK lines
 
-def add_asm_checks(output_lines, comment_marker, prefix_list, func_dict,
+def add_checks(output_lines, comment_marker, prefix_list, func_dict,
                    func_name, is_filtered):
   # Label format is based on ASM string.
   check_label_format = '{} %s-LABEL: %s%s:'.format(comment_marker)
