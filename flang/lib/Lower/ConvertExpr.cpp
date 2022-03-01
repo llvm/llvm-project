@@ -430,7 +430,11 @@ public:
   /// one.
   ExtValue gen(Fortran::semantics::SymbolRef sym) {
     if (Fortran::lower::SymbolBox val = symMap.lookupSymbol(sym))
-      return val.match([&val](auto &) { return val.toExtendedValue(); });
+      return val.match(
+          [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &boxAddr) {
+            return fir::factory::genMutableBoxRead(builder, getLoc(), boxAddr);
+          },
+          [&val](auto &) { return val.toExtendedValue(); });
     LLVM_DEBUG(llvm::dbgs()
                << "unknown symbol: " << sym << "\nmap: " << symMap << '\n');
     fir::emitFatalError(getLoc(), "symbol is not mapped to any IR value");
@@ -1482,7 +1486,28 @@ public:
         if (arg.passBy == PassBy::BaseAddress) {
           caller.placeInput(arg, fir::getBase(argAddr));
         } else {
-          TODO(loc, "procedureref PassBy::BoxChar");
+          assert(arg.passBy == PassBy::BoxChar);
+          auto helper = fir::factory::CharacterExprHelper{builder, loc};
+          auto boxChar = argAddr.match(
+              [&](const fir::CharBoxValue &x) { return helper.createEmbox(x); },
+              [&](const fir::CharArrayBoxValue &x) {
+                return helper.createEmbox(x);
+              },
+              [&](const auto &x) -> mlir::Value {
+                // Fortran allows an actual argument of a completely different
+                // type to be passed to a procedure expecting a CHARACTER in the
+                // dummy argument position. When this happens, the data pointer
+                // argument is simply assumed to point to CHARACTER data and the
+                // LEN argument used is garbage. Simulate this behavior by
+                // free-casting the base address to be a !fir.char reference and
+                // setting the LEN argument to undefined. What could go wrong?
+                auto dataPtr = fir::getBase(x);
+                assert(!dataPtr.getType().template isa<fir::BoxType>());
+                return builder.convertWithSemantics(
+                    loc, argTy, dataPtr,
+                    /*allowCharacterConversion=*/true);
+              });
+          caller.placeInput(arg, boxChar);
         }
       } else if (arg.passBy == PassBy::Box) {
         // Before lowering to an address, handle the allocatable/pointer actual

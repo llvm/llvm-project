@@ -646,6 +646,24 @@ static void lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
   assert(result.empty() || result.size() == box.dynamicBound().size());
 }
 
+/// Lower explicit character length if any. Return empty mlir::Value if no
+/// explicit length.
+static mlir::Value
+lowerExplicitCharLen(Fortran::lower::AbstractConverter &converter,
+                     mlir::Location loc, const Fortran::lower::BoxAnalyzer &box,
+                     Fortran::lower::SymMap &symMap,
+                     Fortran::lower::StatementContext &stmtCtx) {
+  if (!box.isChar())
+    return mlir::Value{};
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Type lenTy = builder.getCharacterLengthType();
+  if (llvm::Optional<int64_t> len = box.getCharLenConst())
+    return builder.createIntegerConstant(loc, lenTy, *len);
+  if (llvm::Optional<Fortran::lower::SomeExpr> lenExpr = box.getCharLenExpr())
+    return genScalarValue(converter, loc, *lenExpr, symMap, stmtCtx);
+  return mlir::Value{};
+}
+
 /// Treat negative values as undefined. Assumed size arrays will return -1 from
 /// the front end for example. Using negative values can produce hard to find
 /// bugs much further along in the compilation.
@@ -694,7 +712,11 @@ void Fortran::lower::mapSymbolAttributes(
     // Lower non deferred parameters.
     llvm::SmallVector<mlir::Value> nonDeferredLenParams;
     if (ba.isChar()) {
-      TODO(loc, "mapSymbolAttributes allocatble or pointer char");
+      if (mlir::Value len =
+              lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
+        nonDeferredLenParams.push_back(len);
+      else if (Fortran::semantics::IsAssumedLengthCharacter(sym))
+        TODO(loc, "assumed length character allocatable");
     } else if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType()) {
       if (const Fortran::semantics::DerivedTypeSpec *derived =
               declTy->AsDerived())
