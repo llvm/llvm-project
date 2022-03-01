@@ -24,8 +24,10 @@ declare dso_local i32 @printf(i8*, ...)
 attributes #0 = { noinline optnone "frame-pointer"="all" }
 
 ; CHECK:                  stp	x[[SPILL_REG1:[0-9]+]], x[[SPILL_REG2:[0-9]+]], [sp, #-[[SPILL_OFFSET1:[0-9]+]]]
+; CHECK-NEXT:             .cfi_def_cfa_offset [[SPILL_OFFSET1]]
 ; CHECK-NEXT:             str	x[[SPILL_REG3:[0-9]+]], [sp, #[[SPILL_OFFSET2:[0-9]+]]]
 ; CHECK-NEXT:             mov	x[[FRAME:[0-9]+]], sp
+; CHECK-NEXT:             .cfi_def_cfa w[[FRAME]], [[SPILL_OFFSET1]]
 ; CHECK-COUNT-128:        sub	sp, sp, #[[STACK1:[0-9]+]], lsl #12
 ; CHECK-NEXT:             sub	sp, sp, #[[STACK2:[0-9]+]], lsl #12
 ; CHECK-NEXT:             sub	sp, sp, #[[STACK3:[0-9]+]]

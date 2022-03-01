@@ -285,6 +285,17 @@ features that are required for the function to be called. The result of this is
 that future processors execute the most restrictive version of the function the
 new processor can execute.
 
+In addition, unlike the ICC implementation of this feature, the selection of the
+version does not consider the manufacturer or microarchitecture of the processor.
+It tests solely the list of features that are both supported by the specified
+processor and present in the compiler-rt library. This can be surprising at times,
+as the runtime processor may be from a completely different manufacturer, as long
+as it supports the same feature set.
+
+This can additionally be surprising, as some processors are indistringuishable from
+others based on the list of testable features. When this happens, the variant
+is selected in an unspecified manner.
+
 Function versions are defined with ``cpu_specific``, which takes one or more CPU
 names as a parameter. For example:
 
@@ -513,6 +524,29 @@ over the tradeoff between code size and debug information precision.
 ``nomerge`` attribute can also be used as function attribute to prevent all 
 calls to the specified function from merging. It has no effect on indirect 
 calls.
+  }];
+}
+
+def NoInlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute suppresses the inlining of a function at the call sites
+of the function.
+
+``[[clang::noinline]]`` spelling can be used as a statement attribute; other
+spellings of the attribute are not supported on statements. If a statement is
+marked ``[[clang::noinline]]`` and contains calls, those calls inside the
+statement will not be inlined by the compiler.
+
+.. code-block:: c
+
+  int example(void) {
+    int r;
+    [[clang::noinline]] foo();
+    [[clang::noinline]] r = bar();
+    return r;
+  }
+
   }];
 }
 

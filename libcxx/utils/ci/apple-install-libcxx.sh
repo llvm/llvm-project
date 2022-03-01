@@ -158,7 +158,6 @@ step "Installing the libc++ and libc++abi headers to ${install_dir}/usr/include"
 any_arch=$(echo ${architectures} | cut -d ' ' -f 1)
 mkdir -p "${install_dir}/usr/include"
 ditto "${build_dir}/${any_arch}-install/include" "${install_dir}/usr/include"
-ditto "${llvm_root}/libcxxabi/include" "${install_dir}/usr/include" # TODO: libcxxabi should install its headers in CMake
 if [[ $EUID -eq 0 ]]; then # Only chown if we're running as root
     chown -R root:wheel "${install_dir}/usr/include"
 fi

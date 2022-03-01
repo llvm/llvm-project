@@ -155,11 +155,10 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_nxv32i1_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    index z0.s, #0, #1
 ; CHECK-NEXT:    mov z3.s, w0
 ; CHECK-NEXT:    mov z1.d, z0.d
@@ -179,6 +178,7 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-NEXT:    cmphi p3.s, p0/z, z4.s, z5.s
 ; CHECK-NEXT:    uqadd z5.s, z6.s, z3.s
 ; CHECK-NEXT:    incw z1.s, all, mul #4
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p4.s, p0/z, z4.s, z5.s
 ; CHECK-NEXT:    uqadd z0.s, z0.s, z3.s
 ; CHECK-NEXT:    uqadd z1.s, z1.s, z3.s
@@ -190,6 +190,7 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-NEXT:    cmphi p4.s, p0/z, z4.s, z1.s
 ; CHECK-NEXT:    uqadd z0.s, z2.s, z3.s
 ; CHECK-NEXT:    uqadd z1.s, z6.s, z3.s
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p5.s, p0/z, z4.s, z0.s
 ; CHECK-NEXT:    cmphi p0.s, p0/z, z4.s, z1.s
 ; CHECK-NEXT:    uzp1 p3.h, p3.h, p4.h
@@ -209,13 +210,10 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_nxv32i1_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    mov z3.d, x0
 ; CHECK-NEXT:    mov z1.d, z0.d
@@ -241,13 +239,16 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-NEXT:    uqadd z6.d, z7.d, z3.d
 ; CHECK-NEXT:    mov z25.d, z2.d
 ; CHECK-NEXT:    incd z24.d, all, mul #4
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov z26.d, z5.d
 ; CHECK-NEXT:    cmphi p4.d, p0/z, z4.d, z6.d
 ; CHECK-NEXT:    uqadd z6.d, z24.d, z3.d
 ; CHECK-NEXT:    incd z25.d, all, mul #4
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p5.d, p0/z, z4.d, z6.d
 ; CHECK-NEXT:    uqadd z6.d, z25.d, z3.d
 ; CHECK-NEXT:    incd z26.d, all, mul #4
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p6.d, p0/z, z4.d, z6.d
 ; CHECK-NEXT:    uqadd z6.d, z26.d, z3.d
 ; CHECK-NEXT:    uzp1 p2.s, p2.s, p3.s
@@ -280,6 +281,7 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-NEXT:    cmphi p6.d, p0/z, z4.d, z1.d
 ; CHECK-NEXT:    uqadd z0.d, z25.d, z3.d
 ; CHECK-NEXT:    uqadd z1.d, z26.d, z3.d
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p7.d, p0/z, z4.d, z0.d
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z4.d, z1.d
 ; CHECK-NEXT:    uzp1 p5.s, p5.s, p6.s

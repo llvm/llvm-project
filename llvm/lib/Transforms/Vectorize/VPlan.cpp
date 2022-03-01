@@ -583,7 +583,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenSC:
   case VPWidenGEPSC:
   case VPReductionSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPScalarIVStepsSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -606,6 +607,14 @@ void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
          "Insertion position not in any VPBasicBlock");
   Parent = InsertPos->getParent();
   Parent->getRecipeList().insert(InsertPos->getIterator(), this);
+}
+
+void VPRecipeBase::insertBefore(VPBasicBlock &BB,
+                                iplist<VPRecipeBase>::iterator I) {
+  assert(!Parent && "Recipe already in some VPBasicBlock");
+  assert(I == BB.end() || I->getParent() == &BB);
+  Parent = &BB;
+  BB.getRecipeList().insert(I, this);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
@@ -634,10 +643,8 @@ void VPRecipeBase::moveAfter(VPRecipeBase *InsertPos) {
 
 void VPRecipeBase::moveBefore(VPBasicBlock &BB,
                               iplist<VPRecipeBase>::iterator I) {
-  assert(I == BB.end() || I->getParent() == &BB);
   removeFromParent();
-  Parent = &BB;
-  BB.getRecipeList().insert(I, this);
+  insertBefore(BB, I);
 }
 
 void VPInstruction::generateInstruction(VPTransformState &State,
@@ -875,13 +882,16 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
+                    if (isa<VPScalarIVStepsRecipe>(U))
+                      return true;
                     auto *VPI = cast<VPInstruction>(U);
                     return VPI->getOpcode() ==
                                VPInstruction::CanonicalIVIncrement ||
                            VPI->getOpcode() ==
                                VPInstruction::CanonicalIVIncrementNUW;
                   }) &&
-           "the canonical IV should only be used by its increments when "
+           "the canonical IV should only be used by its increments or "
+           "ScalarIVSteps when "
            "resetting the start value");
     IV->setOperand(0, VPV);
   }
@@ -1272,7 +1282,32 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   return StartC && StartC->isZero() && StepC && StepC->isOne();
 }
 
+VPCanonicalIVPHIRecipe *VPScalarIVStepsRecipe::getCanonicalIV() const {
+  return cast<VPCanonicalIVPHIRecipe>(getOperand(0));
+}
+
+bool VPScalarIVStepsRecipe::isCanonical() const {
+  auto *CanIV = getCanonicalIV();
+  // The start value of the steps-recipe must match the start value of the
+  // canonical induction and it must step by 1.
+  if (CanIV->getStartValue() != getStartValue())
+    return false;
+  auto *StepVPV = getStepValue();
+  if (StepVPV->getDef())
+    return false;
+  auto *StepC = dyn_cast_or_null<ConstantInt>(StepVPV->getLiveInIRValue());
+  return StepC && StepC->isOne();
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPScalarIVStepsRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << Indent << "= SCALAR-STEPS ";
+  printOperands(O, SlotTracker);
+}
+
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";

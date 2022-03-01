@@ -387,11 +387,10 @@ define void @masked_gather_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
 ; VBITS_EQ_256-NEXT:    punpklo p2.h, p2.b
 ; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_EQ_256-NEXT:    mov z3.d, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    and p2.b, p2/z, p2.b, p1.b
 ; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    cmpne p2.d, p1/z, z3.d, #0
-; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_EQ_256-NEXT:    ld1w { z2.d }, p2/z, [z2.d]
+; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_EQ_256-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_EQ_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_EQ_256-NEXT:    uzp1 z1.s, z2.s, z2.s

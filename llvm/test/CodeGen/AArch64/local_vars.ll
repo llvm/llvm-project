@@ -30,7 +30,11 @@ define void @trivial_fp_func() {
 
 ; CHECK-WITHFP-ARM64-LABEL: trivial_fp_func:
 ; CHECK-WITHFP-ARM64: stp x29, x30, [sp, #-16]!
+; CHECK-WITHFP-ARM64-NEXT: .cfi_def_cfa_offset 16
 ; CHECK-WITHFP-ARM64-NEXT: mov x29, sp
+; CHECK-WITHFP-ARM64-NEXT: .cfi_def_cfa w29, 16
+; CHECK-WITHFP-ARM64-NEXT: .cfi_offset w30, -8
+; CHECK-WITHFP-ARM64-NEXT: .cfi_offset w29, -16
 
 ; Dont't really care, but it would be a Bad Thing if this came after the epilogue.
 ; CHECK-WITHFP-ARM64: bl foo

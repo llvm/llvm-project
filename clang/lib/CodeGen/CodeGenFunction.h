@@ -551,6 +551,9 @@ public:
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
+  /// True if the current statement has noinline attribute.
+  bool InNoInlineAttributedStmt = false;
+
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;

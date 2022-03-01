@@ -8747,11 +8747,9 @@ public:
   // C++ Template Instantiation
   //
 
-  MultiLevelTemplateArgumentList
-  getTemplateInstantiationArgs(NamedDecl *D,
-                               const TemplateArgumentList *Innermost = nullptr,
-                               bool RelativeToPrimary = false,
-                               const FunctionDecl *Pattern = nullptr);
+  MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
+      const NamedDecl *D, const TemplateArgumentList *Innermost = nullptr,
+      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr);
 
   /// A context in which code is being synthesized (where a source location
   /// alone is not sufficient to identify the context). This covers template

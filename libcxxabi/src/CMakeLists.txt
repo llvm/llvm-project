@@ -178,6 +178,7 @@ endif()
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
   target_link_libraries(cxxabi_shared PRIVATE cxx-headers ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  target_link_libraries(cxxabi_shared PUBLIC cxxabi-headers)
   if (TARGET pstl::ParallelSTL)
     target_link_libraries(cxxabi_shared PUBLIC pstl::ParallelSTL)
   endif()
@@ -233,6 +234,7 @@ endif()
 if (LIBCXXABI_ENABLE_STATIC)
   add_library(cxxabi_static STATIC ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
   target_link_libraries(cxxabi_static PRIVATE cxx-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  target_link_libraries(cxxabi_static PUBLIC cxxabi-headers)
   if (TARGET pstl::ParallelSTL)
     target_link_libraries(cxxabi_static PUBLIC pstl::ParallelSTL)
   endif()
@@ -299,7 +301,7 @@ endif()
 
 if (NOT CMAKE_CONFIGURATION_TYPES AND LIBCXXABI_INSTALL_LIBRARY)
   add_custom_target(install-cxxabi
-    DEPENDS cxxabi
+    DEPENDS cxxabi install-cxxabi-headers
     COMMAND "${CMAKE_COMMAND}"
             -DCMAKE_INSTALL_COMPONENT=cxxabi
             -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")

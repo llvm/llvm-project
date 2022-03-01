@@ -32,9 +32,9 @@ loopend:
 
 ; CHECK-LABEL: @reverse_induction_i128(
 ; CHECK: %index = phi i128 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i128 %startval, %index
-; CHECK: %[[a0:.+]] = add i128 %offset.idx, 0
-; CHECK: %[[a4:.+]] = add i128 %offset.idx, -4
+; CHECK: [[OFFSET_IDX:%.+]] = sub i128 %startval, %index
+; CHECK: %[[a0:.+]] = add i128 [[OFFSET_IDX]], 0
+; CHECK: %[[a4:.+]] = add i128 [[OFFSET_IDX]], -4
 
 define i32 @reverse_induction_i128(i128 %startval, i32 * %ptr) {
 entry:
