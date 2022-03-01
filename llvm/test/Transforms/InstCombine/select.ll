@@ -1654,6 +1654,17 @@ define float @copysign1(float %x) {
   ret float %r
 }
 
+define float @copysign1_fmf(float %x) {
+; CHECK-LABEL: @copysign1_fmf(
+; CHECK-NEXT:    [[R:%.*]] = call ninf nsz float @llvm.copysign.f32(float 1.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, -1
+  %r = select nsz ninf i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
 define <2 x float> @copysign2(<2 x float> %x) {
 ; CHECK-LABEL: @copysign2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x float> [[X:%.*]]
