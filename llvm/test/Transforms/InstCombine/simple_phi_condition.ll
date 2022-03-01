@@ -52,6 +52,26 @@ merge:
   ret i1 %ret
 }
 
+define i1 @test_edge_dominance(i1 %cmp) {
+; CHECK-LABEL: @test_edge_dominance(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:
+  br label %if.end
+
+if.end:
+  %phi = phi i1 [ true, %entry ], [ false, %if.then ]
+  ret i1 %phi
+}
+
 define i1 @test_direct_implication_complex_cfg(i1 %cond, i32 %cnt1) {
 ; CHECK-LABEL: @test_direct_implication_complex_cfg(
 ; CHECK-NEXT:  entry:
