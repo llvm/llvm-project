@@ -1,15 +1,16 @@
 # This reproduces a bug in aggressive tail duplication/copy propagation.
-# XFAIL: *
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
-# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: ld.lld %t.o -o %t.exe -q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -relocs \
 # RUN:   -tail-duplication=1 -tail-duplication-aggressive=1 \
 # RUN:   -tail-duplication-const-copy-propagation=1
 
+  .text
+  .type a, %function
   .globl a
 a:
 	.cfi_startproc
@@ -33,7 +34,10 @@ i:
 g:
 	jmp	g
 j:
+    ud2
 	.cfi_endproc
+.size a, .-a
+
 .rodata
 JT:
 	.quad	b
