@@ -314,7 +314,7 @@ def _get_output_sparse_tensor_kernel(
 func @{_ENTRY_NAME}(%t: tensor<{shape}x{type}, #enc>, %filename: !Ptr)
 attributes {{ llvm.emit_c_interface }} {{
   sparse_tensor.out %t, %filename : tensor<{shape}x{type}, #enc>, !Ptr
-  std.return
+  func.return
 }}"""
 
 

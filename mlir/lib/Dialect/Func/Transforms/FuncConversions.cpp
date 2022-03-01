@@ -1,4 +1,4 @@
-//===- FuncConversions.cpp - Standard Function conversions ----------------===//
+//===- FuncConversions.cpp - Function conversions -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+using namespace mlir::func;
 
 namespace {
-/// Converts the operand and result types of the Standard's CallOp, used
-/// together with the FuncOpSignatureConversion.
+/// Converts the operand and result types of the CallOp, used together with the
+/// FuncOpSignatureConversion.
 struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
   using OpConversionPattern<CallOp>::OpConversionPattern;
 

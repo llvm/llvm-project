@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/DecomposeCallGraphTypes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/DecomposeCallGraphTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -43,11 +43,11 @@ struct TestDecomposeCallGraphTypes
 
     target.addLegalDialect<test::TestDialect>();
 
-    target.addDynamicallyLegalOp<ReturnOp>([&](ReturnOp op) {
+    target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
       return typeConverter.isLegal(op.getOperandTypes());
     });
-    target.addDynamicallyLegalOp<CallOp>(
-        [&](CallOp op) { return typeConverter.isLegal(op); });
+    target.addDynamicallyLegalOp<func::CallOp>(
+        [&](func::CallOp op) { return typeConverter.isLegal(op); });
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
       return typeConverter.isSignatureLegal(op.getType());
     });

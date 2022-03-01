@@ -365,7 +365,7 @@ vectorizeOneOp(OpBuilder &b, LinalgOp linalgOp, Operation *op,
 
   // 2. Constant ops don't get vectorized but rather broadcasted at their users.
   // Clone so that the constant is not confined to the linalgOp block .
-  if (isa<arith::ConstantOp, ConstantOp>(op))
+  if (isa<arith::ConstantOp, func::ConstantOp>(op))
     return VectorizationResult{VectorizationStatus::NewOp, b.clone(*op)};
 
   // 3. Only ElementwiseMappable are allowed in the generic vectorization.
@@ -428,8 +428,8 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
   if (!llvm::hasSingleElement(r))
     return false;
   for (Operation &op : r.front()) {
-    if (!(isa<arith::ConstantOp, ConstantOp, linalg::YieldOp, linalg::IndexOp>(
-              op) ||
+    if (!(isa<arith::ConstantOp, func::ConstantOp, linalg::YieldOp,
+              linalg::IndexOp>(op) ||
           OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))

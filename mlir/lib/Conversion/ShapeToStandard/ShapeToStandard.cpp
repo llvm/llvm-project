@@ -10,9 +10,9 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -668,7 +668,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
   // Setup target legality.
   MLIRContext &ctx = getContext();
   ConversionTarget target(ctx);
-  target.addLegalDialect<arith::ArithmeticDialect, StandardOpsDialect,
+  target.addLegalDialect<arith::ArithmeticDialect, func::FuncDialect,
                          SCFDialect, tensor::TensorDialect>();
   target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp>();
 

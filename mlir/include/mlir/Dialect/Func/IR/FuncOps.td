@@ -1,56 +1,51 @@
-//===- Ops.td - Standard operation definitions -------------*- tablegen -*-===//
+//===- FuncOps.td - Func operation definitions -------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Defines some MLIR standard operations.
-//
-//===----------------------------------------------------------------------===//
 
-#ifndef STANDARD_OPS
-#define STANDARD_OPS
+#ifndef MLIR_DIALECT_FUNC_IR_FUNCOPS_TD
+#define MLIR_DIALECT_FUNC_IR_FUNCOPS_TD
 
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
-include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def StandardOps_Dialect : Dialect {
-  let name = "std";
-  let cppNamespace = "::mlir";
+def Func_Dialect : Dialect {
+  let name = "func";
+  let cppNamespace = "::mlir::func";
   let dependentDialects = ["cf::ControlFlowDialect"];
   let hasConstantMaterializer = 1;
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
-// Base class for Standard dialect ops.
-class Std_Op<string mnemonic, list<Trait> traits = []> :
-    Op<StandardOps_Dialect, mnemonic, traits>;
+// Base class for Func dialect ops.
+class Func_Op<string mnemonic, list<Trait> traits = []> :
+    Op<Func_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
-def CallOp : Std_Op<"call",
+def CallOp : Func_Op<"call",
     [CallOpInterface, MemRefsNormalizable,
      DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "call operation";
   let description = [{
-    The `call` operation represents a direct call to a function that is within
-    the same symbol scope as the call. The operands and result types of the
-    call must match the specified function type. The callee is encoded as a
+    The `func.call` operation represents a direct call to a function that is
+    within the same symbol scope as the call. The operands and result types of
+    the call must match the specified function type. The callee is encoded as a
     symbol reference attribute named "callee".
 
     Example:
 
     ```mlir
-    %2 = call @my_add(%0, %1) : (f32, f32) -> f32
+    %2 = func.call @my_add(%0, %1) : (f32, f32) -> f32
     ```
   }];
 
@@ -105,7 +100,7 @@ def CallOp : Std_Op<"call",
 // CallIndirectOp
 //===----------------------------------------------------------------------===//
 
-def CallIndirectOp : Std_Op<"call_indirect", [
+def CallIndirectOp : Func_Op<"call_indirect", [
       CallOpInterface,
       TypesMatchWith<"callee input types match argument types",
                      "callee", "callee_operands",
@@ -116,19 +111,18 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     ]> {
   let summary = "indirect call operation";
   let description = [{
-    The `call_indirect` operation represents an indirect call to a value of
-    function type. Functions are first class types in MLIR, and may be passed as
-    arguments and merged together with block arguments. The operands and result
-    types of the call must match the specified function type.
+    The `func.call_indirect` operation represents an indirect call to a value
+    of function type. The operands and result types of the call must match the
+    specified function type.
 
     Function values can be created with the
-    [`constant` operation](#stdconstant-constantop).
+    [`func.constant` operation](#funcconstant-constantop).
 
     Example:
 
     ```mlir
-    %31 = call_indirect %15(%0, %1)
-            : (tensor<16xf32>, tensor<16xf32>) -> tensor<16xf32>
+    %func = func.constant @my_func : (tensor<16xf32>, tensor<16xf32>) -> tensor<16xf32>
+    %result = func.call_indirect %func(%0, %1) : (tensor<16xf32>, tensor<16xf32>) -> tensor<16xf32>
     ```
   }];
 
@@ -160,38 +154,31 @@ def CallIndirectOp : Std_Op<"call_indirect", [
   }];
 
   let hasCanonicalizeMethod = 1;
-
-  let assemblyFormat =
-    "$callee `(` $callee_operands `)` attr-dict `:` type($callee)";
+  let assemblyFormat = [{
+    $callee `(` $callee_operands `)` attr-dict `:` type($callee)
+  }];
 }
 
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-def ConstantOp : Std_Op<"constant",
+def ConstantOp : Func_Op<"constant",
     [ConstantLike, NoSideEffect,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "constant";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `std.constant` attribute-value `:` type
-    ```
-
-    The `constant` operation produces an SSA value from a symbol reference to a
-    `builtin.func` operation
+    The `func.constant` operation produces an SSA value from a symbol reference
+    to a `func.func` operation
 
     Example:
 
     ```mlir
     // Reference to function @myfn.
-    %2 = constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
+    %2 = func.constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
 
     // Equivalent generic forms
-    %2 = "std.constant"() {value = @myfn}
-       : () -> ((tensor<16xf32>, f32) -> tensor<16xf32>)
+    %2 = "func.constant"() { value = @myfn } : () -> ((tensor<16xf32>, f32) -> tensor<16xf32>)
     ```
 
     MLIR does not allow direct references to functions in SSA operands because
@@ -218,11 +205,11 @@ def ConstantOp : Std_Op<"constant",
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+def ReturnOp : Func_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
                                 MemRefsNormalizable, ReturnLike, Terminator]> {
-  let summary = "return operation";
+  let summary = "Function return operation";
   let description = [{
-    The `return` operation represents a return operation within a function.
+    The `func.return` operation represents a return operation within a function.
     The operation takes variable number of operands and produces no results.
     The operand number and types must match the signature of the function
     that contains the operation.
@@ -230,7 +217,7 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     Example:
 
     ```mlir
-    func @foo() : (i32, f8) {
+    func.func @foo() : (i32, f8) {
       ...
       return %0, %1 : i32, f8
     }
@@ -239,12 +226,12 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [
-    OpBuilder<(ins),
-    [{ build($_builder, $_state, llvm::None); }]>];
+  let builders = [OpBuilder<(ins), [{
+    build($_builder, $_state, llvm::None);
+  }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;
 }
 
-#endif // STANDARD_OPS
+#endif // MLIR_DIALECT_FUNC_IR_FUNCOPS_TD

@@ -1,4 +1,4 @@
-//===- Ops.cpp - Standard MLIR Operations ---------------------------------===//
+//===- FuncOps.cpp - Func Dialect Operations ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
-#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -30,33 +27,30 @@
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
-#include "mlir/Dialect/StandardOps/IR/OpsDialect.cpp.inc"
-
-// Pull in all enum type definitions and utility function declarations.
-#include "mlir/Dialect/StandardOps/IR/OpsEnums.cpp.inc"
+#include "mlir/Dialect/Func/IR/FuncOpsDialect.cpp.inc"
 
 using namespace mlir;
+using namespace mlir::func;
 
 //===----------------------------------------------------------------------===//
-// StandardOpsDialect Interfaces
+// FuncDialect Interfaces
 //===----------------------------------------------------------------------===//
 namespace {
-/// This class defines the interface for handling inlining with standard
-/// operations.
-struct StdInlinerInterface : public DialectInlinerInterface {
+/// This class defines the interface for handling inlining with func operations.
+struct FuncInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
   //===--------------------------------------------------------------------===//
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
-  /// All call operations within standard ops can be inlined.
+  /// All call operations can be inlined.
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
     return true;
   }
 
-  /// All operations within standard ops can be inlined.
+  /// All operations can be inlined.
   bool isLegalToInline(Operation *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
@@ -69,7 +63,7 @@ struct StdInlinerInterface : public DialectInlinerInterface {
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
   void handleTerminator(Operation *op, Block *newDest) const final {
-    // Only "std.return" needs to be handled here.
+    // Only return needs to be handled here.
     auto returnOp = dyn_cast<ReturnOp>(op);
     if (!returnOp)
       return;
@@ -84,7 +78,7 @@ struct StdInlinerInterface : public DialectInlinerInterface {
   /// as necessary.
   void handleTerminator(Operation *op,
                         ArrayRef<Value> valuesToRepl) const final {
-    // Only "std.return" needs to be handled here.
+    // Only return needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
     // Replace the values directly with the return operands.
@@ -96,24 +90,21 @@ struct StdInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// StandardOpsDialect
+// FuncDialect
 //===----------------------------------------------------------------------===//
 
-void StandardOpsDialect::initialize() {
+void FuncDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/StandardOps/IR/Ops.cpp.inc"
+#include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
-  addInterfaces<StdInlinerInterface>();
+  addInterfaces<FuncInlinerInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
-Operation *StandardOpsDialect::materializeConstant(OpBuilder &builder,
-                                                   Attribute value, Type type,
-                                                   Location loc) {
-  if (arith::ConstantOp::isBuildableWith(value, type))
-    return builder.create<arith::ConstantOp>(loc, type, value);
+Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
+                                            Type type, Location loc) {
   if (ConstantOp::isBuildableWith(value, type))
     return builder.create<ConstantOp>(loc, type,
                                       value.cast<FlatSymbolRefAttr>());
@@ -247,4 +238,4 @@ LogicalResult ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/StandardOps/IR/Ops.cpp.inc"
+#include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"

@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LogicalResult.h"
@@ -36,13 +36,13 @@ using namespace mlir;
 
 namespace {
 
-/// Converts std.return to spv.Return.
-class ReturnOpPattern final : public OpConversionPattern<ReturnOp> {
+/// Converts func.return to spv.Return.
+class ReturnOpPattern final : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern<ReturnOp>::OpConversionPattern;
+  using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp returnOp, OpAdaptor adaptor,
+  matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -114,7 +114,7 @@ private:
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ReturnOpPattern::matchAndRewrite(ReturnOp returnOp, OpAdaptor adaptor,
+ReturnOpPattern::matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
                                  ConversionPatternRewriter &rewriter) const {
   if (returnOp.getNumOperands() > 1)
     return failure();

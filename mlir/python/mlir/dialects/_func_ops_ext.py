@@ -46,8 +46,8 @@ class CallOp:
     For example
 
         f = builtin.FuncOp("foo", ...)
-        std.CallOp(f, [args])
-        std.CallOp([result_types], "foo", [args])
+        func.CallOp(f, [args])
+        func.CallOp([result_types], "foo", [args])
 
     In all cases, the location and insertion point may be specified as keyword
     arguments if not provided by the surrounding context managers.

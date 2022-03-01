@@ -14,10 +14,10 @@ add_mlir_conversion_library(MLIRSCFToSPIRV
   MLIRSPIRV
   MLIRSPIRVConversion
   MLIRStandardToSPIRV
+  MLIRFunc
   MLIRIR
   MLIRPass
   MLIRSCF
-  MLIRStandard
   MLIRSupport
   MLIRTransforms
   )

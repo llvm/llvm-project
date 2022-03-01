@@ -13,11 +13,11 @@
 #include <utility>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/CodegenStrategy.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -41,11 +41,11 @@ struct TestLinalgCodegenStrategy
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
     registry.insert<AffineDialect,
+                    func::FuncDialect,
                     gpu::GPUDialect,
                     linalg::LinalgDialect,
                     memref::MemRefDialect,
                     scf::SCFDialect,
-                    StandardOpsDialect,
                     vector::VectorDialect>();
     // clang-format on
   }

@@ -1,4 +1,4 @@
-//===- Standard.cpp - C Interface for Standard dialect --------------------===//
+//===- Func.cpp - C Interface for Func dialect ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Dialect/Standard.h"
+#include "mlir-c/Dialect/Func.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Standard, std, mlir::StandardOpsDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Func, func, mlir::func::FuncDialect)

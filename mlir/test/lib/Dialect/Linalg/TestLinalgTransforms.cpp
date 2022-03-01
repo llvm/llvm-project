@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -19,7 +20,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -39,9 +39,9 @@ struct TestLinalgTransforms
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
     registry.insert<AffineDialect,
+                    func::FuncDialect,
                     memref::MemRefDialect,
                     scf::SCFDialect,
-                    StandardOpsDialect,
                     linalg::LinalgDialect,
                     vector::VectorDialect,
                     gpu::GPUDialect>();

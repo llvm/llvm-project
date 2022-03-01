@@ -2,8 +2,8 @@
 
 from mlir.ir import *
 from mlir.dialects import arith
+from mlir.dialects import func
 from mlir.dialects import scf
-from mlir.dialects import std
 from mlir.dialects import builtin
 
 
@@ -59,16 +59,16 @@ def testOpsAsArguments():
   index_type = IndexType.get()
   callee = builtin.FuncOp(
       "callee", ([], [index_type, index_type]), visibility="private")
-  func = builtin.FuncOp("ops_as_arguments", ([], []))
-  with InsertionPoint(func.add_entry_block()):
+  f = builtin.FuncOp("ops_as_arguments", ([], []))
+  with InsertionPoint(f.add_entry_block()):
     lb = arith.ConstantOp.create_index(0)
     ub = arith.ConstantOp.create_index(42)
     step = arith.ConstantOp.create_index(2)
-    iter_args = std.CallOp(callee, [])
+    iter_args = func.CallOp(callee, [])
     loop = scf.ForOp(lb, ub, step, iter_args)
     with InsertionPoint(loop.body):
       scf.YieldOp(loop.inner_iter_args)
-    std.ReturnOp([])
+    func.ReturnOp([])
 
 
 # CHECK-LABEL: TEST: testOpsAsArguments

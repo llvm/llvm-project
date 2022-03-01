@@ -1,4 +1,4 @@
-//===- Bufferize.cpp - Bufferization for std ops --------------------------===//
+//===- Bufferize.cpp - Bufferization for func ops -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements bufferization of std.func's and std.call's.
+// This file implements bufferization of builtin.func's and func.call's.
 //
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+using namespace mlir::func;
 
 namespace {
 struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
@@ -59,6 +60,6 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createFuncBufferizePass() {
+std::unique_ptr<Pass> mlir::func::createFuncBufferizePass() {
   return std::make_unique<FuncBufferizePass>();
 }

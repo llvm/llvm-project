@@ -82,7 +82,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
   } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
     // TODO: Support DMA ops.
     return false;
-  } else if (!isa<arith::ConstantOp, ConstantOp>(op)) {
+  } else if (!isa<arith::ConstantOp, func::ConstantOp>(op)) {
     // Register op in the set of ops that have users.
     opsWithUsers.insert(&op);
     if (isa<AffineMapAccessInterface>(op)) {

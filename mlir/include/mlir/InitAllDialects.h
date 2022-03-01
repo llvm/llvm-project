@@ -26,6 +26,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -44,7 +45,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
@@ -71,6 +71,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   complex::ComplexDialect,
                   DLTIDialect,
                   emitc::EmitCDialect,
+                  func::FuncDialect,
                   gpu::GPUDialect,
                   LLVM::LLVMDialect,
                   linalg::LinalgDialect,
@@ -82,7 +83,6 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   pdl_interp::PDLInterpDialect,
                   quant::QuantizationDialect,
                   spirv::SPIRVDialect,
-                  StandardOpsDialect,
                   arm_sve::ArmSVEDialect,
                   vector::VectorDialect,
                   NVVM::NVVMDialect,

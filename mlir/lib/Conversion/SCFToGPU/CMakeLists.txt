@@ -13,12 +13,12 @@ add_mlir_conversion_library(MLIRSCFToGPU
   MLIRAffineToStandard
   MLIRArithmetic
   MLIRComplex
+  MLIRFunc
   MLIRGPUTransforms
   MLIRIR
   MLIRLinalg
   MLIRMemRef
   MLIRPass
-  MLIRStandard
   MLIRSupport
   MLIRTransforms
   )

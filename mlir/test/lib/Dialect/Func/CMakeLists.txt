@@ -1,5 +1,5 @@
 # Exclude tests from libMLIR.so
-add_mlir_library(MLIRStandardOpsTestPasses
+add_mlir_library(MLIRFuncTestPasses
   TestDecomposeCallGraphTypes.cpp
 
   EXCLUDE_FROM_LIBMLIR
@@ -7,12 +7,12 @@ add_mlir_library(MLIRStandardOpsTestPasses
   LINK_LIBS PUBLIC
   MLIRAffine
   MLIRPass
-  MLIRStandardOpsTransforms
+  MLIRFuncTransforms
   MLIRTestDialect
   MLIRTransformUtils
   )
 
-target_include_directories(MLIRStandardOpsTestPasses
+target_include_directories(MLIRFuncTestPasses
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../Test
   ${CMAKE_CURRENT_BINARY_DIR}/../Test

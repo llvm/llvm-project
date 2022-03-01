@@ -6,9 +6,9 @@ import mlir.all_passes_registration
 from mlir import ir
 from mlir.dialects import arith
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects import memref
 from mlir.dialects import scf
-from mlir.dialects import std
 from mlir.passmanager import PassManager
 
 
@@ -93,15 +93,15 @@ def emit_benchmark_wrapped_main_func(func, timer_func):
         iter_args = list(wrapped_func.arguments[-num_results - 1:-1])
         loop = scf.ForOp(zero, n_iterations, one, iter_args)
         with ir.InsertionPoint(loop.body):
-            start = std.CallOp(timer_func, [])
-            call = std.CallOp(
+            start = func.CallOp(timer_func, [])
+            call = func.CallOp(
                 func,
                 wrapped_func.arguments[:-num_results - 1] + loop.inner_iter_args
             )
-            end = std.CallOp(timer_func, [])
+            end = func.CallOp(timer_func, [])
             time_taken = arith.SubIOp(end, start)
             memref.StoreOp(time_taken, timer_buffer, [loop.induction_variable])
             scf.YieldOp(list(call.results))
-        std.ReturnOp(loop)
+        func.ReturnOp(loop)
 
     return wrapped_func

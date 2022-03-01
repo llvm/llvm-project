@@ -17,8 +17,8 @@ add_mlir_dialect_library(MLIRModuleBufferization
   LINK_LIBS PUBLIC
   MLIRBufferization
   MLIRBufferizationTransforms
+  MLIRFunc
+  MLIRFuncTransforms
   MLIRIR
   MLIRMemRef
-  MLIRStandard
-  MLIRStandardOpsTransforms
 )
