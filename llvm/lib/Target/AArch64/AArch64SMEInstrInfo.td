@@ -15,6 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasSME] in {
+def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
+def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
+
 def ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha">;
 def ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva">;
 }
