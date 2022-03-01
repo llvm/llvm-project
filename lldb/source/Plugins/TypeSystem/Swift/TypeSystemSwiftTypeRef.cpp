@@ -31,6 +31,7 @@
 
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
+#include "swift/Frontend/Frontend.h"
 #include "swift/AST/ClangModuleLoader.h"
 #include "swift/Basic/Version.h"
 #include "swift/Demangling/Demangle.h"
@@ -53,6 +54,40 @@ using namespace lldb_private;
 char TypeSystemSwift::ID;
 char TypeSystemSwiftTypeRef::ID;
 char TypeSystemSwiftTypeRefForExpressions::ID;
+
+namespace lldb_private {
+
+/// swift::ASTContext-less Clang name importer.
+class ClangNameImporter {
+public:
+  ClangNameImporter(swift::LangOptions lang_opts)
+      : m_source_manager(FileSystem::Instance().GetVirtualFileSystem()),
+        m_diagnostic_engine(m_source_manager) {
+    m_compiler_invocation.getLangOptions() = lang_opts;
+    m_ast_context.reset(swift::ASTContext::get(
+        m_compiler_invocation.getLangOptions(),
+        m_compiler_invocation.getTypeCheckerOptions(),
+        m_compiler_invocation.getSILOptions(),
+        m_compiler_invocation.getSearchPathOptions(),
+        m_compiler_invocation.getClangImporterOptions(),
+        m_compiler_invocation.getSymbolGraphOptions(),
+        m_source_manager, m_diagnostic_engine));
+
+    m_clang_importer = swift::ClangImporter::create(*m_ast_context, "", {}, {});
+  }
+  std::string ImportName(const clang::NamedDecl *decl) {
+    swift::DeclName imported_name = m_clang_importer->importName(decl, {});
+    return imported_name.getBaseName().userFacingName().str();
+  }
+
+private:
+  swift::CompilerInvocation m_compiler_invocation;
+  swift::SourceManager m_source_manager;
+  swift::DiagnosticEngine m_diagnostic_engine;
+  std::unique_ptr<swift::ASTContext> m_ast_context;
+  std::unique_ptr<swift::ClangImporter> m_clang_importer;
+};
+} // namespace lldb_private
 
 /// Determine wether this demangle tree contains an unresolved type alias.
 static bool ContainsUnresolvedTypeAlias(swift::Demangle::NodePointer node) {
@@ -758,9 +793,8 @@ TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
   }
   // Else we must go through ClangImporter to apply the automatic
   // swiftification rules.
-  //
-  // TODO: Separate ClangImporter::ImportDecl into a freestanding
-  // class, so we don't need a SwiftASTContext for this!
+  if (auto *importer = GetNameImporter())
+    return importer->ImportName(named_decl);
   if (auto *swift_ast_context = GetSwiftASTContext())
     return swift_ast_context->ImportName(named_decl);
   return {};
@@ -1351,6 +1385,25 @@ swift::DWARFImporterDelegate &TypeSystemSwiftTypeRef::GetDWARFImporterDelegate()
     m_dwarf_importer_delegate_up.reset(CreateSwiftDWARFImporterDelegate(*this));
   assert(m_dwarf_importer_delegate_up);
   return *m_dwarf_importer_delegate_up;
+}
+
+ClangNameImporter *
+TypeSystemSwiftTypeRef::GetNameImporter() const {
+  if (llvm::isa<TypeSystemSwiftTypeRefForExpressions>(this) || !m_module)
+    return nullptr;
+  if (!m_name_importer_up) {
+    swift::LangOptions lang_opts;
+    lang_opts.setTarget(GetTriple());
+    m_name_importer_up = std::make_unique<ClangNameImporter>(lang_opts);
+  }
+  assert(m_name_importer_up);
+  return m_name_importer_up.get();
+}
+
+llvm::Triple TypeSystemSwiftTypeRef::GetTriple() const {
+  if (m_module)
+    return m_module->GetArchitecture().GetTriple();
+  return {};
 }
 
 void TypeSystemSwiftTypeRef::SetTriple(const llvm::Triple triple) {

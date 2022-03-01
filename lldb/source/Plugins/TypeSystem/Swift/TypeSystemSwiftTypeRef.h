@@ -34,6 +34,7 @@ class Demangler;
 
 namespace lldb_private {
 class ClangExternalASTSourceCallbacks;
+class ClangNameImporter;
 class SwiftASTContext;
 class SwiftASTContextForExpressions;
 
@@ -64,6 +65,8 @@ public:
     return *this;
   }
   swift::DWARFImporterDelegate &GetDWARFImporterDelegate();
+  ClangNameImporter *GetNameImporter() const;
+  llvm::Triple GetTriple() const;
   void SetTriple(const llvm::Triple triple) override;
   void ClearModuleDependentCaches() override;
   lldb::TargetWP GetTargetWP() const override { return {}; }
@@ -383,6 +386,7 @@ protected:
   mutable SwiftASTContext *m_swift_ast_context = nullptr;
   mutable std::unique_ptr<swift::DWARFImporterDelegate>
       m_dwarf_importer_delegate_up;
+  mutable std::unique_ptr<ClangNameImporter> m_name_importer_up;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_up;
 
   /// The APINotesManager responsible for each Clang module.
