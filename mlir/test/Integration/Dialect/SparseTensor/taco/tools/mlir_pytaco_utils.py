@@ -151,15 +151,21 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
     ValueError: If the shared library doesn't contain the needed routines.
   """
 
-  rank = ctypes.c_ulonglong(len(np_shape))
+  r = len(np_shape)
+  rank = ctypes.c_ulonglong(r)
   nse = ctypes.c_ulonglong(len(np_values))
   shape = np_shape.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
   values = np_values.ctypes.data_as(
       ctypes.POINTER(np.ctypeslib.as_ctypes_type(np_values.dtype)))
   indices = np_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
 
+  np_perm = np.arange(r, dtype=np.ulonglong)
+  np_sparse = np.full(r, 1, dtype=np.uint8)
+  perm = np_perm.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
+  sparse = np_sparse.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+
   convert_to = _get_support_func_locator()(np_values.dtype.type)[0]
-  ptr = convert_to(rank, nse, shape, values, indices)
+  ptr = convert_to(rank, nse, shape, values, indices, perm, sparse)
   assert ptr is not None, "Problem with calling convertToMLIRSparseTensorF64"
   return ptr
 
