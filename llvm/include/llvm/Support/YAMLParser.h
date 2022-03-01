@@ -11,7 +11,6 @@
 //  See http://www.yaml.org/spec/1.2/spec.html for the full standard.
 //
 //  This currently does not implement the following:
-//    * Multi-line literal folding.
 //    * Tag resolution.
 //    * UTF-16.
 //    * BOMs anywhere other than the first Unicode scalar value in the file.
