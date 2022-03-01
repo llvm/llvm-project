@@ -34,20 +34,22 @@ return:
   ret i32 %retval.0
 }
 
+; FORCE-NOT: define internal i32 @foo(
+;
 ; FORCE:      define internal i32 @foo.1(i32 %x, i32* %b) {
 ; FORCE-NEXT: entry:
 ; FORCE-NEXT:   %0 = load i32, i32* @A, align 4
 ; FORCE-NEXT:   %add = add nsw i32 %x, %0
 ; FORCE-NEXT:   ret i32 %add
 ; FORCE-NEXT: }
-
+;
 ; FORCE:      define internal i32 @foo.2(i32 %x, i32* %b) {
 ; FORCE-NEXT: entry:
 ; FORCE-NEXT:   %0 = load i32, i32* @B, align 4
 ; FORCE-NEXT:   %add = add nsw i32 %x, %0
 ; FORCE-NEXT:   ret i32 %add
 ; FORCE-NEXT: }
-
+;
 define internal i32 @foo(i32 %x, i32* %b) {
 entry:
   %0 = load i32, i32* %b, align 4
