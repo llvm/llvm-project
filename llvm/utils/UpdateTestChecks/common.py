@@ -306,6 +306,7 @@ IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
 MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
+DEBUG_ONLY_ARG_RE = re.compile(r'-debug-only[= ]([^ ]+)')
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r'^(\s+)')
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
@@ -351,6 +352,21 @@ def find_run_lines(test, lines):
     debug('  RUN: {}'.format(l))
   return run_lines
 
+def get_triple_from_march(march):
+  triples = {
+      'amdgcn': 'amdgcn',
+      'r600': 'r600',
+      'mips': 'mips',
+      'sparc': 'sparc',
+      'hexagon': 'hexagon',
+      've': 've',
+  }
+  for prefix, triple in triples.items():
+    if march.startswith(prefix):
+      return triple
+  print("Cannot find a triple. Assume 'x86'", file=sys.stderr)
+  return 'x86'
+
 def apply_filters(line, filters):
   has_filter = False
   for f in filters:
@@ -390,7 +406,7 @@ class function_body(object):
     self.extrascrub = extra
     self.args_and_sig = args_and_sig
     self.attrs = attrs
-  def is_same_except_arg_names(self, extrascrub, args_and_sig, attrs, is_asm):
+  def is_same_except_arg_names(self, extrascrub, args_and_sig, attrs, is_backend):
     arg_names = set()
     def drop_arg_names(match):
         arg_names.add(match.group(variable_group_in_ir_value_match))
@@ -409,9 +425,9 @@ class function_body(object):
     ans1 = IR_VALUE_RE.sub(drop_arg_names, args_and_sig)
     if ans0 != ans1:
         return False
-    if is_asm:
+    if is_backend:
         # Check without replacements, the replacements are not applied to the
-        # body for asm checks.
+        # body for backend checks.
         return self.extrascrub == extrascrub
 
     es0 = IR_VALUE_RE.sub(repl_arg_names, self.extrascrub)
@@ -460,7 +476,7 @@ class FunctionTestBuilder:
   def is_filtered(self):
     return bool(self._filters)
 
-  def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes, is_asm):
+  def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes, is_backend):
     build_global_values_dictionary(self._global_var_dict, raw_tool_output, prefixes)
     for m in function_re.finditer(raw_tool_output):
       if not m:
@@ -528,7 +544,7 @@ class FunctionTestBuilder:
                 scrubbed_extra,
                 args_and_sig,
                 attrs,
-                is_asm)):
+                is_backend)):
               self._func_dict[prefix][func].scrub = scrubbed_extra
               self._func_dict[prefix][func].args_and_sig = args_and_sig
               continue
@@ -766,7 +782,7 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
   return lines
 
 
-def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm, is_analyze, global_vars_seen_dict, is_filtered):
+def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_backend, is_analyze, global_vars_seen_dict, is_filtered):
   # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
   prefix_exclusions = set()
   printed_prefixes = []
@@ -801,7 +817,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       # Add some space between different check prefixes, but not after the last
       # check line (before the test code).
-      if is_asm:
+      if is_backend:
         if len(printed_prefixes) != 0:
           output_lines.append(comment_marker)
 
@@ -829,7 +845,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
         continue
 
       # For ASM output, just emit the check lines.
-      if is_asm:
+      if is_backend:
         body_start = 1
         if is_filtered:
           # For filtered output we don't add "-NEXT" so don't add extra spaces
