@@ -107,12 +107,12 @@ copy_and_scale(val, in_tensor, outs=[out_tensor])
 
 ## Index Attributes
 
-Attributes are compile-time constant parameters only accessible in index
+Index attributes are compile-time constant parameters only accessible in index
 expressions. They can be used to parameterize the access pattern of a structured
 operation, for example, by setting its strides. They cannot take part in the
 actual computation.
 
-The following example demonstrates the use of attributes:
+The following example demonstrates the use of index attributes:
 
 ```python
 @linalg_structured_op
@@ -136,9 +136,9 @@ The `strides` vector elements substitute the symbols `S.SH` and `S.SW` in the
 index expressions of the operation instance. If no strides are provided the
 `default` vector elements are used instead.
 
-Attributes are currently limited to integer vectors and only accessible in index
-expressions. An operation may have multiple attributes all of them placed at the
-end of the parameter list after the output tensors.
+Index attributes are currently limited to integer vectors and only accessible in
+index expressions. An operation may have multiple attributes all of them placed
+at the end of the parameter list after the output tensors.
 
 ## Shape-Only Tensors
 
@@ -219,6 +219,43 @@ There are also special forms:
 
 *   `const(value)` returns a constant value.
 *   `index(dim)` returns the iteration index in the given dimension `dim`.
+
+## Function Attributes
+
+Function attributes are compile-time constant function parameters. They can be
+used to parameterize the computation performed by a structured operation, for
+example, to support signed and unsigned computations.
+
+The following example demonstrates the use of function attributes:
+
+```python
+@linalg_structured_op
+def elemwise_binary(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T2),
+    O=TensorDef(U, output=True),
+    fun=BinaryFnAttrDef(default=BinaryFn.add),
+    cast=TypeFnAttrDef(default=TypeFn.cast)):
+  O[None] = fun(cast(U, lhs[None]), cast(U, rhs[None]))
+```
+
+The `fun` and `cast` function attributes by default are aliases for their
+default values `BinaryFn.add` and `TypeFn.cast`, respectively. When
+instantiating the operation, the function attributes may be set to other
+functions using optional named arguments:
+
+```python
+elemwise_binary(lhs, rhs, outs=[out_tensor],
+                fun=BinaryFn.mul, cast=TypeFn.cast_unsigned)
+```
+
+In the example, the `fun` and `cast` arguments adapt the body of the operation
+to implement multiplication and unsigned casts instead of addition and signed
+casts.
+
+OpDSL supports unary, binary, and type conversion function attributes. An
+operation can take multiple attributes of different kinds placed at the end of
+the parameter list.
 
 ## Types
 

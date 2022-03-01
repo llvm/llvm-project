@@ -108,17 +108,9 @@ static LogicalResult foldMemRefCast(Operation *op) {
 //===----------------------------------------------------------------------===//
 // Region builder helper.
 // TODO: Move this to a utility library.
-// The public methods on this class are referenced directly from generated code
-// and bind by name to math functions in the DSL as:
-//   `unary__{fnName}`
-//   `binary__{fnName}`
-// Examples:
-//   `binary__add`
-//   `binary__mul`
-//   `unary__exp`
-//   `unary__log`
-// The naming convention is intentional in order to match snake-cased DSL names.
-// See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
+// The public methods on this class are referenced directly from generated code.
+// Helper build the unary, binary, and type conversion functions defined by the
+// DSL. See mlir-linalg-ods-yaml-gen.cpp for the code that uses this class.
 //
 // Implementations of the math functions must be polymorphic over numeric types,
 // internally performing necessary casts. If the function application makes no
@@ -142,6 +134,98 @@ public:
   RegionBuilderHelper(MLIRContext *context, Block &block)
       : context(context), block(block) {}
 
+  // Build the unary functions defined by OpDSL.
+  Value buildUnaryFn(UnaryFn unaryFn, Value arg) {
+    if (!isFloatingPoint(arg))
+      llvm_unreachable("unsupported non numeric type");
+    OpBuilder builder = getBuilder();
+    switch (unaryFn) {
+    case UnaryFn::exp:
+      return builder.create<math::ExpOp>(arg.getLoc(), arg);
+    case UnaryFn::log:
+      return builder.create<math::LogOp>(arg.getLoc(), arg);
+    }
+    llvm_unreachable("unsupported unary function");
+  }
+
+  // Build the binary functions defined by OpDSL.
+  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1) {
+    bool allFloatingPoint = isFloatingPoint(arg0) && isFloatingPoint(arg1);
+    bool allInteger = isInteger(arg0) && isInteger(arg1);
+    if (!allFloatingPoint && !allInteger)
+      llvm_unreachable("unsupported non numeric type");
+    OpBuilder builder = getBuilder();
+    switch (binaryFn) {
+    case BinaryFn::add:
+      if (allFloatingPoint)
+        return builder.create<arith::AddFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::AddIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::mul:
+      if (allFloatingPoint)
+        return builder.create<arith::MulFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max:
+      if (allFloatingPoint)
+        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min:
+      if (allFloatingPoint)
+        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::sub:
+      if (allFloatingPoint)
+        return builder.create<arith::SubFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::SubIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max_unsigned:
+      if (allFloatingPoint)
+        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxUIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min_unsigned:
+      if (allFloatingPoint)
+        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
+    }
+    llvm_unreachable("unsupported binary function");
+  }
+
+  // Build the type functions defined by OpDSL.
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+    switch (typeFn) {
+    case TypeFn::cast:
+      return cast(toType, operand, false);
+    case TypeFn::cast_unsigned:
+      return cast(toType, operand, true);
+    }
+    llvm_unreachable("unsupported type conversion function");
+  }
+
+  void yieldOutputs(ValueRange values) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    builder.create<YieldOp>(loc, values);
+  }
+
+  Value constant(const std::string &value) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    Attribute valueAttr = parseAttribute(value, builder.getContext());
+    return builder.create<arith::ConstantOp>(loc, valueAttr.getType(),
+                                             valueAttr);
+  }
+
+  Value index(int64_t dim) {
+    OpBuilder builder = getBuilder();
+    return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
+  }
+
+  Type getIntegerType(unsigned width) {
+    return IntegerType::get(context, width);
+  }
+
+  Type getFloat32Type() { return Float32Type::get(context); }
+  Type getFloat64Type() { return Float64Type::get(context); }
+
+private:
   // Generates operations to cast the given operand to a specified type.
   // If the cast cannot be performed, a warning will be issued and the
   // operand returned as-is (which will presumably yield a verification
@@ -193,136 +277,6 @@ public:
     return operand;
   }
 
-  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
-    switch (typeFn) {
-    case TypeFn::cast:
-      return cast(toType, operand, false);
-    case TypeFn::cast_unsigned:
-      return cast(toType, operand, true);
-    }
-    llvm_unreachable("unsupported type conversion function");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__add(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::AddFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::AddIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value unary__exp(Value x) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(x))
-      return builder.create<math::ExpOp>(x.getLoc(), x);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value unary__log(Value x) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(x))
-      return builder.create<math::LogOp>(x.getLoc(), x);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__sub(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::SubFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::SubIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__mul(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MulFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MulIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__max(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MaxSIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__max_unsigned(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MaxUIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__min(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MinSIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value binary__min_unsigned(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder();
-    if (isFloatingPoint(lhs))
-      return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
-    if (isInteger(lhs))
-      return builder.create<arith::MinUIOp>(lhs.getLoc(), lhs, rhs);
-    llvm_unreachable("unsupported non numeric type");
-  }
-
-  void yieldOutputs(ValueRange values) {
-    assert(!values.empty() && "linalg ops must yield outputs");
-    if (values.empty())
-      return;
-    Value first = values.front();
-    OpBuilder builder = getBuilder();
-    builder.create<YieldOp>(first.getLoc(), values);
-  }
-
-  Value constant(const std::string &value) {
-    OpBuilder builder = getBuilder();
-    Location loc = builder.getUnknownLoc();
-    Attribute valueAttr = parseAttribute(value, builder.getContext());
-    return builder.create<arith::ConstantOp>(loc, valueAttr.getType(),
-                                             valueAttr);
-  }
-
-  Value index(int64_t dim) {
-    OpBuilder builder = getBuilder();
-    return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
-  }
-
-  Type getIntegerType(unsigned width) {
-    return IntegerType::get(context, width);
-  }
-
-  Type getFloat32Type() { return Float32Type::get(context); }
-
-  Type getFloat64Type() { return Float64Type::get(context); }
-
-private:
-  MLIRContext *context;
-  Block &block;
-
   bool isFloatingPoint(Value value) { return value.getType().isa<FloatType>(); }
   bool isInteger(Value value) { return value.getType().isa<IntegerType>(); }
 
@@ -331,6 +285,9 @@ private:
     builder.setInsertionPointToEnd(&block);
     return builder;
   }
+
+  MLIRContext *context;
+  Block &block;
 };
 
 } // namespace

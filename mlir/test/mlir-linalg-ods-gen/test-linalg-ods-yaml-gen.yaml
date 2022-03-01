@@ -111,7 +111,7 @@ structured_op: !LinalgStructuredOpConfig
 #   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL0]]);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
 #   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL2]]);
-#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.binary__add([[VAL1]], [[VAL3]]);
+#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.buildBinaryFn(BinaryFn::add, [[VAL1]], [[VAL3]]);
 
 
 # @linalg_structured_op
@@ -255,14 +255,15 @@ structured_op: !LinalgStructuredOpConfig
 #  IMPL-NEXT:    AffineMap scalarMap = AffineMap::get(getNumParallelLoops(), 0, context);
 #  IMPL-NEXT:    AffineMap tensorMap = AffineMap::getMultiDimIdentityMap(
 
-
 # @linalg_structured_op
-# def test4(O=TensorDef(T, S.M, S.N, output=True)):
+# def test4(O=TensorDef(T, S.M, S.N, output=True),
+#           unary_fun=UnaryFnAttrDef(default=UnaryFn.exp),
+#           binary_fun=BinaryFnAttrDef(default=BinaryFn.add)):
 #   """Title.
 
 #   Detailed description.
 #   """
-#   O[D.m, D.n] = BinaryFn.add(UnaryFn.exp(O[D.m, D.n]), O[D.m, D.n])
+#   O[D.m, D.n] = binary_fun(unary_fun(O[D.m, D.n]), O[D.m, D.n])
 
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
@@ -279,6 +280,14 @@ structured_op: !LinalgStructuredOpConfig
     kind: output_tensor
     type_var: T
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
+  - !LinalgOperandDefConfig
+    name: unary_fun
+    kind: unary_fn_attr
+    default_fn: exp
+  - !LinalgOperandDefConfig
+    name: binary_fun
+    kind: binary_fn_attr
+    default_fn: add
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
@@ -291,21 +300,36 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: binary
-        fn_name: add
+        attr_name: binary_fun
         operands:
         - !ScalarExpression
           scalar_fn:
             kind: unary
-            fn_name: exp
+            attr_name: unary_fun
             operands:
             - !ScalarExpression
               scalar_arg: O
         - !ScalarExpression
           scalar_arg: O
 
+# ODS-LABEL:  def Test4Op : LinalgStructuredBase_Op<"test4"
+
+#       ODS:  let arguments =
+#  ODS-NEXT:    Variadic<AnyType>:$inputs,
+#  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
+#  ODS-NEXT:    DefaultValuedAttr<UnaryFnAttr, "UnaryFn::exp">:$unary_fun,
+#  ODS-NEXT:    DefaultValuedAttr<BinaryFnAttr, "BinaryFn::add">:$binary_fun
+
+#       ODS:    "Attribute":$unary_fun, "Attribute":$binary_fun,
+
+#       ODS:    $_state.addAttribute("unary_fun", unary_fun)
+#  ODS-NEXT:    $_state.addAttribute("binary_fun", binary_fun)
+
 # IMPL-LABEL:  void Test4Op::regionBuilder(ImplicitLocOpBuilder &b,
 #  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
+#       IMPL:  UnaryFn unary_funVal = UnaryFn::exp
+#       IMPL:  BinaryFn binary_funVal = BinaryFn::add
 
-#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.unary__exp(block.getArgument(0))
-#  IMPL-NEXT:  Value [[VAL1:[a-z0-9]+]] = helper.binary__add([[VAL0]], block.getArgument(0))
+#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.buildUnaryFn(unary_funVal, block.getArgument(0))
+#  IMPL-NEXT:  Value [[VAL1:[a-z0-9]+]] = helper.buildBinaryFn(binary_funVal, [[VAL0]], block.getArgument(0))
 #  IMPL-NEXT:  yields.push_back([[VAL1]])

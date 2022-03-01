@@ -58,7 +58,26 @@ def Linalg_Dialect : Dialect {
   }];
 }
 
-// Define a TypeFn enum matching the OpDSL TypeFn class.
+// Define the function attribute enums matching the OpDSL functions.
+def UnaryFn : I32EnumAttr<"UnaryFn", "", [
+  I32EnumAttrCase<"exp", 0>,
+  I32EnumAttrCase<"log", 1>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+def BinaryFn : I32EnumAttr<"BinaryFn", "", [
+  I32EnumAttrCase<"add", 0>,
+  I32EnumAttrCase<"mul", 1>,
+  I32EnumAttrCase<"max", 2>,
+  I32EnumAttrCase<"min", 3>,
+  I32EnumAttrCase<"sub", 4>,
+  I32EnumAttrCase<"max_unsigned", 5>,
+  I32EnumAttrCase<"min_unsigned", 6>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
 def TypeFn : I32EnumAttr<"TypeFn", "", [
   I32EnumAttrCase<"cast", 0>,
   I32EnumAttrCase<"cast_unsigned", 1>
@@ -67,6 +86,12 @@ def TypeFn : I32EnumAttr<"TypeFn", "", [
   let cppNamespace = "::mlir::linalg";
 }
 
+def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+def BinaryFnAttr : EnumAttr<Linalg_Dialect, BinaryFn, "binary_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn"> {
   let assemblyFormat = "`<` $value `>`";
 }
