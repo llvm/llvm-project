@@ -496,16 +496,6 @@ let Predicates = [MMA, PrefixInstrs] in {
                                                Msk2Imm:$PMSK)),
             (PMXVF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
-  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2pn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
-                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
-            (PMXVF16GER2PN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
-  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2np v512i1:$ATi, v16i8:$XA, v16i8:$XB,
-                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
-            (PMXVF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
   def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2nn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
                                                Msk4Imm:$XMSK, Msk4Imm:$YMSK,
                                                Msk2Imm:$PMSK)),
