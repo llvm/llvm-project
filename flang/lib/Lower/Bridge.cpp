@@ -1087,10 +1087,6 @@ private:
     TODO(toLocation(), "CaseStmt lowering");
   }
 
-  void genFIR(const Fortran::parser::ContinueStmt &) {
-    TODO(toLocation(), "ContinueStmt lowering");
-  }
-
   void genFIR(const Fortran::parser::ElseIfStmt &) {
     TODO(toLocation(), "ElseIfStmt lowering");
   }
@@ -1120,6 +1116,7 @@ private:
   }
 
   // Nop statements - No code, or code is generated at the construct level.
+  void genFIR(const Fortran::parser::ContinueStmt &) {}      // nop
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}   // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
 

@@ -23,6 +23,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Factory.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
@@ -850,6 +851,13 @@ public:
     return builder.createConvert(loc, ty, lb);
   }
 
+  static bool isSlice(const Fortran::evaluate::ArrayRef &aref) {
+    for (const Fortran::evaluate::Subscript &sub : aref.subscript())
+      if (std::holds_alternative<Fortran::evaluate::Triplet>(sub.u))
+        return true;
+    return false;
+  }
+
   /// Lower an ArrayRef to a fir.coordinate_of given its lowered base.
   ExtValue genCoordinateOp(const ExtValue &array,
                            const Fortran::evaluate::ArrayRef &aref) {
@@ -862,7 +870,7 @@ public:
     if ((array.rank() > 1 && fir::hasDynamicSize(baseType)) ||
         fir::characterWithDynamicLen(fir::unwrapSequenceType(baseType)))
       if (!array.getBoxOf<fir::BoxValue>())
-        TODO(getLoc(), "genOffsetAndCoordinateOp");
+        return genOffsetAndCoordinateOp(array, aref);
     // Generate a fir.coordinate_of with zero based array indexes.
     llvm::SmallVector<mlir::Value> args;
     for (const auto &subsc : llvm::enumerate(aref.subscript())) {
@@ -883,13 +891,104 @@ public:
     return fir::factory::arrayElementToExtendedValue(builder, loc, array, addr);
   }
 
+  /// Lower an ArrayRef to a fir.coordinate_of using an element offset instead
+  /// of array indexes.
+  /// This generates offset computation from the indexes and length parameters,
+  /// and use the offset to access the element with a fir.coordinate_of. This
+  /// must only be used if it is not possible to generate a normal
+  /// fir.coordinate_of using array indexes (i.e. when the shape information is
+  /// unavailable in the IR).
+  ExtValue genOffsetAndCoordinateOp(const ExtValue &array,
+                                    const Fortran::evaluate::ArrayRef &aref) {
+    mlir::Location loc = getLoc();
+    mlir::Value addr = fir::getBase(array);
+    mlir::Type arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
+    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(eleTy));
+    mlir::Type refTy = builder.getRefType(eleTy);
+    mlir::Value base = builder.createConvert(loc, seqTy, addr);
+    mlir::IndexType idxTy = builder.getIndexType();
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    auto getLB = [&](const auto &arr, unsigned dim) -> mlir::Value {
+      return arr.getLBounds().empty() ? one : arr.getLBounds()[dim];
+    };
+    auto genFullDim = [&](const auto &arr, mlir::Value delta) -> mlir::Value {
+      mlir::Value total = zero;
+      assert(arr.getExtents().size() == aref.subscript().size());
+      delta = builder.createConvert(loc, idxTy, delta);
+      unsigned dim = 0;
+      for (auto [ext, sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
+        ExtValue subVal = genSubscript(sub);
+        assert(fir::isUnboxedValue(subVal));
+        mlir::Value val =
+            builder.createConvert(loc, idxTy, fir::getBase(subVal));
+        mlir::Value lb = builder.createConvert(loc, idxTy, getLB(arr, dim));
+        mlir::Value diff = builder.create<mlir::arith::SubIOp>(loc, val, lb);
+        mlir::Value prod =
+            builder.create<mlir::arith::MulIOp>(loc, delta, diff);
+        total = builder.create<mlir::arith::AddIOp>(loc, prod, total);
+        if (ext)
+          delta = builder.create<mlir::arith::MulIOp>(loc, delta, ext);
+        ++dim;
+      }
+      mlir::Type origRefTy = refTy;
+      if (fir::factory::CharacterExprHelper::isCharacterScalar(refTy)) {
+        fir::CharacterType chTy =
+            fir::factory::CharacterExprHelper::getCharacterType(refTy);
+        if (fir::characterWithDynamicLen(chTy)) {
+          mlir::MLIRContext *ctx = builder.getContext();
+          fir::KindTy kind =
+              fir::factory::CharacterExprHelper::getCharacterKind(chTy);
+          fir::CharacterType singleTy =
+              fir::CharacterType::getSingleton(ctx, kind);
+          refTy = builder.getRefType(singleTy);
+          mlir::Type seqRefTy =
+              builder.getRefType(builder.getVarLenSeqTy(singleTy));
+          base = builder.createConvert(loc, seqRefTy, base);
+        }
+      }
+      auto coor = builder.create<fir::CoordinateOp>(
+          loc, refTy, base, llvm::ArrayRef<mlir::Value>{total});
+      // Convert to expected, original type after address arithmetic.
+      return builder.createConvert(loc, origRefTy, coor);
+    };
+    return array.match(
+        [&](const fir::ArrayBoxValue &arr) -> ExtValue {
+          // FIXME: this check can be removed when slicing is implemented
+          if (isSlice(aref))
+            fir::emitFatalError(
+                getLoc(),
+                "slice should be handled in array expression context");
+          return genFullDim(arr, one);
+        },
+        [&](const fir::CharArrayBoxValue &arr) -> ExtValue {
+          mlir::Value delta = arr.getLen();
+          // If the length is known in the type, fir.coordinate_of will
+          // already take the length into account.
+          if (fir::factory::CharacterExprHelper::hasConstantLengthInType(arr))
+            delta = one;
+          return fir::CharBoxValue(genFullDim(arr, delta), arr.getLen());
+        },
+        [&](const fir::BoxValue &arr) -> ExtValue {
+          // CoordinateOp for BoxValue is not generated here. The dimensions
+          // must be kept in the fir.coordinate_op so that potential fir.box
+          // strides can be applied by codegen.
+          fir::emitFatalError(
+              loc, "internal: BoxValue in dim-collapsed fir.coordinate_of");
+        },
+        [&](const auto &) -> ExtValue {
+          fir::emitFatalError(loc, "internal: array lowering failed");
+        });
+  }
+
   ExtValue gen(const Fortran::evaluate::ArrayRef &aref) {
     ExtValue base = aref.base().IsSymbol() ? gen(aref.base().GetFirstSymbol())
                                            : gen(aref.base().GetComponent());
     return genCoordinateOp(base, aref);
   }
   ExtValue genval(const Fortran::evaluate::ArrayRef &aref) {
-    TODO(getLoc(), "genval ArrayRef");
+    return genLoad(gen(aref));
   }
 
   ExtValue gen(const Fortran::evaluate::CoarrayRef &coref) {
