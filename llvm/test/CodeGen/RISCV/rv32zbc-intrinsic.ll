@@ -10,5 +10,5 @@ define i32 @clmul32r(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-NEXT:    clmulr a0, a0, a1
 ; RV32ZBC-NEXT:    ret
   %tmp = call i32 @llvm.riscv.clmulr.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
