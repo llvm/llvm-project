@@ -91,6 +91,9 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
                "// line 2\n"
                "void f() {}\n");
 
+  EXPECT_EQ("// comment\n", format("//comment\n"));
+  EXPECT_EQ("// #comment\n", format("//#comment\n"));
+
   EXPECT_EQ("// comment\n"
             "// clang-format on\n",
             format("//comment\n"
@@ -3302,6 +3305,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(NoTextInComment, Style));
 
   Style.SpacesInLineCommentPrefix.Minimum = 0;
+  EXPECT_EQ("//#comment", format("//#comment", Style));
   EXPECT_EQ("//\n"
             "\n"
             "void foo() { //\n"
@@ -3310,6 +3314,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(NoTextInComment, Style));
 
   Style.SpacesInLineCommentPrefix.Minimum = 5;
+  EXPECT_EQ("//     #comment", format("//#comment", Style));
   EXPECT_EQ("//\n"
             "\n"
             "void foo() { //\n"
@@ -3463,6 +3468,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(Code, Style));
 
   Style.SpacesInLineCommentPrefix = {0, 0};
+  EXPECT_EQ("//#comment", format("//   #comment", Style));
   EXPECT_EQ("//Free comment without space\n"
             "\n"
             "//Free comment with 3 spaces\n"
