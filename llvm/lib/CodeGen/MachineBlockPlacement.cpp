@@ -201,6 +201,7 @@ static cl::opt<unsigned> TriangleChainCount(
     cl::Hidden);
 
 extern cl::opt<bool> EnableExtTspBlockPlacement;
+extern cl::opt<bool> ApplyExtTspWithoutProfile;
 
 namespace llvm {
 extern cl::opt<unsigned> StaticLikelyProb;
@@ -3419,7 +3420,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Apply a post-processing optimizing block placement.
-  if (MF.size() >= 3 && EnableExtTspBlockPlacement) {
+  if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
+      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData())) {
     // Find a new placement and modify the layout of the blocks in the function.
     applyExtTsp();
 
