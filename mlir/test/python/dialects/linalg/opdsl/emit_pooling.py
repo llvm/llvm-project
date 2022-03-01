@@ -16,8 +16,8 @@ def pooling_poly(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
-    reduce=BinaryFnAttrDef(default=BinaryFn.max),
-    cast=TypeFnAttrDef(default=TypeFn.cast),
+    reduce=BinaryFnAttrDef(default=BinaryFn.max_signed),
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
     strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
     dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
@@ -99,7 +99,7 @@ with Context() as ctx, Location.unknown():
           input,
           shape,
           outs=[init_result],
-          reduce=BinaryFn.min,
+          reduce=BinaryFn.min_signed,
           strides=[2, 4],
           dilations=[1, 2])
 
@@ -131,7 +131,7 @@ with Context() as ctx, Location.unknown():
           input,
           shape,
           outs=[init_result],
-          reduce=BinaryFn.min,
+          reduce=BinaryFn.min_signed,
           strides=[2, 4],
           dilations=[1, 2])
 

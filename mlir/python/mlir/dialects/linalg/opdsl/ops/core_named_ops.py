@@ -11,7 +11,7 @@ def elemwise_unary(
     I=TensorDef(T1),
     O=TensorDef(U, output=True),
     fun=UnaryFnAttrDef(default=UnaryFn.exp),
-    cast=TypeFnAttrDef(default=TypeFn.cast)):
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
   """Applies the unary function fun elementwise.
 
   Numeric casting is performed on the input operand, promoting it to the same
@@ -26,7 +26,7 @@ def elemwise_binary(
     rhs=TensorDef(T2),
     O=TensorDef(U, output=True),
     fun=BinaryFnAttrDef(default=BinaryFn.add),
-    cast=TypeFnAttrDef(default=TypeFn.cast)):
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
   """Applies the binary function fun elementwise.
 
   Numeric casting is performed on the input operand, promoting it to the same
@@ -40,7 +40,7 @@ def matmul(
     A=TensorDef(T1, S.M, S.K),
     B=TensorDef(T2, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True),
-    cast=TypeFnAttrDef(default=TypeFn.cast)):
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
   """Performs a matrix multiplication of two 2D inputs.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
@@ -82,8 +82,9 @@ def quantized_matmul(
   matmul.
   """
   domain(D.m, D.n, D.k)
-  C[D.m, D.n] += (TypeFn.cast(U, A[D.m, D.k]) - TypeFn.cast(U, AZp)) * (
-      TypeFn.cast(U, B[D.k, D.n]) - TypeFn.cast(U, BZp))
+  C[D.m, D.n] += (
+      TypeFn.cast_signed(U, A[D.m, D.k]) - TypeFn.cast_signed(U, AZp)) * (
+          TypeFn.cast_signed(U, B[D.k, D.n]) - TypeFn.cast_signed(U, BZp))
 
 
 @linalg_structured_op
@@ -103,8 +104,8 @@ def mmt4d(
   """
   domain(D.m, D.n, D.k, D.m0, D.n0, D.k0)
   implements(ContractionOpInterface)
-  accum[D.m, D.n, D.m0, D.n0] += TypeFn.cast(
-      TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * TypeFn.cast(
+  accum[D.m, D.n, D.m0, D.n0] += TypeFn.cast_signed(
+      TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * TypeFn.cast_signed(
           TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
 
 
@@ -121,7 +122,8 @@ def batch_matmul(
   domain(D.b, D.m, D.n, D.k)
   implements(ContractionOpInterface)
   C[D.b, D.m,
-    D.n] += TypeFn.cast(U, A[D.b, D.m, D.k]) * TypeFn.cast(U, B[D.b, D.k, D.n])
+    D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
+        U, B[D.b, D.k, D.n])
 
 
 @linalg_structured_op
@@ -139,9 +141,9 @@ def quantized_batch_matmul(
   matmul.
   """
   domain(D.b, D.m, D.n, D.k)
-  C[D.b, D.m,
-    D.n] += (TypeFn.cast(U, A[D.b, D.m, D.k]) - TypeFn.cast(U, AZp)) * (
-        TypeFn.cast(U, B[D.b, D.k, D.n]) - TypeFn.cast(U, BZp))
+  C[D.b, D.m, D.n] += (
+      TypeFn.cast_signed(U, A[D.b, D.m, D.k]) - TypeFn.cast_signed(U, AZp)) * (
+          TypeFn.cast_signed(U, B[D.b, D.k, D.n]) - TypeFn.cast_signed(U, BZp))
 
 
 @linalg_structured_op
@@ -156,7 +158,7 @@ def matvec(
   """
   domain(D.m, D.n)
   implements(ContractionOpInterface)
-  x[D.m] += TypeFn.cast(U, A[D.m, D.n]) * TypeFn.cast(U, y[D.n])
+  x[D.m] += TypeFn.cast_signed(U, A[D.m, D.n]) * TypeFn.cast_signed(U, y[D.n])
 
 
 @linalg_structured_op
@@ -171,7 +173,7 @@ def vecmat(
   """
   domain(D.n, D.m)
   implements(ContractionOpInterface)
-  x[D.n] += TypeFn.cast(U, y[D.m]) * TypeFn.cast(U, A[D.m, D.n])
+  x[D.n] += TypeFn.cast_signed(U, y[D.m]) * TypeFn.cast_signed(U, A[D.m, D.n])
 
 
 @linalg_structured_op
@@ -186,7 +188,8 @@ def batch_matvec(
   """
   domain(D.b, D.m, D.k)
   implements(ContractionOpInterface)
-  C[D.b, D.m] += TypeFn.cast(U, A[D.b, D.m, D.k]) * TypeFn.cast(U, B[D.b, D.k])
+  C[D.b, D.m] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
+      U, B[D.b, D.k])
 
 
 @linalg_structured_op
@@ -198,7 +201,7 @@ def dot(
   them to the same data type as the accumulator/output.
   """
   implements(ContractionOpInterface)
-  C[None] += TypeFn.cast(U, A[D.m]) * TypeFn.cast(U, B[D.m])
+  C[None] += TypeFn.cast_signed(U, A[D.m]) * TypeFn.cast_signed(U, B[D.m])
 
 
 @linalg_structured_op
@@ -213,7 +216,8 @@ def conv_1d(
   """
   implements(ConvolutionOpInterface)
   domain(D.ow, D.kw)
-  O[D.ow] += TypeFn.cast(U, I[D.ow + D.kw]) * TypeFn.cast(U, K[D.kw])
+  O[D.ow] += TypeFn.cast_signed(U, I[D.ow + D.kw]) * TypeFn.cast_signed(
+      U, K[D.kw])
 
 
 @linalg_structured_op
@@ -228,8 +232,8 @@ def conv_2d(
   """
   implements(ConvolutionOpInterface)
   domain(D.oh, D.ow, D.kh, D.kw)
-  O[D.oh, D.ow] += TypeFn.cast(U, I[D.oh + D.kh, D.ow + D.kw]) * TypeFn.cast(
-      U, K[D.kh, D.kw])
+  O[D.oh, D.ow] += TypeFn.cast_signed(
+      U, I[D.oh + D.kh, D.ow + D.kw]) * TypeFn.cast_signed(U, K[D.kh, D.kw])
 
 
 @linalg_structured_op
@@ -244,9 +248,9 @@ def conv_3d(
   """
   implements(ConvolutionOpInterface)
   domain(D.od, D.oh, D.ow, D.kd, D.kh, D.kw)
-  O[D.od, D.oh,
-    D.ow] += TypeFn.cast(U, I[D.od + D.kd, D.oh + D.kh, D.ow +
-                              D.kw]) * TypeFn.cast(U, K[D.kd, D.kh, D.kw])
+  O[D.od, D.oh, D.ow] += TypeFn.cast_signed(
+      U, I[D.od + D.kd, D.oh + D.kh, D.ow + D.kw]) * TypeFn.cast_signed(
+          U, K[D.kd, D.kh, D.kw])
 
 
 @linalg_structured_op
@@ -264,8 +268,8 @@ def conv_1d_nwc_wcf(
   implements(ConvolutionOpInterface)
   domain(D.n, D.ow, D.f, D.kw, D.c)
   O[D.n, D.ow,
-    D.f] += TypeFn.cast(U, I[D.n, D.ow * S.SW + D.kw * S.DW,
-                             D.c]) * TypeFn.cast(U, K[D.kw, D.c, D.f])
+    D.f] += TypeFn.cast_signed(U, I[D.n, D.ow * S.SW + D.kw * S.DW,
+                             D.c]) * TypeFn.cast_signed(U, K[D.kw, D.c, D.f])
 
 
 @linalg_structured_op
@@ -287,9 +291,9 @@ def conv_2d_nhwc_hwcf(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.f] += TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.f] += TypeFn.cast_signed(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
-           D.c]) * TypeFn.cast(U, K[D.kh, D.kw, D.c, D.f])
+           D.c]) * TypeFn.cast_signed(U, K[D.kh, D.kw, D.c, D.f])
 
 
 @linalg_structured_op
@@ -315,10 +319,11 @@ def conv_2d_nhwc_hwcf_q(
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow,
-    D.f] += (TypeFn.cast(
+    D.f] += (TypeFn.cast_signed(
         U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]) -
-             TypeFn.cast(U, IZp)) * (
-                 TypeFn.cast(U, K[D.kh, D.kw, D.c, D.f]) - TypeFn.cast(U, KZp))
+             TypeFn.cast_signed(U, IZp)) * (
+                 TypeFn.cast_signed(U, K[D.kh, D.kw, D.c, D.f]) -
+                 TypeFn.cast_signed(U, KZp))
 
 
 @linalg_structured_op
@@ -340,9 +345,9 @@ def conv_2d_nchw_fchw(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
-  O[D.n, D.f, D.oh, D.ow] += TypeFn.cast(
-      U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH,
-           D.ow * S.SW + D.kw * S.DW]) * TypeFn.cast(U, K[D.f, D.c, D.kh, D.kw])
+  O[D.n, D.f, D.oh, D.ow] += TypeFn.cast_signed(
+      U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW +
+           D.kw * S.DW]) * TypeFn.cast_signed(U, K[D.f, D.c, D.kh, D.kw])
 
 
 @linalg_structured_op
@@ -360,9 +365,9 @@ def conv_3d_ndhwc_dhwcf(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
-  O[D.n, D.od, D.oh, D.ow, D.f] += TypeFn.cast(
+  O[D.n, D.od, D.oh, D.ow, D.f] += TypeFn.cast_signed(
       U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
-           D.ow * S.SW + D.kw * S.DW, D.c]) * TypeFn.cast(
+           D.ow * S.SW + D.kw * S.DW, D.c]) * TypeFn.cast_signed(
                U, K[D.kd, D.kh, D.kw, D.c, D.f])
 
 
@@ -382,8 +387,8 @@ def depthwise_conv_1d_nwc_wc(
   implements(ConvolutionOpInterface)
   domain(D.n, D.ow, D.ic, D.kw)
   O[D.n, D.ow, D.ic] += \
-      TypeFn.cast(U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.ic]) * \
-      TypeFn.cast(U, K[D.kw, D.ic])
+      TypeFn.cast_signed(U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.ic]) * \
+      TypeFn.cast_signed(U, K[D.kw, D.ic])
 
 
 @linalg_structured_op
@@ -402,9 +407,9 @@ def depthwise_conv_2d_nhwc_hwc(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
-  O[D.n, D.oh, D.ow, D.ic] += TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.ic] += TypeFn.cast_signed(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
-           D.ic]) * TypeFn.cast(U, K[D.kh, D.kw, D.ic])
+           D.ic]) * TypeFn.cast_signed(U, K[D.kh, D.kw, D.ic])
 
 
 @linalg_structured_op
@@ -424,11 +429,11 @@ def depthwise_conv_2d_nhwc_hwc_q(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
-  O[D.n, D.oh, D.ow,
-    D.ic] += ((TypeFn.cast(
-        U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.ic]) -
-               TypeFn.cast(U, IZp)) *
-              (TypeFn.cast(U, K[D.kh, D.kw, D.ic]) - TypeFn.cast(U, KZp)))
+  O[D.n, D.oh, D.ow, D.ic] += ((TypeFn.cast_signed(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.ic]) -
+                                TypeFn.cast_signed(U, IZp)) *
+                               (TypeFn.cast_signed(U, K[D.kh, D.kw, D.ic]) -
+                                TypeFn.cast_signed(U, KZp)))
 
 
 @linalg_structured_op
@@ -446,9 +451,9 @@ def depthwise_conv_2d_nhwc_hwcm(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
-  O[D.n, D.oh, D.ow, D.ic, D.cm] += TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.ic, D.cm] += TypeFn.cast_signed(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
-           D.ic]) * TypeFn.cast(U, K[D.kh, D.kw, D.ic, D.cm])
+           D.ic]) * TypeFn.cast_signed(U, K[D.kh, D.kw, D.ic, D.cm])
 
 
 @linalg_structured_op
@@ -469,10 +474,11 @@ def depthwise_conv_2d_nhwc_hwcm_q(
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic,
-    D.cm] += ((TypeFn.cast(
+    D.cm] += ((TypeFn.cast_signed(
         U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.ic]) -
-               TypeFn.cast(U, IZp)) *
-              (TypeFn.cast(U, K[D.kh, D.kw, D.ic, D.cm]) - TypeFn.cast(U, KZp)))
+               TypeFn.cast_signed(U, IZp)) *
+              (TypeFn.cast_signed(U, K[D.kh, D.kw, D.ic, D.cm]) -
+               TypeFn.cast_signed(U, KZp)))
 
 
 @linalg_structured_op
@@ -490,7 +496,7 @@ def pooling_nhwc_sum(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.c, D.kh, D.kw)
-  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast_signed(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
 
 
@@ -509,8 +515,8 @@ def pooling_nhwc_max(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.c, D.kh, D.kw)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max[D.kh, D.kw](
-      TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max_signed[D.kh, D.kw](
+      TypeFn.cast_signed(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
 
@@ -549,8 +555,8 @@ def pooling_nchw_max(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.c, D.oh, D.ow, D.kh, D.kw)
-  O[D.n, D.c, D.oh, D.ow] = ReduceFn.max[D.kh, D.kw](
-      TypeFn.cast(
+  O[D.n, D.c, D.oh, D.ow] = ReduceFn.max_signed[D.kh, D.kw](
+      TypeFn.cast_signed(
           U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH,
                D.ow * S.SW + D.kw * S.DW,]))
 
@@ -570,8 +576,8 @@ def pooling_nhwc_min(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.c, D.kh, D.kw)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min[D.kh, D.kw](
-      TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min_signed[D.kh, D.kw](
+      TypeFn.cast_signed(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
 
@@ -610,7 +616,7 @@ def pooling_ndhwc_sum(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.c, D.kd, D.kh, D.kw)
-  O[D.n, D.od, D.oh, D.ow, D.c] += TypeFn.cast(
+  O[D.n, D.od, D.oh, D.ow, D.c] += TypeFn.cast_signed(
       U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
            D.ow * S.SW + D.kw * S.DW, D.c])
 
@@ -630,8 +636,8 @@ def pooling_ndhwc_max(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.c, D.kd, D.kh, D.kw)
-  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.max[D.kd, D.kh, D.kw](
-      TypeFn.cast(
+  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.max_signed[D.kd, D.kh, D.kw](
+      TypeFn.cast_signed(
           U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
                D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -651,8 +657,8 @@ def pooling_ndhwc_min(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.c, D.kd, D.kh, D.kw)
-  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.min[D.kd, D.kh, D.kw](
-      TypeFn.cast(
+  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.min_signed[D.kd, D.kh, D.kw](
+      TypeFn.cast_signed(
           U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
                D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -665,7 +671,7 @@ def fill_tensor(value=ScalarDef(T1), O=TensorDef(U, output=True)):
   accesses only and is thus rank polymorphic. Numeric casting is performed on
   the value operand, promoting it to the same data type as the output.
   """
-  O[None] = TypeFn.cast(U, value)
+  O[None] = TypeFn.cast_signed(U, value)
 
 
 @linalg_structured_op
@@ -685,15 +691,15 @@ def fill_rng_2d(
   the range of the generated random numbers.
   """
   domain(D.m, D.n)
-  multiplier = TypeFn.cast(I32, const(1103515245))
-  increment = TypeFn.cast(I32, const(12345))
-  rand1 = (TypeFn.cast(I32, index(D.m)) + seed) * multiplier + increment
-  rand2 = (TypeFn.cast(I32, index(D.n)) + rand1) * multiplier + increment
-  inv_range = TypeFn.cast(F64, const(2.3283064e-10))
-  offset = TypeFn.cast(F64, const(2147483647))
+  multiplier = TypeFn.cast_signed(I32, const(1103515245))
+  increment = TypeFn.cast_signed(I32, const(12345))
+  rand1 = (TypeFn.cast_signed(I32, index(D.m)) + seed) * multiplier + increment
+  rand2 = (TypeFn.cast_signed(I32, index(D.n)) + rand1) * multiplier + increment
+  inv_range = TypeFn.cast_signed(F64, const(2.3283064e-10))
+  offset = TypeFn.cast_signed(F64, const(2147483647))
   scaling = (max - min) * inv_range
-  O[D.m, D.n] = TypeFn.cast(T,
-                            (offset + TypeFn.cast(F64, rand2)) * scaling + min)
+  O[D.m, D.n] = TypeFn.cast_signed(
+      T, (offset + TypeFn.cast_signed(F64, rand2)) * scaling + min)
 
 
 @linalg_structured_op
@@ -706,4 +712,4 @@ def soft_plus_2d(
   """
   domain(D.m, D.n)
   O[D.m, D.n] = \
-      UnaryFn.log(TypeFn.cast(U, const(1.0)) + UnaryFn.exp(TypeFn.cast(U, I[D.m, D.n])))
+      UnaryFn.log(TypeFn.cast_signed(U, const(1.0)) + UnaryFn.exp(TypeFn.cast_signed(U, I[D.m, D.n])))

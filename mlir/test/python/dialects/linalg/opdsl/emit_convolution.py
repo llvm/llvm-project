@@ -19,9 +19,9 @@ def conv_poly(
     strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
     dilations=IndexAttrDef(S.DH, S.DW, default=[1, 2])):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast(
+  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast_signed(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
-           D.c]) * TypeFn.cast(U, K[D.kh, D.kw, D.c])
+           D.c]) * TypeFn.cast_signed(U, K[D.kh, D.kw, D.c])
 
 
 with Context() as ctx, Location.unknown():

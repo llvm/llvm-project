@@ -3,7 +3,7 @@
 
 # @linalg_structured_op
 # def test1(O=TensorDef(T, S.M, S.N, output=True),
-#           cast=TypeFnAttrDef(default=TypeFn.cast)):
+#           cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
 #   """Title.
 
 #   Detailed description.
@@ -28,7 +28,7 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: cast
     kind: type_fn_attr
-    default_fn: cast
+    default_fn: cast_signed
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
@@ -70,7 +70,7 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<TypeFnAttr, "TypeFn::cast">:$cast
+#  ODS-NEXT:    DefaultValuedAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
 
 #       ODS:  let builders =
 #       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -99,7 +99,7 @@ structured_op: !LinalgStructuredOpConfig
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
 #  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
-#       IMPL:  TypeFn castVal = TypeFn::cast;
+#       IMPL:  TypeFn castVal = TypeFn::cast_signed;
 #  IMPL-NEXT:  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
 #  IMPL-NEXT:                                return attr.getName() == "cast"; });
 #  IMPL-NEXT:  if (castIter != attrs.end()) {
@@ -209,7 +209,7 @@ structured_op: !LinalgStructuredOpConfig
 
 #   Detailed description.
 #   """
-#   O[None] = TypeFn.cast(U, value)
+#   O[None] = TypeFn.cast_signed(U, value)
 
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
@@ -241,7 +241,7 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: type
-        fn_name: cast
+        fn_name: cast_signed
         type_var: U
         operands:
         - !ScalarExpression

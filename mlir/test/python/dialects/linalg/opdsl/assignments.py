@@ -35,7 +35,7 @@ def matmul(
     B=TensorDef(T, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True),
     mul=BinaryFnAttrDef(default=BinaryFn.mul),
-    cast=TypeFnAttrDef(default=TypeFn.cast)):
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
   C[D.m, D.n] += mul(cast(U, A[D.m, D.k]), cast(U, B[D.k, D.n]))
 
 
@@ -63,13 +63,13 @@ def matmul(
 # CHECK:                      scalar_const: '3.1415926535897931 : f64'
 # CHECK:              scalar_fn:
 # CHECK:                kind: type
-# CHECK:                fn_name: cast
+# CHECK:                fn_name: cast_signed
 # CHECK:                type_var: T
 # CHECK:                operands:
 # CHECK:                  scalar_const: '42 : i64'
 # CHECK:          scalar_fn:
 # CHECK:            kind: type
-# CHECK:            fn_name: cast
+# CHECK:            fn_name: cast_signed
 # CHECK:            type_var: T
 # CHECK:            operands:
 # CHECK:              scalar_fn:
@@ -81,9 +81,9 @@ def matmul(
 def constants(
     O=TensorDef(T, S.M, S.K, output=True),
     exp=UnaryFnAttrDef(default=UnaryFn.exp)):
-  pi = TypeFn.cast(T, const(3.1415926535897931))
-  cst42 = TypeFn.cast(T, const(42))
-  cst1000 = TypeFn.cast(T, exp(const(1e+3)))
+  pi = TypeFn.cast_signed(T, const(3.1415926535897931))
+  cst42 = TypeFn.cast_signed(T, const(42))
+  cst1000 = TypeFn.cast_signed(T, exp(const(1e+3)))
   O[D.m, D.n] = UnaryFn.exp(pi) + cst42 - cst1000
 
 

@@ -24,7 +24,8 @@ def matmul(
     B=TensorDef(T, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True)):
   domain(D.m, D.n, D.k)
-  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast_signed(U, A[D.m, D.k]) * TypeFn.cast_signed(
+      U, B[D.k, D.n])
 
 
 # Verifies that assignment to a scalar (represented as [None]) is represented
@@ -42,7 +43,7 @@ def matmul(
 # CHECK-NEXT: - reduction
 @linalg_structured_op
 def dot(A=TensorDef(T, S.M), B=TensorDef(T, S.M), C=TensorDef(U, output=True)):
-  C[None] += TypeFn.cast(U, A[D.m]) * TypeFn.cast(U, B[D.m])
+  C[None] += TypeFn.cast_signed(U, A[D.m]) * TypeFn.cast_signed(U, B[D.m])
 
 
 # Verifies that the index_dims of shape-only operands translate to correct
@@ -65,4 +66,4 @@ def pool(
     K=TensorDef(T, S.K, index_dims=[D.k]),
     O=TensorDef(U, S.O, output=True)):
   domain(D.o, D.k)
-  O[D.o] += TypeFn.cast(U, I[D.o * 2 + D.k])
+  O[D.o] += TypeFn.cast_signed(U, I[D.o * 2 + D.k])

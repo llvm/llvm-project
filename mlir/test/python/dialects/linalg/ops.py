@@ -99,7 +99,7 @@ def testNamedStructuredOpCustomForm():
         init_result = linalg.InitTensorOp([4, 8], f32)
         # Check for the named form with custom format
         #      CHECK: linalg.elemwise_unary
-        # CHECK-SAME:    cast = #linalg.type_fn<cast>
+        # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
         # CHECK-SAME:    fun = #linalg.unary_fn<exp>
         # CHECK-SAME:    ins(%{{.*}} : tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
         unary_result = linalg.elemwise_unary(lhs, outs=[init_result.result])
@@ -137,7 +137,7 @@ def testNamedStructuredOpGenericForm():
         # CHECK-NEXT:    arith.mulf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
-        # CHECK-NEXT:    cast = #linalg.type_fn<cast>
+        # CHECK-NEXT:    cast = #linalg.type_fn<cast_signed>
         # CHECK-SAME:    operand_segment_sizes = dense<[2, 1]> : vector<2xi32>
         # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
         return linalg.matmul(lhs, rhs, outs=[init_result.result])

@@ -28,7 +28,7 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: cast
     kind: type_fn_attr
-    default_fn: cast
+    default_fn: cast_signed
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<() -> ()>
@@ -83,7 +83,7 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: cast
     kind: type_fn_attr
-    default_fn: cast
+    default_fn: cast_signed
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<() -> ()>
@@ -145,7 +145,7 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: cast
     kind: type_fn_attr
-    default_fn: cast
+    default_fn: cast_signed
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
@@ -324,7 +324,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -332,7 +332,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -345,7 +345,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -353,7 +353,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -424,7 +424,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: AccumType
                 operands:
                 - !ScalarExpression
@@ -432,7 +432,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: AccumType
                 operands:
                 - !ScalarExpression
@@ -493,7 +493,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -501,7 +501,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -577,7 +577,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -585,7 +585,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -598,7 +598,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -606,7 +606,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -665,7 +665,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -673,7 +673,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -732,7 +732,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -740,7 +740,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -800,7 +800,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -808,7 +808,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -866,7 +866,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -874,7 +874,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -933,7 +933,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -941,7 +941,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1002,7 +1002,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1010,7 +1010,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1074,7 +1074,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1082,7 +1082,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1158,7 +1158,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1166,7 +1166,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1256,7 +1256,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1264,7 +1264,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1372,7 +1372,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1380,7 +1380,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1393,7 +1393,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1401,7 +1401,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1491,7 +1491,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1499,7 +1499,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1591,7 +1591,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1599,7 +1599,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1674,7 +1674,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1682,7 +1682,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1767,7 +1767,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1775,7 +1775,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1876,7 +1876,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1884,7 +1884,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1897,7 +1897,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1905,7 +1905,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -1991,7 +1991,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -1999,7 +1999,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -2102,7 +2102,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -2110,7 +2110,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -2123,7 +2123,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -2131,7 +2131,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
@@ -2210,7 +2210,7 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2282,14 +2282,14 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: binary
-        fn_name: max
+        fn_name: max_signed
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2440,14 +2440,14 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: binary
-        fn_name: max
+        fn_name: max_signed
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2519,14 +2519,14 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: binary
-        fn_name: min
+        fn_name: min_signed
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2690,7 +2690,7 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2768,14 +2768,14 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: binary
-        fn_name: max
+        fn_name: max_signed
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2853,14 +2853,14 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: binary
-        fn_name: min
+        fn_name: min_signed
         operands:
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
           scalar_fn:
             kind: type
-            fn_name: cast
+            fn_name: cast_signed
             type_var: U
             operands:
             - !ScalarExpression
@@ -2897,7 +2897,7 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: type
-        fn_name: cast
+        fn_name: cast_signed
         type_var: U
         operands:
         - !ScalarExpression
@@ -2950,7 +2950,7 @@ structured_op: !LinalgStructuredOpConfig
     value: !ScalarExpression
       scalar_fn:
         kind: type
-        fn_name: cast
+        fn_name: cast_signed
         type_var: T
         operands:
         - !ScalarExpression
@@ -2971,7 +2971,7 @@ structured_op: !LinalgStructuredOpConfig
                     - !ScalarExpression
                       scalar_fn:
                         kind: type
-                        fn_name: cast
+                        fn_name: cast_signed
                         type_var: F64
                         operands:
                         - !ScalarExpression
@@ -2979,7 +2979,7 @@ structured_op: !LinalgStructuredOpConfig
                     - !ScalarExpression
                       scalar_fn:
                         kind: type
-                        fn_name: cast
+                        fn_name: cast_signed
                         type_var: F64
                         operands:
                         - !ScalarExpression
@@ -3000,7 +3000,7 @@ structured_op: !LinalgStructuredOpConfig
                                     - !ScalarExpression
                                       scalar_fn:
                                         kind: type
-                                        fn_name: cast
+                                        fn_name: cast_signed
                                         type_var: I32
                                         operands:
                                         - !ScalarExpression
@@ -3023,7 +3023,7 @@ structured_op: !LinalgStructuredOpConfig
                                                 - !ScalarExpression
                                                   scalar_fn:
                                                     kind: type
-                                                    fn_name: cast
+                                                    fn_name: cast_signed
                                                     type_var: I32
                                                     operands:
                                                     - !ScalarExpression
@@ -3033,7 +3033,7 @@ structured_op: !LinalgStructuredOpConfig
                                             - !ScalarExpression
                                               scalar_fn:
                                                 kind: type
-                                                fn_name: cast
+                                                fn_name: cast_signed
                                                 type_var: I32
                                                 operands:
                                                 - !ScalarExpression
@@ -3041,7 +3041,7 @@ structured_op: !LinalgStructuredOpConfig
                                         - !ScalarExpression
                                           scalar_fn:
                                             kind: type
-                                            fn_name: cast
+                                            fn_name: cast_signed
                                             type_var: I32
                                             operands:
                                             - !ScalarExpression
@@ -3049,7 +3049,7 @@ structured_op: !LinalgStructuredOpConfig
                                 - !ScalarExpression
                                   scalar_fn:
                                     kind: type
-                                    fn_name: cast
+                                    fn_name: cast_signed
                                     type_var: I32
                                     operands:
                                     - !ScalarExpression
@@ -3057,7 +3057,7 @@ structured_op: !LinalgStructuredOpConfig
                             - !ScalarExpression
                               scalar_fn:
                                 kind: type
-                                fn_name: cast
+                                fn_name: cast_signed
                                 type_var: I32
                                 operands:
                                 - !ScalarExpression
@@ -3079,7 +3079,7 @@ structured_op: !LinalgStructuredOpConfig
                     - !ScalarExpression
                       scalar_fn:
                         kind: type
-                        fn_name: cast
+                        fn_name: cast_signed
                         type_var: F64
                         operands:
                         - !ScalarExpression
@@ -3130,7 +3130,7 @@ structured_op: !LinalgStructuredOpConfig
             - !ScalarExpression
               scalar_fn:
                 kind: type
-                fn_name: cast
+                fn_name: cast_signed
                 type_var: U
                 operands:
                 - !ScalarExpression
@@ -3143,7 +3143,7 @@ structured_op: !LinalgStructuredOpConfig
                 - !ScalarExpression
                   scalar_fn:
                     kind: type
-                    fn_name: cast
+                    fn_name: cast_signed
                     type_var: U
                     operands:
                     - !ScalarExpression
