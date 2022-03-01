@@ -666,11 +666,15 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
+  bool noinline = false;
   const CallExpr *musttail = nullptr;
 
   for (const auto *A : S.getAttrs()) {
     if (A->getKind() == attr::NoMerge) {
       nomerge = true;
+    }
+    if (A->getKind() == attr::NoInline) {
+      noinline = true;
     }
     if (A->getKind() == attr::MustTail) {
       const Stmt *Sub = S.getSubStmt();
@@ -679,6 +683,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     }
   }
   SaveAndRestore<bool> save_nomerge(InNoMergeAttributedStmt, nomerge);
+  SaveAndRestore<bool> save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore<const CallExpr *> save_musttail(MustTailCall, musttail);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
