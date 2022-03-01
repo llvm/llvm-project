@@ -223,21 +223,21 @@ defm VOTE_SYNC_BALLOT : VOTE_SYNC<Int32Regs, "ballot.b32", int_nvvm_vote_ballot_
 
 multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntOp,
                           Operand ImmOp> {
-  def ii : NVPTXInst<(outs regclass:$dest), (ins i32imm:$mask, ImmOp:$value),
+  def ii : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, ImmOp:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set regclass:$dest, (IntOp imm:$mask, imm:$value))]>,
+              [(set Int32Regs:$dest, (IntOp imm:$mask, imm:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
-  def ir : NVPTXInst<(outs regclass:$dest), (ins Int32Regs:$mask, ImmOp:$value),
+  def ir : NVPTXInst<(outs Int32Regs:$dest), (ins Int32Regs:$mask, ImmOp:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set regclass:$dest, (IntOp Int32Regs:$mask, imm:$value))]>,
+              [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, imm:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
-  def ri : NVPTXInst<(outs regclass:$dest), (ins i32imm:$mask, regclass:$value),
+  def ri : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, regclass:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set regclass:$dest, (IntOp imm:$mask, regclass:$value))]>,
+              [(set Int32Regs:$dest, (IntOp imm:$mask, regclass:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
-  def rr : NVPTXInst<(outs regclass:$dest), (ins Int32Regs:$mask, regclass:$value),
+  def rr : NVPTXInst<(outs Int32Regs:$dest), (ins Int32Regs:$mask, regclass:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set regclass:$dest, (IntOp Int32Regs:$mask, regclass:$value))]>,
+              [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, regclass:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
 }
 
@@ -248,25 +248,25 @@ defm MATCH_ANY_SYNC_64 : MATCH_ANY_SYNC<Int64Regs, "b64", int_nvvm_match_any_syn
 
 multiclass MATCH_ALLP_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntOp,
                           Operand ImmOp> {
-  def ii : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
+  def ii : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set regclass:$dest, Int1Regs:$pred, (IntOp imm:$mask, imm:$value))]>,
+              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp imm:$mask, imm:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
-  def ir : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
+  def ir : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set regclass:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, imm:$value))]>,
+              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, imm:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
-  def ri : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
+  def ri : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set regclass:$dest, Int1Regs:$pred, (IntOp imm:$mask, regclass:$value))]>,
+              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp imm:$mask, regclass:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
-  def rr : NVPTXInst<(outs regclass:$dest, Int1Regs:$pred),
+  def rr : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set regclass:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, regclass:$value))]>,
+              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, regclass:$value))]>,
            Requires<[hasPTX60, hasSM70]>;
 }
 defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<Int32Regs, "b32", int_nvvm_match_all_sync_i32p,
