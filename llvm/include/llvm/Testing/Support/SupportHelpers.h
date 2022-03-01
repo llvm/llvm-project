@@ -238,6 +238,12 @@ public:
     }
   }
 
+  TempFile(const TempFile &) = delete;
+  TempFile &operator=(const TempFile &) = delete;
+
+  TempFile(TempFile &&) = default;
+  TempFile &operator=(TempFile &&) = default;
+
   /// The path to the file.
   StringRef path() const { return Path; }
 };
