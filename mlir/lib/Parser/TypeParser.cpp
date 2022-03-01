@@ -34,6 +34,8 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f16:
   case Token::kw_f32:
   case Token::kw_f64:
+  case Token::kw_f80:
+  case Token::kw_f128:
   case Token::kw_index:
   case Token::kw_none:
   case Token::exclamation_identifier:

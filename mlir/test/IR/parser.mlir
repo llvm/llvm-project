@@ -1420,3 +1420,7 @@ test.dialect_custom_printer custom_format
 // be handled by the dialect.
 // CHECK: test.dialect_custom_format_fallback custom_format_fallback
 test.dialect_custom_format_fallback custom_format_fallback
+
+// Check that an op with an optional result parses f80 as type.
+// CHECK: test.format_optional_result_d_op : f80
+test.format_optional_result_d_op : f80
