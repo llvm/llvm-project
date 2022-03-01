@@ -36,8 +36,10 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
-if (LIBUNWIND_TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${LIBUNWIND_TARGET_TRIPLE}\"")
+if (CMAKE_CXX_COMPILER_TARGET)
+  serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
+else()
+  serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
 foreach(param IN LISTS LIBUNWIND_TEST_PARAMS)
