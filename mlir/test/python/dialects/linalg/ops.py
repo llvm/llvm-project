@@ -94,20 +94,27 @@ def testNamedStructuredOpCustomForm():
     with InsertionPoint(module.body):
 
       @builtin.FuncOp.from_py_func(
-          RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8),
-                                                                   f32))
+          RankedTensorType.get((4, 8), f32), RankedTensorType.get((4, 8), f32))
       def named_form(lhs, rhs):
         init_result = linalg.InitTensorOp([4, 8], f32)
-        # First check the named form with custom format
-        #      CHECK: linalg.matmul
-        #      CHECK: cast = #linalg.type_fn<cast_unsigned>
-        #  CHECK-NOT: linalg.memoized_indexing_maps
-        # CHECK-SAME:    ins(%{{.*}} : tensor<4x16xf32>, tensor<16x8xf32>)
-        # CHECK-SAME:   outs(%{{.*}} : tensor<4x8xf32>)
-        # CHECK-SAME:   -> tensor<4x8xf32>
-        # CHECK-NEXT: return
-        return linalg.matmul(
-            lhs, rhs, outs=[init_result.result], cast=TypeFn.cast_unsigned)
+        # Check for the named form with custom format
+        #      CHECK: linalg.elemwise_unary
+        # CHECK-SAME:    cast = #linalg.type_fn<cast>
+        # CHECK-SAME:    fun = #linalg.unary_fn<exp>
+        # CHECK-SAME:    ins(%{{.*}} : tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
+        unary_result = linalg.elemwise_unary(lhs, outs=[init_result.result])
+        #      CHECK: linalg.elemwise_binary
+        # CHECK-SAME:    cast = #linalg.type_fn<cast_unsigned>
+        # CHECK-SAME:    fun = #linalg.binary_fn<mul>
+        # CHECK-SAME:    ins(%{{.*}}, %{{.*}} : tensor<4x8xf32>, tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
+        #      CHECK: return
+        binary_result = linalg.elemwise_binary(
+            lhs,
+            rhs,
+            outs=[init_result.result],
+            fun=BinaryFn.mul,
+            cast=TypeFn.cast_unsigned)
+        return unary_result, binary_result
 
   print(module)
 
@@ -130,7 +137,8 @@ def testNamedStructuredOpGenericForm():
         # CHECK-NEXT:    arith.mulf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
-        # CHECK-NEXT:    operand_segment_sizes = dense<[2, 1]> : vector<2xi32>
+        # CHECK-NEXT:    cast = #linalg.type_fn<cast>
+        # CHECK-SAME:    operand_segment_sizes = dense<[2, 1]> : vector<2xi32>
         # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
         return linalg.matmul(lhs, rhs, outs=[init_result.result])
 

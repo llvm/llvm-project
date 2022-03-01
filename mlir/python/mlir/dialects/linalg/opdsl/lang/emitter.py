@@ -41,7 +41,7 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   all_arg_defs = op_config.ordered_operands
   in_arg_defs = [
       d for d in all_arg_defs
-      if d.kind == OperandKind.SCALAR or d.kind == OperandKind.INPUT_TENSOR
+      if d.kind in [OperandKind.SCALAR, OperandKind.INPUT_TENSOR]
   ]
   out_arg_defs = [
       d for d in all_arg_defs if d.kind == OperandKind.OUTPUT_TENSOR
@@ -49,8 +49,11 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   index_attr_arg_defs = [
       d for d in all_arg_defs if d.kind == OperandKind.INDEX_ATTR
   ]
-  type_fn_attr_arg_defs = [
-      d for d in all_arg_defs if d.kind == OperandKind.TYPE_FN_ATTR
+  fn_attr_arg_defs = [
+      d for d in all_arg_defs if d.kind in [
+          OperandKind.UNARY_FN_ATTR, OperandKind.BINARY_FN_ATTR,
+          OperandKind.TYPE_FN_ATTR
+      ]
   ]
 
   # Verify outs is a sequence or a list of results.
@@ -135,28 +138,38 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
       array = np.array(index_attr_vals, dtype=np.int64)
       index_attrs[index_attr.name] = DenseElementsAttr.get(array)
 
-  # Compute the type function attribute mapping.
-  type_fn_attr_mapping = {}
-  for type_fn_attr in type_fn_attr_arg_defs:
-    attr_val = type_fn_attr.operand_def.default_fn
-    if type_fn_attr.name in attrs:
-      type_fn = attrs.get(type_fn_attr.name)
-      if not isinstance(type_fn, TypeFnType):
-        raise ValueError(f"Attribute {type_fn_attr.name} needs to be of type "
-                         f"TypeFnType but got {type(attr_val)}")
-      attr_val = type_fn.fn_name
-    assert attr_val, "Type function attribute has no value"
-    type_fn_attr_mapping[type_fn_attr.name] = attr_val
+  # Compute the function attribute mapping.
+  fn_attr_mapping = {}
+  for fn_attr in fn_attr_arg_defs:
+    attr_val = fn_attr.operand_def.default_fn
+    attr_kind = fn_attr.kind
+    if fn_attr.name in attrs:
+      fn = attrs.get(fn_attr.name)
+      if attr_kind == OperandKind.UNARY_FN_ATTR:
+        if not isinstance(fn, UnaryFnType):
+          raise ValueError(f"Attribute {fn_attr.name} needs to be of type "
+                           f"UnaryFnType but got {type(attr_val)}")
+      elif attr_kind == OperandKind.BINARY_FN_ATTR:
+        if not isinstance(fn, BinaryFnType):
+          raise ValueError(f"Attribute {fn_attr.name} needs to be of type "
+                           f"BinaryFnType but got {type(attr_val)}")
+      else:
+        if not isinstance(fn, TypeFnType):
+          raise ValueError(f"Attribute {fn_attr.name} needs to be of type "
+                           f"TypeFnType but got {type(attr_val)}")
+      attr_val = fn.fn_name
+    assert attr_val, "Function attribute has no value"
+    fn_attr_mapping[fn_attr.name] = (attr_val, attr_kind)
 
   return (all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types,
           type_mapping, indexing_maps_attr, iterator_types_attr, index_attrs,
-          type_fn_attr_mapping, block_arg_types)
+          fn_attr_mapping, block_arg_types)
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
                                outs: ValueList, **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  indexing_maps_attr, iterator_types_attr, index_attrs, type_fn_attr_mapping, \
+  indexing_maps_attr, iterator_types_attr, index_attrs, fn_attr_mapping, \
   block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
 
@@ -193,7 +206,7 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
   block_arg_mapping = dict(zip(block_arg_names, block.arguments))
   with InsertionPoint(block):
     body_builder = _BodyBuilder(type_mapping, block_arg_mapping,
-                                type_fn_attr_mapping)
+                                fn_attr_mapping)
     for assignment in op_config.assignments:
       body_builder.assign(assignment)
     body_builder.yield_outputs(*_get_operand_def_names(*out_arg_defs))
@@ -208,7 +221,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
                              op_class_name: str, *ins: Value, outs: ValueList,
                              **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  indexing_maps_attr, iterator_types_attr, index_attrs, type_fn_attr_mapping, \
+  indexing_maps_attr, iterator_types_attr, index_attrs, fn_attr_mapping, \
   block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
 
@@ -225,10 +238,12 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
   for name, value in index_attrs.items():
     named_op.operation.attributes[name] = value
 
-  # Set the type function attributes.
-  for name, value in type_fn_attr_mapping.items():
+  # Compute the function attributes by combining operand kind and function name.
+  for name, (fn_name, kind) in fn_attr_mapping.items():
+    assert kind.name.lower().endswith("_attr")
+    enum_name = kind.name.lower()[:-5]
     named_op.operation.attributes[name] = Attribute.parse(
-        f"#linalg.type_fn<{value}>")
+        f"#linalg.{enum_name}<{fn_name}>")
 
   linalg.fill_builtin_region(named_op.operation)
 
@@ -242,11 +257,11 @@ class _BodyBuilder:
   """Constructs a structured op body by evaluating assignments."""
 
   def __init__(self, type_mapping: Dict[str, Type],
-               block_arg_mapping: Dict[str, Value],
-               type_fn_attr_mapping: Dict[str, str]):
+               block_arg_mapping: Dict[str, Value], fn_attr_mapping: Dict[str,
+                                                                          str]):
     self.type_mapping = type_mapping
     self.block_arg_mapping = block_arg_mapping
-    self.type_fn_attr_mapping = type_fn_attr_mapping
+    self.fn_attr_mapping = fn_attr_mapping
     self.yield_mapping = dict()  # type: Dict[str, Value]
 
   def assign(self, assignment: ScalarAssign):
@@ -270,21 +285,18 @@ class _BodyBuilder:
       dim_attr = IntegerAttr.get(
           IntegerType.get_signless(64), expr.scalar_index.dim)
       return linalg.IndexOp(dim_attr).result
-    elif expr.scalar_fn and expr.scalar_fn.kind is not FunctionKind.TYPE:
-      kind = expr.scalar_fn.kind.name.lower()
-      fn = self._get_function(f"_{kind}_{expr.scalar_fn.fn_name}")
-      operand_values = [
-          self.expression(operand) for operand in expr.scalar_fn.operands
-      ]
-      return fn(*operand_values)
-    elif expr.scalar_fn and expr.scalar_fn.kind is FunctionKind.TYPE:
+    elif expr.scalar_fn:
       kind = expr.scalar_fn.kind.name.lower()
       fn_name = expr.scalar_fn.fn_name
       if expr.scalar_fn.attr_name:
-        fn_name = self.type_fn_attr_mapping[expr.scalar_fn.attr_name]
+        fn_name, _ = self.fn_attr_mapping[expr.scalar_fn.attr_name]
       fn = self._get_function(f"_{kind}_{fn_name}")
-      operand_value = self.expression(expr.scalar_fn.operands[0])
-      return fn(expr.scalar_fn.type_var.name, operand_value)
+      operand_values = [
+          self.expression(operand) for operand in expr.scalar_fn.operands
+      ]
+      if expr.scalar_fn.kind == FunctionKind.TYPE:
+        operand_values = [expr.scalar_fn.type_var.name] + operand_values
+      return fn(*operand_values)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
 
   def yield_outputs(self, *output_names: str):

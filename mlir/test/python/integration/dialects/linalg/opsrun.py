@@ -19,6 +19,37 @@ def log(*args):
   sys.stderr.flush()
 
 
+elemwise_boiler = """
+func @main() -> f32 attributes {llvm.emit_c_interface} {
+  %v0 = arith.constant 0.0 : f32
+  %v1 = arith.constant 1.0 : f32
+  %v2 = arith.constant 2.0 : f32
+
+  %lhs = memref.alloc() : memref<4x8xf32>
+  %rhs = memref.alloc() : memref<4x8xf32>
+  %O0 = memref.alloc() : memref<4x8xf32>
+  %O1 = memref.alloc() : memref<4x8xf32>
+  linalg.fill(%v1, %lhs) : f32, memref<4x8xf32>
+  linalg.fill(%v2, %rhs) : f32, memref<4x8xf32>
+  linalg.fill(%v0, %O0) : f32, memref<4x8xf32>
+  linalg.fill(%v0, %O1) : f32, memref<4x8xf32>
+
+  call @elemwise_exp_add_on_buffers(%lhs, %rhs, %O0) :
+    (memref<4x8xf32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
+  call @elemwise_log_mul_on_buffers(%lhs, %rhs, %O1) :
+    (memref<4x8xf32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
+
+  %c0 = arith.constant 0 : index
+  %res0 = memref.load %O0[%c0, %c0] : memref<4x8xf32>
+  %res1 = memref.load %O1[%c0, %c0] : memref<4x8xf32>
+
+  %0 = arith.addf %res0, %res1 : f32
+
+  // TODO: FFI-based solution to allow testing and printing with python code.
+  return %0 : f32
+}
+"""
+
 matmul_boiler = """
 func @main() -> f32 attributes {llvm.emit_c_interface} {
   %v0 = arith.constant 0.0 : f32
@@ -166,11 +197,91 @@ def transform(module, boilerplate):
 
   pm = PassManager.parse(
       "builtin.func(convert-linalg-to-loops, lower-affine, " +
-      "convert-scf-to-cf, arith-expand, memref-expand), convert-vector-to-llvm,"
-      + "convert-memref-to-llvm, convert-std-to-llvm," +
+      "convert-math-to-llvm, convert-scf-to-cf, arith-expand, memref-expand), "
+      + "convert-vector-to-llvm, convert-memref-to-llvm, convert-std-to-llvm," +
       "reconcile-unrealized-casts")
   pm.run(mod)
   return mod
+
+
+def test_elemwise_builtin():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    i8 = IntegerType.get_signless(8)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((4, 8), f32))
+      def elemwise_exp_add_on_buffers(lhs, rhs, out):
+        linalg.elemwise_unary(lhs, outs=[out])
+        linalg.elemwise_binary(out, rhs, outs=[out])
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((4, 8), f32))
+      def elemwise_log_mul_on_buffers(lhs, rhs, out):
+        linalg.elemwise_unary(lhs, outs=[out], fun=UnaryFn.log)
+        linalg.elemwise_binary(out, rhs, outs=[out], fun=BinaryFn.mul)
+
+    execution_engine = ExecutionEngine(transform(module, elemwise_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result f32.
+    # Arguments must be passed as pointers.
+    c_float_p = ctypes.c_float * 1
+    res = c_float_p(-1.)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # elemwise_exp_add_on_buffers: exp(1.0) + 2.0 = 4.71828182846
+    # elemwise_log_mul_on_buffers: log(1.0) * 2.0 = 0.0
+    # CHECK: RESULT: 4.71828
+
+
+test_elemwise_builtin()
+
+
+def test_elemwise_generic():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    i8 = IntegerType.get_signless(8)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((4, 8), f32))
+      def elemwise_exp_add_on_buffers(lhs, rhs, out):
+        linalg.elemwise_unary(lhs, outs=[out], emit_generic=True)
+        linalg.elemwise_binary(out, rhs, outs=[out], emit_generic=True)
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((4, 8), f32))
+      def elemwise_log_mul_on_buffers(lhs, rhs, out):
+        linalg.elemwise_unary(
+            lhs, outs=[out], fun=UnaryFn.log, emit_generic=True)
+        linalg.elemwise_binary(
+            out, rhs, outs=[out], fun=BinaryFn.mul, emit_generic=True)
+
+    execution_engine = ExecutionEngine(transform(module, elemwise_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result f32.
+    # Arguments must be passed as pointers.
+    c_float_p = ctypes.c_float * 1
+    res = c_float_p(-1.)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # elemwise_exp_add_on_buffers: exp(1.0) + 2.0 = 4.71828182846
+    # elemwise_log_mul_on_buffers: log(1.0) * 2.0 = 0.0
+    # CHECK: RESULT: 4.71828
+
+
+test_elemwise_generic()
 
 
 def test_matmul_builtin():

@@ -126,7 +126,7 @@ class TensorUse(TensorExpression):
     return rhs_dims - lhs_dims
 
   def __iadd__(self, rhs: TensorExpression) -> "TensorReduceFn":
-    return ReduceFnUse(BinaryFn.add, *self._compute_reduce_dims(rhs))(rhs)
+    return ReduceFnUse(BinaryFn.add, None, *self._compute_reduce_dims(rhs))(rhs)
 
   def __repr__(self):
     return (f"{self.operand_def.name}"
@@ -183,8 +183,14 @@ class TensorReduceFn(TensorExpression):
                        f"bound to its lhs: {self}")
     full_args = [self.lhs.to_scalar_expression()
                 ] + [arg.to_scalar_expression() for arg in self.args]
-    return ScalarFn(FunctionKind.BINARY, self.reduce_use.binary_fn.fn_name,
-                    None, None, full_args).expr()
+    fn_name = None
+    attr_name = None
+    if self.reduce_use.binary_fn:
+      fn_name = self.reduce_use.binary_fn.fn_name
+    if self.reduce_use.binary_attr:
+      attr_name = self.reduce_use.binary_attr.operand_def.name
+    return ScalarFn(FunctionKind.BINARY, fn_name, attr_name, None,
+                    full_args).expr()
 
   def visit_tensor_exprs(self, callback: Callable[["TensorExpression"], None]):
     for arg in self.args:
@@ -257,8 +263,8 @@ class UnaryFnType:
   def __init__(self, fn_name: str):
     self.fn_name = fn_name
 
-  def __call__(self, exp: TensorExpression) -> "TensorFn":
-    return TensorFn(FunctionKind.UNARY, self.fn_name, None, None, [exp])
+  def __call__(self, arg: TensorExpression) -> "TensorFn":
+    return TensorFn(FunctionKind.UNARY, self.fn_name, None, None, [arg])
 
   def __repr__(self):
     return f"{self.fn_name}"
@@ -345,16 +351,21 @@ class ReduceFnUse:
   A reduction use specifies the reduction function and dimensions.
   """
 
-  def __init__(self, binary_fn: BinaryFnType, *reduce_dims: DimDef):
+  def __init__(self, binary_fn: Optional[BinaryFnType],
+               binary_attr: Optional["BinaryFnAttrDef"], *reduce_dims: DimDef):
+    if bool(binary_fn) + bool(binary_attr) != 1:
+      raise ValueError("One of 'binary_fn', 'binary_attr' must be specified")
     self.binary_fn = binary_fn
+    self.binary_attr = binary_attr
     self.reduce_dims = reduce_dims
 
   def __call__(self, *args: TensorExpression) -> "TensorReduceFn":
     return TensorReduceFn(self, args)
 
   def __repr__(self):
-    return (f"reduce_{self.binary_fn.fn_name}"
-            f"({', '.join(repr(d) for d in self.reduce_dims)})")
+    fn = self.binary_fn if self.binary_fn else self.binary_attr
+    return (
+        f"reduce_{repr(fn)}({', '.join(repr(d) for d in self.reduce_dims)})")
 
 
 class ReduceFnType:
@@ -369,10 +380,10 @@ class ReduceFnType:
     self.binary_fn = binary_fn
 
   def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
-    return ReduceFnUse(self.binary_fn, *reduce_dims)
+    return ReduceFnUse(self.binary_fn, None, *reduce_dims)
 
   def __repr__(self):
-    return (f"reduce_{self.binary_fn.fn_name}")
+    return f"reduce_{repr(self.binary_fn)}"
 
 
 class ReduceFn:
@@ -394,7 +405,9 @@ class OperandKind(Enum):
   SCALAR = 1
   OUTPUT_TENSOR = 2
   INDEX_ATTR = 3
-  TYPE_FN_ATTR = 4
+  UNARY_FN_ATTR = 4
+  BINARY_FN_ATTR = 5
+  TYPE_FN_ATTR = 6
 
 
 class OperandDef:
@@ -441,6 +454,8 @@ class OperandDef:
 
   def is_attribute(self) -> bool:
     return (self.kind == OperandKind.INDEX_ATTR or
+            self.kind == OperandKind.UNARY_FN_ATTR or
+            self.kind == OperandKind.BINARY_FN_ATTR or
             self.kind == OperandKind.TYPE_FN_ATTR)
 
   def __hash__(self):
@@ -555,6 +570,49 @@ class IndexAttrDef:
                        f"but got {len(default)}")
     self.operand_def = OperandDef(
         OperandKind.INDEX_ATTR, size_exprs=sizes, default_indices=default)
+
+
+class UnaryFnAttrDef:
+  """Unary function attribute definition.
+
+  Unary function attributes provide a way to make the arithmetic computation
+  parametrizable. Every attribute specifies a default unary function
+  that may be overwritten at operation instantiation time.
+  """
+
+  def __init__(self, default: "UnaryFnType"):
+    if not isinstance(default, UnaryFnType):
+      raise ValueError(f"UnaryFnAttrDef requires default of type UnaryFnType "
+                       f"but got {default}")
+    self.operand_def = OperandDef(
+        OperandKind.UNARY_FN_ATTR, default_fn=default.fn_name)
+
+  def __call__(self, arg: TensorExpression) -> TensorFn:
+    return TensorFn(FunctionKind.UNARY, None, self.operand_def, None, [arg])
+
+
+class BinaryFnAttrDef:
+  """Binary function attribute definition.
+
+  Binary function attributes provide a way to make the arithmetic computation
+  parametrizable. Every attribute specifies a default binary function
+  that may be overwritten at operation instantiation time.
+  """
+
+  def __init__(self, default: "BinaryFnType"):
+    if not isinstance(default, BinaryFnType):
+      raise ValueError(f"BinaryFnAttrDef requires default of type BinaryFnType "
+                       f"but got {default}")
+    self.operand_def = OperandDef(
+        OperandKind.BINARY_FN_ATTR, default_fn=default.fn_name)
+
+  def __call__(self, arg0: TensorExpression,
+               arg1: TensorExpression) -> TensorFn:
+    return TensorFn(FunctionKind.BINARY, None, self.operand_def, None,
+                    [arg0, arg1])
+
+  def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
+    return ReduceFnUse(None, self, *reduce_dims)
 
 
 class TypeFnAttrDef:

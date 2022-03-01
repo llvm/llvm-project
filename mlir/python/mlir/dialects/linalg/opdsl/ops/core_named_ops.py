@@ -7,6 +7,35 @@ Batch = S.Batch
 
 
 @linalg_structured_op
+def elemwise_unary(
+    I=TensorDef(T1),
+    O=TensorDef(U, output=True),
+    fun=UnaryFnAttrDef(default=UnaryFn.exp),
+    cast=TypeFnAttrDef(default=TypeFn.cast)):
+  """Applies the unary function fun elementwise.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  O[None] = fun(cast(U, I[None]))
+
+
+@linalg_structured_op
+def elemwise_binary(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T2),
+    O=TensorDef(U, output=True),
+    fun=BinaryFnAttrDef(default=BinaryFn.add),
+    cast=TypeFnAttrDef(default=TypeFn.cast)):
+  """Applies the binary function fun elementwise.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  O[None] = fun(cast(U, lhs[None]), cast(U, rhs[None]))
+
+
+@linalg_structured_op
 def matmul(
     A=TensorDef(T1, S.M, S.K),
     B=TensorDef(T2, S.K, S.N),
