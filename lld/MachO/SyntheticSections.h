@@ -595,6 +595,7 @@ private:
 };
 
 struct InStruct {
+  const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
   CStringSection *cStringSection = nullptr;
   WordLiteralSection *wordLiteralSection = nullptr;

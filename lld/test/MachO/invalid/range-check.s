@@ -6,8 +6,8 @@
 # RUN: %lld -dylib %t/bar.o -o %t/libbar.dylib
 # RUN: not %lld -lSystem -o /dev/null %t/libbar.dylib %t/test.o 2>&1 | FileCheck %s
 
-# CHECK: error: relocation UNSIGNED is out of range: [[#]] is not in [0, 4294967295]; references _foo
-# CHECK: error: relocation GOT_LOAD is out of range: [[#]] is not in [-2147483648, 2147483647]; references _foo
+# CHECK: error: {{.*}}test.o:(symbol _main+0xd): relocation UNSIGNED is out of range: [[#]] is not in [0, 4294967295]; references _foo
+# CHECK: error: {{.*}}test.o:(symbol _main+0x3): relocation GOT_LOAD is out of range: [[#]] is not in [-2147483648, 2147483647]; references _foo
 # CHECK: error: stub is out of range: [[#]] is not in [-2147483648, 2147483647]; references _bar
 # CHECK: error: stub helper header is out of range: [[#]] is not in [-2147483648, 2147483647]
 # CHECK: error: stub helper header is out of range: [[#]] is not in [-2147483648, 2147483647]

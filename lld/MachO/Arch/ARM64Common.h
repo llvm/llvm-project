@@ -40,16 +40,18 @@ inline uint64_t bitField(uint64_t value, int right, int width, int left) {
 // |           |                       imm26                       |
 // +-----------+---------------------------------------------------+
 
-inline uint64_t encodeBranch26(const Reloc &r, uint64_t base, uint64_t va) {
-  checkInt(r, va, 28);
+inline void encodeBranch26(uint32_t *loc, const Reloc &r, uint32_t base,
+                           uint64_t va) {
+  checkInt(loc, r, va, 28);
   // Since branch destinations are 4-byte aligned, the 2 least-
   // significant bits are 0. They are right shifted off the end.
-  return (base | bitField(va, 2, 26, 0));
+  llvm::support::endian::write32le(loc, base | bitField(va, 2, 26, 0));
 }
 
-inline uint64_t encodeBranch26(SymbolDiagnostic d, uint64_t base, uint64_t va) {
-  checkInt(d, va, 28);
-  return (base | bitField(va, 2, 26, 0));
+inline void encodeBranch26(uint32_t *loc, SymbolDiagnostic d, uint32_t base,
+                           uint64_t va) {
+  checkInt(loc, d, va, 28);
+  llvm::support::endian::write32le(loc, base | bitField(va, 2, 26, 0));
 }
 
 //   30 29          23                                  5
@@ -57,14 +59,18 @@ inline uint64_t encodeBranch26(SymbolDiagnostic d, uint64_t base, uint64_t va) {
 // | |ilo|         |                immhi                |         |
 // +-+---+---------+-------------------------------------+---------+
 
-inline uint64_t encodePage21(const Reloc &r, uint64_t base, uint64_t va) {
-  checkInt(r, va, 35);
-  return (base | bitField(va, 12, 2, 29) | bitField(va, 14, 19, 5));
+inline void encodePage21(uint32_t *loc, const Reloc &r, uint32_t base,
+                         uint64_t va) {
+  checkInt(loc, r, va, 35);
+  llvm::support::endian::write32le(loc, base | bitField(va, 12, 2, 29) |
+                                            bitField(va, 14, 19, 5));
 }
 
-inline uint64_t encodePage21(SymbolDiagnostic d, uint64_t base, uint64_t va) {
-  checkInt(d, va, 35);
-  return (base | bitField(va, 12, 2, 29) | bitField(va, 14, 19, 5));
+inline void encodePage21(uint32_t *loc, SymbolDiagnostic d, uint32_t base,
+                         uint64_t va) {
+  checkInt(loc, d, va, 35);
+  llvm::support::endian::write32le(loc, base | bitField(va, 12, 2, 29) |
+                                            bitField(va, 14, 19, 5));
 }
 
 //                      21                   10
@@ -72,7 +78,7 @@ inline uint64_t encodePage21(SymbolDiagnostic d, uint64_t base, uint64_t va) {
 // |                   |         imm12         |                   |
 // +-------------------+-----------------------+-------------------+
 
-inline uint64_t encodePageOff12(uint32_t base, uint64_t va) {
+inline void encodePageOff12(uint32_t *loc, uint32_t base, uint64_t va) {
   int scale = 0;
   if ((base & 0x3b00'0000) == 0x3900'0000) { // load/store
     scale = base >> 30;
@@ -82,7 +88,8 @@ inline uint64_t encodePageOff12(uint32_t base, uint64_t va) {
 
   // TODO(gkm): extract embedded addend and warn if != 0
   // uint64_t addend = ((base & 0x003FFC00) >> 10);
-  return (base | bitField(va, scale, 12 - scale, 10));
+  llvm::support::endian::write32le(loc,
+                                   base | bitField(va, scale, 12 - scale, 10));
 }
 
 inline uint64_t pageBits(uint64_t address) {
@@ -99,9 +106,9 @@ inline void writeStub(uint8_t *buf8, const uint32_t stubCode[3],
       pageBits(in.stubs->addr + sym.stubsIndex * stubCodeSize);
   uint64_t lazyPointerVA =
       in.lazyPointers->addr + sym.stubsIndex * LP::wordSize;
-  buf32[0] = encodePage21({&sym, "stub"}, stubCode[0],
-                          pageBits(lazyPointerVA) - pcPageBits);
-  buf32[1] = encodePageOff12(stubCode[1], lazyPointerVA);
+  encodePage21(&buf32[0], {&sym, "stub"}, stubCode[0],
+               pageBits(lazyPointerVA) - pcPageBits);
+  encodePageOff12(&buf32[1], stubCode[1], lazyPointerVA);
   buf32[2] = stubCode[2];
 }
 
@@ -114,15 +121,15 @@ inline void writeStubHelperHeader(uint8_t *buf8,
   };
   uint64_t loaderVA = in.imageLoaderCache->getVA();
   SymbolDiagnostic d = {nullptr, "stub header helper"};
-  buf32[0] = encodePage21(d, stubHelperHeaderCode[0],
-                          pageBits(loaderVA) - pcPageBits(0));
-  buf32[1] = encodePageOff12(stubHelperHeaderCode[1], loaderVA);
+  encodePage21(&buf32[0], d, stubHelperHeaderCode[0],
+               pageBits(loaderVA) - pcPageBits(0));
+  encodePageOff12(&buf32[1], stubHelperHeaderCode[1], loaderVA);
   buf32[2] = stubHelperHeaderCode[2];
   uint64_t binderVA =
       in.got->addr + in.stubHelper->stubBinder->gotIndex * LP::wordSize;
-  buf32[3] = encodePage21(d, stubHelperHeaderCode[3],
-                          pageBits(binderVA) - pcPageBits(3));
-  buf32[4] = encodePageOff12(stubHelperHeaderCode[4], binderVA);
+  encodePage21(&buf32[3], d, stubHelperHeaderCode[3],
+               pageBits(binderVA) - pcPageBits(3));
+  encodePageOff12(&buf32[4], stubHelperHeaderCode[4], binderVA);
   buf32[5] = stubHelperHeaderCode[5];
 }
 
@@ -133,8 +140,8 @@ inline void writeStubHelperEntry(uint8_t *buf8,
   auto pcVA = [entryVA](int i) { return entryVA + i * sizeof(uint32_t); };
   uint64_t stubHelperHeaderVA = in.stubHelper->addr;
   buf32[0] = stubHelperEntryCode[0];
-  buf32[1] = encodeBranch26({&sym, "stub helper"}, stubHelperEntryCode[1],
-                            stubHelperHeaderVA - pcVA(1));
+  encodeBranch26(&buf32[1], {&sym, "stub helper"}, stubHelperEntryCode[1],
+                 stubHelperHeaderVA - pcVA(1));
   buf32[2] = sym.lazyBindOffset;
 }
 
