@@ -1474,7 +1474,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
 //   rename (checked using UsedInBetween).
 // * is available in all used register classes (checked using RequiredClasses).
 static Optional<MCPhysReg> tryToFindRegisterToRename(
-    MachineInstr &FirstMI, MachineInstr &MI, LiveRegUnits &DefinedInBB,
+    MachineInstr &FirstMI, LiveRegUnits &DefinedInBB,
     LiveRegUnits &UsedInBetween,
     SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
     const TargetRegisterInfo *TRI) {
@@ -1723,8 +1723,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
             if (*MaybeCanRename) {
               Optional<MCPhysReg> MaybeRenameReg = tryToFindRegisterToRename(
-                  FirstMI, MI, DefinedInBB, UsedInBetween, RequiredClasses,
-                  TRI);
+                  FirstMI, DefinedInBB, UsedInBetween, RequiredClasses, TRI);
               if (MaybeRenameReg) {
                 Flags.setRenameReg(*MaybeRenameReg);
                 Flags.setMergeForward(true);
