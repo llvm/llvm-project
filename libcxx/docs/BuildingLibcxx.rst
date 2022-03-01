@@ -318,7 +318,7 @@ ABI Library Specific Options
 
 .. option:: LIBCXX_CXX_ABI:STRING
 
-  **Values**: ``none``, ``libcxxabi``, ``libcxxrt``, ``libstdc++``, ``libsupc++``.
+  **Values**: ``none``, ``libcxxabi``, ``system-libcxxabi``, ``libcxxrt``, ``libstdc++``, ``libsupc++``.
 
   Select the ABI library to build libc++ against.
 
