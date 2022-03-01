@@ -1254,7 +1254,17 @@ func @gep_out_of_bounds(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx
 // -----
 
 func @non_splat_shuffle_on_scalable_vector(%arg0: vector<[4]xf32>) {
-  // expected-error@+1 {{expected a splat operation for scalable vectors}}
+  // expected-error@below {{expected a splat operation for scalable vectors}}
   %0 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 1 : i32] : vector<[4]xf32>, vector<[4]xf32>
   return
+}
+
+// -----
+
+llvm.mlir.global internal @side_effecting_global() : !llvm.struct<(i8)> {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  // expected-error@below {{ops with side effects not allowed in global initializers}}
+  %1 = llvm.alloca %0 x !llvm.struct<(i8)> : (i64) -> !llvm.ptr<struct<(i8)>>
+  %2 = llvm.load %1 : !llvm.ptr<struct<(i8)>>
+  llvm.return %2 : !llvm.struct<(i8)>
 }
