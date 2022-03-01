@@ -236,6 +236,7 @@ cc_library(
         ":TestDialect",
         "//llvm:Support",
         "//mlir:Analysis",
+        "//mlir:ArithmeticDialect",
         "//mlir:IR",
         "//mlir:LinalgOps",
         "//mlir:Pass",
@@ -495,8 +496,8 @@ cc_library(
 )
 
 cc_library(
-    name = "TestStandardOps",
-    srcs = glob(["lib/Dialect/StandardOps/*.cpp"]),
+    name = "TestFunc",
+    srcs = glob(["lib/Dialect/Func/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [

@@ -358,7 +358,7 @@ cc_library(
 mlir_c_api_cc_library(
     name = "CAPIIR",
     srcs = [
-        "lib/CAPI/Dialect/Standard.cpp",
+        "lib/CAPI/Dialect/Func.cpp",
         "lib/CAPI/IR/AffineExpr.cpp",
         "lib/CAPI/IR/AffineMap.cpp",
         "lib/CAPI/IR/BuiltinAttributes.cpp",
@@ -376,7 +376,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/BuiltinAttributes.h",
         "include/mlir-c/BuiltinTypes.h",
         "include/mlir-c/Diagnostics.h",
-        "include/mlir-c/Dialect/Standard.h",
+        "include/mlir-c/Dialect/Func.h",
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir-c/IR.h",
         "include/mlir-c/IntegerSet.h",
@@ -1957,6 +1957,7 @@ cc_library(
         ":Affine",
         ":ArithmeticDialect",
         ":BufferizationDialect",
+        ":FuncTransforms",
         ":IR",
         ":LLVMDialect",
         ":LinalgOps",
@@ -1970,7 +1971,6 @@ cc_library(
         ":SparseTensorPassIncGen",
         ":SparseTensorUtils",
         ":StandardOps",
-        ":StandardOpsTransforms",
         ":TensorDialect",
         ":Transforms",
         ":VectorOps",
@@ -1987,11 +1987,11 @@ cc_library(
         ":ArithmeticTransforms",
         ":BufferizationTransforms",
         ":ConversionPasses",
+        ":FuncTransforms",
         ":LinalgTransforms",
         ":Pass",
         ":SparseTensor",
         ":SparseTensorTransforms",
-        ":StandardOpsTransforms",
         ":TensorTransforms",
         ":VectorToLLVM",
         ":VectorTransforms",
@@ -1999,9 +1999,9 @@ cc_library(
 )
 
 td_library(
-    name = "StdOpsTdFiles",
+    name = "FuncTdFiles",
     srcs = [
-        "include/mlir/Dialect/StandardOps/IR/Ops.td",
+        "include/mlir/Dialect/Func/IR/FuncOps.td",
     ],
     includes = ["include"],
     deps = [
@@ -2016,37 +2016,37 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "StandardOpsIncGen",
+    name = "FuncIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/StandardOps/IR/Ops.h.inc",
+            "include/mlir/Dialect/Func/IR/FuncOps.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/StandardOps/IR/Ops.cpp.inc",
+            "include/mlir/Dialect/Func/IR/FuncOps.cpp.inc",
         ),
         (
             ["-gen-dialect-decls"],
-            "include/mlir/Dialect/StandardOps/IR/OpsDialect.h.inc",
+            "include/mlir/Dialect/Func/IR/FuncOpsDialect.h.inc",
         ),
         (
             ["-gen-dialect-defs"],
-            "include/mlir/Dialect/StandardOps/IR/OpsDialect.cpp.inc",
+            "include/mlir/Dialect/Func/IR/FuncOpsDialect.cpp.inc",
         ),
         (
             ["-gen-enum-decls"],
-            "include/mlir/Dialect/StandardOps/IR/OpsEnums.h.inc",
+            "include/mlir/Dialect/Func/IR/FuncOpsEnums.h.inc",
         ),
         (
             ["-gen-enum-defs"],
-            "include/mlir/Dialect/StandardOps/IR/OpsEnums.cpp.inc",
+            "include/mlir/Dialect/Func/IR/FuncOpsEnums.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/StandardOps/IR/Ops.td",
-    deps = [":StdOpsTdFiles"],
+    td_file = "include/mlir/Dialect/Func/IR/FuncOps.td",
+    deps = [":FuncTdFiles"],
 )
 
 cc_library(
@@ -2370,12 +2370,12 @@ cc_library(
         ":ArithmeticDialect",
         ":Async",
         ":ConversionPassIncGen",
+        ":FuncTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
         ":StandardOps",
-        ":StandardOpsTransforms",
         ":StandardToLLVM",
         ":Support",
         ":Transforms",
@@ -2805,17 +2805,17 @@ cc_library(
 )
 
 cc_library(
-    name = "StandardOps",
+    name = "FuncDialect",
     srcs = glob(
         [
-            "lib/Dialect/StandardOps/IR/*.cpp",
-            "lib/Dialect/StandardOps/IR/*.h",
-            "lib/Dialect/StandardOps/Utils/*.cpp",
+            "lib/Dialect/Func/IR/*.cpp",
+            "lib/Dialect/Func/IR/*.h",
+            "lib/Dialect/Func/Utils/*.cpp",
         ],
     ),
     hdrs = glob([
-        "include/mlir/Dialect/StandardOps/IR/*.h",
-        "include/mlir/Dialect/StandardOps/Utils/*.h",
+        "include/mlir/Dialect/Func/IR/*.h",
+        "include/mlir/Dialect/Func/Utils/*.h",
     ]) + ["include/mlir/Transforms/InliningUtils.h"],
     includes = ["include"],
     deps = [
@@ -2826,38 +2826,54 @@ cc_library(
         ":CommonFolders",
         ":ControlFlowInterfaces",
         ":ControlFlowOps",
+        ":FuncIncGen",
         ":IR",
         ":InferTypeOpInterface",
         ":SideEffectInterfaces",
-        ":StandardOpsIncGen",
         ":Support",
         ":VectorInterfaces",
         "//llvm:Support",
     ],
 )
 
+# TODO(zinenko): remove this after updating users.
+alias(
+    name = "StandardOps",
+    actual = ":FuncDialect",
+)
+
+alias(
+    name = "StdOpsTdFiles",
+    actual = ":FuncTdFiles",
+)
+
+alias(
+    name = "StandardOpsTransforms",
+    actual = ":FuncTransforms",
+)
+
 gentbl_cc_library(
-    name = "StandardOpsTransformsPassIncGen",
+    name = "FuncTransformsPassIncGen",
     strip_include_prefix = "include",
     tbl_outs = [(
         [
             "-gen-pass-decls",
-            "-name=Standard",
+            "-name=Func",
         ],
-        "include/mlir/Dialect/StandardOps/Transforms/Passes.h.inc",
+        "include/mlir/Dialect/Func/Transforms/Passes.h.inc",
     )],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/StandardOps/Transforms/Passes.td",
+    td_file = "include/mlir/Dialect/Func/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
 )
 
 cc_library(
-    name = "StandardOpsTransforms",
+    name = "FuncTransforms",
     srcs = glob([
-        "lib/Dialect/StandardOps/Transforms/*.cpp",
-        "lib/Dialect/StandardOps/Transforms/*.h",
+        "lib/Dialect/Func/Transforms/*.cpp",
+        "lib/Dialect/Func/Transforms/*.h",
     ]),
-    hdrs = glob(["include/mlir/Dialect/StandardOps/Transforms/*.h"]),
+    hdrs = glob(["include/mlir/Dialect/Func/Transforms/*.h"]),
     includes = ["include"],
     deps = [
         ":Affine",
@@ -2865,12 +2881,12 @@ cc_library(
         ":ArithmeticTransforms",
         ":BufferizationDialect",
         ":BufferizationTransforms",
+        ":FuncTransformsPassIncGen",
         ":IR",
         ":MemRefDialect",  # TODO: Remove dependency on MemRef dialect
         ":Pass",
         ":SCFDialect",
         ":StandardOps",
-        ":StandardOpsTransformsPassIncGen",
         ":Support",
         ":TensorDialect",
         ":Transforms",
@@ -5105,6 +5121,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":DataLayoutInterfaces",
         ":DialectUtils",
+        ":FuncTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -5113,7 +5130,6 @@ cc_library(
         ":Parser",
         ":Pass",
         ":StandardOps",
-        ":StandardOpsTransforms",
         ":Support",
         ":TransformUtils",
         ":Transforms",
@@ -5864,6 +5880,8 @@ cc_library(
         ":ConversionPasses",
         ":DLTIDialect",
         ":EmitC",
+        ":FuncTransforms",
+        ":FuncTransformsPassIncGen",
         ":GPUDialect",
         ":GPUPassIncGen",
         ":GPUToGPURuntimeTransforms",
@@ -5920,8 +5938,6 @@ cc_library(
         ":SparseTensorPipelines",
         ":SparseTensorTransforms",
         ":StandardOps",
-        ":StandardOpsTransforms",
-        ":StandardOpsTransformsPassIncGen",
         ":StandardToLLVM",
         ":StandardToSPIRV",
         ":TensorDialect",
@@ -5975,6 +5991,7 @@ cc_binary(
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
+        "//mlir/test:TestFunc",
         "//mlir/test:TestGPU",
         "//mlir/test:TestIR",
         "//mlir/test:TestLinalg",
@@ -5986,7 +6003,6 @@ cc_binary(
         "//mlir/test:TestSCF",
         "//mlir/test:TestSPIRV",
         "//mlir/test:TestShapeDialect",
-        "//mlir/test:TestStandardOps",
         "//mlir/test:TestStandardToLLVM",
         "//mlir/test:TestTensor",
         "//mlir/test:TestTosaDialect",
@@ -7070,6 +7086,7 @@ cc_library(
         ":ComplexDialect",
         ":ControlFlowOps",
         ":DialectUtils",
+        ":FuncTransforms",
         ":IR",
         ":InferTypeOpInterface",
         ":LinalgOps",
@@ -7084,7 +7101,6 @@ cc_library(
         ":SCFUtils",
         ":SparseTensor",
         ":StandardOps",
-        ":StandardOpsTransforms",
         ":Support",
         ":TensorDialect",
         ":TensorTilingInterfaceImpl",
