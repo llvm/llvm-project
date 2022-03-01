@@ -24053,6 +24053,13 @@ TEST_F(FormatTest, RequiresClauses) {
                "    return number_zero_v<T>;\n"
                "  }\n"
                "};");
+
+  // Not a clause, but we once hit an assert.
+  verifyFormat("#if 0\n"
+               "#else\n"
+               "foo();\n"
+               "#endif\n"
+               "bar(requires);");
 }
 
 TEST_F(FormatTest, StatementAttributeLikeMacros) {

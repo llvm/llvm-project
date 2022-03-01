@@ -2994,7 +2994,6 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
 void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
   assert(FormatTok->getPreviousNonComment() == RequiresToken);
   assert(RequiresToken->is(tok::kw_requires) && "'requires' expected");
-  assert(RequiresToken->getType() == TT_Unknown);
 
   // If there is no previous token, we are within a requires expression,
   // otherwise we will always have the template or function declaration in front
@@ -3023,7 +3022,6 @@ void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
 void UnwrappedLineParser::parseRequiresExpression(FormatToken *RequiresToken) {
   assert(FormatTok->getPreviousNonComment() == RequiresToken);
   assert(RequiresToken->is(tok::kw_requires) && "'requires' expected");
-  assert(RequiresToken->getType() == TT_Unknown);
 
   RequiresToken->setFinalizedType(TT_RequiresExpression);
 
