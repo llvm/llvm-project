@@ -16,6 +16,7 @@ typedef struct {
   _Alignas(sizeof(unsigned int) > _Alignof(unsigned int)
                ? sizeof(unsigned int)
                : _Alignof(unsigned int)) unsigned int __word;
+  _Static_assert(sizeof(unsigned int) == 4, "Unexpected size of unsigned int.");
 #else
 #error "A type to represent a futex word is not available for the target arch."
 #endif
