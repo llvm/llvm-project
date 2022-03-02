@@ -1513,6 +1513,30 @@ static mlir::Value genBasicIOStmt(Fortran::lower::AbstractConverter &converter,
                   stmtCtx);
 }
 
+mlir::Value Fortran::lower::genBackspaceStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::BackspaceStmt &stmt) {
+  return genBasicIOStmt<mkIOKey(BeginBackspace)>(converter, stmt);
+}
+
+mlir::Value Fortran::lower::genEndfileStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::EndfileStmt &stmt) {
+  return genBasicIOStmt<mkIOKey(BeginEndfile)>(converter, stmt);
+}
+
+mlir::Value
+Fortran::lower::genFlushStatement(Fortran::lower::AbstractConverter &converter,
+                                  const Fortran::parser::FlushStmt &stmt) {
+  return genBasicIOStmt<mkIOKey(BeginFlush)>(converter, stmt);
+}
+
+mlir::Value
+Fortran::lower::genRewindStatement(Fortran::lower::AbstractConverter &converter,
+                                   const Fortran::parser::RewindStmt &stmt) {
+  return genBasicIOStmt<mkIOKey(BeginRewind)>(converter, stmt);
+}
+
 mlir::Value
 Fortran::lower::genOpenStatement(Fortran::lower::AbstractConverter &converter,
                                  const Fortran::parser::OpenStmt &stmt) {
@@ -1552,6 +1576,33 @@ mlir::Value
 Fortran::lower::genCloseStatement(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::parser::CloseStmt &stmt) {
   return genBasicIOStmt<mkIOKey(BeginClose)>(converter, stmt);
+}
+
+mlir::Value
+Fortran::lower::genWaitStatement(Fortran::lower::AbstractConverter &converter,
+                                 const Fortran::parser::WaitStmt &stmt) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Location loc = converter.getCurrentLocation();
+  bool hasId = hasMem<Fortran::parser::IdExpr>(stmt);
+  mlir::FuncOp beginFunc =
+      hasId ? getIORuntimeFunc<mkIOKey(BeginWait)>(loc, builder)
+            : getIORuntimeFunc<mkIOKey(BeginWaitAll)>(loc, builder);
+  mlir::FunctionType beginFuncTy = beginFunc.getType();
+  mlir::Value unit = fir::getBase(converter.genExprValue(
+      getExpr<Fortran::parser::FileUnitNumber>(stmt), stmtCtx, loc));
+  mlir::Value un = builder.createConvert(loc, beginFuncTy.getInput(0), unit);
+  llvm::SmallVector<mlir::Value> args{un};
+  if (hasId) {
+    mlir::Value id = fir::getBase(converter.genExprValue(
+        getExpr<Fortran::parser::IdExpr>(stmt), stmtCtx, loc));
+    args.push_back(builder.createConvert(loc, beginFuncTy.getInput(1), id));
+  }
+  auto cookie = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
+  ConditionSpecInfo csi;
+  genConditionHandlerCall(converter, loc, cookie, stmt.v, csi);
+  return genEndIO(converter, converter.getCurrentLocation(), cookie, csi,
+                  stmtCtx);
 }
 
 //===----------------------------------------------------------------------===//

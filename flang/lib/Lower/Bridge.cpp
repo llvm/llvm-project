@@ -811,7 +811,8 @@ private:
   //===--------------------------------------------------------------------===//
 
   void genFIR(const Fortran::parser::BackspaceStmt &stmt) {
-    TODO(toLocation(), "BackspaceStmt lowering");
+    mlir::Value iostat = genBackspaceStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::CloseStmt &stmt) {
@@ -820,11 +821,13 @@ private:
   }
 
   void genFIR(const Fortran::parser::EndfileStmt &stmt) {
-    TODO(toLocation(), "EndfileStmt lowering");
+    mlir::Value iostat = genEndfileStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::FlushStmt &stmt) {
-    TODO(toLocation(), "FlushStmt lowering");
+    mlir::Value iostat = genFlushStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::InquireStmt &stmt) {
@@ -846,11 +849,13 @@ private:
   }
 
   void genFIR(const Fortran::parser::RewindStmt &stmt) {
-    TODO(toLocation(), "RewindStmt lowering");
+    mlir::Value iostat = genRewindStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::WaitStmt &stmt) {
-    TODO(toLocation(), "WaitStmt lowering");
+    mlir::Value iostat = genWaitStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::WriteStmt &stmt) {

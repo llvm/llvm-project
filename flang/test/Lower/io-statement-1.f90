@@ -12,6 +12,26 @@
   ! CHECK: call {{.*}}EndIoStatement
   open(8, file="foo", access="sequential")
 
+  ! CHECK: call {{.*}}BeginBackspace
+  ! CHECK: call {{.*}}EndIoStatement
+  backspace(8)
+
+  ! CHECK: call {{.*}}BeginFlush
+  ! CHECK: call {{.*}}EndIoStatement
+  flush(8)
+  
+  ! CHECK: call {{.*}}BeginRewind
+  ! CHECK: call {{.*}}EndIoStatement
+  rewind(8)
+
+  ! CHECK: call {{.*}}BeginEndfile
+  ! CHECK: call {{.*}}EndIoStatement
+  endfile(8)
+
+  ! CHECK: call {{.*}}BeginWaitAll
+  ! CHECK: call {{.*}}EndIoStatement
+  wait(unit=8)
+
   ! CHECK: call {{.*}}BeginExternalListInput
   ! CHECK: call {{.*}}InputInteger
   ! CHECK: call {{.*}}InputReal32
