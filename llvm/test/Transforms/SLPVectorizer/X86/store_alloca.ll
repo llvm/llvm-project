@@ -32,13 +32,13 @@ define void @ham() #1 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8** [[VAR32]] to <4 x i8*>*
 ; CHECK-NEXT:    store <4 x i8*> [[SHUFFLE]], <4 x i8*>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[VAR36:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 4
+; CHECK-NEXT:    store i8* [[VAR4]], i8** [[VAR36]], align 4
 ; CHECK-NEXT:    [[VAR37:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 5
+; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR37]], align 4
 ; CHECK-NEXT:    [[VAR38:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 6
+; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR38]], align 4
 ; CHECK-NEXT:    [[VAR39:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 7
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8*> [[TMP1]], i8* [[VAR5]], i32 1
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i8*> [[TMP3]], <4 x i8*> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[VAR36]] to <4 x i8*>*
-; CHECK-NEXT:    store <4 x i8*> [[SHUFFLE1]], <4 x i8*>* [[TMP4]], align 4
+; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR39]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %var2 = alloca i8
@@ -78,14 +78,13 @@ define void @spam() #1 {
 ; CHECK-NEXT:    [[VAR5:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[VAR12:%.*]] = alloca [12 x i8*], align 4
 ; CHECK-NEXT:    [[VAR36:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 4
+; CHECK-NEXT:    store i8* [[VAR4]], i8** [[VAR36]], align 4
 ; CHECK-NEXT:    [[VAR37:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 5
+; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR37]], align 4
 ; CHECK-NEXT:    [[VAR38:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 6
+; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR38]], align 4
 ; CHECK-NEXT:    [[VAR39:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 7
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8*> poison, i8* [[VAR4]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8*> [[TMP1]], i8* [[VAR5]], i32 1
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i8*> [[TMP2]], <4 x i8*> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8** [[VAR36]] to <4 x i8*>*
-; CHECK-NEXT:    store <4 x i8*> [[SHUFFLE]], <4 x i8*>* [[TMP3]], align 4
+; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR39]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %var4 = alloca i8
