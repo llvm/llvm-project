@@ -488,6 +488,32 @@ fir::ExtendedValue arraySectionElementToExtendedValue(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const fir::ExtendedValue &array, mlir::Value element, mlir::Value slice);
 
+/// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalars. The
+/// assignment follows Fortran intrinsic assignment semantic (10.2.1.3).
+void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
+                         const fir::ExtendedValue &lhs,
+                         const fir::ExtendedValue &rhs);
+/// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
+/// types. The assignment follows Fortran intrinsic assignment semantic for
+/// derived types (10.2.1.3 point 13).
+void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
+                         const fir::ExtendedValue &lhs,
+                         const fir::ExtendedValue &rhs);
+
+/// Generate the, possibly dynamic, LEN of a CHARACTER. \p arrLoad determines
+/// the base array. After applying \p path, the result must be a reference to a
+/// `!fir.char` type object. \p substring must have 0, 1, or 2 members. The
+/// first member is the starting offset. The second is the ending offset.
+mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
+                              fir::ArrayLoadOp arrLoad,
+                              llvm::ArrayRef<mlir::Value> path,
+                              llvm::ArrayRef<mlir::Value> substring);
+mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
+                              fir::SequenceType seqTy, mlir::Value memref,
+                              llvm::ArrayRef<mlir::Value> typeParams,
+                              llvm::ArrayRef<mlir::Value> path,
+                              llvm::ArrayRef<mlir::Value> substring);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

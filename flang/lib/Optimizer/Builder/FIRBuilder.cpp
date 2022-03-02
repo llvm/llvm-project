@@ -866,3 +866,210 @@ mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
   fir::emitFatalError(loc, "internal: trying to generate zero value of non "
                            "numeric or logical type");
 }
+
+void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       const fir::ExtendedValue &lhs,
+                                       const fir::ExtendedValue &rhs) {
+  assert(lhs.rank() == 0 && rhs.rank() == 0 && "must be scalars");
+  auto type = fir::unwrapSequenceType(
+      fir::unwrapPassByRefType(fir::getBase(lhs).getType()));
+  if (type.isa<fir::CharacterType>()) {
+    const fir::CharBoxValue *toChar = lhs.getCharBox();
+    const fir::CharBoxValue *fromChar = rhs.getCharBox();
+    assert(toChar && fromChar);
+    fir::factory::CharacterExprHelper helper{builder, loc};
+    helper.createAssign(fir::ExtendedValue{*toChar},
+                        fir::ExtendedValue{*fromChar});
+  } else if (type.isa<fir::RecordType>()) {
+    fir::factory::genRecordAssignment(builder, loc, lhs, rhs);
+  } else {
+    assert(!fir::hasDynamicSize(type));
+    auto rhsVal = fir::getBase(rhs);
+    if (fir::isa_ref_type(rhsVal.getType()))
+      rhsVal = builder.create<fir::LoadOp>(loc, rhsVal);
+    mlir::Value lhsAddr = fir::getBase(lhs);
+    rhsVal = builder.createConvert(loc, fir::unwrapRefType(lhsAddr.getType()),
+                                   rhsVal);
+    builder.create<fir::StoreOp>(loc, rhsVal, lhsAddr);
+  }
+}
+
+static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              const fir::ExtendedValue &lhs,
+                                              const fir::ExtendedValue &rhs) {
+  auto baseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
+  auto lhsType = baseType.dyn_cast<fir::RecordType>();
+  assert(lhsType && "lhs must be a scalar record type");
+  auto fieldIndexType = fir::FieldType::get(lhsType.getContext());
+  for (auto [fieldName, fieldType] : lhsType.getTypeList()) {
+    assert(!fir::hasDynamicSize(fieldType));
+    mlir::Value field = builder.create<fir::FieldIndexOp>(
+        loc, fieldIndexType, fieldName, lhsType, fir::getTypeParams(lhs));
+    auto fieldRefType = builder.getRefType(fieldType);
+    mlir::Value fromCoor = builder.create<fir::CoordinateOp>(
+        loc, fieldRefType, fir::getBase(rhs), field);
+    mlir::Value toCoor = builder.create<fir::CoordinateOp>(
+        loc, fieldRefType, fir::getBase(lhs), field);
+    llvm::Optional<fir::DoLoopOp> outerLoop;
+    if (auto sequenceType = fieldType.dyn_cast<fir::SequenceType>()) {
+      // Create loops to assign array components elements by elements.
+      // Note that, since these are components, they either do not overlap,
+      // or are the same and exactly overlap. They also have compile time
+      // constant shapes.
+      mlir::Type idxTy = builder.getIndexType();
+      llvm::SmallVector<mlir::Value> indices;
+      mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      for (auto extent : llvm::reverse(sequenceType.getShape())) {
+        // TODO: add zero size test !
+        mlir::Value ub = builder.createIntegerConstant(loc, idxTy, extent - 1);
+        auto loop = builder.create<fir::DoLoopOp>(loc, zero, ub, one);
+        if (!outerLoop)
+          outerLoop = loop;
+        indices.push_back(loop.getInductionVar());
+        builder.setInsertionPointToStart(loop.getBody());
+      }
+      // Set indices in column-major order.
+      std::reverse(indices.begin(), indices.end());
+      auto elementRefType = builder.getRefType(sequenceType.getEleTy());
+      toCoor = builder.create<fir::CoordinateOp>(loc, elementRefType, toCoor,
+                                                 indices);
+      fromCoor = builder.create<fir::CoordinateOp>(loc, elementRefType,
+                                                   fromCoor, indices);
+    }
+    auto fieldElementType = fir::unwrapSequenceType(fieldType);
+    if (fieldElementType.isa<fir::BoxType>()) {
+      assert(fieldElementType.cast<fir::BoxType>()
+                 .getEleTy()
+                 .isa<fir::PointerType>() &&
+             "allocatable require deep copy");
+      auto fromPointerValue = builder.create<fir::LoadOp>(loc, fromCoor);
+      builder.create<fir::StoreOp>(loc, fromPointerValue, toCoor);
+    } else {
+      auto from =
+          fir::factory::componentToExtendedValue(builder, loc, fromCoor);
+      auto to = fir::factory::componentToExtendedValue(builder, loc, toCoor);
+      fir::factory::genScalarAssignment(builder, loc, to, from);
+    }
+    if (outerLoop)
+      builder.setInsertionPointAfter(*outerLoop);
+  }
+}
+
+/// Can the assignment of this record type be implement with a simple memory
+/// copy (it requires no deep copy or user defined assignment of components )?
+static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
+  if (fir::hasDynamicSize(recordType))
+    return false;
+  for (auto [_, fieldType] : recordType.getTypeList()) {
+    // Derived type component may have user assignment (so far, we cannot tell
+    // in FIR, so assume it is always the case, TODO: get the actual info).
+    if (fir::unwrapSequenceType(fieldType).isa<fir::RecordType>())
+      return false;
+    // Allocatable components need deep copy.
+    if (auto boxType = fieldType.dyn_cast<fir::BoxType>())
+      if (boxType.getEleTy().isa<fir::HeapType>())
+        return false;
+  }
+  // Constant size components without user defined assignment and pointers can
+  // be memcopied.
+  return true;
+}
+
+void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       const fir::ExtendedValue &lhs,
+                                       const fir::ExtendedValue &rhs) {
+  assert(lhs.rank() == 0 && rhs.rank() == 0 && "assume scalar assignment");
+  auto baseTy = fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(lhs).getType());
+  assert(baseTy && "must be a memory type");
+  // Box operands may be polymorphic, it is not entirely clear from 10.2.1.3
+  // if the assignment is performed on the dynamic of declared type. Use the
+  // runtime assuming it is performed on the dynamic type.
+  bool hasBoxOperands = fir::getBase(lhs).getType().isa<fir::BoxType>() ||
+                        fir::getBase(rhs).getType().isa<fir::BoxType>();
+  auto recTy = baseTy.dyn_cast<fir::RecordType>();
+  assert(recTy && "must be a record type");
+  if (hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
+    auto to = fir::getBase(builder.createBox(loc, lhs));
+    auto from = fir::getBase(builder.createBox(loc, rhs));
+    // The runtime entry point may modify the LHS descriptor if it is
+    // an allocatable. Allocatable assignment is handle elsewhere in lowering,
+    // so just create a fir.ref<fir.box<>> from the fir.box to comply with the
+    // runtime interface, but assume the fir.box is unchanged.
+    // TODO: does this holds true with polymorphic entities ?
+    auto toMutableBox = builder.createTemporary(loc, to.getType());
+    builder.create<fir::StoreOp>(loc, to, toMutableBox);
+    fir::runtime::genAssign(builder, loc, toMutableBox, from);
+    return;
+  }
+  // Otherwise, the derived type has compile time constant size and for which
+  // the component by component assignment can be replaced by a memory copy.
+  // Since we do not know the size of the derived type in lowering, do a
+  // component by component assignment. Note that a single fir.load/fir.store
+  // could be used on "small" record types, but as the type size grows, this
+  // leads to issues in LLVM (long compile times, long IR files, and even
+  // asserts at some point). Since there is no good size boundary, just always
+  // use component by component assignment here.
+  genComponentByComponentAssignment(builder, loc, lhs, rhs);
+}
+
+mlir::Value fir::factory::genLenOfCharacter(
+    fir::FirOpBuilder &builder, mlir::Location loc, fir::ArrayLoadOp arrLoad,
+    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
+  llvm::SmallVector<mlir::Value> typeParams(arrLoad.getTypeparams());
+  return genLenOfCharacter(builder, loc,
+                           arrLoad.getType().cast<fir::SequenceType>(),
+                           arrLoad.getMemref(), typeParams, path, substring);
+}
+
+mlir::Value fir::factory::genLenOfCharacter(
+    fir::FirOpBuilder &builder, mlir::Location loc, fir::SequenceType seqTy,
+    mlir::Value memref, llvm::ArrayRef<mlir::Value> typeParams,
+    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
+  auto idxTy = builder.getIndexType();
+  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+  auto saturatedDiff = [&](mlir::Value lower, mlir::Value upper) {
+    auto diff = builder.create<mlir::arith::SubIOp>(loc, upper, lower);
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    auto size = builder.create<mlir::arith::AddIOp>(loc, diff, one);
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::sgt, size, zero);
+    return builder.create<mlir::arith::SelectOp>(loc, cmp, size, zero);
+  };
+  if (substring.size() == 2) {
+    auto upper = builder.createConvert(loc, idxTy, substring.back());
+    auto lower = builder.createConvert(loc, idxTy, substring.front());
+    return saturatedDiff(lower, upper);
+  }
+  auto lower = zero;
+  if (substring.size() == 1)
+    lower = builder.createConvert(loc, idxTy, substring.front());
+  auto eleTy = fir::applyPathToType(seqTy, path);
+  if (!fir::hasDynamicSize(eleTy)) {
+    if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+      // Use LEN from the type.
+      return builder.createIntegerConstant(loc, idxTy, charTy.getLen());
+    }
+    // Do we need to support !fir.array<!fir.char<k,n>>?
+    fir::emitFatalError(loc,
+                        "application of path did not result in a !fir.char");
+  }
+  if (fir::isa_box_type(memref.getType())) {
+    if (memref.getType().isa<fir::BoxCharType>())
+      return builder.create<fir::BoxCharLenOp>(loc, idxTy, memref);
+    if (memref.getType().isa<fir::BoxType>())
+      return CharacterExprHelper(builder, loc).readLengthFromBox(memref);
+    fir::emitFatalError(loc, "memref has wrong type");
+  }
+  if (typeParams.empty()) {
+    fir::emitFatalError(loc, "array_load must have typeparams");
+  }
+  if (fir::isa_char(seqTy.getEleTy())) {
+    assert(typeParams.size() == 1 && "too many typeparams");
+    return typeParams.front();
+  }
+  TODO(loc, "LEN of character must be computed at runtime");
+}
