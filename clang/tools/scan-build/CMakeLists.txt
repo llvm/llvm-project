@@ -74,7 +74,7 @@ if(CLANG_INSTALL_SCANBUILD)
                          "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/"
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/man/${ManPage})
     list(APPEND Depends "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_MANDIR}/man1/${ManPage}")
-    install(PROGRAMS man/${ManPage}
+    install(FILES man/${ManPage}
             DESTINATION "${CMAKE_INSTALL_MANDIR}/man1"
             COMPONENT scan-build)
   endforeach()
