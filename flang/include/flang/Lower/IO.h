@@ -23,6 +23,7 @@ struct BackspaceStmt;
 struct CloseStmt;
 struct EndfileStmt;
 struct FlushStmt;
+struct InquireStmt;
 struct OpenStmt;
 struct ReadStmt;
 struct RewindStmt;
@@ -48,6 +49,10 @@ mlir::Value genEndfileStatement(AbstractConverter &,
 
 /// Generate IO call(s) for FLUSH; return the IOSTAT code
 mlir::Value genFlushStatement(AbstractConverter &, const parser::FlushStmt &);
+
+/// Generate IO call(s) for INQUIRE; return the IOSTAT code
+mlir::Value genInquireStatement(AbstractConverter &,
+                                const parser::InquireStmt &);
 
 /// Generate IO call(s) for READ; return the IOSTAT code
 mlir::Value genReadStatement(AbstractConverter &converter,

@@ -831,7 +831,10 @@ private:
   }
 
   void genFIR(const Fortran::parser::InquireStmt &stmt) {
-    TODO(toLocation(), "InquireStmt lowering");
+    mlir::Value iostat = genInquireStatement(*this, stmt);
+    if (const auto *specs =
+            std::get_if<std::list<Fortran::parser::InquireSpec>>(&stmt.u))
+      genIoConditionBranches(getEval(), *specs, iostat);
   }
 
   void genFIR(const Fortran::parser::OpenStmt &stmt) {

@@ -2484,7 +2484,31 @@ public:
     if (destShape.empty())
       destShape = getShape(arrayOperands.back());
     if (isBoxValue()) {
-      TODO(loc, "genarr BoxValue");
+      // Semantics are a reference to a boxed array.
+      // This case just requires that an embox operation be created to box the
+      // value. The value of the box is forwarded in the continuation.
+      mlir::Type reduceTy = reduceRank(arrTy, slice);
+      auto boxTy = fir::BoxType::get(reduceTy);
+      if (components.substring) {
+        // Adjust char length to substring size.
+        fir::CharacterType charTy =
+            fir::factory::CharacterExprHelper::getCharType(reduceTy);
+        auto seqTy = reduceTy.cast<fir::SequenceType>();
+        // TODO: Use a constant for fir.char LEN if we can compute it.
+        boxTy = fir::BoxType::get(
+            fir::SequenceType::get(fir::CharacterType::getUnknownLen(
+                                       builder.getContext(), charTy.getFKind()),
+                                   seqTy.getDimension()));
+      }
+      mlir::Value embox =
+          memref.getType().isa<fir::BoxType>()
+              ? builder.create<fir::ReboxOp>(loc, boxTy, memref, shape, slice)
+                    .getResult()
+              : builder
+                    .create<fir::EmboxOp>(loc, boxTy, memref, shape, slice,
+                                          fir::getTypeParams(extMemref))
+                    .getResult();
+      return [=](IterSpace) -> ExtValue { return fir::BoxValue(embox); };
     }
     if (isReferentiallyOpaque()) {
       TODO(loc, "genarr isReferentiallyOpaque");

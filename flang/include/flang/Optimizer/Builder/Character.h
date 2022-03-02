@@ -107,6 +107,10 @@ public:
   /// Extract the kind of a character or array of character type.
   static fir::KindTy getCharacterOrSequenceKind(mlir::Type type);
 
+  /// Determine the inner character type. Unwraps references, boxes, and
+  /// sequences to find the !fir.char element type.
+  static fir::CharacterType getCharType(mlir::Type type);
+
   /// Determine the base character type
   static fir::CharacterType getCharacterType(mlir::Type type);
   static fir::CharacterType getCharacterType(const fir::CharBoxValue &box);
