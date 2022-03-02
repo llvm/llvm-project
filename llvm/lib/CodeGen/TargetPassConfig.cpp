@@ -922,9 +922,6 @@ void TargetPassConfig::addIRPasses() {
   // Allow disabling it for testing purposes.
   if (!DisableExpandReductions)
     addPass(createExpandReductionsPass());
-
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createTLSVariableHoistPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
