@@ -1594,8 +1594,6 @@ public:
         // the compare predicate and sometimes the value.  rhsInt is rounded
         // towards zero at this point.
         switch (pred) {
-        default:
-          llvm_unreachable("Unexpected integer comparison!");
         case CmpIPredicate::ne: // (float)int != 4.4   --> true
           rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/true,
                                                      /*width=*/1);
