@@ -670,7 +670,8 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
         LV.setAddress(WrapperCGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
             LV.getAddress(WrapperCGF),
             PI->getType()->getPointerTo(
-                LV.getAddress(WrapperCGF).getAddressSpace())));
+                LV.getAddress(WrapperCGF).getAddressSpace()),
+            PI->getType()));
       CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc());
     } else {
       auto EI = VLASizes.find(Arg);
@@ -7000,10 +7001,11 @@ void CodeGenFunction::EmitOMPUseDeviceAddrClause(
           EmitLoadOfPointer(PrivAddr, getContext()
                                           .getPointerType(OrigVD->getType())
                                           ->castAs<PointerType>());
-    llvm::Type *RealTy =
-        ConvertTypeForMem(OrigVD->getType().getNonReferenceType())
-            ->getPointerTo();
-    PrivAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(PrivAddr, RealTy);
+    llvm::Type *RealElTy =
+        ConvertTypeForMem(OrigVD->getType().getNonReferenceType());
+    llvm::Type *RealTy = RealElTy->getPointerTo();
+    PrivAddr =
+        Builder.CreatePointerBitCastOrAddrSpaceCast(PrivAddr, RealTy, RealElTy);
 
     (void)PrivateScope.addPrivate(OrigVD, [PrivAddr]() { return PrivAddr; });
   }
