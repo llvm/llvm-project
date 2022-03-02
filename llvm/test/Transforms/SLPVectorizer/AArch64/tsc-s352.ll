@@ -33,9 +33,9 @@ define i32 @s352() {
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX6]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
@@ -48,9 +48,9 @@ define i32 @s352() {
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP9]]
+; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[ARRAYIDX18]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x float>, <2 x float>* [[TMP10]], align 4
-; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float* [[ARRAYIDX21]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x float>, <2 x float>* [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[TMP11]], [[TMP13]]

@@ -36,13 +36,13 @@ define void @main() #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 5.000000e+01, double 5.200000e+01>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[AGG_TMP99208_SROA_0_0_IDX]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[AGG_TMP99208_SROA_0_0_IDX]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[AGG_TMP101211_SROA_0_0_IDX]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP10]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[TMP10]], align 8
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond.true63.us:
 ; CHECK-NEXT:    unreachable
@@ -114,6 +114,7 @@ define void @_Z8radianceRK3RayiPt() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN78:%.*]], label [[IF_THEN38:%.*]]
 ; CHECK:       if.then38:
+; CHECK-NEXT:    [[AGG_TMP74663_SROA_0_0_IDX:%.*]] = getelementptr inbounds [[STRUCT_RAY_5_11_53_95_137_191_197_203_239_257_263_269_275_281_287_293_383_437_443_455_461_599_601:%.*]], %struct.Ray.5.11.53.95.137.191.197.203.239.257.263.269.275.281.287.293.383.437.443.455.461.599.601* undef, i64 0, i32 1, i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double undef, double poison>, double undef, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> undef, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> undef, [[TMP1]]
@@ -122,7 +123,6 @@ define void @_Z8radianceRK3RayiPt() #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> undef, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> undef, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> undef, [[TMP6]]
-; CHECK-NEXT:    [[AGG_TMP74663_SROA_0_0_IDX:%.*]] = getelementptr inbounds [[STRUCT_RAY_5_11_53_95_137_191_197_203_239_257_263_269_275_281_287_293_383_437_443_455_461_599_601:%.*]], %struct.Ray.5.11.53.95.137.191.197.203.239.257.263.269.275.281.287.293.383.437.443.455.461.599.601* undef, i64 0, i32 1, i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double* [[AGG_TMP74663_SROA_0_0_IDX]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP8]], align 8
 ; CHECK-NEXT:    br label [[RETURN:%.*]]

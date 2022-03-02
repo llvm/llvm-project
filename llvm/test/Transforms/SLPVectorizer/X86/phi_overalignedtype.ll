@@ -9,16 +9,16 @@ target triple = "i386-apple-macosx10.9.0"
 define void @test(double* %i1, double* %i2, double* %o) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I1_0:%.*]] = load double, double* [[I1:%.*]], align 16
-; CHECK-NEXT:    [[I1_GEP1:%.*]] = getelementptr double, double* [[I1]], i64 1
+; CHECK-NEXT:    [[I1_GEP1:%.*]] = getelementptr double, double* [[I1:%.*]], i64 1
+; CHECK-NEXT:    [[I1_0:%.*]] = load double, double* [[I1]], align 16
 ; CHECK-NEXT:    [[I1_1:%.*]] = load double, double* [[I1_GEP1]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[I1_0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[I1_1]], i32 1
 ; CHECK-NEXT:    br i1 undef, label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[I2_GEP0:%.*]] = getelementptr inbounds double, double* [[I2:%.*]], i64 0
-; CHECK-NEXT:    [[I2_0:%.*]] = load double, double* [[I2_GEP0]], align 16
 ; CHECK-NEXT:    [[I2_GEP1:%.*]] = getelementptr inbounds double, double* [[I2]], i64 1
+; CHECK-NEXT:    [[I2_0:%.*]] = load double, double* [[I2_GEP0]], align 16
 ; CHECK-NEXT:    [[I2_1:%.*]] = load double, double* [[I2_GEP1]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[I2_0]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[I2_1]], i32 1
