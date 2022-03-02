@@ -926,8 +926,14 @@ void Writer::createSections() {
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file
     // because the loader cannot handle holes. Stripping can remove other
     // discardable ones than .reloc, which is first of them (created early).
-    if (s->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
+    if (s->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) {
+      // Move discardable sections named .debug_ to the end, after other
+      // discardable sections. Stripping only removes the sections named
+      // .debug_* - thus try to avoid leaving holes after stripping.
+      if (s->name.startswith(".debug_"))
+        return 3;
       return 2;
+    }
     // .rsrc should come at the end of the non-discardable sections because its
     // size may change by the Win32 UpdateResources() function, causing
     // subsequent sections to move (see https://crbug.com/827082).
