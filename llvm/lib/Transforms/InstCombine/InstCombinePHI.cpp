@@ -1261,9 +1261,6 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   //      ...      ...
   //       \       /
   //    phi [true] [false]
-  if (!PN.getType()->isIntegerTy(1))
-    return nullptr;
-
   // Make sure all inputs are constants.
   if (!all_of(PN.operands(), [](Value *V) { return isa<ConstantInt>(V); }))
     return nullptr;
@@ -1273,30 +1270,49 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   if (!DT.isReachableFromEntry(BB))
     return nullptr;
 
-  // Check that the immediate dominator has a conditional branch.
+  // Determine which value the condition of the idom has for which successor.
+  LLVMContext &Context = PN.getContext();
   auto *IDom = DT.getNode(BB)->getIDom()->getBlock();
-  auto *BI = dyn_cast<BranchInst>(IDom->getTerminator());
-  if (!BI || BI->isUnconditional())
+  Value *Cond;
+  SmallDenseMap<ConstantInt *, BasicBlock *, 8> SuccForValue;
+  if (auto *BI = dyn_cast<BranchInst>(IDom->getTerminator())) {
+    if (BI->isUnconditional())
+      return nullptr;
+
+    Cond = BI->getCondition();
+    SuccForValue[ConstantInt::getTrue(Context)] = BI->getSuccessor(0);
+    SuccForValue[ConstantInt::getFalse(Context)] = BI->getSuccessor(1);
+  } else if (auto *SI = dyn_cast<SwitchInst>(IDom->getTerminator())) {
+    Cond = SI->getCondition();
+    for (auto Case : SI->cases())
+      SuccForValue[Case.getCaseValue()] = Case.getCaseSuccessor();
+  } else {
+    return nullptr;
+  }
+
+  if (Cond->getType() != PN.getType())
     return nullptr;
 
   // Check that edges outgoing from the idom's terminators dominate respective
   // inputs of the Phi.
-  BasicBlockEdge TrueOutEdge(IDom, BI->getSuccessor(0));
-  BasicBlockEdge FalseOutEdge(IDom, BI->getSuccessor(1));
-
   Optional<bool> Invert;
   for (auto Pair : zip(PN.incoming_values(), PN.blocks())) {
     auto *Input = cast<ConstantInt>(std::get<0>(Pair));
     BasicBlock *Pred = std::get<1>(Pair);
-    BasicBlockEdge Edge(Pred, BB);
+    auto IsCorrectInput = [&](ConstantInt *Input) {
+      // The input needs to be dominated by the corresponding edge of the idom.
+      auto It = SuccForValue.find(Input);
+      return It != SuccForValue.end() &&
+             DT.dominates(BasicBlockEdge(IDom, It->second),
+                          BasicBlockEdge(Pred, BB));
+    };
 
-    // The input needs to be dominated by one of the edges of the idom.
     // Depending on the constant, the condition may need to be inverted.
     bool NeedsInvert;
-    if (DT.dominates(TrueOutEdge, Edge))
-      NeedsInvert = Input->isZero();
-    else if (DT.dominates(FalseOutEdge, Edge))
-      NeedsInvert = Input->isOne();
+    if (IsCorrectInput(Input))
+      NeedsInvert = false;
+    else if (IsCorrectInput(cast<ConstantInt>(ConstantExpr::getNot(Input))))
+      NeedsInvert = true;
     else
       return nullptr;
 
@@ -1307,7 +1323,6 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     Invert = NeedsInvert;
   }
 
-  auto *Cond = BI->getCondition();
   if (!*Invert)
     return Cond;
 
