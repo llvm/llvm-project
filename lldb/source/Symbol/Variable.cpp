@@ -147,23 +147,13 @@ void Variable::Dump(Stream *s, bool show_context) const {
 
   if (m_location.IsValid()) {
     s->PutCString(", location = ");
-    lldb::addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
-    if (m_location.IsLocationList()) {
-      SymbolContext variable_sc;
-      m_owner_scope->CalculateSymbolContext(&variable_sc);
-      if (variable_sc.function)
-        loclist_base_addr = variable_sc.function->GetAddressRange()
-                                .GetBaseAddress()
-                                .GetFileAddress();
-    }
     ABISP abi;
     if (m_owner_scope) {
       ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
       if (module_sp)
         abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture());
     }
-    m_location.GetDescription(s, lldb::eDescriptionLevelBrief,
-                              loclist_base_addr, abi.get());
+    m_location.GetDescription(s, lldb::eDescriptionLevelBrief, abi.get());
   }
 
   if (m_external)
@@ -445,36 +435,25 @@ Status Variable::GetValuesForVariableExpressionPath(
   return error;
 }
 
-bool Variable::DumpLocationForAddress(Stream *s, const Address &address) {
-  // Be sure to resolve the address to section offset prior to calling this
-  // function.
-  if (address.IsSectionOffset()) {
-    SymbolContext sc;
-    CalculateSymbolContext(&sc);
-    if (sc.module_sp == address.GetModule()) {
-      ABISP abi;
-      if (m_owner_scope) {
-        ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
-        if (module_sp)
-          abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture());
-      }
+bool Variable::DumpLocations(Stream *s, const Address &address) {
+  SymbolContext sc;
+  CalculateSymbolContext(&sc);
+  ABISP abi;
+  if (m_owner_scope) {
+    ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
+    if (module_sp)
+      abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture());
+  }
 
-      const addr_t file_addr = address.GetFileAddress();
-      if (sc.function) {
-        if (sc.function->GetAddressRange().ContainsFileAddress(address)) {
-          addr_t loclist_base_file_addr =
-              sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
-          if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
-            return false;
-          return m_location.DumpLocationForAddress(s, eDescriptionLevelBrief,
-                                                   loclist_base_file_addr,
-                                                   file_addr, abi.get());
-        }
-      }
-      return m_location.DumpLocationForAddress(s, eDescriptionLevelBrief,
-                                               LLDB_INVALID_ADDRESS, file_addr,
-                                               abi.get());
-    }
+  const addr_t file_addr = address.GetFileAddress();
+  if (sc.function) {
+    addr_t loclist_base_file_addr =
+        sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+    if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
+      return false;
+    return m_location.DumpLocations(s, eDescriptionLevelBrief,
+                                    loclist_base_file_addr, file_addr,
+                                    abi.get());
   }
   return false;
 }

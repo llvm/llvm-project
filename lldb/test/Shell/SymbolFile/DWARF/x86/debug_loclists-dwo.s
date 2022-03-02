@@ -3,8 +3,8 @@
 # RUN: %lldb debug_loclists-dwo.o -o "image lookup -v -s lookup_loclists" -o exit | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -s lookup_loclists
-# CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
-# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = DW_OP_reg1 RDX,
+# CHECK: Variable: {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000000, 0x0000000000000003) -> DW_OP_reg0 RAX,
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", valid ranges = <block>, location = [0x0000000000000002, 0x0000000000000004) -> DW_OP_reg1 RDX,
 
 loclists:
         nop
