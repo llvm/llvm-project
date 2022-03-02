@@ -82,6 +82,8 @@ protected:
 
     Str << " declare <8 x i32> @llvm.vp.fptosi.v8i32"
         << ".v8f32(<8 x float>, <8 x i1>, i32) ";
+    Str << " declare <8 x float> @llvm.vp.sitofp.v8f32"
+        << ".v8i32(<8 x i32>, <8 x i1>, i32) ";
 
     return parseAssemblyString(Str.str(), Err, C);
   }

@@ -20073,6 +20073,61 @@ Examples:
       %t = fptosi <4 x float> %a to <4 x i32>
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
 
+.. _int_vp_sitofp:
+
+'``llvm.vp.sitofp.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.sitofp.v16f32.v16i32 (<16 x i32> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.sitofp.nxv4f32.nxv4i32 (<vscale x 4 x i32> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.sitofp.v256f64.v256i64 (<256 x i64> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.sitofp``' intrinsic converts its signed integer operand to the
+:ref:`floating-point <t_floating>` return type.  The operation has a mask and
+an explicit vector length parameter.
+
+
+Arguments:
+""""""""""
+
+The '``llvm.vp.sitofp``' intrinsic takes a value to cast as its first operand.
+The value to cast must be vector of :ref:`integer <t_integer>` type.  The
+return type is the type to cast the value to.  The return type must be a vector
+of :ref:`floating-point <t_floating>` type.  The second operand is the vector
+mask. The return type, the value to cast, and the vector mask have the same
+number of elements.  The third operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.sitofp``' intrinsic interprets its first operand as a signed
+integer quantity and converts it to the corresponding floating-point value. If
+the value cannot be exactly represented, it is rounded using the default
+rounding mode.  The conversion is performed on lane positions below the
+explicit vector length and where the vector mask is true.  Masked-off lanes are
+undefined.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.sitofp.v4f32.v4i32(<4 x i32> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = sitofp <4 x i32> %a to <4 x float>
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+
 
 .. _int_mload_mstore:
 

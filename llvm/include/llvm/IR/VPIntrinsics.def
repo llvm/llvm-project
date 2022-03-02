@@ -245,6 +245,9 @@ END_REGISTER_VP(vp_fma, VP_FMA)
 // llvm.vp.fptosi(x,mask,vlen)
 HELPER_REGISTER_CAST_VP(fptosi, VP_FPTOSI, FPToSI, 0)
 
+// llvm.vp.sitofp(x,mask,vlen)
+HELPER_REGISTER_CAST_VP(sitofp, VP_SITOFP, SIToFP, 1)
+
 #undef HELPER_REGISTER_CAST_VP
 
 ///// } Type Casts
