@@ -14,12 +14,12 @@
 
 #include <iterator>
 
-#include <concepts>
-#include <list>
-#include <vector>
+static_assert(std::same_as<std::iter_rvalue_reference_t<int*>, int&&>);
+static_assert(std::same_as<std::iter_rvalue_reference_t<const int*>, const int&&>);
 
-static_assert(std::same_as<std::iter_rvalue_reference_t<std::vector<int>::iterator&>, int&&>);
-static_assert(std::same_as<std::iter_rvalue_reference_t<std::vector<int>::const_iterator>, int const&&>);
-static_assert(std::same_as<std::iter_rvalue_reference_t<std::list<int const>::iterator>, int const&&>);
-
-int main(int, char**) { return 0; }
+void test_undefined_internal() {
+  struct A {
+    int& operator*() const;
+  };
+  static_assert(std::same_as<std::iter_rvalue_reference_t<A>, int&&>);
+}
