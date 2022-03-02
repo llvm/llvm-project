@@ -89,7 +89,7 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
   }
 
   // Set up default CPU name for PS4 compilers.
-  if (Triple.isPS4CPU())
+  if (Triple.isPS4())
     return "btver2";
 
   // On Android use targets compatible with gcc
