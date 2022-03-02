@@ -3626,6 +3626,15 @@ public:
       m_print_all = false;
     }
 
+    Status OptionParsingFinished(ExecutionContext *execution_context) override {
+      Status status;
+      if (m_all_ranges && !m_verbose) {
+        status.SetErrorString("--show-variable-ranges must be used in "
+                              "conjunction with --verbose.");
+      }
+      return status;
+    }
+
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_target_modules_lookup_options);
     }
