@@ -4464,6 +4464,9 @@ unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
   unsigned Size = getMemAccessSizeInBytes(MemAccessSize(S));
   if (Size != 0)
     return Size;
+  // Y2_dcfetchbo is special
+  if (MI.getOpcode() == Hexagon::Y2_dcfetchbo)
+    return HexagonII::DoubleWordAccess;
 
   // Handle vector access sizes.
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
