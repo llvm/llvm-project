@@ -981,4 +981,45 @@ define i32 @store_truncs() {
   ret i32 undef
 }
 
+define void @extend_extract() {
+; CHECK-LABEL: 'extend_extract'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %e8 = extractelement <8 x i8> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %e16 = extractelement <8 x i16> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %e32 = extractelement <8 x i32> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8_16 = sext i8 %e8 to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8_16 = zext i8 %e8 to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8_32 = sext i8 %e8 to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8_32 = zext i8 %e8 to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8_64 = sext i8 %e8 to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %z8_64 = zext i8 %e8 to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s16_32 = sext i16 %e16 to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z16_32 = zext i16 %e16 to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s16_64 = sext i16 %e16 to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %z16_64 = zext i16 %e16 to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s32_64 = sext i32 %e32 to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %z32_64 = zext i32 %e32 to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @use(i16 %s8_16, i16 %z8_16, i32 %s8_32, i32 %z8_32, i64 %s8_64, i64 %z8_64, i32 %s16_32, i32 %z16_32, i64 %s16_64, i64 %z16_64, i64 %s32_64, i64 %z32_64)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %e8 = extractelement <8 x i8> undef, i32 1
+  %e16 = extractelement <8 x i16> undef, i32 1
+  %e32 = extractelement <8 x i32> undef, i32 1
+  %s8_16 = sext i8 %e8 to i16
+  %z8_16 = zext i8 %e8 to i16
+  %s8_32 = sext i8 %e8 to i32
+  %z8_32 = zext i8 %e8 to i32
+  %s8_64 = sext i8 %e8 to i64
+  %z8_64 = zext i8 %e8 to i64
+  %s16_32 = sext i16 %e16 to i32
+  %z16_32 = zext i16 %e16 to i32
+  %s16_64 = sext i16 %e16 to i64
+  %z16_64 = zext i16 %e16 to i64
+  %s32_64 = sext i32 %e32 to i64
+  %z32_64 = zext i32 %e32 to i64
+  call void @use(i16 %s8_16, i16 %z8_16, i32 %s8_32, i32 %z8_32, i64 %s8_64, i64 %z8_64, i32 %s16_32, i32 %z16_32, i64 %s16_64, i64 %z16_64, i64 %s32_64, i64 %z32_64)
+  ret void
+}
+
+declare void @use(i16, i16, i32, i32, i64, i64, i32, i32, i64, i64, i64, i64)
+
 attributes #0 = { "target-features"="+sve" }
