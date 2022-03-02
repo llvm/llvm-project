@@ -6,6 +6,7 @@
 // CHECK: f80:128:256
 module attributes {dlti.dl_spec = #dlti.dl_spec<
 #dlti.dl_entry<"dlti.endianness", "big">,
+#dlti.dl_entry<index, 64>,
 #dlti.dl_entry<i64, dense<[64,128]> : vector<2xi32>>,
 #dlti.dl_entry<f80, dense<[128,256]> : vector<2xi32>>
 >} {

@@ -86,6 +86,9 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     auto type = entry.getKey().dyn_cast<Type>();
     if (!type)
       continue;
+    // Data layout for the index type is irrelevant at this point.
+    if (type.isa<IndexType>())
+      continue;
     FailureOr<std::string> prefix =
         llvm::TypeSwitch<Type, FailureOr<std::string>>(type)
             .Case<IntegerType>(
