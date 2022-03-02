@@ -3000,7 +3000,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       removeModOperands(UseMI);
       UseMI.setDesc(get(NewOpc));
 
-      bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+      bool DeleteDef = MRI->use_nodbg_empty(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
 
@@ -3083,7 +3083,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // constant and SGPR are illegal.
       legalizeOperands(UseMI);
 
-      bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+      bool DeleteDef = MRI->use_nodbg_empty(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
 
