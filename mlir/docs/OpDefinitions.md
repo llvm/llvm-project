@@ -1283,10 +1283,8 @@ optionality, default values, etc.:
 
 Some attributes can only take values from a predefined enum, e.g., the
 comparison kind of a comparison op. To define such attributes, ODS provides
-several mechanisms: `StrEnumAttr`, `IntEnumAttr`, and `BitEnumAttr`.
+several mechanisms: `IntEnumAttr`, and `BitEnumAttr`.
 
-*   `StrEnumAttr`: each enum case is a string, the attribute is stored as a
-    [`StringAttr`][StringAttr] in the op.
 *   `IntEnumAttr`: each enum case is an integer, the attribute is stored as a
     [`IntegerAttr`][IntegerAttr] in the op.
 *   `BitEnumAttr`: each enum case is a either the empty case, a single bit,

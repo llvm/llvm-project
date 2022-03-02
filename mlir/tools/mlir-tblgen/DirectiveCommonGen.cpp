@@ -35,7 +35,7 @@ using llvm::RecordKeeper;
 // declarations, functions etc.
 //
 // Some OpenMP/OpenACC clauses accept only a fixed set of values as inputs.
-// These can be represented as a String Enum Attribute (StrEnumAttr) in MLIR
+// These can be represented as a Enum Attributes (EnumAttrDef) in MLIR
 // ODS. The emitDecls function below currently generates these enumerations. The
 // name of the enumeration is specified in the enumClauseValue field of
 // Clause record in OMP.td. This name can be used to specify the type of the
