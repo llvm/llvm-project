@@ -177,7 +177,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   mutable Optional<bool> NeedsDwarfUnwindInfo;
 
   /// True if the function need asynchronous unwind information.
-  mutable Optional<bool> NeedsAsyncDwarfUnwindInfo;
+  mutable Optional<bool> NeedsDwarfAsyncUnwindInfo;
 
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);

@@ -10,7 +10,7 @@ target triple = "arm64--"
 ; formed in SelectionDAG, optimizeCondBranch() only triggers if the and
 ; instruction is in a different block than the conditional jump.
 
-define void @func() uwtable {
+define void @func() {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
@@ -24,16 +24,12 @@ define void @func() uwtable {
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w0, w8, #0x100
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    cbz w0, .LBB0_5
 ; CHECK-NEXT:  .LBB0_3: // %common.ret.sink.split
 ; CHECK-NEXT:    b extfunc
 ; CHECK-NEXT:  .LBB0_4: // %b2
 ; CHECK-NEXT:    bl extfunc
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    cbnz w0, .LBB0_3
 ; CHECK-NEXT:  .LBB0_5: // %common.ret
 ; CHECK-NEXT:    ret

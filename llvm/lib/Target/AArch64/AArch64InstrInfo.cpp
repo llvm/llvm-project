@@ -4139,12 +4139,11 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
 
 MCCFIInstruction llvm::createDefCFA(const TargetRegisterInfo &TRI,
                                     unsigned FrameReg, unsigned Reg,
-                                    const StackOffset &Offset,
-                                    bool LastAdjustmentWasScalable) {
+                                    const StackOffset &Offset) {
   if (Offset.getScalable())
     return createDefCFAExpression(TRI, Reg, Offset);
 
-  if (FrameReg == Reg && !LastAdjustmentWasScalable)
+  if (FrameReg == Reg)
     return MCCFIInstruction::cfiDefCfaOffset(nullptr, int(Offset.getFixed()));
 
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
@@ -4276,8 +4275,8 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
       const TargetSubtargetInfo &STI = MF.getSubtarget();
       const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-      unsigned CFIIndex = MF.addFrameInst(
-          createDefCFA(TRI, FrameReg, DestReg, CFAOffset, VScale != 1));
+      unsigned CFIIndex =
+          MF.addFrameInst(createDefCFA(TRI, FrameReg, DestReg, CFAOffset));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(Flag);

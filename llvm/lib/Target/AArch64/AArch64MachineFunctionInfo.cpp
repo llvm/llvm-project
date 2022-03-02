@@ -15,7 +15,6 @@
 
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
-#include "AArch64Subtarget.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
@@ -127,19 +126,9 @@ bool AArch64FunctionInfo::needsDwarfUnwindInfo() const {
 }
 
 bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo() const {
-  if (!NeedsAsyncDwarfUnwindInfo.hasValue()) {
-    const Function &F = MF.getFunction();
-    NeedsAsyncDwarfUnwindInfo =
-        needsDwarfUnwindInfo() && F.getUWTableKind() == UWTableKind::Async &&
-        !MF.getSubtarget<AArch64Subtarget>()
-             .isTargetMachO() && // TODO: async unwind info not represenatble in
-                                 // the compact format(?).
-        !F.hasMinSize(); // TODO: this is to prevent epilogue unwind info
-                         // from being emitted for homogeneous epilogues,
-                         // outlined functions, and functions outlined from.
-                         // Alternatively, we could disable those
-                         // optimisations. Or even better, add async unwind
-                         // support to them!
-  }
-  return NeedsAsyncDwarfUnwindInfo.getValue();
+  if (!NeedsDwarfAsyncUnwindInfo.hasValue())
+    NeedsDwarfAsyncUnwindInfo =
+        needsDwarfUnwindInfo() &&
+        MF.getFunction().getUWTableKind() == UWTableKind::Async;
+  return NeedsDwarfAsyncUnwindInfo.getValue();
 }
