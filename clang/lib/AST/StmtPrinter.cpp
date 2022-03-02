@@ -1023,7 +1023,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     return;
   }
   if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(Node->getDecl())) {
-    TPOD->printAsExpr(OS);
+    TPOD->printAsExpr(OS, Policy);
     return;
   }
   if (NestedNameSpecifier *Qualifier = Node->getQualifier())
