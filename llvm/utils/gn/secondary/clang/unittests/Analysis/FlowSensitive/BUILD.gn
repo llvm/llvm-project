@@ -16,6 +16,8 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "DataflowAnalysisContextTest.cpp",
+    "DataflowEnvironmentTest.cpp",
     "MapLatticeTest.cpp",
     "MultiVarConstantPropagationTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
