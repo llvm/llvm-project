@@ -15,10 +15,12 @@
 
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "llvm/Support/CommandLine.h"
@@ -27,6 +29,49 @@
 
 #define PGMATH_DECLARE
 #include "flang/Evaluate/pgmath.h.inc"
+
+/// Enums used to templatize and share lowering of MIN and MAX.
+enum class Extremum { Min, Max };
+
+// There are different ways to deal with NaNs in MIN and MAX.
+// Known existing behaviors are listed below and can be selected for
+// f18 MIN/MAX implementation.
+enum class ExtremumBehavior {
+  // Note: the Signaling/quiet aspect of NaNs in the behaviors below are
+  // not described because there is no way to control/observe such aspect in
+  // MLIR/LLVM yet. The IEEE behaviors come with requirements regarding this
+  // aspect that are therefore currently not enforced. In the descriptions
+  // below, NaNs can be signaling or quite. Returned NaNs may be signaling
+  // if one of the input NaN was signaling but it cannot be guaranteed either.
+  // Existing compilers using an IEEE behavior (gfortran) also do not fulfill
+  // signaling/quiet requirements.
+  IeeeMinMaximumNumber,
+  // IEEE minimumNumber/maximumNumber behavior (754-2019, section 9.6):
+  // If one of the argument is and number and the other is NaN, return the
+  // number. If both arguements are NaN, return NaN.
+  // Compilers: gfortran.
+  IeeeMinMaximum,
+  // IEEE minimum/maximum behavior (754-2019, section 9.6):
+  // If one of the argument is NaN, return NaN.
+  MinMaxss,
+  // x86 minss/maxss behavior:
+  // If the second argument is a number and the other is NaN, return the number.
+  // In all other cases where at least one operand is NaN, return NaN.
+  // Compilers: xlf (only for MAX), ifort, pgfortran -nollvm, and nagfor.
+  PgfortranLlvm,
+  // "Opposite of" x86 minss/maxss behavior:
+  // If the first argument is a number and the other is NaN, return the
+  // number.
+  // In all other cases where at least one operand is NaN, return NaN.
+  // Compilers: xlf (only for MIN), and pgfortran (with llvm).
+  IeeeMinMaxNum
+  // IEEE minNum/maxNum behavior (754-2008, section 5.3.1):
+  // TODO: Not implemented.
+  // It is the only behavior where the signaling/quiet aspect of a NaN argument
+  // impacts if the result should be NaN or the argument that is a number.
+  // LLVM/MLIR do not provide ways to observe this aspect, so it is not
+  // possible to implement it without some target dependent runtime.
+};
 
 /// This file implements lowering of Fortran intrinsic procedures.
 /// Intrinsics are lowered to a mix of FIR and MLIR operations as
@@ -81,6 +126,8 @@ struct IntrinsicLibrary {
   /// if the argument is an integer, into llvm intrinsics if the argument is
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <Extremum, ExtremumBehavior>
+  mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -600,6 +647,81 @@ mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
   return builder.create<mlir::arith::AndIOp>(loc, args[0], args[1]);
 }
 
+// Compare two FIR values and return boolean result as i1.
+template <Extremum extremum, ExtremumBehavior behavior>
+static mlir::Value createExtremumCompare(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         mlir::Value left, mlir::Value right) {
+  static constexpr mlir::arith::CmpIPredicate integerPredicate =
+      extremum == Extremum::Max ? mlir::arith::CmpIPredicate::sgt
+                                : mlir::arith::CmpIPredicate::slt;
+  static constexpr mlir::arith::CmpFPredicate orderedCmp =
+      extremum == Extremum::Max ? mlir::arith::CmpFPredicate::OGT
+                                : mlir::arith::CmpFPredicate::OLT;
+  mlir::Type type = left.getType();
+  mlir::Value result;
+  if (fir::isa_real(type)) {
+    // Note: the signaling/quit aspect of the result required by IEEE
+    // cannot currently be obtained with LLVM without ad-hoc runtime.
+    if constexpr (behavior == ExtremumBehavior::IeeeMinMaximumNumber) {
+      // Return the number if one of the inputs is NaN and the other is
+      // a number.
+      auto leftIsResult =
+          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
+      auto rightIsNan = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::UNE, right, right);
+      result =
+          builder.create<mlir::arith::OrIOp>(loc, leftIsResult, rightIsNan);
+    } else if constexpr (behavior == ExtremumBehavior::IeeeMinMaximum) {
+      // Always return NaNs if one the input is NaNs
+      auto leftIsResult =
+          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
+      auto leftIsNan = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::UNE, left, left);
+      result = builder.create<mlir::arith::OrIOp>(loc, leftIsResult, leftIsNan);
+    } else if constexpr (behavior == ExtremumBehavior::MinMaxss) {
+      // If the left is a NaN, return the right whatever it is.
+      result =
+          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
+    } else if constexpr (behavior == ExtremumBehavior::PgfortranLlvm) {
+      // If one of the operand is a NaN, return left whatever it is.
+      static constexpr auto unorderedCmp =
+          extremum == Extremum::Max ? mlir::arith::CmpFPredicate::UGT
+                                    : mlir::arith::CmpFPredicate::ULT;
+      result =
+          builder.create<mlir::arith::CmpFOp>(loc, unorderedCmp, left, right);
+    } else {
+      // TODO: ieeeMinNum/ieeeMaxNum
+      static_assert(behavior == ExtremumBehavior::IeeeMinMaxNum,
+                    "ieeeMinNum/ieeeMaxNum behavior not implemented");
+    }
+  } else if (fir::isa_integer(type)) {
+    result =
+        builder.create<mlir::arith::CmpIOp>(loc, integerPredicate, left, right);
+  } else if (fir::isa_char(type)) {
+    // TODO: ! character min and max is tricky because the result
+    // length is the length of the longest argument!
+    // So we may need a temp.
+    TODO(loc, "CHARACTER min and max");
+  }
+  assert(result && "result must be defined");
+  return result;
+}
+
+// MIN and MAX
+template <Extremum extremum, ExtremumBehavior behavior>
+mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1);
+  mlir::Value result = args[0];
+  for (auto arg : args.drop_front()) {
+    mlir::Value mask =
+        createExtremumCompare<extremum, behavior>(loc, builder, result, arg);
+    result = builder.create<mlir::arith::SelectOp>(loc, mask, result, arg);
+  }
+  return result;
+}
+
 //===----------------------------------------------------------------------===//
 // Argument lowering rules interface
 //===----------------------------------------------------------------------===//
@@ -637,6 +759,15 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::ArrayRef<fir::ExtendedValue> args) {
   return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
                                                          args);
+}
+
+mlir::Value Fortran::lower::genMax(fir::FirOpBuilder &builder,
+                                   mlir::Location loc,
+                                   llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() > 0 && "max requires at least one argument");
+  return IntrinsicLibrary{builder, loc}
+      .genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>(args[0].getType(),
+                                                              args);
 }
 
 mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
