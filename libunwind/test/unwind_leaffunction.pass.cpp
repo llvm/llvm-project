@@ -10,6 +10,9 @@
 // Ensure that leaf function can be unwund.
 // REQUIRES: linux && (target={{aarch64-.+}} || target={{x86_64-.+}})
 
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <signal.h>

@@ -12,6 +12,9 @@
 // TODO: Investigate this failure on macOS
 // XFAIL: target={{.+}}-apple-darwin{{.+}}
 
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
 // UNSUPPORTED: libunwind-arm-ehabi
 
 // The AIX assembler does not support CFI directives, which

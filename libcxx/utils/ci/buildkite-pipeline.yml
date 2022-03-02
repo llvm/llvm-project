@@ -276,6 +276,20 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
+    - label: "MSAN"
+      command: "libcxx/utils/ci/run-buildbot generic-msan"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "linux"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
   # Tests with the various supported ways to build libc++.
   - label: "Bootstrapping build"
     command: "libcxx/utils/ci/run-buildbot bootstrapping-build"

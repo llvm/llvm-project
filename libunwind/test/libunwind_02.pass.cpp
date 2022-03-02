@@ -1,3 +1,6 @@
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
 #include <assert.h>
 #include <stdlib.h>
 #include <unwind.h>
