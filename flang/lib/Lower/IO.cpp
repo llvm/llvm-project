@@ -1829,3 +1829,257 @@ Fortran::lower::genReadStatement(Fortran::lower::AbstractConverter &converter,
                                  const Fortran::parser::ReadStmt &stmt) {
   return genDataTransferStmt</*isInput=*/true>(converter, stmt);
 }
+
+/// Get the file expression from the inquire spec list. Also return if the
+/// expression is a file name.
+static std::pair<const Fortran::lower::SomeExpr *, bool>
+getInquireFileExpr(const std::list<Fortran::parser::InquireSpec> *stmt) {
+  if (!stmt)
+    return {nullptr, /*filename?=*/false};
+  for (const Fortran::parser::InquireSpec &spec : *stmt) {
+    if (auto *f = std::get_if<Fortran::parser::FileUnitNumber>(&spec.u))
+      return {Fortran::semantics::GetExpr(*f), /*filename?=*/false};
+    if (auto *f = std::get_if<Fortran::parser::FileNameExpr>(&spec.u))
+      return {Fortran::semantics::GetExpr(*f), /*filename?=*/true};
+  }
+  // semantics should have already caught this condition
+  llvm::report_fatal_error("inquire spec must have a file");
+}
+
+/// Generate calls to the four distinct INQUIRE subhandlers. An INQUIRE may
+/// return values of type CHARACTER, INTEGER, or LOGICAL. There is one
+/// additional special case for INQUIRE with both PENDING and ID specifiers.
+template <typename A>
+static mlir::Value genInquireSpec(Fortran::lower::AbstractConverter &converter,
+                                  mlir::Location loc, mlir::Value cookie,
+                                  mlir::Value idExpr, const A &var,
+                                  Fortran::lower::StatementContext &stmtCtx) {
+  // default case: do nothing
+  return {};
+}
+/// Specialization for CHARACTER.
+template <>
+mlir::Value genInquireSpec<Fortran::parser::InquireSpec::CharVar>(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Value cookie, mlir::Value idExpr,
+    const Fortran::parser::InquireSpec::CharVar &var,
+    Fortran::lower::StatementContext &stmtCtx) {
+  // IOMSG is handled with exception conditions
+  if (std::get<Fortran::parser::InquireSpec::CharVar::Kind>(var.t) ==
+      Fortran::parser::InquireSpec::CharVar::Kind::Iomsg)
+    return {};
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::FuncOp specFunc =
+      getIORuntimeFunc<mkIOKey(InquireCharacter)>(loc, builder);
+  mlir::FunctionType specFuncTy = specFunc.getType();
+  const auto *varExpr = Fortran::semantics::GetExpr(
+      std::get<Fortran::parser::ScalarDefaultCharVariable>(var.t));
+  fir::ExtendedValue str = converter.genExprAddr(varExpr, stmtCtx, loc);
+  llvm::SmallVector<mlir::Value> args = {
+      builder.createConvert(loc, specFuncTy.getInput(0), cookie),
+      builder.createIntegerConstant(
+          loc, specFuncTy.getInput(1),
+          Fortran::runtime::io::HashInquiryKeyword(
+              Fortran::parser::InquireSpec::CharVar::EnumToString(
+                  std::get<Fortran::parser::InquireSpec::CharVar::Kind>(var.t))
+                  .c_str())),
+      builder.createConvert(loc, specFuncTy.getInput(2), fir::getBase(str)),
+      builder.createConvert(loc, specFuncTy.getInput(3), fir::getLen(str))};
+  return builder.create<fir::CallOp>(loc, specFunc, args).getResult(0);
+}
+/// Specialization for INTEGER.
+template <>
+mlir::Value genInquireSpec<Fortran::parser::InquireSpec::IntVar>(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Value cookie, mlir::Value idExpr,
+    const Fortran::parser::InquireSpec::IntVar &var,
+    Fortran::lower::StatementContext &stmtCtx) {
+  // IOSTAT is handled with exception conditions
+  if (std::get<Fortran::parser::InquireSpec::IntVar::Kind>(var.t) ==
+      Fortran::parser::InquireSpec::IntVar::Kind::Iostat)
+    return {};
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::FuncOp specFunc =
+      getIORuntimeFunc<mkIOKey(InquireInteger64)>(loc, builder);
+  mlir::FunctionType specFuncTy = specFunc.getType();
+  const auto *varExpr = Fortran::semantics::GetExpr(
+      std::get<Fortran::parser::ScalarIntVariable>(var.t));
+  mlir::Value addr = fir::getBase(converter.genExprAddr(varExpr, stmtCtx, loc));
+  mlir::Type eleTy = fir::dyn_cast_ptrEleTy(addr.getType());
+  if (!eleTy)
+    fir::emitFatalError(loc,
+                        "internal error: expected a memory reference type");
+  auto bitWidth = eleTy.cast<mlir::IntegerType>().getWidth();
+  mlir::IndexType idxTy = builder.getIndexType();
+  mlir::Value kind = builder.createIntegerConstant(loc, idxTy, bitWidth / 8);
+  llvm::SmallVector<mlir::Value> args = {
+      builder.createConvert(loc, specFuncTy.getInput(0), cookie),
+      builder.createIntegerConstant(
+          loc, specFuncTy.getInput(1),
+          Fortran::runtime::io::HashInquiryKeyword(
+              Fortran::parser::InquireSpec::IntVar::EnumToString(
+                  std::get<Fortran::parser::InquireSpec::IntVar::Kind>(var.t))
+                  .c_str())),
+      builder.createConvert(loc, specFuncTy.getInput(2), addr),
+      builder.createConvert(loc, specFuncTy.getInput(3), kind)};
+  return builder.create<fir::CallOp>(loc, specFunc, args).getResult(0);
+}
+/// Specialization for LOGICAL and (PENDING + ID).
+template <>
+mlir::Value genInquireSpec<Fortran::parser::InquireSpec::LogVar>(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Value cookie, mlir::Value idExpr,
+    const Fortran::parser::InquireSpec::LogVar &var,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto logVarKind = std::get<Fortran::parser::InquireSpec::LogVar::Kind>(var.t);
+  bool pendId =
+      idExpr &&
+      logVarKind == Fortran::parser::InquireSpec::LogVar::Kind::Pending;
+  mlir::FuncOp specFunc =
+      pendId ? getIORuntimeFunc<mkIOKey(InquirePendingId)>(loc, builder)
+             : getIORuntimeFunc<mkIOKey(InquireLogical)>(loc, builder);
+  mlir::FunctionType specFuncTy = specFunc.getType();
+  mlir::Value addr = fir::getBase(converter.genExprAddr(
+      Fortran::semantics::GetExpr(
+          std::get<Fortran::parser::Scalar<
+              Fortran::parser::Logical<Fortran::parser::Variable>>>(var.t)),
+      stmtCtx, loc));
+  llvm::SmallVector<mlir::Value> args = {
+      builder.createConvert(loc, specFuncTy.getInput(0), cookie)};
+  if (pendId)
+    args.push_back(builder.createConvert(loc, specFuncTy.getInput(1), idExpr));
+  else
+    args.push_back(builder.createIntegerConstant(
+        loc, specFuncTy.getInput(1),
+        Fortran::runtime::io::HashInquiryKeyword(
+            Fortran::parser::InquireSpec::LogVar::EnumToString(logVarKind)
+                .c_str())));
+  args.push_back(builder.createConvert(loc, specFuncTy.getInput(2), addr));
+  return builder.create<fir::CallOp>(loc, specFunc, args).getResult(0);
+}
+
+/// If there is an IdExpr in the list of inquire-specs, then lower it and return
+/// the resulting Value. Otherwise, return null.
+static mlir::Value
+lowerIdExpr(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+            const std::list<Fortran::parser::InquireSpec> &ispecs,
+            Fortran::lower::StatementContext &stmtCtx) {
+  for (const Fortran::parser::InquireSpec &spec : ispecs)
+    if (mlir::Value v = std::visit(
+            Fortran::common::visitors{
+                [&](const Fortran::parser::IdExpr &idExpr) {
+                  return fir::getBase(converter.genExprValue(
+                      Fortran::semantics::GetExpr(idExpr), stmtCtx, loc));
+                },
+                [](const auto &) { return mlir::Value{}; }},
+            spec.u))
+      return v;
+  return {};
+}
+
+/// For each inquire-spec, build the appropriate call, threading the cookie.
+static void threadInquire(Fortran::lower::AbstractConverter &converter,
+                          mlir::Location loc, mlir::Value cookie,
+                          const std::list<Fortran::parser::InquireSpec> &ispecs,
+                          bool checkResult, mlir::Value &ok,
+                          Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Value idExpr = lowerIdExpr(converter, loc, ispecs, stmtCtx);
+  for (const Fortran::parser::InquireSpec &spec : ispecs) {
+    makeNextConditionalOn(builder, loc, checkResult, ok);
+    ok = std::visit(Fortran::common::visitors{[&](const auto &x) {
+                      return genInquireSpec(converter, loc, cookie, idExpr, x,
+                                            stmtCtx);
+                    }},
+                    spec.u);
+  }
+}
+
+mlir::Value Fortran::lower::genInquireStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::InquireStmt &stmt) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::FuncOp beginFunc;
+  ConditionSpecInfo csi;
+  llvm::SmallVector<mlir::Value> beginArgs;
+  const auto *list =
+      std::get_if<std::list<Fortran::parser::InquireSpec>>(&stmt.u);
+  auto exprPair = getInquireFileExpr(list);
+  auto inquireFileUnit = [&]() -> bool {
+    return exprPair.first && !exprPair.second;
+  };
+  auto inquireFileName = [&]() -> bool {
+    return exprPair.first && exprPair.second;
+  };
+
+  // Make one of three BeginInquire calls.
+  if (inquireFileUnit()) {
+    // Inquire by unit -- [UNIT=]file-unit-number.
+    beginFunc = getIORuntimeFunc<mkIOKey(BeginInquireUnit)>(loc, builder);
+    mlir::FunctionType beginFuncTy = beginFunc.getType();
+    beginArgs = {builder.createConvert(loc, beginFuncTy.getInput(0),
+                                       fir::getBase(converter.genExprValue(
+                                           exprPair.first, stmtCtx, loc))),
+                 locToFilename(converter, loc, beginFuncTy.getInput(1)),
+                 locToLineNo(converter, loc, beginFuncTy.getInput(2))};
+  } else if (inquireFileName()) {
+    // Inquire by file -- FILE=file-name-expr.
+    beginFunc = getIORuntimeFunc<mkIOKey(BeginInquireFile)>(loc, builder);
+    mlir::FunctionType beginFuncTy = beginFunc.getType();
+    fir::ExtendedValue file =
+        converter.genExprAddr(exprPair.first, stmtCtx, loc);
+    beginArgs = {
+        builder.createConvert(loc, beginFuncTy.getInput(0), fir::getBase(file)),
+        builder.createConvert(loc, beginFuncTy.getInput(1), fir::getLen(file)),
+        locToFilename(converter, loc, beginFuncTy.getInput(2)),
+        locToLineNo(converter, loc, beginFuncTy.getInput(3))};
+  } else {
+    // Inquire by output list -- IOLENGTH=scalar-int-variable.
+    const auto *ioLength =
+        std::get_if<Fortran::parser::InquireStmt::Iolength>(&stmt.u);
+    assert(ioLength && "must have an IOLENGTH specifier");
+    beginFunc = getIORuntimeFunc<mkIOKey(BeginInquireIoLength)>(loc, builder);
+    mlir::FunctionType beginFuncTy = beginFunc.getType();
+    beginArgs = {locToFilename(converter, loc, beginFuncTy.getInput(0)),
+                 locToLineNo(converter, loc, beginFuncTy.getInput(1))};
+    auto cookie =
+        builder.create<fir::CallOp>(loc, beginFunc, beginArgs).getResult(0);
+    mlir::Value ok;
+    genOutputItemList(
+        converter, cookie,
+        std::get<std::list<Fortran::parser::OutputItem>>(ioLength->t),
+        /*isFormatted=*/false, /*checkResult=*/false, ok, /*inLoop=*/false,
+        stmtCtx);
+    auto *ioLengthVar = Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::ScalarIntVariable>(ioLength->t));
+    mlir::Value ioLengthVarAddr =
+        fir::getBase(converter.genExprAddr(ioLengthVar, stmtCtx, loc));
+    llvm::SmallVector<mlir::Value> args = {cookie};
+    mlir::Value length =
+        builder
+            .create<fir::CallOp>(
+                loc, getIORuntimeFunc<mkIOKey(GetIoLength)>(loc, builder), args)
+            .getResult(0);
+    mlir::Value length1 =
+        builder.createConvert(loc, converter.genType(*ioLengthVar), length);
+    builder.create<fir::StoreOp>(loc, length1, ioLengthVarAddr);
+    return genEndIO(converter, loc, cookie, csi, stmtCtx);
+  }
+
+  // Common handling for inquire by unit or file.
+  assert(list && "inquire-spec list must be present");
+  auto cookie =
+      builder.create<fir::CallOp>(loc, beginFunc, beginArgs).getResult(0);
+  genConditionHandlerCall(converter, loc, cookie, *list, csi);
+  // Handle remaining arguments in specifier list.
+  mlir::Value ok;
+  auto insertPt = builder.saveInsertionPoint();
+  threadInquire(converter, loc, cookie, *list, csi.hasErrorConditionSpec(), ok,
+                stmtCtx);
+  builder.restoreInsertionPoint(insertPt);
+  // Generate end statement call.
+  return genEndIO(converter, loc, cookie, csi, stmtCtx);
+}

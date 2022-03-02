@@ -52,7 +52,46 @@
   ! CHECK: call {{.*}}OutputAscii
   ! CHECK: call {{.*}}EndIoStatement
   print *, "A literal string"
+
+  ! CHECK: call {{.*}}BeginInquireUnit
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire(4, EXIST=existsvar)
+
+  ! CHECK: call {{.*}}BeginInquireFile
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire(FILE="fail.f90", EXIST=existsvar)
+
+  ! CHECK: call {{.*}}BeginInquireIoLength
+  ! CHECK-COUNT-3: call {{.*}}OutputDescriptor
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire (iolength=length) existsvar, length, a
 end
+
+! Tests the 3 basic inquire formats
+! CHECK-LABEL: func @_QPinquire_test
+subroutine inquire_test(ch, i, b)
+  character(80) :: ch
+  integer :: i
+  logical :: b
+
+  ! CHARACTER
+  ! CHECK: %[[sugar:.*]] = fir.call {{.*}}BeginInquireUnit
+  ! CHECK: call {{.*}}InquireCharacter(%[[sugar]], %c{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire(88, name=ch)
+
+  ! INTEGER
+  ! CHECK: %[[oatmeal:.*]] = fir.call {{.*}}BeginInquireUnit
+  ! CHECK: call @_FortranAioInquireInteger64(%[[oatmeal]], %c{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire(89, pos=i)
+
+  ! LOGICAL
+  ! CHECK: %[[snicker:.*]] = fir.call {{.*}}BeginInquireUnit
+  ! CHECK: call @_FortranAioInquireLogical(%[[snicker]], %c{{.*}}, %[[b:.*]]) : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire(90, opened=b)
+end subroutine inquire_test
 
 ! CHECK-LABEL: @_QPboz
 subroutine boz

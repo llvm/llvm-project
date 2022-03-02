@@ -43,6 +43,11 @@ fir::factory::CharacterExprHelper::getCharacterType(mlir::Type type) {
   return recoverCharacterType(type);
 }
 
+fir::CharacterType
+fir::factory::CharacterExprHelper::getCharType(mlir::Type type) {
+  return recoverCharacterType(type);
+}
+
 fir::CharacterType fir::factory::CharacterExprHelper::getCharacterType(
     const fir::CharBoxValue &box) {
   return getCharacterType(box.getBuffer().getType());
