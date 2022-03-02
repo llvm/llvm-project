@@ -22,6 +22,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Process.h"
@@ -403,7 +404,8 @@ bool Address::GetDescription(Stream &s, Target &target,
 }
 
 bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
-                   DumpStyle fallback_style, uint32_t addr_size) const {
+                   DumpStyle fallback_style, uint32_t addr_size,
+                   bool all_ranges) const {
   // If the section was nullptr, only load address is going to work unless we
   // are trying to deref a pointer
   SectionSP section_sp(GetSection());
@@ -720,27 +722,42 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
           bool get_parent_variables = true;
           bool stop_if_block_is_inlined_function = false;
           VariableList variable_list;
-          sc.block->AppendVariables(can_create, get_parent_variables,
-                                    stop_if_block_is_inlined_function,
-                                    [](Variable *) { return true; },
-                                    &variable_list);
-
+          addr_t file_addr = GetFileAddress();
+          sc.block->AppendVariables(
+              can_create, get_parent_variables,
+              stop_if_block_is_inlined_function,
+              [&](Variable *var) {
+                return var && var->LocationIsValidForAddress(*this);
+              },
+              &variable_list);
+          ABISP abi =
+              ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture());
           for (const VariableSP &var_sp : variable_list) {
-            if (var_sp && var_sp->LocationIsValidForAddress(*this)) {
-              s->Indent();
-              s->Printf("   Variable: id = {0x%8.8" PRIx64 "}, name = \"%s\"",
-                        var_sp->GetID(), var_sp->GetName().GetCString());
-              Type *type = var_sp->GetType();
-              if (type)
-                s->Printf(", type = \"%s\"", type->GetName().GetCString());
-              else
-                s->PutCString(", type = <unknown>");
-              s->PutCString(", location = ");
-              var_sp->DumpLocationForAddress(s, *this);
-              s->PutCString(", decl = ");
-              var_sp->GetDeclaration().DumpStopContext(s, false);
-              s->EOL();
-            }
+            s->Indent();
+            s->Printf("   Variable: id = {0x%8.8" PRIx64 "}, name = \"%s\"",
+                      var_sp->GetID(), var_sp->GetName().GetCString());
+            Type *type = var_sp->GetType();
+            if (type)
+              s->Printf(", type = \"%s\"", type->GetName().GetCString());
+            else
+              s->PutCString(", type = <unknown>");
+            s->PutCString(", valid ranges = ");
+            if (var_sp->GetScopeRange().IsEmpty())
+              s->PutCString("<block>");
+            else if (all_ranges) {
+              for (auto range : var_sp->GetScopeRange())
+                DumpAddressRange(s->AsRawOstream(), range.GetRangeBase(),
+                                 range.GetRangeEnd(), addr_size);
+            } else if (auto *range =
+                           var_sp->GetScopeRange().FindEntryThatContains(
+                               file_addr))
+              DumpAddressRange(s->AsRawOstream(), range->GetRangeBase(),
+                               range->GetRangeEnd(), addr_size);
+            s->PutCString(", location = ");
+            var_sp->DumpLocations(s, all_ranges ? LLDB_INVALID_ADDRESS : *this);
+            s->PutCString(", decl = ");
+            var_sp->GetDeclaration().DumpStopContext(s, false);
+            s->EOL();
           }
         }
       }

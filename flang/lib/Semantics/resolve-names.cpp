@@ -3317,13 +3317,21 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
     Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
     return false;
   }
-  if (symbol->owner() == currScope()) {
-    PushScope(Scope::Kind::Subprogram, symbol);
+  if (symbol->owner() == currScope() && symbol->scope()) {
+    // This is a MODULE PROCEDURE whose interface appears in its host.
+    // Convert the module procedure's interface into a subprogram.
+    SetScope(DEREF(symbol->scope()));
+    symbol->get<SubprogramDetails>().set_isInterface(false);
+    if (IsFunction(*symbol)) {
+      funcInfoStack_.emplace_back(); // just to be popped later
+    }
   } else {
+    // Copy the interface into a new subprogram scope.
     Symbol &newSymbol{MakeSymbol(name, SubprogramDetails{})};
     PushScope(Scope::Kind::Subprogram, &newSymbol);
     const auto &details{symbol->get<SubprogramDetails>()};
     auto &newDetails{newSymbol.get<SubprogramDetails>()};
+    newDetails.set_moduleInterface(*symbol);
     for (const Symbol *dummyArg : details.dummyArgs()) {
       if (!dummyArg) {
         newDetails.add_alternateReturn();
@@ -3349,14 +3357,34 @@ bool SubprogramVisitor::BeginSubprogram(
         "MODULE or SUBMODULE"_err_en_US);
     return false;
   }
-
-  if (hasModulePrefix && !inInterfaceBlock() &&
-      !IsSeparateModuleProcedureInterface(
-          FindSymbol(currScope().parent(), name))) {
-    Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
-    return false;
+  Symbol *moduleInterface{nullptr};
+  if (hasModulePrefix && !inInterfaceBlock()) {
+    moduleInterface = FindSymbol(currScope(), name);
+    if (IsSeparateModuleProcedureInterface(moduleInterface)) {
+      // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
+      // previously defined in the same scope.
+      currScope().erase(moduleInterface->name());
+    } else {
+      moduleInterface = nullptr;
+    }
+    if (!moduleInterface) {
+      moduleInterface = FindSymbol(currScope().parent(), name);
+      if (!IsSeparateModuleProcedureInterface(moduleInterface)) {
+        Say(name,
+            "'%s' was not declared a separate module procedure"_err_en_US);
+        return false;
+      }
+    }
   }
-  PushSubprogramScope(name, subpFlag);
+  Symbol &newSymbol{PushSubprogramScope(name, subpFlag)};
+  if (moduleInterface) {
+    newSymbol.get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
+    if (moduleInterface->attrs().test(Attr::PRIVATE)) {
+      newSymbol.attrs().set(Attr::PRIVATE);
+    } else if (moduleInterface->attrs().test(Attr::PUBLIC)) {
+      newSymbol.attrs().set(Attr::PUBLIC);
+    }
+  }
   if (IsFunction(currScope())) {
     funcInfoStack_.emplace_back();
   }
@@ -7059,7 +7087,12 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
       node.IsModule() ? SubprogramKind::Module : SubprogramKind::Internal};
   for (auto &child : node.children()) {
     auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind, child})};
-    symbol.set(child.GetSubpFlag());
+    auto childKind{child.GetKind()};
+    if (childKind == ProgramTree::Kind::Function) {
+      symbol.set(Symbol::Flag::Function);
+    } else if (childKind == ProgramTree::Kind::Subroutine) {
+      symbol.set(Symbol::Flag::Subroutine);
+    }
     for (const auto &entryStmt : child.entryStmts()) {
       SubprogramNameDetails details{kind, child};
       details.set_isEntryStmt();

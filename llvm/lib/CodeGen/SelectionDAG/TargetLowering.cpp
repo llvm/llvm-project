@@ -3819,17 +3819,23 @@ static SDValue foldSetCCWithRotate(EVT VT, SDValue N0, SDValue N1,
   if (Cond != ISD::SETEQ && Cond != ISD::SETNE)
     return SDValue();
 
-  if (N0.getOpcode() != ISD::ROTL && N0.getOpcode() != ISD::ROTR)
-    return SDValue();
-
   auto *C1 = isConstOrConstSplat(N1, /* AllowUndefs */ true);
   if (!C1 || !(C1->isZero() || C1->isAllOnes()))
     return SDValue();
 
+  auto getRotateSource = [](SDValue X) {
+    if (X.getOpcode() == ISD::ROTL || X.getOpcode() == ISD::ROTR)
+      return X.getOperand(0);
+    return SDValue();
+  };
+
   // Peek through a rotated value compared against 0 or -1:
   // (rot X, Y) == 0/-1 --> X == 0/-1
   // (rot X, Y) != 0/-1 --> X != 0/-1
-  return DAG.getSetCC(dl, VT, N0.getOperand(0), N1, Cond);
+  if (SDValue R = getRotateSource(N0))
+    return DAG.getSetCC(dl, VT, R, N1, Cond);
+
+  return SDValue();
 }
 
 /// Try to simplify a setcc built with the specified operands and cc. If it is
