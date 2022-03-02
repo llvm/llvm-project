@@ -20029,9 +20029,9 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <16 x float>  @llvm.vp.fptosi.v16f32 (<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
-      declare <vscale x 4 x float>  @llvm.vp.fptosi.nxv4f32 (<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
-      declare <256 x double>  @llvm.vp.fptosi.v256f64 (<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+      declare <16 x i32>  @llvm.vp.fptosi.v16i32.v16f32 (<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.fptosi.nxv4i32.nxv4f32 (<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.fptosi.v256i64.v256f64 (<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
 
 Overview:
 """""""""
