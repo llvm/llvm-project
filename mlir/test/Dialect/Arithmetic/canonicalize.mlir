@@ -176,6 +176,48 @@ func @extSIOfExtSI(%arg0: i1) -> i64 {
 
 // -----
 
+// CHECK-LABEL: @cmpIExtSINE
+//       CHECK:  %[[comb:.+]] = arith.cmpi ne, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtSINE(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.cmpi ne, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpIExtSIEQ
+//       CHECK:  %[[comb:.+]] = arith.cmpi eq, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtSIEQ(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.cmpi eq, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpIExtUINE
+//       CHECK:  %[[comb:.+]] = arith.cmpi ne, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtUINE(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.cmpi ne, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpIExtUIEQ
+//       CHECK:  %[[comb:.+]] = arith.cmpi eq, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtUIEQ(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.cmpi eq, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// -----
+
 // CHECK-LABEL: @andOfExtSI
 //       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
 //       CHECK:  %[[ext:.+]] = arith.extsi %[[comb]] : i8 to i64

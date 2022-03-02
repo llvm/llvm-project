@@ -1104,6 +1104,7 @@ def Arith_CmpIOp : Arith_CompareOpOfAnyRank<"cmpi"> {
   }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
