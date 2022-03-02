@@ -1,11 +1,14 @@
 ! Test allocatable assignments
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
+module alloc_assign
+contains
+
 ! -----------------------------------------------------------------------------
 !            Test simple scalar RHS
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func @_QPtest_simple_scalar(
+! CHECK-LABEL: func @_QMalloc_assignPtest_simple_scalar(
 ! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>{{.*}}) {
 subroutine test_simple_scalar(x)
   real, allocatable  :: x
@@ -40,10 +43,10 @@ subroutine test_simple_scalar(x)
   x = 42.
 end subroutine
 
-! CHECK-LABEL: func @_QPtest_simple_local_scalar() {
+! CHECK-LABEL: func @_QMalloc_assignPtest_simple_local_scalar() {
 subroutine test_simple_local_scalar()
   real, allocatable  :: x
-! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.heap<f32> {uniq_name = "_QFtest_simple_local_scalarEx.addr"}
+! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.heap<f32> {uniq_name = "_QMalloc_assignFtest_simple_local_scalarEx.addr"}
 ! CHECK:  %[[VAL_2:.*]] = fir.zero_bits !fir.heap<f32>
 ! CHECK:  fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.heap<f32>>
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 4.200000e+01 : f32
@@ -74,3 +77,5 @@ subroutine test_simple_local_scalar()
 ! CHECK:  }
   x = 42.
 end subroutine
+
+end module

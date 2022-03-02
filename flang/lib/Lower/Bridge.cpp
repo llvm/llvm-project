@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/iostat.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -58,21 +59,67 @@ public:
   /// Convert the PFT to FIR.
   void run(Fortran::lower::pft::Program &pft) {
     // Primary translation pass.
+    //  - Declare all functions that have definitions so that definition
+    //    signatures prevail over call site signatures.
+    //  - Define module variables and OpenMP/OpenACC declarative construct so
+    //    that they are available before lowering any function that may use
+    //    them.
+    for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+      std::visit(Fortran::common::visitors{
+                     [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                       declareFunction(f);
+                     },
+                     [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                       lowerModuleDeclScope(m);
+                       for (Fortran::lower::pft::FunctionLikeUnit &f :
+                            m.nestedFunctions)
+                         declareFunction(f);
+                     },
+                     [&](Fortran::lower::pft::BlockDataUnit &b) {},
+                     [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
+                       setCurrentPosition(
+                           d.get<Fortran::parser::CompilerDirective>().source);
+                       mlir::emitWarning(toLocation(),
+                                         "ignoring all compiler directives");
+                     },
+                 },
+                 u);
+    }
+
+    // Primary translation pass.
     for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
       std::visit(
           Fortran::common::visitors{
               [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
-              [&](Fortran::lower::pft::ModuleLikeUnit &m) {},
+              [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
-              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
-                setCurrentPosition(
-                    d.get<Fortran::parser::CompilerDirective>().source);
-                mlir::emitWarning(toLocation(),
-                                  "ignoring all compiler directives");
-              },
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
           },
           u);
     }
+  }
+
+  /// Declare a function.
+  void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    setCurrentPosition(funit.getStartingSourceLoc());
+    for (int entryIndex = 0, last = funit.entryPointList.size();
+         entryIndex < last; ++entryIndex) {
+      funit.setActiveEntry(entryIndex);
+      // Calling CalleeInterface ctor will build a declaration mlir::FuncOp with
+      // no other side effects.
+      // TODO: when doing some compiler profiling on real apps, it may be worth
+      // to check it's better to save the CalleeInterface instead of recomputing
+      // it later when lowering the body. CalleeInterface ctor should be linear
+      // with the number of arguments, so it is not awful to do it that way for
+      // now, but the linear coefficient might be non negligible. Until
+      // measured, stick to the solution that impacts the code less.
+      Fortran::lower::CalleeInterface{funit, *this};
+    }
+    funit.setActiveEntry(0);
+
+    // Declare internal procedures
+    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
+      declareFunction(f);
   }
 
   //===--------------------------------------------------------------------===//
@@ -405,6 +452,41 @@ public:
     funit.setActiveEntry(0);
     for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
       lowerFunc(f); // internal procedure
+  }
+
+  /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
+  /// declarative construct.
+  void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
+    // FIXME: get rid of the bogus function context and instantiate the
+    // globals directly into the module.
+    MLIRContext *context = &getMLIRContext();
+    setCurrentPosition(mod.getStartingSourceLoc());
+    mlir::FuncOp func = fir::FirOpBuilder::createFunction(
+        mlir::UnknownLoc::get(context), getModuleOp(),
+        fir::NameUniquer::doGenerated("ModuleSham"),
+        mlir::FunctionType::get(context, llvm::None, llvm::None));
+    func.addEntryBlock();
+    builder = new fir::FirOpBuilder(func, bridge.getKindMap());
+    for (const Fortran::lower::pft::Variable &var :
+         mod.getOrderedSymbolTable()) {
+      // Only define the variables owned by this module.
+      const Fortran::semantics::Scope *owningScope = var.getOwningScope();
+      if (!owningScope || mod.getScope() == *owningScope)
+        Fortran::lower::defineModuleVariable(*this, var);
+    }
+    for (auto &eval : mod.evaluationList)
+      genFIR(eval);
+    if (mlir::Region *region = func.getCallableRegion())
+      region->dropAllReferences();
+    func.erase();
+    delete builder;
+    builder = nullptr;
+  }
+
+  /// Lower functions contained in a module.
+  void lowerMod(Fortran::lower::pft::ModuleLikeUnit &mod) {
+    for (Fortran::lower::pft::FunctionLikeUnit &f : mod.nestedFunctions)
+      lowerFunc(f);
   }
 
   mlir::Value hostAssocTupleValue() override final { return hostAssocTuple; }
@@ -811,27 +893,35 @@ private:
   //===--------------------------------------------------------------------===//
 
   void genFIR(const Fortran::parser::BackspaceStmt &stmt) {
-    TODO(toLocation(), "BackspaceStmt lowering");
+    mlir::Value iostat = genBackspaceStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::CloseStmt &stmt) {
-    TODO(toLocation(), "CloseStmt lowering");
+    mlir::Value iostat = genCloseStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::EndfileStmt &stmt) {
-    TODO(toLocation(), "EndfileStmt lowering");
+    mlir::Value iostat = genEndfileStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::FlushStmt &stmt) {
-    TODO(toLocation(), "FlushStmt lowering");
+    mlir::Value iostat = genFlushStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::InquireStmt &stmt) {
-    TODO(toLocation(), "InquireStmt lowering");
+    mlir::Value iostat = genInquireStatement(*this, stmt);
+    if (const auto *specs =
+            std::get_if<std::list<Fortran::parser::InquireSpec>>(&stmt.u))
+      genIoConditionBranches(getEval(), *specs, iostat);
   }
 
   void genFIR(const Fortran::parser::OpenStmt &stmt) {
-    TODO(toLocation(), "OpenStmt lowering");
+    mlir::Value iostat = genOpenStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::PrintStmt &stmt) {
@@ -844,11 +934,13 @@ private:
   }
 
   void genFIR(const Fortran::parser::RewindStmt &stmt) {
-    TODO(toLocation(), "RewindStmt lowering");
+    mlir::Value iostat = genRewindStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::WaitStmt &stmt) {
-    TODO(toLocation(), "WaitStmt lowering");
+    mlir::Value iostat = genWaitStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::WriteStmt &stmt) {

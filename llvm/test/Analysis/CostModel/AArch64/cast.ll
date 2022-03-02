@@ -536,7 +536,6 @@ define i32 @casts_no_users() {
   %r111 = fptosi <4 x float> undef to <4 x i1>
   %r112 = fptoui <4 x float> undef to <4 x i8>
   %r113 = fptosi <4 x float> undef to <4 x i8>
-
   %r114 = fptoui <4 x float> undef to <4 x i16>
   %r115 = fptosi <4 x float> undef to <4 x i16>
   %r116 = fptoui <4 x float> undef to <4 x i32>
@@ -1021,5 +1020,116 @@ define void @extend_extract() {
 }
 
 declare void @use(i16, i16, i32, i32, i64, i64, i32, i32, i64, i64, i64, i64)
+
+define void @fp16cast() {
+; CHECK-LABEL: 'fp16cast'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r30 = fptoui half undef to i1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r31 = fptosi half undef to i1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r32 = fptoui half undef to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r33 = fptosi half undef to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r34 = fptoui half undef to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r35 = fptosi half undef to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r36 = fptoui half undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r37 = fptosi half undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r38 = fptoui half undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r39 = fptosi half undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r90 = fptoui <2 x half> undef to <2 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r91 = fptosi <2 x half> undef to <2 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r92 = fptoui <2 x half> undef to <2 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r93 = fptosi <2 x half> undef to <2 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r94 = fptoui <2 x half> undef to <2 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r95 = fptosi <2 x half> undef to <2 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r96 = fptoui <2 x half> undef to <2 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r97 = fptosi <2 x half> undef to <2 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r98 = fptoui <2 x half> undef to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r99 = fptosi <2 x half> undef to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r110 = fptoui <4 x half> undef to <4 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r111 = fptosi <4 x half> undef to <4 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r112 = fptoui <4 x half> undef to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r113 = fptosi <4 x half> undef to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r114 = fptoui <4 x half> undef to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r115 = fptosi <4 x half> undef to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %r116 = fptoui <4 x half> undef to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %r117 = fptosi <4 x half> undef to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %r118 = fptoui <4 x half> undef to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %r119 = fptosi <4 x half> undef to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %r130 = fptoui <8 x half> undef to <8 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %r131 = fptosi <8 x half> undef to <8 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %r132 = fptoui <8 x half> undef to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %r133 = fptosi <8 x half> undef to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r134 = fptoui <8 x half> undef to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r135 = fptosi <8 x half> undef to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %r136 = fptoui <8 x half> undef to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %r137 = fptosi <8 x half> undef to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %r138 = fptoui <8 x half> undef to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %r139 = fptosi <8 x half> undef to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 101 for instruction: %r150 = fptoui <16 x half> undef to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 101 for instruction: %r151 = fptosi <16 x half> undef to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 101 for instruction: %r152 = fptoui <16 x half> undef to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 101 for instruction: %r153 = fptosi <16 x half> undef to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r154 = fptoui <16 x half> undef to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r155 = fptosi <16 x half> undef to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %r156 = fptoui <16 x half> undef to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %r157 = fptosi <16 x half> undef to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %r158 = fptoui <16 x half> undef to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %r159 = fptosi <16 x half> undef to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %r30 = fptoui half undef to i1
+  %r31 = fptosi half undef to i1
+  %r32 = fptoui half undef to i8
+  %r33 = fptosi half undef to i8
+  %r34 = fptoui half undef to i16
+  %r35 = fptosi half undef to i16
+  %r36 = fptoui half undef to i32
+  %r37 = fptosi half undef to i32
+  %r38 = fptoui half undef to i64
+  %r39 = fptosi half undef to i64
+
+  %r90 = fptoui <2 x half> undef to <2 x i1>
+  %r91 = fptosi <2 x half> undef to <2 x i1>
+  %r92 = fptoui <2 x half> undef to <2 x i8>
+  %r93 = fptosi <2 x half> undef to <2 x i8>
+  %r94 = fptoui <2 x half> undef to <2 x i16>
+  %r95 = fptosi <2 x half> undef to <2 x i16>
+  %r96 = fptoui <2 x half> undef to <2 x i32>
+  %r97 = fptosi <2 x half> undef to <2 x i32>
+  %r98 = fptoui <2 x half> undef to <2 x i64>
+  %r99 = fptosi <2 x half> undef to <2 x i64>
+
+  %r110 = fptoui <4 x half> undef to <4 x i1>
+  %r111 = fptosi <4 x half> undef to <4 x i1>
+  %r112 = fptoui <4 x half> undef to <4 x i8>
+  %r113 = fptosi <4 x half> undef to <4 x i8>
+  %r114 = fptoui <4 x half> undef to <4 x i16>
+  %r115 = fptosi <4 x half> undef to <4 x i16>
+  %r116 = fptoui <4 x half> undef to <4 x i32>
+  %r117 = fptosi <4 x half> undef to <4 x i32>
+  %r118 = fptoui <4 x half> undef to <4 x i64>
+  %r119 = fptosi <4 x half> undef to <4 x i64>
+
+  %r130 = fptoui <8 x half> undef to <8 x i1>
+  %r131 = fptosi <8 x half> undef to <8 x i1>
+  %r132 = fptoui <8 x half> undef to <8 x i8>
+  %r133 = fptosi <8 x half> undef to <8 x i8>
+  %r134 = fptoui <8 x half> undef to <8 x i16>
+  %r135 = fptosi <8 x half> undef to <8 x i16>
+  %r136 = fptoui <8 x half> undef to <8 x i32>
+  %r137 = fptosi <8 x half> undef to <8 x i32>
+  %r138 = fptoui <8 x half> undef to <8 x i64>
+  %r139 = fptosi <8 x half> undef to <8 x i64>
+
+  %r150 = fptoui <16 x half> undef to <16 x i1>
+  %r151 = fptosi <16 x half> undef to <16 x i1>
+  %r152 = fptoui <16 x half> undef to <16 x i8>
+  %r153 = fptosi <16 x half> undef to <16 x i8>
+  %r154 = fptoui <16 x half> undef to <16 x i16>
+  %r155 = fptosi <16 x half> undef to <16 x i16>
+  %r156 = fptoui <16 x half> undef to <16 x i32>
+  %r157 = fptosi <16 x half> undef to <16 x i32>
+  %r158 = fptoui <16 x half> undef to <16 x i64>
+  %r159 = fptosi <16 x half> undef to <16 x i64>
+  ret void
+}
 
 attributes #0 = { "target-features"="+sve" }

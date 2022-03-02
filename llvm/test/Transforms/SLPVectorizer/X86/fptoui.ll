@@ -82,10 +82,10 @@ define void @fptoui_8f64_8i64() #0 {
 ;
 ; AVX256DQ-LABEL: @fptoui_8f64_8i64(
 ; AVX256DQ-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* bitcast ([8 x double]* @src64 to <4 x double>*), align 8
-; AVX256DQ-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4) to <4 x double>*), align 8
-; AVX256DQ-NEXT:    [[TMP3:%.*]] = fptoui <4 x double> [[TMP1]] to <4 x i64>
-; AVX256DQ-NEXT:    [[TMP4:%.*]] = fptoui <4 x double> [[TMP2]] to <4 x i64>
-; AVX256DQ-NEXT:    store <4 x i64> [[TMP3]], <4 x i64>* bitcast ([8 x i64]* @dst64 to <4 x i64>*), align 8
+; AVX256DQ-NEXT:    [[TMP2:%.*]] = fptoui <4 x double> [[TMP1]] to <4 x i64>
+; AVX256DQ-NEXT:    store <4 x i64> [[TMP2]], <4 x i64>* bitcast ([8 x i64]* @dst64 to <4 x i64>*), align 8
+; AVX256DQ-NEXT:    [[TMP3:%.*]] = load <4 x double>, <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4) to <4 x double>*), align 8
+; AVX256DQ-NEXT:    [[TMP4:%.*]] = fptoui <4 x double> [[TMP3]] to <4 x i64>
 ; AVX256DQ-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @dst64, i32 0, i64 4) to <4 x i64>*), align 8
 ; AVX256DQ-NEXT:    ret void
 ;
@@ -119,10 +119,10 @@ define void @fptoui_8f64_8i64() #0 {
 define void @fptoui_8f64_8i32() #0 {
 ; SSE-LABEL: @fptoui_8f64_8i32(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* bitcast ([8 x double]* @src64 to <4 x double>*), align 8
-; SSE-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4) to <4 x double>*), align 8
-; SSE-NEXT:    [[TMP3:%.*]] = fptoui <4 x double> [[TMP1]] to <4 x i32>
-; SSE-NEXT:    [[TMP4:%.*]] = fptoui <4 x double> [[TMP2]] to <4 x i32>
-; SSE-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([16 x i32]* @dst32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = fptoui <4 x double> [[TMP1]] to <4 x i32>
+; SSE-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([16 x i32]* @dst32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x double>, <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4) to <4 x double>*), align 8
+; SSE-NEXT:    [[TMP4:%.*]] = fptoui <4 x double> [[TMP3]] to <4 x i32>
 ; SSE-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;
@@ -315,10 +315,10 @@ define void @fptoui_8f32_8i64() #0 {
 ;
 ; AVX256DQ-LABEL: @fptoui_8f32_8i64(
 ; AVX256DQ-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @src32 to <4 x float>*), align 4
-; AVX256DQ-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 4) to <4 x float>*), align 4
-; AVX256DQ-NEXT:    [[TMP3:%.*]] = fptoui <4 x float> [[TMP1]] to <4 x i64>
-; AVX256DQ-NEXT:    [[TMP4:%.*]] = fptoui <4 x float> [[TMP2]] to <4 x i64>
-; AVX256DQ-NEXT:    store <4 x i64> [[TMP3]], <4 x i64>* bitcast ([8 x i64]* @dst64 to <4 x i64>*), align 8
+; AVX256DQ-NEXT:    [[TMP2:%.*]] = fptoui <4 x float> [[TMP1]] to <4 x i64>
+; AVX256DQ-NEXT:    store <4 x i64> [[TMP2]], <4 x i64>* bitcast ([8 x i64]* @dst64 to <4 x i64>*), align 8
+; AVX256DQ-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 4) to <4 x float>*), align 4
+; AVX256DQ-NEXT:    [[TMP4:%.*]] = fptoui <4 x float> [[TMP3]] to <4 x i64>
 ; AVX256DQ-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @dst64, i32 0, i64 4) to <4 x i64>*), align 8
 ; AVX256DQ-NEXT:    ret void
 ;
@@ -352,10 +352,10 @@ define void @fptoui_8f32_8i64() #0 {
 define void @fptoui_8f32_8i32() #0 {
 ; SSE-LABEL: @fptoui_8f32_8i32(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @src32 to <4 x float>*), align 4
-; SSE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 4) to <4 x float>*), align 4
-; SSE-NEXT:    [[TMP3:%.*]] = fptoui <4 x float> [[TMP1]] to <4 x i32>
-; SSE-NEXT:    [[TMP4:%.*]] = fptoui <4 x float> [[TMP2]] to <4 x i32>
-; SSE-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([16 x i32]* @dst32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = fptoui <4 x float> [[TMP1]] to <4 x i32>
+; SSE-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([16 x i32]* @dst32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = fptoui <4 x float> [[TMP3]] to <4 x i32>
 ; SSE-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;

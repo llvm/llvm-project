@@ -782,10 +782,10 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; STORE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD34]]
 ; STORE-NEXT:    [[ADD1135:%.*]] = or i64 [[MUL]], 2
 ; STORE-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1135]]
-; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[B]] to <4 x float>*
-; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; STORE-NEXT:    [[ADD1736:%.*]] = or i64 [[MUL]], 3
 ; STORE-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1736]]
+; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[B]] to <4 x float>*
+; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
