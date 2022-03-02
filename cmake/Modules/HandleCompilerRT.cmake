@@ -1,4 +1,4 @@
-# Check if compile-rt library file path exists.
+# Check if the compiler-rt library file path exists.
 # If found, cache the path in:
 #    COMPILER_RT_LIBRARY-<name>-<target>
 # If err_flag is true OR path not found, emit a message and set:
