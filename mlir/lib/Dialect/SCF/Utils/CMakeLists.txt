@@ -11,9 +11,9 @@ add_mlir_dialect_library(MLIRSCFUtils
   MLIRAnalysis
   MLIRArithmetic
   MLIRDialectUtils
+  MLIRFunc
   MLIRIR
   MLIRSCF
-  MLIRStandard
   MLIRSupport
   MLIRTransforms
   )

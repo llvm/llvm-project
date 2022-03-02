@@ -12,6 +12,5 @@ add_mlir_conversion_library(MLIRComplexToStandard
   MLIRComplex
   MLIRIR
   MLIRMath
-  MLIRStandard
   MLIRTransforms
   )

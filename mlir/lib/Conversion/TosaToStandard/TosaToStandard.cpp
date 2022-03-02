@@ -12,7 +12,6 @@
 
 #include "mlir/Conversion/TosaToStandard/TosaToStandard.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -69,7 +68,7 @@ Attribute getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
   return rewriter.getIntegerAttr(type, value);
 }
 
-// This converts the TOSA ApplyScale operator to a set of StandardOps ops,
+// This converts the TOSA ApplyScale operator to a set of arithmetic ops,
 // using 64-bit operations to perform the necessary multiply, bias, and shift.
 // Multiple types are used to use minimal bit width operations.
 class ApplyScaleOpConverter : public OpRewritePattern<tosa::ApplyScaleOp> {

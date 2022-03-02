@@ -20,7 +20,7 @@ class OperationPass;
 namespace linalg {
 
 //===----------------------------------------------------------------------===//
-// Patterns to convert a LinalgOp to std.call @external library implementation.
+// Patterns to convert a LinalgOp to func.call @external library implementation.
 //===----------------------------------------------------------------------===//
 // These patterns are exposed individually because they are expected to be
 // typically used individually.

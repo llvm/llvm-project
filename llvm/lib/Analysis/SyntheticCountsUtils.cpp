@@ -14,9 +14,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 
 using namespace llvm;

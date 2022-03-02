@@ -104,8 +104,10 @@ public:
   /// Get base address of allocated/associated entity.
   mlir::Value readBaseAddress() {
     if (irBox) {
-      auto heapOrPtrTy = box.getBoxTy().getEleTy();
-      return builder.create<fir::BoxAddrOp>(loc, heapOrPtrTy, irBox);
+      auto memrefTy = box.getBoxTy().getEleTy();
+      if (!fir::isa_ref_type(memrefTy))
+        memrefTy = builder.getRefType(memrefTy);
+      return builder.create<fir::BoxAddrOp>(loc, memrefTy, irBox);
     }
     auto addrVar = box.getMutableProperties().addr;
     return builder.create<fir::LoadOp>(loc, addrVar);
@@ -144,7 +146,7 @@ public:
   /// also read into it.
   llvm::SmallVector<mlir::Value>
   readShape(llvm::SmallVectorImpl<mlir::Value> *lbounds = nullptr) {
-    llvm::SmallVector<mlir::Value> extents(box.rank());
+    llvm::SmallVector<mlir::Value> extents;
     auto rank = box.rank();
     for (decltype(rank) dim = 0; dim < rank; ++dim) {
       auto [lb, extent] = readShape(dim);

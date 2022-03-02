@@ -169,7 +169,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
 
     populateTensorBufferizePatterns(typeConverter, patterns);
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
-    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<func::FuncDialect>();
 
     if (failed(
             applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -224,8 +224,8 @@ which helps with this in general.
         contain regions.
 
 -   `func-bufferize`
-    ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/StandardOps/Transforms/FuncBufferize.cpp#L1),
-    [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/Standard/func-bufferize.mlir#L1))
+    ([code](https://github.com/llvm/llvm-project/blob/2f5715dc78328215d51d5664c72c632a6dac1046/mlir/lib/Dialect/Func/Transforms/FuncBufferize.cpp#L1),
+    [test](https://github.com/llvm/llvm-project/blob/2f5715dc78328215d51d5664c72c632a6dac1046/mlir/test/Dialect/Func/func-bufferize.mlir#L1))
 
     -   Bufferizes `func`, `call`, and `BranchOpInterface` ops.
     -   This is an example of how to bufferize ops that have multi-block

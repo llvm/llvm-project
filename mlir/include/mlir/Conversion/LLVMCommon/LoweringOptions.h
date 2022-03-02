@@ -25,8 +25,8 @@ class MLIRContext;
 /// to derive the bitwidth from the LLVM data layout.
 static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
 
-/// Options to control the Standard dialect to LLVM lowering. The struct is used
-/// to share lowering options between passes, patterns, and type converter.
+/// Options to control the LLVM lowering. The struct is used to share lowering
+/// options between passes, patterns, and type converter.
 class LowerToLLVMOptions {
 public:
   explicit LowerToLLVMOptions(MLIRContext *ctx);

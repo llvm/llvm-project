@@ -15,7 +15,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"

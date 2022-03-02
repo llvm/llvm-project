@@ -13,13 +13,17 @@
 #ifndef LLVM_ANALYSIS_INLINECOST_H
 #define LLVM_ANALYSIS_INLINECOST_H
 
-#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/IR/PassManager.h"
 #include <cassert>
 #include <climits>
 
 namespace llvm {
+class AssumptionCache;
+class OptimizationRemarkEmitter;
 class BlockFrequencyInfo;
 class CallBase;
 class DataLayout;

@@ -3226,34 +3226,53 @@ static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
+  MachineBasicBlock &MBB = *MI.getParent();
   unsigned Opc = MI.getOpcode();
-  bool IsF16 = false;
+
+  // Handle MFMA.
+  int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
+  if (NewMFMAOpc != -1) {
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB.add(MI.getOperand(I));
+    updateLiveVariables(LV, MI, *MIB);
+    if (LIS)
+      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+    return MIB;
+  }
+
+  // Handle MAC/FMAC.
+  bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
+               Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64;
   bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F32_e64 ||
+               Opc == AMDGPU::V_FMAC_LEGACY_F32_e32 ||
+               Opc == AMDGPU::V_FMAC_LEGACY_F32_e64 ||
                Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64 ||
                Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
   bool IsF64 = Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
-  int NewMFMAOpc = -1;
+  bool IsLegacy = Opc == AMDGPU::V_MAC_LEGACY_F32_e32 ||
+                  Opc == AMDGPU::V_MAC_LEGACY_F32_e64 ||
+                  Opc == AMDGPU::V_FMAC_LEGACY_F32_e32 ||
+                  Opc == AMDGPU::V_FMAC_LEGACY_F32_e64;
 
   switch (Opc) {
   default:
-    NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
-    if (NewMFMAOpc == -1)
-      return nullptr;
-    break;
+    return nullptr;
   case AMDGPU::V_MAC_F16_e64:
   case AMDGPU::V_FMAC_F16_e64:
-    IsF16 = true;
-    LLVM_FALLTHROUGH;
   case AMDGPU::V_MAC_F32_e64:
+  case AMDGPU::V_MAC_LEGACY_F32_e64:
   case AMDGPU::V_FMAC_F32_e64:
+  case AMDGPU::V_FMAC_LEGACY_F32_e64:
   case AMDGPU::V_FMAC_F64_e64:
     break;
   case AMDGPU::V_MAC_F16_e32:
   case AMDGPU::V_FMAC_F16_e32:
-    IsF16 = true;
-    LLVM_FALLTHROUGH;
   case AMDGPU::V_MAC_F32_e32:
+  case AMDGPU::V_MAC_LEGACY_F32_e32:
   case AMDGPU::V_FMAC_F32_e32:
+  case AMDGPU::V_FMAC_LEGACY_F32_e32:
   case AMDGPU::V_FMAC_F64_e32: {
     int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                              AMDGPU::OpName::src0);
@@ -3269,18 +3288,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
 
   MachineInstrBuilder MIB;
-  MachineBasicBlock &MBB = *MI.getParent();
-
-  if (NewMFMAOpc != -1) {
-    MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
-      MIB.add(MI.getOperand(I));
-    updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
-      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-    return MIB;
-  }
-
   const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
   const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
   const MachineOperand *Src0Mods =
@@ -3295,6 +3302,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
 
   if (!Src0Mods && !Src1Mods && !Src2Mods && !Clamp && !Omod && !IsF64 &&
+      !IsLegacy &&
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
@@ -3364,10 +3372,14 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     }
   }
 
-  unsigned NewOpc = IsFMA ? (IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64
-                                   : IsF64 ? AMDGPU::V_FMA_F64_e64
-                                           : AMDGPU::V_FMA_F32_e64)
-                          : (IsF16 ? AMDGPU::V_MAD_F16_e64 : AMDGPU::V_MAD_F32_e64);
+  unsigned NewOpc = IsFMA ? IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64
+                                  : IsF64 ? AMDGPU::V_FMA_F64_e64
+                                          : IsLegacy
+                                                ? AMDGPU::V_FMA_LEGACY_F32_e64
+                                                : AMDGPU::V_FMA_F32_e64
+                          : IsF16 ? AMDGPU::V_MAD_F16_e64
+                                  : IsLegacy ? AMDGPU::V_MAD_LEGACY_F32_e64
+                                             : AMDGPU::V_MAD_F32_e64;
   if (pseudoToMCOpcode(NewOpc) == -1)
     return nullptr;
 

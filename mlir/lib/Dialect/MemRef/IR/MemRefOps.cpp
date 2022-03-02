@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -256,6 +257,159 @@ void AllocaScopeOp::getSuccessorRegions(
   }
 
   regions.push_back(RegionSuccessor(&bodyRegion()));
+}
+
+/// Given an operation, return whether this op is guaranteed to
+/// allocate an AutomaticAllocationScopeResource
+static bool isGuaranteedAutomaticAllocationScope(Operation *op) {
+  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!interface)
+    return false;
+  for (auto res : op->getResults()) {
+    if (auto effect =
+            interface.getEffectOnValue<MemoryEffects::Allocate>(res)) {
+      if (isa<SideEffects::AutomaticAllocationScopeResource>(
+              effect->getResource()))
+        return true;
+    }
+  }
+  return false;
+}
+
+/// Given an operation, return whether this op could to
+/// allocate an AutomaticAllocationScopeResource
+static bool isPotentialAutomaticAllocationScope(Operation *op) {
+  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!interface)
+    return true;
+  for (auto res : op->getResults()) {
+    if (auto effect =
+            interface.getEffectOnValue<MemoryEffects::Allocate>(res)) {
+      if (isa<SideEffects::AutomaticAllocationScopeResource>(
+              effect->getResource()))
+        return true;
+    }
+  }
+  return false;
+}
+
+/// Return whether this op is the last non terminating op
+/// in a region. That is to say, it is in a one-block region
+/// and is only followed by a terminator. This prevents
+/// extending the lifetime of allocations.
+static bool lastNonTerminatorInRegion(Operation *op) {
+  return op->getNextNode() == op->getBlock()->getTerminator() &&
+         op->getParentRegion()->getBlocks().size() == 1;
+}
+
+/// Inline an AllocaScopeOp if either the direct parent is an allocation scope
+/// or it contains no allocation.
+struct AllocaScopeInliner : public OpRewritePattern<AllocaScopeOp> {
+  using OpRewritePattern<AllocaScopeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AllocaScopeOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!op->getParentOp()->hasTrait<OpTrait::AutomaticAllocationScope>()) {
+      bool hasPotentialAlloca =
+          op->walk([&](Operation *alloc) {
+              if (isPotentialAutomaticAllocationScope(alloc))
+                return WalkResult::interrupt();
+              return WalkResult::skip();
+            }).wasInterrupted();
+      if (hasPotentialAlloca)
+        return failure();
+    }
+
+    // Only apply to if this is this last non-terminator
+    // op in the block (lest lifetime be extended) of a one
+    // block region
+    if (!lastNonTerminatorInRegion(op))
+      return failure();
+
+    Block *block = &op.getRegion().front();
+    Operation *terminator = block->getTerminator();
+    ValueRange results = terminator->getOperands();
+    rewriter.mergeBlockBefore(block, op);
+    rewriter.replaceOp(op, results);
+    rewriter.eraseOp(terminator);
+    return success();
+  }
+};
+
+/// Move allocations into an allocation scope, if it is legal to
+/// move them (e.g. their operands are available at the location
+/// the op would be moved to).
+struct AllocaScopeHoister : public OpRewritePattern<AllocaScopeOp> {
+  using OpRewritePattern<AllocaScopeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AllocaScopeOp op,
+                                PatternRewriter &rewriter) const override {
+
+    if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+      return failure();
+
+    Operation *lastParentWithoutScope = op->getParentOp();
+
+    if (!lastParentWithoutScope ||
+        lastParentWithoutScope->hasTrait<OpTrait::AutomaticAllocationScope>())
+      return failure();
+
+    // Only apply to if this is this last non-terminator
+    // op in the block (lest lifetime be extended) of a one
+    // block region
+    if (!lastNonTerminatorInRegion(op) ||
+        !lastNonTerminatorInRegion(lastParentWithoutScope))
+      return failure();
+
+    while (!lastParentWithoutScope->getParentOp()
+                ->hasTrait<OpTrait::AutomaticAllocationScope>()) {
+      lastParentWithoutScope = lastParentWithoutScope->getParentOp();
+      if (!lastParentWithoutScope ||
+          !lastNonTerminatorInRegion(lastParentWithoutScope))
+        return failure();
+    }
+    assert(lastParentWithoutScope->getParentOp()
+               ->hasTrait<OpTrait::AutomaticAllocationScope>());
+
+    Region *containingRegion = nullptr;
+    for (auto &r : lastParentWithoutScope->getRegions()) {
+      if (r.isAncestor(op->getParentRegion())) {
+        assert(containingRegion == nullptr &&
+               "only one region can contain the op");
+        containingRegion = &r;
+      }
+    }
+    assert(containingRegion && "op must be contained in a region");
+
+    SmallVector<Operation *> toHoist;
+    op->walk([&](Operation *alloc) {
+      if (!isGuaranteedAutomaticAllocationScope(alloc))
+        return WalkResult::skip();
+
+      // If any operand is not defined before the location of
+      // lastParentWithoutScope (i.e. where we would hoist to), skip.
+      if (llvm::any_of(alloc->getOperands(), [&](Value v) {
+            return containingRegion->isAncestor(v.getParentRegion());
+          }))
+        return WalkResult::skip();
+      toHoist.push_back(alloc);
+      return WalkResult::advance();
+    });
+
+    if (!toHoist.size())
+      return failure();
+    rewriter.setInsertionPoint(lastParentWithoutScope);
+    for (auto op : toHoist) {
+      auto cloned = rewriter.clone(*op);
+      rewriter.replaceOp(op, cloned->getResults());
+    }
+    return success();
+  }
+};
+
+void AllocaScopeOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<AllocaScopeInliner, AllocaScopeHoister>(context);
 }
 
 //===----------------------------------------------------------------------===//

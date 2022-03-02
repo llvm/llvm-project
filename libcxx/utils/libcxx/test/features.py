@@ -75,14 +75,27 @@ DEFAULT_FEATURES = [
 
   # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
   # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
-  Feature(name='broken-utf8-wchar-ctype',
+  Feature(name='win32-broken-utf8-wchar-ctype',
           when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
-          #include <locale.h>
-          #include <wctype.h>
-          int main(int, char**) {
-            setlocale(LC_ALL, "en_US.UTF-8");
-            return towlower(L'\\xDA') != L'\\xFA';
-          }
+            #include <locale.h>
+            #include <wctype.h>
+            int main(int, char**) {
+              setlocale(LC_ALL, "en_US.UTF-8");
+              return towlower(L'\\xDA') != L'\\xFA';
+            }
+          """)),
+
+  # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.19041.0).
+  # https://developercommunity.visualstudio.com/t/printf-formatting-with-g-outputs-too/1660837
+  Feature(name='win32-broken-printf-g-precision',
+          when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
+            #include <stdio.h>
+            #include <string.h>
+            int main(int, char**) {
+              char buf[100];
+              snprintf(buf, sizeof(buf), "%#.*g", 0, 0.0);
+              return strcmp(buf, "0.");
+            }
           """)),
 
   # Whether Bash can run on the executor.

@@ -16,7 +16,7 @@ from mlir import runtime as rt
 from mlir.execution_engine import ExecutionEngine
 
 from mlir.dialects import builtin
-from mlir.dialects import std
+from mlir.dialects import func
 from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -122,7 +122,7 @@ class StressTest:
           st.ReleaseOp(v.result)
           v = w
         self._assertEqualsRoundtripTp(v.result.type)
-        std.ReturnOp(v)
+        func.ReturnOp(v)
     return self
 
   def writeTo(self, filename):

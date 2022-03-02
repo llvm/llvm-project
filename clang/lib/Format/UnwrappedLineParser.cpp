@@ -500,7 +500,7 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
       break;
     case tok::l_brace:
       if (NextLBracesType != TT_Unknown)
-        FormatTok->setType(NextLBracesType);
+        FormatTok->setFinalizedType(NextLBracesType);
       else if (FormatTok->Previous &&
                FormatTok->Previous->ClosesRequiresClause) {
         // We need the 'default' case here to correctly parse a function
@@ -1240,7 +1240,7 @@ void UnwrappedLineParser::parseModuleImport() {
   nextToken();
   while (!eof()) {
     if (FormatTok->is(tok::colon)) {
-      FormatTok->setType(TT_ModulePartitionColon);
+      FormatTok->setFinalizedType(TT_ModulePartitionColon);
     }
     // Handle import <foo/bar.h> as we would an include statement.
     else if (FormatTok->is(tok::less)) {
@@ -1250,7 +1250,7 @@ void UnwrappedLineParser::parseModuleImport() {
         // literals.
         if (FormatTok->isNot(tok::comment) &&
             !FormatTok->TokenText.startswith("//"))
-          FormatTok->setType(TT_ImplicitStringLiteral);
+          FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
         nextToken();
       }
     }
@@ -1325,11 +1325,11 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
   case tok::kw_asm:
     nextToken();
     if (FormatTok->is(tok::l_brace)) {
-      FormatTok->setType(TT_InlineASMBrace);
+      FormatTok->setFinalizedType(TT_InlineASMBrace);
       nextToken();
       while (FormatTok && FormatTok->isNot(tok::eof)) {
         if (FormatTok->is(tok::r_brace)) {
-          FormatTok->setType(TT_InlineASMBrace);
+          FormatTok->setFinalizedType(TT_InlineASMBrace);
           nextToken();
           addUnwrappedLine();
           break;
@@ -1651,7 +1651,7 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
       break;
     case tok::l_brace:
       if (NextLBracesType != TT_Unknown)
-        FormatTok->setType(NextLBracesType);
+        FormatTok->setFinalizedType(NextLBracesType);
       if (!tryToParsePropertyAccessor() && !tryToParseBracedList()) {
         // A block outside of parentheses must be the last part of a
         // structural element.
@@ -1668,7 +1668,7 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
           addUnwrappedLine();
         }
         if (!Line->InPPDirective)
-          FormatTok->setType(TT_FunctionLBrace);
+          FormatTok->setFinalizedType(TT_FunctionLBrace);
         parseBlock();
         addUnwrappedLine();
         return;
@@ -1773,7 +1773,7 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
 
         if (FollowedByNewline && (Text.size() >= 5 || FunctionLike) &&
             tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
-          PreviousToken->setType(TT_FunctionLikeOrFreestandingMacro);
+          PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
           return;
         }
@@ -1997,7 +1997,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setType(TT_LambdaArrow);
+      FormatTok->setFinalizedType(TT_LambdaArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2005,8 +2005,8 @@ bool UnwrappedLineParser::tryToParseLambda() {
       return true;
     }
   }
-  FormatTok->setType(TT_LambdaLBrace);
-  LSquare.setType(TT_LambdaLSquare);
+  FormatTok->setFinalizedType(TT_LambdaLBrace);
+  LSquare.setFinalizedType(TT_LambdaLSquare);
   parseChildBlock();
   return true;
 }
@@ -2038,7 +2038,7 @@ void UnwrappedLineParser::tryToParseJSFunction() {
 
   // Consume * (generator function). Treat it like C++'s overloaded operators.
   if (FormatTok->is(tok::star)) {
-    FormatTok->setType(TT_OverloadedOperator);
+    FormatTok->setFinalizedType(TT_OverloadedOperator);
     nextToken();
   }
 
@@ -2246,7 +2246,7 @@ void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
     }
     case tok::ampamp:
       if (AmpAmpTokenType != TT_Unknown)
-        FormatTok->setType(AmpAmpTokenType);
+        FormatTok->setFinalizedType(AmpAmpTokenType);
       LLVM_FALLTHROUGH;
     default:
       nextToken();
@@ -2994,7 +2994,6 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
 void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
   assert(FormatTok->getPreviousNonComment() == RequiresToken);
   assert(RequiresToken->is(tok::kw_requires) && "'requires' expected");
-  assert(RequiresToken->getType() == TT_Unknown);
 
   // If there is no previous token, we are within a requires expression,
   // otherwise we will always have the template or function declaration in front
@@ -3003,9 +3002,9 @@ void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
       !RequiresToken->Previous ||
       RequiresToken->Previous->is(TT_RequiresExpressionLBrace);
 
-  RequiresToken->setType(InRequiresExpression
-                             ? TT_RequiresClauseInARequiresExpression
-                             : TT_RequiresClause);
+  RequiresToken->setFinalizedType(InRequiresExpression
+                                      ? TT_RequiresClauseInARequiresExpression
+                                      : TT_RequiresClause);
 
   parseConstraintExpression();
 
@@ -3023,17 +3022,16 @@ void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
 void UnwrappedLineParser::parseRequiresExpression(FormatToken *RequiresToken) {
   assert(FormatTok->getPreviousNonComment() == RequiresToken);
   assert(RequiresToken->is(tok::kw_requires) && "'requires' expected");
-  assert(RequiresToken->getType() == TT_Unknown);
 
-  RequiresToken->setType(TT_RequiresExpression);
+  RequiresToken->setFinalizedType(TT_RequiresExpression);
 
   if (FormatTok->is(tok::l_paren)) {
-    FormatTok->setType(TT_RequiresExpressionLParen);
+    FormatTok->setFinalizedType(TT_RequiresExpressionLParen);
     parseParens();
   }
 
   if (FormatTok->is(tok::l_brace)) {
-    FormatTok->setType(TT_RequiresExpressionLBrace);
+    FormatTok->setFinalizedType(TT_RequiresExpressionLBrace);
     parseChildBlock(/*CanContainBracedList=*/false,
                     /*NextLBracesType=*/TT_CompoundRequirementLBrace);
   }
@@ -3109,7 +3107,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
 
     case tok::ampamp:
     case tok::pipepipe:
-      FormatTok->setType(TT_BinaryOperator);
+      FormatTok->setFinalizedType(TT_BinaryOperator);
       nextToken();
       LambdaNextTimeAllowed = true;
       break;
@@ -3217,7 +3215,7 @@ bool UnwrappedLineParser::parseEnum() {
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
     return true;
-  FormatTok->setType(TT_EnumLBrace);
+  FormatTok->setFinalizedType(TT_EnumLBrace);
   FormatTok->setBlockKind(BK_Block);
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -3469,7 +3467,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
   };
   if (FormatTok->is(tok::l_brace)) {
-    FormatTok->setType(GetBraceType(InitialToken));
+    FormatTok->setFinalizedType(GetBraceType(InitialToken));
     if (ParseAsExpr) {
       parseChildBlock();
     } else {

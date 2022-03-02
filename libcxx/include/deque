@@ -450,7 +450,7 @@ public:
         {return !(__x < __y);}
 
 private:
-    _LIBCPP_INLINE_VISIBILITY __deque_iterator(__map_iterator __m, pointer __p) _NOEXCEPT
+    _LIBCPP_INLINE_VISIBILITY explicit __deque_iterator(__map_iterator __m, pointer __p) _NOEXCEPT
         : __m_iter_(__m), __ptr_(__p) {}
 
     template <class _Tp, class _Ap> friend class __deque_base;

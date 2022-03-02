@@ -10,5 +10,5 @@ define i64 @clmul64r(i64 %a, i64 %b) nounwind {
 ; RV64ZBC-NEXT:    clmulr a0, a0, a1
 ; RV64ZBC-NEXT:    ret
   %tmp = call i64 @llvm.riscv.clmulr.i64(i64 %a, i64 %b)
- ret i64 %tmp
+  ret i64 %tmp
 }

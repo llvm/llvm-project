@@ -14,11 +14,11 @@
 #ifndef LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
-#include "llvm/ADT/SmallVector.h"
 #include <cstdint>
 
 namespace llvm {
 
+template <typename T> class SmallVectorImpl;
 class CallBase;
 class CallInst;
 class Constant;

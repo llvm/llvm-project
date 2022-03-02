@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -23,7 +23,7 @@ namespace {
 struct TestGpuRewritePass
     : public PassWrapper<TestGpuRewritePass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithmeticDialect, StandardOpsDialect,
+    registry.insert<arith::ArithmeticDialect, func::FuncDialect,
                     memref::MemRefDialect>();
   }
   StringRef getArgument() const final { return "test-gpu-rewrite"; }

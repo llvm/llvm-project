@@ -792,7 +792,7 @@ public:
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<
         FIROpsDialect, mlir::scf::SCFDialect, mlir::arith::ArithmeticDialect,
-        mlir::cf::ControlFlowDialect, mlir::StandardOpsDialect>();
+        mlir::cf::ControlFlowDialect, mlir::func::FuncDialect>();
     target.addIllegalOp<ArrayFetchOp, ArrayUpdateOp, ArrayModifyOp>();
     // Rewrite the array fetch and array update ops.
     if (mlir::failed(

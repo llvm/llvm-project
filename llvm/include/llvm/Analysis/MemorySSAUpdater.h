@@ -31,7 +31,6 @@
 #ifndef LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -39,7 +38,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CFGDiff.h"
-#include <utility>
 
 namespace llvm {
 
@@ -47,6 +45,7 @@ class BasicBlock;
 class DominatorTree;
 class Instruction;
 class LoopBlocksRPO;
+template <typename T, unsigned int N> class SmallSetVector;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 using PhiToDefMap = SmallDenseMap<MemoryPhi *, MemoryAccess *>;

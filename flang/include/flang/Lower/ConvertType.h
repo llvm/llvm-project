@@ -60,7 +60,7 @@ using LenParameterTy = std::int64_t;
 
 /// Get a FIR type based on a category and kind.
 mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
-                      int kind);
+                      int kind, llvm::ArrayRef<LenParameterTy>);
 
 /// Translate a SomeExpr to an mlir::Type.
 mlir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,

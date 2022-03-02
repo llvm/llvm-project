@@ -15,10 +15,10 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   LINK_LIBS PUBLIC
   MLIRBufferization
   MLIRControlFlowInterfaces
+  MLIRFunc
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRef
   MLIRPass
-  MLIRStandard
   MLIRTransforms
 )

@@ -18,9 +18,9 @@
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
@@ -88,7 +88,6 @@ void LowerVectorToLLVMPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithmeticDialect>();
   target.addLegalDialect<memref::MemRefDialect>();
-  target.addLegalDialect<StandardOpsDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
   if (armNeon) {
     // TODO: we may or may not want to include in-dialect lowering to

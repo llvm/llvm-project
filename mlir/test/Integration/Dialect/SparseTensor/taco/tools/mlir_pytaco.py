@@ -34,8 +34,8 @@ from mlir import ir
 from mlir import runtime
 from mlir.dialects import arith
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects import linalg
-from mlir.dialects import std
 from mlir.dialects import sparse_tensor
 from mlir.dialects.linalg.opdsl import lang
 
@@ -324,6 +324,13 @@ class Format:
   def rank(self) -> int:
     """Returns the number of dimensions represented by the format."""
     return self.format_pack.rank()
+
+  def get_permutation_and_sparsity(self) -> Tuple[np.ndarray, np.ndarray]:
+    """Constructs the numpy arrays for the permutation and sparsity."""
+    perm = np.array(self.ordering.ordering, dtype=np.ulonglong)
+    a = [0 if s == ModeFormat.DENSE else 1 for s in self.format_pack.formats]
+    sparse = np.array(a, dtype=np.uint8)
+    return (perm, sparse)
 
   def mlir_tensor_attr(self) -> Optional[sparse_tensor.EncodingAttr]:
     """Constructs the MLIR attributes for the tensor format."""
@@ -1017,7 +1024,9 @@ class Tensor:
       shape = np.array(self._shape, np.int64)
       indices = np.array(self._coords, np.int64)
       values = np.array(self._values, self._dtype.value)
-      ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices)
+      perm, sparse = self.format.get_permutation_and_sparsity()
+      ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices, perm,
+                                              sparse)
     else:
       ptr = self._packed_sparse_value
 

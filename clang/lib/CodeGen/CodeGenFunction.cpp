@@ -744,6 +744,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   } while (false);
 
   if (D) {
+    const bool SanitizeBounds = SanOpts.hasOneOf(SanitizerKind::Bounds);
     bool NoSanitizeCoverage = false;
 
     for (auto Attr : D->specific_attrs<NoSanitizeAttr>()) {
@@ -763,6 +764,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       if (Attr->hasCoverage())
         NoSanitizeCoverage = true;
     }
+
+    if (SanitizeBounds && !SanOpts.hasOneOf(SanitizerKind::Bounds))
+      Fn->addFnAttr(llvm::Attribute::NoSanitizeBounds);
 
     if (NoSanitizeCoverage && CGM.getCodeGenOpts().hasSanitizeCoverage())
       Fn->addFnAttr(llvm::Attribute::NoSanitizeCoverage);
