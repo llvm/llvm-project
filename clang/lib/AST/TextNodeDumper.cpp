@@ -283,6 +283,8 @@ void TextNodeDumper::Visit(const Decl *D) {
       OS << " constexpr";
     if (FD->isConsteval())
       OS << " consteval";
+    if (FD->isMultiVersion())
+      OS << " multiversion";
   }
 
   if (!isa<FunctionDecl>(*D)) {
