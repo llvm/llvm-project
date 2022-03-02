@@ -3160,8 +3160,8 @@ void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue NegLo, NegHi;
   SplitInteger(Neg, NegLo, NegHi);
 
-  SDValue HiIsNeg = DAG.getSetCC(dl, getSetCCResultType(NVT),
-                                 DAG.getConstant(0, dl, NVT), Hi, ISD::SETGT);
+  SDValue HiIsNeg = DAG.getSetCC(dl, getSetCCResultType(NVT), Hi,
+                                 DAG.getConstant(0, dl, NVT), ISD::SETLT);
   Lo = DAG.getSelect(dl, NVT, HiIsNeg, NegLo, Lo);
   Hi = DAG.getSelect(dl, NVT, HiIsNeg, NegHi, Hi);
 }
