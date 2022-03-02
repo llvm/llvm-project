@@ -62,10 +62,6 @@ public:
 
   InstructionCost getRegUsageForType(Type *Ty);
 
-  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                        Align Alignment, unsigned AddressSpace,
-                                        TTI::TargetCostKind CostKind);
-
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE);
