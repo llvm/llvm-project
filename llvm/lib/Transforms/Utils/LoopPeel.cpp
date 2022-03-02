@@ -904,8 +904,10 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   // We modified the loop, update SE.
   SE->forgetTopmostLoop(L);
 
+#ifdef EXPENSIVE_CHECKS
   // Finally DomtTree must be correct.
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+#endif
 
   // FIXME: Incrementally update loop-simplify
   simplifyLoop(L, &DT, LI, SE, AC, nullptr, PreserveLCSSA);
