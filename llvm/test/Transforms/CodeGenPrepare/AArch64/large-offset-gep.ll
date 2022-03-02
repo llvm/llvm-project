@@ -134,7 +134,7 @@ while_end:
 declare %struct_type* @foo()
 declare void @foo2()
 
-define void @test4(i32 %n) personality i32 (...)* @__FrameHandler {
+define void @test4(i32 %n) uwtable personality i32 (...)* @__FrameHandler {
 ; CHECK-LABEL: test4:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .cfi_startproc
@@ -171,6 +171,11 @@ define void @test4(i32 %n) personality i32 (...)* @__FrameHandler {
 ; CHECK-NEXT:  .LBB3_4: // %while_end
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w20
+; CHECK-NEXT:    .cfi_restore w21
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_5: // %cleanup
 ; CHECK-NEXT:  .Ltmp2:
