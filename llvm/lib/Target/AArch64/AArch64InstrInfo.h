@@ -396,8 +396,7 @@ bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
                                      const TargetRegisterInfo *TRI);
 
 MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
-                              unsigned Reg, const StackOffset &Offset,
-                              bool LastAdjustmentWasScalable = true);
+                              unsigned Reg, const StackOffset &Offset);
 MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
                                  const StackOffset &OffsetFromDefCFA);
 

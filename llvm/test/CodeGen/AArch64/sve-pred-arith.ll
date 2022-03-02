@@ -46,7 +46,7 @@ define <vscale x 2 x i1> @add_nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b)
 
 ; ILLEGAL ADDS
 
-define aarch64_sve_vector_pcs <vscale x 64 x i1> @add_nxv64i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b) uwtable {
+define aarch64_sve_vector_pcs <vscale x 64 x i1> @add_nxv64i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b) {
 ; CHECK-LABEL: add_nxv64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -74,10 +74,7 @@ define aarch64_sve_vector_pcs <vscale x 64 x i1> @add_nxv64i1(<vscale x 64 x i1>
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %res = add <vscale x 64 x i1> %a, %b
   ret <vscale x 64 x i1> %res;
@@ -130,7 +127,7 @@ define <vscale x 2 x i1> @sub_xv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) 
 ; ILLEGAL SUBGS
 
 
-define aarch64_sve_vector_pcs <vscale x 64 x i1> @sub_nxv64i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b) uwtable {
+define aarch64_sve_vector_pcs <vscale x 64 x i1> @sub_nxv64i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b) {
 ; CHECK-LABEL: sub_nxv64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -158,10 +155,7 @@ define aarch64_sve_vector_pcs <vscale x 64 x i1> @sub_nxv64i1(<vscale x 64 x i1>
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %res = sub <vscale x 64 x i1> %a, %b
   ret <vscale x 64 x i1> %res;

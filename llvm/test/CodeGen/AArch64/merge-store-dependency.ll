@@ -6,7 +6,7 @@
 @gv0 = internal unnamed_addr global i32 0, align 4
 @gv1 = internal unnamed_addr global %struct1** null, align 8
 
-define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg) uwtable {
+define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg)  {
 ;CHECK-LABEL: test
 ; A53-LABEL: test:
 ; A53:       // %bb.0: // %entry
@@ -45,9 +45,6 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:    adrp x8, gv1
 ; A53-NEXT:    str x0, [x8, :lo12:gv1]
 ; A53-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
-; A53-NEXT:    .cfi_def_cfa_offset 0
-; A53-NEXT:    .cfi_restore w19
-; A53-NEXT:    .cfi_restore w30
 ; A53-NEXT:    ret
 ; A53-NEXT:  .LBB0_4: // %while.body.i.split
 ; A53-NEXT:    // =>This Inner Loop Header: Depth=1
