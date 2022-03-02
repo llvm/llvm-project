@@ -92,6 +92,13 @@ CallInst *findControlPointCall(Module &M) {
 std::vector<Value *> getLiveVars(DominatorTree &DT, CallInst *OldCtrlPoint) {
   std::vector<Value *> Vec;
   Function *Func = OldCtrlPoint->getFunction();
+
+  // Add function arguments to the live set.
+  for (Value &Arg : Func->args()) {
+    Vec.push_back(&Arg);
+  }
+
+  // Then add anything which dominates the control point to the live set.
   for (auto &BB : *Func) {
     if (!DT.dominates(cast<Instruction>(OldCtrlPoint), &BB)) {
       for (auto &I : BB) {
