@@ -90,9 +90,9 @@ findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
 /// {2}: initialization code that is emitted in the ctor body before calling
 /// initialize()
 static const char *const dialectDeclBeginStr = R"(
-class {0} : public ::mlir::Dialect {
+class {0} : public ::mlir::{3} {
   explicit {0}(::mlir::MLIRContext *context)
-    : ::mlir::Dialect(getDialectNamespace(), context,
+    : ::mlir::{3}(getDialectNamespace(), context,
       ::mlir::TypeID::get<{0}>()) {{
     {2}
     initialize();
@@ -205,8 +205,10 @@ emitDialectDecl(Dialect &dialect,
 
     // Emit the start of the decl.
     std::string cppName = dialect.getCppClassName();
+    StringRef superClassName =
+        dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
-                        dependentDialectRegistrations);
+                        dependentDialectRegistrations, superClassName);
 
     // Check for any attributes/types registered to this dialect.  If there are,
     // add the hooks for parsing/printing.

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -207,6 +208,58 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// Dynamic operations
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<DynamicOpDefinition> getGenericDynamicOp(TestDialect *dialect) {
+  return DynamicOpDefinition::get(
+      "generic_dynamic_op", dialect, [](Operation *op) { return success(); },
+      [](Operation *op) { return success(); });
+}
+
+std::unique_ptr<DynamicOpDefinition>
+getOneOperandTwoResultsDynamicOp(TestDialect *dialect) {
+  return DynamicOpDefinition::get(
+      "one_operand_two_results", dialect,
+      [](Operation *op) {
+        if (op->getNumOperands() != 1) {
+          op->emitOpError()
+              << "expected 1 operand, but had " << op->getNumOperands();
+          return failure();
+        }
+        if (op->getNumResults() != 2) {
+          op->emitOpError()
+              << "expected 2 results, but had " << op->getNumResults();
+          return failure();
+        }
+        return success();
+      },
+      [](Operation *op) { return success(); });
+}
+
+std::unique_ptr<DynamicOpDefinition>
+getCustomParserPrinterDynamicOp(TestDialect *dialect) {
+  auto verifier = [](Operation *op) {
+    if (op->getNumOperands() == 0 && op->getNumResults() == 0)
+      return success();
+    op->emitError() << "operation should have no operands and no results";
+    return failure();
+  };
+  auto regionVerifier = [](Operation *op) { return success(); };
+
+  auto parser = [](OpAsmParser &parser, OperationState &state) {
+    return parser.parseKeyword("custom_keyword");
+  };
+
+  auto printer = [](Operation *op, OpAsmPrinter &printer, llvm::StringRef) {
+    printer << op->getName() << " custom_keyword";
+  };
+
+  return DynamicOpDefinition::get("custom_parser_printer_dynamic_op", dialect,
+                                  verifier, regionVerifier, parser, printer);
+}
+
+//===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//
 
@@ -240,6 +293,10 @@ void TestDialect::initialize() {
 #define GET_OP_LIST
 #include "TestOps.cpp.inc"
       >();
+  registerDynamicOp(getGenericDynamicOp(this));
+  registerDynamicOp(getOneOperandTwoResultsDynamicOp(this));
+  registerDynamicOp(getCustomParserPrinterDynamicOp(this));
+
   addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
                 TestInlinerInterface, TestReductionPatternInterface>();
   allowUnknownOperations();
