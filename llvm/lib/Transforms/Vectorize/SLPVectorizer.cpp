@@ -3910,6 +3910,16 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
   }
 
+  // Avoid attempting to schedule allocas; there are unmodeled dependencies
+  // for "static" alloca status and for reordering with stacksave calls.
+  for (Value *V : VL) {
+    if (isa<AllocaInst>(V)) {
+      LLVM_DEBUG(dbgs() << "SLP: Gathering due to alloca.\n");
+      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+      return;
+    }
+  }
+
   if (StoreInst *SI = dyn_cast<StoreInst>(S.OpValue))
     if (SI->getValueOperand()->getType()->isVectorTy()) {
       LLVM_DEBUG(dbgs() << "SLP: Gathering due to store vector type.\n");
