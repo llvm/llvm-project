@@ -1386,8 +1386,13 @@ public:
     return AMDGPU::isGFX9(getSTI());
   }
 
+  // TODO: isGFX90A is also true for GFX940. We need to clean it.
   bool isGFX90A() const {
     return AMDGPU::isGFX90A(getSTI());
+  }
+
+  bool isGFX940() const {
+    return AMDGPU::isGFX940(getSTI());
   }
 
   bool isGFX9Plus() const {
@@ -4256,7 +4261,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     return false;
   }
 
-  if (isGFX90A() && (CPol & CPol::SCC)) {
+  if (isGFX90A() && !isGFX940() && (CPol & CPol::SCC)) {
     SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
     StringRef CStr(S.getPointer());
     S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scc")]);
@@ -4269,7 +4274,8 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   if (TSFlags & SIInstrFlags::IsAtomicRet) {
     if (!(TSFlags & SIInstrFlags::MIMG) && !(CPol & CPol::GLC)) {
-      Error(IDLoc, "instruction must use glc");
+      Error(IDLoc, isGFX940() ? "instruction must use sc0"
+                              : "instruction must use glc");
       return false;
     }
   } else {
@@ -4277,7 +4283,8 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("glc")]);
-      Error(S, "instruction must not use glc");
+      Error(S, isGFX940() ? "instruction must not use sc0"
+                          : "instruction must not use glc");
       return false;
     }
   }
@@ -5626,7 +5633,24 @@ AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   unsigned CPolOff = 0;
   SMLoc S = getLoc();
 
-  if (trySkipId("glc"))
+  StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
+  if (isGFX940() && !Mnemo.startswith("s_")) {
+    if (trySkipId("sc0"))
+      CPolOn = AMDGPU::CPol::SC0;
+    else if (trySkipId("nosc0"))
+      CPolOff = AMDGPU::CPol::SC0;
+    else if (trySkipId("nt"))
+      CPolOn = AMDGPU::CPol::NT;
+    else if (trySkipId("nont"))
+      CPolOff = AMDGPU::CPol::NT;
+    else if (trySkipId("sc1"))
+      CPolOn = AMDGPU::CPol::SC1;
+    else if (trySkipId("nosc1"))
+      CPolOff = AMDGPU::CPol::SC1;
+    else
+      return MatchOperand_NoMatch;
+  }
+  else if (trySkipId("glc"))
     CPolOn = AMDGPU::CPol::GLC;
   else if (trySkipId("noglc"))
     CPolOff = AMDGPU::CPol::GLC;

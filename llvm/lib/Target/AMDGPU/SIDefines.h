@@ -294,6 +294,9 @@ enum CPol {
   SLC = 2,
   DLC = 4,
   SCC = 16,
+  SC0 = GLC,
+  SC1 = SCC,
+  NT = SLC,
   ALL = GLC | SLC | DLC | SCC
 };
 
