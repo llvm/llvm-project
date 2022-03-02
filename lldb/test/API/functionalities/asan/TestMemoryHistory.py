@@ -40,7 +40,7 @@ class AsanTestCase(TestBase):
         # "memory history" command should not work without a process
         self.expect("memory history 0",
                     error=True,
-                    substrs=["invalid process"])
+                    substrs=["Command requires a current process"])
 
         self.runCmd("run")
 
