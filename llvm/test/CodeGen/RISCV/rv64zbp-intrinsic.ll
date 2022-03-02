@@ -340,11 +340,13 @@ define i64 @grevi64(i64 %a) nounwind {
   ret i64 %tmp
 }
 
-; FIXME: This is miscompiled. We can't fold the rotate with the grev.
+; Make sure we don't fold this rotate with the grev. We can only fold a rotate
+; by 32.
 define i64 @grevi64_24_rotl_16(i64 %a) nounwind {
 ; RV64ZBP-LABEL: grevi64_24_rotl_16:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    rev8.h a0, a0
+; RV64ZBP-NEXT:    rev8.w a0, a0
+; RV64ZBP-NEXT:    rori a0, a0, 48
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 24)
   %tmp1 = call i64 @llvm.fshl.i64(i64 %tmp, i64 %tmp, i64 16)
@@ -352,11 +354,13 @@ define i64 @grevi64_24_rotl_16(i64 %a) nounwind {
 }
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 
-; FIXME: This is miscompiled. We can't fold the rotate with the grev.
+; Make sure we don't fold this rotate with the grev. We can only fold a rotate
+; by 32.
 define i64 @grevi64_24_rotr_16(i64 %a) nounwind {
 ; RV64ZBP-LABEL: grevi64_24_rotr_16:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    rev8.h a0, a0
+; RV64ZBP-NEXT:    rev8.w a0, a0
+; RV64ZBP-NEXT:    rori a0, a0, 16
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 24)
   %tmp1 = call i64 @llvm.fshr.i64(i64 %tmp, i64 %tmp, i64 16)
