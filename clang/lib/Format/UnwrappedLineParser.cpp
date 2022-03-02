@@ -2384,10 +2384,16 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
 
   assert(FormatTok->is(tok::kw_if) && "'if' expected");
   nextToken();
-  if (FormatTok->isOneOf(tok::kw_constexpr, tok::identifier))
+  if (FormatTok->is(tok::exclaim))
     nextToken();
-  if (FormatTok->is(tok::l_paren))
-    parseParens();
+  if (FormatTok->is(tok::kw_consteval)) {
+    nextToken();
+  } else {
+    if (FormatTok->isOneOf(tok::kw_constexpr, tok::identifier))
+      nextToken();
+    if (FormatTok->is(tok::l_paren))
+      parseParens();
+  }
   HandleAttributes();
 
   bool NeedsUnwrappedLine = false;
