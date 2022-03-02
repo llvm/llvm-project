@@ -341,59 +341,59 @@ define i32 @select_abs32(i32 %x) {
 define i64 @abs64(i64 %x) {
 ; RV32I-LABEL: abs64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srai a2, a1, 31
-; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    sltu a3, a2, a0
-; RV32I-NEXT:    xor a1, a1, a2
-; RV32I-NEXT:    sub a1, a2, a1
-; RV32I-NEXT:    sub a1, a1, a3
-; RV32I-NEXT:    sub a0, a2, a0
+; RV32I-NEXT:    bgez a1, .LBB6_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:  .LBB6_2:
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: abs64:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    srai a2, a1, 31
-; RV32ZBB-NEXT:    xor a0, a0, a2
-; RV32ZBB-NEXT:    sltu a3, a2, a0
-; RV32ZBB-NEXT:    xor a1, a1, a2
-; RV32ZBB-NEXT:    sub a1, a2, a1
-; RV32ZBB-NEXT:    sub a1, a1, a3
-; RV32ZBB-NEXT:    sub a0, a2, a0
+; RV32ZBB-NEXT:    bgez a1, .LBB6_2
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    snez a2, a0
+; RV32ZBB-NEXT:    neg a0, a0
+; RV32ZBB-NEXT:    add a1, a1, a2
+; RV32ZBB-NEXT:    neg a1, a1
+; RV32ZBB-NEXT:  .LBB6_2:
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV32ZBT-LABEL: abs64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    srai a2, a1, 31
-; RV32ZBT-NEXT:    xor a0, a0, a2
-; RV32ZBT-NEXT:    sltu a3, a2, a0
-; RV32ZBT-NEXT:    xor a1, a1, a2
-; RV32ZBT-NEXT:    sub a1, a2, a1
-; RV32ZBT-NEXT:    sub a1, a1, a3
-; RV32ZBT-NEXT:    sub a0, a2, a0
+; RV32ZBT-NEXT:    neg a2, a0
+; RV32ZBT-NEXT:    slti a3, a1, 0
+; RV32ZBT-NEXT:    cmov a2, a3, a2, a0
+; RV32ZBT-NEXT:    snez a0, a0
+; RV32ZBT-NEXT:    add a0, a1, a0
+; RV32ZBT-NEXT:    neg a0, a0
+; RV32ZBT-NEXT:    cmov a1, a3, a0, a1
+; RV32ZBT-NEXT:    mv a0, a2
 ; RV32ZBT-NEXT:    ret
 ;
 ; RV64I-LABEL: abs64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a1, a0, 63
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs64:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    neg a1, a0
-; RV64ZBB-NEXT:    min a0, a0, a1
+; RV64ZBB-NEXT:    max a0, a0, a1
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: abs64:
 ; RV64ZBT:       # %bb.0:
 ; RV64ZBT-NEXT:    srai a1, a0, 63
 ; RV64ZBT-NEXT:    xor a0, a0, a1
-; RV64ZBT-NEXT:    sub a0, a1, a0
+; RV64ZBT-NEXT:    sub a0, a0, a1
 ; RV64ZBT-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
-  %neg = sub nsw i64 0, %abs
-  ret i64 %neg
+  ret i64 %abs
 }
 
 define i64 @select_abs64(i64 %x) {
