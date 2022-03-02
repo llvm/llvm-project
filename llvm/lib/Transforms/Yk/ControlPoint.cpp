@@ -89,6 +89,9 @@ CallInst *findControlPointCall(Module &M) {
 }
 
 /// Extract all live variables that need to be passed into the control point.
+///
+/// YKFIXME: This currently computes an over-approximation of what's live.
+/// https://github.com/ykjit/yk/issues/515
 std::vector<Value *> getLiveVars(DominatorTree &DT, CallInst *OldCtrlPoint) {
   std::vector<Value *> Vec;
   Function *Func = OldCtrlPoint->getFunction();
