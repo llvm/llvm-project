@@ -235,6 +235,56 @@ public:
     return DACtx->getBoolLiteralValue(Value);
   }
 
+  /// Returns an atomic boolean value.
+  BoolValue &makeAtomicBoolValue() { return DACtx->createAtomicBoolValue(); }
+
+  /// Returns a boolean value that represents the conjunction of `LHS` and
+  /// `RHS`. Subsequent calls with the same arguments, regardless of their
+  /// order, will return the same result. If the given boolean values represent
+  /// the same value, the result will be the value itself.
+  BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) {
+    return DACtx->getOrCreateConjunctionValue(LHS, RHS);
+  }
+
+  /// Returns a boolean value that represents the disjunction of `LHS` and
+  /// `RHS`. Subsequent calls with the same arguments, regardless of their
+  /// order, will return the same result. If the given boolean values represent
+  /// the same value, the result will be the value itself.
+  BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) {
+    return DACtx->getOrCreateDisjunctionValue(LHS, RHS);
+  }
+
+  /// Returns a boolean value that represents the negation of `Val`. Subsequent
+  /// calls with the same argument will return the same result.
+  BoolValue &makeNot(BoolValue &Val) {
+    return DACtx->getOrCreateNegationValue(Val);
+  }
+
+  /// Returns a boolean value represents `LHS` => `RHS`. Subsequent calls with
+  /// the same arguments, regardless of their order, will return the same
+  /// result. If the given boolean values represent the same value, the result
+  /// will be a value that represents the true boolean literal.
+  BoolValue &makeImplication(BoolValue &LHS, BoolValue &RHS) {
+    return &LHS == &RHS ? getBoolLiteralValue(true) : makeOr(makeNot(LHS), RHS);
+  }
+
+  /// Returns a boolean value represents `LHS` <=> `RHS`. Subsequent calls with
+  /// the same arguments, regardless of their order, will return the same
+  /// result. If the given boolean values represent the same value, the result
+  /// will be a value that represents the true boolean literal.
+  BoolValue &makeIff(BoolValue &LHS, BoolValue &RHS) {
+    return &LHS == &RHS
+               ? getBoolLiteralValue(true)
+               : makeAnd(makeImplication(LHS, RHS), makeImplication(RHS, LHS));
+  }
+
+  /// Adds `Val` to the set of clauses that constitute the flow condition.
+  void addToFlowCondition(BoolValue &Val);
+
+  /// Returns true if and only if the clauses that constitute the flow condition
+  /// imply that `Val` is true.
+  bool flowConditionImplies(BoolValue &Val);
+
 private:
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null.
@@ -272,7 +322,7 @@ private:
                  std::pair<StructValue *, const ValueDecl *>>
       MemberLocToStruct;
 
-  // FIXME: Add flow condition constraints.
+  llvm::DenseSet<BoolValue *> FlowConditionConstraints;
 };
 
 } // namespace dataflow
