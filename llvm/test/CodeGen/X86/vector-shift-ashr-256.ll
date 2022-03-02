@@ -2193,24 +2193,19 @@ define <4 x i64> @PR52719(<4 x i64> %a0, i32 %a1) {
 ; X86-AVX1-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
 ; X86-AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; X86-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
-; X86-AVX1-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; X86-AVX1-NEXT:    # xmm4 = mem[0,0]
-; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm4, %xmm5
-; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm4, %xmm6
-; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm6[0,1,2,3],xmm5[4,5,6,7]
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm6, %xmm1
-; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm6, %xmm2
-; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; X86-AVX1-NEXT:    vpxor %xmm5, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpsubq %xmm5, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpsrlq %xmm3, %xmm4, %xmm2
-; X86-AVX1-NEXT:    vpsrlq %xmm3, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; X86-AVX1-NEXT:    # xmm3 = mem[0,0]
+; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm3, %xmm4
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm5, %xmm2
+; X86-AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vpsubq %xmm4, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: PR52719:

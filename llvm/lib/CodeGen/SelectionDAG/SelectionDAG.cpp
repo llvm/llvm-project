@@ -2587,9 +2587,9 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     return true;
   }
   case ISD::VECTOR_SHUFFLE: {
-    // Check if this is a shuffle node doing a splat.
-    // TODO: Do we need to handle shuffle(splat, undef, mask)?
-    int SplatIndex = -1;
+    // Check if this is a shuffle node doing a splat or a shuffle of a splat.
+    APInt DemandedLHS = APInt::getNullValue(NumElts);
+    APInt DemandedRHS = APInt::getNullValue(NumElts);
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(V)->getMask();
     for (int i = 0; i != (int)NumElts; ++i) {
       int M = Mask[i];
@@ -2599,11 +2599,30 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
       }
       if (!DemandedElts[i])
         continue;
-      if (0 <= SplatIndex && SplatIndex != M)
-        return false;
-      SplatIndex = M;
+      if (M < (int)NumElts)
+        DemandedLHS.setBit(M);
+      else
+        DemandedRHS.setBit(M - NumElts);
     }
-    return true;
+
+    // If we aren't demanding either op, assume there's no splat.
+    // If we are demanding both ops, assume there's no splat.
+    if ((DemandedLHS.isZero() && DemandedRHS.isZero()) ||
+        (!DemandedLHS.isZero() && !DemandedRHS.isZero()))
+      return false;
+
+    // See if the demanded elts of the source op is a splat or we only demand
+    // one element, which should always be a splat.
+    // TODO: Handle source ops splats with undefs.
+    auto CheckSplatSrc = [&](SDValue Src, const APInt &SrcElts) {
+      APInt SrcUndefs;
+      return (SrcElts.countPopulation() == 1) ||
+             (isSplatValue(Src, SrcElts, SrcUndefs, Depth + 1) &&
+              (SrcElts & SrcUndefs).isZero());
+    };
+    if (!DemandedLHS.isZero())
+      return CheckSplatSrc(V.getOperand(0), DemandedLHS);
+    return CheckSplatSrc(V.getOperand(1), DemandedRHS);
   }
   case ISD::EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
