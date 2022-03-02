@@ -11012,7 +11012,29 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
 
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  std::pair<Register, const TargetRegisterClass *> Res =
+      TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+
+  if (Res.second == &RISCV::GPRF32RegClass) {
+    if (!Subtarget.is64Bit() || VT == MVT::Other)
+      return std::make_pair(Res.first, &RISCV::GPRRegClass);
+    return std::make_pair(0, nullptr);
+  }
+
+  if (Res.second == &RISCV::GPRF64RegClass ||
+      Res.second == &RISCV::GPRPF64RegClass) {
+    if (Subtarget.is64Bit() || VT == MVT::Other)
+      return std::make_pair(Res.first, &RISCV::GPRRegClass);
+    return std::make_pair(0, nullptr);
+  }
+
+  if (Res.second == &RISCV::GPRF16RegClass) {
+    if (VT == MVT::Other)
+      return std::make_pair(Res.first, &RISCV::GPRRegClass);
+    return std::make_pair(0, nullptr);
+  }
+
+  return Res;
 }
 
 unsigned
