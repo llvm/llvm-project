@@ -79,96 +79,101 @@ static int InitLibrary(DeviceTy &Device) {
   bool supportsEmptyImages = Device.RTL->supports_empty_images &&
                              Device.RTL->supports_empty_images() > 0;
 
-  Device.PendingGlobalsMtx.lock();
-  PM->TrlTblMtx.lock();
-  for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
-    TranslationTable *TransTable =
-        &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
-    if (TransTable->HostTable.EntriesBegin ==
-            TransTable->HostTable.EntriesEnd &&
-        !supportsEmptyImages) {
-      // No host entry so no need to proceed
-      continue;
-    }
+  std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
+      Device.PendingGlobalsMtx);
+  {
+    std::lock_guard<decltype(PM->TrlTblMtx)> LG(PM->TrlTblMtx);
+    for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
+      TranslationTable *TransTable =
+          &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
+      if (TransTable->HostTable.EntriesBegin ==
+              TransTable->HostTable.EntriesEnd &&
+          !supportsEmptyImages) {
+        // No host entry so no need to proceed
+        continue;
+      }
 
-    if (TransTable->TargetsTable[device_id] != 0) {
-      // Library entries have already been processed
-      continue;
-    }
+      if (TransTable->TargetsTable[device_id] != 0) {
+        // Library entries have already been processed
+        continue;
+      }
 
-    // 1) get image.
-    assert(TransTable->TargetsImages.size() > (size_t)device_id &&
-           "Not expecting a device ID outside the table's bounds!");
-    __tgt_device_image *img = TransTable->TargetsImages[device_id];
-    if (!img) {
-      REPORT("No image loaded for device id %d.\n", device_id);
-      rc = OFFLOAD_FAIL;
-      break;
-    }
-    // 2) load image into the target table.
-    __tgt_target_table *TargetTable = TransTable->TargetsTable[device_id] =
-        Device.load_binary(img);
-    // Unable to get table for this image: invalidate image and fail.
-    if (!TargetTable) {
-      REPORT("Unable to generate entries table for device id %d.\n", device_id);
-      TransTable->TargetsImages[device_id] = 0;
-      rc = OFFLOAD_FAIL;
-      break;
-    }
+      // 1) get image.
+      assert(TransTable->TargetsImages.size() > (size_t)device_id &&
+             "Not expecting a device ID outside the table's bounds!");
+      __tgt_device_image *img = TransTable->TargetsImages[device_id];
+      if (!img) {
+        REPORT("No image loaded for device id %d.\n", device_id);
+        rc = OFFLOAD_FAIL;
+        break;
+      }
+      // 2) load image into the target table.
+      __tgt_target_table *TargetTable = TransTable->TargetsTable[device_id] =
+          Device.load_binary(img);
+      // Unable to get table for this image: invalidate image and fail.
+      if (!TargetTable) {
+        REPORT("Unable to generate entries table for device id %d.\n",
+               device_id);
+        TransTable->TargetsImages[device_id] = 0;
+        rc = OFFLOAD_FAIL;
+        break;
+      }
 
-    // Verify whether the two table sizes match.
-    size_t hsize =
-        TransTable->HostTable.EntriesEnd - TransTable->HostTable.EntriesBegin;
-    size_t tsize = TargetTable->EntriesEnd - TargetTable->EntriesBegin;
+      // Verify whether the two table sizes match.
+      size_t hsize =
+          TransTable->HostTable.EntriesEnd - TransTable->HostTable.EntriesBegin;
+      size_t tsize = TargetTable->EntriesEnd - TargetTable->EntriesBegin;
 
-    // Invalid image for these host entries!
-    if (hsize != tsize) {
-      REPORT("Host and Target tables mismatch for device id %d [%zx != %zx].\n",
-             device_id, hsize, tsize);
-      TransTable->TargetsImages[device_id] = 0;
-      TransTable->TargetsTable[device_id] = 0;
-      rc = OFFLOAD_FAIL;
-      break;
-    }
+      // Invalid image for these host entries!
+      if (hsize != tsize) {
+        REPORT(
+            "Host and Target tables mismatch for device id %d [%zx != %zx].\n",
+            device_id, hsize, tsize);
+        TransTable->TargetsImages[device_id] = 0;
+        TransTable->TargetsTable[device_id] = 0;
+        rc = OFFLOAD_FAIL;
+        break;
+      }
 
-    // process global data that needs to be mapped.
-    Device.DataMapMtx.lock();
-    __tgt_target_table *HostTable = &TransTable->HostTable;
-    for (__tgt_offload_entry *CurrDeviceEntry = TargetTable->EntriesBegin,
-                             *CurrHostEntry = HostTable->EntriesBegin,
-                             *EntryDeviceEnd = TargetTable->EntriesEnd;
-         CurrDeviceEntry != EntryDeviceEnd;
-         CurrDeviceEntry++, CurrHostEntry++) {
-      if (CurrDeviceEntry->size != 0) {
-        // has data.
-        assert(CurrDeviceEntry->size == CurrHostEntry->size &&
-               "data size mismatch");
+      // process global data that needs to be mapped.
+      std::lock_guard<decltype(Device.DataMapMtx)> LG(Device.DataMapMtx);
 
-        // Fortran may use multiple weak declarations for the same symbol,
-        // therefore we must allow for multiple weak symbols to be loaded from
-        // the fat binary. Treat these mappings as any other "regular" mapping.
-        // Add entry to map.
-        if (Device.getTgtPtrBegin(CurrHostEntry->addr, CurrHostEntry->size))
-          continue;
-        DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
-           "\n",
-           DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
-           CurrDeviceEntry->size);
-        Device.HostDataToTargetMap.emplace(
-            (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
-            (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
-            (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
-            (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
-            false /*UseHoldRefCount*/, nullptr /*Name*/,
-            true /*IsRefCountINF*/);
+      __tgt_target_table *HostTable = &TransTable->HostTable;
+      for (__tgt_offload_entry *CurrDeviceEntry = TargetTable->EntriesBegin,
+                               *CurrHostEntry = HostTable->EntriesBegin,
+                               *EntryDeviceEnd = TargetTable->EntriesEnd;
+           CurrDeviceEntry != EntryDeviceEnd;
+           CurrDeviceEntry++, CurrHostEntry++) {
+        if (CurrDeviceEntry->size != 0) {
+          // has data.
+          assert(CurrDeviceEntry->size == CurrHostEntry->size &&
+                 "data size mismatch");
+
+          // Fortran may use multiple weak declarations for the same symbol,
+          // therefore we must allow for multiple weak symbols to be loaded from
+          // the fat binary. Treat these mappings as any other "regular"
+          // mapping. Add entry to map.
+          if (Device.getTgtPtrBegin(CurrHostEntry->addr, CurrHostEntry->size))
+            continue;
+          DP("Add mapping from host " DPxMOD " to device " DPxMOD
+             " with size %zu"
+             "\n",
+             DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
+             CurrDeviceEntry->size);
+          Device.HostDataToTargetMap.emplace(
+              (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
+              (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
+              (uintptr_t)CurrHostEntry->addr +
+                  CurrHostEntry->size /*HstPtrEnd*/,
+              (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
+              false /*UseHoldRefCount*/, nullptr /*Name*/,
+              true /*IsRefCountINF*/);
+        }
       }
     }
-    Device.DataMapMtx.unlock();
   }
-  PM->TrlTblMtx.unlock();
 
   if (rc != OFFLOAD_SUCCESS) {
-    Device.PendingGlobalsMtx.unlock();
     return rc;
   }
 
@@ -188,7 +193,6 @@ static int InitLibrary(DeviceTy &Device) {
                      nullptr, nullptr, nullptr, 1, 1, true /*team*/, AsyncInfo);
           if (rc != OFFLOAD_SUCCESS) {
             REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(ctor));
-            Device.PendingGlobalsMtx.unlock();
             return OFFLOAD_FAIL;
           }
         }
@@ -202,7 +206,6 @@ static int InitLibrary(DeviceTy &Device) {
       return OFFLOAD_FAIL;
   }
   Device.HasPendingGlobals = false;
-  Device.PendingGlobalsMtx.unlock();
 
   return OFFLOAD_SUCCESS;
 }
@@ -246,7 +249,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
 }
 
 static void handleDefaultTargetOffload() {
-  PM->TargetOffloadMtx.lock();
+  std::lock_guard<decltype(PM->TargetOffloadMtx)> LG(PM->TargetOffloadMtx);
   if (PM->TargetOffloadPolicy == tgt_default) {
     if (omp_get_num_devices() > 0) {
       DP("Default TARGET OFFLOAD policy is now mandatory "
@@ -258,7 +261,6 @@ static void handleDefaultTargetOffload() {
       PM->TargetOffloadPolicy = tgt_disabled;
     }
   }
-  PM->TargetOffloadMtx.unlock();
 }
 
 static bool isOffloadDisabled() {
@@ -314,10 +316,13 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   DeviceTy &Device = *PM->Devices[DeviceID];
 
   // Check whether global data has been mapped for this device
-  Device.PendingGlobalsMtx.lock();
-  bool hasPendingGlobals = Device.HasPendingGlobals;
-  Device.PendingGlobalsMtx.unlock();
-  if (hasPendingGlobals && InitLibrary(Device) != OFFLOAD_SUCCESS) {
+  bool HasPendingGlobals;
+  {
+    std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
+        Device.PendingGlobalsMtx);
+    HasPendingGlobals = Device.HasPendingGlobals;
+  }
+  if (HasPendingGlobals && InitLibrary(Device) != OFFLOAD_SUCCESS) {
     REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
     handleTargetOutcome(false, Loc);
     return true;
@@ -572,7 +577,8 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       }
 
       if (UpdateDevPtr) {
-        HostDataToTargetTy::LockGuard LG(*Pointer_TPR.MapTableEntry);
+        std::lock_guard<decltype(*Pointer_TPR.MapTableEntry)> LG(
+            *Pointer_TPR.MapTableEntry);
         Device.ShadowMtx.unlock();
 
         DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
@@ -635,7 +641,7 @@ static void applyToShadowMapEntries(DeviceTy &Device, CBTy CB, void *Begin,
   uintptr_t LB = (uintptr_t)Begin;
   uintptr_t UB = LB + Size;
   // Now we are looking into the shadow map so we need to lock it.
-  Device.ShadowMtx.lock();
+  std::lock_guard<decltype(Device.ShadowMtx)> LG(Device.ShadowMtx);
   for (ShadowPtrListTy::iterator Itr = Device.ShadowPtrMap.begin();
        Itr != Device.ShadowPtrMap.end();) {
     uintptr_t ShadowHstPtrAddr = (uintptr_t)Itr->first;
@@ -652,7 +658,6 @@ static void applyToShadowMapEntries(DeviceTy &Device, CBTy CB, void *Begin,
     if (CB(Itr) == OFFLOAD_FAIL)
       break;
   }
-  Device.ShadowMtx.unlock();
 }
 
 } // namespace
