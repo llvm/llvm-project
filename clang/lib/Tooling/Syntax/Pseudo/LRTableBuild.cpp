@@ -73,7 +73,7 @@ public:
       Table.Actions.push_back(E.Act);
       Table.States.push_back(E.State);
     }
-    // Initialize the terminal and nonterminal idx, all ranges are empty by
+    // Initialize the terminal and nonterminal offset, all ranges are empty by
     // default.
     Table.TerminalOffset = std::vector<uint32_t>(GT.Terminals.size() + 1, 0);
     Table.NontermOffset = std::vector<uint32_t>(GT.Nonterminals.size() + 1, 0);
@@ -127,7 +127,7 @@ LRTable LRTable::buildSLR(const Grammar &G) {
       }
       if (!I.hasNext()) {
         // If we've reached the end of a rule A := ..., then we can reduce if
-        // the next token is in the follow set of A".
+        // the next token is in the follow set of A.
         for (SymbolID Follow : FollowSets[G.lookupRule(I.rule()).Target]) {
           assert(isToken(Follow));
           Build.insert({SID, Follow, Action::reduce(I.rule())});
