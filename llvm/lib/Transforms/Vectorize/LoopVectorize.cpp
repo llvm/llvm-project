@@ -1132,6 +1132,7 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
       // handled.
       if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
           isa<VPInterleaveRecipe>(CurRec) ||
+          isa<VPScalarIVStepsRecipe>(CurRec) ||
           isa<VPCanonicalIVPHIRecipe>(CurRec))
         continue;
 
@@ -9736,26 +9737,24 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
         IndDesc.getInductionBinOp()->getFastMathFlags());
 
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
-  auto *Trunc = dyn_cast<TruncInst>(getUnderlyingValue());
   auto CreateScalarIV = [&](Value *&Step) -> Value * {
     Value *ScalarIV = State.get(getCanonicalIV(), VPIteration(0, 0));
     auto *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
-    if (!isCanonical() || CanonicalIV->getType() != IV->getType()) {
-      ScalarIV = IV->getType()->isIntegerTy()
-                     ? State.Builder.CreateSExtOrTrunc(ScalarIV, IV->getType())
-                     : State.Builder.CreateCast(Instruction::SIToFP, ScalarIV,
-                                                IV->getType());
+    if (!isCanonical() || CanonicalIV->getType() != Ty) {
+      ScalarIV =
+          Ty->isIntegerTy()
+              ? State.Builder.CreateSExtOrTrunc(ScalarIV, Ty)
+              : State.Builder.CreateCast(Instruction::SIToFP, ScalarIV, Ty);
       ScalarIV = emitTransformedIndex(State.Builder, ScalarIV,
                                       getStartValue()->getLiveInIRValue(), Step,
                                       IndDesc);
       ScalarIV->setName("offset.idx");
     }
-    if (Trunc) {
-      auto *TruncType = cast<IntegerType>(Trunc->getType());
+    if (TruncToTy) {
       assert(Step->getType()->isIntegerTy() &&
              "Truncation requires an integer step");
-      ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncType);
-      Step = State.Builder.CreateTrunc(Step, TruncType);
+      ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
+      Step = State.Builder.CreateTrunc(Step, TruncToTy);
     }
     return ScalarIV;
   };
@@ -9783,8 +9782,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
           ScalarIV, State.Builder.CreateMul(StartIdx, Step), "induction");
     }
     State.set(this, EntryPart, Part);
-    if (Trunc)
-      State.ILV->addMetadata(EntryPart, Trunc);
   }
 }
 
