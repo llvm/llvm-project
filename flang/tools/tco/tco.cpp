@@ -131,6 +131,10 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
 }
 
 int main(int argc, char **argv) {
+  // Disable the ExternalNameConversion pass by default until all the tests have
+  // been updated to pass with it enabled.
+  disableExternalNameConversion = true;
+
   [[maybe_unused]] InitLLVM y(argc, argv);
   fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptCodeGenPasses();
