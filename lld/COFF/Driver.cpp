@@ -51,6 +51,8 @@
 #include <future>
 #include <memory>
 
+#include "IntrinsicRewrite.h"
+
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
@@ -1973,6 +1975,28 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (Optional<StringRef> path = findLib(arg->getValue()))
       enqueuePath(*path, false, false);
+
+  // Add intrinsic rewrite lib to windows driver
+  if (config->driver) {
+    size_t libSize = 0;
+    char *libBufPtr = nullptr;
+    if (config->machine == AMD64) {
+      // X64
+      libSize = sizeof(LLVMINTRINSICREWRITE_X64_LIB);
+      libBufPtr = (char *)LLVMINTRINSICREWRITE_X64_LIB;
+    } else if (config->machine == I386) {
+      // X86 TODO
+    } else {
+      // ARM TODO
+    }
+
+    auto buf = WritableMemoryBuffer::getNewUninitMemBuffer(libSize);
+    if (buf) {
+      memcpy(buf->getBufferStart(), libBufPtr, libSize);
+      driver->addBuffer(std::move(buf), false, false);
+    }
+  }
+
   run();
   if (errorCount())
     return;
