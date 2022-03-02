@@ -1,4 +1,4 @@
-//==-- llvm/CodeGen/GlobalISel/RegisterBank.h - Register Bank ----*- C++ -*-==//
+//==-- llvm/CodeGen/RegisterBank.h - Register Bank ---------------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_REGISTERBANK_H
-#define LLVM_CODEGEN_GLOBALISEL_REGISTERBANK_H
+#ifndef LLVM_CODEGEN_REGISTERBANK_H
+#define LLVM_CODEGEN_REGISTERBANK_H
 
 #include "llvm/ADT/BitVector.h"
 
