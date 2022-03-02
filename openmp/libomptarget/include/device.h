@@ -21,6 +21,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <thread>
 #include <vector>
 
 #include "ExclusiveAccess.h"
@@ -60,7 +61,8 @@ private:
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
         : DynRefCount(DRC), HoldRefCount(HRC),
-          MayContainAttachedPointers(false) {}
+          MayContainAttachedPointers(false), DeleteThreadId(std::thread::id()) {
+    }
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -98,6 +100,14 @@ private:
     /// mechanism for D2H, and if the event cannot be shared between them, Event
     /// should be written as <tt>void *Event[2]</tt>.
     void *Event = nullptr;
+
+    /// The id of the thread responsible for deleting this entry. This thread
+    /// set the reference count to zero *last*. Other threads might reuse the
+    /// entry while it is marked for deletion but not yet deleted (e.g., the
+    /// data is still being moved back). If another thread reuses the entry we
+    /// will have a non-zero reference count *or* the thread will have changed
+    /// this id, effectively taking over deletion responsibility.
+    std::thread::id DeleteThreadId;
   };
   // When HostDataToTargetTy is used by std::set, std::set::iterator is const
   // use unique_ptr to make States mutable.
@@ -138,6 +148,14 @@ public:
   /// Returns OFFLOAD_FAIL if something went wrong, OFFLOAD_SUCCESS otherwise.
   int addEventIfNecessary(DeviceTy &Device, AsyncInfoTy &AsyncInfo) const;
 
+  /// Indicate that the current thread expected to delete this entry.
+  void setDeleteThreadId() const {
+    States->DeleteThreadId = std::this_thread::get_id();
+  }
+
+  /// Return the thread id of the thread expected to delete this entry.
+  std::thread::id getDeleteThreadId() const { return States->DeleteThreadId; }
+
   /// Set the event bound to this data map.
   void setEvent(void *Event) const { States->Event = Event; }
 
@@ -172,7 +190,7 @@ public:
       if (ThisRefCount > 0)
         --ThisRefCount;
       else
-        assert(OtherRefCount > 0 && "total refcount underflow");
+        assert(OtherRefCount >= 0 && "total refcount underflow");
     }
     return getTotalRefCount();
   }
@@ -362,14 +380,16 @@ struct DeviceTy {
                                        bool UseHoldRefCount, bool &IsHostPtr,
                                        bool MustContain = false,
                                        bool ForceDelete = false);
-  /// For the map entry for \p HstPtrBegin, decrement the reference count
-  /// specified by \p HasHoldModifier and, if the the total reference count is
-  /// then zero, deallocate the corresponding device storage and remove the map
-  /// entry.  Return \c OFFLOAD_SUCCESS if the map entry existed, and return
-  /// \c OFFLOAD_FAIL if not.  It is the caller's responsibility to skip calling
-  /// this function if the map entry is not expected to exist because
-  /// \p HstPtrBegin uses shared memory.
-  int deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool HasHoldModifier);
+
+  /// Deallocate \p LR and remove the entry. Assume the total reference count is
+  /// zero and the calling thread is the deleting thread for \p LR. \p HDTTMap
+  /// ensure the caller holds exclusive access and can modify the map. Return \c
+  /// OFFLOAD_SUCCESS if the map entry existed, and return \c OFFLOAD_FAIL if
+  /// not. It is the caller's responsibility to skip calling this function if
+  /// the map entry is not expected to exist because \p HstPtrBegin uses shared
+  /// memory.
+  int deallocTgtPtr(HDTTMapAccessorTy &HDTTMap, LookupResult LR, int64_t Size);
+
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
