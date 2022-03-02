@@ -14,10 +14,11 @@
 #define LLVM_TRANSFORMS_SCALAR_WARNMISSEDTRANSFORMS_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
 class Function;
+class Pass;
+class PassRegistry;
 
 // New pass manager boilerplate.
 class WarnMissedTransformationsPass

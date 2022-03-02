@@ -8,16 +8,12 @@
 
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;

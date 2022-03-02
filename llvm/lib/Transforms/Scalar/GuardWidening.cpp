@@ -42,7 +42,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"

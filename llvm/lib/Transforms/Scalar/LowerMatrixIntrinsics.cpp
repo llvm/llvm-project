@@ -18,7 +18,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"

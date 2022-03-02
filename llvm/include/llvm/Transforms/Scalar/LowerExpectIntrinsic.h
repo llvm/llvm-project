@@ -15,10 +15,11 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOWEREXPECTINTRINSIC_H
 #define LLVM_TRANSFORMS_SCALAR_LOWEREXPECTINTRINSIC_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class Function;
 
 struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// Run the pass over the function.
