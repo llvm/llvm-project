@@ -42,7 +42,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr auto __synth_three_way =
   };
 
 template <class _Tp, class _Up = _Tp>
-using __synth_three_way_result = decltype(__synth_three_way(declval<_Tp&>(), declval<_Up&>()));
+using __synth_three_way_result = decltype(std::__synth_three_way(declval<_Tp&>(), declval<_Up&>()));
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
