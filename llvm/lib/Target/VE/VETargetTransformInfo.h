@@ -21,6 +21,32 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 
+static llvm::Type *getVectorElementType(llvm::Type *Ty) {
+  return llvm::cast<llvm::FixedVectorType>(Ty)->getElementType();
+}
+
+static llvm::Type *getLaneType(llvm::Type *Ty) {
+  using namespace llvm;
+  if (!isa<VectorType>(Ty))
+    return Ty;
+  return getVectorElementType(Ty);
+}
+
+static bool isVectorLaneType(llvm::Type &ElemTy) {
+  // check element sizes for vregs
+  if (ElemTy.isIntegerTy()) {
+    unsigned ScaBits = ElemTy.getScalarSizeInBits();
+    return ScaBits == 1 || ScaBits == 32 || ScaBits == 64;
+  }
+  if (ElemTy.isPointerTy()) {
+    return true;
+  }
+  if (ElemTy.isFloatTy() || ElemTy.isDoubleTy()) {
+    return true;
+  }
+  return false;
+}
+
 namespace llvm {
 
 class VETTIImpl : public BasicTTIImplBase<VETTIImpl> {
@@ -86,6 +112,21 @@ public:
     //   output
     return false;
   }
+
+  // Load & Store {
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  }
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  }
+  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  };
+  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) {
+    return isVectorLaneType(*getLaneType(DataType));
+  }
+  // } Load & Store
 };
 
 } // namespace llvm
