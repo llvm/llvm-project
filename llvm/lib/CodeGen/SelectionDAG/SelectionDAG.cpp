@@ -2638,6 +2638,39 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     }
     break;
   }
+  case ISD::BITCAST: {
+    SDValue Src = V.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    unsigned SrcBitWidth = SrcVT.getScalarSizeInBits();
+    unsigned BitWidth = VT.getScalarSizeInBits();
+
+    // Ignore bitcasts from unsupported types.
+    // TODO: Add fp support?
+    if (!SrcVT.isVector() || !SrcVT.isInteger() || !VT.isInteger())
+      break;
+
+    // Bitcast 'small element' vector to 'large element' vector.
+    if ((BitWidth % SrcBitWidth) == 0) {
+      // See if each sub element is a splat.
+      unsigned Scale = BitWidth / SrcBitWidth;
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      APInt ScaledDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      for (unsigned I = 0; I != Scale; ++I) {
+        APInt SubUndefElts;
+        APInt SubDemandedElt = APInt::getOneBitSet(Scale, I);
+        APInt SubDemandedElts = APInt::getSplat(NumSrcElts, SubDemandedElt);
+        SubDemandedElts &= ScaledDemandedElts;
+        if (!isSplatValue(Src, SubDemandedElts, SubUndefElts, Depth + 1))
+          return false;
+        // TODO: Add support for merging sub undef elements.
+        if (SubDemandedElts.isSubsetOf(SubUndefElts))
+          return false;
+      }
+      return true;
+    }
+    break;
+  }
   }
 
   return false;
