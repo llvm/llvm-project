@@ -1130,7 +1130,7 @@ bool InquireUnitState::Inquire(
     } else if (unit().openRecl) {
       result = *unit().openRecl;
     } else {
-      result = std::numeric_limits<std::uint32_t>::max();
+      result = std::numeric_limits<std::int32_t>::max();
     }
     return true;
   case HashInquiryKeyword("SIZE"):
@@ -1358,6 +1358,11 @@ bool InquireIOLengthState::Emit(const char16_t *p, std::size_t n) {
 bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
   bytes_ += sizeof *p * n;
   return true;
+}
+
+int ErroneousIoStatementState::EndIoStatement() {
+  SignalError(iostat_);
+  return IoStatementBase::EndIoStatement();
 }
 
 } // namespace Fortran::runtime::io

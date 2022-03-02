@@ -704,6 +704,8 @@ lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
     return lldb::eBasicTypeChar16;
   case SimpleTypeKind::Character32:
     return lldb::eBasicTypeChar32;
+  case SimpleTypeKind::Character8:
+    return lldb::eBasicTypeChar8;
   case SimpleTypeKind::Complex80:
     return lldb::eBasicTypeLongDoubleComplex;
   case SimpleTypeKind::Complex64:
@@ -796,6 +798,7 @@ size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
   case SimpleTypeKind::NarrowCharacter:
   case SimpleTypeKind::SignedCharacter:
   case SimpleTypeKind::SByte:
+  case SimpleTypeKind::Character8:
     return 1;
   case SimpleTypeKind::Void:
   default:

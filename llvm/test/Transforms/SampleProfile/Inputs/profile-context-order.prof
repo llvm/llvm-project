@@ -1,4 +1,4 @@
-[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]:1467299:11
+[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]:1467299:287864
  0: 6
  1: 6
  3: 287884
@@ -29,7 +29,7 @@
  1: 10
 [main:3 @ _Z5funcAi]:99:11
  0: 10
- 1: 10 _Z8funcLeafi:11
+ 1: 287864 _Z8funcLeafi:287864
  2: 287864 _Z3fibi:315608
  3: 24
 [main:3 @ _Z5funcAi:2 @ _Z3fibi]:287864:315608

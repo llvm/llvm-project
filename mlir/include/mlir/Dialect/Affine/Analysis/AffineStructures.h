@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_AFFINE_ANALYSIS_AFFINESTRUCTURES_H
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINESTRUCTURES_H
 
-#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/OpDefinition.h"
@@ -98,7 +98,7 @@ public:
   /// Return the kind of this FlatAffineConstraints.
   Kind getKind() const override { return Kind::FlatAffineConstraints; }
 
-  static bool classof(const IntegerPolyhedron *cst) {
+  static bool classof(const IntegerRelation *cst) {
     return cst->getKind() == Kind::FlatAffineConstraints;
   }
 
@@ -179,7 +179,7 @@ public:
   LogicalResult composeMatchingMap(AffineMap other);
 
   /// Replaces the contents of this FlatAffineConstraints with `other`.
-  void clearAndCopyFrom(const IntegerPolyhedron &other) override;
+  void clearAndCopyFrom(const IntegerRelation &other) override;
 
   /// Gets the lower and upper bound of the `offset` + `pos`th identifier
   /// treating [0, offset) U [offset + num, symStartPos) as dimensions and
@@ -286,7 +286,7 @@ public:
   /// Return the kind of this FlatAffineConstraints.
   Kind getKind() const override { return Kind::FlatAffineValueConstraints; }
 
-  static bool classof(const IntegerPolyhedron *cst) {
+  static bool classof(const IntegerRelation *cst) {
     return cst->getKind() == Kind::FlatAffineValueConstraints;
   }
 
@@ -484,7 +484,7 @@ public:
   bool areIdsAlignedWithOther(const FlatAffineValueConstraints &other);
 
   /// Replaces the contents of this FlatAffineValueConstraints with `other`.
-  void clearAndCopyFrom(const IntegerPolyhedron &other) override;
+  void clearAndCopyFrom(const IntegerRelation &other) override;
 
   /// Returns the Value associated with the pos^th identifier. Asserts if
   /// no Value identifier was associated.

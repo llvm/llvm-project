@@ -2404,9 +2404,8 @@ Status ProcessGDBRemote::DoDestroy() {
       m_public_state.GetValue() != eStateRunning) {
     PlatformSP platform_sp = GetTarget().GetPlatform();
 
-    if (platform_sp && platform_sp->GetName() &&
-        platform_sp->GetName().GetStringRef() ==
-            PlatformRemoteiOS::GetPluginNameStatic()) {
+    if (platform_sp && platform_sp->GetPluginName() ==
+                           PlatformRemoteiOS::GetPluginNameStatic()) {
       if (m_destroy_tried_resuming) {
         if (log)
           log->PutCString("ProcessGDBRemote::DoDestroy() - Tried resuming to "

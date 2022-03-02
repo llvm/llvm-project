@@ -40,7 +40,11 @@ template("fuzzer") {
       if (!defined(cflags)) {
         cflags = []
       }
+      if (!defined(ldflags)) {
+        ldflags = []
+      }
       cflags += [ "-fsanitize=fuzzer" ]
+      ldflags += [ "-fsanitize=fuzzer" ]
       not_needed(invoker, [ "dummy_main" ])
     } else {
       sources += [ invoker.dummy_main ]

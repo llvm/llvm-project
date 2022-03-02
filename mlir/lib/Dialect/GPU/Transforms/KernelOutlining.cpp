@@ -18,9 +18,9 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/GPU/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
@@ -60,8 +60,8 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 /// operations may not have side-effects, as otherwise sinking (and hence
 /// duplicating them) is not legal.
 static bool isLikelyAnIndexComputation(Operation *op) {
-  return isa<arith::ConstantOp, ConstantOp, memref::DimOp, arith::SelectOp,
-             arith::CmpIOp>(op);
+  return matchPattern(op, m_Constant()) ||
+         isa<memref::DimOp, arith::SelectOp, arith::CmpIOp>(op);
 }
 
 /// For a given operation `op`, computes whether it is beneficial to sink the

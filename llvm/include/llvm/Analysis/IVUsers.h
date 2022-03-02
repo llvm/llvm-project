@@ -23,8 +23,6 @@ namespace llvm {
 
 class AssumptionCache;
 class DominatorTree;
-class Instruction;
-class Value;
 class ScalarEvolution;
 class SCEV;
 class IVUsers;

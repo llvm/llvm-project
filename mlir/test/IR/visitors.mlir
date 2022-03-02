@@ -30,7 +30,7 @@ func @structured_cfg() {
 // CHECK:       Visiting op 'use1'
 // CHECK:       Visiting op 'use2'
 // CHECK:       Visiting op 'use3'
-// CHECK:       Visiting op 'std.return'
+// CHECK:       Visiting op 'func.return'
 
 // CHECK-LABEL: Block pre-order visits
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
@@ -53,7 +53,7 @@ func @structured_cfg() {
 // CHECK:       Visiting op 'scf.if'
 // CHECK:       Visiting op 'use3'
 // CHECK:       Visiting op 'scf.for'
-// CHECK:       Visiting op 'std.return'
+// CHECK:       Visiting op 'func.return'
 // CHECK:       Visiting op 'builtin.func'
 // CHECK:       Visiting op 'builtin.module'
 
@@ -73,7 +73,7 @@ func @structured_cfg() {
 
 // CHECK-LABEL: Op pre-order erasures
 // CHECK:       Erasing op 'scf.for'
-// CHECK:       Erasing op 'std.return'
+// CHECK:       Erasing op 'func.return'
 
 // CHECK-LABEL: Block pre-order erasures
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'scf.for'
@@ -85,7 +85,7 @@ func @structured_cfg() {
 // CHECK:       Erasing op 'scf.if'
 // CHECK:       Erasing op 'use3'
 // CHECK:       Erasing op 'scf.for'
-// CHECK:       Erasing op 'std.return'
+// CHECK:       Erasing op 'func.return'
 
 // CHECK-LABEL: Block post-order erasures (skip)
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'scf.if'
@@ -99,7 +99,7 @@ func @structured_cfg() {
 // CHECK:       Erasing op 'scf.if'
 // CHECK:       Erasing op 'use3'
 // CHECK:       Erasing op 'scf.for'
-// CHECK:       Erasing op 'std.return'
+// CHECK:       Erasing op 'func.return'
 // CHECK:       Erasing op 'builtin.func'
 // CHECK:       Erasing op 'builtin.module'
 
@@ -135,7 +135,7 @@ func @unstructured_cfg() {
 // CHECK:       Visiting op 'op1'
 // CHECK:       Visiting op 'cf.br'
 // CHECK:       Visiting op 'op2'
-// CHECK:       Visiting op 'std.return'
+// CHECK:       Visiting op 'func.return'
 
 // CHECK-LABEL: Block pre-order visits
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
@@ -156,7 +156,7 @@ func @unstructured_cfg() {
 // CHECK:       Visiting op 'cf.br'
 // CHECK:       Visiting op 'op2'
 // CHECK:       Visiting op 'regionOp0'
-// CHECK:       Visiting op 'std.return'
+// CHECK:       Visiting op 'func.return'
 // CHECK:       Visiting op 'builtin.func'
 // CHECK:       Visiting op 'builtin.module'
 
@@ -174,7 +174,7 @@ func @unstructured_cfg() {
 
 // CHECK-LABEL: Op pre-order erasures (skip)
 // CHECK:       Erasing op 'regionOp0'
-// CHECK:       Erasing op 'std.return'
+// CHECK:       Erasing op 'func.return'
 
 // CHECK-LABEL: Block pre-order erasures (skip)
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'
@@ -188,7 +188,7 @@ func @unstructured_cfg() {
 // CHECK:       Erasing op 'cf.br'
 // CHECK:       Erasing op 'op2'
 // CHECK:       Erasing op 'regionOp0'
-// CHECK:       Erasing op 'std.return'
+// CHECK:       Erasing op 'func.return'
 
 // CHECK-LABEL: Block post-order erasures (skip)
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'
@@ -202,7 +202,7 @@ func @unstructured_cfg() {
 // CHECK:       Erasing op 'cf.br'
 // CHECK:       Erasing op 'op2'
 // CHECK:       Erasing op 'regionOp0'
-// CHECK:       Erasing op 'std.return'
+// CHECK:       Erasing op 'func.return'
 
 // CHECK-LABEL: Block post-order erasures (no skip)
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'

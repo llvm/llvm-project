@@ -198,6 +198,28 @@ void static_through_instance() {
   h<4>();
 }
 
+struct SP {
+  static int I;
+} P;
+
+void usep() {
+  P.I;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
+  // CHECK-FIXES: {{^}}  SP::I;{{$}}
+}
+
+namespace NSP {
+struct SP {
+  static int I;
+} P;
+} // namespace NSP
+
+void usensp() {
+  NSP::P.I;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
+  // CHECK-FIXES: {{^}}  NSP::SP::I;{{$}}
+}
+
 // Overloaded member access operator
 struct Q {
   static int K;
@@ -237,9 +259,9 @@ void use_anonymous() {
 
 namespace Outer {
   inline namespace Inline {
-    struct S {
-      static int I;
-    };
+  struct S {
+    static int I;
+  };
   }
 }
 

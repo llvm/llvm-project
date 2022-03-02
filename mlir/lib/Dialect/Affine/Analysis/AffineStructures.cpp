@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
@@ -1366,7 +1365,7 @@ void FlatAffineConstraints::printSpace(raw_ostream &os) const {
   os << " const)\n";
 }
 
-void FlatAffineConstraints::clearAndCopyFrom(const IntegerPolyhedron &other) {
+void FlatAffineConstraints::clearAndCopyFrom(const IntegerRelation &other) {
   if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
     assert(!otherValueSet->hasValues() &&
            "cannot copy associated Values into FlatAffineConstraints");
@@ -1376,11 +1375,11 @@ void FlatAffineConstraints::clearAndCopyFrom(const IntegerPolyhedron &other) {
   if (auto *otherValueSet = dyn_cast<const FlatAffineConstraints>(&other))
     *this = *otherValueSet;
   else
-    *static_cast<IntegerPolyhedron *>(this) = other;
+    *static_cast<IntegerRelation *>(this) = other;
 }
 
 void FlatAffineValueConstraints::clearAndCopyFrom(
-    const IntegerPolyhedron &other) {
+    const IntegerRelation &other) {
 
   if (auto *otherValueSet =
           dyn_cast<const FlatAffineValueConstraints>(&other)) {
@@ -1391,7 +1390,7 @@ void FlatAffineValueConstraints::clearAndCopyFrom(
   if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
     *static_cast<FlatAffineConstraints *>(this) = *otherValueSet;
   else
-    *static_cast<IntegerPolyhedron *>(this) = other;
+    *static_cast<IntegerRelation *>(this) = other;
 
   values.clear();
   values.resize(getNumIds(), None);

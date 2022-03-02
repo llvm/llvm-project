@@ -53,6 +53,8 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
       context.hasSameType(GetBasicQualType(eBasicTypeBool), context.BoolTy));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeChar), context.CharTy));
+  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeChar8),
+                                  context.Char8Ty));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeChar16),
                                   context.Char16Ty));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeChar32),

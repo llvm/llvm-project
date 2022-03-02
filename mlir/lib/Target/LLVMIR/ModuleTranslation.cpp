@@ -14,6 +14,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "DebugTranslation.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -49,6 +50,79 @@ using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
+
+/// Translates the given data layout spec attribute to the LLVM IR data layout.
+/// Only integer, float and endianness entries are currently supported.
+FailureOr<llvm::DataLayout>
+translateDataLayout(DataLayoutSpecInterface attribute,
+                    const DataLayout &dataLayout,
+                    Optional<Location> loc = llvm::None) {
+  if (!loc)
+    loc = UnknownLoc::get(attribute.getContext());
+
+  // Translate the endianness attribute.
+  std::string llvmDataLayout;
+  llvm::raw_string_ostream layoutStream(llvmDataLayout);
+  for (DataLayoutEntryInterface entry : attribute.getEntries()) {
+    auto key = entry.getKey().dyn_cast<StringAttr>();
+    if (!key)
+      continue;
+    if (key.getValue() == DLTIDialect::kDataLayoutEndiannessKey) {
+      auto value = entry.getValue().cast<StringAttr>();
+      bool isLittleEndian =
+          value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
+      layoutStream << (isLittleEndian ? "e" : "E");
+      layoutStream.flush();
+      continue;
+    }
+    emitError(*loc) << "unsupported data layout key " << key;
+    return failure();
+  }
+
+  // Go through the list of entries to check which types are explicitly
+  // specified in entries. Don't use the entries directly though but query the
+  // data from the layout.
+  for (DataLayoutEntryInterface entry : attribute.getEntries()) {
+    auto type = entry.getKey().dyn_cast<Type>();
+    if (!type)
+      continue;
+    // Data layout for the index type is irrelevant at this point.
+    if (type.isa<IndexType>())
+      continue;
+    FailureOr<std::string> prefix =
+        llvm::TypeSwitch<Type, FailureOr<std::string>>(type)
+            .Case<IntegerType>(
+                [loc](IntegerType integerType) -> FailureOr<std::string> {
+                  if (integerType.getSignedness() == IntegerType::Signless)
+                    return std::string("i");
+                  emitError(*loc)
+                      << "unsupported data layout for non-signless integer "
+                      << integerType;
+                  return failure();
+                })
+            .Case<Float16Type, Float32Type, Float64Type, Float80Type,
+                  Float128Type>([](Type) { return std::string("f"); })
+            .Default([loc](Type type) -> FailureOr<std::string> {
+              emitError(*loc) << "unsupported type in data layout: " << type;
+              return failure();
+            });
+    if (failed(prefix))
+      return failure();
+
+    unsigned size = dataLayout.getTypeSizeInBits(type);
+    unsigned abi = dataLayout.getTypeABIAlignment(type) * 8u;
+    unsigned preferred = dataLayout.getTypePreferredAlignment(type) * 8u;
+    layoutStream << "-" << *prefix << size << ":" << abi;
+    if (abi != preferred)
+      layoutStream << ":" << preferred;
+  }
+  layoutStream.flush();
+  StringRef layoutSpec(llvmDataLayout);
+  if (layoutSpec.startswith("-"))
+    layoutSpec = layoutSpec.drop_front();
+
+  return llvm::DataLayout(layoutSpec);
+}
 
 /// Builds a constant of a sequential LLVM type `type`, potentially containing
 /// other sequential types recursively, from the individual constant values
@@ -1010,8 +1084,25 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
   if (auto dataLayoutAttr =
-          m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()))
+          m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(dataLayoutAttr.cast<StringAttr>().getValue());
+  } else {
+    FailureOr<llvm::DataLayout> llvmDataLayout(llvm::DataLayout(""));
+    if (auto iface = dyn_cast<DataLayoutOpInterface>(m)) {
+      if (DataLayoutSpecInterface spec = iface.getDataLayoutSpec()) {
+        llvmDataLayout =
+            translateDataLayout(spec, DataLayout(iface), m->getLoc());
+      }
+    } else if (auto mod = dyn_cast<ModuleOp>(m)) {
+      if (DataLayoutSpecInterface spec = mod.getDataLayoutSpec()) {
+        llvmDataLayout =
+            translateDataLayout(spec, DataLayout(mod), m->getLoc());
+      }
+    }
+    if (failed(llvmDataLayout))
+      return nullptr;
+    llvmModule->setDataLayout(*llvmDataLayout);
+  }
   if (auto targetTripleAttr =
           m->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(targetTripleAttr.cast<StringAttr>().getValue());
@@ -1032,8 +1123,11 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
                               StringRef name) {
   if (!satisfiesLLVMModule(module))
     return nullptr;
+
   std::unique_ptr<llvm::Module> llvmModule =
       prepareLLVMModule(module, llvmContext, name);
+  if (!llvmModule)
+    return nullptr;
 
   LLVM::ensureDistinctSuccessors(module);
 

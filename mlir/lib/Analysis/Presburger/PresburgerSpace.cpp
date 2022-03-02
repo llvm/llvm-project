@@ -38,10 +38,8 @@ PresburgerLocalSpace PresburgerLocalSpace::getSetSpace(unsigned numDims,
 }
 
 unsigned PresburgerSpace::getNumIdKind(IdKind kind) const {
-  if (kind == IdKind::Domain) {
-    assert(spaceKind == Relation && "IdKind::Domain is not supported in Set.");
+  if (kind == IdKind::Domain)
     return getNumDomainIds();
-  }
   if (kind == IdKind::Range)
     return getNumRangeIds();
   if (kind == IdKind::Symbol)
@@ -52,10 +50,8 @@ unsigned PresburgerSpace::getNumIdKind(IdKind kind) const {
 }
 
 unsigned PresburgerSpace::getIdKindOffset(IdKind kind) const {
-  if (kind == IdKind::Domain) {
-    assert(spaceKind == Relation && "IdKind::Domain is not supported in Set.");
+  if (kind == IdKind::Domain)
     return 0;
-  }
   if (kind == IdKind::Range)
     return getNumDomainIds();
   if (kind == IdKind::Symbol)

@@ -1371,12 +1371,12 @@ bool HWAddressSanitizer::instrumentStack(
       tagAlloca(IRB, AI, Tag, Size);
       for (auto *RI : SInfo.RetVec)
         TagEnd(RI);
-      if (!StandardLifetime) {
-        for (auto &II : Info.LifetimeStart)
-          II->eraseFromParent();
-        for (auto &II : Info.LifetimeEnd)
-          II->eraseFromParent();
-      }
+      // We inserted tagging outside of the lifetimes, so we have to remove
+      // them.
+      for (auto &II : Info.LifetimeStart)
+        II->eraseFromParent();
+      for (auto &II : Info.LifetimeEnd)
+        II->eraseFromParent();
     }
     memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment()));
   }

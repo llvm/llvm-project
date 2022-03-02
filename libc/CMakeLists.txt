@@ -51,29 +51,48 @@ endif()
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
 
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
-if(LLVM_LIBC_ENABLE_LINTING AND (NOT LLVM_LIBC_FULL_BUILD))
-  message(FATAL_ERROR "Cannot enable linting when full libc build is not enabled.")
+
+if(LLVM_LIBC_CLANG_TIDY)
+  set(LLVM_LIBC_ENABLE_LINTING ON)
 endif()
+
 if(LLVM_LIBC_ENABLE_LINTING)
-  if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS
-             AND "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    add_custom_target(lint-libc)
-    file(COPY ${LIBC_SOURCE_DIR}/.clang-tidy DESTINATION ${LIBC_BUILD_DIR})
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(LLVM_LIBC_ENABLE_LINTING OFF)
+    message(WARNING "C++ compiler is not clang++, linting with be disabled.")
   else()
-    message(FATAL_ERROR "
-      'clang' and 'clang-tools-extra' are required in LLVM_ENABLE_PROJECTS to
-      lint llvm-libc. The linting step performs important checks to help prevent
-      the introduction of subtle bugs, but it may increase build times.
+    if (NOT LLVM_LIBC_CLANG_TIDY)
+      find_program(LLVM_LIBC_CLANG_TIDY NAMES clang-tidy)
+    endif()
 
-      To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
-      (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+    if(LLVM_LIBC_CLANG_TIDY)
+      # Check clang-tidy major version.
+      execute_process(COMMAND ${LLVM_LIBC_CLANG_TIDY} "--version"
+                      OUTPUT_VARIABLE CLANG_TIDY_OUTPUT)
+      string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
+      string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
+             "${CMAKE_CXX_COMPILER_VERSION}")
+      if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
+        set(LLVM_LIBC_ENABLE_LINTING OFF)
+        message(WARNING "
+          'clang-tidy' (version ${CLANG_TIDY_VERSION}) is not the same as
+          'clang' (version ${CLANG_MAJOR_VERSION}).  Linting will
+          be disabled.
+
+          The path to the clang-tidy binary can be set manually by passing
+          -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.")
+      endif()
+    else()
+      message(FATAL_ERROR "
+        Linting is enabled but 'clang-tidy' is not found!
+
+        The path to the clang-tidy binary can be set manually by passing
+        -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.
+
+        To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
+        (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+    endif()
   endif()
-elseif(LLVM_LIBC_FULL_BUILD)
-  message(WARNING "
-    Linting for libc is currently disabled.
-
-    This is not recommended, to enable set LLVM_LIBC_ENABLE_LINTING to ON
-    (pass -DLLVM_LIBC_ENABLE_LINTING=ON to cmake).")
 endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)

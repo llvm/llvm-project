@@ -24,7 +24,7 @@ def TosaInferShapes : Pass<"tosa-infer-shapes", "FuncOp"> {
 
   let constructor = "createTosaInferShapesPass()";
   let dependentDialects = [
-    "StandardOpsDialect",
+    "func::FuncDialect",
     "tensor::TensorDialect",
     "tosa::TosaDialect",
   ];

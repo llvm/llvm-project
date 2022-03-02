@@ -495,10 +495,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-#if !(__has_feature(cxx_strong_enums))
-#define _LIBCPP_HAS_NO_STRONG_ENUMS
-#endif
-
 #if __has_feature(cxx_attributes)
 #  define _LIBCPP_NORETURN [[noreturn]]
 #else
@@ -862,7 +858,7 @@ typedef unsigned int   char32_t;
 # define _LIBCPP_USING_IF_EXISTS
 #endif
 
-#ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
+#ifdef _LIBCPP_CXX03_LANG
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) struct _LIBCPP_TYPE_VIS x { enum __lx
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x) \
      __lx __v_; \
@@ -870,10 +866,10 @@ typedef unsigned int   char32_t;
      _LIBCPP_INLINE_VISIBILITY explicit x(int __v) : __v_(static_cast<__lx>(__v)) {} \
      _LIBCPP_INLINE_VISIBILITY operator int() const {return __v_;} \
      };
-#else  // _LIBCPP_HAS_NO_STRONG_ENUMS
+#else  // _LIBCPP_CXX03_LANG
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
-#endif // _LIBCPP_HAS_NO_STRONG_ENUMS
+#endif // _LIBCPP_CXX03_LANG
 
 // _LIBCPP_DEBUG potential values:
 //  - undefined: No assertions. This is the default.

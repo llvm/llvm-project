@@ -599,20 +599,20 @@ public:
           auto newArg = func.front().insertArgument(fixup.index,
                                                     newInTys[fixup.index], loc);
           offset++;
-          func.walk([&](mlir::ReturnOp ret) {
+          func.walk([&](mlir::func::ReturnOp ret) {
             rewriter->setInsertionPoint(ret);
             auto oldOper = ret.getOperand(0);
             auto oldOperTy = ReferenceType::get(oldOper.getType());
             auto cast = rewriter->create<ConvertOp>(loc, oldOperTy, newArg);
             rewriter->create<fir::StoreOp>(loc, oldOper, cast);
-            rewriter->create<mlir::ReturnOp>(loc);
+            rewriter->create<mlir::func::ReturnOp>(loc);
             ret.erase();
           });
         } break;
         case FixupTy::Codes::ReturnType: {
           // The function is still returning a value, but its type has likely
           // changed to suit the target ABI convention.
-          func.walk([&](mlir::ReturnOp ret) {
+          func.walk([&](mlir::func::ReturnOp ret) {
             rewriter->setInsertionPoint(ret);
             auto oldOper = ret.getOperand(0);
             auto oldOperTy = ReferenceType::get(oldOper.getType());
@@ -621,7 +621,7 @@ public:
             auto cast = rewriter->create<ConvertOp>(loc, oldOperTy, mem);
             rewriter->create<fir::StoreOp>(loc, oldOper, cast);
             mlir::Value load = rewriter->create<fir::LoadOp>(loc, mem);
-            rewriter->create<mlir::ReturnOp>(loc, load);
+            rewriter->create<mlir::func::ReturnOp>(loc, load);
             ret.erase();
           });
         } break;

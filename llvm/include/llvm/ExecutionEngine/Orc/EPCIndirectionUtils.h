@@ -148,7 +148,7 @@ private:
   std::mutex EPCUIMutex;
   ExecutorProcessControl &EPC;
   std::unique_ptr<ABISupport> ABI;
-  JITTargetAddress ResolverBlockAddr;
+  JITTargetAddress ResolverBlockAddr = 0;
   FinalizedAlloc ResolverBlock;
   std::unique_ptr<TrampolinePool> TP;
   std::unique_ptr<LazyCallThroughManager> LCTM;

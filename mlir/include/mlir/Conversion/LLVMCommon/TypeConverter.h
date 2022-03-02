@@ -26,7 +26,7 @@ namespace LLVM {
 class LLVMDialect;
 } // namespace LLVM
 
-/// Conversion from types in the Standard dialect to the LLVM IR dialect.
+/// Conversion from types to the LLVM IR dialect.
 class LLVMTypeConverter : public TypeConverter {
   /// Give structFuncArgTypeConverter access to memref-specific functions.
   friend LogicalResult

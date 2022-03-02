@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Functionality to perform analysis on an IntegerPolyhedron. In particular,
+// Functionality to perform analysis on an IntegerRelation. In particular,
 // support for performing emptiness checks, redundancy checks and obtaining the
 // lexicographically minimum rational element in a set.
 //
@@ -16,7 +16,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_SIMPLEX_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
@@ -41,8 +41,8 @@ class GBRSimplex;
 /// these constraints that are redundant, i.e. a subset of constraints that
 /// doesn't constrain the affine set further after adding the non-redundant
 /// constraints. The LexSimplex class provides support for computing the
-/// lexicographical minimum of an IntegerPolyhedron. Both these classes can be
-/// constructed from an IntegerPolyhedron, and both inherit common
+/// lexicographical minimum of an IntegerRelation. Both these classes can be
+/// constructed from an IntegerRelation, and both inherit common
 /// functionality from SimplexBase.
 ///
 /// The implementations of the Simplex and SimplexBase classes, other than the
@@ -201,8 +201,8 @@ public:
   /// Rollback to a snapshot. This invalidates all later snapshots.
   void rollback(unsigned snapshot);
 
-  /// Add all the constraints from the given IntegerPolyhedron.
-  void intersectIntegerPolyhedron(const IntegerPolyhedron &poly);
+  /// Add all the constraints from the given IntegerRelation.
+  void intersectIntegerRelation(const IntegerRelation &rel);
 
   /// Print the tableau's internal state.
   void print(raw_ostream &os) const;
@@ -419,9 +419,9 @@ class LexSimplex : public SimplexBase {
 public:
   explicit LexSimplex(unsigned nVar)
       : SimplexBase(nVar, /*mustUseBigM=*/true) {}
-  explicit LexSimplex(const IntegerPolyhedron &constraints)
+  explicit LexSimplex(const IntegerRelation &constraints)
       : LexSimplex(constraints.getNumIds()) {
-    intersectIntegerPolyhedron(constraints);
+    intersectIntegerRelation(constraints);
   }
   ~LexSimplex() override = default;
 
@@ -515,9 +515,9 @@ public:
 
   Simplex() = delete;
   explicit Simplex(unsigned nVar) : SimplexBase(nVar, /*mustUseBigM=*/false) {}
-  explicit Simplex(const IntegerPolyhedron &constraints)
+  explicit Simplex(const IntegerRelation &constraints)
       : Simplex(constraints.getNumIds()) {
-    intersectIntegerPolyhedron(constraints);
+    intersectIntegerRelation(constraints);
   }
   ~Simplex() override = default;
 
@@ -595,9 +595,9 @@ public:
   /// Check if the specified equality already holds in the polytope.
   bool isRedundantEquality(ArrayRef<int64_t> coeffs);
 
-  /// Returns true if this Simplex's polytope is a rational subset of `poly`.
+  /// Returns true if this Simplex's polytope is a rational subset of `rel`.
   /// Otherwise, returns false.
-  bool isRationalSubsetOf(const IntegerPolyhedron &poly);
+  bool isRationalSubsetOf(const IntegerRelation &rel);
 
   /// Returns the current sample point if it is integral. Otherwise, returns
   /// None.

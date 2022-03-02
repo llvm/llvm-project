@@ -35,7 +35,7 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONNORMALIZATION_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONNORMALIZATION_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {

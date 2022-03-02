@@ -18,7 +18,6 @@
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -128,8 +127,7 @@ struct ExpandOpsPass : public ExpandOpsBase<ExpandOpsPass> {
     memref::populateExpandOpsPatterns(patterns);
     ConversionTarget target(ctx);
 
-    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
-                           StandardOpsDialect>();
+    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect>();
     target.addDynamicallyLegalOp<memref::AtomicRMWOp>(
         [](memref::AtomicRMWOp op) {
           return op.kind() != arith::AtomicRMWKind::maxf &&

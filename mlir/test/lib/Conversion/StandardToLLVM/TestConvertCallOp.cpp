@@ -10,8 +10,8 @@
 #include "TestTypes.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -40,7 +40,7 @@ public:
   }
   StringRef getArgument() const final { return "test-convert-call-op"; }
   StringRef getDescription() const final {
-    return "Tests conversion of `std.call` to `llvm.call` in "
+    return "Tests conversion of `func.call` to `llvm.call` in "
            "presence of custom types";
   }
 
@@ -65,7 +65,7 @@ public:
     ConversionTarget target(getContext());
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addIllegalDialect<test::TestDialect>();
-    target.addIllegalDialect<StandardOpsDialect>();
+    target.addIllegalDialect<func::FuncDialect>();
 
     if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
