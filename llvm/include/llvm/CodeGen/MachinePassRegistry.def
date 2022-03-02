@@ -47,7 +47,6 @@ FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
 FUNCTION_PASS("lowerinvoke", LowerInvokePass, ())
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
-FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
 #undef FUNCTION_PASS
 
