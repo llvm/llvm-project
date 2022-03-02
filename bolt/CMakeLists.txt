@@ -26,7 +26,7 @@ if (LLVM_INCLUDE_TESTS)
         message(WARNING "BOLT_LLD_EXE is set and lld project is enabled. \
               BOLT_LLD_EXE will be used for BOLT tests.")
       endif()
-      set(BOLT_INCLUDE_TESTS ON)
+      set(BOLT_INCLUDE_TESTS ON CACHE BOOL "Build BOLT tests")
     else()
       message(WARNING "Not including BOLT tests since lld is disabled. \
             Enable lld in LLVM_ENABLE_PROJECTS or provide a path to lld binary \
