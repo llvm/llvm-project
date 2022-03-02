@@ -1251,19 +1251,30 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   if (!TargetAddress)
     return;
 
+  auto setPLTSymbol = [&](BinaryFunction *BF, StringRef Name) {
+    const unsigned PtrSize = BC->AsmInfo->getCodePointerSize();
+    MCSymbol *TargetSymbol = BC->registerNameAtAddress(
+        Name.str() + "@GOT", TargetAddress, PtrSize, PtrSize);
+    BF->setPLTSymbol(TargetSymbol);
+  };
+
+  BinaryFunction *BF = BC->getBinaryFunctionAtAddress(EntryAddress);
+  if (BF && BC->isAArch64()) {
+    // Handle IFUNC trampoline
+    setPLTSymbol(BF, BF->getOneName());
+    return;
+  }
+
   const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
   if (!Rel || !Rel->Symbol)
     return;
 
-  const unsigned PtrSize = BC->AsmInfo->getCodePointerSize();
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
   assert(Section && "cannot get section for address");
-  BinaryFunction *BF = BC->createBinaryFunction(
-      Rel->Symbol->getName().str() + "@PLT", *Section, EntryAddress, 0,
-      EntrySize, Section->getAlignment());
-  MCSymbol *TargetSymbol = BC->registerNameAtAddress(
-      Rel->Symbol->getName().str() + "@GOT", TargetAddress, PtrSize, PtrSize);
-  BF->setPLTSymbol(TargetSymbol);
+  BF = BC->createBinaryFunction(Rel->Symbol->getName().str() + "@PLT", *Section,
+                                EntryAddress, 0, EntrySize,
+                                Section->getAlignment());
+  setPLTSymbol(BF, Rel->Symbol->getName());
 }
 
 void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
