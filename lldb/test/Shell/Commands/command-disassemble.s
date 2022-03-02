@@ -6,13 +6,13 @@
 # RUN:   -s %S/Inputs/command-disassemble.lldbinit -o exit 2>&1 | FileCheck %s
 
 # CHECK:      (lldb) disassemble
-# CHECK-NEXT: error: Cannot disassemble around the current function without a selected frame.
+# CHECK-NEXT: error: Cannot disassemble around the current function without a selected frame: no currently running process.
 # CHECK-NEXT: (lldb) disassemble --line
-# CHECK-NEXT: error: Cannot disassemble around the current line without a selected frame.
+# CHECK-NEXT: error: Cannot disassemble around the current line without a selected frame: no currently running process.
 # CHECK-NEXT: (lldb) disassemble --frame
-# CHECK-NEXT: error: Cannot disassemble around the current function without a selected frame.
+# CHECK-NEXT: error: Cannot disassemble around the current function without a selected frame: no currently running process.
 # CHECK-NEXT: (lldb) disassemble --pc
-# CHECK-NEXT: error: Cannot disassemble around the current PC without a selected frame.
+# CHECK-NEXT: error: Cannot disassemble around the current PC without a selected frame: no currently running process.
 # CHECK-NEXT: (lldb) disassemble --start-address 0x0
 # CHECK-NEXT: command-disassemble.s.tmp`foo:
 # CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:   int    $0x10
