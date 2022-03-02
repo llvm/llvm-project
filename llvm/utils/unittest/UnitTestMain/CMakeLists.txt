@@ -1,8 +1,8 @@
-add_llvm_library(llvm_gtest_main
+add_llvm_library(gtest_main
   TestMain.cpp
 
   LINK_LIBS
-  llvm_gtest
+  gtest
 
   LINK_COMPONENTS
   Support # Depends on llvm::cl

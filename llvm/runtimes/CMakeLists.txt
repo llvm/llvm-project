@@ -480,8 +480,8 @@ if(runtimes)
         obj2yaml
         sancov
         sanstats
-        llvm_gtest_main
-        llvm_gtest
+        gtest_main
+        gtest
       )
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
       add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})
