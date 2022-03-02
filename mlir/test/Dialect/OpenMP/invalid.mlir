@@ -97,7 +97,7 @@ func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
 // -----
 
 func @order_value(%lb : index, %ub : index, %step : index) {
-  // expected-error @below {{invalid order kind}}
+  // expected-error @below {{invalid clause value: 'default'}}
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) order(default) {
     omp.yield
   }
@@ -106,7 +106,7 @@ func @order_value(%lb : index, %ub : index, %step : index) {
 // -----
 
 func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
-  // expected-error @below {{if is not a valid clause for the omp.wsloop operation}}
+  // expected-error @below {{if is not a valid clause}}
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) if(%bool_var: i1) {
     omp.yield
   }
@@ -115,7 +115,7 @@ func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
 // -----
 
 func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var : i32) {
-  // expected-error @below {{num_threads is not a valid clause for the omp.wsloop operation}}
+  // expected-error @below {{num_threads is not a valid clause}}
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) num_threads(%int_var: i32) {
     omp.yield
   }
@@ -124,7 +124,7 @@ func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var 
 // -----
 
 func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
-  // expected-error @below {{proc_bind is not a valid clause for the omp.wsloop operation}}
+  // expected-error @below {{proc_bind is not a valid clause}}
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) proc_bind(close) {
     omp.yield
   }
@@ -429,7 +429,7 @@ func @omp_atomic_read1(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func @omp_atomic_read2(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{invalid memory order kind}}
+  // expected-error @below {{invalid clause value: 'xyz'}}
   omp.atomic.read %v = %x memory_order(xyz) : memref<i32>
   return
 }
@@ -453,7 +453,7 @@ func @omp_atomic_read4(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func @omp_atomic_read5(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.read operation}}
+  // expected-error @below {{`memory_order` clause can appear at most once in the expansion of the oilist directive}}
   omp.atomic.read %v = %x memory_order(acquire) memory_order(relaxed) : memref<i32>
   return
 }
@@ -461,7 +461,7 @@ func @omp_atomic_read5(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func @omp_atomic_read6(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{at most one hint clause can appear on the omp.atomic.read operation}}
+  // expected-error @below {{`hint` clause can appear at most once in the expansion of the oilist directive}}
   omp.atomic.read %v =  %x hint(speculative) hint(contended) : memref<i32>
   return
 }
@@ -501,7 +501,7 @@ func @omp_atomic_write3(%addr : memref<i32>, %val : i32) {
 // -----
 
 func @omp_atomic_write4(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.write operation}}
+  // expected-error @below {{`memory_order` clause can appear at most once in the expansion of the oilist directive}}
   omp.atomic.write  %addr = %val memory_order(release) memory_order(seq_cst) : memref<i32>, i32
   return
 }
@@ -509,7 +509,7 @@ func @omp_atomic_write4(%addr : memref<i32>, %val : i32) {
 // -----
 
 func @omp_atomic_write5(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{at most one hint clause can appear on the omp.atomic.write operation}}
+  // expected-error @below {{`hint` clause can appear at most once in the expansion of the oilist directive}}
   omp.atomic.write  %addr = %val hint(contended) hint(speculative) : memref<i32>, i32
   return
 }
@@ -517,7 +517,7 @@ func @omp_atomic_write5(%addr : memref<i32>, %val : i32) {
 // -----
 
 func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{invalid memory order kind}}
+  // expected-error @below {{invalid clause value: 'xyz'}}
   omp.atomic.write  %addr = %val memory_order(xyz) : memref<i32>, i32
   return
 }
@@ -573,9 +573,8 @@ func @omp_atomic_update4(%x: memref<i32>, %expr: i32) {
 
 // -----
 
-// expected-note @below {{prior use here}}
 func @omp_atomic_update5(%x: memref<i32>, %expr: i32) {
-  // expected-error @below {{use of value '%x' expects different type than prior uses: 'i32' vs 'memref<i32>'}}
+  // expected-error @below {{invalid kind of type specified}}
   omp.atomic.update %x : i32 {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
