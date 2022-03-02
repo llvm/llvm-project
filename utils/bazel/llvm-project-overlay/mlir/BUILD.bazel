@@ -2346,7 +2346,7 @@ cc_library(
         ":SPIRVToLLVM",
         ":ShapeToStandard",
         ":StandardToLLVM",
-        ":StandardToSPIRV",
+        ":FuncToSPIRV",
         ":TosaToLinalg",
         ":TosaToSCF",
         ":TosaToStandard",
@@ -3674,7 +3674,7 @@ cc_library(
         ":SCFToSPIRV",
         ":SPIRVConversion",
         ":SPIRVDialect",
-        ":StandardToSPIRV",
+        ":FuncToSPIRV",
         ":Support",
         ":Transforms",
         ":VectorToSPIRV",
@@ -4388,17 +4388,49 @@ cc_library(
 )
 
 cc_library(
-    name = "StandardToSPIRV",
+    name = "FuncToSPIRV",
     srcs = glob([
-        "lib/Conversion/StandardToSPIRV/*.cpp",
-        "lib/Conversion/StandardToSPIRV/*.h",
+        "lib/Conversion/FuncToSPIRV/*.cpp",
+        "lib/Conversion/FuncToSPIRV/*.h",
     ]) + [":ConversionPassDetail"],
     hdrs = glob([
-        "include/mlir/Conversion/StandardToSPIRV/*.h",
+        "include/mlir/Conversion/FuncToSPIRV/*.h",
     ]),
     includes = [
         "include",
-        "lib/Conversion/StandardToSPIRV",
+        "lib/Conversion/FuncToSPIRV",
+    ],
+    deps = [
+        ":ControlFlowToSPIRV",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":MathToSPIRV",
+        ":Pass",
+        ":SPIRVCommonConversion",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":SPIRVUtils",
+        ":Support",
+        ":TensorDialect",
+        ":Transforms",
+        ":VectorOps",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TensorToSPIRV",
+    srcs = glob([
+        "lib/Conversion/TensorToSPIRV/*.cpp",
+        "lib/Conversion/TensorToSPIRV/*.h",
+    ]) + [":ConversionPassDetail"],
+    hdrs = glob([
+        "include/mlir/Conversion/TensorToSPIRV/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/TensorToSPIRV",
     ],
     deps = [
         ":ArithmeticToSPIRV",
@@ -5009,7 +5041,7 @@ cc_library(
         ":SCFDialect",
         ":SPIRVConversion",
         ":SPIRVDialect",
-        ":StandardToSPIRV",
+        ":FuncToSPIRV",
         ":Support",
         ":TransformUtils",
         ":Transforms",
@@ -5263,6 +5295,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":ConversionPassIncGen",
+        ":FuncToSPIRV",
         ":IR",
         ":Pass",
         ":SPIRVCommonConversion",
@@ -5943,7 +5976,7 @@ cc_library(
         ":SparseTensorPipelines",
         ":SparseTensorTransforms",
         ":StandardToLLVM",
-        ":StandardToSPIRV",
+        ":FuncToSPIRV",
         ":TensorDialect",
         ":TensorInferTypeOpInterfaceImpl",
         ":TensorTilingInterfaceImpl",
@@ -6185,7 +6218,7 @@ cc_binary(
         ":SPIRVDialect",
         ":SPIRVTransforms",
         ":StandardToLLVM",
-        ":StandardToSPIRV",
+        ":FuncToSPIRV",
         ":ToLLVMIRTranslation",
         "//llvm:Support",
     ],
