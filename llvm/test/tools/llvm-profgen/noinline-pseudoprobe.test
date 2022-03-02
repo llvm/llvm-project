@@ -1,0 +1,48 @@
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-pseudoprobe.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t1 --ignore-stack-samples
+; RUN: FileCheck %s --input-file %t1
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-pseudoprobe.aggperfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t2 --ignore-stack-samples
+; RUN: FileCheck %s --input-file %t2
+
+
+; CHECK:     foo:75:0
+; CHECK-NEXT:  1: 0
+; CHECK-NEXT:  2: 15
+; CHECK-NEXT:  3: 15
+; CHECK-NEXT:  4: 15
+; CHECK-NEXT:  5: 0
+; CHECK-NEXT:  6: 15
+; CHECK-NEXT:  7: 0
+; CHECK-NEXT:  8: 15 bar:15
+; CHECK-NEXT:  9: 0
+; CHECK-NEXT:  !CFGChecksum: 563088904013236
+; CHECK-NEXT: bar:30:15
+; CHECK-NEXT:  1: 15
+; CHECK-NEXT:  4: 15
+; CHECK-NEXT:  !CFGChecksum: 72617220756
+
+
+
+; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
+; -fno-inline-functions -g test.c  -o a.out
+
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}
