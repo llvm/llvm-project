@@ -256,6 +256,10 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       return Name;
     if (Name.size() == 2 && Name[1] == '/') // String table.
       return Name;
+    // System libraries from the Windows SDK for Windows 11 contain this symbol.
+    // It looks like a CFG guard: we just skip it for now.
+    if (Name.equals("/<XFGHASHMAP>/"))
+      return Name;
     // It's a long name.
     // Get the string table offset.
     std::size_t StringOffset;
