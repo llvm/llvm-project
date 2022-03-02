@@ -71,6 +71,7 @@ public:
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
     }
+    directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;
   }
@@ -112,11 +113,13 @@ private:
   void DoImpliedEndfile(IoErrorHandler &);
   void DoEndfile(IoErrorHandler &);
   void CommitWrites();
+  bool CheckDirectAccess(IoErrorHandler &);
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
   bool impliedEndfile_{false}; // sequential/stream output has taken place
   bool beganReadingRecord_{false};
+  bool directAccessRecWasSet_{false}; // REC= appeared
 
   Lock lock_;
 
