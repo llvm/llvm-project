@@ -1365,7 +1365,7 @@ void FlatAffineConstraints::printSpace(raw_ostream &os) const {
   os << " const)\n";
 }
 
-void FlatAffineConstraints::clearAndCopyFrom(const IntegerPolyhedron &other) {
+void FlatAffineConstraints::clearAndCopyFrom(const IntegerRelation &other) {
   if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
     assert(!otherValueSet->hasValues() &&
            "cannot copy associated Values into FlatAffineConstraints");
@@ -1375,11 +1375,11 @@ void FlatAffineConstraints::clearAndCopyFrom(const IntegerPolyhedron &other) {
   if (auto *otherValueSet = dyn_cast<const FlatAffineConstraints>(&other))
     *this = *otherValueSet;
   else
-    *static_cast<IntegerPolyhedron *>(this) = other;
+    *static_cast<IntegerRelation *>(this) = other;
 }
 
 void FlatAffineValueConstraints::clearAndCopyFrom(
-    const IntegerPolyhedron &other) {
+    const IntegerRelation &other) {
 
   if (auto *otherValueSet =
           dyn_cast<const FlatAffineValueConstraints>(&other)) {
@@ -1390,7 +1390,7 @@ void FlatAffineValueConstraints::clearAndCopyFrom(
   if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
     *static_cast<FlatAffineConstraints *>(this) = *otherValueSet;
   else
-    *static_cast<IntegerPolyhedron *>(this) = other;
+    *static_cast<IntegerRelation *>(this) = other;
 
   values.clear();
   values.resize(getNumIds(), None);

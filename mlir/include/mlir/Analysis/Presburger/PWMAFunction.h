@@ -16,7 +16,7 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H
 #define MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H
 
-#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
 
 namespace mlir {
@@ -62,8 +62,8 @@ public:
 
   ~MultiAffineFunction() override = default;
   Kind getKind() const override { return Kind::MultiAffineFunction; }
-  bool classof(const IntegerPolyhedron *poly) const {
-    return poly->getKind() == Kind::MultiAffineFunction;
+  bool classof(const IntegerRelation *rel) const {
+    return rel->getKind() == Kind::MultiAffineFunction;
   }
 
   unsigned getNumInputs() const { return getNumDimAndSymbolIds(); }

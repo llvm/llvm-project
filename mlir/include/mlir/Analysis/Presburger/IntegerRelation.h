@@ -1,4 +1,4 @@
-//===- IntegerPolyhedron.h - MLIR IntegerPolyhedron Class -----*- C++ -*---===//
+//===- IntegerRelation.h - MLIR IntegerRelation Class ---------*- C++ -*---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A class to represent an integer polyhedron.
+// A class to represent a relation over integer tuples. A relation is
+// represented as a constraint system over a space of tuples of integer valued
+// variables supporting symbolic identifiers and existential quantification.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,6 +44,15 @@ namespace presburger {
 /// and IdKind::Domain should be used to refer to dimension identifiers.
 class IntegerRelation : public PresburgerLocalSpace {
 public:
+  /// All derived classes of IntegerRelation.
+  enum class Kind {
+    FlatAffineConstraints,
+    FlatAffineValueConstraints,
+    MultiAffineFunction,
+    IntegerRelation,
+    IntegerPolyhedron,
+  };
+
   /// Constructs a relation reserving memory for the specified number
   /// of constraints and identifiers.
   IntegerRelation(unsigned numReservedInequalities,
@@ -64,99 +75,35 @@ public:
                             numLocals + 1,
                         numDomain, numRange, numSymbols, numLocals) {}
 
-protected:
-  /// Constructs a set reserving memory for the specified number
-  /// of constraints and identifiers.  This constructor should not be used
-  /// directly to create a relation and should only be used to create Sets.
-  IntegerRelation(unsigned numReservedInequalities,
-                  unsigned numReservedEqualities, unsigned numReservedCols,
-                  unsigned numDims, unsigned numSymbols, unsigned numLocals)
-      : PresburgerLocalSpace(numDims, numSymbols, numLocals),
-        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
-        inequalities(0, getNumIds() + 1, numReservedInequalities,
-                     numReservedCols) {
-    assert(numReservedCols >= getNumIds() + 1);
-  }
-
-  /// Coefficients of affine equalities (in == 0 form).
-  Matrix equalities;
-
-  /// Coefficients of affine inequalities (in >= 0 form).
-  Matrix inequalities;
-};
-
-/// An IntegerPolyhedron is a PresburgerLocalSpace subject to affine
-/// constraints. Affine constraints can be inequalities or equalities in the
-/// form:
-///
-/// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
-/// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
-///
-/// where c_0, c_1, ..., c_n are integers and n is the total number of
-/// identifiers in the space.
-///
-/// An IntegerPolyhedron is similar to a IntegerRelation but it does not make a
-/// distinction between Domain and Range identifiers. Internally,
-/// IntegerPolyhedron is implemented as a IntegerRelation with zero domain ids.
-///
-/// Since IntegerPolyhedron does not make a distinction between dimensions,
-/// IdKind::SetDim should be used to refer to dimension identifiers.
-class IntegerPolyhedron : public IntegerRelation {
-public:
-  /// All derived classes of IntegerPolyhedron.
-  enum class Kind {
-    FlatAffineConstraints,
-    FlatAffineValueConstraints,
-    MultiAffineFunction,
-    IntegerPolyhedron
-  };
-
-  /// Constructs a constraint system reserving memory for the specified number
-  /// of constraints and identifiers.
-  IntegerPolyhedron(unsigned numReservedInequalities,
-                    unsigned numReservedEqualities, unsigned numReservedCols,
-                    unsigned numDims, unsigned numSymbols, unsigned numLocals)
-      : IntegerRelation(numReservedInequalities, numReservedEqualities,
-                        numReservedCols, numDims, numSymbols, numLocals) {}
-
-  /// Constructs a constraint system with the specified number of
-  /// dimensions and symbols.
-  IntegerPolyhedron(unsigned numDims = 0, unsigned numSymbols = 0,
-                    unsigned numLocals = 0)
-      : IntegerPolyhedron(/*numReservedInequalities=*/0,
-                          /*numReservedEqualities=*/0,
-                          /*numReservedCols=*/numDims + numSymbols + numLocals +
-                              1,
-                          numDims, numSymbols, numLocals) {}
-
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
-  static IntegerPolyhedron getUniverse(unsigned numDims = 0,
-                                       unsigned numSymbols = 0) {
-    return IntegerPolyhedron(numDims, numSymbols);
+  static IntegerRelation getUniverse(unsigned numDomain = 0,
+                                     unsigned numRange = 0,
+                                     unsigned numSymbols = 0) {
+    return IntegerRelation(numDomain, numRange, numSymbols);
   }
 
-  /// Return the kind of this IntegerPolyhedron.
-  virtual Kind getKind() const { return Kind::IntegerPolyhedron; }
+  /// Return the kind of this IntegerRelation.
+  virtual Kind getKind() const { return Kind::IntegerRelation; }
 
-  static bool classof(const IntegerPolyhedron *cst) { return true; }
+  static bool classof(const IntegerRelation *cst) { return true; }
 
   // Clones this object.
-  std::unique_ptr<IntegerPolyhedron> clone() const;
+  std::unique_ptr<IntegerRelation> clone() const;
 
   /// Appends constraints from `other` into `this`. This is equivalent to an
   /// intersection with no simplification of any sort attempted.
-  void append(const IntegerPolyhedron &other);
+  void append(const IntegerRelation &other);
 
   /// Return whether `this` and `other` are equal. This is integer-exact
   /// and somewhat expensive, since it uses the integer emptiness check
-  /// (see IntegerPolyhedron::findIntegerSample()).
-  bool isEqual(const IntegerPolyhedron &other) const;
+  /// (see IntegerRelation::findIntegerSample()).
+  bool isEqual(const IntegerRelation &other) const;
 
-  /// Return whether this is a subset of the given IntegerPolyhedron. This is
+  /// Return whether this is a subset of the given IntegerRelation. This is
   /// integer-exact and somewhat expensive, since it uses the integer emptiness
-  /// check (see IntegerPolyhedron::findIntegerSample()).
-  bool isSubsetOf(const IntegerPolyhedron &other) const;
+  /// check (see IntegerRelation::findIntegerSample()).
+  bool isSubsetOf(const IntegerRelation &other) const;
 
   /// Returns the value at the specified equality row and column.
   inline int64_t atEq(unsigned i, unsigned j) const { return equalities(i, j); }
@@ -237,15 +184,16 @@ public:
   void removeInequalityRange(unsigned start, unsigned end);
 
   /// Get the lexicographically minimum rational point satisfying the
-  /// constraints. Returns an empty optional if the polyhedron is empty or if
+  /// constraints. Returns an empty optional if the relation is empty or if
   /// the lexmin is unbounded. Symbols are not supported and will result in
-  /// assert-failure.
+  /// assert-failure. Note that Domain is minimized first, then range.
   MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin() const;
 
   /// Same as above, but returns lexicographically minimal integer point.
   /// Note: this should be used only when the lexmin is really required.
   /// For a generic integer sampling operation, findIntegerSample is more
-  /// robust and should be preferred.
+  /// robust and should be preferred. Note that Domain is minimized first, then
+  /// range.
   MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin() const;
 
   /// Swap the posA^th identifier with the posB^th identifier.
@@ -258,8 +206,8 @@ public:
   /// values and removes them.
   void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
 
-  /// Replaces the contents of this IntegerPolyhedron with `other`.
-  virtual void clearAndCopyFrom(const IntegerPolyhedron &other);
+  /// Replaces the contents of this IntegerRelation with `other`.
+  virtual void clearAndCopyFrom(const IntegerRelation &other);
 
   /// Gather positions of all lower and upper bounds of the identifier at `pos`,
   /// and optionally any equalities on it. In addition, the bounds are to be
@@ -304,14 +252,14 @@ public:
   Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
 
   /// Compute an overapproximation of the number of integer points in the
-  /// polyhedron. Symbol ids are currently not supported. If the computed
+  /// relation. Symbol ids are currently not supported. If the computed
   /// overapproximation is infinite, an empty optional is returned.
   Optional<uint64_t> computeVolume() const;
 
   /// Returns true if the given point satisfies the constraints, or false
   /// otherwise.
   ///
-  /// Note: currently, if the polyhedron contains local ids, the values of
+  /// Note: currently, if the relation contains local ids, the values of
   /// the local ids must also be provided.
   bool containsPoint(ArrayRef<int64_t> point) const;
 
@@ -383,7 +331,7 @@ public:
   /// 3) this   = {0 <= d0 <= 5, 1 <= d1 <= 9}
   ///    other  = {2 <= d0 <= 6, 5 <= d1 <= 15},
   ///    output = {0 <= d0 <= 6, 1 <= d1 <= 15}
-  LogicalResult unionBoundingBox(const IntegerPolyhedron &other);
+  LogicalResult unionBoundingBox(const IntegerRelation &other);
 
   /// Returns the smallest known constant bound for the extent of the specified
   /// identifier (pos^th), i.e., the smallest known constant that is greater
@@ -452,12 +400,27 @@ public:
   ///
   /// The number of dimensions and symbol ids in `this` and `other` should
   /// match.
-  void mergeLocalIds(IntegerPolyhedron &other);
+  void mergeLocalIds(IntegerRelation &other);
 
   void print(raw_ostream &os) const;
   void dump() const;
 
 protected:
+  /// Constructs a set reserving memory for the specified number
+  /// of constraints and identifiers. This constructor should not be used
+  /// directly to create a relation and should only be used to create Sets.
+  /// Internally this constructs a relation with with no domain and a
+  /// space with no distinction between domain and range identifiers.
+  IntegerRelation(unsigned numReservedInequalities,
+                  unsigned numReservedEqualities, unsigned numReservedCols,
+                  unsigned numDims, unsigned numSymbols, unsigned numLocals)
+      : PresburgerLocalSpace(numDims, numSymbols, numLocals),
+        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
+        inequalities(0, getNumIds() + 1, numReservedInequalities,
+                     numReservedCols) {
+    assert(numReservedCols >= getNumIds() + 1);
+  }
+
   /// Checks all rows of equality/inequality constraints for trivial
   /// contradictions (for example: 1 == 0, 0 >= 1), which may have surfaced
   /// after elimination. Returns true if an invalid constraint is found;
@@ -526,7 +489,7 @@ protected:
   virtual bool hasConsistentState() const;
 
   /// Prints the number of constraints, dimensions, symbols and locals in the
-  /// IntegerPolyhedron.
+  /// IntegerRelation.
   virtual void printSpace(raw_ostream &os) const;
 
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
@@ -537,7 +500,7 @@ protected:
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
   /// variables, we consider such a system out of line with the intended use
-  /// case of IntegerPolyhedron.
+  /// case of IntegerRelation.
   // The rationale for 32 is that in the typical simplest of cases, an
   // identifier is expected to have one lower bound and one upper bound
   // constraint. With a level of tiling or a connection to another identifier
@@ -545,6 +508,65 @@ protected:
   // don't expect an identifier to have more than 32 lower/upper/equality
   // constraints. This is conservatively set low and can be raised if needed.
   constexpr static unsigned kExplosionFactor = 32;
+
+  /// Coefficients of affine equalities (in == 0 form).
+  Matrix equalities;
+
+  /// Coefficients of affine inequalities (in >= 0 form).
+  Matrix inequalities;
+};
+
+/// An IntegerPolyhedron is a PresburgerLocalSpace subject to affine
+/// constraints. Affine constraints can be inequalities or equalities in the
+/// form:
+///
+/// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
+/// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
+///
+/// where c_0, c_1, ..., c_n are integers and n is the total number of
+/// identifiers in the space.
+///
+/// An IntegerPolyhedron is similar to an IntegerRelation but it does not make a
+/// distinction between Domain and Range identifiers. Internally,
+/// IntegerPolyhedron is implemented as a IntegerRelation with zero domain ids.
+///
+/// Since IntegerPolyhedron does not make a distinction between kinds of
+/// dimensions, IdKind::SetDim should be used to refer to dimension identifiers.
+class IntegerPolyhedron : public IntegerRelation {
+public:
+  /// Constructs a set reserving memory for the specified number
+  /// of constraints and identifiers.
+  IntegerPolyhedron(unsigned numReservedInequalities,
+                    unsigned numReservedEqualities, unsigned numReservedCols,
+                    unsigned numDims, unsigned numSymbols, unsigned numLocals)
+      : IntegerRelation(numReservedInequalities, numReservedEqualities,
+                        numReservedCols, numDims, numSymbols, numLocals) {}
+
+  /// Constructs a relation with the specified number of dimensions and symbols.
+  IntegerPolyhedron(unsigned numDims = 0, unsigned numSymbols = 0,
+                    unsigned numLocals = 0)
+      : IntegerPolyhedron(/*numReservedInequalities=*/0,
+                          /*numReservedEqualities=*/0,
+                          /*numReservedCols=*/numDims + numSymbols + numLocals +
+                              1,
+                          numDims, numSymbols, numLocals) {}
+
+  /// Return a system with no constraints, i.e., one which is satisfied by all
+  /// points.
+  static IntegerPolyhedron getUniverse(unsigned numDims = 0,
+                                       unsigned numSymbols = 0) {
+    return IntegerPolyhedron(numDims, numSymbols);
+  }
+
+  /// Return the kind of this IntegerRelation.
+  Kind getKind() const override { return Kind::IntegerPolyhedron; }
+
+  static bool classof(const IntegerRelation *cst) {
+    return cst->getKind() == Kind::IntegerPolyhedron;
+  }
+
+  // Clones this object.
+  std::unique_ptr<IntegerPolyhedron> clone() const;
 };
 
 } // namespace presburger

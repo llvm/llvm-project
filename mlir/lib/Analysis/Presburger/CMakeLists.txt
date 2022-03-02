@@ -1,5 +1,5 @@
 add_mlir_library(MLIRPresburger
-  IntegerPolyhedron.cpp
+  IntegerRelation.cpp
   LinearTransform.cpp
   Matrix.cpp
   PresburgerSet.cpp

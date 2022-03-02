@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/LinearTransform.h"
-#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 
 using namespace mlir;
 using namespace presburger;
@@ -112,12 +112,11 @@ LinearTransform::makeTransformToColumnEchelon(Matrix m) {
   return {echelonCol, LinearTransform(std::move(resultMatrix))};
 }
 
-IntegerPolyhedron
-LinearTransform::applyTo(const IntegerPolyhedron &poly) const {
-  IntegerPolyhedron result(poly.getNumIds());
+IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
+  IntegerRelation result(rel.getNumIds());
 
-  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i) {
-    ArrayRef<int64_t> eq = poly.getEquality(i);
+  for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i) {
+    ArrayRef<int64_t> eq = rel.getEquality(i);
 
     int64_t c = eq.back();
 
@@ -126,8 +125,8 @@ LinearTransform::applyTo(const IntegerPolyhedron &poly) const {
     result.addEquality(newEq);
   }
 
-  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i) {
-    ArrayRef<int64_t> ineq = poly.getInequality(i);
+  for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i) {
+    ArrayRef<int64_t> ineq = rel.getInequality(i);
 
     int64_t c = ineq.back();
 
