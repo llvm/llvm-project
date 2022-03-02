@@ -120,7 +120,7 @@ public:
     if (!RT)
       RT = MainJD.getDefaultResourceTracker();
 
-    return OptimizeLayer.add(RT, std::move(TSM));
+    return CODLayer.add(RT, std::move(TSM));
   }
 
   Expected<JITEvaluatedSymbol> lookup(StringRef Name) {
