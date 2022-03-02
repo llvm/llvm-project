@@ -325,6 +325,13 @@ class Format:
     """Returns the number of dimensions represented by the format."""
     return self.format_pack.rank()
 
+  def get_permutation_and_sparsity(self) -> Tuple[np.ndarray, np.ndarray]:
+    """Constructs the numpy arrays for the permutation and sparsity."""
+    perm = np.array(self.ordering.ordering, dtype=np.ulonglong)
+    a = [0 if s == ModeFormat.DENSE else 1 for s in self.format_pack.formats]
+    sparse = np.array(a, dtype=np.uint8)
+    return (perm, sparse)
+
   def mlir_tensor_attr(self) -> Optional[sparse_tensor.EncodingAttr]:
     """Constructs the MLIR attributes for the tensor format."""
     order = (
@@ -1017,7 +1024,9 @@ class Tensor:
       shape = np.array(self._shape, np.int64)
       indices = np.array(self._coords, np.int64)
       values = np.array(self._values, self._dtype.value)
-      ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices)
+      perm, sparse = self.format.get_permutation_and_sparsity()
+      ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices, perm,
+                                              sparse)
     else:
       ptr = self._packed_sparse_value
 
