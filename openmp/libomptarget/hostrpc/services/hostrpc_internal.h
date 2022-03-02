@@ -1,9 +1,9 @@
 #ifndef AMD_HOSTCALL_H
 #define AMD_HOSTCALL_H
 
+#include <hsa.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <hsa.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +27,25 @@ extern "C" {
  *  comments associated with each of the API functions.
  */
 
+// Error codes for service handler functions used in this file
+// Some error codes may be returned to device stub functions.
+typedef enum hostrpc_status_t {
+  HOSTRPC_SUCCESS = 0,
+  HOSTRPC_STATUS_UNKNOWN = 1,
+  HOSTRPC_STATUS_ERROR = 2,
+  HOSTRPC_STATUS_TERMINATE = 3,
+  HOSTRPC_DATA_USED_ERROR = 4,
+  HOSTRPC_ADDINT_ERROR = 5,
+  HOSTRPC_ADDFLOAT_ERROR = 6,
+  HOSTRPC_ADDSTRING_ERROR = 7,
+  HOSTRPC_UNSUPPORTED_ID_ERROR = 8,
+  HOSTRPC_INVALID_ID_ERROR = 9,
+  HOSTRPC_ERROR_INVALID_REQUEST = 10,
+  HOSTRPC_EXCEED_MAXVARGS_ERROR = 11,
+  HOSTRPC_WRONGVERSION_ERROR = 12,
+  HOSTRPC_OLDHOSTVERSIONMOD_ERROR = 13,
+  HOSTRPC_INVALIDSERVICE_ERROR = 14,
+} hostrpc_status_t;
 typedef enum {
   AMD_HOSTCALL_SUCCESS,
   AMD_HOSTCALL_ERROR_CONSUMER_ACTIVE,
@@ -37,6 +56,8 @@ typedef enum {
   AMD_HOSTCALL_ERROR_INCORRECT_ALIGNMENT,
   AMD_HOSTCALL_ERROR_NULLPTR
 } amd_hostcall_error_t;
+
+void hostrpc_abort(int rc);
 
 const char *amd_hostcall_error_string(amd_hostcall_error_t error);
 

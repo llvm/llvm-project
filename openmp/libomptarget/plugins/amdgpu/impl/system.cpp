@@ -15,7 +15,6 @@
 #include "rt.h"
 
 #include "msgpack.h"
-
 namespace hsa {
 // Wrap HSA iterate API in a shim that allows passing general callables
 template <typename C>
@@ -638,6 +637,8 @@ hsa_status_t RegisterModuleFromMemory(
     void *cb_state, std::vector<hsa_executable_t> &HSAExecutables) {
   hsa_status_t err;
   hsa_executable_t executable = {0};
+  hsa_code_object_reader_t code_object_rdr;
+
   hsa_profile_t agent_profile;
 
   err = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agent_profile);
@@ -652,10 +653,20 @@ hsa_status_t RegisterModuleFromMemory(
   /* Create the empty executable.  */
   err = hsa_executable_create(agent_profile, HSA_EXECUTABLE_STATE_UNFROZEN, "",
                               &executable);
+
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Create the executable", get_error_string(err));
     return HSA_STATUS_ERROR;
+  }
+
+  err = hsa_code_object_reader_create_from_memory(module_bytes, module_size,
+                                                  &code_object_rdr);
+  if (err != HSA_STATUS_SUCCESS) {
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Error in creating code object reader from memory!",
+           get_error_string(err));
+    return err;
   }
 
   bool module_load_success = false;
@@ -672,7 +683,6 @@ hsa_status_t RegisterModuleFromMemory(
            "Getting custom code object metadata", get_error_string(err));
         continue;
       }
-
       // Deserialize code object.
       hsa_code_object_t code_object = {0};
       err = hsa_code_object_deserialize(module_bytes, module_size, NULL,
@@ -695,10 +705,9 @@ hsa_status_t RegisterModuleFromMemory(
                get_error_string(impl_err));
         return impl_err;
       }
-
-      /* Load the code object.  */
-      err =
-          hsa_executable_load_code_object(executable, agent, code_object, NULL);
+      /* Load the code object. */
+      err = hsa_executable_load_agent_code_object(executable, agent,
+                                                  code_object_rdr, NULL, NULL);
       if (err != HSA_STATUS_SUCCESS) {
         DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Loading the code object", get_error_string(err));

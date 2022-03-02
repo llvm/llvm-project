@@ -39,9 +39,10 @@ hostrpc_invoke_zeros(uint32_t id, uint64_t arg0 = 0, uint64_t arg1 = 0,
   return hostrpc_invoke(id, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
-// This definition of __ockl_devmem_request needs to override the weak
-// symbol for __ockl_devmem_request in ockl.bc because by default ockl
-// uses hostcall. But OpenMP uses hostrpc.
+// This definition of __ockl_devmem_request and __ockl_sanitizer_report needs to
+// override the weak symbol for __ockl_devmem_request and
+// __ockl_sanitizer_report in ockl.bc because by default ockl uses hostcall. But
+// OpenMP uses hostrpc.
 EXTERN uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
   uint64_t arg0;
   if (size) { // allocation request
@@ -55,6 +56,14 @@ EXTERN uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
         hostrpc_invoke_zeros(PACK_VERS(HOSTRPC_SERVICE_FREE), arg0);
     return result.arg0;
   }
+}
+EXTERN void __ockl_sanitizer_report(uint64_t addr, uint64_t pc, uint64_t wgidx,
+                                    uint64_t wgidy, uint64_t wgidz,
+                                    uint64_t wave_id, uint64_t is_read,
+                                    uint64_t access_size) {
+  hostrpc_result_t result =
+      hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_SANITIZER), addr, pc, wgidx,
+                     wgidy, wgidz, wave_id, is_read, access_size);
 }
 EXTERN void f90print_(char *s) { printf("%s\n", s); }
 EXTERN void f90printi_(char *s, int *i) { printf("%s %d\n", s, *i); }

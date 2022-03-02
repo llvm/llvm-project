@@ -264,7 +264,6 @@ hsa_status_t hsa_executable_load_code_object(hsa_executable_t executable,
                                              hsa_agent_t agent,
                                              hsa_code_object_t code_object,
                                              const char *options);
-
 #ifdef __cplusplus
 }
 #endif

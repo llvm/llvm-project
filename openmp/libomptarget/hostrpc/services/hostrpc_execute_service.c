@@ -40,26 +40,6 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-// Error codes for service handler functions used in this file
-// Some error codes may be returned to device stub functions.
-typedef enum hostrpc_status_t {
-  HOSTRPC_SUCCESS = 0,
-  HOSTRPC_STATUS_UNKNOWN = 1,
-  HOSTRPC_STATUS_ERROR = 2,
-  HOSTRPC_STATUS_TERMINATE = 3,
-  HOSTRPC_DATA_USED_ERROR = 4,
-  HOSTRPC_ADDINT_ERROR = 5,
-  HOSTRPC_ADDFLOAT_ERROR = 6,
-  HOSTRPC_ADDSTRING_ERROR = 7,
-  HOSTRPC_UNSUPPORTED_ID_ERROR = 8,
-  HOSTRPC_INVALID_ID_ERROR = 9,
-  HOSTRPC_ERROR_INVALID_REQUEST = 10,
-  HOSTRPC_EXCEED_MAXVARGS_ERROR = 11,
-  HOSTRPC_WRONGVERSION_ERROR = 12,
-  HOSTRPC_OLDHOSTVERSIONMOD_ERROR = 13,
-  HOSTRPC_INVALIDSERVICE_ERROR = 14,
-} hostrpc_status_t;
-
 // MAXVARGS is more than a static array size.
 // It is for user vargs functions only.
 // It does not apply to printf.
@@ -265,41 +245,7 @@ static void hostrpc_handler_SERVICE_DEMO(uint32_t device_id,
   payload[1] = (uint64_t)num_zeros;
 }
 
-// FIXME: Clean up this diagnostic and die properly
-static bool hostrpc_version_checked;
-static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
-  if (device_vrm == (unsigned int)HOSTRPC_VRM)
-    return HOSTRPC_SUCCESS;
-  uint device_version_release = device_vrm >> 6;
-  if (device_version_release != HOSTRPC_VERSION_RELEASE) {
-    printf("ERROR Incompatible device and host release\n      Device "
-           "release(%d)\n      Host release(%d)\n",
-           device_version_release, HOSTRPC_VERSION_RELEASE);
-    return HOSTRPC_WRONGVERSION_ERROR;
-  }
-  if (device_vrm > HOSTRPC_VRM) {
-    printf("ERROR Incompatible device and host version \n       Device "
-           "version(%d)\n      Host version(%d)\n",
-           device_vrm, HOSTRPC_VERSION_RELEASE);
-    printf("          Upgrade libomptarget runtime on your system.\n");
-    return HOSTRPC_OLDHOSTVERSIONMOD_ERROR;
-  }
-  if (device_vrm < HOSTRPC_VRM) {
-    unsigned int host_ver = ((unsigned int)HOSTRPC_VRM) >> 12;
-    unsigned int host_rel = (((unsigned int)HOSTRPC_VRM) << 20) >> 26;
-    unsigned int host_mod = (((unsigned int)HOSTRPC_VRM) << 26) >> 26;
-    unsigned int dev_ver = ((unsigned int)device_vrm) >> 12;
-    unsigned int dev_rel = (((unsigned int)device_vrm) << 20) >> 26;
-    unsigned int dev_mod = (((unsigned int)device_vrm) << 26) >> 26;
-    printf("WARNING:  Device mod version < host mod version \n          Device "
-           "version: %d.%d.%d\n          Host version:   %d.%d.%d\n",
-           dev_ver, dev_rel, dev_mod, host_ver, host_rel, host_mod);
-    printf("          Consider rebuild binary with more recent compiler.\n");
-  }
-  return HOSTRPC_SUCCESS;
-}
-
-static void hostrpc_abort(int rc) {
+void hostrpc_abort(int rc) {
   printf("hostrpc_abort called with code %d\n", rc);
   abort();
 }
@@ -307,20 +253,9 @@ static void hostrpc_abort(int rc) {
 // The architecture-specific implementation of hostrpc will
 // call this single external function for each service request.
 // Host service functions are architecturally independent.
-extern void hostrpc_execute_service(uint32_t service, uint32_t device_id,
+extern void hostrpc_execute_service(uint32_t service_id, uint32_t *device_ptr,
                                     uint64_t *payload) {
-
-  // split the 32-bit service number into service_id and VRM to be checked
-  // if device hostrpc or stubs are ahead of this host runtime.
-  uint service_id = (service << 16) >> 16;
-  if (!hostrpc_version_checked) {
-    uint device_vrm = ((uint)service >> 16);
-    hostrpc_status_t err = hostrpc_version_check(device_vrm);
-    if (err != HOSTRPC_SUCCESS)
-      hostrpc_abort(err);
-    hostrpc_version_checked = true;
-  }
-
+  uint32_t device_id = *device_ptr;
   switch (service_id) {
   case HOSTRPC_SERVICE_PRINTF:
     hostrpc_handler_SERVICE_PRINTF(device_id, payload);
@@ -357,7 +292,7 @@ extern void hostrpc_execute_service(uint32_t service, uint32_t device_id,
     break;
   default:
     hostrpc_abort(HOSTRPC_INVALIDSERVICE_ERROR);
-    printf("ERROR: hostrpc got a bad service id:%d\n", service);
+    printf("ERROR: hostrpc got a bad service id:%d\n", service_id);
   }
 }
 

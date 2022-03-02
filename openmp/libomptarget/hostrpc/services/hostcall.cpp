@@ -1,8 +1,9 @@
 #include "../plugins/amdgpu/impl/rt.h"
 #include "../plugins/amdgpu/src/utils.h"
+#include "../src/hostrpc.h"
 #include "hostrpc_internal.h"
 #include "hsa.h"
-
+#include "urilocator.h"
 #include <assert.h>
 #include <atomic>
 #include <cstring>
@@ -110,7 +111,7 @@ private:
   signal_t doorbell;
   std::thread thread;
   critical_data_t critical_data;
-
+  UriLocator *urilocator;
   amd_hostcall_consumer_t(signal_t _doorbell) : doorbell(_doorbell) {}
 
 public:
@@ -142,8 +143,49 @@ static payload_t *get_payload(buffer_t *buffer, ulong ptr) {
   return buffer->payloads + get_ptr_index(ptr, buffer->index_size);
 }
 
-extern "C" void hostrpc_execute_service(uint32_t service, uint32_t device_id,
+extern "C" void hostrpc_handler_SERVICE_SANITIZER(payload_t *payload,
+                                                  uint64_t activemask,
+                                                  const uint32_t *dev_ptr,
+                                                  UriLocator *uri_locator);
+
+extern "C" void hostrpc_execute_service(uint32_t service_id,
+                                        uint32_t *device_ptr,
                                         uint64_t *payload);
+
+// FIXME: Clean up this diagnostic and die properly
+static bool hostrpc_version_checked;
+
+static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
+  if (device_vrm == (unsigned int)HOSTRPC_VRM)
+    return HOSTRPC_SUCCESS;
+  uint device_version_release = device_vrm >> 6;
+  if (device_version_release != HOSTRPC_VERSION_RELEASE) {
+    printf("ERROR Incompatible device and host release\n      Device "
+           "release(%d)\n      Host release(%d)\n",
+           device_version_release, HOSTRPC_VERSION_RELEASE);
+    return HOSTRPC_WRONGVERSION_ERROR;
+  }
+  if (device_vrm > HOSTRPC_VRM) {
+    printf("ERROR Incompatible device and host version \n       Device "
+           "version(%d)\n      Host version(%d)\n",
+           device_vrm, HOSTRPC_VERSION_RELEASE);
+    printf("          Upgrade libomptarget runtime on your system.\n");
+    return HOSTRPC_OLDHOSTVERSIONMOD_ERROR;
+  }
+  if (device_vrm < HOSTRPC_VRM) {
+    unsigned int host_ver = ((unsigned int)HOSTRPC_VRM) >> 12;
+    unsigned int host_rel = (((unsigned int)HOSTRPC_VRM) << 20) >> 26;
+    unsigned int host_mod = (((unsigned int)HOSTRPC_VRM) << 26) >> 26;
+    unsigned int dev_ver = ((unsigned int)device_vrm) >> 12;
+    unsigned int dev_rel = (((unsigned int)device_vrm) << 20) >> 26;
+    unsigned int dev_mod = (((unsigned int)device_vrm) << 26) >> 26;
+    printf("WARNING:  Device mod version < host mod version \n          Device "
+           "version: %d.%d.%d\n          Host version:   %d.%d.%d\n",
+           dev_ver, dev_rel, dev_mod, host_ver, host_rel, host_mod);
+    printf("          Consider rebuild binary with more recent compiler.\n");
+  }
+  return HOSTRPC_SUCCESS;
+}
 
 void amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
                                               uint64_t ready_stack) const {
@@ -177,13 +219,29 @@ void amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
     WHEN_DEBUG(std::cout << "activemask: " << std::hex << activemask
                          << std::endl);
 
-    // TODO: One could use ffs to skip inactive lanes faster.
-    for (uint32_t wi = 0; wi != 64; ++wi) {
-      uint64_t flag = activemask & ((uint64_t)1 << wi);
-      if (flag == 0)
-        continue;
-      uint64_t *slot = payload->slots[wi];
-      hostrpc_execute_service(header->service, buffer->device_id, slot);
+    // split the 32-bit service number into service_id and VRM to be checked
+    // if device hostrpc or stubs are ahead of this host runtime.
+    uint service_id = (header->service << 16) >> 16;
+    if (!hostrpc_version_checked) {
+      uint device_vrm = ((uint)(header->service) >> 16);
+      hostrpc_status_t err = hostrpc_version_check(device_vrm);
+      if (err != HOSTRPC_SUCCESS)
+        hostrpc_abort(err);
+      hostrpc_version_checked = true;
+    }
+
+    if (service_id == HOSTRPC_SERVICE_SANITIZER) {
+      hostrpc_handler_SERVICE_SANITIZER(payload, activemask,
+                                        &(buffer->device_id), urilocator);
+    } else {
+      // TODO: One could use ffs to skip inactive lanes faster.
+      for (uint32_t wi = 0; wi != 64; ++wi) {
+        uint64_t flag = activemask & ((uint64_t)1 << wi);
+        if (flag == 0)
+          continue;
+        uint64_t *slot = payload->slots[wi];
+        hostrpc_execute_service(service_id, &(buffer->device_id), slot);
+      }
     }
     __atomic_store_n(&header->control, reset_ready_flag(header->control),
                      std::memory_order_release);
@@ -238,7 +296,6 @@ void amd_hostcall_consumer_t::consume_packets() {
 amd_hostcall_error_t amd_hostcall_consumer_t::launch() {
   if (thread.joinable())
     return AMD_HOSTCALL_ERROR_CONSUMER_ACTIVE;
-
   thread = std::thread(&amd_hostcall_consumer_t::consume_packets, this);
   if (!thread.joinable())
     return AMD_HOSTCALL_ERROR_CONSUMER_LAUNCH_FAILED;
@@ -258,11 +315,11 @@ amd_hostcall_error_t amd_hostcall_consumer_t::terminate() {
 void amd_hostcall_consumer_t::register_buffer(void *b) {
   locked_critical_data_t data(critical_data);
   auto buffer = reinterpret_cast<buffer_t *>(b);
-
   auto &record = data->buffers[buffer];
   WHEN_DEBUG(std::cout << "registered buffer: " << std::hex << b << std::endl);
   record.discarded = false;
   buffer->doorbell = doorbell;
+  urilocator = new UriLocator();
   WHEN_DEBUG(std::cout << "signal: " << buffer->doorbell.handle << std::endl);
 }
 
@@ -280,6 +337,7 @@ amd_hostcall_error_t amd_hostcall_consumer_t::deregister_buffer(void *b) {
 
 amd_hostcall_consumer_t::~amd_hostcall_consumer_t() {
   terminate();
+  delete urilocator;
   critical_data.buffers.clear();
   hsa_signal_t hs{doorbell.handle};
   hsa_signal_destroy(hs);
