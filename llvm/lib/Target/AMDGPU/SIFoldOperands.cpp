@@ -1602,8 +1602,9 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  if (!TRI->isVectorSuperClass(
-          TRI->getRegClass(InstDesc.OpInfo[OpIdx].RegClass)))
+  const TargetRegisterClass *OpRC =
+      TII->getRegClass(InstDesc, OpIdx, TRI, *MI.getMF());
+  if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 
   const auto *NewDstRC = TRI->getEquivalentAGPRClass(MRI->getRegClass(Reg));
