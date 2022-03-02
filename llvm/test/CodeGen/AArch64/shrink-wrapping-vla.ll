@@ -15,7 +15,7 @@
 ;
 ; RUN: llc -mtriple aarch64-linux %s -o - | FileCheck %s
 
-define dso_local void @f(i32 %n, i32* nocapture %x) {
+define dso_local void @f(i32 %n, i32* nocapture %x) uwtable {
 entry:
   %cmp = icmp slt i32 %n, 0
   br i1 %cmp, label %return, label %if.end
@@ -80,6 +80,10 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK:      stp x29, x30, [sp, #-16]!
 ; CHECK-NEXT: .cfi_def_cfa_offset 16
 ; CHECK-NEXT: mov x29, sp
+; CHECK-NEXT: .cfi_def_cfa w29, 16
+; CHECK-NEXT: .cfi_offset w30, -8
+; CHECK-NEXT: .cfi_offset w29, -16
+
 
 ; VLA allocation
 ; CHECK: mov [[X2:x[0-9]+]], sp
@@ -93,4 +97,9 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK:      mov sp, [[SAVE]]
 ; Epilogue
 ; CHECK-NEXT: mov sp, x29
+; CHECK-NEXT: .cfi_def_cfa wsp, 16
 ; CHECK-NEXT: ldp x29, x30, [sp], #16
+; CHECK-NEXT: .cfi_def_cfa_offset 0
+; CHECK-NEXT: .cfi_restore w30
+; CHECK-NEXT: .cfi_restore w29
+; CHECK-NEXT:  ret

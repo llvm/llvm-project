@@ -5,7 +5,7 @@ declare i32 @sve_printf(i8*, <vscale x 4 x i32>, ...)
 
 @.str_1 = internal constant [6 x i8] c"boo!\0A\00"
 
-define void @foo(<vscale x 4 x i32> %x) {
+define void @foo(<vscale x 4 x i32> %x) uwtable {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -15,6 +15,8 @@ define void @foo(<vscale x 4 x i32> %x) {
 ; CHECK-NEXT:    add x0, x0, :lo12:.str_1
 ; CHECK-NEXT:    bl sve_printf
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
   %f = getelementptr [6 x i8], [6 x i8]* @.str_1, i64 0, i64 0
   call i32 (i8*, <vscale x 4 x i32>, ...) @sve_printf(i8* %f, <vscale x 4 x i32> %x)

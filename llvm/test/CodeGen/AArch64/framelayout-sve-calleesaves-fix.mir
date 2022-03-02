@@ -2,7 +2,7 @@
 # RUN: llc -mattr=+sve -mtriple=aarch64-none-linux-gnu -start-before=prologepilog %s -o - | FileCheck %s
 
 --- |
-  define aarch64_sve_vector_pcs void @fix_restorepoint_p4() { entry: unreachable }
+  define aarch64_sve_vector_pcs void @fix_restorepoint_p4() uwtable { entry: unreachable }
   ; CHECK-LABEL: fix_restorepoint_p4:
   ; CHECK:       // %bb.0: // %entry
   ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -18,10 +18,15 @@
   ; CHECK-NEXT:    // implicit-def: $z8
   ; CHECK-NEXT:    // implicit-def: $p4
   ; CHECK-NEXT:    addvl sp, sp, #1
+  ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
   ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
   ; CHECK-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
   ; CHECK-NEXT:    addvl sp, sp, #2
+  ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
+  ; CHECK-NEXT:    .cfi_restore z8
   ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+  ; CHECK-NEXT:    .cfi_def_cfa_offset 0
+  ; CHECK-NEXT:    .cfi_restore w29
   ; CHECK-NEXT:    ret
 ...
 name: fix_restorepoint_p4

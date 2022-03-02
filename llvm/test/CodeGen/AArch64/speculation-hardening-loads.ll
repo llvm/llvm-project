@@ -138,7 +138,7 @@ entry:
   ret <2 x double> %vld1_lane
 }
 
-define i32 @deadload() speculative_load_hardening {
+define i32 @deadload() speculative_load_hardening uwtable {
 entry:
 ; CHECK-LABEL: deadload
 ; CHECK:       cmp     sp, #0
@@ -147,6 +147,7 @@ entry:
 ; CHECK-NEXT:  .cfi_def_cfa_offset 16
 ; CHECK-NEXT:  ldr     w8, [sp, #12]
 ; CHECK-NEXT:  add     sp, sp, #16
+; CHECK-NEXT:  .cfi_def_cfa_offset 0
 ; CHECK-NEXT:  mov     [[TMPREG:x[0-9]+]], sp
 ; CHECK-NEXT:  and     [[TMPREG]], [[TMPREG]], x16
 ; CHECK-NEXT:  mov     sp, [[TMPREG]]

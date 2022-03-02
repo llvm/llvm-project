@@ -23,7 +23,7 @@ define void @trivial_func() nounwind {
   ret void
 }
 
-define void @trivial_fp_func() {
+define void @trivial_fp_func() uwtable {
 ; CHECK-LABEL: trivial_fp_func:
 ; CHECK: str x30, [sp, #-16]!
 ; CHECK-NOT: mov x29, sp
@@ -43,9 +43,15 @@ define void @trivial_fp_func() {
   ret void
 
 ; CHECK: ldr x30, [sp], #16
+; CHECK-NEXT: .cfi_def_cfa_offset 0
+; CHECK-NEXT: .cfi_restore w30
 ; CHECK-NEXT: ret
 
-; CHECK-WITHFP-ARM64: ldp x29, x30, [sp], #16
+; CHECK-WITHFP-ARM64:      .cfi_def_cfa wsp, 16
+; CHECK-WITHFP-ARM64-NEXT: ldp x29, x30, [sp], #16
+; CHECK-WITHFP-ARM64-NEXT: .cfi_def_cfa_offset 0
+; CHECK-WITHFP-ARM64-NEXT: .cfi_restore w30
+; CHECK-WITHFP-ARM64-NEXT: .cfi_restore w29
 ; CHECK-WITHFP-ARM64-NEXT: ret
 }
 
