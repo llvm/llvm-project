@@ -2420,7 +2420,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 
   // For C++20 modules, we can have "name" or ":Partition name" as valid input.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
+  bool IsPartition = false;
   Module *HeaderUnit = nullptr;
   if (Tok.is(tok::header_name)) {
     // This is a header import that the preprocessor decided we should skip
@@ -2435,10 +2435,12 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SourceLocation ColonLoc = ConsumeToken();
     if (!getLangOpts().CPlusPlusModules)
       Diag(ColonLoc, diag::err_unsupported_module_partition)
-          << SourceRange(ColonLoc, Partition.back().second);
+          << SourceRange(ColonLoc, Path.back().second);
     // Recover by leaving partition empty.
-    else if (ParseModuleName(ColonLoc, Partition, /*IsImport*/ true))
+    else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
       return nullptr;
+    else
+      IsPartition = true;
   } else {
     if (ParseModuleName(ImportLoc, Path, /*IsImport*/ true))
       return nullptr;
@@ -2457,7 +2459,6 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 
   // Diagnose mis-imports.
   bool SeenError = true;
-  bool HasPart = !Partition.empty();
   switch (ImportState) {
   case Sema::ModuleImportState::ImportAllowed:
     SeenError = false;
@@ -2465,7 +2466,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   case Sema::ModuleImportState::FirstDecl:
   case Sema::ModuleImportState::NotACXX20Module:
     // We can only import a partition within a module purview.
-    if (HasPart)
+    if (IsPartition)
       Diag(ImportLoc, diag::err_partition_import_outside_module);
     else
       SeenError = false;
@@ -2474,7 +2475,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     // We can only have pre-processor directives in the global module
     // fragment.  We can, however have a header unit import here.
     if (!HeaderUnit)
-      Diag(ImportLoc, diag::err_import_in_wrong_fragment) << HasPart << 0;
+      Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 0;
     else
       SeenError = false;
     break;
@@ -2485,7 +2486,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       SeenError = false;
     break;
   case Sema::ModuleImportState::PrivateFragment:
-    Diag(ImportLoc, diag::err_import_in_wrong_fragment) << HasPart << 1;
+    Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 1;
     break;
   }
   if (SeenError) {
@@ -2497,9 +2498,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   if (HeaderUnit)
     Import =
         Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, HeaderUnit);
-  else if (!Path.empty() || !Partition.empty())
+  else if (!Path.empty())
     Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path,
-                                       Partition);
+                                       IsPartition);
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;
