@@ -44,6 +44,12 @@ using AggregateStoreMap = llvm::DenseMap<AggregateStoreKey, mlir::Value>;
 void instantiateVariable(AbstractConverter &, const pft::Variable &var,
                          SymMap &symMap, AggregateStoreMap &storeMap);
 
+/// Create a fir::GlobalOp given a module variable definition. This is intended
+/// to be used when lowering a module definition, not when lowering variables
+/// used from a module. For used variables instantiateVariable must directly be
+/// called.
+void defineModuleVariable(AbstractConverter &, const pft::Variable &var);
+
 /// Lower a symbol attributes given an optional storage \p and add it to the
 /// provided symbol map. If \preAlloc is not provided, a temporary storage will
 /// be allocated. This is a low level function that should only be used if

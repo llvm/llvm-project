@@ -1005,6 +1005,31 @@ void Fortran::lower::mapSymbolAttributes(
       });
 }
 
+void Fortran::lower::defineModuleVariable(
+    AbstractConverter &converter, const Fortran::lower::pft::Variable &var) {
+  // Use empty linkage for module variables, which makes them available
+  // for use in another unit.
+  mlir::StringAttr externalLinkage;
+  if (!var.isGlobal())
+    fir::emitFatalError(converter.getCurrentLocation(),
+                        "attempting to lower module variable as local");
+  // Define aggregate storages for equivalenced objects.
+  if (var.isAggregateStore()) {
+    const mlir::Location loc = converter.genLocation(var.getSymbol().name());
+    TODO(loc, "defineModuleVariable aggregateStore");
+  }
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  if (Fortran::semantics::FindCommonBlockContaining(var.getSymbol())) {
+    const mlir::Location loc = converter.genLocation(sym.name());
+    TODO(loc, "defineModuleVariable common block");
+  } else if (var.isAlias()) {
+    // Do nothing. Mapping will be done on user side.
+  } else {
+    std::string globalName = Fortran::lower::mangle::mangleName(sym);
+    defineGlobal(converter, var, globalName, externalLinkage);
+  }
+}
+
 void Fortran::lower::instantiateVariable(AbstractConverter &converter,
                                          const pft::Variable &var,
                                          SymMap &symMap,
