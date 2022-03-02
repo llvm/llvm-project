@@ -1174,8 +1174,7 @@ void RewriteInstance::discoverFileObjects() {
   processDynamicRelocations();
 
   // Process PLT section.
-  if (BC->TheTriple->getArch() == Triple::x86_64)
-    disassemblePLT();
+  disassemblePLT();
 
   // See if we missed any functions marked by FDE.
   for (const auto &FDEI : CFIRdWrt->getFDEs()) {
@@ -1245,67 +1244,147 @@ void RewriteInstance::discoverFileObjects() {
   }
 }
 
+void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
+                                              uint64_t EntryAddress,
+                                              uint64_t EntrySize) {
+  if (!TargetAddress)
+    return;
+
+  const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
+  if (!Rel || !Rel->Symbol)
+    return;
+
+  const unsigned PtrSize = BC->AsmInfo->getCodePointerSize();
+  ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
+  assert(Section && "cannot get section for address");
+  BinaryFunction *BF = BC->createBinaryFunction(
+      Rel->Symbol->getName().str() + "@PLT", *Section, EntryAddress, 0,
+      EntrySize, Section->getAlignment());
+  MCSymbol *TargetSymbol = BC->registerNameAtAddress(
+      Rel->Symbol->getName().str() + "@GOT", TargetAddress, PtrSize, PtrSize);
+  BF->setPLTSymbol(TargetSymbol);
+}
+
+void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
+  const uint64_t SectionAddress = Section.getAddress();
+  const uint64_t SectionSize = Section.getSize();
+  StringRef PLTContents = Section.getContents();
+  ArrayRef<uint8_t> PLTData(
+      reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
+
+  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
+                                    uint64_t &InstrSize) {
+    const uint64_t InstrAddr = SectionAddress + InstrOffset;
+    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
+                                    PLTData.slice(InstrOffset), InstrAddr,
+                                    nulls())) {
+      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
+             << Section.getName() << " at offset 0x"
+             << Twine::utohexstr(InstrOffset) << '\n';
+      exit(1);
+    }
+  };
+
+  uint64_t InstrOffset = 0;
+  // Locate new plt entry
+  while (InstrOffset < SectionSize) {
+    InstructionListType Instructions;
+    MCInst Instruction;
+    uint64_t EntryOffset = InstrOffset;
+    uint64_t EntrySize = 0;
+    uint64_t InstrSize;
+    // Loop through entry instructions
+    while (InstrOffset < SectionSize) {
+      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      EntrySize += InstrSize;
+      if (!BC->MIB->isIndirectBranch(Instruction)) {
+        Instructions.emplace_back(Instruction);
+        InstrOffset += InstrSize;
+        continue;
+      }
+
+      const uint64_t EntryAddress = SectionAddress + EntryOffset;
+      const uint64_t TargetAddress = BC->MIB->analyzePLTEntry(
+          Instruction, Instructions.begin(), Instructions.end(), EntryAddress);
+
+      createPLTBinaryFunction(TargetAddress, EntryAddress, EntrySize);
+      break;
+    }
+
+    // Branch instruction
+    InstrOffset += InstrSize;
+
+    // Skip nops if any
+    while (InstrOffset < SectionSize) {
+      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      if (!BC->MIB->isNoop(Instruction))
+        break;
+
+      InstrOffset += InstrSize;
+    }
+  }
+}
+
+void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
+                                               uint64_t EntrySize) {
+  const uint64_t SectionAddress = Section.getAddress();
+  const uint64_t SectionSize = Section.getSize();
+  StringRef PLTContents = Section.getContents();
+  ArrayRef<uint8_t> PLTData(
+      reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
+
+  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
+                                    uint64_t &InstrSize) {
+    const uint64_t InstrAddr = SectionAddress + InstrOffset;
+    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
+                                    PLTData.slice(InstrOffset), InstrAddr,
+                                    nulls())) {
+      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
+             << Section.getName() << " at offset 0x"
+             << Twine::utohexstr(InstrOffset) << '\n';
+      exit(1);
+    }
+  };
+
+  for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= SectionSize;
+       EntryOffset += EntrySize) {
+    MCInst Instruction;
+    uint64_t InstrSize, InstrOffset = EntryOffset;
+    while (InstrOffset < EntryOffset + EntrySize) {
+      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      // Check if the entry size needs adjustment.
+      if (EntryOffset == 0 && BC->MIB->isTerminateBranch(Instruction) &&
+          EntrySize == 8)
+        EntrySize = 16;
+
+      if (BC->MIB->isIndirectBranch(Instruction))
+        break;
+
+      InstrOffset += InstrSize;
+    }
+
+    if (InstrOffset + InstrSize > EntryOffset + EntrySize)
+      continue;
+
+    uint64_t TargetAddress;
+    if (!BC->MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
+                                           SectionAddress + InstrOffset,
+                                           InstrSize)) {
+      errs() << "BOLT-ERROR: error evaluating PLT instruction at offset 0x"
+             << Twine::utohexstr(SectionAddress + InstrOffset) << '\n';
+      exit(1);
+    }
+
+    createPLTBinaryFunction(TargetAddress, SectionAddress + EntryOffset,
+                            EntrySize);
+  }
+}
+
 void RewriteInstance::disassemblePLT() {
   auto analyzeOnePLTSection = [&](BinarySection &Section, uint64_t EntrySize) {
-    const uint64_t PLTAddress = Section.getAddress();
-    StringRef PLTContents = Section.getContents();
-    ArrayRef<uint8_t> PLTData(
-        reinterpret_cast<const uint8_t *>(PLTContents.data()),
-        Section.getSize());
-    const unsigned PtrSize = BC->AsmInfo->getCodePointerSize();
-
-    for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= Section.getSize();
-         EntryOffset += EntrySize) {
-      uint64_t InstrOffset = EntryOffset;
-      uint64_t InstrSize;
-      MCInst Instruction;
-      while (InstrOffset < EntryOffset + EntrySize) {
-        uint64_t InstrAddr = PLTAddress + InstrOffset;
-        if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
-                                        PLTData.slice(InstrOffset), InstrAddr,
-                                        nulls())) {
-          errs() << "BOLT-ERROR: unable to disassemble instruction in PLT "
-                    "section "
-                 << Section.getName() << " at offset 0x"
-                 << Twine::utohexstr(InstrOffset) << '\n';
-          exit(1);
-        }
-
-        // Check if the entry size needs adjustment.
-        if (EntryOffset == 0 && BC->MIB->isTerminateBranch(Instruction) &&
-            EntrySize == 8)
-          EntrySize = 16;
-
-        if (BC->MIB->isIndirectBranch(Instruction))
-          break;
-
-        InstrOffset += InstrSize;
-      }
-
-      if (InstrOffset + InstrSize > EntryOffset + EntrySize)
-        continue;
-
-      uint64_t TargetAddress;
-      if (!BC->MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
-                                             PLTAddress + InstrOffset,
-                                             InstrSize)) {
-        errs() << "BOLT-ERROR: error evaluating PLT instruction at offset 0x"
-               << Twine::utohexstr(PLTAddress + InstrOffset) << '\n';
-        exit(1);
-      }
-
-      const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
-      if (!Rel || !Rel->Symbol)
-        continue;
-
-      BinaryFunction *BF = BC->createBinaryFunction(
-          Rel->Symbol->getName().str() + "@PLT", Section,
-          PLTAddress + EntryOffset, 0, EntrySize, Section.getAlignment());
-      MCSymbol *TargetSymbol =
-          BC->registerNameAtAddress(Rel->Symbol->getName().str() + "@GOT",
-                                    TargetAddress, PtrSize, PtrSize);
-      BF->setPLTSymbol(TargetSymbol);
-    }
+    if (BC->isAArch64())
+      return disassemblePLTSectionAArch64(Section);
+    return disassemblePLTSectionX86(Section, EntrySize);
   };
 
   for (BinarySection &Section : BC->allocatableSections()) {
@@ -1786,6 +1865,11 @@ bool RewriteInstance::analyzeRelocation(
     SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
     // Section symbols are marked as ST_Debug.
     IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
+    // Check for PLT entry registered with symbol name
+    if (!SymbolAddress && IsAArch64) {
+      BinaryData *BD = BC->getBinaryDataByName(SymbolName + "@PLT");
+      SymbolAddress = BD ? BD->getAddress() : 0;
+    }
   }
   // For PIE or dynamic libs, the linker may choose not to put the relocation
   // result at the address if it is a X86_64_64 one because it will emit a
