@@ -106,6 +106,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
 
+  // Forward -mllvm options to the LLVM option parser. In practice, this means
+  // forwarding to `-fc1` as that's where the LLVM parser is run.
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    A->claim();
+    A->render(Args, CmdArgs);
+  }
+
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());

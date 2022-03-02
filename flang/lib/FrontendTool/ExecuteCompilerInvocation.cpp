@@ -135,6 +135,19 @@ bool ExecuteCompilerInvocation(CompilerInstance *flang) {
     }
   }
 
+  // Honor -mllvm. This should happen AFTER plugins have been loaded!
+  if (!flang->frontendOpts().llvmArgs.empty()) {
+    unsigned numArgs = flang->frontendOpts().llvmArgs.size();
+    auto args = std::make_unique<const char *[]>(numArgs + 2);
+    args[0] = "flang (LLVM option parsing)";
+
+    for (unsigned i = 0; i != numArgs; ++i)
+      args[i + 1] = flang->frontendOpts().llvmArgs[i].c_str();
+
+    args[numArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(numArgs + 1, args.get());
+  }
+
   // If there were errors in processing arguments, don't do anything else.
   if (flang->diagnostics().hasErrorOccurred()) {
     return false;
