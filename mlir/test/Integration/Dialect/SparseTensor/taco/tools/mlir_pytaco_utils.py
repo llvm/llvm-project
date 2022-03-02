@@ -133,7 +133,8 @@ def sparse_tensor_to_coo_tensor(
 
 
 def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
-                                np_indices: np.ndarray) -> int:
+                                np_indices: np.ndarray, np_perm: np.ndarray,
+                                np_sparse: np.ndarray) -> int:
   """Converts a COO-flavored format sparse tensor to an MLIR sparse tensor.
 
   Args:
@@ -141,6 +142,10 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
      np_values: A 1D numpy array, for the non-zero values in the tensor.
      np_indices: A 2D numpy array of integers, representing the indices for the
        non-zero values in the tensor.
+     np_perm: A 1D numpy array of integers, representing the storage ordering
+       for the dimensions.
+     np_sparse: A 1D numpy array of uint8, representing the sparsity values
+       for the dimensions.
 
   Returns:
      An integer for the non-null ctypes.c_void_p to the MLIR sparse tensor
@@ -151,15 +156,19 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
     ValueError: If the shared library doesn't contain the needed routines.
   """
 
-  rank = ctypes.c_ulonglong(len(np_shape))
+  r = len(np_shape)
+  rank = ctypes.c_ulonglong(r)
   nse = ctypes.c_ulonglong(len(np_values))
   shape = np_shape.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
   values = np_values.ctypes.data_as(
       ctypes.POINTER(np.ctypeslib.as_ctypes_type(np_values.dtype)))
   indices = np_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
 
+  perm = np_perm.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
+  sparse = np_sparse.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+
   convert_to = _get_support_func_locator()(np_values.dtype.type)[0]
-  ptr = convert_to(rank, nse, shape, values, indices)
+  ptr = convert_to(rank, nse, shape, values, indices, perm, sparse)
   assert ptr is not None, "Problem with calling convertToMLIRSparseTensorF64"
   return ptr
 
@@ -308,7 +317,7 @@ def _get_output_sparse_tensor_kernel(
 func @{_ENTRY_NAME}(%t: tensor<{shape}x{type}, #enc>, %filename: !Ptr)
 attributes {{ llvm.emit_c_interface }} {{
   sparse_tensor.out %t, %filename : tensor<{shape}x{type}, #enc>, !Ptr
-  std.return
+  func.return
 }}"""
 
 

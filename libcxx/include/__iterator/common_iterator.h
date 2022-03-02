@@ -23,7 +23,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<iterator>)
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -43,7 +42,7 @@ class common_iterator {
 
     iter_value_t<_Iter> __value;
     // We can move __x because the only caller verifies that __x is not a reference.
-    constexpr __proxy(iter_reference_t<_Iter>&& __x)
+    constexpr explicit __proxy(iter_reference_t<_Iter>&& __x)
       : __value(_VSTD::move(__x)) {}
 
   public:
@@ -56,7 +55,7 @@ class common_iterator {
     friend common_iterator;
 
     iter_value_t<_Iter> __value;
-    constexpr __postfix_proxy(iter_reference_t<_Iter>&& __x)
+    constexpr explicit __postfix_proxy(iter_reference_t<_Iter>&& __x)
       : __value(_VSTD::forward<iter_reference_t<_Iter>>(__x)) {}
 
   public:

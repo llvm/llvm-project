@@ -128,7 +128,7 @@ def testBlockAndRegionOwners():
       r"""
     builtin.module {
       builtin.func @f() {
-        std.return
+        func.return
       }
     }
   """, ctx)
@@ -564,7 +564,7 @@ def testOperationPrint():
 
   # Test get_asm with options.
   # CHECK: value = opaque<"elided_large_const", "0xDEADBEEF"> : tensor<4xi32>
-  # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
+  # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
   module.operation.print(
       large_elements_limit=2,
       enable_debug_info=True,
@@ -587,7 +587,7 @@ def testKnownOpView():
     """)
     print(module)
 
-    # addf should map to a known OpView class in the std dialect.
+    # addf should map to a known OpView class in the arithmetic dialect.
     # We know the OpView for it defines an 'lhs' attribute.
     addf = module.body.operations[2]
     # CHECK: <mlir.dialects._arith_ops_gen._AddFOp object

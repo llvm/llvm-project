@@ -552,3 +552,94 @@ func @self_copy(%m1: memref<?xf32>) {
 
 // CHECK-LABEL: func @self_copy
 //  CHECK-NEXT:   return
+
+// -----
+
+func @scopeMerge() {
+  memref.alloca_scope {
+    %cnt = "test.count"() : () -> index
+    %a = memref.alloca(%cnt) : memref<?xi64>
+    "test.use"(%a) : (memref<?xi64>) -> ()
+  }
+  return
+}
+// CHECK:   func @scopeMerge() {
+// CHECK-NOT: alloca_scope
+// CHECK:     %[[cnt:.+]] = "test.count"() : () -> index
+// CHECK:     %[[alloc:.+]] = memref.alloca(%[[cnt]]) : memref<?xi64>
+// CHECK:     "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
+// CHECK:     return
+
+func @scopeMerge2() {
+  "test.region"() ({
+    memref.alloca_scope {
+      %cnt = "test.count"() : () -> index
+      %a = memref.alloca(%cnt) : memref<?xi64>
+      "test.use"(%a) : (memref<?xi64>) -> ()
+    }
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK:   func @scopeMerge2() {
+// CHECK:     "test.region"() ({
+// CHECK:       memref.alloca_scope {
+// CHECK:         %[[cnt:.+]] = "test.count"() : () -> index
+// CHECK:         %[[alloc:.+]] = memref.alloca(%[[cnt]]) : memref<?xi64>
+// CHECK:         "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
+// CHECK:       }
+// CHECK:       "test.terminator"() : () -> ()
+// CHECK:     }) : () -> ()
+// CHECK:     return
+// CHECK:   }
+
+func @scopeMerge3() {
+  %cnt = "test.count"() : () -> index
+  "test.region"() ({
+    memref.alloca_scope {
+      %a = memref.alloca(%cnt) : memref<?xi64>
+      "test.use"(%a) : (memref<?xi64>) -> ()
+    }
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK:   func @scopeMerge3() {
+// CHECK:     %[[cnt:.+]] = "test.count"() : () -> index
+// CHECK:     %[[alloc:.+]] = memref.alloca(%[[cnt]]) : memref<?xi64>
+// CHECK:     "test.region"() ({
+// CHECK:       memref.alloca_scope {
+// CHECK:         "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
+// CHECK:       }
+// CHECK:       "test.terminator"() : () -> ()
+// CHECK:     }) : () -> ()
+// CHECK:     return
+// CHECK:   }
+
+func @scopeMerge4() {
+  %cnt = "test.count"() : () -> index
+  "test.region"() ({
+    memref.alloca_scope {
+      %a = memref.alloca(%cnt) : memref<?xi64>
+      "test.use"(%a) : (memref<?xi64>) -> ()
+    }
+    "test.op"() : () -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK:   func @scopeMerge4() {
+// CHECK:     %[[cnt:.+]] = "test.count"() : () -> index
+// CHECK:     "test.region"() ({
+// CHECK:       memref.alloca_scope {
+// CHECK:         %[[alloc:.+]] = memref.alloca(%[[cnt]]) : memref<?xi64>
+// CHECK:         "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
+// CHECK:       }
+// CHECK:       "test.op"() : () -> ()
+// CHECK:       "test.terminator"() : () -> ()
+// CHECK:     }) : () -> ()
+// CHECK:     return
+// CHECK:   }

@@ -20,9 +20,9 @@
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -55,7 +55,7 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
   for (const auto &attr : attrs) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
         attr.getName() == FunctionOpInterface::getTypeAttrName() ||
-        attr.getName() == "std.varargs" ||
+        attr.getName() == "func.varargs" ||
         (filterArgAttrs &&
          attr.getName() == FunctionOpInterface::getArgDictAttrName()))
       continue;
@@ -228,7 +228,7 @@ protected:
                             ConversionPatternRewriter &rewriter) const {
     // Convert the original function arguments. They are converted using the
     // LLVMTypeConverter provided to this legalization pattern.
-    auto varargsAttr = funcOp->getAttrOfType<BoolAttr>("std.varargs");
+    auto varargsAttr = funcOp->getAttrOfType<BoolAttr>("func.varargs");
     TypeConverter::SignatureConversion result(funcOp.getNumArguments());
     auto llvmType = getTypeConverter()->convertFunctionSignature(
         funcOp.getType(), varargsAttr && varargsAttr.getValue(), result);
@@ -388,11 +388,11 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   }
 };
 
-struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
-  using ConvertOpToLLVMPattern<ConstantOp>::ConvertOpToLLVMPattern;
+struct ConstantOpLowering : public ConvertOpToLLVMPattern<func::ConstantOp> {
+  using ConvertOpToLLVMPattern<func::ConstantOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(ConstantOp op, OpAdaptor adaptor,
+  matchAndRewrite(func::ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = typeConverter->convertType(op.getResult().getType());
     if (!type || !LLVM::isCompatibleType(type))
@@ -474,11 +474,12 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
   }
 };
 
-struct CallOpLowering : public CallOpInterfaceLowering<CallOp> {
+struct CallOpLowering : public CallOpInterfaceLowering<func::CallOp> {
   using Super::Super;
 };
 
-struct CallIndirectOpLowering : public CallOpInterfaceLowering<CallIndirectOp> {
+struct CallIndirectOpLowering
+    : public CallOpInterfaceLowering<func::CallIndirectOp> {
   using Super::Super;
 };
 
@@ -515,11 +516,11 @@ struct UnrealizedConversionCastOpLowering
 // can only return 0 or 1 value, we pack multiple values into a structure type.
 // Emit `UndefOp` followed by `InsertValueOp`s to create such structure if
 // necessary before returning it
-struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
-  using ConvertOpToLLVMPattern<ReturnOp>::ConvertOpToLLVMPattern;
+struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
+  using ConvertOpToLLVMPattern<func::ReturnOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+  matchAndRewrite(func::ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     unsigned numArguments = op.getNumOperands();

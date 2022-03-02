@@ -21,6 +21,7 @@ class AffineForOp;
 class AffineIfOp;
 class AffineParallelOp;
 class DominanceInfo;
+class FuncOp;
 class Operation;
 class PostDominanceInfo;
 

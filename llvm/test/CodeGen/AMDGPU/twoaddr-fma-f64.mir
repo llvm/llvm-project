@@ -92,7 +92,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f64
-# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
+# GCN: V_FMAC_F64_e32 4636737291354636288, %0, %2, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_otherimm_src0_f64
@@ -104,7 +104,7 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %2 = V_FMAC_F64_e32 4611686018427387904, %0, %1, implicit $mode, implicit $exec
+    %2 = V_FMAC_F64_e32 4636737291354636288, %0, %1, implicit $mode, implicit $exec
 
 ...
 

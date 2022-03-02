@@ -17,9 +17,10 @@ i, j, k = pt.get_index_vars(3)
 # Set up scalar and sparse tensors.
 alpha = pt.tensor(42.0)
 S = pt.tensor([8, 8, 8],
-              pt.format([pt.compressed, pt.compressed, pt.compressed]))
+              pt.format([pt.compressed, pt.dense, pt.compressed], [1, 0, 2]))
 X = pt.tensor([8, 8, 8],
-              pt.format([pt.compressed, pt.compressed, pt.compressed]))
+              pt.format([pt.compressed, pt.compressed, pt.compressed],
+                        [1, 0, 2]))
 S.insert([0, 0, 0], 2.0)
 S.insert([1, 1, 1], 3.0)
 S.insert([4, 4, 4], 4.0)

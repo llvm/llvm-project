@@ -15,14 +15,12 @@
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+#include "llvm/Analysis/ValueLattice.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -538,7 +536,11 @@ void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
   // over from the old function.
   for (Argument *OldArg = F->arg_begin(), *NewArg = A->getParent()->arg_begin(),
                 *End = F->arg_end();
-       OldArg != End; ++OldArg, ++NewArg)
+       OldArg != End; ++OldArg, ++NewArg) {
+
+    LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
+                      << NewArg->getNameOrAsOperand() << "\n");
+
     if (NewArg != A && ValueState.count(OldArg)) {
       // Note: This previously looked like this:
       // ValueState[NewArg] = ValueState[OldArg];
@@ -549,6 +551,7 @@ void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
       NewValue = ValueState[OldArg];
       pushToWorkList(NewValue, NewArg);
     }
+  }
 }
 
 void SCCPInstVisitor::visitInstruction(Instruction &I) {

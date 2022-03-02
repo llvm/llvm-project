@@ -750,14 +750,32 @@ void outSparseTensor(void *tensor, void *dest, bool sort) {
 template <typename V>
 SparseTensorStorage<uint64_t, uint64_t, V> *
 toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
-                   uint64_t *indices) {
-  // Setup all-dims compressed and default ordering.
-  std::vector<DimLevelType> sparse(rank, DimLevelType::kCompressed);
-  std::vector<uint64_t> perm(rank);
-  std::iota(perm.begin(), perm.end(), 0);
+                   uint64_t *indices, uint64_t *perm, uint8_t *sparse) {
+  const DimLevelType *sparsity = (DimLevelType *)(sparse);
+#ifndef NDEBUG
+  // Verify that perm is a permutation of 0..(rank-1).
+  std::vector<uint64_t> order(perm, perm + rank);
+  std::sort(order.begin(), order.end());
+  for (uint64_t i = 0; i < rank; ++i) {
+    if (i != order[i]) {
+      fprintf(stderr, "Permutation is not a permutation of 0..%lu\n", rank);
+      exit(1);
+    }
+  }
+
+  // Verify that the sparsity values are supported.
+  for (uint64_t i = 0; i < rank; ++i) {
+    if (sparsity[i] != DimLevelType::kDense &&
+        sparsity[i] != DimLevelType::kCompressed) {
+      fprintf(stderr, "Unsupported sparsity value %d\n",
+              static_cast<int>(sparsity[i]));
+      exit(1);
+    }
+  }
+#endif
+
   // Convert external format to internal COO.
-  auto *tensor =
-      SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm.data(), nse);
+  auto *tensor = SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm, nse);
   std::vector<uint64_t> idx(rank);
   for (uint64_t i = 0, base = 0; i < nse; i++) {
     for (uint64_t r = 0; r < rank; r++)
@@ -767,7 +785,7 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
   }
   // Return sparse tensor storage format as opaque pointer.
   return SparseTensorStorage<uint64_t, uint64_t, V>::newSparseTensor(
-      rank, shape, perm.data(), sparse.data(), tensor);
+      rank, shape, perm, sparsity, tensor);
 }
 
 /// Converts a sparse tensor to an external COO-flavored format.
@@ -1188,6 +1206,8 @@ void delSparseTensor(void *tensor) {
 ///   shape:   array with dimension size for each rank
 ///   values:  a "nse" array with values for all specified elements
 ///   indices: a flat "nse x rank" array with indices for all specified elements
+///   perm:    the permutation of the dimensions in the storage
+///   sparse:  the sparsity for the dimensions
 ///
 /// For example, the sparse matrix
 ///     | 1.0 0.0 0.0 |
@@ -1199,16 +1219,19 @@ void delSparseTensor(void *tensor) {
 ///      values  = [1.0, 5.0, 3.0]
 ///      indices = [ 0, 0,  1, 1,  1, 2]
 //
-// TODO: generalize beyond 64-bit indices, no dim ordering, all dimensions
-// compressed
+// TODO: generalize beyond 64-bit indices.
 //
 void *convertToMLIRSparseTensorF64(uint64_t rank, uint64_t nse, uint64_t *shape,
-                                   double *values, uint64_t *indices) {
-  return toMLIRSparseTensor<double>(rank, nse, shape, values, indices);
+                                   double *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<double>(rank, nse, shape, values, indices, perm,
+                                    sparse);
 }
 void *convertToMLIRSparseTensorF32(uint64_t rank, uint64_t nse, uint64_t *shape,
-                                   float *values, uint64_t *indices) {
-  return toMLIRSparseTensor<float>(rank, nse, shape, values, indices);
+                                   float *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<float>(rank, nse, shape, values, indices, perm,
+                                   sparse);
 }
 
 /// Converts a sparse tensor to COO-flavored format expressed using C-style

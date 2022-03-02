@@ -16,7 +16,7 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
-#include "mlir-c/Dialect/Standard.h"
+#include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/Support.h"
@@ -161,7 +161,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   populateLoopBody(ctx, loopBody, location, funcBody);
 
   MlirOperationState retState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.return"), location);
+      mlirStringRefCreateFromCString("func.return"), location);
   MlirOperation ret = mlirOperationCreate(&retState);
   mlirBlockAppendOwnedOperation(funcBody, ret);
 
@@ -837,10 +837,10 @@ int printBuiltinAttributes(MlirContext ctx) {
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
   MlirAttribute opaque =
-      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("std"), 3, data,
+      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("func"), 3, data,
                         mlirNoneTypeGet(ctx));
   if (!mlirAttributeIsAOpaque(opaque) ||
-      !stringIsEqual("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
+      !stringIsEqual("func", mlirOpaqueAttrGetDialectNamespace(opaque)))
     return 4;
 
   MlirStringRef opaqueData = mlirOpaqueAttrGetData(opaque);
@@ -848,7 +848,7 @@ int printBuiltinAttributes(MlirContext ctx) {
       strncmp(data, opaqueData.data, opaqueData.length))
     return 5;
   mlirAttributeDump(opaque);
-  // CHECK: #std.abc
+  // CHECK: #func.abc
 
   MlirAttribute string =
       mlirStringAttrGet(ctx, mlirStringRefCreate(data + 3, 2));
@@ -1514,7 +1514,7 @@ int registerOnlyStd() {
   if (mlirContextGetNumLoadedDialects(ctx) != 1)
     return 1;
 
-  MlirDialectHandle stdHandle = mlirGetDialectHandle__std__();
+  MlirDialectHandle stdHandle = mlirGetDialectHandle__func__();
 
   MlirDialect std = mlirContextGetOrLoadDialect(
       ctx, mlirDialectHandleGetNamespace(stdHandle));
@@ -1546,10 +1546,10 @@ int registerOnlyStd() {
           mlirContextIsRegisteredOperation(
               ctx, mlirStringRefCreateFromCString("cf.cond_br")));
 
-  // CHECK: std.not_existing_op is_registered: 0
-  fprintf(stderr, "std.not_existing_op is_registered: %d\n",
+  // CHECK: func.not_existing_op is_registered: 0
+  fprintf(stderr, "func.not_existing_op is_registered: %d\n",
           mlirContextIsRegisteredOperation(
-              ctx, mlirStringRefCreateFromCString("std.not_existing_op")));
+              ctx, mlirStringRefCreateFromCString("func.not_existing_op")));
 
   // CHECK: not_existing_dialect.not_existing_op is_registered: 0
   fprintf(stderr, "not_existing_dialect.not_existing_op is_registered: %d\n",
@@ -1674,7 +1674,7 @@ int testClone() {
 
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
-  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("std"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirType indexType = mlirIndexTypeGet(ctx);
   MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
@@ -1923,7 +1923,7 @@ int testDialectRegistry() {
     return 1;
   }
 
-  MlirDialectHandle stdHandle = mlirGetDialectHandle__std__();
+  MlirDialectHandle stdHandle = mlirGetDialectHandle__func__();
   mlirDialectHandleInsertDialect(stdHandle, registry);
 
   MlirContext ctx = mlirContextCreate();

@@ -348,7 +348,7 @@ individual scalar arguments.
 
 Examples:
 
-This convention is implemented in the conversion of `std.func` and `std.call` to
+This convention is implemented in the conversion of `builtin.func` and `func.call` to
 the LLVM dialect, with the former unpacking the descriptor into a set of
 individual values and the latter packing those values back into a descriptor so
 as to make it transparently usable by other operations. Conversions from other
@@ -481,7 +481,7 @@ be returned from a function, the ranked descriptor it points to is copied into
 dynamically allocated memory, and the pointer in the unranked descriptor is
 updated accordingly. The allocation happens immediately before returning. It is
 the responsibility of the caller to free the dynamically allocated memory. The
-default conversion of `std.call` and `std.call_indirect` copies the ranked
+default conversion of `func.call` and `func.call_indirect` copies the ranked
 descriptor to newly allocated memory on the caller's stack. Thus, the convention
 of the ranked memref descriptor pointed to by an unranked memref descriptor
 being stored on stack is respected.

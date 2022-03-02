@@ -13,7 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CTORUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CTORUTILS_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
 

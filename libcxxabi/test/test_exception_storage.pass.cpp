@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
-#include "threading_support.h"
+#include <__threading_support>
 #include <unistd.h>
 
 #include "../src/cxa_exception.h"

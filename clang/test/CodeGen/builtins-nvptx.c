@@ -16,6 +16,12 @@
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 \
 // RUN:   -DERROR_CHECK -fcuda-is-device -S -o /dev/null -x cuda -verify %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
+// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP32 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
+// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP64 %s
 
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
@@ -788,6 +794,131 @@ __device__ void nvvm_cvt_sm80() {
 
   // CHECK_PTX70_SM80: call i32 @llvm.nvvm.f2tf32.rna(float 1.000000e+00)
   __nvvm_f2tf32_rna(1);
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_abs_neg_bf16_bf16x2_sm80
+__device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
+#if __CUDA_ARCH__ >= 800
+
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.abs.bf16(i16 -1)
+  __nvvm_abs_bf16(0xFFFF);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.abs.bf16x2(i32 -1)
+  __nvvm_abs_bf16x2(0xFFFFFFFF);
+
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.neg.bf16(i16 -1)
+  __nvvm_neg_bf16(0xFFFF);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.neg.bf16x2(i32 -1)
+  __nvvm_neg_bf16x2(0xFFFFFFFF);
+#endif
+  // CHECK: ret void
+}
+
+#define NAN32 0x7FBFFFFF
+#define NAN16 0x7FBF
+#define BF16 0x1234
+#define BF16_2 0x4321
+#define NANBF16 0xFFC1
+#define BF16X2 0x12341234
+#define BF16X2_2 0x32343234
+#define NANBF16X2 0xFFC1FFC1
+
+// CHECK-LABEL: nvvm_min_max_sm80
+__device__ void nvvm_min_max_sm80() {
+#if __CUDA_ARCH__ >= 800
+
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmin.nan.f
+  __nvvm_fmin_nan_f(0.1f, (float)NAN32);
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmin.ftz.nan.f
+  __nvvm_fmin_ftz_nan_f(0.1f, (float)NAN32);
+
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fmin.bf16
+  __nvvm_fmin_bf16(BF16, BF16_2);
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fmin.nan.bf16
+  __nvvm_fmin_nan_bf16(BF16, NANBF16);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fmin.bf16x2
+  __nvvm_fmin_bf16x2(BF16X2, BF16X2_2);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fmin.nan.bf16x2
+  __nvvm_fmin_nan_bf16x2(BF16X2, NANBF16X2);
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.nan.f
+  __nvvm_fmax_nan_f(0.1f, 0.11f);
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.ftz.nan.f
+  __nvvm_fmax_ftz_nan_f(0.1f, (float)NAN32);
+
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.nan.f
+  __nvvm_fmax_nan_f(0.1f, (float)NAN32);
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.ftz.nan.f
+  __nvvm_fmax_ftz_nan_f(0.1f, (float)NAN32);
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fmax.bf16
+  __nvvm_fmax_bf16(BF16, BF16_2);
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fmax.nan.bf16
+  __nvvm_fmax_nan_bf16(BF16, NANBF16);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fmax.bf16x2
+  __nvvm_fmax_bf16x2(BF16X2, BF16X2_2);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fmax.nan.bf16x2
+  __nvvm_fmax_nan_bf16x2(NANBF16X2, BF16X2);
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.nan.f
+  __nvvm_fmax_nan_f(0.1f, (float)NAN32);
+  // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.ftz.nan.f
+  __nvvm_fmax_ftz_nan_f(0.1f, (float)NAN32);
+
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_fma_bf16_bf16x2_sm80
+__device__ void nvvm_fma_bf16_bf16x2_sm80() {
+#if __CUDA_ARCH__ >= 800
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fma.rn.bf16
+  __nvvm_fma_rn_bf16(0x1234, 0x7FBF, 0x1234);
+  // CHECK_PTX70_SM80: call i16 @llvm.nvvm.fma.rn.relu.bf16
+  __nvvm_fma_rn_relu_bf16(0x1234, 0x7FBF, 0x1234);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fma.rn.bf16x2
+  __nvvm_fma_rn_bf16x2(0x7FBFFFFF, 0xFFFFFFFF, 0x7FBFFFFF);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.fma.rn.relu.bf16x2
+  __nvvm_fma_rn_relu_bf16x2(0x7FBFFFFF, 0xFFFFFFFF, 0x7FBFFFFF);
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_min_max_sm86
+__device__ void nvvm_min_max_sm86() {
+#if __CUDA_ARCH__ >= 860
+
+  // CHECK_PTX72_SM86: call i16 @llvm.nvvm.fmin.xorsign.abs.bf16
+  __nvvm_fmin_xorsign_abs_bf16(BF16, BF16_2);
+  // CHECK_PTX72_SM86: call i16 @llvm.nvvm.fmin.nan.xorsign.abs.bf16
+  __nvvm_fmin_nan_xorsign_abs_bf16(BF16, NANBF16);
+  // CHECK_PTX72_SM86: call i32 @llvm.nvvm.fmin.xorsign.abs.bf16x2
+  __nvvm_fmin_xorsign_abs_bf16x2(BF16X2, BF16X2_2);
+  // CHECK_PTX72_SM86: call i32 @llvm.nvvm.fmin.nan.xorsign.abs.bf16x2
+  __nvvm_fmin_nan_xorsign_abs_bf16x2(BF16X2, NANBF16X2);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmin.xorsign.abs.f
+  __nvvm_fmin_xorsign_abs_f(-0.1f, 0.1f);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmin.ftz.xorsign.abs.f
+  __nvvm_fmin_ftz_xorsign_abs_f(-0.1f, 0.1f);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmin.nan.xorsign.abs.f
+  __nvvm_fmin_nan_xorsign_abs_f(-0.1f, (float)NAN32);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f
+  __nvvm_fmin_ftz_nan_xorsign_abs_f(-0.1f, (float)NAN32);
+
+  // CHECK_PTX72_SM86: call i16 @llvm.nvvm.fmax.xorsign.abs.bf16
+  __nvvm_fmax_xorsign_abs_bf16(BF16, BF16_2);
+  // CHECK_PTX72_SM86: call i16 @llvm.nvvm.fmax.nan.xorsign.abs.bf16
+  __nvvm_fmax_nan_xorsign_abs_bf16(BF16, NANBF16);
+  // CHECK_PTX72_SM86: call i32 @llvm.nvvm.fmax.xorsign.abs.bf16x2
+  __nvvm_fmax_xorsign_abs_bf16x2(BF16X2, BF16X2_2);
+  // CHECK_PTX72_SM86: call i32 @llvm.nvvm.fmax.nan.xorsign.abs.bf16x2
+  __nvvm_fmax_nan_xorsign_abs_bf16x2(BF16X2, NANBF16X2);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmax.xorsign.abs.f
+  __nvvm_fmax_xorsign_abs_f(-0.1f, 0.1f);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmax.ftz.xorsign.abs.f
+  __nvvm_fmax_ftz_xorsign_abs_f(-0.1f, 0.1f);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmax.nan.xorsign.abs.f
+  __nvvm_fmax_nan_xorsign_abs_f(-0.1f, (float)NAN32);
+  // CHECK_PTX72_SM86: call float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f
+  __nvvm_fmax_ftz_nan_xorsign_abs_f(-0.1f, (float)NAN32);
 #endif
   // CHECK: ret void
 }

@@ -69,7 +69,6 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
   let dependentDialects = [
     "memref::MemRefDialect",
     "scf::SCFDialect",
-    "StandardOpsDialect",
     "vector::VectorDialect"
   ];
 }
@@ -227,9 +226,9 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
   let dependentDialects = [
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "NVVM::NVVMDialect",
-    "StandardOpsDialect",
   ];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
@@ -327,7 +326,7 @@ def ConvertLinalgToStandard : Pass<"convert-linalg-to-std", "ModuleOp"> {
   let summary = "Convert the operations from the linalg dialect into the "
                 "Standard dialect";
   let constructor = "mlir::createConvertLinalgToStandardPass()";
-  let dependentDialects = ["memref::MemRefDialect", "StandardOpsDialect"];
+  let dependentDialects = ["func::FuncDialect", "memref::MemRefDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -356,7 +355,7 @@ def ConvertMathToLibm : Pass<"convert-math-to-libm", "ModuleOp"> {
   let constructor = "mlir::createConvertMathToLibmPass()";
   let dependentDialects = [
     "arith::ArithmeticDialect",
-    "StandardOpsDialect",
+    "func::FuncDialect",
     "vector::VectorDialect",
   ];
 }
@@ -501,7 +500,8 @@ def ConvertSCFToOpenMP : Pass<"convert-scf-to-openmp", "ModuleOp"> {
   let summary = "Convert SCF parallel loop to OpenMP parallel + workshare "
                 "constructs.";
   let constructor = "mlir::createConvertSCFToOpenMPPass()";
-  let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect"];
+  let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",
+                           "memref::MemRefDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -552,7 +552,6 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
                 "dialect";
   let constructor = "mlir::createConvertShapeToStandardPass()";
   let dependentDialects = [
-    "StandardOpsDialect",
     "scf::SCFDialect",
   ];
 }
@@ -704,7 +703,6 @@ def TosaToStandard : Pass<"tosa-to-standard"> {
   let summary = "Lower TOSA to the Standard dialect";
   let dependentDialects = [
     "arith::ArithmeticDialect",
-    "StandardOpsDialect",
     "tensor::TensorDialect",
   ];
   let description = [{

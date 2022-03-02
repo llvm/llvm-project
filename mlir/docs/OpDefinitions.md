@@ -861,7 +861,7 @@ The `elements` of an optional group have the following requirements:
     -   All region variables can be used. When a non-variable length region is
         used, if the group is not present the region is empty.
 
-An example of an operation with an optional group is `std.return`, which has a
+An example of an operation with an optional group is `func.return`, which has a
 variadic number of operands.
 
 ```tablegen

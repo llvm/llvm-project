@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "include/threads.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/threads/call_once.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
@@ -16,10 +17,8 @@
 #include "src/threads/thrd_join.h"
 #include "utils/UnitTest/Test.h"
 
-#include <stdatomic.h>
-
 static constexpr unsigned int NUM_THREADS = 5;
-static atomic_uint thread_count;
+static __llvm_libc::cpp::Atomic<unsigned int> thread_count;
 
 static unsigned int call_count;
 static void call_once_func() { ++call_count; }
@@ -28,7 +27,7 @@ static int func(void *) {
   static once_flag flag = ONCE_FLAG_INIT;
   __llvm_libc::call_once(&flag, call_once_func);
 
-  ++thread_count; // This is a an atomic update.
+  thread_count.fetch_add(1);
 
   return 0;
 }
@@ -51,7 +50,7 @@ TEST(LlvmLibcCallOnceTest, CallFrom5Threads) {
     ASSERT_EQ(retval, 0);
   }
 
-  EXPECT_EQ(static_cast<unsigned int>(thread_count), 5U);
+  EXPECT_EQ(thread_count.val, 5U);
   EXPECT_EQ(call_count, 1U);
 }
 
@@ -61,13 +60,13 @@ static void blocking_once_func() {
   __llvm_libc::mtx_unlock(&once_func_blocker);
 }
 
-static atomic_uint start_count;
-static atomic_uint done_count;
+static __llvm_libc::cpp::Atomic<unsigned int> start_count;
+static __llvm_libc::cpp::Atomic<unsigned int> done_count;
 static int once_func_caller(void *) {
   static once_flag flag;
-  ++start_count;
+  start_count.fetch_add(1);
   __llvm_libc::call_once(&flag, blocking_once_func);
-  ++done_count;
+  done_count.fetch_add(1);
   return 0;
 }
 
@@ -90,11 +89,11 @@ TEST(LlvmLibcCallOnceTest, TestSynchronization) {
   ASSERT_EQ(__llvm_libc::thrd_create(&t2, once_func_caller, nullptr),
             static_cast<int>(thrd_success));
 
-  while (start_count != 2)
+  while (start_count.load() != 2)
     ; // Spin until both threads start.
 
   // Since the once func is blocked, the threads should not be done yet.
-  EXPECT_EQ(static_cast<unsigned int>(done_count), 0U);
+  EXPECT_EQ(done_count.val, 0U);
 
   // Unlock the blocking mutex so that the once func blocks.
   ASSERT_EQ(__llvm_libc::mtx_unlock(&once_func_blocker),
@@ -108,7 +107,7 @@ TEST(LlvmLibcCallOnceTest, TestSynchronization) {
             static_cast<int>(thrd_success));
   ASSERT_EQ(retval, 0);
 
-  ASSERT_EQ(static_cast<unsigned int>(done_count), 2U);
+  ASSERT_EQ(done_count.val, 2U);
 
   __llvm_libc::mtx_destroy(&once_func_blocker);
 }

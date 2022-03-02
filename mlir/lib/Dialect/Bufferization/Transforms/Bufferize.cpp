@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -175,10 +175,9 @@ struct OneShotBufferizePass
 
       BufferizationOptions::OpFilterEntry::FilterFn filterFn =
           [&](Operation *op) {
-            // Disallow non-std dialect ops. I.e., no ops related to function
+            // Disallow non-func dialect ops. I.e., no ops related to function
             // calls.
-            if (op->getDialect()->getNamespace() ==
-                StandardOpsDialect::getDialectNamespace())
+            if (isa<func::FuncDialect>(op->getDialect()))
               return false;
             // Filter may be specified via options.
             if (this->dialectFilter.hasValue())

@@ -79,3 +79,8 @@ Build System Changes
 - Support for standalone builds have been entirely removed from libc++, libc++abi and
   libunwind. Please use :ref:`these instructions <build instructions>` for building
   libc++, libc++abi and/or libunwind.
+
+- The ``{LIBCXX,LIBCXXABI,LIBUNWIND}_TARGET_TRIPLE``, ``{LIBCXX,LIBCXXABI,LIBUNWIND}_SYSROOT`` and
+  ``{LIBCXX,LIBCXXABI,LIBUNWIND}_GCC_TOOLCHAIN`` CMake variables have been removed. Instead, please
+  use the ``CMAKE_CXX_COMPILER_TARGET``, ``CMAKE_SYSROOT`` and ``CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN``
+  variables provided by CMake.

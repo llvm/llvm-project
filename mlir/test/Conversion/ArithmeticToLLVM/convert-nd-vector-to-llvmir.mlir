@@ -208,5 +208,5 @@ func @select_2d(%arg0 : vector<4x3xi1>, %arg1 : vector<4x3xi32>, %arg2 : vector<
   // CHECK: %[[SELECT:.*]] = llvm.select %[[EXTRACT1]], %[[EXTRACT2]], %[[EXTRACT3]] : vector<3xi1>, vector<3xi32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[SELECT]], %{{.*}}[0] : !llvm.array<4 x vector<3xi32>>
   %0 = arith.select %arg0, %arg1, %arg2 : vector<4x3xi1>, vector<4x3xi32>
-  std.return
+  func.return
 }

@@ -456,11 +456,11 @@ func @verbose_terminators() -> (i1, i17) {
 ^bb2(%a : i17):
   %true = arith.constant true
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
-  "std.return"(%true, %a) : (i1, i17) -> ()
+  "func.return"(%true, %a) : (i1, i17) -> ()
 
 ^bb3(%b : i1, %c : i17):
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
-  "std.return"(%b, %c) : (i1, i17) -> ()
+  "func.return"(%b, %c) : (i1, i17) -> ()
 }
 
 // CHECK-LABEL: func @condbr_simple
@@ -1276,17 +1276,11 @@ func @default_dialect(%bool : i1) {
     // example.
     // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
     "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
-
-    // TODO: remove this after removing the special casing for std in the printer.
-    // Verify that operations in the standard dialect keep the `std.` prefix.
-    // CHECK: cf.assert
-    cf.assert %bool, "Assertion"
     "test.terminator"() : ()->()
   }
-  // The same operation outside of the region does not have an std. prefix.
-  // CHECK-NOT: std.assert
+  // The same operation outside of the region does not have an func. prefix.
   // CHECK: return
-  std.return
+  func.return
 }
 
 // CHECK-LABEL: func @unreachable_dominance_violation_ok

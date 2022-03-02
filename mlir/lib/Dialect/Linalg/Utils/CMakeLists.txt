@@ -13,7 +13,6 @@ add_mlir_dialect_library(MLIRLinalgUtils
   MLIRLinalg
   MLIRSCF
   MLIRPass
-  MLIRStandard
   MLIRTensorUtils
   MLIRTransformUtils
   )

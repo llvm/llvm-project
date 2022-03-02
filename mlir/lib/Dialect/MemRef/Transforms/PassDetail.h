@@ -14,7 +14,6 @@
 namespace mlir {
 
 class AffineDialect;
-class StandardOpsDialect;
 
 // Forward declaration from Dialect.h
 template <typename ConcreteDialect>
@@ -23,6 +22,10 @@ void registerDialect(DialectRegistry &registry);
 namespace arith {
 class ArithmeticDialect;
 } // namespace arith
+
+namespace func {
+class FuncDialect;
+} // namespace func
 
 namespace memref {
 class MemRefDialect;
