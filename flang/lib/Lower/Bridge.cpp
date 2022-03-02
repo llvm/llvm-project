@@ -815,7 +815,8 @@ private:
   }
 
   void genFIR(const Fortran::parser::CloseStmt &stmt) {
-    TODO(toLocation(), "CloseStmt lowering");
+    mlir::Value iostat = genCloseStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::EndfileStmt &stmt) {
@@ -831,7 +832,8 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenStmt &stmt) {
-    TODO(toLocation(), "OpenStmt lowering");
+    mlir::Value iostat = genOpenStatement(*this, stmt);
+    genIoConditionBranches(getEval(), stmt.v, iostat);
   }
 
   void genFIR(const Fortran::parser::PrintStmt &stmt) {

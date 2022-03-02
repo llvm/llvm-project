@@ -19,6 +19,8 @@ class Value;
 
 namespace Fortran {
 namespace parser {
+struct CloseStmt;
+struct OpenStmt;
 struct ReadStmt;
 struct PrintStmt;
 struct WriteStmt;
@@ -28,9 +30,15 @@ namespace lower {
 
 class AbstractConverter;
 
+/// Generate IO call(s) for CLOSE; return the IOSTAT code
+mlir::Value genCloseStatement(AbstractConverter &, const parser::CloseStmt &);
+
 /// Generate IO call(s) for READ; return the IOSTAT code
 mlir::Value genReadStatement(AbstractConverter &converter,
                              const parser::ReadStmt &stmt);
+
+/// Generate IO call(s) for OPEN; return the IOSTAT code
+mlir::Value genOpenStatement(AbstractConverter &, const parser::OpenStmt &);
 
 /// Generate IO call(s) for PRINT
 void genPrintStatement(AbstractConverter &converter,

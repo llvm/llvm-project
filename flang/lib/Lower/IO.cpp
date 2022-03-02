@@ -1059,6 +1059,20 @@ static bool hasX(const A &list) {
   return false;
 }
 
+template <typename SEEK, typename A>
+static bool hasMem(const A &stmt) {
+  return hasX<SEEK>(stmt.v);
+}
+
+/// Get the sought expression from the specifier list.
+template <typename SEEK, typename A>
+static const Fortran::lower::SomeExpr *getExpr(const A &stmt) {
+  for (const auto &spec : stmt.v)
+    if (auto *f = std::get_if<SEEK>(&spec.u))
+      return Fortran::semantics::GetExpr(f->v);
+  llvm::report_fatal_error("must have a file unit");
+}
+
 /// For each specifier, build the appropriate call, threading the cookie.
 template <typename A>
 static void threadSpecs(Fortran::lower::AbstractConverter &converter,
@@ -1467,6 +1481,77 @@ mlir::Value getIOUnit(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   return builder.create<mlir::arith::ConstantOp>(
       loc, builder.getIntegerAttr(ty, Fortran::runtime::io::DefaultUnit));
+}
+
+//===----------------------------------------------------------------------===//
+// Generators for each IO statement type.
+//===----------------------------------------------------------------------===//
+
+template <typename K, typename S>
+static mlir::Value genBasicIOStmt(Fortran::lower::AbstractConverter &converter,
+                                  const S &stmt) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::FuncOp beginFunc = getIORuntimeFunc<K>(loc, builder);
+  mlir::FunctionType beginFuncTy = beginFunc.getType();
+  mlir::Value unit = fir::getBase(converter.genExprValue(
+      getExpr<Fortran::parser::FileUnitNumber>(stmt), stmtCtx, loc));
+  mlir::Value un = builder.createConvert(loc, beginFuncTy.getInput(0), unit);
+  mlir::Value file = locToFilename(converter, loc, beginFuncTy.getInput(1));
+  mlir::Value line = locToLineNo(converter, loc, beginFuncTy.getInput(2));
+  auto call = builder.create<fir::CallOp>(loc, beginFunc,
+                                          mlir::ValueRange{un, file, line});
+  mlir::Value cookie = call.getResult(0);
+  ConditionSpecInfo csi;
+  genConditionHandlerCall(converter, loc, cookie, stmt.v, csi);
+  mlir::Value ok;
+  auto insertPt = builder.saveInsertionPoint();
+  threadSpecs(converter, loc, cookie, stmt.v, csi.hasErrorConditionSpec(), ok);
+  builder.restoreInsertionPoint(insertPt);
+  return genEndIO(converter, converter.getCurrentLocation(), cookie, csi,
+                  stmtCtx);
+}
+
+mlir::Value
+Fortran::lower::genOpenStatement(Fortran::lower::AbstractConverter &converter,
+                                 const Fortran::parser::OpenStmt &stmt) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::FuncOp beginFunc;
+  llvm::SmallVector<mlir::Value> beginArgs;
+  mlir::Location loc = converter.getCurrentLocation();
+  if (hasMem<Fortran::parser::FileUnitNumber>(stmt)) {
+    beginFunc = getIORuntimeFunc<mkIOKey(BeginOpenUnit)>(loc, builder);
+    mlir::FunctionType beginFuncTy = beginFunc.getType();
+    mlir::Value unit = fir::getBase(converter.genExprValue(
+        getExpr<Fortran::parser::FileUnitNumber>(stmt), stmtCtx, loc));
+    beginArgs.push_back(
+        builder.createConvert(loc, beginFuncTy.getInput(0), unit));
+    beginArgs.push_back(locToFilename(converter, loc, beginFuncTy.getInput(1)));
+    beginArgs.push_back(locToLineNo(converter, loc, beginFuncTy.getInput(2)));
+  } else {
+    assert(hasMem<Fortran::parser::ConnectSpec::Newunit>(stmt));
+    beginFunc = getIORuntimeFunc<mkIOKey(BeginOpenNewUnit)>(loc, builder);
+    mlir::FunctionType beginFuncTy = beginFunc.getType();
+    beginArgs.push_back(locToFilename(converter, loc, beginFuncTy.getInput(0)));
+    beginArgs.push_back(locToLineNo(converter, loc, beginFuncTy.getInput(1)));
+  }
+  auto cookie =
+      builder.create<fir::CallOp>(loc, beginFunc, beginArgs).getResult(0);
+  ConditionSpecInfo csi;
+  genConditionHandlerCall(converter, loc, cookie, stmt.v, csi);
+  mlir::Value ok;
+  auto insertPt = builder.saveInsertionPoint();
+  threadSpecs(converter, loc, cookie, stmt.v, csi.hasErrorConditionSpec(), ok);
+  builder.restoreInsertionPoint(insertPt);
+  return genEndIO(converter, loc, cookie, csi, stmtCtx);
+}
+
+mlir::Value
+Fortran::lower::genCloseStatement(Fortran::lower::AbstractConverter &converter,
+                                  const Fortran::parser::CloseStmt &stmt) {
+  return genBasicIOStmt<mkIOKey(BeginClose)>(converter, stmt);
 }
 
 //===----------------------------------------------------------------------===//
