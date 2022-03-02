@@ -625,6 +625,67 @@ static double GetApproxValue(const llvm::APFloat &F) {
   return V.convertToDouble();
 }
 
+static bool TryPrintAsStringLiteral(raw_ostream &Out,
+                                    const PrintingPolicy &Policy,
+                                    const ArrayType *ATy,
+                                    ArrayRef<APValue> Inits) {
+  if (Inits.empty())
+    return false;
+
+  QualType Ty = ATy->getElementType();
+  if (!Ty->isAnyCharacterType())
+    return false;
+
+  // Nothing we can do about a sequence that is not null-terminated
+  if (!Inits.back().getInt().isZero())
+    return false;
+  else
+    Inits = Inits.drop_back();
+
+  llvm::SmallString<40> Buf;
+  Buf.push_back('"');
+
+  // Better than printing a two-digit sequence of 10 integers.
+  constexpr size_t MaxN = 36;
+  StringRef Ellipsis;
+  if (Inits.size() > MaxN && !Policy.EntireContentsOfLargeArray) {
+    Ellipsis = "[...]";
+    Inits =
+        Inits.take_front(std::min(MaxN - Ellipsis.size() / 2, Inits.size()));
+  }
+
+  for (auto &Val : Inits) {
+    int64_t Char64 = Val.getInt().getExtValue();
+    if (!isASCII(Char64))
+      return false; // Bye bye, see you in integers.
+    auto Ch = static_cast<unsigned char>(Char64);
+    // The diagnostic message is 'quoted'
+    StringRef Escaped = escapeCStyle<EscapeChar::SingleAndDouble>(Ch);
+    if (Escaped.empty()) {
+      if (!isPrintable(Ch))
+        return false;
+      Buf.emplace_back(Ch);
+    } else {
+      Buf.append(Escaped);
+    }
+  }
+
+  Buf.append(Ellipsis);
+  Buf.push_back('"');
+
+  if (Ty->isWideCharType())
+    Out << 'L';
+  else if (Ty->isChar8Type())
+    Out << "u8";
+  else if (Ty->isChar16Type())
+    Out << 'u';
+  else if (Ty->isChar32Type())
+    Out << 'U';
+
+  Out << Buf;
+  return true;
+}
+
 void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
                           QualType Ty) const {
   printPretty(Out, Ctx.getPrintingPolicy(), Ty, &Ctx);
@@ -795,17 +856,23 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
   }
   case APValue::Array: {
     const ArrayType *AT = Ty->castAsArrayTypeUnsafe();
+    unsigned N = getArrayInitializedElts();
+    if (N != 0 && TryPrintAsStringLiteral(Out, Policy, AT,
+                                          {&getArrayInitializedElt(0), N}))
+      return;
     QualType ElemTy = AT->getElementType();
     Out << '{';
-    if (unsigned N = getArrayInitializedElts()) {
-      getArrayInitializedElt(0).printPretty(Out, Policy, ElemTy, Ctx);
-      for (unsigned I = 1; I != N; ++I) {
+    unsigned I = 0;
+    switch (N) {
+    case 0:
+      for (; I != N; ++I) {
         Out << ", ";
-        if (I == 10) {
-          // Avoid printing out the entire contents of large arrays.
-          Out << "...";
-          break;
+        if (I == 10 && !Policy.EntireContentsOfLargeArray) {
+          Out << "...}";
+          return;
         }
+        LLVM_FALLTHROUGH;
+      default:
         getArrayInitializedElt(I).printPretty(Out, Policy, ElemTy, Ctx);
       }
     }

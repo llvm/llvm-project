@@ -114,6 +114,9 @@ PrintingPolicy Sema::getPrintingPolicy(const ASTContext &Context,
     }
   }
 
+  // Shorten the data output if needed
+  Policy.EntireContentsOfLargeArray = false;
+
   return Policy;
 }
 

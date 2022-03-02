@@ -80,3 +80,34 @@ TEST(TypePrinter, ParamsUglified) {
                                  varDecl(hasType(qualType().bind("id"))),
                                  "const f<Tp &> *", Clean));
 }
+
+TEST(TypePrinter, TemplateIdWithNTTP) {
+  constexpr char Code[] = R"cpp(
+    template <int N>
+    struct Str {
+      constexpr Str(char const (&s)[N]) { __builtin_memcpy(value, s, N); }
+      char value[N];
+    };
+    template <Str> class ASCII {};
+
+    ASCII<"this nontype template argument is too long to print"> x;
+  )cpp";
+  auto Matcher = classTemplateSpecializationDecl(
+      hasName("ASCII"), has(cxxConstructorDecl(
+                            isMoveConstructor(),
+                            has(parmVarDecl(hasType(qualType().bind("id")))))));
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {"-std=c++20"}, Matcher,
+      R"(ASCII<{"this nontype template argument is [...]"}> &&)",
+      [](PrintingPolicy &Policy) {
+        Policy.EntireContentsOfLargeArray = false;
+      }));
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {"-std=c++20"}, Matcher,
+      R"(ASCII<{"this nontype template argument is too long to print"}> &&)",
+      [](PrintingPolicy &Policy) {
+        Policy.EntireContentsOfLargeArray = true;
+      }));
+}

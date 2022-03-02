@@ -74,7 +74,7 @@ struct PrintingPolicy {
         SuppressImplicitBase(false), FullyQualifiedName(false),
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
-        CleanUglifiedParameters(false) {}
+        CleanUglifiedParameters(false), EntireContentsOfLargeArray(true) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -285,6 +285,10 @@ struct PrintingPolicy {
   /// e.g. std::vector<class _Tp> becomes std::vector<class Tp>.
   /// This only affects parameter names, and so describes a compatible API.
   unsigned CleanUglifiedParameters : 1;
+
+  /// Whether to print the entire array initializers, especially on non-type
+  /// template parameters, no matter how many elements there are.
+  unsigned EntireContentsOfLargeArray : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

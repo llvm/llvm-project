@@ -38,15 +38,16 @@ namespace charinfo {
   };
 } // end namespace charinfo
 
-/// Returns true if this is an ASCII character.
+/// Returns true if a byte is an ASCII character.
 LLVM_READNONE inline bool isASCII(char c) {
   return static_cast<unsigned char>(c) <= 127;
 }
 
 LLVM_READNONE inline bool isASCII(unsigned char c) { return c <= 127; }
 
-/// Returns true if this is an ASCII character.
+/// Returns true if a codepoint is an ASCII character.
 LLVM_READNONE inline bool isASCII(uint32_t c) { return c <= 127; }
+LLVM_READNONE inline bool isASCII(int64_t c) { return 0 <= c && c <= 127; }
 
 /// Returns true if this is a valid first character of a C identifier,
 /// which is [a-zA-Z_].
@@ -162,6 +163,44 @@ LLVM_READONLY inline bool isRawStringDelimBody(unsigned char c) {
                           CHAR_DIGIT|CHAR_UNDER|CHAR_RAWDEL)) != 0;
 }
 
+enum class EscapeChar {
+  Single = 1,
+  Double = 2,
+  SingleAndDouble = static_cast<int>(Single) | static_cast<int>(Double),
+};
+
+/// Return C-style escaped string for special characters, or an empty string if
+/// there is no such mapping.
+template <EscapeChar Opt, class CharT>
+LLVM_READONLY inline auto escapeCStyle(CharT Ch) -> StringRef {
+  switch (Ch) {
+  case '\\':
+    return "\\\\";
+  case '\'':
+    if ((static_cast<int>(Opt) & static_cast<int>(EscapeChar::Single)) == 0)
+      break;
+    return "\\'";
+  case '"':
+    if ((static_cast<int>(Opt) & static_cast<int>(EscapeChar::Double)) == 0)
+      break;
+    return "\\\"";
+  case '\a':
+    return "\\a";
+  case '\b':
+    return "\\b";
+  case '\f':
+    return "\\f";
+  case '\n':
+    return "\\n";
+  case '\r':
+    return "\\r";
+  case '\t':
+    return "\\t";
+  case '\v':
+    return "\\v";
+  }
+  return {};
+}
 
 /// Converts the given ASCII character to its lowercase equivalent.
 ///
