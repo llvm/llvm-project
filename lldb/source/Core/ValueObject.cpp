@@ -850,7 +850,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
 static bool CopyStringDataToBufferSP(const StreamString &source,
                                      lldb::DataBufferSP &destination) {
   llvm::StringRef src = source.GetString();
-  src.consume_back(llvm::StringRef("\0", 1));
+  src = src.rtrim('\0');
   destination = std::make_shared<DataBufferHeap>(src.size(), 0);
   memcpy(destination->GetBytes(), src.data(), src.size());
   return true;
