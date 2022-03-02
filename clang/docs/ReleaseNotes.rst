@@ -76,6 +76,9 @@ Non-comprehensive list of changes in this release
 - Configuration file syntax extended with ``<CFGDIR>`` token. This expands to
   the base path of the current config file. See :ref:`configuration-files` for
   details.
+- The ``-E -P`` preprocessor output now always omits blank lines, matching
+  gcc behaviour. Previously, up to 8 consecutive blank lines could appear
+  in the output.
 
 New Compiler Flags
 ------------------
@@ -91,6 +94,14 @@ New Compiler Flags
   outside of such a region.
 - ``-falign-loops=N`` (N is a power of 2) is now supported for non-LTO cases.
   (`D106701 <https://reviews.llvm.org/D106701>`_)
+- The ``-fminimize-whitespace`` flag allows removing redundant whitespace
+  from preprocessor output (``-E`` flag). When combined with ``-P``, this
+  includes newlines. Otherwise, only indention is removed (other horizontal
+  whitespace is always collapsed).
+  The motivation is to improve compiler cache hit rate by becoming invariant
+  to whitespace changes, such as reformatting using clang-format. Patches
+  for `ccache <https://github.com/ccache/ccache/pull/815>`_ and
+  `sccache <https://github.com/mozilla/sccache/pull/1055>`_ are under review.
 
 Deprecated Compiler Flags
 -------------------------
