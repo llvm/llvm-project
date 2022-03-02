@@ -22,6 +22,7 @@
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
 #include "mlir/Translation.h"
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -93,8 +94,23 @@ DataLayoutSpecInterface
 mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
                           MLIRContext *context) {
   assert(context && "expected MLIR context");
-  StringRef layout = dataLayout.getStringRepresentation();
+  std::string layoutstr = dataLayout.getStringRepresentation();
+
+  // Remaining unhandled default layout defaults
+  // e (little endian if not set)
+  // p[n]:64:64:64 (non zero address spaces have 64-bit properties)
+  std::string append =
+      "p:64:64:64-S0-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f16:16:16-f64:"
+      "64:64-f128:128:128-v64:64:64-v128:128:128-a:0:64";
+  if (layoutstr.empty())
+    layoutstr = append;
+  else
+    layoutstr = layoutstr + "-" + append;
+
+  StringRef layout(layoutstr);
+
   SmallVector<DataLayoutEntryInterface> entries;
+  StringSet<> seen;
   while (!layout.empty()) {
     // Split at '-'.
     std::pair<StringRef, StringRef> split = layout.split('-');
@@ -104,6 +120,9 @@ mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
     // Split at ':'.
     StringRef kind, spec;
     std::tie(kind, spec) = current.split(':');
+    if (seen.contains(kind))
+      continue;
+    seen.insert(kind);
 
     char symbol = kind.front();
     StringRef parameter = kind.substr(1);
