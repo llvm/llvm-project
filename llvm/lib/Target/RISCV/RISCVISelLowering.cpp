@@ -11027,24 +11027,13 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   std::pair<Register, const TargetRegisterClass *> Res =
       TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 
-  if (Res.second == &RISCV::GPRF32RegClass) {
-    if (!Subtarget.is64Bit() || VT == MVT::Other)
-      return std::make_pair(Res.first, &RISCV::GPRRegClass);
-    return std::make_pair(0, nullptr);
-  }
-
-  if (Res.second == &RISCV::GPRF64RegClass ||
-      Res.second == &RISCV::GPRPF64RegClass) {
-    if (Subtarget.is64Bit() || VT == MVT::Other)
-      return std::make_pair(Res.first, &RISCV::GPRRegClass);
-    return std::make_pair(0, nullptr);
-  }
-
-  if (Res.second == &RISCV::GPRF16RegClass) {
-    if (VT == MVT::Other)
-      return std::make_pair(Res.first, &RISCV::GPRRegClass);
-    return std::make_pair(0, nullptr);
-  }
+  // If we picked one of the Zfinx register classes, remap it to the GPR class.
+  // FIXME: When Zfinx is supported in CodeGen this will need to take the
+  // Subtarget into account.
+  if (Res.second == &RISCV::GPRF16RegClass ||
+      Res.second == &RISCV::GPRF32RegClass ||
+      Res.second == &RISCV::GPRF64RegClass)
+    return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
   return Res;
 }

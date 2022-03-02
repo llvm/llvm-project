@@ -111,3 +111,47 @@ define half @constraint_f_half_abi_name(half %a) nounwind {
   %2 = tail call half asm "fadd.s $0, $1, $2", "={ft0},{fa0},{fs0}"(half %a, half %1)
   ret half %2
 }
+
+define half @constraint_gpr(half %x) {
+; RV32ZFH-LABEL: constraint_gpr:
+; RV32ZFH:       # %bb.0:
+; RV32ZFH-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFH-NEXT:    fmv.x.h a0, fa0
+; RV32ZFH-NEXT:    #APP
+; RV32ZFH-NEXT:    mv a0, a0
+; RV32ZFH-NEXT:    #NO_APP
+; RV32ZFH-NEXT:    fmv.h.x fa0, a0
+; RV32ZFH-NEXT:    ret
+;
+; RV64ZFH-LABEL: constraint_gpr:
+; RV64ZFH:       # %bb.0:
+; RV64ZFH-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFH-NEXT:    fmv.x.h a0, fa0
+; RV64ZFH-NEXT:    #APP
+; RV64ZFH-NEXT:    mv a0, a0
+; RV64ZFH-NEXT:    #NO_APP
+; RV64ZFH-NEXT:    fmv.h.x fa0, a0
+; RV64ZFH-NEXT:    ret
+;
+; RV32DZFH-LABEL: constraint_gpr:
+; RV32DZFH:       # %bb.0:
+; RV32DZFH-NEXT:    .cfi_def_cfa_offset 0
+; RV32DZFH-NEXT:    fmv.x.h a0, fa0
+; RV32DZFH-NEXT:    #APP
+; RV32DZFH-NEXT:    mv a0, a0
+; RV32DZFH-NEXT:    #NO_APP
+; RV32DZFH-NEXT:    fmv.h.x fa0, a0
+; RV32DZFH-NEXT:    ret
+;
+; RV64DZFH-LABEL: constraint_gpr:
+; RV64DZFH:       # %bb.0:
+; RV64DZFH-NEXT:    .cfi_def_cfa_offset 0
+; RV64DZFH-NEXT:    fmv.x.h a0, fa0
+; RV64DZFH-NEXT:    #APP
+; RV64DZFH-NEXT:    mv a0, a0
+; RV64DZFH-NEXT:    #NO_APP
+; RV64DZFH-NEXT:    fmv.h.x fa0, a0
+; RV64DZFH-NEXT:    ret
+  %1 = tail call half asm sideeffect alignstack "mv $0, $1", "={x10},{x10}"(half %x)
+  ret half %1
+}
