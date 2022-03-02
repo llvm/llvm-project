@@ -13,7 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERBANKINFO_H
 
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 
 #define GET_REGBANK_DECLARATIONS
 #include "X86GenRegisterBank.inc"
