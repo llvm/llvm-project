@@ -52,7 +52,7 @@ else()
   append_list_if(COMPILER_RT_HAS_LIBEXECINFO -lexecinfo ORC_UNITTEST_LINK_FLAGS)
 endif()
 
-set(ORC_DEPS gtest orc)
+set(ORC_DEPS llvm_gtest orc)
 # ORC uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(ORC_DEPS cxx-headers)
