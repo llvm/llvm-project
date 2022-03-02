@@ -16,7 +16,7 @@ _start:
   .cfi_startproc
   call foo
   retq
-  .size main, .-main
+  .size _start, .-_start
   .cfi_endproc
 
   .globl  foo
