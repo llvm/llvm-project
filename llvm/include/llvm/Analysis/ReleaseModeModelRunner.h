@@ -20,7 +20,6 @@
 #include <memory>
 #include <vector>
 
-using namespace llvm;
 namespace llvm {
 
 /// ReleaseModeModelRunner - production mode implementation of the
