@@ -279,8 +279,7 @@ define i8 @test_switch(i8 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 42
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 1, [[SW_1]] ], [ 7, [[SW_7]] ], [ 19, [[SW_19]] ]
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    ret i8 [[COND]]
 ;
 entry:
   switch i8 %cond, label %default [
@@ -321,8 +320,7 @@ define i8 @test_switch_direct_edge(i8 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 42
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 1, [[SW_1]] ], [ 7, [[SW_7]] ], [ 19, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    ret i8 [[COND]]
 ;
 entry:
   switch i8 %cond, label %default [
@@ -396,8 +394,7 @@ define i8 @test_switch_subset(i8 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 42
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 1, [[SW_1]] ], [ 7, [[SW_7]] ]
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    ret i8 [[COND]]
 ;
 entry:
   switch i8 %cond, label %default [
@@ -484,8 +481,8 @@ define i8 @test_switch_inverted(i8 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 42
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ -1, [[SW_0]] ], [ -2, [[SW_1]] ], [ -3, [[SW_2]] ]
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[COND]], -1
+; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
   switch i8 %cond, label %default [
