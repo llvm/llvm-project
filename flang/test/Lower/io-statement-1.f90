@@ -6,6 +6,12 @@
  real :: a(100)
 
   ! CHECK-LABEL: _QQmain
+  ! CHECK: call {{.*}}BeginOpenUnit
+  ! CHECK-DAG: call {{.*}}SetFile
+  ! CHECK-DAG: call {{.*}}SetAccess
+  ! CHECK: call {{.*}}EndIoStatement
+  open(8, file="foo", access="sequential")
+
   ! CHECK: call {{.*}}BeginExternalListInput
   ! CHECK: call {{.*}}InputInteger
   ! CHECK: call {{.*}}InputReal32
@@ -17,6 +23,10 @@
   ! CHECK: call {{.*}}OutputReal32
   ! CHECK: call {{.*}}EndIoStatement
   write (8,*) i, f
+
+  ! CHECK: call {{.*}}BeginClose
+  ! CHECK: call {{.*}}EndIoStatement
+  close(8)
 
   ! CHECK: call {{.*}}BeginExternalListOutput
   ! CHECK: call {{.*}}OutputAscii
