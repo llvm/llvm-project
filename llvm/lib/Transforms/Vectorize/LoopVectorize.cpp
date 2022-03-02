@@ -2458,12 +2458,8 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
 }
 
 /// Compute scalar induction steps. \p ScalarIV is the scalar induction
-/// variable on which to base the steps, \p Step is the size of the step, and
-/// \p EntryVal is the value from the original loop that maps to the steps.
-/// Note that \p EntryVal doesn't have to be an induction variable - it
-/// can also be a truncate instruction.
+/// variable on which to base the steps, \p Step is the size of the step.
 static void buildScalarSteps(Value *ScalarIV, Value *Step,
-                             Instruction *EntryVal,
                              const InductionDescriptor &ID, VPValue *Def,
                              VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
@@ -2707,7 +2703,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
     // the number of instructions in the loop in the common case prior to
     // InstCombine. We will be trading one vector extract for each scalar step.
     Value *ScalarIV = CreateScalarIV(Step);
-    buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, State);
+    buildScalarSteps(ScalarIV, Step, ID, Def, State);
   }
 }
 
@@ -9766,7 +9762,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
 
   Value *ScalarIV = CreateScalarIV(Step);
   if (State.VF.isVector()) {
-    buildScalarSteps(ScalarIV, Step, IV, IndDesc, this, State);
+    buildScalarSteps(ScalarIV, Step, IndDesc, this, State);
     return;
   }
 
