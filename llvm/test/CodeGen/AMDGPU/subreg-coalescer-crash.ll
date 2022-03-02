@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL:{{^}}row_filter_C1_D0:
