@@ -1824,6 +1824,9 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::SHL:
     // These nodes are marked as 'custom' for combining purposes only.
     // We know that they are legal. See LowerAdd in ISelLowering.
     return (Cost + 1) * LT.first;
