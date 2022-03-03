@@ -450,3 +450,65 @@ entry:
   %1 = extractvalue { i128, i1 } %0, 0
   ret i128 %1
 }
+
+define i1 @cas_acqrel_acquire_check_succ(i128* %a, i128 %cmp, i128 %new) {
+; CHECK-LABEL: cas_acqrel_acquire_check_succ:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:  .LBB11_1: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    lqarx r8, 0, r3
+; CHECK-NEXT:    xor r11, r9, r5
+; CHECK-NEXT:    xor r10, r8, r4
+; CHECK-NEXT:    or. r11, r11, r10
+; CHECK-NEXT:    bne cr0, .LBB11_3
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    mr r11, r7
+; CHECK-NEXT:    mr r10, r6
+; CHECK-NEXT:    stqcx. r10, 0, r3
+; CHECK-NEXT:    bne cr0, .LBB11_1
+; CHECK-NEXT:    b .LBB11_4
+; CHECK-NEXT:  .LBB11_3: # %entry
+; CHECK-NEXT:    stqcx. r8, 0, r3
+; CHECK-NEXT:  .LBB11_4: # %entry
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    xor r3, r5, r9
+; CHECK-NEXT:    or r3, r3, r4
+; CHECK-NEXT:    cntlzd r3, r3
+; CHECK-NEXT:    rldicl r3, r3, 58, 63
+; CHECK-NEXT:    blr
+;
+; PWR7-LABEL: cas_acqrel_acquire_check_succ:
+; PWR7:       # %bb.0: # %entry
+; PWR7-NEXT:    mflr r0
+; PWR7-NEXT:    std r0, 16(r1)
+; PWR7-NEXT:    stdu r1, -144(r1)
+; PWR7-NEXT:    .cfi_def_cfa_offset 144
+; PWR7-NEXT:    .cfi_offset lr, 16
+; PWR7-NEXT:    .cfi_offset r29, -24
+; PWR7-NEXT:    .cfi_offset r30, -16
+; PWR7-NEXT:    std r29, 120(r1) # 8-byte Folded Spill
+; PWR7-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
+; PWR7-NEXT:    mr r30, r5
+; PWR7-NEXT:    mr r29, r4
+; PWR7-NEXT:    lwsync
+; PWR7-NEXT:    bl __sync_val_compare_and_swap_16
+; PWR7-NEXT:    nop
+; PWR7-NEXT:    xor r3, r3, r29
+; PWR7-NEXT:    xor r4, r4, r30
+; PWR7-NEXT:    lwsync
+; PWR7-NEXT:    or r3, r4, r3
+; PWR7-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
+; PWR7-NEXT:    ld r29, 120(r1) # 8-byte Folded Reload
+; PWR7-NEXT:    cntlzd r3, r3
+; PWR7-NEXT:    rldicl r3, r3, 58, 63
+; PWR7-NEXT:    addi r1, r1, 144
+; PWR7-NEXT:    ld r0, 16(r1)
+; PWR7-NEXT:    mtlr r0
+; PWR7-NEXT:    blr
+entry:
+  %0 = cmpxchg i128* %a, i128 %cmp, i128 %new acq_rel acquire
+  %1 = extractvalue { i128, i1 } %0, 1
+  ret i1 %1
+}
