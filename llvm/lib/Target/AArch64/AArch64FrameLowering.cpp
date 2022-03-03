@@ -2012,8 +2012,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   // right thing for the emergency spill slot.
   bool UseFP = false;
   if (AFI->hasStackFrame() && !isSVE) {
-    // We shouldn't prefer using the FP when there is an SVE area
-    // in between the FP and the non-SVE locals/spills.
+    // We shouldn't prefer using the FP to access fixed-sized stack objects when
+    // there are scalable (SVE) objects in between the FP and the fixed-sized
+    // objects.
     PreferFP &= !SVEStackSize;
 
     // Note: Keeping the following as multiple 'if' statements rather than
@@ -2034,7 +2035,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       // offsets is smaller than for positive ones. If an offset is available
       // via the FP and the SP, use whichever is closest.
       bool FPOffsetFits = !ForSimm || FPOffset >= -256;
-      PreferFP |= Offset > -FPOffset;
+      PreferFP |= Offset > -FPOffset && !SVEStackSize;
 
       if (MFI.hasVarSizedObjects()) {
         // If we have variable sized objects, we can use either FP or BP, as the
