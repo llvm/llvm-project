@@ -595,7 +595,7 @@ public:
   }
 
   void appendHostAssocTupleArg(mlir::Type tupTy) {
-    MLIRContext *ctxt = tupTy.getContext();
+    mlir::MLIRContext *ctxt = tupTy.getContext();
     addFirOperand(tupTy, nextPassedArgPosition(), Property::BaseAddress,
                   {mlir::NamedAttribute{
                       mlir::StringAttr::get(ctxt, fir::getHostAssocAttrName()),

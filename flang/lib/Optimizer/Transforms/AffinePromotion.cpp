@@ -34,6 +34,7 @@
 #define DEBUG_TYPE "flang-affine-promotion"
 
 using namespace fir;
+using namespace mlir;
 
 namespace {
 struct AffineLoopAnalysis;

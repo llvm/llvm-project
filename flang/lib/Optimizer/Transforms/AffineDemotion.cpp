@@ -39,6 +39,7 @@
 #define DEBUG_TYPE "flang-affine-demotion"
 
 using namespace fir;
+using namespace mlir;
 
 namespace {
 

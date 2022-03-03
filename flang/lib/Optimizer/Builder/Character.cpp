@@ -18,6 +18,8 @@
 
 #define DEBUG_TYPE "flang-lower-character"
 
+using namespace mlir;
+
 //===----------------------------------------------------------------------===//
 // CharacterExprHelper implementation
 //===----------------------------------------------------------------------===//

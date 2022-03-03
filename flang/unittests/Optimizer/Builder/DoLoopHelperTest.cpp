@@ -12,6 +12,8 @@
 #include "flang/Optimizer/Support/KindMapping.h"
 #include <string>
 
+using namespace mlir;
+
 struct DoLoopHelperTest : public testing::Test {
 public:
   void SetUp() {

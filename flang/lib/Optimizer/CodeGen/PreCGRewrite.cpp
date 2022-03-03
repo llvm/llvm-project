@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 using namespace fir;
+using namespace mlir;
 
 #define DEBUG_TYPE "flang-codegen-rewrite"
 

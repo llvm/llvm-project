@@ -21,6 +21,7 @@
 #define DEBUG_TYPE "flang-array-value-copy"
 
 using namespace fir;
+using namespace mlir;
 
 using OperationUseMapT = llvm::DenseMap<mlir::Operation *, mlir::Operation *>;
 
