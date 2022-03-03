@@ -1990,10 +1990,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // ARM TODO
     }
 
-    auto buf = WritableMemoryBuffer::getNewUninitMemBuffer(libSize);
-    if (buf) {
-      memcpy(buf->getBufferStart(), libBufPtr, libSize);
-      driver->addBuffer(std::move(buf), false, false);
+    if (libSize) {
+      auto buf = WritableMemoryBuffer::getNewUninitMemBuffer(libSize);
+      if (buf) {
+        memcpy(buf->getBufferStart(), libBufPtr, libSize);
+        driver->addBuffer(std::move(buf), false, false);
+      }
     }
   }
 
