@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=streaming-sve < %s | FileCheck %s
 
 ; ld2b
 define <vscale x 32 x i8> @ld2.nxv32i8(<vscale x 16 x i1> %Pg, i8 *%addr, i64 %a) {
@@ -256,4 +257,4 @@ declare <vscale x 16 x float> @llvm.aarch64.sve.ld4.nxv16f32.nxv4i1.p0f32(<vscal
 declare <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1.p0f64(<vscale x 2 x i1>, double*)
 
 ; +bf16 is required for the bfloat version.
-attributes #0 = { "target-features"="+sve,+bf16" }
+attributes #0 = { "target-features"="+bf16" }
