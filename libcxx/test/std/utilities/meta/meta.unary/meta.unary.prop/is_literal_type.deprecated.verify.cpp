@@ -15,10 +15,6 @@
 
 #include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**) {
-  static_assert(std::is_literal_type<int>::value, ""); // expected-warning {{'is_literal_type<int>' is deprecated}}
-
-  return 0;
+void f() {
+  [[maybe_unused]] std::is_literal_type<int> a; // expected-warning {{'is_literal_type<int>' is deprecated}}
 }
