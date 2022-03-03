@@ -32,3 +32,23 @@ namespace test1 {
   template <> int AB::foo = 0; // expected-error{{extraneous 'template<>'}}
   int AB::bar = 1;
 }
+
+namespace GH54151 {
+
+struct S {
+  int i<0>;   // expected-error  {{member 'i' cannot have template arguments}}
+  int j<int>; // expected-error  {{member 'j' cannot have template arguments}}
+
+  static int k<12>; // expected-error {{template specialization requires 'template<>'}} \
+                       expected-error{{no variable template matches specialization}}
+  void f<12>();     // expected-error {{template specialization requires 'template<>'}} \
+                    // expected-error {{no function template matches function template specialization 'f'}}
+};
+
+template <typename T, int N>
+struct U {
+  int i<N>; // expected-error {{member 'i' cannot have template arguments}}
+  int j<T>; // expected-error {{member 'j' cannot have template arguments}}
+};
+
+} // namespace GH54151
