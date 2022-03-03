@@ -1706,6 +1706,9 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
                                    .Case("asimd", "neon")
                                    .Case("fp", "fp-armv8")
                                    .Case("crc32", "crc")
+                                   .Case("atomics", "lse")
+                                   .Case("sve", "sve")
+                                   .Case("sve2", "sve2")
 #else
                                    .Case("half", "fp16")
                                    .Case("neon", "neon")
