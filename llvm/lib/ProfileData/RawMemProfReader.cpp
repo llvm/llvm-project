@@ -10,10 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cstdint>
 #include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
@@ -26,6 +29,7 @@
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
 
@@ -168,6 +172,11 @@ Error report(Error E, const StringRef Context) {
   return joinErrors(createStringError(inconvertibleErrorCode(), Context),
                     std::move(E));
 }
+
+bool isRuntimePath(const StringRef Path) {
+  return StringRef(llvm::sys::path::convert_to_slash(Path))
+      .contains("memprof/memprof_");
+}
 } // namespace
 
 Expected<std::unique_ptr<RawMemProfReader>>
@@ -218,6 +227,9 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
   OS << "MemprofProfile:\n";
+  // TODO: Update printSummaries to print out the data after the profile has
+  // been symbolized and pruned. We can parse some raw profile characteristics
+  // from the data buffer for additional information.
   printSummaries(OS);
   // Print out the merged contents of the profiles.
   OS << "  Records:\n";
@@ -276,19 +288,28 @@ Error RawMemProfReader::initialize() {
   if (Error E = readRawProfile())
     return E;
 
-  return symbolizeStackFrames();
+  return symbolizeAndFilterStackFrames();
 }
 
-Error RawMemProfReader::symbolizeStackFrames() {
+Error RawMemProfReader::symbolizeAndFilterStackFrames() {
   // The specifier to use when symbolization is requested.
   const DILineInfoSpecifier Specifier(
       DILineInfoSpecifier::FileLineInfoKind::RawValue,
       DILineInfoSpecifier::FunctionNameKind::LinkageName);
 
-  for (const auto &Entry : StackMap) {
+  // For entries where all PCs in the callstack are discarded, we erase the
+  // entry from the stack map.
+  llvm::SmallVector<uint64_t> EntriesToErase;
+  // We keep track of all prior discarded entries so that we can avoid invoking
+  // the symbolizer for such entries.
+  llvm::DenseSet<uint64_t> AllVAddrsToDiscard;
+  for (auto &Entry : StackMap) {
     for (const uint64_t VAddr : Entry.getSecond()) {
-      // Check if we have already symbolized and cached the result.
-      if (SymbolizedFrame.count(VAddr) > 0)
+      // Check if we have already symbolized and cached the result or if we
+      // don't want to attempt symbolization since we know this address is bad.
+      // In this case the address is also removed from the current callstack.
+      if (SymbolizedFrame.count(VAddr) > 0 ||
+          AllVAddrsToDiscard.contains(VAddr))
         continue;
 
       Expected<DIInliningInfo> DIOr = Symbolizer->symbolizeInlinedCode(
@@ -296,6 +317,13 @@ Error RawMemProfReader::symbolizeStackFrames() {
       if (!DIOr)
         return DIOr.takeError();
       DIInliningInfo DI = DIOr.get();
+
+      // Drop frames which we can't symbolize or if they belong to the runtime.
+      if (DI.getFrame(0).FunctionName == DILineInfo::BadString ||
+          isRuntimePath(DI.getFrame(0).FileName)) {
+        AllVAddrsToDiscard.insert(VAddr);
+        continue;
+      }
 
       for (size_t I = 0; I < DI.getNumberOfFrames(); I++) {
         const auto &Frame = DI.getFrame(I);
@@ -311,7 +339,28 @@ Error RawMemProfReader::symbolizeStackFrames() {
             I != 0);
       }
     }
+
+    auto &CallStack = Entry.getSecond();
+    CallStack.erase(std::remove_if(CallStack.begin(), CallStack.end(),
+                                   [&AllVAddrsToDiscard](const uint64_t A) {
+                                     return AllVAddrsToDiscard.contains(A);
+                                   }),
+                    CallStack.end());
+    if (CallStack.empty())
+      EntriesToErase.push_back(Entry.getFirst());
   }
+
+  // Drop the entries where the callstack is empty.
+  for (const uint64_t Id : EntriesToErase) {
+    StackMap.erase(Id);
+    ProfileData.erase(Id);
+  }
+
+  if (StackMap.empty())
+    return make_error<InstrProfError>(
+        instrprof_error::malformed,
+        "no entries in callstack map after symbolization");
+
   return Error::success();
 }
 
