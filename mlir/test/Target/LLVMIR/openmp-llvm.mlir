@@ -751,6 +751,66 @@ llvm.func @collapse_wsloop(
 
 // -----
 
+// Check that the loop bounds are emitted in the correct location in case of
+// collapse for dynamic schedule. This only checks the overall shape of the IR,
+// detailed checking is done by the OpenMPIRBuilder.
+
+// CHECK-LABEL: @collapse_wsloop_dynamic
+// CHECK: i32* noalias %[[TIDADDR:[0-9A-Za-z.]*]]
+// CHECK: load i32, i32* %[[TIDADDR]]
+// CHECK: store
+// CHECK: load
+// CHECK: %[[LB0:.*]] = load i32
+// CHECK: %[[UB0:.*]] = load i32
+// CHECK: %[[STEP0:.*]] = load i32
+// CHECK: %[[LB1:.*]] = load i32
+// CHECK: %[[UB1:.*]] = load i32
+// CHECK: %[[STEP1:.*]] = load i32
+// CHECK: %[[LB2:.*]] = load i32
+// CHECK: %[[UB2:.*]] = load i32
+// CHECK: %[[STEP2:.*]] = load i32
+
+llvm.func @collapse_wsloop_dynamic(
+    %0: i32, %1: i32, %2: i32,
+    %3: i32, %4: i32, %5: i32,
+    %6: i32, %7: i32, %8: i32,
+    %20: !llvm.ptr<i32>) {
+  omp.parallel {
+    // CHECK: icmp slt i32 %[[LB0]], 0
+    // CHECK-COUNT-4: select
+    // CHECK: %[[TRIPCOUNT0:.*]] = select
+    // CHECK: br label %[[PREHEADER:.*]]
+    //
+    // CHECK: [[PREHEADER]]:
+    // CHECK: icmp slt i32 %[[LB1]], 0
+    // CHECK-COUNT-4: select
+    // CHECK: %[[TRIPCOUNT1:.*]] = select
+    // CHECK: icmp slt i32 %[[LB2]], 0
+    // CHECK-COUNT-4: select
+    // CHECK: %[[TRIPCOUNT2:.*]] = select
+    // CHECK: %[[PROD:.*]] = mul nuw i32 %[[TRIPCOUNT0]], %[[TRIPCOUNT1]]
+    // CHECK: %[[TOTAL:.*]] = mul nuw i32 %[[PROD]], %[[TRIPCOUNT2]]
+    // CHECK: br label %[[COLLAPSED_PREHEADER:.*]]
+    //
+    // CHECK: [[COLLAPSED_PREHEADER]]:
+    // CHECK: store i32 1, i32*
+    // CHECK: store i32 %[[TOTAL]], i32*
+    // CHECK: call void @__kmpc_dispatch_init_4u
+    omp.wsloop (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) collapse(3) schedule(dynamic) {
+      %31 = llvm.load %20 : !llvm.ptr<i32>
+      %32 = llvm.add %31, %arg0 : i32
+      %33 = llvm.add %32, %arg1 : i32
+      %34 = llvm.add %33, %arg2 : i32
+      llvm.store %34, %20 : !llvm.ptr<i32>
+      omp.yield
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_ordered
 llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     %arg4: i64, %arg5: i64, %arg6: i64) -> () {
