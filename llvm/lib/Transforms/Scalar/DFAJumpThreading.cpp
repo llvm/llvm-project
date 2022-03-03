@@ -81,6 +81,10 @@
 #include <algorithm>
 #include <deque>
 
+#ifdef EXPENSIVE_CHECKS
+#include "llvm/IR/Verifier.h"
+#endif
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dfa-jump-threading"
