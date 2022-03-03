@@ -71,6 +71,10 @@ public:
   OutputBuffer(char *StartBuf, size_t Size)
       : Buffer(StartBuf), CurrentPosition(0), BufferCapacity(Size) {}
   OutputBuffer() = default;
+  // Non-copyable
+  OutputBuffer(const OutputBuffer &) = delete;
+  OutputBuffer &operator=(const OutputBuffer &) = delete;
+
   void reset(char *Buffer_, size_t BufferCapacity_) {
     CurrentPosition = 0;
     Buffer = Buffer_;
@@ -97,7 +101,7 @@ public:
     return *this;
   }
 
-  OutputBuffer prepend(StringView R) {
+  OutputBuffer &prepend(StringView R) {
     size_t Size = R.size();
 
     grow(Size);
