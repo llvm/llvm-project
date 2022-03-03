@@ -148,7 +148,7 @@ API Changes
 - The ``<experimental/coroutine>`` header is deprecated, as is any
   use of coroutines without C++20. Use C++20's ``<coroutine>`` header
   instead. The ``<experimental/coroutine>`` header will be removed
-  in LLVM 15.
+  in LLVM 16.
 
 - ``_VSTD`` is now an alias for ``std`` instead of ``std::_LIBCPP_ABI_NAMESPACE``.
   This is technically not a functional change, except for folks that might have been
