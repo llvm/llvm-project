@@ -1041,7 +1041,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
-  if (Subtarget.hasStdExtZfh())
+  if (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZbb())
     setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   if (Subtarget.hasStdExtF()) {
     setTargetDAGCombine(ISD::ZERO_EXTEND);
@@ -7617,14 +7617,42 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performSIGN_EXTEND_INREG(SDNode *N, SelectionDAG &DAG) {
+static SDValue
+performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
   SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
 
   // Fold (sext_inreg (fmv_x_anyexth X), i16) -> (fmv_x_signexth X)
   if (Src.getOpcode() == RISCVISD::FMV_X_ANYEXTH &&
       cast<VTSDNode>(N->getOperand(1))->getVT().bitsGE(MVT::i16))
-    return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, SDLoc(N), VT,
                        Src.getOperand(0));
+
+  // Fold (i64 (sext_inreg (abs X), i32)) ->
+  // (i64 (smax (sext_inreg (neg X), i32), X)) if X has more than 32 sign bits.
+  // The (sext_inreg (neg X), i32) will be selected to negw by isel. This
+  // pattern occurs after type legalization of (i32 (abs X)) on RV64 if the user
+  // of the (i32 (abs X)) is a sext or setcc or something else that causes type
+  // legalization to add a sext_inreg after the abs. The (i32 (abs X)) will have
+  // been type legalized to (i64 (abs (sext_inreg X, i32))), but the sext_inreg
+  // may get combined into an earlier operation so we need to use
+  // ComputeNumSignBits.
+  // NOTE: (i64 (sext_inreg (abs X), i32)) can also be created for
+  // (i64 (ashr (shl (abs X), 32), 32)) without any type legalization so
+  // we can't assume that X has 33 sign bits. We must check.
+  if (Subtarget.hasStdExtZbb() && Subtarget.is64Bit() &&
+      Src.getOpcode() == ISD::ABS && Src.hasOneUse() && VT == MVT::i64 &&
+      cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32 &&
+      DAG.ComputeNumSignBits(Src.getOperand(0)) > 32) {
+    SDLoc DL(N);
+    SDValue Freeze = DAG.getFreeze(Src.getOperand(0));
+    SDValue Neg =
+        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, MVT::i64), Freeze);
+    Neg = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Neg,
+                      DAG.getValueType(MVT::i32));
+    return DAG.getNode(ISD::SMAX, DL, MVT::i64, Freeze, Neg);
+  }
 
   return SDValue();
 }
@@ -8244,7 +8272,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::XOR:
     return performXORCombine(N, DAG);
   case ISD::SIGN_EXTEND_INREG:
-    return performSIGN_EXTEND_INREG(N, DAG);
+    return performSIGN_EXTEND_INREGCombine(N, DAG, Subtarget);
   case ISD::ANY_EXTEND:
     return performANY_EXTENDCombine(N, DCI, Subtarget);
   case ISD::ZERO_EXTEND:

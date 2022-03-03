@@ -960,7 +960,6 @@ define i32 @abs_i32(i32 %x) {
   ret i32 %abs
 }
 
-; FIXME: We can remove the sext.w on RV64ZBB by using negw.
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:
@@ -971,9 +970,8 @@ define signext i32 @abs_i32_sext(i32 signext %x) {
 ;
 ; RV64ZBB-LABEL: abs_i32_sext:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    neg a1, a0
+; RV64ZBB-NEXT:    negw a1, a0
 ; RV64ZBB-NEXT:    max a0, a0, a1
-; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %abs
