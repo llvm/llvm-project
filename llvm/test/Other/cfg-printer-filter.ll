@@ -1,12 +1,12 @@
 ; RUN: rm -f %t.other.dot %t-only.other.dot
 
 ;; Both f and func are dumped because their names contain the pattern 'f' as a substring.
-; RUN: opt < %s -dot-cfg -cfg-dot-filename-prefix=%t -cfg-func-name=f 2>/dev/null
+; RUN: opt < %s -dot-cfg -cfg-dot-filename-prefix=%t -cfg-func-name=f 2>/dev/null > /dev/null
 ; RUN: FileCheck %s -input-file=%t.f.dot -check-prefix=F
 ; RUN: FileCheck %s -input-file=%t.func.dot -check-prefix=Func
 ; RUN: not test -f %t.other.dot
 
-; RUN: opt < %s -dot-cfg-only -cfg-dot-filename-prefix=%t-only -cfg-func-name=f 2>/dev/null
+; RUN: opt < %s -dot-cfg-only -cfg-dot-filename-prefix=%t-only -cfg-func-name=f 2>/dev/null > /dev/null
 ; RUN: FileCheck %s -input-file=%t-only.f.dot -check-prefix=F
 ; RUN: FileCheck %s -input-file=%t-only.func.dot -check-prefix=Func
 ; RUN: not test -f %t-only.other.dot

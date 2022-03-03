@@ -783,7 +783,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                                           stdout = stdout,
                                           stderr = stderr,
                                           env = cmd_shenv.env,
-                                          close_fds = kUseCloseFDs))
+                                          close_fds = kUseCloseFDs,
+                                          universal_newlines = True,
+                                          errors = 'replace'))
             proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])

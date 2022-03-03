@@ -10,7 +10,7 @@
 
 // Test weak_ptr<T> with trivial_abi as return-type.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 
 // XFAIL: gcc
 
