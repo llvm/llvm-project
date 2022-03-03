@@ -90,13 +90,13 @@ define void @store_reverse(i64* %p3) {
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 10
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
 ; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 11
+; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 8
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 11
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[ARRAYIDX1]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[ARRAYIDX14]] to <4 x i64>*
 ; CHECK-NEXT:    store <4 x i64> [[SHUFFLE]], <4 x i64>* [[TMP5]], align 8
@@ -148,9 +148,6 @@ define void @store15(float* %p1, i32 %p2, i64* %p3, float* %p4) {
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
@@ -167,6 +164,9 @@ define void @store15(float* %p1, i32 %p2, i64* %p3, float* %p4) {
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[TMP5]], align 8
 ; CHECK-NEXT:    ret void
@@ -230,9 +230,6 @@ define void @store16(float* %p1, i32 %p2, i64* %p3, float* %p4) {
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
@@ -250,6 +247,9 @@ define void @store16(float* %p1, i32 %p2, i64* %p3, float* %p4) {
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[TMP5]], align 8
 ; CHECK-NEXT:    ret void

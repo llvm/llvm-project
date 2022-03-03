@@ -101,6 +101,7 @@ protected:
   bool GFX8Insts;
   bool GFX9Insts;
   bool GFX90AInsts;
+  bool GFX940Insts;
   bool GFX10Insts;
   bool GFX11Insts;
   bool GFX10_3Insts;
@@ -565,7 +566,7 @@ public:
   // The ST addressing mode means no registers are used, either VGPR or SGPR,
   // but only immediate offset is swizzled and added to the FLAT scratch base.
   bool hasFlatScratchSTMode() const {
-    return hasFlatScratchInsts() && hasGFX10_3Insts();
+    return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
   }
 
   bool hasScalarFlatScratchInsts() const {
@@ -1018,6 +1019,10 @@ public:
   bool hasDelayAlu() const { return GFX11Insts; }
 
   bool hasPackedTID() const { return HasPackedTID; }
+
+  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // hasGFX90AInsts is also true.
+  bool hasGFX940Insts() const { return GFX940Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

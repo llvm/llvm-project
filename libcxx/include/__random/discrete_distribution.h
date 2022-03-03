@@ -213,6 +213,7 @@ template<class _URNG>
 _IntType
 discrete_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     uniform_real_distribution<double> __gen;
     return static_cast<_IntType>(
            _VSTD::upper_bound(__p.__p_.begin(), __p.__p_.end(), __gen(__g)) -

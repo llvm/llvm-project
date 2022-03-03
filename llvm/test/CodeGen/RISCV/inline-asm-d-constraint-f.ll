@@ -71,3 +71,37 @@ define double @constraint_f_double_abi_name(double %a) nounwind {
   %2 = tail call double asm "fadd.d $0, $1, $2", "={ft0},{fa1},{fs0}"(double %a, double %1)
   ret double %2
 }
+
+define double @constraint_gpr(double %x) {
+; RV32F-LABEL: constraint_gpr:
+; RV32F:       # %bb.0:
+; RV32F-NEXT:    addi sp, sp, -32
+; RV32F-NEXT:    .cfi_def_cfa_offset 32
+; RV32F-NEXT:    sw a0, 8(sp)
+; RV32F-NEXT:    sw a1, 12(sp)
+; RV32F-NEXT:    fld ft0, 8(sp)
+; RV32F-NEXT:    fsd ft0, 24(sp)
+; RV32F-NEXT:    lw a0, 24(sp)
+; RV32F-NEXT:    lw a1, 28(sp)
+; RV32F-NEXT:    #APP
+; RV32F-NEXT:    mv a0, a0
+; RV32F-NEXT:    #NO_APP
+; RV32F-NEXT:    sw a1, 20(sp)
+; RV32F-NEXT:    sw a0, 16(sp)
+; RV32F-NEXT:    fld ft0, 16(sp)
+; RV32F-NEXT:    fsd ft0, 8(sp)
+; RV32F-NEXT:    lw a0, 8(sp)
+; RV32F-NEXT:    lw a1, 12(sp)
+; RV32F-NEXT:    addi sp, sp, 32
+; RV32F-NEXT:    ret
+;
+; RV64F-LABEL: constraint_gpr:
+; RV64F:       # %bb.0:
+; RV64F-NEXT:    .cfi_def_cfa_offset 0
+; RV64F-NEXT:    #APP
+; RV64F-NEXT:    mv a0, a0
+; RV64F-NEXT:    #NO_APP
+; RV64F-NEXT:    ret
+  %1 = tail call double asm sideeffect alignstack "mv $0, $1", "={x10},{x10}"(double %x)
+  ret double %1
+}

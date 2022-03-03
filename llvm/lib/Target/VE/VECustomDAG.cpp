@@ -61,6 +61,10 @@ bool isMaskArithmetic(SDValue Op) {
 /// \returns the VVP_* SDNode opcode corresponsing to \p OC.
 Optional<unsigned> getVVPOpcode(unsigned Opcode) {
   switch (Opcode) {
+  case ISD::MLOAD:
+    return VEISD::VVP_LOAD;
+  case ISD::MSTORE:
+    return VEISD::VVP_STORE;
 #define HANDLE_VP_TO_VVP(VPOPC, VVPNAME)                                       \
   case ISD::VPOPC:                                                             \
     return VEISD::VVPNAME;
@@ -166,8 +170,12 @@ Optional<int> getMaskPos(unsigned Opc) {
   if (isVVPBinaryOp(Opc))
     return 2;
 
-  // VM Opcodes.
+  // Other opcodes.
   switch (Opc) {
+  case ISD::MSTORE:
+    return 4;
+  case ISD::MLOAD:
+    return 3;
   case VEISD::VVP_SELECT:
     return 2;
   }
@@ -176,6 +184,116 @@ Optional<int> getMaskPos(unsigned Opc) {
 }
 
 bool isLegalAVL(SDValue AVL) { return AVL->getOpcode() == VEISD::LEGALAVL; }
+
+/// Node Properties {
+
+SDValue getNodeChain(SDValue Op) {
+  if (MemSDNode *MemN = dyn_cast<MemSDNode>(Op.getNode()))
+    return MemN->getChain();
+
+  switch (Op->getOpcode()) {
+  case VEISD::VVP_LOAD:
+  case VEISD::VVP_STORE:
+    return Op->getOperand(0);
+  }
+  return SDValue();
+}
+
+SDValue getMemoryPtr(SDValue Op) {
+  if (auto *MemN = dyn_cast<MemSDNode>(Op.getNode()))
+    return MemN->getBasePtr();
+
+  switch (Op->getOpcode()) {
+  case VEISD::VVP_LOAD:
+    return Op->getOperand(1);
+  case VEISD::VVP_STORE:
+    return Op->getOperand(2);
+  }
+  return SDValue();
+}
+
+Optional<EVT> getIdiomaticVectorType(SDNode *Op) {
+  unsigned OC = Op->getOpcode();
+
+  // For memory ops -> the transfered data type
+  if (auto MemN = dyn_cast<MemSDNode>(Op))
+    return MemN->getMemoryVT();
+
+  switch (OC) {
+  // Standard ISD.
+  case ISD::SELECT: // not aliased with VVP_SELECT
+  case ISD::CONCAT_VECTORS:
+  case ISD::EXTRACT_SUBVECTOR:
+  case ISD::VECTOR_SHUFFLE:
+  case ISD::BUILD_VECTOR:
+  case ISD::SCALAR_TO_VECTOR:
+    return Op->getValueType(0);
+  }
+
+  // Translate to VVP where possible.
+  if (auto VVPOpc = getVVPOpcode(OC))
+    OC = *VVPOpc;
+
+  switch (OC) {
+  default:
+  case VEISD::VVP_SETCC:
+    return Op->getOperand(0).getValueType();
+
+  case VEISD::VVP_SELECT:
+#define ADD_BINARY_VVP_OP(VVP_NAME, ...) case VEISD::VVP_NAME:
+#include "VVPNodes.def"
+    return Op->getValueType(0);
+
+  case VEISD::VVP_LOAD:
+    return Op->getValueType(0);
+
+  case VEISD::VVP_STORE:
+    return Op->getOperand(1)->getValueType(0);
+
+  // VEC
+  case VEISD::VEC_BROADCAST:
+    return Op->getValueType(0);
+  }
+}
+
+SDValue getLoadStoreStride(SDValue Op, VECustomDAG &CDAG) {
+  if (Op->getOpcode() == VEISD::VVP_STORE)
+    return Op->getOperand(3);
+  if (Op->getOpcode() == VEISD::VVP_LOAD)
+    return Op->getOperand(2);
+
+  if (isa<MemSDNode>(Op.getNode())) {
+    // Regular MLOAD/MSTORE/LOAD/STORE
+    // No stride argument -> use the contiguous element size as stride.
+    uint64_t ElemStride = getIdiomaticVectorType(Op.getNode())
+                              ->getVectorElementType()
+                              .getStoreSize();
+    return CDAG.getConstant(ElemStride, MVT::i64);
+  }
+  return SDValue();
+}
+
+SDValue getStoredValue(SDValue Op) {
+  switch (Op->getOpcode()) {
+  case VEISD::VVP_STORE:
+    return Op->getOperand(1);
+  }
+  if (auto *StoreN = dyn_cast<StoreSDNode>(Op.getNode()))
+    return StoreN->getValue();
+  if (auto *StoreN = dyn_cast<MaskedStoreSDNode>(Op.getNode()))
+    return StoreN->getValue();
+  if (auto *StoreN = dyn_cast<VPStoreSDNode>(Op.getNode()))
+    return StoreN->getValue();
+  return SDValue();
+}
+
+SDValue getNodePassthru(SDValue Op) {
+  if (auto *N = dyn_cast<MaskedLoadSDNode>(Op.getNode()))
+    return N->getPassThru();
+  return SDValue();
+}
+
+/// } Node Properties
 
 SDValue getNodeAVL(SDValue Op) {
   auto PosOpt = getAVLPos(Op->getOpcode());

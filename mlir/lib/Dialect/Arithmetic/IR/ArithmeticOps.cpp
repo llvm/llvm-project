@@ -1322,6 +1322,11 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   return BoolAttr::get(getContext(), val);
 }
 
+void arith::CmpIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.insert<CmpIExtSI, CmpIExtUI>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // CmpFOp
 //===----------------------------------------------------------------------===//
@@ -1849,6 +1854,20 @@ LogicalResult arith::SelectOp::verify() {
                          << conditionType;
   }
   return success();
+}
+//===----------------------------------------------------------------------===//
+// ShLIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
+  // Don't fold if shifting more than the bit width.
+  bool bounded = false;
+  auto result =
+      constFoldBinaryOp<IntegerAttr>(operands, [&](APInt a, const APInt &b) {
+        bounded = b.ule(b.getBitWidth());
+        return std::move(a).shl(b);
+      });
+  return bounded ? result : Attribute();
 }
 
 //===----------------------------------------------------------------------===//

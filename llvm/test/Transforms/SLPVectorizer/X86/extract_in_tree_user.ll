@@ -10,11 +10,11 @@ define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** @a, align 8
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[TMP0]], i64 12
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> poison, i64* [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64*> [[TMP1]], i64* [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 11, i64 56>
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[TMP0]], i64 12
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP6]], align 8
@@ -41,18 +41,18 @@ define void @fn2(i32* %a, i32* %b, float* %c) {
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 2
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 3
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 3
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i32 1
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[C]], i32 2
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[C]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP4]] to <4 x float>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP5]], i32 [[TMP6]])
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i32 1
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[C]], i32 2
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[C]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[C]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP7]], <4 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    ret void
@@ -103,11 +103,11 @@ define void @externally_used_ptrs() {
 ; CHECK-LABEL: @externally_used_ptrs(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** @a, align 8
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[TMP0]], i64 12
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> poison, i64* [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64*> [[TMP1]], i64* [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 56, i64 11>
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[TMP0]], i64 12
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 8

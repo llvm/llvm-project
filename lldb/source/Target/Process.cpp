@@ -2895,11 +2895,10 @@ void Process::CompleteAttach() {
       if (platform_sp) {
         GetTarget().SetPlatform(platform_sp);
         GetTarget().SetArchitecture(platform_arch);
-        LLDB_LOGF(log,
-                  "Process::%s switching platform to %s and architecture "
-                  "to %s based on info from attach",
-                  __FUNCTION__, platform_sp->GetName().AsCString(""),
-                  platform_arch.GetTriple().getTriple().c_str());
+        LLDB_LOG(log,
+                 "switching platform to {0} and architecture to {1} based on "
+                 "info from attach",
+                 platform_sp->GetName(), platform_arch.GetTriple().getTriple());
       }
     } else if (!process_arch.IsValid()) {
       ProcessInstanceInfo process_info;

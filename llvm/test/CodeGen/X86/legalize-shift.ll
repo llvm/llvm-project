@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-define void @PR36250() {
+define void @PR36250() nounwind {
 ; X86-LABEL: PR36250:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl (%eax), %eax

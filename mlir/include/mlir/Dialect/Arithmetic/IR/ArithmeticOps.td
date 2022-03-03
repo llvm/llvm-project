@@ -510,6 +510,7 @@ def Arith_ShLIOp : Arith_IntBinaryOp<"shli"> {
     %3 = arith.shli %1, %2 : (i8, i8) -> i8    // %3 is 0b00101000
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1103,6 +1104,7 @@ def Arith_CmpIOp : Arith_CompareOpOfAnyRank<"cmpi"> {
   }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

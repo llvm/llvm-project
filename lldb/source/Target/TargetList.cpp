@@ -242,7 +242,7 @@ Status TargetList::CreateTargetInternal(
                 platform_set.end()) {
               if (!platform_set.empty())
                 error_strm.PutCString(", ");
-              error_strm.PutCString(the_platform_sp->GetName().GetCString());
+              error_strm.PutCString(the_platform_sp->GetName());
               platform_set.insert(the_platform_sp.get());
             }
           }

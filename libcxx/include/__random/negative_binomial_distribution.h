@@ -118,6 +118,7 @@ template<class _URNG>
 _IntType
 negative_binomial_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     result_type __k = __pr.k();
     double __p = __pr.p();
     if (__k <= 21 * __p)

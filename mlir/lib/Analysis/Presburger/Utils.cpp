@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
 
@@ -87,7 +87,7 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division. The final division expression is
 /// normalized by GCD.
-static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
+static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
                                 unsigned ubIneq, unsigned lbIneq,
                                 SmallVector<int64_t, 8> &expr,
                                 unsigned &divisor) {
@@ -151,7 +151,7 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division. The final division expression is
 /// normalized by GCD.
-static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
+static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
                                 unsigned eqInd, SmallVector<int64_t, 8> &expr,
                                 unsigned &divisor) {
 
@@ -182,7 +182,7 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 
 // Returns `false` if the constraints depends on a variable for which an
 // explicit representation has not been found yet, otherwise returns `true`.
-static bool checkExplicitRepresentation(const IntegerPolyhedron &cst,
+static bool checkExplicitRepresentation(const IntegerRelation &cst,
                                         ArrayRef<bool> foundRepr,
                                         ArrayRef<int64_t> dividend,
                                         unsigned pos) {
@@ -214,7 +214,7 @@ static bool checkExplicitRepresentation(const IntegerPolyhedron &cst,
 /// If the representation could not be computed, the kind attribute in
 /// `MaybeLocalRepr` is set to None.
 MaybeLocalRepr presburger::computeSingleVarRepr(
-    const IntegerPolyhedron &cst, ArrayRef<bool> foundRepr, unsigned pos,
+    const IntegerRelation &cst, ArrayRef<bool> foundRepr, unsigned pos,
     SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
   assert(pos < cst.getNumIds() && "invalid position");
   assert(foundRepr.size() == cst.getNumIds() &&

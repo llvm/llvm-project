@@ -88,6 +88,22 @@ std::pair<SDValue, bool> getAnnotatedNodeAVL(SDValue);
 
 /// } AVL Functions
 
+/// Node Properties {
+
+Optional<EVT> getIdiomaticVectorType(SDNode *Op);
+
+SDValue getLoadStoreStride(SDValue Op, VECustomDAG &CDAG);
+
+SDValue getMemoryPtr(SDValue Op);
+
+SDValue getNodeChain(SDValue Op);
+
+SDValue getStoredValue(SDValue Op);
+
+SDValue getNodePassthru(SDValue Op);
+
+/// } Node Properties
+
 enum class Packing {
   Normal = 0, // 256 element standard mode.
   Dense = 1   // 512 element packed mode.
@@ -156,6 +172,10 @@ public:
   SDValue getUnpack(EVT DestVT, SDValue Vec, PackElem Part, SDValue AVL) const;
   SDValue getPack(EVT DestVT, SDValue LoVec, SDValue HiVec, SDValue AVL) const;
   /// } Packing
+
+  SDValue getMergeValues(ArrayRef<SDValue> Values) const {
+    return DAG.getMergeValues(Values, DL);
+  }
 
   SDValue getConstant(uint64_t Val, EVT VT, bool IsTarget = false,
                       bool IsOpaque = false) const;

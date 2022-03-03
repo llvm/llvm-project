@@ -84,6 +84,11 @@ fir::ExtendedValue getAbsentIntrinsicArgument();
 // of intrinsic call lowering.
 //===----------------------------------------------------------------------===//
 
+/// Generate maximum. There must be at least one argument and all arguments
+/// must have the same type.
+mlir::Value genMax(fir::FirOpBuilder &, mlir::Location,
+                   llvm::ArrayRef<mlir::Value> args);
+
 /// Generate power function x**y with the given expected
 /// result type.
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,

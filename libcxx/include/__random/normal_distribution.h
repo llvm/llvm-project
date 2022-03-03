@@ -10,6 +10,7 @@
 #define _LIBCPP___RANDOM_NORMAL_DISTRIBUTION_H
 
 #include <__config>
+#include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <cmath>
 #include <iosfwd>
@@ -131,6 +132,7 @@ template<class _URNG>
 _RealType
 normal_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     result_type _Up;
     if (_V_hot_)
     {

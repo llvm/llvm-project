@@ -1755,6 +1755,59 @@ convertToArrayBoxValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
 //===----------------------------------------------------------------------===//
 //
+// Lowering of scalar expressions in an explicit iteration space context.
+//
+//===----------------------------------------------------------------------===//
+
+// Shared code for creating a copy of a derived type element. This function is
+// called from a continuation.
+inline static fir::ArrayAmendOp
+createDerivedArrayAmend(mlir::Location loc, fir::ArrayLoadOp destLoad,
+                        fir::FirOpBuilder &builder, fir::ArrayAccessOp destAcc,
+                        const fir::ExtendedValue &elementExv, mlir::Type eleTy,
+                        mlir::Value innerArg) {
+  if (destLoad.getTypeparams().empty()) {
+    fir::factory::genRecordAssignment(builder, loc, destAcc, elementExv);
+  } else {
+    auto boxTy = fir::BoxType::get(eleTy);
+    auto toBox = builder.create<fir::EmboxOp>(loc, boxTy, destAcc.getResult(),
+                                              mlir::Value{}, mlir::Value{},
+                                              destLoad.getTypeparams());
+    auto fromBox = builder.create<fir::EmboxOp>(
+        loc, boxTy, fir::getBase(elementExv), mlir::Value{}, mlir::Value{},
+        destLoad.getTypeparams());
+    fir::factory::genRecordAssignment(builder, loc, fir::BoxValue(toBox),
+                                      fir::BoxValue(fromBox));
+  }
+  return builder.create<fir::ArrayAmendOp>(loc, innerArg.getType(), innerArg,
+                                           destAcc);
+}
+
+inline static fir::ArrayAmendOp
+createCharArrayAmend(mlir::Location loc, fir::FirOpBuilder &builder,
+                     fir::ArrayAccessOp dstOp, mlir::Value &dstLen,
+                     const fir::ExtendedValue &srcExv, mlir::Value innerArg,
+                     llvm::ArrayRef<mlir::Value> bounds) {
+  fir::CharBoxValue dstChar(dstOp, dstLen);
+  fir::factory::CharacterExprHelper helper{builder, loc};
+  if (!bounds.empty()) {
+    dstChar = helper.createSubstring(dstChar, bounds);
+    fir::factory::genCharacterCopy(fir::getBase(srcExv), fir::getLen(srcExv),
+                                   dstChar.getAddr(), dstChar.getLen(), builder,
+                                   loc);
+    // Update the LEN to the substring's LEN.
+    dstLen = dstChar.getLen();
+  }
+  // For a CHARACTER, we generate the element assignment loops inline.
+  helper.createAssign(fir::ExtendedValue{dstChar}, srcExv);
+  // Mark this array element as amended.
+  mlir::Type ty = innerArg.getType();
+  auto amend = builder.create<fir::ArrayAmendOp>(loc, ty, innerArg, dstOp);
+  return amend;
+}
+
+//===----------------------------------------------------------------------===//
+//
 // Lowering of array expressions.
 //
 //===----------------------------------------------------------------------===//
@@ -2435,8 +2488,37 @@ public:
     TODO(getLoc(), "genarr Component");
   }
 
+  /// Array reference with subscripts. If this has rank > 0, this is a form
+  /// of an array section (slice).
+  ///
+  /// There are two "slicing" primitives that may be applied on a dimension by
+  /// dimension basis: (1) triple notation and (2) vector addressing. Since
+  /// dimensions can be selectively sliced, some dimensions may contain
+  /// regular scalar expressions and those dimensions do not participate in
+  /// the array expression evaluation.
   CC genarr(const Fortran::evaluate::ArrayRef &x, ComponentPath &components) {
-    TODO(getLoc(), "genar  ArrayRef");
+    if (explicitSpaceIsActive()) {
+      TODO(getLoc(), "genarr ArrayRef explicitSpace");
+    } else {
+      if (Fortran::lower::isRankedArrayAccess(x)) {
+        components.reversePath.push_back(&x);
+        return genImplicitArrayAccess(x.base(), components);
+      }
+    }
+    bool atEnd = pathIsEmpty(components);
+    components.reversePath.push_back(&x);
+    auto result = genarr(x.base(), components);
+    if (components.applied)
+      return result;
+    mlir::Location loc = getLoc();
+    if (atEnd) {
+      if (x.Rank() == 0)
+        return genAsScalar(x);
+      fir::emitFatalError(loc, "expected scalar");
+    }
+    return [=](IterSpace) -> ExtValue {
+      fir::emitFatalError(loc, "reached arrayref with path");
+    };
   }
 
   CC genarr(const Fortran::evaluate::CoarrayRef &x, ComponentPath &components) {
@@ -2452,6 +2534,10 @@ public:
   CC genarr(const Fortran::evaluate::DataRef &x, ComponentPath &components) {
     return std::visit([&](const auto &v) { return genarr(v, components); },
                       x.u);
+  }
+
+  bool pathIsEmpty(const ComponentPath &components) {
+    return components.reversePath.empty();
   }
 
   CC genarr(const Fortran::evaluate::ComplexPart &x,
@@ -2484,7 +2570,31 @@ public:
     if (destShape.empty())
       destShape = getShape(arrayOperands.back());
     if (isBoxValue()) {
-      TODO(loc, "genarr BoxValue");
+      // Semantics are a reference to a boxed array.
+      // This case just requires that an embox operation be created to box the
+      // value. The value of the box is forwarded in the continuation.
+      mlir::Type reduceTy = reduceRank(arrTy, slice);
+      auto boxTy = fir::BoxType::get(reduceTy);
+      if (components.substring) {
+        // Adjust char length to substring size.
+        fir::CharacterType charTy =
+            fir::factory::CharacterExprHelper::getCharType(reduceTy);
+        auto seqTy = reduceTy.cast<fir::SequenceType>();
+        // TODO: Use a constant for fir.char LEN if we can compute it.
+        boxTy = fir::BoxType::get(
+            fir::SequenceType::get(fir::CharacterType::getUnknownLen(
+                                       builder.getContext(), charTy.getFKind()),
+                                   seqTy.getDimension()));
+      }
+      mlir::Value embox =
+          memref.getType().isa<fir::BoxType>()
+              ? builder.create<fir::ReboxOp>(loc, boxTy, memref, shape, slice)
+                    .getResult()
+              : builder
+                    .create<fir::EmboxOp>(loc, boxTy, memref, shape, slice,
+                                          fir::getTypeParams(extMemref))
+                    .getResult();
+      return [=](IterSpace) -> ExtValue { return fir::BoxValue(embox); };
     }
     if (isReferentiallyOpaque()) {
       TODO(loc, "genarr isReferentiallyOpaque");
@@ -2642,7 +2752,30 @@ private:
       mlir::Type arrTy = innerArg.getType();
       mlir::Type eleTy = fir::applyPathToType(arrTy, iterSpace.iterVec());
       if (isAdjustedArrayElementType(eleTy)) {
-        TODO(loc, "isAdjustedArrayElementType");
+        // The elemental update is in the memref domain. Under this semantics,
+        // we must always copy the computed new element from its location in
+        // memory into the destination array.
+        mlir::Type resRefTy = builder.getRefType(eleTy);
+        // Get a reference to the array element to be amended.
+        auto arrayOp = builder.create<fir::ArrayAccessOp>(
+            loc, resRefTy, innerArg, iterSpace.iterVec(),
+            destination.getTypeparams());
+        if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+          llvm::SmallVector<mlir::Value> substringBounds;
+          populateBounds(substringBounds, substring);
+          mlir::Value dstLen = fir::factory::genLenOfCharacter(
+              builder, loc, destination, iterSpace.iterVec(), substringBounds);
+          fir::ArrayAmendOp amend = createCharArrayAmend(
+              loc, builder, arrayOp, dstLen, exv, innerArg, substringBounds);
+          return abstractArrayExtValue(amend, dstLen);
+        }
+        if (fir::isa_derived(eleTy)) {
+          fir::ArrayAmendOp amend = createDerivedArrayAmend(
+              loc, destination, builder, arrayOp, exv, eleTy, innerArg);
+          return abstractArrayExtValue(amend /*FIXME: typeparams?*/);
+        }
+        assert(eleTy.isa<fir::SequenceType>() && "must be an array");
+        TODO(loc, "array (as element) assignment");
       }
       // By value semantics. The element is being assigned by value.
       mlir::Value ele = builder.createConvert(loc, eleTy, fir::getBase(exv));
@@ -2962,4 +3095,16 @@ void Fortran::lower::createAllocatableArrayAssignment(
              << implicitSpace << '\n';);
   ArrayExprLowering::lowerAllocatableArrayAssignment(
       converter, symMap, stmtCtx, lhs, rhs, explicitSpace, implicitSpace);
+}
+
+mlir::Value Fortran::lower::genMaxWithZero(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           mlir::Value value) {
+  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+  if (mlir::Operation *definingOp = value.getDefiningOp())
+    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
+      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
+        return intAttr.getInt() < 0 ? zero : value;
+  return Fortran::lower::genMax(builder, loc,
+                                llvm::SmallVector<mlir::Value>{value, zero});
 }

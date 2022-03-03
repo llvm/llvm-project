@@ -12,7 +12,7 @@
 # CHECK-LABEL: image lookup -v -n F1
 # CHECK: CompileUnit: id = {0x00000001}, file = "1.c", language = "<not loaded>"
 # CHECK: Function: {{.*}}, name = "F1", range = [0x0000000000000001-0x0000000000000002)
-# CHECK: Variable: {{.*}}, name = "x", type = "int", location = DW_OP_reg1 RDX
+# CHECK: Variable: {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x0000000000000001, 0x0000000000000002) -> DW_OP_reg1 RDX
 
 # SYMBOLS:      Compile units:
 # SYMBOLS-NEXT: CompileUnit{0x00000000}, language = "<not loaded>", file = '0.c'

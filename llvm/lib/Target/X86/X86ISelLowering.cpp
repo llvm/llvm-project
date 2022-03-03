@@ -1701,6 +1701,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FSHL,       MVT::v64i8, Custom);
     setOperationAction(ISD::FSHR,       MVT::v64i8, Custom);
+    setOperationAction(ISD::FSHL,      MVT::v32i16, Custom);
+    setOperationAction(ISD::FSHR,      MVT::v32i16, Custom);
     setOperationAction(ISD::FSHL,      MVT::v16i32, Custom);
     setOperationAction(ISD::FSHR,      MVT::v16i32, Custom);
 
@@ -29338,7 +29340,6 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
   SDValue Amt = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
   unsigned X86OpcI = getTargetVShiftUniformOpcode(Opcode, false);
-  unsigned X86OpcV = getTargetVShiftUniformOpcode(Opcode, true);
 
   // TODO: Use getSplatSourceVector.
   if (SDValue BaseShAmt = DAG.getSplatValue(Amt)) {
@@ -29401,23 +29402,6 @@ static SDValue LowerShiftByScalarVariable(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  // Check cases (mainly 32-bit) where i64 is expanded into high and low parts.
-  if (VT == MVT::v2i64 && Amt.getOpcode() == ISD::BITCAST &&
-      Amt.getOperand(0).getOpcode() == ISD::BUILD_VECTOR) {
-    Amt = Amt.getOperand(0);
-    unsigned Ratio = 64 / Amt.getScalarValueSizeInBits();
-    std::vector<SDValue> Vals(Ratio);
-    for (unsigned i = 0; i != Ratio; ++i)
-      Vals[i] = Amt.getOperand(i);
-    for (unsigned i = Ratio, e = Amt.getNumOperands(); i != e; i += Ratio) {
-      for (unsigned j = 0; j != Ratio; ++j)
-        if (Vals[j] != Amt.getOperand(i + j))
-          return SDValue();
-    }
-
-    if (supportedVectorShiftWithBaseAmnt(VT, Subtarget, Op.getOpcode()))
-      return DAG.getNode(X86OpcV, dl, VT, R, Op.getOperand(1));
-  }
   return SDValue();
 }
 
@@ -29997,8 +29981,8 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
                            {Op0, Op1, Amt}, DAG, Subtarget);
     }
     assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
-            VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v4i32 ||
-            VT == MVT::v8i32 || VT == MVT::v16i32) &&
+            VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v32i16 ||
+            VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32) &&
            "Unexpected funnel shift type!");
 
     // fshl(x,y,z) -> unpack(y,x) << (z & (bw-1))) >> bw.

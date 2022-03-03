@@ -17,18 +17,18 @@ define void @foo() {
 ; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 undef to double
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[CONV2]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[CONV2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP7]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> poison, double [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP12]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = fcmp ogt <4 x double> [[TMP13]], [[TMP4]]
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP14:%.*]] = fcmp ogt <4 x double> [[TMP13]], [[TMP9]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP16:%.*]] = fptrunc <4 x double> [[TMP15]] to <4 x float>
 ; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP2]], <4 x float> [[TMP16]]
 ; CHECK-NEXT:    br label [[BB3]]

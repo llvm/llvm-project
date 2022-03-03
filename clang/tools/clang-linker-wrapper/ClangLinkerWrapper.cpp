@@ -133,6 +133,9 @@ static const char *LinkerExecutable;
 /// Filename of the executable being created.
 static StringRef ExecutableName;
 
+/// System root if passed in to the linker via. '--sysroot='.
+static StringRef Sysroot = "";
+
 /// Binary path for the CUDA installation.
 static std::string CudaBinaryPath;
 
@@ -169,8 +172,8 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
     return;
 
   llvm::errs() << " \"" << CmdArgs.front() << "\" ";
-  for (auto IC = CmdArgs.begin() + 1, IE = CmdArgs.end(); IC != IE; ++IC)
-    llvm::errs() << *IC << (IC + 1 != IE ? " " : "\n");
+  for (auto IC = std::next(CmdArgs.begin()), IE = CmdArgs.end(); IC != IE; ++IC)
+    llvm::errs() << *IC << (std::next(IC) != IE ? " " : "\n");
 }
 
 static StringRef getDeviceFileExtension(StringRef DeviceTriple,
@@ -726,10 +729,10 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
       CmdArgs.push_back(Arg);
     else if (Arg.startswith("-rpath")) {
       CmdArgs.push_back(Arg);
-      CmdArgs.push_back(*(AI + 1));
+      CmdArgs.push_back(*std::next(AI));
     } else if (Arg.startswith("-dynamic-linker")) {
       CmdArgs.push_back(Arg);
-      CmdArgs.push_back(*(AI + 1));
+      CmdArgs.push_back(*std::next(AI));
     }
   }
   CmdArgs.push_back("-Bsymbolic");
@@ -1157,8 +1160,11 @@ Expected<std::string> wrapDeviceImages(ArrayRef<std::string> Images) {
 
 Optional<std::string> findFile(StringRef Dir, const Twine &Name) {
   SmallString<128> Path;
-  // TODO: Parse `--sysroot` somewhere and use it here.
-  sys::path::append(Path, Dir, Name);
+  if (Dir.startswith("="))
+    sys::path::append(Path, Sysroot, Dir.substr(1), Name);
+  else
+    sys::path::append(Path, Dir, Name);
+
   if (sys::fs::exists(Path))
     return static_cast<std::string>(Path);
   return None;
@@ -1229,7 +1235,13 @@ int main(int argc, const char **argv) {
   if (!CudaPath.empty())
     CudaBinaryPath = CudaPath + "/bin";
 
-  ExecutableName = *(llvm::find(HostLinkerArgs, "-o") + 1);
+  auto RootIt = llvm::find_if(HostLinkerArgs, [](StringRef Arg) {
+    return Arg.startswith("--sysroot=");
+  });
+  if (RootIt != HostLinkerArgs.end())
+    Sysroot = StringRef(*RootIt).split('=').second;
+
+  ExecutableName = *std::next(llvm::find(HostLinkerArgs, "-o"));
   SmallVector<std::string, 16> LinkerArgs;
   for (const std::string &Arg : HostLinkerArgs)
     LinkerArgs.push_back(Arg);
