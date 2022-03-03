@@ -9,6 +9,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   MapLatticeTest.cpp
   MultiVarConstantPropagationTest.cpp
   SingleVarConstantPropagationTest.cpp
+  SourceLocationsLatticeTest.cpp
   TestingSupport.cpp
   TestingSupportTest.cpp
   TransferTest.cpp
