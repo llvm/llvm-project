@@ -2686,34 +2686,30 @@ private:
   /// Such situations should use the specific attribute parsing functionality.
   void ParseAttributes(unsigned WhichAttrKinds,
                        ParsedAttributesWithRange &Attrs,
-                       SourceLocation *End = nullptr,
                        LateParsedAttrList *LateAttrs = nullptr);
   void ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
-                       SourceLocation *End = nullptr,
                        LateParsedAttrList *LateAttrs = nullptr) {
     ParsedAttributesWithRange AttrsWithRange(AttrFactory);
-    ParseAttributes(WhichAttrKinds, AttrsWithRange, End, LateAttrs);
+    ParseAttributes(WhichAttrKinds, AttrsWithRange, LateAttrs);
     Attrs.takeAllFrom(AttrsWithRange);
   }
   /// \brief Possibly parse attributes based on what syntaxes are desired,
   /// allowing for the order to vary.
   bool MaybeParseAttributes(unsigned WhichAttrKinds,
                             ParsedAttributesWithRange &Attrs,
-                            SourceLocation *End = nullptr,
                             LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
         (standardAttributesAllowed() && isCXX11AttributeSpecifier())) {
-      ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
+      ParseAttributes(WhichAttrKinds, Attrs, LateAttrs);
       return true;
     }
     return false;
   }
   bool MaybeParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
-                            SourceLocation *End = nullptr,
                             LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
         (standardAttributesAllowed() && isCXX11AttributeSpecifier())) {
-      ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
+      ParseAttributes(WhichAttrKinds, Attrs, LateAttrs);
       return true;
     }
     return false;
@@ -2722,10 +2718,9 @@ private:
   void MaybeParseGNUAttributes(Declarator &D,
                                LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.is(tok::kw___attribute)) {
-      ParsedAttributes attrs(AttrFactory);
-      SourceLocation endLoc;
-      ParseGNUAttributes(attrs, &endLoc, LateAttrs, &D);
-      D.takeAttributes(attrs, endLoc);
+      ParsedAttributesWithRange attrs(AttrFactory);
+      ParseGNUAttributes(attrs, LateAttrs, &D);
+      D.takeAttributes(attrs, attrs.Range.getEnd());
     }
   }
 
@@ -2735,11 +2730,10 @@ private:
   /// This API is discouraged. Use the version that takes a
   /// ParsedAttributesWithRange instead.
   bool MaybeParseGNUAttributes(ParsedAttributes &Attrs,
-                               SourceLocation *EndLoc = nullptr,
                                LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.is(tok::kw___attribute)) {
       ParsedAttributesWithRange AttrsWithRange(AttrFactory);
-      ParseGNUAttributes(Attrs, EndLoc, LateAttrs);
+      ParseGNUAttributes(Attrs, LateAttrs);
       Attrs.takeAllFrom(AttrsWithRange);
       return true;
     }
@@ -2747,10 +2741,9 @@ private:
   }
 
   bool MaybeParseGNUAttributes(ParsedAttributesWithRange &Attrs,
-                               SourceLocation *EndLoc = nullptr,
                                LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.is(tok::kw___attribute)) {
-      ParseGNUAttributes(Attrs, EndLoc, LateAttrs);
+      ParseGNUAttributes(Attrs, LateAttrs);
       return true;
     }
     return false;
@@ -2762,16 +2755,14 @@ private:
   /// This API is discouraged. Use the version that takes a
   /// ParsedAttributesWithRange instead.
   void ParseGNUAttributes(ParsedAttributes &Attrs,
-                          SourceLocation *EndLoc = nullptr,
                           LateParsedAttrList *LateAttrs = nullptr,
                           Declarator *D = nullptr) {
     ParsedAttributesWithRange AttrsWithRange(AttrFactory);
-    ParseGNUAttributes(AttrsWithRange, EndLoc, LateAttrs, D);
+    ParseGNUAttributes(AttrsWithRange, LateAttrs, D);
     Attrs.takeAllFrom(AttrsWithRange);
   }
 
   void ParseGNUAttributes(ParsedAttributesWithRange &Attrs,
-                          SourceLocation *EndLoc = nullptr,
                           LateParsedAttrList *LateAttrs = nullptr,
                           Declarator *D = nullptr);
   void ParseGNUAttributeArgs(IdentifierInfo *AttrName,
@@ -2800,27 +2791,24 @@ private:
   void MaybeParseCXX11Attributes(Declarator &D) {
     if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
       ParsedAttributesWithRange attrs(AttrFactory);
-      SourceLocation endLoc;
-      ParseCXX11Attributes(attrs, &endLoc);
-      D.takeAttributes(attrs, endLoc);
+      ParseCXX11Attributes(attrs);
+      D.takeAttributes(attrs, attrs.Range.getEnd());
     }
   }
-  bool MaybeParseCXX11Attributes(ParsedAttributes &attrs,
-                                 SourceLocation *endLoc = nullptr) {
+  bool MaybeParseCXX11Attributes(ParsedAttributes &attrs) {
     if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
       ParsedAttributesWithRange attrsWithRange(AttrFactory);
-      ParseCXX11Attributes(attrsWithRange, endLoc);
+      ParseCXX11Attributes(attrsWithRange);
       attrs.takeAllFrom(attrsWithRange);
       return true;
     }
     return false;
   }
   bool MaybeParseCXX11Attributes(ParsedAttributesWithRange &attrs,
-                                 SourceLocation *endLoc = nullptr,
                                  bool OuterMightBeMessageSend = false) {
     if (standardAttributesAllowed() &&
         isCXX11AttributeSpecifier(false, OuterMightBeMessageSend)) {
-      ParseCXX11Attributes(attrs, endLoc);
+      ParseCXX11Attributes(attrs);
       return true;
     }
     return false;
@@ -2838,8 +2826,7 @@ private:
     ParseCXX11AttributeSpecifierInternal(Attrs, OpenMPTokens, EndLoc);
     ReplayOpenMPAttributeTokens(OpenMPTokens);
   }
-  void ParseCXX11Attributes(ParsedAttributesWithRange &attrs,
-                            SourceLocation *EndLoc = nullptr);
+  void ParseCXX11Attributes(ParsedAttributesWithRange &attrs);
   /// Parses a C++11 (or C2x)-style attribute argument list. Returns true
   /// if this results in adding an attribute to the ParsedAttributes list.
   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
@@ -2854,25 +2841,23 @@ private:
       Sema::AttributeCompletion Completion = Sema::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
-  void MaybeParseMicrosoftAttributes(ParsedAttributes &attrs,
-                                     SourceLocation *endLoc = nullptr) {
-    if (getLangOpts().MicrosoftExt && Tok.is(tok::l_square))
-      ParseMicrosoftAttributes(attrs, endLoc);
+  void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+    if (getLangOpts().MicrosoftExt && Tok.is(tok::l_square)) {
+      ParsedAttributesWithRange AttrsWithRange(AttrFactory);
+      ParseMicrosoftAttributes(AttrsWithRange);
+      Attrs.takeAllFrom(AttrsWithRange);
+    }
   }
   void ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs);
-  void ParseMicrosoftAttributes(ParsedAttributes &attrs,
-                                SourceLocation *endLoc = nullptr);
-  bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
-                                    SourceLocation *End = nullptr) {
-    const auto &LO = getLangOpts();
-    if (LO.DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
-      ParseMicrosoftDeclSpecs(Attrs, End);
+  void ParseMicrosoftAttributes(ParsedAttributesWithRange &attrs);
+  bool MaybeParseMicrosoftDeclSpecs(ParsedAttributesWithRange &Attrs) {
+    if (getLangOpts().DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
+      ParseMicrosoftDeclSpecs(Attrs);
       return true;
     }
     return false;
   }
-  void ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
-                               SourceLocation *End = nullptr);
+  void ParseMicrosoftDeclSpecs(ParsedAttributesWithRange &Attrs);
   bool ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
                                   SourceLocation AttrNameLoc,
                                   ParsedAttributes &Attrs);

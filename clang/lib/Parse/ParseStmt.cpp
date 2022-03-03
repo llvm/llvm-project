@@ -106,7 +106,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // at the start of the statement. Thus, we're not using MaybeParseAttributes
   // here because we don't want to allow arbitrary orderings.
   ParsedAttributesWithRange Attrs(AttrFactory);
-  MaybeParseCXX11Attributes(Attrs, nullptr, /*MightBeObjCMessageSend*/ true);
+  MaybeParseCXX11Attributes(Attrs, /*MightBeObjCMessageSend*/ true);
   if (getLangOpts().OpenCL)
     MaybeParseGNUAttributes(Attrs);
 
@@ -1119,8 +1119,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
         ConsumeToken();
 
       ParsedAttributesWithRange attrs(AttrFactory);
-      MaybeParseCXX11Attributes(attrs, nullptr,
-                                /*MightBeObjCMessageSend*/ true);
+      MaybeParseCXX11Attributes(attrs, /*MightBeObjCMessageSend*/ true);
 
       // If this is the start of a declaration, parse it as such.
       if (isDeclarationStatement()) {
