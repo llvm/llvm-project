@@ -12,6 +12,7 @@
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 
 using namespace mlir;
@@ -25,9 +26,13 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void runOnOperation() override;
 
   void checkOperation(Operation *op);
+  void checkFunc(Operation *op);
   void checkBlock(Block &block);
+
+  void checkRegionWithScope(Region &region);
   void checkRegion(Region &region);
 
+  void checkIf(IfOp op);
   void checkAlloca(AllocaOp op);
   void checkStore(StoreOp op);
   void checkLoad(LoadOp op);
@@ -83,7 +88,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
         return val.getInt() == RHS.val.getInt();
     }
 
-    void dump();
+    void dump(llvm::raw_ostream &OS = llvm::errs());
 
     static State getInvalid() { return {}; }
     static State getNullPtr() { return {NullPtr}; }
@@ -91,11 +96,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   };
 
   using PSetType = llvm::SmallSet<State, 4>;
-
   // FIXME: this should be a ScopedHashTable for consistency.
   using PMapType = llvm::DenseMap<mlir::Value, PSetType>;
 
-  PMapType pmap;
   SmallPtrSet<mlir::Value, 8> ptrs;
 
   // Represents the scope context for IR operations (cir.scope, cir.if,
@@ -137,14 +140,38 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     }
   };
 
+  class PmapGuard {
+    LifetimeCheckPass &Pass;
+    PMapType *OldVal = nullptr;
+
+  public:
+    PmapGuard(LifetimeCheckPass &lcp, PMapType *L) : Pass(lcp) {
+      if (Pass.currPmap) {
+        OldVal = Pass.currPmap;
+      }
+      Pass.currPmap = L;
+    }
+
+    PmapGuard(const PmapGuard &) = delete;
+    PmapGuard &operator=(const PmapGuard &) = delete;
+    PmapGuard &operator=(PmapGuard &&other) = delete;
+
+    void restore() { Pass.currPmap = OldVal; }
+    ~PmapGuard() { restore(); }
+  };
+
   LexicalScopeContext *currScope = nullptr;
-  void dumpPset(PSetType &pset);
-  void dumpPmap();
+  PMapType *currPmap = nullptr;
+  PMapType &getPmap() { return *currPmap; }
+
+  void joinPmaps(SmallVectorImpl<PMapType> &pmaps);
+  void printPset(PSetType &pset, llvm::raw_ostream &OS = llvm::errs());
+  void dumpPmap(PMapType &pmap);
 };
 } // namespace
 
 static StringRef getVarNameFromValue(mlir::Value v) {
-  if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(v.getDefiningOp()))
+  if (auto allocaOp = dyn_cast<AllocaOp>(v.getDefiningOp()))
     return allocaOp.getName();
   assert(0 && "how did it get here?");
   return "";
@@ -152,7 +179,7 @@ static StringRef getVarNameFromValue(mlir::Value v) {
 
 void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
   auto *localScope = Pass.currScope;
-  auto &pmap = Pass.pmap;
+  auto &pmap = Pass.getPmap();
   // If we are cleaning up at the function level, nothing
   // to do here cause we are past all possible deference points
   if (localScope->Depth == 0)
@@ -189,25 +216,101 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
 }
 
 void LifetimeCheckPass::checkBlock(Block &block) {
-  // Block main role is to hold a list of Operations: let's recurse.
+  // Block main role is to hold a list of Operations.
   for (Operation &op : block.getOperations())
     checkOperation(&op);
 }
 
 void LifetimeCheckPass::checkRegion(Region &region) {
-  // FIXME: if else-then blocks have their own scope too.
   for (Block &block : region.getBlocks())
     checkBlock(block);
 }
 
+void LifetimeCheckPass::checkRegionWithScope(Region &region) {
+  // Add a new scope. Note that as part of the scope cleanup process
+  // we apply section 2.3 KILL(x) functionality, turning relevant
+  // references invalid.
+  LexicalScopeContext lexScope{};
+  LexicalScopeGuard scopeGuard{*this, &lexScope};
+  for (Block &block : region.getBlocks())
+    checkBlock(block);
+}
+
+void LifetimeCheckPass::checkFunc(Operation *op) {
+  // Add a new scope. Note that as part of the scope cleanup process
+  // we apply section 2.3 KILL(x) functionality, turning relevant
+  // references invalid.
+  LexicalScopeContext lexScope{};
+  LexicalScopeGuard scopeGuard{*this, &lexScope};
+
+  // Create a new pmap for this function.
+  PMapType localPmap{};
+  PmapGuard pmapGuard{*this, &localPmap};
+
+  for (Region &region : op->getRegions())
+    checkRegion(region);
+
+  // FIXME: store the pmap result for this function, we
+  // could do some interesting IPA stuff using this info.
+}
+
+// The join operation between pmap as described in section 2.3.
+//
+//  JOIN({pmap1,...,pmapN}) =>
+//  { (p, pset1(p) U ... U psetN(p) | (p,*) U pmap1 U ... U pmapN }.
+//
+void LifetimeCheckPass::joinPmaps(SmallVectorImpl<PMapType> &pmaps) {
+  for (auto &mapEntry : getPmap()) {
+    auto &val = mapEntry.first;
+
+    PSetType joinPset;
+    for (auto &pmapOp : pmaps)
+      llvm::set_union(joinPset, pmapOp[val]);
+
+    getPmap()[val] = joinPset;
+  }
+}
+
+void LifetimeCheckPass::checkIf(IfOp ifOp) {
+  // Both then and else create their own lexical scopes, take that into account
+  // while checking then/else.
+  //
+  // This is also the moment where pmaps are joined because flow forks:
+  //    pmap(ifOp) = JOIN( pmap(then), pmap(else) )
+  //
+  // To that intent the pmap is copied out before checking each region and
+  // pmap(ifOp) computed after analysing both paths.
+  SmallVector<PMapType, 2> pmapOps;
+
+  {
+    PMapType localThenPmap = getPmap();
+    PmapGuard pmapGuard{*this, &localThenPmap};
+    checkRegionWithScope(ifOp.getThenRegion());
+    pmapOps.push_back(localThenPmap);
+  }
+
+  // In case there's no 'else' branch, the 'else' pmap is the same as
+  // prior to the if condition.
+  if (!ifOp.getElseRegion().empty()) {
+    PMapType localElsePmap = getPmap();
+    PmapGuard pmapGuard{*this, &localElsePmap};
+    checkRegionWithScope(ifOp.getElseRegion());
+    pmapOps.push_back(localElsePmap);
+  } else {
+    pmapOps.push_back(getPmap());
+  }
+
+  joinPmaps(pmapOps);
+}
+
 void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   auto addr = allocaOp.getAddr();
-  assert(!pmap.count(addr) && "only one alloca for any given address");
+  assert(!getPmap().count(addr) && "only one alloca for any given address");
 
-  pmap[addr] = {};
+  getPmap()[addr] = {};
   if (!allocaOp.isPointerType()) {
     // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
-    pmap[addr].insert(State::getLocalValue(addr));
+    getPmap()[addr].insert(State::getLocalValue(addr));
     currScope->localValues.push_back(addr);
     return;
   }
@@ -215,7 +318,7 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   // 2.4.2 - When a non-parameter non-member Pointer p is declared, add
   // (p, {invalid}) to pmap.
   ptrs.insert(addr);
-  pmap[addr].insert(State::getInvalid());
+  getPmap()[addr].insert(State::getInvalid());
 
   // If other styles of initialization gets added, required to add support
   // here.
@@ -234,7 +337,7 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   auto data = storeOp.getValue();
   // 2.4.2 - If the declaration includes an initialization, the
   // initialization is treated as a separate operation
-  if (auto cstOp = dyn_cast<::mlir::cir::ConstantOp>(data.getDefiningOp())) {
+  if (auto cstOp = dyn_cast<ConstantOp>(data.getDefiningOp())) {
     assert(cstOp.isNullPtr() && "not implemented");
     // 2.4.2 - If the initialization is default initialization or zero
     // initialization, set pset(p) = {null}; for example:
@@ -242,15 +345,15 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
     //  int* p; => pset(p) == {invalid}
     //  int* p{}; or string_view p; => pset(p) == {null}.
     //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
-    pmap[addr] = {};
-    pmap[addr].insert(State::getNullPtr());
+    getPmap()[addr] = {};
+    getPmap()[addr].insert(State::getNullPtr());
     return;
   }
 
-  if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(data.getDefiningOp())) {
+  if (auto allocaOp = dyn_cast<AllocaOp>(data.getDefiningOp())) {
     // p = &x;
-    pmap[addr] = {};
-    pmap[addr].insert(State::getLocalValue(data));
+    getPmap()[addr] = {};
+    getPmap()[addr].insert(State::getLocalValue(data));
     return;
   }
 
@@ -262,7 +365,7 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
 void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   auto addr = loadOp.getAddr();
   // Only interested in checking deference on top of pointer types.
-  if (!pmap.count(addr) || !ptrs.count(addr))
+  if (!getPmap().count(addr) || !ptrs.count(addr))
     return;
 
   if (!loadOp.getIsDeref())
@@ -270,7 +373,7 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
 
   // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
   // invalid.
-  if (!pmap[addr].count(State::getInvalid())) {
+  if (!getPmap()[addr].count(State::getInvalid())) {
     // FIXME: perhaps add a remark that we got a valid dereference
     return;
   }
@@ -280,8 +383,15 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   //
   // Note that usually the use of the invalid address happens at the
   // load or store using the result of this loadOp.
-  emitWarning(loadOp.getLoc())
-      << "use of invalid pointer '" << getVarNameFromValue(addr) << "'";
+  StringRef varName = getVarNameFromValue(addr);
+  emitWarning(loadOp.getLoc()) << "use of invalid pointer '" << varName << "'";
+
+  llvm::SmallString<128> psetStr;
+  llvm::raw_svector_ostream Out(psetStr);
+  printPset(getPmap()[addr], Out);
+
+  if (opts.emitRemarkPset())
+    emitRemark(loadOp.getLoc()) << "pset => " << Out.str();
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
@@ -291,12 +401,14 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return;
   }
 
-  bool isLexicalScopeOp =
-      isa<::mlir::FuncOp>(op) || isa<::mlir::cir::ScopeOp>(op);
-  if (isLexicalScopeOp) {
+  if (isa<ScopeOp>(op)) {
     // Add a new scope. Note that as part of the scope cleanup process
     // we apply section 2.3 KILL(x) functionality, turning relevant
     // references invalid.
+    //
+    // No need to create a new pmap when entering a new scope since it
+    // doesn't cause control flow to diverge (as it does in presence
+    // of cir::IfOp).
     LexicalScopeContext lexScope{};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
     for (Region &region : op->getRegions())
@@ -304,11 +416,15 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return;
   }
 
-  if (auto allocaOp = dyn_cast<::mlir::cir::AllocaOp>(op))
+  if (isa<FuncOp>(op))
+    return checkFunc(op);
+  if (auto ifOp = dyn_cast<IfOp>(op))
+    return checkIf(ifOp);
+  if (auto allocaOp = dyn_cast<AllocaOp>(op))
     return checkAlloca(allocaOp);
-  if (auto storeOp = dyn_cast<::mlir::cir::StoreOp>(op))
+  if (auto storeOp = dyn_cast<StoreOp>(op))
     return checkStore(storeOp);
-  if (auto loadOp = dyn_cast<::mlir::cir::LoadOp>(op))
+  if (auto loadOp = dyn_cast<LoadOp>(op))
     return checkLoad(loadOp);
 }
 
@@ -323,7 +439,7 @@ std::unique_ptr<Pass> mlir::createLifetimeCheckPass() {
 }
 
 //===----------------------------------------------------------------------===//
-// Dump helpers
+// Dump & print helpers
 //===----------------------------------------------------------------------===//
 
 void LifetimeCheckPass::LexicalScopeContext::dumpLocalValues() {
@@ -335,40 +451,43 @@ void LifetimeCheckPass::LexicalScopeContext::dumpLocalValues() {
   llvm::errs() << "}\n";
 }
 
-void LifetimeCheckPass::State::dump() {
+void LifetimeCheckPass::State::dump(llvm::raw_ostream &OS) {
   switch (val.getInt()) {
   case Invalid:
-    llvm::errs() << "invalid";
+    OS << "invalid";
     break;
   case NullPtr:
-    llvm::errs() << "nullptr";
+    OS << "nullptr";
     break;
   case Global:
-    llvm::errs() << "global";
+    OS << "global";
     break;
   case LocalValue:
-    llvm::errs() << getVarNameFromValue(val.getPointer());
+    OS << getVarNameFromValue(val.getPointer());
     break;
   }
 }
 
-void LifetimeCheckPass::dumpPset(PSetType &pset) {
-  llvm::errs() << "{ ";
+void LifetimeCheckPass::printPset(PSetType &pset, llvm::raw_ostream &OS) {
+  OS << "{ ";
+  auto size = pset.size();
   for (auto s : pset) {
-    s.dump();
-    llvm::errs() << ", ";
+    s.dump(OS);
+    size--;
+    if (size > 0)
+      OS << ", ";
   }
-  llvm::errs() << "}";
+  OS << " }";
 }
 
-void LifetimeCheckPass::dumpPmap() {
+void LifetimeCheckPass::dumpPmap(PMapType &pmap) {
   llvm::errs() << "pmap {\n";
   int entry = 0;
   for (auto &mapEntry : pmap) {
     llvm::errs() << "  " << entry << ": " << getVarNameFromValue(mapEntry.first)
                  << "  "
                  << "=> ";
-    dumpPset(mapEntry.second);
+    printPset(mapEntry.second);
     llvm::errs() << "\n";
     entry++;
   }
