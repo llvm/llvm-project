@@ -167,4 +167,81 @@ define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
   ret <4 x i32> %5
 }
 
+define <8 x i16> @or_fshl_v8i16(<8 x i16> %x, <8 x i16> %y) {
+; XOPAVX1-LABEL: or_fshl_v8i16:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpsrlw $11, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsllw $5, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: or_fshl_v8i16:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpsllw $5, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpsrlw $11, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX2-NEXT:    retq
+;
+; AVX512-LABEL: or_fshl_v8i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; AVX512-NEXT:    vpsllw $5, %xmm1, %xmm1
+; AVX512-NEXT:    vpsrlw $11, %xmm0, %xmm0
+; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %or1 = or <8 x i16> %y, %x
+  %sh1 = shl <8 x i16> %or1, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+  %sh2 = lshr <8 x i16> %x, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
+  %r = or <8 x i16> %sh2, %sh1
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @or_fshl_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; XOPAVX1-LABEL: or_fshl_v4i32:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpsrld $11, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpslld $21, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: or_fshl_v4i32:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpslld $21, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpsrld $11, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX2-NEXT:    retq
+;
+; AVX512-LABEL: or_fshl_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; AVX512-NEXT:    vpslld $21, %xmm1, %xmm1
+; AVX512-NEXT:    vpsrld $11, %xmm0, %xmm0
+; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %or1 = or <4 x i32> %y, %x
+  %sh1 = shl <4 x i32> %or1, <i32 21, i32 21, i32 21, i32 21>
+  %sh2 = lshr <4 x i32> %x, <i32 11, i32 11, i32 11, i32 11>
+  %r = or <4 x i32> %sh2, %sh1
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @or_fshr_v2i64(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: or_fshr_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpsllq $42, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrlq $22, %xmm1, %xmm1
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %or1 = or <2 x i64> %x, %y
+  %sh1 = shl <2 x i64> %x, <i64 42, i64 42>
+  %sh2 = lshr <2 x i64> %or1, <i64 22, i64 22>
+  %r = or <2 x i64> %sh1, %sh2
+  ret <2 x i64> %r
+}
+
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
