@@ -105,7 +105,7 @@ bool RTNAME(PointerIsAssociated)(const Descriptor &);
 
 // True when the pointer is associated with a specific target.
 bool RTNAME(PointerIsAssociatedWith)(
-    const Descriptor &, const Descriptor &target);
+    const Descriptor &, const Descriptor *target);
 
 } // extern "C"
 } // namespace Fortran::runtime

@@ -76,13 +76,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"

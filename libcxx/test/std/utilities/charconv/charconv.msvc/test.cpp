@@ -91,7 +91,7 @@ void initialize_randomness(mt19937_64& mt64, const int argc, char** const argv) 
 
     puts("SEED DATA:");
     for (const auto& elem : vec) {
-        printf("%u ", elem);
+        printf("%zu ", static_cast<size_t>(elem));
     }
     printf("\n");
 
@@ -566,7 +566,7 @@ void all_integer_tests() {
 
 void assert_message_bits(const bool b, const char* const msg, const uint32_t bits) {
     if (!b) {
-        fprintf(stderr, "%s failed for 0x%08X\n", msg, bits);
+        fprintf(stderr, "%s failed for 0x%08zX\n", msg, static_cast<size_t>(bits));
         fprintf(stderr, "This is a randomized test.\n");
         fprintf(stderr, "DO NOT IGNORE/RERUN THIS FAILURE.\n");
         fprintf(stderr, "You must report it to the STL maintainers.\n");
@@ -1093,7 +1093,7 @@ int main(int argc, char** argv) {
     const long long ms = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
 
     puts("PASS");
-    printf("Randomized test cases: %u\n", PrefixesToTest * Fractions);
+    printf("Randomized test cases: %zu\n", static_cast<size_t>(PrefixesToTest * Fractions));
     printf("Total time: %lld ms\n", ms);
 
     if (ms < 3'000) {

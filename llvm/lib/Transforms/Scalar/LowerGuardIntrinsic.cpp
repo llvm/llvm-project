@@ -15,7 +15,6 @@
 #include "llvm/Transforms/Scalar/LowerGuardIntrinsic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GuardUtils.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"

@@ -16,7 +16,7 @@
 namespace mlir {
 
 // Rewriting that replaces Op with XOp, YOp, or ZOp depending on the dimension
-// that Op operates on.  Op is assumed to return an `std.index` value and
+// that Op operates on.  Op is assumed to return an `index` value and
 // XOp, YOp and ZOp are assumed to return an `llvm.i32` value.  Depending on
 // `indexBitwidth`, sign-extend or truncate the resulting value to match the
 // bitwidth expected by the consumers of the value.

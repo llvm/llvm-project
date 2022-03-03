@@ -25,6 +25,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "locale_helpers.h"
 #include "platform_support.h" // locale name macros
 
 class Fnf
@@ -140,19 +141,7 @@ int main(int, char**)
 
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
-#if defined(_CS_GNU_LIBC_VERSION)
-        // GLIBC <= 2.23 uses currency_symbol="<U0440><U0443><U0431>"
-        // GLIBC >= 2.24 uses currency_symbol="<U20BD>"
-        // See also: http://www.fileformat.info/info/unicode/char/20bd/index.htm
-        if (!glibc_version_less_than("2.24"))
-          assert(f.curr_symbol() == " \xE2\x82\xBD"); // \u20BD
-        else
-          assert(f.curr_symbol() == " \xD1\x80\xD1\x83\xD0\xB1"); // \u0440\u0443\u0431
-#elif defined(_WIN32) || defined(__FreeBSD__)
-        assert(f.curr_symbol() == " \xE2\x82\xBD"); // \u20BD
-#else
-        assert(f.curr_symbol() == " \xD1\x80\xD1\x83\xD0\xB1."); // \u0440\u0443\u0431.
-#endif
+        assert(f.curr_symbol() == " " + static_cast<std::string>(LocaleHelpers::currency_symbol_ru_RU()));
     }
     {
         Fnt f(LOCALE_ru_RU_UTF_8, 1);
@@ -161,16 +150,7 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_ru_RU_UTF_8, 1);
-#if defined(_CS_GNU_LIBC_VERSION)
-        if (!glibc_version_less_than("2.24"))
-          assert(f.curr_symbol() == L" \u20BD");
-        else
-          assert(f.curr_symbol() == L" \u0440\u0443\u0431");
-#elif defined(_WIN32) || defined(__FreeBSD__)
-        assert(f.curr_symbol() == L" \u20BD");
-#else
-        assert(f.curr_symbol() == L" \u0440\u0443\u0431.");
-#endif
+        assert(f.curr_symbol() == L" " + static_cast<std::wstring>(LocaleHelpers::currency_symbol_ru_RU()));
     }
 
     {

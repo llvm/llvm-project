@@ -2,19 +2,21 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-define void @PR36250() {
+define void @PR36250() nounwind {
 ; X86-LABEL: PR36250:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    roll %ecx
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    orl %ecx, %edx
-; X86-NEXT:    orl %ecx, %edx
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    leal (%eax,%eax), %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    sete (%eax)
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR36250:
@@ -22,11 +24,10 @@ define void @PR36250() {
 ; X64-NEXT:    movq (%rax), %rax
 ; X64-NEXT:    movq %rax, %rcx
 ; X64-NEXT:    rolq %rcx
-; X64-NEXT:    addq %rax, %rax
-; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    orq %rcx, %rdx
-; X64-NEXT:    orq %rax, %rdx
-; X64-NEXT:    orq %rcx, %rdx
+; X64-NEXT:    leaq (%rax,%rax), %rdx
+; X64-NEXT:    orq %rcx, %rcx
+; X64-NEXT:    orq %rdx, %rcx
+; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    sete (%rax)
 ; X64-NEXT:    retq
    %1 = load i448, i448* undef

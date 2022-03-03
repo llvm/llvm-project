@@ -67,6 +67,7 @@ static const struct BuiltinTypeEntry {
     {codeview::SimpleTypeKind::WideCharacter, PDB_BuiltinType::WCharT, 2},
     {codeview::SimpleTypeKind::Character16, PDB_BuiltinType::Char16, 2},
     {codeview::SimpleTypeKind::Character32, PDB_BuiltinType::Char32, 4},
+    {codeview::SimpleTypeKind::Character8, PDB_BuiltinType::Char8, 1},
     {codeview::SimpleTypeKind::SignedCharacter, PDB_BuiltinType::Char, 1},
     {codeview::SimpleTypeKind::UnsignedCharacter, PDB_BuiltinType::UInt, 1},
     {codeview::SimpleTypeKind::Float32, PDB_BuiltinType::Float, 4},

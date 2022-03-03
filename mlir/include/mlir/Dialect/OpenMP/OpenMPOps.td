@@ -105,7 +105,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocate_vars, type($allocate_vars),
                 $allocators_vars, type($allocators_vars)
               ) `)`
-          | `proc_bind` `(` custom<ProcBindKind>($proc_bind_val) `)`
+          | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
     ) $region attr-dict
   }];
   let hasVerifier = 1;
@@ -317,6 +317,10 @@ def YieldOp : OpenMP_Op<"yield",
 
   let arguments = (ins Variadic<AnyType>:$results);
 
+  let builders = [
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
+  ];
+
   let assemblyFormat = [{ ( `(` $results^ `:` type($results) `)` )? attr-dict}];
 }
 
@@ -421,10 +425,11 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedAttr<I64Attr, "0">:$hint);
+                       DefaultValuedAttr<I64Attr, "0">:$hint_val);
 
   let assemblyFormat = [{
-    $sym_name custom<SynchronizationHint>($hint) attr-dict
+    $sym_name oilist(`hint` `(` custom<SynchronizationHint>($hint_val) `)`)
+    attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -555,7 +560,7 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
 // value of the clause) here decomposes handling of this construct into a
 // two-step process.
 
-def AtomicReadOp : OpenMP_Op<"atomic.read"> {
+def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
 
   let summary = "performs an atomic read";
 
@@ -570,14 +575,19 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
     optimization.
 
     `memory_order` indicates the memory ordering behavior of the construct. It
-    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+    can be one of `seq_cst`, `acquire` or `relaxed`.
   }];
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        OpenMP_PointerLikeType:$v,
-                       DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKindAttr>:$memory_order);
-  let hasCustomAssemblyFormat = 1;
+                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
+  let assemblyFormat = [{
+    $v `=` $x 
+    oilist( `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
+          | `hint` `(` custom<SynchronizationHint>($hint_val) `)`)
+    `:` type($x) attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -598,14 +608,20 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
     optimization.
 
     `memory_order` indicates the memory ordering behavior of the construct. It
-    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+    can be one of `seq_cst`, `release` or `relaxed`.
   }];
 
   let arguments = (ins OpenMP_PointerLikeType:$address,
                        AnyType:$value,
-                       DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKindAttr>:$memory_order);
-  let hasCustomAssemblyFormat = 1;
+                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
+  let assemblyFormat = [{
+    $address `=` $value
+    oilist( `hint` `(` custom<SynchronizationHint>($hint_val) `)`
+          | `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`)
+    `:` type($address) `,` type($value)
+    attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -625,7 +641,7 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
     time constant. As the name suggests, this is just a hint for optimization.
 
     `memory_order` indicates the memory ordering behavior of the construct. It
-    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+    can be one of `seq_cst`, `release` or `relaxed`.
 
     The region describes how to update the value of `x`. It takes the value at
     `x` as an input and must yield the updated value. Only the update to `x` is
@@ -635,10 +651,14 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   }];
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
-                       DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKindAttr>:$memory_order);
+                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist( `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
+          | `hint` `(` custom<SynchronizationHint>($hint_val) `)`)
+    $x `:` type($x) $region attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -678,10 +698,14 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 
   }];
 
-  let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist(`memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
+          |`hint` `(` custom<SynchronizationHint>($hint_val) `)`)
+    $region attr-dict
+  }];
   let hasVerifier = 1;
 }
 

@@ -114,6 +114,7 @@ void test() {
 namespace test1 {
   template<typename T> class A : public unknown::X { // expected-error {{undeclared identifier 'unknown'}} expected-error {{expected class name}}
     A(UndeclaredType n) : X(n) {} // expected-error {{unknown type name 'UndeclaredType'}}
+    // expected-error@-1 {{member initializer 'X' does not name a non-static data member or base class}}
   };
   template<typename T> class B : public A<T>     {
     virtual void foo() {}

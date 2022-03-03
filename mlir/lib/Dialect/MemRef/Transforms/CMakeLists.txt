@@ -16,11 +16,11 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRAffine
   MLIRAffineUtils
   MLIRArithmetic
+  MLIRFunc
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
   MLIRMemRef
   MLIRPass
-  MLIRStandard
   MLIRTensor
   MLIRTransforms
   MLIRVector

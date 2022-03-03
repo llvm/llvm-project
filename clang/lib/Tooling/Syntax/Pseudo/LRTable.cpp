@@ -110,14 +110,15 @@ llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
 
   assert(llvm::is_sorted(TargetedStates) &&
          "subrange of the StateIdx should be sorted!");
-  const LRTable::StateID *It = llvm::partition_point(
+  const LRTable::StateID *Start = llvm::partition_point(
       TargetedStates, [&Src](LRTable::StateID S) { return S < Src; });
-  if (It == TargetedStates.end())
+  if (Start == TargetedStates.end())
     return {};
-  size_t Start = It - States.data(), End = Start;
-  while (End < States.size() && States[End] == Src)
+  const LRTable::StateID *End = Start;
+  while (End != TargetedStates.end() && *End == Src)
     ++End;
-  return llvm::makeArrayRef(&Actions[Start], End - Start);
+  return llvm::makeArrayRef(&Actions[Start - States.data()],
+                            /*length=*/End - Start);
 }
 
 } // namespace pseudo

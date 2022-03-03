@@ -173,6 +173,8 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
     return "char16_t";
   case SimpleTypeKind::Character32:
     return "char32_t";
+  case SimpleTypeKind::Character8:
+    return "char8_t";
   case SimpleTypeKind::Complex80:
   case SimpleTypeKind::Complex64:
   case SimpleTypeKind::Complex32:

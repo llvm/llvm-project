@@ -205,7 +205,7 @@ func @zero_dim_no_idx(%arg0 : memref<i32>, %arg1 : memref<i32>, %arg2 : memref<i
 // CHECK-LABEL: func @return_op(%arg0: i32) -> i32 {
 func @return_op(%a : i32) -> i32 {
   // CHECK: return %arg0 : i32
-  "std.return" (%a) : (i32)->()
+  "func.return" (%a) : (i32)->()
 }
 
 // CHECK-LABEL: func @calls(%arg0: i32) {
@@ -215,7 +215,7 @@ func @calls(%arg0: i32) {
   // CHECK: %1 = call @return_op(%0) : (i32) -> i32
   %y = call @return_op(%x) : (i32) -> i32
   // CHECK: %2 = call @return_op(%0) : (i32) -> i32
-  %z = "std.call"(%x) {callee = @return_op} : (i32) -> i32
+  %z = "func.call"(%x) {callee = @return_op} : (i32) -> i32
 
   // CHECK: %f = constant @affine_apply : () -> ()
   %f = constant @affine_apply : () -> ()
@@ -230,7 +230,7 @@ func @calls(%arg0: i32) {
   %2 = call_indirect %f_0(%arg0) : (i32) -> i32
 
   // CHECK: %4 = call_indirect %f_0(%arg0) : (i32) -> i32
-  %3 = "std.call_indirect"(%f_0, %arg0) : ((i32) -> i32, i32) -> i32
+  %3 = "func.call_indirect"(%f_0, %arg0) : ((i32) -> i32, i32) -> i32
 
   return
 }

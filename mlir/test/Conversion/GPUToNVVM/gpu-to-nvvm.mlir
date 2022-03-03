@@ -49,7 +49,7 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %gDimZ = gpu.grid_dim z
 
-    std.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
+    func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
                %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ
         : index, index, index, index, index, index,
           index, index, index, index, index, index
@@ -67,7 +67,7 @@ gpu.module @test_module {
     %0 = arith.addi %idx, %idx : index
     // CHECK: llvm.return %{{.*}} : i64
     // CHECK32: llvm.return %{{.*}} : i32
-    std.return %0 : index
+    func.return %0 : index
   }
 }
 
@@ -140,7 +140,7 @@ gpu.module @test_module {
     // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
 
-    std.return %shfl, %shflu, %shfld, %shfli : f32, f32,f32, f32
+    func.return %shfl, %shflu, %shfld, %shfli : f32, f32,f32, f32
   }
 }
 
@@ -151,7 +151,7 @@ gpu.module @test_module {
   builtin.func @gpu_sync() {
     // CHECK: nvvm.barrier0
     gpu.barrier
-    std.return
+    func.return
   }
 }
 
@@ -166,7 +166,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (f32) -> f32
     %result64 = math.abs %arg_f64 : f64
     // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -181,7 +181,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_ceilf(%{{.*}}) : (f32) -> f32
     %result64 = math.ceil %arg_f64 : f64
     // CHECK: llvm.call @__nv_ceil(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -196,7 +196,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_floorf(%{{.*}}) : (f32) -> f32
     %result64 = math.floor %arg_f64 : f64
     // CHECK: llvm.call @__nv_floor(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -211,7 +211,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_cosf(%{{.*}}) : (f32) -> f32
     %result64 = math.cos %arg_f64 : f64
     // CHECK: llvm.call @__nv_cos(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -225,7 +225,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     %result64 = math.exp %arg_f64 : f64
     // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -239,7 +239,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_exp2f(%{{.*}}) : (f32) -> f32
     %result64 = math.exp2 %arg_f64 : f64
     // CHECK: llvm.call @__nv_exp2(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -254,7 +254,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_logf(%{{.*}}) : (f32) -> f32
     %result64 = math.log %arg_f64 : f64
     // CHECK: llvm.call @__nv_log(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -269,7 +269,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_log10f(%{{.*}}) : (f32) -> f32
     %result64 = math.log10 %arg_f64 : f64
     // CHECK: llvm.call @__nv_log10(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -284,7 +284,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_log1pf(%{{.*}}) : (f32) -> f32
     %result64 = math.log1p %arg_f64 : f64
     // CHECK: llvm.call @__nv_log1p(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -299,7 +299,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_log2f(%{{.*}}) : (f32) -> f32
     %result64 = math.log2 %arg_f64 : f64
     // CHECK: llvm.call @__nv_log2(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -314,7 +314,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_sinf(%{{.*}}) : (f32) -> f32
     %result64 = math.sin %arg_f64 : f64
     // CHECK: llvm.call @__nv_sin(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -333,7 +333,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_tanhf(%{{.*}}) : (f32) -> f32
     %result64 = math.tanh %arg_f64 : f64
     // CHECK: llvm.call @__nv_tanh(%{{.*}}) : (f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -353,7 +353,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_rsqrtf(%{{.*}}) : (f32) -> f32
     %result64 = math.rsqrt %arg_f64 : f64
     // CHECK: llvm.call @__nv_rsqrt(%{{.*}}) : (f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -373,7 +373,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_sqrtf(%{{.*}}) : (f32) -> f32
     %result64 = math.sqrt %arg_f64 : f64
     // CHECK: llvm.call @__nv_sqrt(%{{.*}}) : (f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -393,7 +393,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_atanf(%{{.*}}) : (f32) -> f32
     %result64 = math.atan %arg_f64 : f64
     // CHECK: llvm.call @__nv_atan(%{{.*}}) : (f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -414,7 +414,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_atan2f(%{{.*}}) : (f32, f32) -> f32
     %result64 = math.atan2 %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__nv_atan2(%{{.*}}) : (f64, f64) -> f64
-    std.return %result16, %result32, %result64 : f16, f32, f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -432,7 +432,7 @@ gpu.module @test_module {
       // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
       %result64 = math.exp %arg_f64 : f64
       // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
-      std.return %result32, %result64 : f32, f64
+      func.return %result32, %result64 : f32, f64
     }
     "test.finish" () : () -> ()
   }) : () -> ()
@@ -449,7 +449,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_expm1f(%{{.*}}) : (f32) -> f32
     %result64 = math.expm1 %arg_f64 : f64
     // CHECK: llvm.call @__nv_expm1(%{{.*}}) : (f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 
@@ -464,7 +464,7 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_powf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
     %result64 = math.powf %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__nv_pow(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
-    std.return %result32, %result64 : f32, f64
+    func.return %result32, %result64 : f32, f64
   }
 }
 

@@ -15,14 +15,26 @@
 
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 #include <set>
+#include <stack>
 
 using namespace llvm;
 #define DEBUG_TYPE "sample-profile-inference"
 
 namespace {
+
+static cl::opt<bool> SampleProfileEvenCountDistribution(
+    "sample-profile-even-count-distribution", cl::init(true), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("Try to evenly distribute counts when there are multiple equally "
+             "likely options."));
+
+static cl::opt<unsigned> SampleProfileMaxDfsCalls(
+    "sample-profile-max-dfs-calls", cl::init(10), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Maximum number of dfs iterations for even count distribution."));
 
 /// A value indicating an infinite flow/capacity/weight of a block/edge.
 /// Not using numeric_limits<int64_t>::max(), as the values can be summed up
@@ -52,16 +64,16 @@ public:
 
     Nodes = std::vector<Node>(NodeCount);
     Edges = std::vector<std::vector<Edge>>(NodeCount, std::vector<Edge>());
+    if (SampleProfileEvenCountDistribution)
+      AugmentingEdges =
+          std::vector<std::vector<Edge *>>(NodeCount, std::vector<Edge *>());
   }
 
   // Run the algorithm.
   int64_t run() {
-    // Find an augmenting path and update the flow along the path
-    size_t AugmentationIters = 0;
-    while (findAugmentingPath()) {
-      augmentFlowAlongPath();
-      AugmentationIters++;
-    }
+    // Iteratively find an augmentation path/dag in the network and send the
+    // flow along its edges
+    size_t AugmentationIters = applyFlowAugmentation();
 
     // Compute the total flow and its cost
     int64_t TotalCost = 0;
@@ -79,6 +91,7 @@ public:
                       << " iterations with " << TotalFlow << " total flow"
                       << " of " << TotalCost << " cost\n");
     (void)TotalFlow;
+    (void)AugmentationIters;
     return TotalCost;
   }
 
@@ -148,6 +161,55 @@ public:
   static constexpr int64_t AuxCostUnlikely = ((int64_t)1) << 30;
 
 private:
+  /// Iteratively find an augmentation path/dag in the network and send the
+  /// flow along its edges. The method returns the number of applied iterations.
+  size_t applyFlowAugmentation() {
+    size_t AugmentationIters = 0;
+    while (findAugmentingPath()) {
+      uint64_t PathCapacity = computeAugmentingPathCapacity();
+      while (PathCapacity > 0) {
+        bool Progress = false;
+        if (SampleProfileEvenCountDistribution) {
+          // Identify node/edge candidates for augmentation
+          identifyShortestEdges(PathCapacity);
+
+          // Find an augmenting DAG
+          auto AugmentingOrder = findAugmentingDAG();
+
+          // Apply the DAG augmentation
+          Progress = augmentFlowAlongDAG(AugmentingOrder);
+          PathCapacity = computeAugmentingPathCapacity();
+        }
+
+        if (!Progress) {
+          augmentFlowAlongPath(PathCapacity);
+          PathCapacity = 0;
+        }
+
+        AugmentationIters++;
+      }
+    }
+    return AugmentationIters;
+  }
+
+  /// Compute the capacity of the cannonical augmenting path. If the path is
+  /// saturated (that is, no flow can be sent along the path), then return 0.
+  uint64_t computeAugmentingPathCapacity() {
+    uint64_t PathCapacity = INF;
+    uint64_t Now = Target;
+    while (Now != Source) {
+      uint64_t Pred = Nodes[Now].ParentNode;
+      auto &Edge = Edges[Pred][Nodes[Now].ParentEdgeIndex];
+
+      assert(Edge.Capacity >= Edge.Flow && "incorrect edge flow");
+      uint64_t EdgeCapacity = uint64_t(Edge.Capacity - Edge.Flow);
+      PathCapacity = std::min(PathCapacity, EdgeCapacity);
+
+      Now = Pred;
+    }
+    return PathCapacity;
+  }
+
   /// Check for existence of an augmenting path with a positive capacity.
   bool findAugmentingPath() {
     // Initialize data structures
@@ -180,7 +242,7 @@ private:
       //    from Source to Target; it follows from inequalities
       //    Dist[Source, Target] >= Dist[Source, V] + Dist[V, Target]
       //                         >= Dist[Source, V]
-      if (Nodes[Target].Distance == 0)
+      if (!SampleProfileEvenCountDistribution && Nodes[Target].Distance == 0)
         break;
       if (Nodes[Src].Distance > Nodes[Target].Distance)
         continue;
@@ -210,21 +272,9 @@ private:
   }
 
   /// Update the current flow along the augmenting path.
-  void augmentFlowAlongPath() {
-    // Find path capacity
-    int64_t PathCapacity = INF;
-    uint64_t Now = Target;
-    while (Now != Source) {
-      uint64_t Pred = Nodes[Now].ParentNode;
-      auto &Edge = Edges[Pred][Nodes[Now].ParentEdgeIndex];
-      PathCapacity = std::min(PathCapacity, Edge.Capacity - Edge.Flow);
-      Now = Pred;
-    }
-
+  void augmentFlowAlongPath(uint64_t PathCapacity) {
     assert(PathCapacity > 0 && "found an incorrect augmenting path");
-
-    // Update the flow along the path
-    Now = Target;
+    uint64_t Now = Target;
     while (Now != Source) {
       uint64_t Pred = Nodes[Now].ParentNode;
       auto &Edge = Edges[Pred][Nodes[Now].ParentEdgeIndex];
@@ -234,6 +284,220 @@ private:
       RevEdge.Flow -= PathCapacity;
 
       Now = Pred;
+    }
+  }
+
+  /// Find an Augmenting DAG order using a modified version of DFS in which we
+  /// can visit a node multiple times. In the DFS search, when scanning each
+  /// edge out of a node, continue search at Edge.Dst endpoint if it has not
+  /// been discovered yet and its NumCalls < MaxDfsCalls. The algorithm
+  /// runs in O(MaxDfsCalls * |Edges| + |Nodes|) time.
+  /// It returns an Augmenting Order (Taken nodes in decreasing Finish time)
+  /// that starts with Source and ends with Target.
+  std::vector<uint64_t> findAugmentingDAG() {
+    // We use a stack based implemenation of DFS to avoid recursion.
+    // Defining DFS data structures:
+    // A pair (NodeIdx, EdgeIdx) at the top of the Stack denotes that
+    //  - we are currently visiting Nodes[NodeIdx] and
+    //  - the next edge to scan is Edges[NodeIdx][EdgeIdx]
+    typedef std::pair<uint64_t, uint64_t> StackItemType;
+    std::stack<StackItemType> Stack;
+    std::vector<uint64_t> AugmentingOrder;
+
+    // Phase 0: Initialize Node attributes and Time for DFS run
+    for (auto &Node : Nodes) {
+      Node.Discovery = 0;
+      Node.Finish = 0;
+      Node.NumCalls = 0;
+      Node.Taken = false;
+    }
+    uint64_t Time = 0;
+    // Mark Target as Taken
+    // Taken attribute will be propagated backwards from Target towards Source
+    Nodes[Target].Taken = true;
+
+    // Phase 1: Start DFS traversal from Source
+    Stack.emplace(Source, 0);
+    Nodes[Source].Discovery = ++Time;
+    while (!Stack.empty()) {
+      auto NodeIdx = Stack.top().first;
+      auto EdgeIdx = Stack.top().second;
+
+      // If we haven't scanned all edges out of NodeIdx, continue scanning
+      if (EdgeIdx < Edges[NodeIdx].size()) {
+        auto &Edge = Edges[NodeIdx][EdgeIdx];
+        auto &Dst = Nodes[Edge.Dst];
+        Stack.top().second++;
+
+        if (Edge.OnShortestPath) {
+          // If we haven't seen Edge.Dst so far, continue DFS search there
+          if (Dst.Discovery == 0 && Dst.NumCalls < SampleProfileMaxDfsCalls) {
+            Dst.Discovery = ++Time;
+            Stack.emplace(Edge.Dst, 0);
+            Dst.NumCalls++;
+          } else if (Dst.Taken && Dst.Finish != 0) {
+            // Else, if Edge.Dst already have a path to Target, so that NodeIdx
+            Nodes[NodeIdx].Taken = true;
+          }
+        }
+      } else {
+        // If we are done scanning all edge out of NodeIdx
+        Stack.pop();
+        // If we haven't found a path from NodeIdx to Target, forget about it
+        if (!Nodes[NodeIdx].Taken) {
+          Nodes[NodeIdx].Discovery = 0;
+        } else {
+          // If we have found a path from NodeIdx to Target, then finish NodeIdx
+          // and propagate Taken flag to DFS parent unless at the Source
+          Nodes[NodeIdx].Finish = ++Time;
+          // NodeIdx == Source if and only if the stack is empty
+          if (NodeIdx != Source) {
+            assert(!Stack.empty() && "empty stack while running dfs");
+            Nodes[Stack.top().first].Taken = true;
+          }
+          AugmentingOrder.push_back(NodeIdx);
+        }
+      }
+    }
+    // Nodes are collected decreasing Finish time, so the order is reversed
+    std::reverse(AugmentingOrder.begin(), AugmentingOrder.end());
+
+    // Phase 2: Extract all forward (DAG) edges and fill in AugmentingEdges
+    for (size_t Src : AugmentingOrder) {
+      AugmentingEdges[Src].clear();
+      for (auto &Edge : Edges[Src]) {
+        uint64_t Dst = Edge.Dst;
+        if (Edge.OnShortestPath && Nodes[Src].Taken && Nodes[Dst].Taken &&
+            Nodes[Dst].Finish < Nodes[Src].Finish) {
+          AugmentingEdges[Src].push_back(&Edge);
+        }
+      }
+      assert((Src == Target || !AugmentingEdges[Src].empty()) &&
+             "incorrectly constructed augmenting edges");
+    }
+
+    return AugmentingOrder;
+  }
+
+  /// Update the current flow along the given (acyclic) subgraph specified by
+  /// the vertex order, AugmentingOrder. The objective is to send as much flow
+  /// as possible while evenly distributing flow among successors of each node.
+  /// After the update at least one edge is saturated.
+  bool augmentFlowAlongDAG(const std::vector<uint64_t> &AugmentingOrder) {
+    // Phase 0: Initialization
+    for (uint64_t Src : AugmentingOrder) {
+      Nodes[Src].FracFlow = 0;
+      Nodes[Src].IntFlow = 0;
+      for (auto &Edge : AugmentingEdges[Src]) {
+        Edge->AugmentedFlow = 0;
+      }
+    }
+
+    // Phase 1: Send a unit of fractional flow along the DAG
+    uint64_t MaxFlowAmount = INF;
+    Nodes[Source].FracFlow = 1.0;
+    for (uint64_t Src : AugmentingOrder) {
+      assert((Src == Target || Nodes[Src].FracFlow > 0.0) &&
+             "incorrectly computed fractional flow");
+      // Distribute flow evenly among successors of Src
+      uint64_t Degree = AugmentingEdges[Src].size();
+      for (auto &Edge : AugmentingEdges[Src]) {
+        double EdgeFlow = Nodes[Src].FracFlow / Degree;
+        Nodes[Edge->Dst].FracFlow += EdgeFlow;
+        if (Edge->Capacity == INF)
+          continue;
+        uint64_t MaxIntFlow = double(Edge->Capacity - Edge->Flow) / EdgeFlow;
+        MaxFlowAmount = std::min(MaxFlowAmount, MaxIntFlow);
+      }
+    }
+    // Stop early if we cannot send any (integral) flow from Source to Target
+    if (MaxFlowAmount == 0)
+      return false;
+
+    // Phase 2: Send an integral flow of MaxFlowAmount
+    Nodes[Source].IntFlow = MaxFlowAmount;
+    for (uint64_t Src : AugmentingOrder) {
+      if (Src == Target)
+        break;
+      // Distribute flow evenly among successors of Src, rounding up to make
+      // sure all flow is sent
+      uint64_t Degree = AugmentingEdges[Src].size();
+      // We are guaranteeed that Node[Src].IntFlow <= SuccFlow * Degree
+      uint64_t SuccFlow = (Nodes[Src].IntFlow + Degree - 1) / Degree;
+      for (auto &Edge : AugmentingEdges[Src]) {
+        uint64_t Dst = Edge->Dst;
+        uint64_t EdgeFlow = std::min(Nodes[Src].IntFlow, SuccFlow);
+        EdgeFlow = std::min(EdgeFlow, uint64_t(Edge->Capacity - Edge->Flow));
+        Nodes[Dst].IntFlow += EdgeFlow;
+        Nodes[Src].IntFlow -= EdgeFlow;
+        Edge->AugmentedFlow += EdgeFlow;
+      }
+    }
+    assert(Nodes[Target].IntFlow <= MaxFlowAmount);
+    Nodes[Target].IntFlow = 0;
+
+    // Phase 3: Send excess flow back traversing the nodes backwards.
+    // Because of rounding, not all flow can be sent along the edges of Src.
+    // Hence, sending the remaining flow back to maintain flow conservation
+    for (size_t Idx = AugmentingOrder.size() - 1; Idx > 0; Idx--) {
+      uint64_t Src = AugmentingOrder[Idx - 1];
+      // Try to send excess flow back along each edge.
+      // Make sure we only send back flow we just augmented (AugmentedFlow).
+      for (auto &Edge : AugmentingEdges[Src]) {
+        uint64_t Dst = Edge->Dst;
+        if (Nodes[Dst].IntFlow == 0)
+          continue;
+        uint64_t EdgeFlow = std::min(Nodes[Dst].IntFlow, Edge->AugmentedFlow);
+        Nodes[Dst].IntFlow -= EdgeFlow;
+        Nodes[Src].IntFlow += EdgeFlow;
+        Edge->AugmentedFlow -= EdgeFlow;
+      }
+    }
+
+    // Phase 4: Update flow values along all edges
+    bool HasSaturatedEdges = false;
+    for (uint64_t Src : AugmentingOrder) {
+      // Verify that we have sent all the excess flow from the node
+      assert(Src == Source || Nodes[Src].IntFlow == 0);
+      for (auto &Edge : AugmentingEdges[Src]) {
+        assert(uint64_t(Edge->Capacity - Edge->Flow) >= Edge->AugmentedFlow);
+        // Update flow values along the edge and its reverse copy
+        auto &RevEdge = Edges[Edge->Dst][Edge->RevEdgeIndex];
+        Edge->Flow += Edge->AugmentedFlow;
+        RevEdge.Flow -= Edge->AugmentedFlow;
+        if (Edge->Capacity == Edge->Flow && Edge->AugmentedFlow > 0)
+          HasSaturatedEdges = true;
+      }
+    }
+
+    // The augmentation is successful iff at least one edge becomes saturated
+    return HasSaturatedEdges;
+  }
+
+  /// Identify candidate (shortest) edges for augmentation.
+  void identifyShortestEdges(uint64_t PathCapacity) {
+    assert(PathCapacity > 0 && "found an incorrect augmenting DAG");
+    // To make sure the augmentation DAG contains only edges with large residual
+    // capacity, we prune all edges whose capacity is below a fraction of
+    // the capacity of the augmented path.
+    // (All edges of the path itself are always in the DAG)
+    uint64_t MinCapacity = std::max(PathCapacity / 2, uint64_t(1));
+
+    // Decide which edges are on a shortest path from Source to Target
+    for (size_t Src = 0; Src < Nodes.size(); Src++) {
+      // An edge cannot be augmenting if the endpoint has large distance
+      if (Nodes[Src].Distance > Nodes[Target].Distance)
+        continue;
+
+      for (auto &Edge : Edges[Src]) {
+        uint64_t Dst = Edge.Dst;
+        Edge.OnShortestPath =
+            Src != Target && Dst != Source &&
+            Nodes[Dst].Distance <= Nodes[Target].Distance &&
+            Nodes[Dst].Distance == Nodes[Src].Distance + Edge.Cost &&
+            Edge.Capacity > Edge.Flow &&
+            uint64_t(Edge.Capacity - Edge.Flow) >= MinCapacity;
+      }
     }
   }
 
@@ -247,7 +511,20 @@ private:
     uint64_t ParentEdgeIndex;
     /// An indicator of whether the current node is in a queue.
     bool Taken;
+
+    /// Data fields utilized in DAG-augmentation:
+    /// Fractional flow.
+    double FracFlow;
+    /// Integral flow.
+    uint64_t IntFlow;
+    /// Discovery time.
+    uint64_t Discovery;
+    /// Finish time.
+    uint64_t Finish;
+    /// NumCalls.
+    uint64_t NumCalls;
   };
+
   /// An edge in a flow network.
   struct Edge {
     /// The cost of the edge.
@@ -260,6 +537,12 @@ private:
     uint64_t Dst;
     /// The index of the reverse edge between Dst and the current node.
     uint64_t RevEdgeIndex;
+
+    /// Data fields utilized in DAG-augmentation:
+    /// Whether the edge is currently on a shortest path from Source to Target.
+    bool OnShortestPath;
+    /// Extra flow along the edge.
+    uint64_t AugmentedFlow;
   };
 
   /// The set of network nodes.
@@ -270,6 +553,8 @@ private:
   uint64_t Source;
   /// Target (sink) node of the flow.
   uint64_t Target;
+  /// Augmenting edges.
+  std::vector<std::vector<Edge *>> AugmentingEdges;
 };
 
 /// A post-processing adjustment of control flow. It applies two steps by
@@ -511,7 +796,7 @@ private:
                            std::vector<FlowBlock *> &KnownDstBlocks,
                            std::vector<FlowBlock *> &UnknownBlocks) {
     // Run BFS from SrcBlock and make sure all paths are going through unknown
-    // blocks and end at a non-unknown DstBlock
+    // blocks and end at a known DstBlock
     auto Visited = BitVector(NumBlocks(), false);
     std::queue<uint64_t> Queue;
 

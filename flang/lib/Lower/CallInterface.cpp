@@ -705,8 +705,9 @@ private:
     }
     // CHARACTER with compile time constant length.
     if (cat == Fortran::common::TypeCategory::Character)
-      TODO(interface.converter.getCurrentLocation(),
-           "[translateDynamicType] Character");
+      if (std::optional<std::int64_t> constantLen =
+              toInt64(dynamicType.GetCharLength()))
+        return getConverter().genType(cat, dynamicType.kind(), {*constantLen});
     // INTEGER, REAL, LOGICAL, COMPLEX, and CHARACTER with dynamic length.
     return getConverter().genType(cat, dynamicType.kind());
   }

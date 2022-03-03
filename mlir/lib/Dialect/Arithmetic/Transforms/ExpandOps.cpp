@@ -9,7 +9,6 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -197,7 +196,7 @@ struct ArithmeticExpandOpsPass
 
     arith::populateArithmeticExpandOpsPatterns(patterns);
 
-    target.addLegalDialect<arith::ArithmeticDialect, StandardOpsDialect>();
+    target.addLegalDialect<arith::ArithmeticDialect>();
     // clang-format off
     target.addIllegalOp<
       arith::CeilDivSIOp,

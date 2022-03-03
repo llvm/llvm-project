@@ -15,14 +15,12 @@
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+#include "llvm/Analysis/ValueLattice.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -452,7 +450,7 @@ public:
     return TrackingIncomingArguments;
   }
 
-  void markArgInFuncSpecialization(Function *F, Argument *A, Constant *C);
+  void markArgInFuncSpecialization(Function *F, const ArgInfo &Arg);
 
   void markFunctionUnreachable(Function *F) {
     for (auto &BB : *F)
@@ -526,24 +524,25 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
   return nullptr;
 }
 
-void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
-                                                  Constant *C) {
-  assert(F->arg_size() == A->getParent()->arg_size() &&
+void SCCPInstVisitor::markArgInFuncSpecialization(Function *F,
+                                                  const ArgInfo &Arg) {
+  assert(F->arg_size() == Arg.Formal->getParent()->arg_size() &&
          "Functions should have the same number of arguments");
 
-  // Mark the argument constant in the new function.
-  markConstant(A, C);
-
-  // For the remaining arguments in the new function, copy the lattice state
-  // over from the old function.
-  for (Argument *OldArg = F->arg_begin(), *NewArg = A->getParent()->arg_begin(),
-                *End = F->arg_end();
-       OldArg != End; ++OldArg, ++NewArg) {
+  Argument *NewArg = F->arg_begin();
+  Argument *OldArg = Arg.Formal->getParent()->arg_begin();
+  for (auto End = F->arg_end(); NewArg != End; ++NewArg, ++OldArg) {
 
     LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
                       << NewArg->getNameOrAsOperand() << "\n");
 
-    if (NewArg != A && ValueState.count(OldArg)) {
+    if (OldArg == Arg.Formal) {
+      // Mark the argument constants in the new function.
+      markConstant(NewArg, Arg.Actual);
+    } else if (ValueState.count(OldArg)) {
+      // For the remaining arguments in the new function, copy the lattice state
+      // over from the old function.
+      //
       // Note: This previously looked like this:
       // ValueState[NewArg] = ValueState[OldArg];
       // This is incorrect because the DenseMap class may resize the underlying
@@ -1718,9 +1717,8 @@ SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
   return Visitor->getArgumentTrackedFunctions();
 }
 
-void SCCPSolver::markArgInFuncSpecialization(Function *F, Argument *A,
-                                             Constant *C) {
-  Visitor->markArgInFuncSpecialization(F, A, C);
+void SCCPSolver::markArgInFuncSpecialization(Function *F, const ArgInfo &Arg) {
+  Visitor->markArgInFuncSpecialization(F, Arg);
 }
 
 void SCCPSolver::markFunctionUnreachable(Function *F) {

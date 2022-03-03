@@ -39,6 +39,8 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRArithmeticTransforms
   MLIRBufferization
   MLIRComplex
+  MLIRFunc
+  MLIRFuncTransforms
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRef
@@ -51,8 +53,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRSCFUtils
   MLIRPass
   MLIRSparseTensor
-  MLIRStandard
-  MLIRStandardOpsTransforms
   MLIRStandardToLLVM
   MLIRTensor
   MLIRTensorTilingInterfaceImpl

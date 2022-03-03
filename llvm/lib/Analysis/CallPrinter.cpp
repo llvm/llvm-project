@@ -14,17 +14,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CallPrinter.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/DOTGraphTraitsPass.h"
-#include "llvm/Analysis/HeatUtils.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/HeatUtils.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/GraphWriter.h"
 
 using namespace llvm;
+
+namespace llvm {
+template <class GraphType> struct GraphTraits;
+}
 
 // This option shows static (relative) call counts.
 // FIXME:

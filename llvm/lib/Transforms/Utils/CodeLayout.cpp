@@ -40,7 +40,6 @@
 
 #include "llvm/Transforms/Utils/CodeLayout.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "code-layout"
@@ -49,6 +48,11 @@ cl::opt<bool> EnableExtTspBlockPlacement(
     "enable-ext-tsp-block-placement", cl::Hidden, cl::init(false),
     cl::desc("Enable machine block placement based on the ext-tsp model, "
              "optimizing I-cache utilization."));
+
+cl::opt<bool> ApplyExtTspWithoutProfile(
+    "ext-tsp-apply-without-profile",
+    cl::desc("Whether to apply ext-tsp placement for instances w/o profile"),
+    cl::init(true), cl::Hidden, cl::ZeroOrMore);
 
 // Algorithm-specific constants. The values are tuned for the best performance
 // of large-scale front-end bound binaries.
@@ -67,6 +71,12 @@ static cl::opt<unsigned> ForwardDistance(
 static cl::opt<unsigned> BackwardDistance(
     "ext-tsp-backward-distance", cl::Hidden, cl::init(640),
     cl::desc("The maximum distance (in bytes) of a backward jump for ExtTSP"));
+
+// The maximum size of a chain created by the algorithm. The size is bounded
+// so that the algorithm can efficiently process extremely large instance.
+static cl::opt<unsigned>
+    MaxChainSize("ext-tsp-max-chain-size", cl::Hidden, cl::init(4096),
+                 cl::desc("The maximum size of a chain to create."));
 
 // The maximum size of a chain for splitting. Larger values of the threshold
 // may yield better quality at the cost of worsen run-time.
@@ -147,7 +157,6 @@ private:
   MergeTypeTy MergeType{MergeTypeTy::X_Y};
 };
 
-class Block;
 class Jump;
 class Chain;
 class ChainEdge;
@@ -227,6 +236,8 @@ public:
   void setScore(double NewScore) { Score = NewScore; }
 
   const std::vector<Block *> &blocks() const { return Blocks; }
+
+  size_t numBlocks() const { return Blocks.size(); }
 
   const std::vector<std::pair<Chain *, ChainEdge *>> &edges() const {
     return Edges;
@@ -504,7 +515,7 @@ private:
     AllEdges.reserve(AllJumps.size());
     for (auto &Block : AllBlocks) {
       for (auto &Jump : Block.OutJumps) {
-        const auto SuccBlock = Jump->Target;
+        auto SuccBlock = Jump->Target;
         auto CurEdge = Block.CurChain->getEdge(SuccBlock->CurChain);
         // this edge is already present in the graph
         if (CurEdge != nullptr) {
@@ -592,6 +603,10 @@ private:
           auto ChainEdge = EdgeIter.second;
           // Ignore loop edges
           if (ChainPred == ChainSucc)
+            continue;
+
+          // Stop early if the combined chain violates the maximum allowed size
+          if (ChainPred->numBlocks() + ChainSucc->numBlocks() >= MaxChainSize)
             continue;
 
           // Compute the gain of merging the two chains

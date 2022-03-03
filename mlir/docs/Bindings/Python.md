@@ -885,16 +885,16 @@ Each dialect with a mapping to python requires that an appropriate
 `_{DIALECT_NAMESPACE}_ops_gen.py` wrapper module is created. This is done by
 invoking `mlir-tblgen` on a python-bindings specific tablegen wrapper that
 includes the boilerplate and actual dialect specific `td` file. An example, for
-the `StandardOps` (which is assigned the namespace `std` as a special case):
+the `Func` (which is assigned the namespace `func` as a special case):
 
 ```tablegen
-#ifndef PYTHON_BINDINGS_STANDARD_OPS
-#define PYTHON_BINDINGS_STANDARD_OPS
+#ifndef PYTHON_BINDINGS_FUNC_OPS
+#define PYTHON_BINDINGS_FUNC_OPS
 
 include "mlir/Bindings/Python/Attributes.td"
-include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Func/IR/FuncOps.td"
 
-#endif
+#endif // PYTHON_BINDINGS_FUNC_OPS
 ```
 
 In the main repository, building the wrapper is done via the CMake function

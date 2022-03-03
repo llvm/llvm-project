@@ -13,7 +13,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -139,7 +139,7 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
             break;
 
           // Find the first function call user of the reference counted value.
-          Operation *functionCall = dyn_cast<CallOp>(user);
+          Operation *functionCall = dyn_cast<func::CallOp>(user);
           if (functionCall &&
               (!firstFunctionCallUser ||
                functionCall->isBeforeInBlock(firstFunctionCallUser))) {

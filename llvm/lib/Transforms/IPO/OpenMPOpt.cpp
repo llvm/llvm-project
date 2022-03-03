@@ -110,8 +110,13 @@ static cl::opt<bool> DisableOpenMPOptBarrierElimination(
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> PrintModuleAfterOptimizations(
-    "openmp-opt-print-module", cl::ZeroOrMore,
+    "openmp-opt-print-module-after", cl::ZeroOrMore,
     cl::desc("Print the current module after OpenMP optimizations."),
+    cl::Hidden, cl::init(false));
+
+static cl::opt<bool> PrintModuleBeforeOptimizations(
+    "openmp-opt-print-module-before", cl::ZeroOrMore,
+    cl::desc("Print the current module before OpenMP optimizations."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> AlwaysInlineDeviceFunctions(
@@ -4916,6 +4921,9 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   KernelSet Kernels = getDeviceKernels(M);
 
+  if (PrintModuleBeforeOptimizations)
+    LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt Module Pass:\n" << M);
+
   auto IsCalled = [&](Function &F) {
     if (Kernels.contains(&F))
       return true;
@@ -5017,6 +5025,9 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
     return PreservedAnalyses::all();
 
   Module &M = *C.begin()->getFunction().getParent();
+
+  if (PrintModuleBeforeOptimizations)
+    LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt CGSCC Pass:\n" << M);
 
   KernelSet Kernels = getDeviceKernels(M);
 

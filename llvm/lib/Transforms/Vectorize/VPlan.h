@@ -40,6 +40,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/Support/InstructionCost.h"
 #include <algorithm>
 #include <cassert>
@@ -1848,15 +1849,19 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
 class VPScalarIVStepsRecipe : public VPRecipeBase, public VPValue {
-  PHINode *IV;
+  /// Scalar type to use for the generated values.
+  Type *Ty;
+  /// If not nullptr, truncate the generated values to TruncToTy.
+  Type *TruncToTy;
   const InductionDescriptor &IndDesc;
 
 public:
-  VPScalarIVStepsRecipe(PHINode *IV, const InductionDescriptor &IndDesc,
+  VPScalarIVStepsRecipe(Type *Ty, const InductionDescriptor &IndDesc,
                         VPValue *CanonicalIV, VPValue *Start, VPValue *Step,
-                        Instruction *Trunc)
+                        Type *TruncToTy)
       : VPRecipeBase(VPScalarIVStepsSC, {CanonicalIV, Start, Step}),
-        VPValue(Trunc ? Trunc : IV, this), IV(IV), IndDesc(IndDesc) {}
+        VPValue(nullptr, this), Ty(Ty), TruncToTy(TruncToTy), IndDesc(IndDesc) {
+  }
 
   ~VPScalarIVStepsRecipe() override = default;
 

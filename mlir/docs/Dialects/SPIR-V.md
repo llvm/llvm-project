@@ -1033,25 +1033,25 @@ type conversion for builtin types to SPIR-V types conforming to the
 required extension/capability for the resultant type is not available in the
 given target environment, `convertType()` will return a null type.
 
-Standard scalar types are converted to their corresponding SPIR-V scalar types.
+Builtin scalar types are converted to their corresponding SPIR-V scalar types.
 
 (TODO: Note that if the bitwidth is not available in the target environment,
 it will be unconditionally converted to 32-bit. This should be switched to
 properly emulating non-32-bit scalar types.)
 
-[Standard index type][MlirIndexType] need special handling since they are not
+[Builtin index type][MlirIndexType] need special handling since they are not
 directly supported in SPIR-V. Currently the `index` type is converted to `i32`.
 
 (TODO: Allow for configuring the integer width to use for `index` types in the
 SPIR-V dialect)
 
 SPIR-V only supports vectors of 2/3/4 elements; so
-[standard vector types][MlirVectorType] of these lengths can be converted
+[builtin vector types][MlirVectorType] of these lengths can be converted
 directly.
 
 (TODO: Convert other vectors of lengths to scalars or arrays)
 
-[Standard memref types][MlirMemrefType] with static shape and stride are
+[Builtin memref types][MlirMemrefType] with static shape and stride are
 converted to `spv.ptr<spv.struct<spv.array<...>>>`s. The resultant SPIR-V array
 types have the same element type as the source memref and its number of elements
 is obtained from the layout specification of the memref. The storage class of
@@ -1079,8 +1079,7 @@ returns an SSA value generated from an `spv.mlir.addressof` operation.
 
 Using the above infrastructure, conversions are implemented from
 
-*   [Standard Dialect][MlirStandardDialect] : Only arithmetic and logical
-    operations conversions are implemented.
+*   [Arithmetic Dialect][MlirArithmeticDialect]
 *   [GPU Dialect][MlirGpuDialect] : A gpu.module is converted to a `spv.module`.
     A gpu.function within this module is lowered as an entry function.
 
@@ -1142,12 +1141,12 @@ in a few places:
 *   From GPU dialect: headers are at
     [include/mlir/Conversion/GPUTOSPIRV][MlirGpuToSpirvHeaders]; libraries are
     at [lib/Conversion/GPUToSPIRV][MlirGpuToSpirvLibs].
-*   From standard dialect: headers are at
-    [include/mlir/Conversion/StandardTOSPIRV][MlirStdToSpirvHeaders]; libraries
-    are at [lib/Conversion/StandardToSPIRV][MlirStdToSpirvLibs].
+*   From Func dialect: headers are at
+    [include/mlir/Conversion/FuncToSPIRV][MlirFuncToSpirvHeaders]; libraries
+    are at [lib/Conversion/FuncToSPIRV][MlirFuncToSpirvLibs].
 
 These dialect to dialect conversions have their dedicated libraries,
-`MLIRGPUToSPIRV` and `MLIRStandardToSPIRV`, respectively.
+`MLIRGPUToSPIRV` and `MLIRFuncToSPIRV`, respectively.
 
 There are also common utilities when targeting SPIR-V from any dialect:
 
@@ -1400,15 +1399,15 @@ dialect.
 [MlirMemrefType]: Builtin.md/#memreftype
 [MlirIndexType]: Builtin.md/#indextype
 [MlirGpuDialect]: GPU.md
-[MlirStandardDialect]: Standard.md
+[MlirArithmeticDialect]: Arithmetic.md
 [MlirSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Dialect/SPIRV
 [MlirSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Dialect/SPIRV
 [MlirSpirvTests]: https://github.com/llvm/llvm-project/tree/main/mlir/test/Dialect/SPIRV
 [MlirSpirvUnittests]: https://github.com/llvm/llvm-project/tree/main/mlir/unittests/Dialect/SPIRV
 [MlirGpuToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Conversion/GPUToSPIRV
 [MlirGpuToSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Conversion/GPUToSPIRV
-[MlirStdToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Conversion/StandardToSPIRV
-[MlirStdToSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Conversion/StandardToSPIRV
+[MlirFuncToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Conversion/FuncToSPIRV
+[MlirFuncToSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Conversion/FuncToSPIRV
 [MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVDialect.h
 [MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVTypes.h
 [MlirSpirvOpsH]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVOps.h

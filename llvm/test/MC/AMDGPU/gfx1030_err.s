@@ -4,6 +4,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1033 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1034 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1035 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1036 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 
 v_dot8c_i32_i4 v5, v1, v2
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

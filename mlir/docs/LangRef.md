@@ -256,10 +256,10 @@ between, and within, different dialects.
 A few of the dialects supported by MLIR:
 
 *   [Affine dialect](Dialects/Affine.md)
+*   [Func dialect](Dialects/Func.md)
 *   [GPU dialect](Dialects/GPU.md)
 *   [LLVM dialect](Dialects/LLVM.md)
 *   [SPIR-V dialect](Dialects/SPIR-V.md)
-*   [Standard dialect](Dialects/Standard.md)
 *   [Vector dialect](Dialects/Vector.md)
 
 ### Target specific operations
@@ -305,7 +305,7 @@ MLIR introduces a uniform concept called *operations* to enable describing many
 different levels of abstractions and computations. Operations in MLIR are fully
 extensible (there is no fixed list of operations) and have application-specific
 semantics. For example, MLIR supports
-[target-independent operations](Dialects/Standard.md#memory-operations),
+[target-independent operations](Dialects/MemRef.md),
 [affine operations](Dialects/Affine.md), and
 [target-specific machine operations](#target-specific-operations).
 
@@ -752,7 +752,7 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`cmpi` operation](Dialects/Standard.md#stdcmpi-cmpiop). Each operation has an
+[`cmpi` operation](Dialects/ArithmeticOps.md#arithcmpi-mlirarithcmpiop). Each operation has an
 attribute dictionary, which associates a set of attribute names to attribute
 values. MLIR's builtin dialect provides a rich set of
 [builtin attribute values](#builtin-attribute-values) out of the box (such as

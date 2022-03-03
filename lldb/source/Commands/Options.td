@@ -176,9 +176,9 @@ let Command = "breakpoint set" in {
     Desc<"Set the breakpoint on exceptions thrown by the specified language "
     "(without options, on throw but not catch.)">;
   def breakpoint_set_on_throw : Option<"on-throw", "w">, Group<10>,
-    Arg<"Boolean">, Desc<"Set the breakpoint on exception throW.">;
+    Arg<"Boolean">, Desc<"Set the breakpoint on exception throw.">;
   def breakpoint_set_on_catch : Option<"on-catch", "h">, Group<10>,
-    Arg<"Boolean">, Desc<"Set the breakpoint on exception catcH.">;
+    Arg<"Boolean">, Desc<"Set the breakpoint on exception catch.">;
   def breakpoint_set_language : Option<"language", "L">, GroupRange<3, 8>,
     Arg<"Language">,
     Desc<"Specifies the Language to use when interpreting the breakpoint's "
@@ -957,6 +957,9 @@ let Command = "target modules lookup" in {
   def target_modules_lookup_type : Option<"type", "t">, Group<6>, Arg<"Name">,
     Required, Desc<"Lookup a type by name in the debug symbols in one or more "
     "target modules.">;
+  def target_modules_lookup_variables_ranges : Option<"show-variable-ranges", 
+    "\\x01">, GroupRange<1, 6>, Desc<"Dump valid ranges of variables (must be "
+    "used in conjunction with --verbose">;
   def target_modules_lookup_verbose : Option<"verbose", "v">,
     Desc<"Enable verbose lookup information.">;
   def target_modules_lookup_all : Option<"all", "A">, Desc<"Print all matches, "

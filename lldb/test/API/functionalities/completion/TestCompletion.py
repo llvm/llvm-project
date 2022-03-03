@@ -539,20 +539,20 @@ class CommandLineCompletionTestCase(TestBase):
         """Test descriptions of command options"""
         # Short options
         self.check_completion_with_desc("breakpoint set -", [
-            ["-h", "Set the breakpoint on exception catcH."],
-            ["-w", "Set the breakpoint on exception throW."]
+            ["-h", "Set the breakpoint on exception catch."],
+            ["-w", "Set the breakpoint on exception throw."]
         ])
 
         # Long options.
         self.check_completion_with_desc("breakpoint set --", [
-            ["--on-catch", "Set the breakpoint on exception catcH."],
-            ["--on-throw", "Set the breakpoint on exception throW."]
+            ["--on-catch", "Set the breakpoint on exception catch."],
+            ["--on-throw", "Set the breakpoint on exception throw."]
         ])
 
         # Ambiguous long options.
         self.check_completion_with_desc("breakpoint set --on-", [
-            ["--on-catch", "Set the breakpoint on exception catcH."],
-            ["--on-throw", "Set the breakpoint on exception throW."]
+            ["--on-catch", "Set the breakpoint on exception catch."],
+            ["--on-throw", "Set the breakpoint on exception throw."]
         ])
 
         # Unknown long option.

@@ -1163,8 +1163,8 @@ struct __quoted_output_proxy
     _CharT  __delim;
     _CharT  __escape;
 
-    __quoted_output_proxy(_Iter __f, _Iter __l, _CharT __d, _CharT __e)
-    : __first(__f), __last(__l), __delim(__d), __escape(__e) {}
+    explicit __quoted_output_proxy(_Iter __f, _Iter __l, _CharT __d, _CharT __e)
+        : __first(__f), __last(__l), __delim(__d), __escape(__e) {}
     //  This would be a nice place for a string_ref
 };
 

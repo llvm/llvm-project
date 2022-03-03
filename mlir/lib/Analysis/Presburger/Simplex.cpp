@@ -833,14 +833,14 @@ void SimplexBase::appendVariable(unsigned count) {
   undoLog.insert(undoLog.end(), count, UndoLogEntry::RemoveLastVariable);
 }
 
-/// Add all the constraints from the given IntegerPolyhedron.
-void SimplexBase::intersectIntegerPolyhedron(const IntegerPolyhedron &poly) {
-  assert(poly.getNumIds() == getNumVariables() &&
-         "IntegerPolyhedron must have same dimensionality as simplex");
-  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i)
-    addInequality(poly.getInequality(i));
-  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i)
-    addEquality(poly.getEquality(i));
+/// Add all the constraints from the given IntegerRelation.
+void SimplexBase::intersectIntegerRelation(const IntegerRelation &rel) {
+  assert(rel.getNumIds() == getNumVariables() &&
+         "IntegerRelation must have same dimensionality as simplex");
+  for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i)
+    addInequality(rel.getInequality(i));
+  for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i)
+    addEquality(rel.getEquality(i));
 }
 
 MaybeOptimum<Fraction> Simplex::computeRowOptimum(Direction direction,
@@ -1655,16 +1655,16 @@ void SimplexBase::print(raw_ostream &os) const {
 
 void SimplexBase::dump() const { print(llvm::errs()); }
 
-bool Simplex::isRationalSubsetOf(const IntegerPolyhedron &poly) {
+bool Simplex::isRationalSubsetOf(const IntegerRelation &rel) {
   if (isEmpty())
     return true;
 
-  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i)
-    if (findIneqType(poly.getInequality(i)) != IneqType::Redundant)
+  for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i)
+    if (findIneqType(rel.getInequality(i)) != IneqType::Redundant)
       return false;
 
-  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i)
-    if (!isRedundantEquality(poly.getEquality(i)))
+  for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i)
+    if (!isRedundantEquality(rel.getEquality(i)))
       return false;
 
   return true;

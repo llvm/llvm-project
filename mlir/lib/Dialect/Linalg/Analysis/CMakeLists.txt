@@ -10,5 +10,4 @@ add_mlir_dialect_library(MLIRLinalgAnalysis
   MLIRIR
   MLIRLinalg
   MLIRMemRef
-  MLIRStandard
   )

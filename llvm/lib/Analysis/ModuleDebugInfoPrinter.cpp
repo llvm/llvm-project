@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ModuleDebugInfoPrinter.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"

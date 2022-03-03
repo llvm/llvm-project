@@ -561,12 +561,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                   characteristics::Procedure::Attr::NullPointer);
             }
           }
-          if (!interface.IsPure()) {
-            // 15.5.2.9(1): if dummy is not pure, actual need not be.
-            argInterface.attrs.reset(characteristics::Procedure::Attr::Pure);
-          }
           if (interface.HasExplicitInterface()) {
-            if (interface != argInterface) {
+            if (!interface.IsCompatibleWith(argInterface)) {
               // 15.5.2.9(1): Explicit interfaces must match
               if (argInterface.HasExplicitInterface()) {
                 messages.Say(
@@ -592,7 +588,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                   dummyName);
             } else if (interface.IsFunction()) {
               if (argInterface.IsFunction()) {
-                if (interface.functionResult != argInterface.functionResult) {
+                if (!interface.functionResult->IsCompatibleWith(
+                        *argInterface.functionResult)) {
                   messages.Say(
                       "Actual argument function associated with procedure %s has incompatible result type"_err_en_US,
                       dummyName);
@@ -626,7 +623,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
       const Symbol *last{GetLastSymbol(*expr)};
       if (!(last && IsProcedurePointer(*last))) {
         // 15.5.2.9(5) -- dummy procedure POINTER
-        // Interface compatibility has already been checked above by comparison.
+        // Interface compatibility has already been checked above
         messages.Say(
             "Actual argument associated with procedure pointer %s must be a POINTER unless INTENT(IN)"_err_en_US,
             dummyName);
@@ -699,14 +696,13 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 messages.Say(
                     "Assumed-type '%s' may be associated only with an assumed-type %s"_err_en_US,
                     assumed.name(), dummyName);
-              } else {
-                const auto *details{assumed.detailsIf<ObjectEntityDetails>()};
-                if (!(IsAssumedShape(assumed) ||
-                        (details && details->IsAssumedRank()))) {
-                  messages.Say( // C711
-                      "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed-type %s"_err_en_US,
-                      assumed.name(), dummyName);
-                }
+              } else if (object.type.attrs().test(evaluate::characteristics::
+                                 TypeAndShape::Attr::AssumedRank) &&
+                  !IsAssumedShape(assumed) &&
+                  !evaluate::IsAssumedRank(assumed)) {
+                messages.Say( // C711
+                    "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed rank %s"_err_en_US,
+                    assumed.name(), dummyName);
               }
             }
           },

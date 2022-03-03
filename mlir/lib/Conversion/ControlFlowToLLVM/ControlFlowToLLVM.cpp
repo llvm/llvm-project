@@ -29,7 +29,7 @@ using namespace mlir;
 #define PASS_NAME "convert-cf-to-llvm"
 
 namespace {
-/// Lower `std.assert`. The default lowering calls the `abort` function if the
+/// Lower `cf.assert`. The default lowering calls the `abort` function if the
 /// assertion is violated and has no effect otherwise. The failure message is
 /// ignored by the default lowering but should be propagated by any custom
 /// lowering.

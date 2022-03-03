@@ -62,7 +62,7 @@ public:
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 
-  bool SetDirection(Direction, IoErrorHandler &);
+  Iostat SetDirection(Direction);
 
   template <typename A, typename... X>
   IoStatementState &BeginIoStatement(X &&...xs) {
@@ -71,6 +71,7 @@ public:
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
     }
+    directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;
   }
@@ -112,11 +113,13 @@ private:
   void DoImpliedEndfile(IoErrorHandler &);
   void DoEndfile(IoErrorHandler &);
   void CommitWrites();
+  bool CheckDirectAccess(IoErrorHandler &);
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
   bool impliedEndfile_{false}; // sequential/stream output has taken place
   bool beganReadingRecord_{false};
+  bool directAccessRecWasSet_{false}; // REC= appeared
 
   Lock lock_;
 
@@ -128,7 +131,7 @@ private:
       ExternalListIoStatementState<Direction::Input>,
       ExternalUnformattedIoStatementState<Direction::Output>,
       ExternalUnformattedIoStatementState<Direction::Input>, InquireUnitState,
-      ExternalMiscIoStatementState>
+      ExternalMiscIoStatementState, ErroneousIoStatementState>
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
@@ -171,8 +174,7 @@ public:
 
   OwningPtr<ChildIo> AcquirePrevious() { return std::move(previous_); }
 
-  bool CheckFormattingAndDirection(
-      Terminator &, const char *what, bool unformatted, Direction);
+  Iostat CheckFormattingAndDirection(bool unformatted, Direction);
 
 private:
   IoStatementState &parent_;
@@ -183,7 +185,8 @@ private:
       ChildListIoStatementState<Direction::Output>,
       ChildListIoStatementState<Direction::Input>,
       ChildUnformattedIoStatementState<Direction::Output>,
-      ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState>
+      ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState,
+      ErroneousIoStatementState>
       u_;
   std::optional<IoStatementState> io_;
 };

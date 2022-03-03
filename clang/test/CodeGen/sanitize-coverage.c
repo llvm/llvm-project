@@ -53,6 +53,7 @@ void test_no_sanitize_combined(int n) {
   // ASAN-NOT: call void @__asan_report_store
   // MSAN-NOT: call void @__msan_warning
   // BOUNDS-NOT: call void @__ubsan_handle_out_of_bounds
+  // BOUNDS-NOT: call void @llvm.trap()
   // TSAN-NOT: call void @__tsan_func_entry
   // UBSAN-NOT: call void @__ubsan_handle
   if (n)
@@ -72,6 +73,7 @@ void test_no_sanitize_separate(int n) {
   // ASAN-NOT: call void @__asan_report_store
   // MSAN-NOT: call void @__msan_warning
   // BOUNDS-NOT: call void @__ubsan_handle_out_of_bounds
+  // BOUNDS-NOT: call void @llvm.trap()
   // TSAN-NOT: call void @__tsan_func_entry
   // UBSAN-NOT: call void @__ubsan_handle
   if (n)

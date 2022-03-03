@@ -13,6 +13,8 @@
 #ifndef FORTRAN_LOWER_STATEMENTCONTEXT_H
 #define FORTRAN_LOWER_STATEMENTCONTEXT_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include <functional>
 
 namespace Fortran::lower {

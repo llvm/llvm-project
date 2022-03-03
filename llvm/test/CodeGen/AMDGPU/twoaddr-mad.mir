@@ -152,7 +152,7 @@ body:             |
 # Non-inline immediate uses constant bus already.
 
 # GCN-LABEL: name: test_madak_otherimm_src0_f32
-# GCN: %1:vgpr_32 = V_MAC_F32_e32 1120403456, %0, %1, implicit $mode, implicit $exec
+# GCN: %1:vgpr_32 = V_MADMK_F32 %0, 1120403456, %2:vgpr_32, implicit $mode, implicit $exec
 
 ---
 name:            test_madak_otherimm_src0_f32
