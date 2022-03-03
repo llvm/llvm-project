@@ -80,6 +80,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 using namespace clang;
 using llvm::StringSwitch;
 

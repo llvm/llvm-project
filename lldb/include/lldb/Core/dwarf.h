@@ -15,8 +15,11 @@
 // Get the DWARF constant definitions from llvm
 #include "llvm/BinaryFormat/Dwarf.h"
 
-// and stuff them in our default namespace
-using namespace llvm::dwarf;
+namespace lldb_private {
+namespace dwarf {
+  using namespace llvm::dwarf;
+}
+}
 
 typedef uint32_t dw_uleb128_t;
 typedef int32_t dw_sleb128_t;

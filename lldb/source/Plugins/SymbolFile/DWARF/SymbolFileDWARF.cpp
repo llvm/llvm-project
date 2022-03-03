@@ -97,6 +97,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
