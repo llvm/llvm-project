@@ -1263,8 +1263,7 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable) {
     // to byref*.
 
     auto &byrefInfo = getBlockByrefInfo(variable);
-    addr =
-        Address::deprecated(Builder.CreateLoad(addr), byrefInfo.ByrefAlignment);
+    addr = Address(Builder.CreateLoad(addr), Int8Ty, byrefInfo.ByrefAlignment);
 
     addr = Builder.CreateElementBitCast(addr, byrefInfo.Type, "byref.addr");
 
@@ -1441,7 +1440,7 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
 Address CodeGenFunction::LoadBlockStruct() {
   assert(BlockInfo && "not in a block invocation function!");
   assert(BlockPointer && "no block pointer set!");
-  return Address::deprecated(BlockPointer, BlockInfo->BlockAlign);
+  return Address(BlockPointer, BlockInfo->StructureType, BlockInfo->BlockAlign);
 }
 
 llvm::Function *CodeGenFunction::GenerateBlockFunction(
@@ -1938,12 +1937,12 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
-  src = Address::deprecated(Builder.CreateLoad(src), blockInfo.BlockAlign);
+  src = Address(Builder.CreateLoad(src), Int8Ty, blockInfo.BlockAlign);
   src = Builder.CreateElementBitCast(src, blockInfo.StructureType,
                                      "block.source");
 
   Address dst = GetAddrOfLocalVar(&DstDecl);
-  dst = Address::deprecated(Builder.CreateLoad(dst), blockInfo.BlockAlign);
+  dst = Address(Builder.CreateLoad(dst), Int8Ty, blockInfo.BlockAlign);
   dst =
       Builder.CreateElementBitCast(dst, blockInfo.StructureType, "block.dest");
 
@@ -2128,7 +2127,7 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
-  src = Address::deprecated(Builder.CreateLoad(src), blockInfo.BlockAlign);
+  src = Address(Builder.CreateLoad(src), Int8Ty, blockInfo.BlockAlign);
   src = Builder.CreateElementBitCast(src, blockInfo.StructureType, "block");
 
   CodeGenFunction::RunCleanupsScope cleanups(*this);
@@ -2373,16 +2372,16 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
   if (generator.needsCopy()) {
     // dst->x
     Address destField = CGF.GetAddrOfLocalVar(&Dst);
-    destField = Address::deprecated(CGF.Builder.CreateLoad(destField),
-                                    byrefInfo.ByrefAlignment);
+    destField = Address(CGF.Builder.CreateLoad(destField), CGF.Int8Ty,
+                        byrefInfo.ByrefAlignment);
     destField = CGF.Builder.CreateElementBitCast(destField, byrefInfo.Type);
     destField =
         CGF.emitBlockByrefAddress(destField, byrefInfo, false, "dest-object");
 
     // src->x
     Address srcField = CGF.GetAddrOfLocalVar(&Src);
-    srcField = Address::deprecated(CGF.Builder.CreateLoad(srcField),
-                                   byrefInfo.ByrefAlignment);
+    srcField = Address(CGF.Builder.CreateLoad(srcField), CGF.Int8Ty,
+                       byrefInfo.ByrefAlignment);
     srcField = CGF.Builder.CreateElementBitCast(srcField, byrefInfo.Type);
     srcField =
         CGF.emitBlockByrefAddress(srcField, byrefInfo, false, "src-object");
@@ -2439,8 +2438,8 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
 
   if (generator.needsDispose()) {
     Address addr = CGF.GetAddrOfLocalVar(&Src);
-    addr = Address::deprecated(CGF.Builder.CreateLoad(addr),
-                               byrefInfo.ByrefAlignment);
+    addr = Address(CGF.Builder.CreateLoad(addr), CGF.Int8Ty,
+                   byrefInfo.ByrefAlignment);
     addr = CGF.Builder.CreateElementBitCast(addr, byrefInfo.Type);
     addr = CGF.emitBlockByrefAddress(addr, byrefInfo, false, "object");
 
@@ -2587,8 +2586,8 @@ Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
   // Chase the forwarding address if requested.
   if (followForward) {
     Address forwardingAddr = Builder.CreateStructGEP(baseAddr, 1, "forwarding");
-    baseAddr = Address::deprecated(Builder.CreateLoad(forwardingAddr),
-                                   info.ByrefAlignment);
+    baseAddr = Address(Builder.CreateLoad(forwardingAddr), info.Type,
+                       info.ByrefAlignment);
   }
 
   return Builder.CreateStructGEP(baseAddr, info.FieldIndex, name);

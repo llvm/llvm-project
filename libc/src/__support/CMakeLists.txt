@@ -16,13 +16,6 @@ add_header_library(
 )
 
 add_header_library(
-  high_precision_decimal
-  HDRS
-    high_precision_decimal.h
-
-)
-
-add_header_library(
   str_to_integer
   HDRS
     str_to_integer.h
@@ -31,6 +24,14 @@ add_header_library(
     libc.include.errno
     libc.src.errno.__errno_location
     libc.src.__support.CPP.standalone_cpp
+)
+
+add_header_library(
+  high_precision_decimal
+  HDRS
+    high_precision_decimal.h
+  DEPENDS
+    .str_to_integer
 )
 
 add_header_library(

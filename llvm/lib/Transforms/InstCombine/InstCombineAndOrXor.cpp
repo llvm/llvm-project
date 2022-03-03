@@ -24,32 +24,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-/// Similar to getICmpCode but for FCmpInst. This encodes a fcmp predicate into
-/// a four bit mask.
-static unsigned getFCmpCode(FCmpInst::Predicate CC) {
-  assert(FCmpInst::FCMP_FALSE <= CC && CC <= FCmpInst::FCMP_TRUE &&
-         "Unexpected FCmp predicate!");
-  // Take advantage of the bit pattern of FCmpInst::Predicate here.
-  //                                                 U L G E
-  static_assert(FCmpInst::FCMP_FALSE ==  0, "");  // 0 0 0 0
-  static_assert(FCmpInst::FCMP_OEQ   ==  1, "");  // 0 0 0 1
-  static_assert(FCmpInst::FCMP_OGT   ==  2, "");  // 0 0 1 0
-  static_assert(FCmpInst::FCMP_OGE   ==  3, "");  // 0 0 1 1
-  static_assert(FCmpInst::FCMP_OLT   ==  4, "");  // 0 1 0 0
-  static_assert(FCmpInst::FCMP_OLE   ==  5, "");  // 0 1 0 1
-  static_assert(FCmpInst::FCMP_ONE   ==  6, "");  // 0 1 1 0
-  static_assert(FCmpInst::FCMP_ORD   ==  7, "");  // 0 1 1 1
-  static_assert(FCmpInst::FCMP_UNO   ==  8, "");  // 1 0 0 0
-  static_assert(FCmpInst::FCMP_UEQ   ==  9, "");  // 1 0 0 1
-  static_assert(FCmpInst::FCMP_UGT   == 10, "");  // 1 0 1 0
-  static_assert(FCmpInst::FCMP_UGE   == 11, "");  // 1 0 1 1
-  static_assert(FCmpInst::FCMP_ULT   == 12, "");  // 1 1 0 0
-  static_assert(FCmpInst::FCMP_ULE   == 13, "");  // 1 1 0 1
-  static_assert(FCmpInst::FCMP_UNE   == 14, "");  // 1 1 1 0
-  static_assert(FCmpInst::FCMP_TRUE  == 15, "");  // 1 1 1 1
-  return CC;
-}
-
 /// This is the complement of getICmpCode, which turns an opcode and two
 /// operands into either a constant true or false, or a brand new ICmp
 /// instruction. The sign is passed in to determine which kind of predicate to
@@ -66,14 +40,10 @@ static Value *getNewICmpValue(unsigned Code, bool Sign, Value *LHS, Value *RHS,
 /// operands into either a FCmp instruction, or a true/false constant.
 static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
                            InstCombiner::BuilderTy &Builder) {
-  const auto Pred = static_cast<FCmpInst::Predicate>(Code);
-  assert(FCmpInst::FCMP_FALSE <= Pred && Pred <= FCmpInst::FCMP_TRUE &&
-         "Unexpected FCmp predicate!");
-  if (Pred == FCmpInst::FCMP_FALSE)
-    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-  if (Pred == FCmpInst::FCMP_TRUE)
-    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
-  return Builder.CreateFCmp(Pred, LHS, RHS);
+  FCmpInst::Predicate NewPred;
+  if (Constant *TorF = getPredForFCmpCode(Code, LHS->getType(), NewPred))
+    return TorF;
+  return Builder.CreateFCmp(NewPred, LHS, RHS);
 }
 
 /// Transform BITWISE_OP(BSWAP(A),BSWAP(B)) or
