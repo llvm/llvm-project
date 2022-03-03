@@ -29,6 +29,9 @@ struct MachOConfig {
   // install-name-tool's id option
   Optional<StringRef> SharedLibId;
 
+  // Segments to remove if they are empty
+  DenseSet<StringRef> EmptySegmentsToRemove;
+
   // Boolean options
   bool StripSwiftSymbols = false;
   bool KeepUndefined = false;

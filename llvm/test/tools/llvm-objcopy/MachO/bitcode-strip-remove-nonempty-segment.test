@@ -1,4 +1,4 @@
-## Test bitcode section and segment removal.
+## Test bitcode segment is not removed when not empty.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-bitcode-strip -r %t -o %t2
 # RUN: llvm-readobj --macho-segment --sections %t2 | FileCheck --implicit-check-not=Name: %s
@@ -7,10 +7,14 @@
 # CHECK-NEXT: Segment: __TEXT
 # CHECK:      Name: __bundle
 # CHECK-NEXT: Segment: __DATA
+# CHECK:      Name: __notbundle
+# CHECK-NEXT: Segment: __LLVM
 # CHECK:      Cmd: LC_SEGMENT_64
 # CHECK-NEXT: Name: __TEXT
 # CHECK:      Cmd: LC_SEGMENT_64
 # CHECK-NEXT: Name: __DATA
+# CHECK:      Cmd: LC_SEGMENT_64
+# CHECK-NEXT: Name: __LLVM
 
 --- !mach-o
 FileHeader:
@@ -19,7 +23,7 @@ FileHeader:
   cpusubtype:      0x00000003
   filetype:        0x00000001
   ncmds:           3
-  sizeofcmds:      456
+  sizeofcmds:      536
   flags:           0x00002000
   reserved:        0x00000000
 LoadCommands:
@@ -28,7 +32,7 @@ LoadCommands:
     segname:         __TEXT
     vmaddr:          0
     vmsize:          4
-    fileoff:         488
+    fileoff:         568
     filesize:        4
     maxprot:         7
     initprot:        7
@@ -40,7 +44,7 @@ LoadCommands:
         addr:            0x0000000000000000
         content:         'AABBCCDD'
         size:            4
-        offset:          488
+        offset:          568
         align:           0
         reloff:          0x00000000
         nreloc:          0
@@ -53,7 +57,7 @@ LoadCommands:
     segname:         __DATA
     vmaddr:          4
     vmsize:          4
-    fileoff:         492
+    fileoff:         572
     filesize:        4
     maxprot:         7
     initprot:        7
@@ -65,7 +69,7 @@ LoadCommands:
         addr:            0x0000000000000004
         content:         'DDAADDAA'
         size:            4
-        offset:          492
+        offset:          572
         align:           0
         reloff:          0x00000000
         nreloc:          0
@@ -74,15 +78,15 @@ LoadCommands:
         reserved2:       0x00000000
         reserved3:       0x00000000
   - cmd:             LC_SEGMENT_64
-    cmdsize:         152
+    cmdsize:         232
     segname:         __LLVM
     vmaddr:          8
-    vmsize:          4
-    fileoff:         496
-    filesize:        4
+    vmsize:          8
+    fileoff:         576
+    filesize:        8
     maxprot:         7
     initprot:        7
-    nsects:          1
+    nsects:          2
     flags:           0
     Sections:
       - sectname:        __bundle
@@ -90,7 +94,20 @@ LoadCommands:
         addr:            0x0000000000000008
         content:         'EEFFEEFF'
         size:            4
-        offset:          496
+        offset:          576
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __notbundle
+        segname:         __LLVM
+        addr:            0x0000000000000008
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          580
         align:           0
         reloff:          0x00000000
         nreloc:          0
