@@ -901,6 +901,9 @@ def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
 def : InstAlias<"hfence.gvma",     (HFENCE_GVMA      X0, X0)>;
 def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 
+def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0)>;
+def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
+
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
                 (LB  GPR:$rd, GPR:$rs1, 0)>;
