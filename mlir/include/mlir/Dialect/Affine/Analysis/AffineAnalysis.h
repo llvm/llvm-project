@@ -53,8 +53,10 @@ bool isLoopParallel(
     SmallVectorImpl<LoopReduction> *parallelReductions = nullptr);
 
 /// Returns true if `forOp' doesn't have memory dependences preventing
-/// parallelization. This function doesn't check iter_args and should be used
-/// only as a building block for full parallel-checking functions.
+/// parallelization. Memrefs that are allocated inside `forOp` do not impact its
+/// dependences and parallelism. This function does not check iter_args (for
+/// values other than memref types) and should be used only as a building block
+/// for complete parallelism-checking functions.
 bool isLoopMemoryParallel(AffineForOp forOp);
 
 /// Returns in `affineApplyOps`, the sequence of those AffineApplyOp
