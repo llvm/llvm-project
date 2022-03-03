@@ -30,7 +30,7 @@ constexpr bool test() {
     SizedRandomAccessView view{buf, buf + 8};
     std::ranges::common_view<SizedRandomAccessView> common(view);
     std::same_as<RandomAccessIter> auto end = common.end(); // Note this should NOT be the sentinel type.
-    assert(end.base() == buf + 8);
+    assert(base(end) == buf + 8);
   }
 
   // const version
@@ -38,7 +38,7 @@ constexpr bool test() {
     SizedRandomAccessView view{buf, buf + 8};
     std::ranges::common_view<SizedRandomAccessView> const common(view);
     std::same_as<RandomAccessIter> auto end = common.end(); // Note this should NOT be the sentinel type.
-    assert(end.base() == buf + 8);
+    assert(base(end) == buf + 8);
   }
 
   return true;

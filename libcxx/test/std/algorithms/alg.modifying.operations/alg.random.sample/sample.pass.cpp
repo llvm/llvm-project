@@ -69,14 +69,14 @@ void test() {
   SampleIterator end = std::sample(PopulationIterator(ia),
                                    PopulationIterator(ia + is),
                                    SampleIterator(oa), os, g);
-  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
+  assert(static_cast<std::size_t>(base(end) - oa) == std::min(os, is));
   // sample() is deterministic but non-reproducible;
   // its results can vary between implementations.
   LIBCPP_ASSERT(std::equal(oa, oa + os, oa1));
   end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, std::move(g));
-  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
+  assert(static_cast<std::size_t>(base(end) - oa) == std::min(os, is));
   LIBCPP_ASSERT(std::equal(oa, oa + os, oa2));
 }
 
@@ -92,7 +92,7 @@ void test_empty_population() {
   SampleIterator end =
       std::sample(PopulationIterator(ia), PopulationIterator(ia),
                                 SampleIterator(oa), os, g);
-  assert(end.base() == oa);
+  assert(base(end) == oa);
 }
 
 template <template<class...> class PopulationIteratorType, class PopulationItem,
@@ -107,7 +107,7 @@ void test_empty_sample() {
   SampleIterator end =
       std::sample(PopulationIterator(ia), PopulationIterator(ia + is),
                                 SampleIterator(oa), 0, g);
-  assert(end.base() == oa);
+  assert(base(end) == oa);
 }
 
 template <template<class...> class PopulationIteratorType, class PopulationItem,
@@ -125,12 +125,12 @@ void test_small_population() {
   SampleIterator end = std::sample(PopulationIterator(ia),
                                    PopulationIterator(ia + is),
                                    SampleIterator(oa), os, g);
-  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
+  assert(static_cast<std::size_t>(base(end) - oa) == std::min(os, is));
   typedef typename std::iterator_traits<PopulationIterator>::iterator_category PopulationCategory;
   if (std::is_base_of<std::forward_iterator_tag, PopulationCategory>::value) {
-    assert(std::equal(oa, end.base(), oa1));
+    assert(std::equal(oa, base(end), oa1));
   } else {
-    assert(std::is_permutation(oa, end.base(), oa1));
+    assert(std::is_permutation(oa, base(end), oa1));
   }
 }
 

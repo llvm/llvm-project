@@ -57,8 +57,8 @@ void test() {
     auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
     const auto commonIter2 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
 
-    assert(commonIter1.operator->().base() == buffer);
-    assert(commonIter2.operator->().base() == buffer);
+    assert(base(commonIter1.operator->()) == buffer);
+    assert(base(commonIter2.operator->()) == buffer);
   }
 
   // Case 1: http://eel.is/c++draft/iterators.common#common.iter.access-5.1
@@ -67,8 +67,8 @@ void test() {
     auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
     const auto commonIter2 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
 
-    assert(commonIter1.operator->().base() == buffer);
-    assert(commonIter2.operator->().base() == buffer);
+    assert(base(commonIter1.operator->()) == buffer);
+    assert(base(commonIter2.operator->()) == buffer);
   }
 
   // Case 1: http://eel.is/c++draft/iterators.common#common.iter.access-5.1
@@ -77,8 +77,8 @@ void test() {
     auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
     const auto commonIter2 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
 
-    assert(commonIter1.operator->().base() == buffer);
-    assert(commonIter2.operator->().base() == buffer);
+    assert(base(commonIter1.operator->()) == buffer);
+    assert(base(commonIter2.operator->()) == buffer);
   }
 }
 

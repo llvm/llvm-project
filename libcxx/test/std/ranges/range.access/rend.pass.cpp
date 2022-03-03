@@ -448,31 +448,31 @@ static_assert( std::same_as<std::invoke_result_t<RangeCREndT, MemberBeginAndRBeg
 constexpr bool testBeginEnd() {
   MemberBeginEnd a{};
   const MemberBeginEnd aa{};
-  assert(std::ranges::rend(a).base().base() == &a.b);
-  assert(std::ranges::crend(a).base().base() == &a.cb);
-  assert(std::ranges::rend(aa).base().base() == &aa.cb);
-  assert(std::ranges::crend(aa).base().base() == &aa.cb);
+  assert(base(std::ranges::rend(a).base()) == &a.b);
+  assert(base(std::ranges::crend(a).base()) == &a.cb);
+  assert(base(std::ranges::rend(aa).base()) == &aa.cb);
+  assert(base(std::ranges::crend(aa).base()) == &aa.cb);
 
   FunctionBeginEnd b{};
   const FunctionBeginEnd bb{};
-  assert(std::ranges::rend(b).base().base() == &b.b);
-  assert(std::ranges::crend(b).base().base() == &b.cb);
-  assert(std::ranges::rend(bb).base().base() == &bb.cb);
-  assert(std::ranges::crend(bb).base().base() == &bb.cb);
+  assert(base(std::ranges::rend(b).base()) == &b.b);
+  assert(base(std::ranges::crend(b).base()) == &b.cb);
+  assert(base(std::ranges::rend(bb).base()) == &bb.cb);
+  assert(base(std::ranges::crend(bb).base()) == &bb.cb);
 
   MemberBeginFunctionEnd c{};
   const MemberBeginFunctionEnd cc{};
-  assert(std::ranges::rend(c).base().base() == &c.b);
-  assert(std::ranges::crend(c).base().base() == &c.cb);
-  assert(std::ranges::rend(cc).base().base() == &cc.cb);
-  assert(std::ranges::crend(cc).base().base() == &cc.cb);
+  assert(base(std::ranges::rend(c).base()) == &c.b);
+  assert(base(std::ranges::crend(c).base()) == &c.cb);
+  assert(base(std::ranges::rend(cc).base()) == &cc.cb);
+  assert(base(std::ranges::crend(cc).base()) == &cc.cb);
 
   FunctionBeginMemberEnd d{};
   const FunctionBeginMemberEnd dd{};
-  assert(std::ranges::rend(d).base().base() == &d.b);
-  assert(std::ranges::crend(d).base().base() == &d.cb);
-  assert(std::ranges::rend(dd).base().base() == &dd.cb);
-  assert(std::ranges::crend(dd).base().base() == &dd.cb);
+  assert(base(std::ranges::rend(d).base()) == &d.b);
+  assert(base(std::ranges::crend(d).base()) == &d.cb);
+  assert(base(std::ranges::rend(dd).base()) == &dd.cb);
+  assert(base(std::ranges::crend(dd).base()) == &dd.cb);
 
   return true;
 }
