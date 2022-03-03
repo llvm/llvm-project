@@ -103,7 +103,7 @@ public:
     return {start_, std::min(size_, n)};
   }
   Interval Suffix(std::size_t n) const {
-    CHECK(n <= size_);
+    n = std::min(n, size_);
     return {start_ + n, size_ - n};
   }
 
