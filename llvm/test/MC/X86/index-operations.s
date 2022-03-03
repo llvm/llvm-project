@@ -28,7 +28,7 @@ lodsb (%si), %al
 lodsl %gs:(%esi)
 // 64: lodsl %gs:(%esi), %eax # encoding: [0x67,0x65,0xad]
 // 32: lodsl %gs:(%esi), %eax # encoding: [0x65,0xad]
-// 16: lodsl %gs:(%esi), %eax # encoding: [0x67,0x66,0x65,0xad]
+// 16: lodsl %gs:(%esi), %eax # encoding: [0x67,0x65,0x66,0xad]
 
 lodsl (%edi), %eax
 // ERR64: invalid operand
@@ -113,7 +113,7 @@ cmpsb (%di), (%esi)
 cmpsl %es:(%edi), %ss:(%esi)
 // 64: cmpsl %es:(%edi), %ss:(%esi) # encoding: [0x67,0x36,0xa7]
 // 32: cmpsl %es:(%edi), %ss:(%esi) # encoding: [0x36,0xa7]
-// 16: cmpsl %es:(%edi), %ss:(%esi) # encoding: [0x67,0x66,0x36,0xa7]
+// 16: cmpsl %es:(%edi), %ss:(%esi) # encoding: [0x67,0x36,0x66,0xa7]
 
 cmpsq (%rdi), (%rsi)
 // 64: cmpsq %es:(%rdi), (%rsi) # encoding: [0x48,0xa7]
@@ -128,7 +128,7 @@ movsb (%esi), (%edi)
 movsl %gs:(%esi), (%edi)
 // 64: movsl %gs:(%esi), %es:(%edi) # encoding: [0x67,0x65,0xa5]
 // 32: movsl %gs:(%esi), %es:(%edi) # encoding: [0x65,0xa5]
-// 16: movsl %gs:(%esi), %es:(%edi) # encoding: [0x67,0x66,0x65,0xa5]
+// 16: movsl %gs:(%esi), %es:(%edi) # encoding: [0x67,0x65,0x66,0xa5]
 
 outsb
 // 64: outsb (%rsi), %dx # encoding: [0x6e]
@@ -136,8 +136,8 @@ outsb
 // 16: outsb (%si), %dx # encoding: [0x6e]
 
 outsw %fs:(%esi), %dx
-// 64: outsw %fs:(%esi), %dx # encoding: [0x67,0x66,0x64,0x6f]
-// 32: outsw %fs:(%esi), %dx # encoding: [0x66,0x64,0x6f]
+// 64: outsw %fs:(%esi), %dx # encoding: [0x67,0x64,0x66,0x6f]
+// 32: outsw %fs:(%esi), %dx # encoding: [0x64,0x66,0x6f]
 // 16: outsw %fs:(%esi), %dx # encoding: [0x67,0x64,0x6f]
 
 insw %dx, (%edi)

@@ -11,7 +11,7 @@
 	lodsb (%esi), %al
 	//CHECK:	lodsb	(%esi), %al             # encoding: [0x67,0xac]
 	lodsl %gs:(%esi)
-	//CHECK:	lodsl	%gs:(%esi), %eax        # encoding: [0x67,0x66,0x65,0xad]
+	//CHECK:	lodsl	%gs:(%esi), %eax        # encoding: [0x67,0x65,0x66,0xad]
 	lods (%esi), %ax
 	//CHECK:	lodsw	(%esi), %ax             # encoding: [0x67,0xad]
 	stosw
@@ -29,11 +29,11 @@
 	cmpsw (%edi), (%esi)
 	//CHECK:	cmpsw	%es:(%edi), (%esi)      # encoding: [0x67,0xa7]
 	cmpsl %es:(%edi), %ss:(%esi)
-	//CHECK:	cmpsl	%es:(%edi), %ss:(%esi)  # encoding: [0x67,0x66,0x36,0xa7]
+	//CHECK:	cmpsl	%es:(%edi), %ss:(%esi)  # encoding: [0x67,0x36,0x66,0xa7]
 	movsb (%esi), (%edi)
 	//CHECK:	movsb	(%esi), %es:(%edi)      # encoding: [0x67,0xa4]
 	movsl %gs:(%esi), (%edi)
-	//CHECK:	movsl	%gs:(%esi), %es:(%edi)  # encoding: [0x67,0x66,0x65,0xa5]
+	//CHECK:	movsl	%gs:(%esi), %es:(%edi)  # encoding: [0x67,0x65,0x66,0xa5]
 	outsb
 	//CHECK:	outsb	(%esi), %dx             # encoding: [0x67,0x6e]
 	outsw %fs:(%esi), %dx
