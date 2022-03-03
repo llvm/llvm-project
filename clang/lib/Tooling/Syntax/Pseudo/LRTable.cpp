@@ -112,6 +112,8 @@ llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
          "subrange of the StateIdx should be sorted!");
   const LRTable::StateID *Start = llvm::partition_point(
       TargetedStates, [&Src](LRTable::StateID S) { return S < Src; });
+  if (Start == TargetedStates.end())
+    return {};
   const LRTable::StateID *End = Start;
   while (End != TargetedStates.end() && *End == Src)
     ++End;
