@@ -58,6 +58,39 @@ namespace llvm {
   /// equality comparison (which is signless).
   bool predicatesFoldable(CmpInst::Predicate P1, CmpInst::Predicate P2);
 
+  /// Similar to getICmpCode but for FCmpInst. This encodes a fcmp predicate
+  /// into a four bit mask.
+  inline unsigned getFCmpCode(CmpInst::Predicate CC) {
+    assert(CmpInst::FCMP_FALSE <= CC && CC <= CmpInst::FCMP_TRUE &&
+           "Unexpected FCmp predicate!");
+    // Take advantage of the bit pattern of CmpInst::Predicate here.
+    //                                                U L G E
+    static_assert(CmpInst::FCMP_FALSE ==  0, "");  // 0 0 0 0
+    static_assert(CmpInst::FCMP_OEQ   ==  1, "");  // 0 0 0 1
+    static_assert(CmpInst::FCMP_OGT   ==  2, "");  // 0 0 1 0
+    static_assert(CmpInst::FCMP_OGE   ==  3, "");  // 0 0 1 1
+    static_assert(CmpInst::FCMP_OLT   ==  4, "");  // 0 1 0 0
+    static_assert(CmpInst::FCMP_OLE   ==  5, "");  // 0 1 0 1
+    static_assert(CmpInst::FCMP_ONE   ==  6, "");  // 0 1 1 0
+    static_assert(CmpInst::FCMP_ORD   ==  7, "");  // 0 1 1 1
+    static_assert(CmpInst::FCMP_UNO   ==  8, "");  // 1 0 0 0
+    static_assert(CmpInst::FCMP_UEQ   ==  9, "");  // 1 0 0 1
+    static_assert(CmpInst::FCMP_UGT   == 10, "");  // 1 0 1 0
+    static_assert(CmpInst::FCMP_UGE   == 11, "");  // 1 0 1 1
+    static_assert(CmpInst::FCMP_ULT   == 12, "");  // 1 1 0 0
+    static_assert(CmpInst::FCMP_ULE   == 13, "");  // 1 1 0 1
+    static_assert(CmpInst::FCMP_UNE   == 14, "");  // 1 1 1 0
+    static_assert(CmpInst::FCMP_TRUE  == 15, "");  // 1 1 1 1
+    return CC;
+  }
+
+  /// This is the complement of getFCmpCode. It turns a predicate code into
+  /// either a constant true or false or the predicate for a new FCmp.
+  /// Non-NULL return value will be a true or false constant.
+  /// NULL return means a new ICmp is needed. The predicate is output in Pred.
+  Constant *getPredForFCmpCode(unsigned Code, Type *OpTy,
+                               CmpInst::Predicate &Pred);
+
   /// Decompose an icmp into the form ((X & Mask) pred 0) if possible. The
   /// returned predicate is either == or !=. Returns false if decomposition
   /// fails.
