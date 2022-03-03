@@ -383,6 +383,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       // Create dummy deferred values for the length parameters so that the
       // DerivedTypeSpec is complete and can be used in helpers.
       for (SymbolRef lenParam : *lenParameters) {
+        (void)lenParam;
         derived.AddRawParamValue(
             std::nullopt, ParamValue::Deferred(common::TypeParamAttr::Len));
       }
