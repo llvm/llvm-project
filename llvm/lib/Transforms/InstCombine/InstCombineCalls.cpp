@@ -2834,10 +2834,12 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   // If the callee is a pointer to a function, attempt to move any casts to the
   // arguments of the call/callbr/invoke.
   Value *Callee = Call.getCalledOperand();
-  if (!isa<Function>(Callee) && transformConstExprCastCall(Call))
+  Function *CalleeF = dyn_cast<Function>(Callee);
+  if ((!CalleeF || CalleeF->getFunctionType() != Call.getFunctionType()) &&
+      transformConstExprCastCall(Call))
     return nullptr;
 
-  if (Function *CalleeF = dyn_cast<Function>(Callee)) {
+  if (CalleeF) {
     // Remove the convergent attr on calls when the callee is not convergent.
     if (Call.isConvergent() && !CalleeF->isConvergent() &&
         !CalleeF->isIntrinsic()) {
@@ -3167,13 +3169,18 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // sized type and the sized type has to have the same size as the old type.
     if (ParamTy != ActTy && CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
       PointerType *ParamPTy = dyn_cast<PointerType>(ParamTy);
-      if (!ParamPTy || !ParamPTy->getPointerElementType()->isSized())
+      if (!ParamPTy)
         return false;
 
-      Type *CurElTy = Call.getParamByValType(i);
-      if (DL.getTypeAllocSize(CurElTy) !=
-          DL.getTypeAllocSize(ParamPTy->getPointerElementType()))
-        return false;
+      if (!ParamPTy->isOpaque()) {
+        Type *ParamElTy = ParamPTy->getNonOpaquePointerElementType();
+        if (!ParamElTy->isSized())
+          return false;
+
+        Type *CurElTy = Call.getParamByValType(i);
+        if (DL.getTypeAllocSize(CurElTy) != DL.getTypeAllocSize(ParamElTy))
+          return false;
+      }
     }
   }
 
@@ -3232,9 +3239,10 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     Args.push_back(NewArg);
 
     // Add any parameter attributes.
-    if (CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
+    if (CallerPAL.hasParamAttr(i, Attribute::ByVal) &&
+        !ParamTy->isOpaquePointerTy()) {
       AttrBuilder AB(FT->getContext(), CallerPAL.getParamAttrs(i));
-      AB.addByValAttr(NewArg->getType()->getPointerElementType());
+      AB.addByValAttr(ParamTy->getNonOpaquePointerElementType());
       ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
     } else
       ArgAttrs.push_back(CallerPAL.getParamAttrs(i));
