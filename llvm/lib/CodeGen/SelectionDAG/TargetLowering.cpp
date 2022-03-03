@@ -5068,7 +5068,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       llvm::Type *OpTy = OpInfo.CallOperandVal->getType();
       if (OpInfo.isIndirect) {
         OpTy = Call.getParamElementType(ArgNo);
-        assert(OpTy && "Indirect opernad must have elementtype attribute");
+        assert(OpTy && "Indirect operand must have elementtype attribute");
       }
 
       // Look for vector wrapped in a struct. e.g. { <16 x i8> }.
