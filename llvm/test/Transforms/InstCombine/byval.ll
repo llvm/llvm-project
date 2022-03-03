@@ -18,7 +18,8 @@ define void @add_byval(i64* %in) {
 
 define void @add_byval_2(i64* %in) {
 ; CHECK-LABEL: @add_byval_2(
-; CHECK-NEXT:    call void bitcast (void (double*)* @add_byval_callee_2 to void (i64*)*)(i64* byval(i64) [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[IN:%.*]] to double*
+; CHECK-NEXT:    call void @add_byval_callee_2(double* byval(double) [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = bitcast void (double*)* @add_byval_callee_2 to void (i64*)*
