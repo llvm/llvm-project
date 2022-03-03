@@ -93,7 +93,9 @@ headers_template = """\
 #endif // __cplusplus >= 201103L
 
 // extended headers
+#ifndef _LIBCXX_MODULES_BUILD
 {extended_headers}
+#endif
 """
 
 
@@ -166,7 +168,7 @@ def produce_experimental_headers(post_include=None, exclusions=None):
 
 
 def produce_extended_headers(post_include=None, exclusions=None):
-    return produce_headers([include_path, 'ext'], 0, post_include=post_include, exclusions=exclusions)
+    return produce_headers([include_path, 'ext'], 1, post_include=post_include, exclusions=exclusions)
 
 
 def replace_generated_headers(test_path, test_str):

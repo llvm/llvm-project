@@ -324,3 +324,29 @@ bool fir::NameUniquer::belongsToModule(llvm::StringRef uniquedName,
   return !result.second.modules.empty() &&
          result.second.modules[0] == moduleName;
 }
+
+static std::string
+mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
+  if (kinds.empty())
+    return "";
+  std::string result = "";
+  for (std::int64_t kind : kinds)
+    result += "." + std::to_string(kind);
+  return result;
+}
+
+std::string
+fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
+  auto result = deconstruct(mangledTypeName);
+  if (result.first != NameKind::DERIVED_TYPE)
+    return "";
+  std::string varName = ".dt." + result.second.name +
+                        mangleTypeDescriptorKinds(result.second.kinds);
+  llvm::SmallVector<llvm::StringRef> modules;
+  for (const std::string &mod : result.second.modules)
+    modules.push_back(mod);
+  llvm::Optional<llvm::StringRef> host;
+  if (result.second.host)
+    host = *result.second.host;
+  return doVariable(modules, host, varName);
+}

@@ -302,6 +302,17 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Bufferize the op and its nested ops.
   RewritePatternSet patterns(op->getContext());
   populateBufferizationPattern(state, patterns);
+
+  // Bufferize ops top-to-bottom. When creating a new op, we should ideally
+  // know the exact memref type of all operands. Otherwise, we have to use a
+  // memref type with a fully dynamic layout map, which has to canonicalize
+  // away.
+  // Moreover, if "fullyDynamicLayoutMaps = false", we may otherwise have to
+  // insert buffer copies to fold ("finalize") to_memref(to_tensor(x)) ops with
+  // non-cast-compatible layout maps.
+  GreedyRewriteConfig config;
+  config.useTopDownTraversal = true;
+
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     return failure();
 
