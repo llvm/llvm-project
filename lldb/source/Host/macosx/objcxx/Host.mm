@@ -1305,15 +1305,12 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
-  // From now on we'll deal with the external (devirtualized) path.
-  auto exe_path = fs.GetExternalPath(exe_spec);
-  if (!exe_path)
-    return Status(exe_path.getError());
+  auto exe_path = exe_spec.GetPath();
 
   if (ShouldLaunchUsingXPC(launch_info))
-    error = LaunchProcessXPC(exe_path->c_str(), launch_info, pid);
+    error = LaunchProcessXPC(exe_path.c_str(), launch_info, pid);
   else
-    error = LaunchProcessPosixSpawn(exe_path->c_str(), launch_info, pid);
+    error = LaunchProcessPosixSpawn(exe_path.c_str(), launch_info, pid);
 
   if (pid != LLDB_INVALID_PROCESS_ID) {
     // If all went well, then set the process ID into the launch info

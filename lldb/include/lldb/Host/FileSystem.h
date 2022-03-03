@@ -33,11 +33,10 @@ public:
 
   FileSystem() : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr) {}
   FileSystem(std::shared_ptr<llvm::FileCollectorBase> collector)
-      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(std::move(collector)),
-        m_mapped(false) {}
-  FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
-             bool mapped = false)
-      : m_fs(std::move(fs)), m_collector(nullptr), m_mapped(mapped) {}
+      : m_fs(llvm::vfs::getRealFileSystem()),
+        m_collector(std::move(collector)) {}
+  FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs)
+      : m_fs(std::move(fs)), m_collector(nullptr) {}
 
   FileSystem(const FileSystem &fs) = delete;
   FileSystem &operator=(const FileSystem &fs) = delete;
@@ -46,7 +45,6 @@ public:
 
   static void Initialize();
   static void Initialize(std::shared_ptr<llvm::FileCollectorBase> collector);
-  static llvm::Error Initialize(const FileSpec &mapping);
   static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
   static void Terminate();
 
@@ -189,9 +187,6 @@ public:
   std::error_code GetRealPath(const llvm::Twine &path,
                               llvm::SmallVectorImpl<char> &output) const;
 
-  llvm::ErrorOr<std::string> GetExternalPath(const llvm::Twine &path);
-  llvm::ErrorOr<std::string> GetExternalPath(const FileSpec &file_spec);
-
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> GetVirtualFileSystem() {
     return m_fs;
   }
@@ -206,7 +201,6 @@ private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
   std::shared_ptr<llvm::FileCollectorBase> m_collector;
   std::string m_home_directory;
-  bool m_mapped = false;
 };
 } // namespace lldb_private
 
