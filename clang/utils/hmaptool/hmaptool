@@ -100,7 +100,7 @@ class HeaderMap(object):
             raise SystemExit("error: %s: invalid string index" % (
                     idx,))
         end_idx = self.strtable.index(0, idx)
-        return self.strtable[idx:end_idx]
+        return self.strtable[idx:end_idx].decode()
 
     @property
     def mappings(self):
