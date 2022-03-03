@@ -141,9 +141,9 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   uint64_t FileOffsetToCounters = CurrentFileOffset +
                                   sizeof(__llvm_profile_header) + DataSize +
                                   PaddingBytesBeforeCounters;
-  uint64_t *CounterMmap = (uint64_t *)mmap(
-      (void *)CountersBegin, PageAlignedCountersLength, PROT_READ | PROT_WRITE,
-      MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToCounters);
+  void *CounterMmap = mmap((void *)CountersBegin, PageAlignedCountersLength,
+                           PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED,
+                           Fileno, FileOffsetToCounters);
   if (CounterMmap != CountersBegin) {
     PROF_ERR(
         "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
