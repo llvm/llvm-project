@@ -34,7 +34,7 @@ struct TestPadFusionPass
     MLIRContext *context = &getContext();
     FuncOp funcOp = getOperation();
     RewritePatternSet patterns(context);
-    linalg::populateFusePadTensorWithProducerLinalgOpPatterns(patterns);
+    linalg::populateFuseTensorPadWithProducerLinalgOpPatterns(patterns);
     if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
                                             std::move(patterns))))
       return signalPassFailure();
