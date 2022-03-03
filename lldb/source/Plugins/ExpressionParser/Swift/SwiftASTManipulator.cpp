@@ -641,7 +641,7 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
         // to subclass them, and override any overridable members. That is, we
         // should use 'open' when it is possible and correct to do so, rather
         // than just 'public'.
-        if (llvm::isa<swift::ClassDecl>(VD) || VD->isPotentiallyOverridable()) {
+        if (llvm::isa<swift::ClassDecl>(VD) || VD->isSyntacticallyOverridable()) {
           if (!VD->isFinal())
             access = swift::AccessLevel::Open;
         }
