@@ -37,7 +37,7 @@ define i32 @default_call_default() #0 {
 
 define i32 @unsafe_fp_atomic_enabled_call_default() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@unsafe_fp_atomic_enabled_call_default
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    ret i32 0
 ;
   %call = call i32 @func_default()
@@ -55,7 +55,7 @@ define i32 @unsafe_fp_atomic_enabled_call_unsafe_fp_atomic_enabled() #1 {
 
 define i32 @unsafe_fp_atomic_enabled_call_unsafe_fp_atomic_disabled() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@unsafe_fp_atomic_enabled_call_unsafe_fp_atomic_disabled
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    ret i32 0
 ;
   %call = call i32 @func_unsafe_fp_atomic_disabled()
