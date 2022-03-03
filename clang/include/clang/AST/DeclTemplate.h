@@ -3313,10 +3313,12 @@ public:
 
   /// Print this object as an equivalent expression.
   void printAsExpr(llvm::raw_ostream &OS) const;
+  void printAsExpr(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 
   /// Print this object as an initializer suitable for a variable of the
   /// object's type.
   void printAsInit(llvm::raw_ostream &OS) const;
+  void printAsInit(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 
   const APValue &getValue() const { return Value; }
 

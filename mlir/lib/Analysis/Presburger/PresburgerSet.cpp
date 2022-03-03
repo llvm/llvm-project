@@ -221,7 +221,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
   simplex.appendVariable(numLocalsAdded);
 
   unsigned snapshotBeforeIntersect = simplex.getSnapshot();
-  simplex.intersectIntegerPolyhedron(sI);
+  simplex.intersectIntegerRelation(sI);
 
   if (simplex.isEmpty()) {
     // b ^ s_i is empty, so b \ s_i = b. We move directly to i + 1.

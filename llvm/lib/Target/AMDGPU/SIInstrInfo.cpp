@@ -3045,7 +3045,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       removeModOperands(UseMI);
       UseMI.setDesc(get(NewOpc));
 
-      bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+      bool DeleteDef = MRI->use_nodbg_empty(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
 
@@ -3128,7 +3128,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // constant and SGPR are illegal.
       legalizeOperands(UseMI);
 
-      bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+      bool DeleteDef = MRI->use_nodbg_empty(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
 
@@ -3300,6 +3300,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   Opc == AMDGPU::V_MAC_LEGACY_F32_e64 ||
                   Opc == AMDGPU::V_FMAC_LEGACY_F32_e32 ||
                   Opc == AMDGPU::V_FMAC_LEGACY_F32_e64;
+  bool Src0Literal = false;
 
   switch (Opc) {
   default:
@@ -3326,7 +3327,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       return nullptr;
 
     if (Src0->isImm() && !isInlineConstant(MI, Src0Idx, *Src0))
-      return nullptr;
+      Src0Literal = true;
 
     break;
   }
@@ -3364,7 +3365,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     };
 
     int64_t Imm;
-    if (getFoldableImm(Src2, Imm, &DefMI)) {
+    if (!Src0Literal && getFoldableImm(Src2, Imm, &DefMI)) {
       unsigned NewOpc =
           IsFMA ? (IsF16 ? AMDGPU::V_FMAAK_F16 : AMDGPU::V_FMAAK_F32)
                 : (IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32);
@@ -3384,7 +3385,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     unsigned NewOpc = IsFMA
                           ? (IsF16 ? AMDGPU::V_FMAMK_F16 : AMDGPU::V_FMAMK_F32)
                           : (IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32);
-    if (getFoldableImm(Src1, Imm, &DefMI)) {
+    if (!Src0Literal && getFoldableImm(Src1, Imm, &DefMI)) {
       if (pseudoToMCOpcode(NewOpc) != -1) {
         MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
@@ -3398,7 +3399,11 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         return MIB;
       }
     }
-    if (getFoldableImm(Src0, Imm, &DefMI)) {
+    if (Src0Literal || getFoldableImm(Src0, Imm, &DefMI)) {
+      if (Src0Literal) {
+        Imm = Src0->getImm();
+        DefMI = nullptr;
+      }
       if (pseudoToMCOpcode(NewOpc) != -1 &&
           isOperandLegal(
               MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
@@ -3411,11 +3416,18 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+        if (DefMI)
+          killDef();
         return MIB;
       }
     }
   }
+
+  // VOP2 mac/fmac with a literal operand cannot be converted to VOP3 mad/fma
+  // because VOP3 does not allow a literal operand.
+  // TODO: Remove this restriction for GFX10.
+  if (Src0Literal)
+    return nullptr;
 
   unsigned NewOpc = IsFMA ? IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64
                                   : IsF64 ? AMDGPU::V_FMA_F64_e64

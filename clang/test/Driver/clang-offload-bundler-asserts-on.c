@@ -40,6 +40,10 @@
 // BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:xnack-]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
 // BUNDLECOMPATIBILITY: Incompatible: Value of CodeObject's non-ANY feature is not matching with Target feature's non-ANY value         [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:xnack-]   :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
 
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-hip-archive-gfx906-simple.a,%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=HIPOpenMPCOMPATIBILITY
+// HIPOpenMPCOMPATIBILITY: Compatible: Target IDs are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: hip-amdgcn-amd-amdhsa--gfx906]
+// HIPOpenMPCOMPATIBILITY: Compatible: Target IDs are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: hipv4-amdgcn-amd-amdhsa-gfx908]
+
 // Some code so that we can create a binary out of this file.
 int A = 0;
 void test_func(void) {

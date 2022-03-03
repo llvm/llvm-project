@@ -2587,9 +2587,9 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     return true;
   }
   case ISD::VECTOR_SHUFFLE: {
-    // Check if this is a shuffle node doing a splat.
-    // TODO: Do we need to handle shuffle(splat, undef, mask)?
-    int SplatIndex = -1;
+    // Check if this is a shuffle node doing a splat or a shuffle of a splat.
+    APInt DemandedLHS = APInt::getNullValue(NumElts);
+    APInt DemandedRHS = APInt::getNullValue(NumElts);
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(V)->getMask();
     for (int i = 0; i != (int)NumElts; ++i) {
       int M = Mask[i];
@@ -2599,11 +2599,30 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
       }
       if (!DemandedElts[i])
         continue;
-      if (0 <= SplatIndex && SplatIndex != M)
-        return false;
-      SplatIndex = M;
+      if (M < (int)NumElts)
+        DemandedLHS.setBit(M);
+      else
+        DemandedRHS.setBit(M - NumElts);
     }
-    return true;
+
+    // If we aren't demanding either op, assume there's no splat.
+    // If we are demanding both ops, assume there's no splat.
+    if ((DemandedLHS.isZero() && DemandedRHS.isZero()) ||
+        (!DemandedLHS.isZero() && !DemandedRHS.isZero()))
+      return false;
+
+    // See if the demanded elts of the source op is a splat or we only demand
+    // one element, which should always be a splat.
+    // TODO: Handle source ops splats with undefs.
+    auto CheckSplatSrc = [&](SDValue Src, const APInt &SrcElts) {
+      APInt SrcUndefs;
+      return (SrcElts.countPopulation() == 1) ||
+             (isSplatValue(Src, SrcElts, SrcUndefs, Depth + 1) &&
+              (SrcElts & SrcUndefs).isZero());
+    };
+    if (!DemandedLHS.isZero())
+      return CheckSplatSrc(V.getOperand(0), DemandedLHS);
+    return CheckSplatSrc(V.getOperand(1), DemandedRHS);
   }
   case ISD::EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
@@ -2634,6 +2653,39 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts);
     if (isSplatValue(Src, DemandedSrcElts, UndefSrcElts, Depth + 1)) {
       UndefElts = UndefSrcElts.truncOrSelf(NumElts);
+      return true;
+    }
+    break;
+  }
+  case ISD::BITCAST: {
+    SDValue Src = V.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    unsigned SrcBitWidth = SrcVT.getScalarSizeInBits();
+    unsigned BitWidth = VT.getScalarSizeInBits();
+
+    // Ignore bitcasts from unsupported types.
+    // TODO: Add fp support?
+    if (!SrcVT.isVector() || !SrcVT.isInteger() || !VT.isInteger())
+      break;
+
+    // Bitcast 'small element' vector to 'large element' vector.
+    if ((BitWidth % SrcBitWidth) == 0) {
+      // See if each sub element is a splat.
+      unsigned Scale = BitWidth / SrcBitWidth;
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      APInt ScaledDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      for (unsigned I = 0; I != Scale; ++I) {
+        APInt SubUndefElts;
+        APInt SubDemandedElt = APInt::getOneBitSet(Scale, I);
+        APInt SubDemandedElts = APInt::getSplat(NumSrcElts, SubDemandedElt);
+        SubDemandedElts &= ScaledDemandedElts;
+        if (!isSplatValue(Src, SubDemandedElts, SubUndefElts, Depth + 1))
+          return false;
+        // TODO: Add support for merging sub undef elements.
+        if (SubDemandedElts.isSubsetOf(SubUndefElts))
+          return false;
+      }
       return true;
     }
     break;

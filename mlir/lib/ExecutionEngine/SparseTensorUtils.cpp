@@ -779,7 +779,7 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
   std::vector<uint64_t> idx(rank);
   for (uint64_t i = 0, base = 0; i < nse; i++) {
     for (uint64_t r = 0; r < rank; r++)
-      idx[r] = indices[base + r];
+      idx[perm[r]] = indices[base + r];
     tensor->add(idx, values[i]);
     base += rank;
   }

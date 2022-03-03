@@ -1305,14 +1305,8 @@ bool SampleProfileLoader::getInlineCandidate(InlineCandidate *NewCandidate,
   if (Optional<PseudoProbe> Probe = extractProbe(*CB))
     Factor = Probe->Factor;
 
-  uint64_t CallsiteCount = 0;
-  ErrorOr<uint64_t> Weight = getBlockWeight(CB->getParent());
-  if (Weight)
-    CallsiteCount = Weight.get();
-  if (CalleeSamples)
-    CallsiteCount = std::max(
-        CallsiteCount, uint64_t(CalleeSamples->getEntrySamples() * Factor));
-
+  uint64_t CallsiteCount =
+      CalleeSamples ? CalleeSamples->getEntrySamples() * Factor : 0;
   *NewCandidate = {CB, CalleeSamples, CallsiteCount, Factor};
   return true;
 }

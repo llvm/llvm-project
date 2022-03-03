@@ -25,6 +25,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx909 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX909 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx90a -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX90A %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx90c -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX90C %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx940 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX940 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1010 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1011 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1011 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1012 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1012 %s
@@ -35,6 +36,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1033 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1033 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1034 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1034 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1035 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1035 %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1036 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1036 %s
 
 // GFX600: "target-features"="+s-memtime-inst"
 // GFX601: "target-features"="+s-memtime-inst"
@@ -58,6 +60,7 @@
 // GFX909: "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX90A: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+mai-insts,+s-memrealtime,+s-memtime-inst"
 // GFX90C: "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
+// GFX940: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+mai-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1010: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dpp,+flat-address-space,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1011: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1012: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
@@ -68,5 +71,6 @@
 // GFX1033: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1034: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1035: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
+// GFX1036: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 
 kernel void test() {}

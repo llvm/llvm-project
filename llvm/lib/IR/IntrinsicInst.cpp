@@ -493,6 +493,7 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     break;
   }
   case Intrinsic::vp_fptosi:
+  case Intrinsic::vp_sitofp:
     VPFunc =
         Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
     break;

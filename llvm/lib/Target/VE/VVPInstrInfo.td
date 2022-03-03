@@ -18,6 +18,24 @@
 // TODO explain how VVP nodes relate to VP SDNodes once VP ISel is uptream.
 //===----------------------------------------------------------------------===//
 
+// vvp_load(ptr, stride, mask, avl)
+def SDTLoadVVP : SDTypeProfile<1, 4, [
+  SDTCisVec<0>,
+  SDTCisPtrTy<1>,
+  SDTCisInt<2>,
+  SDTCisVec<3>,
+  IsVLVT<4>
+]>;
+
+// vvp_store(data, ptr, stride, mask, avl)
+def SDTStoreVVP: SDTypeProfile<0, 5, [
+  SDTCisVec<0>,
+  SDTCisPtrTy<1>,
+  SDTCisInt<2>,
+  SDTCisVec<3>,
+  IsVLVT<4>
+]>;
+
 // Binary Operators {
 
 // BinaryOp(x,y,mask,vl)
@@ -101,6 +119,12 @@ def c_vvp_fmul  : vvp_commutative<vvp_fmul>;
 def vvp_fdiv    : SDNode<"VEISD::VVP_FDIV",  SDTFPBinOpVVP>;
 
 // } Binary Operators
+
+def vvp_load    : SDNode<"VEISD::VVP_LOAD",  SDTLoadVVP,
+                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand ]>;
+def vvp_store   : SDNode<"VEISD::VVP_STORE", SDTStoreVVP,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 
 def vvp_select : SDNode<"VEISD::VVP_SELECT", SDTSelectVVP>;
 

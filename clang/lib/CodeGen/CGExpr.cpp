@@ -2707,7 +2707,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
         auto *PTy = llvm::PointerType::get(
             VarTy, getContext().getTargetAddressSpace(VD->getType()));
         if (PTy != Addr.getType())
-          Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PTy);
+          Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PTy, VarTy);
       } else {
         // Should we be using the alignment of the constant pointer we emitted?
         CharUnits Alignment =

@@ -304,7 +304,8 @@ Address AtomicInfo::CreateTempAlloca() const {
   // Cast to pointer to value type for bitfields.
   if (LVal.isBitField())
     return CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        TempAlloca, getAtomicAddress().getType());
+        TempAlloca, getAtomicAddress().getType(),
+        getAtomicAddress().getElementType());
   return TempAlloca;
 }
 

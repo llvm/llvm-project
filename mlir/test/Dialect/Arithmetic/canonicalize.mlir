@@ -176,6 +176,48 @@ func @extSIOfExtSI(%arg0: i1) -> i64 {
 
 // -----
 
+// CHECK-LABEL: @cmpIExtSINE
+//       CHECK:  %[[comb:.+]] = arith.cmpi ne, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtSINE(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.cmpi ne, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpIExtSIEQ
+//       CHECK:  %[[comb:.+]] = arith.cmpi eq, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtSIEQ(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.cmpi eq, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpIExtUINE
+//       CHECK:  %[[comb:.+]] = arith.cmpi ne, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtUINE(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.cmpi ne, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpIExtUIEQ
+//       CHECK:  %[[comb:.+]] = arith.cmpi eq, %arg0, %arg1 : i8
+//       CHECK:   return %[[comb]]
+func @cmpIExtUIEQ(%arg0: i8, %arg1: i8) -> i1 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.cmpi eq, %ext0, %ext1 : i64
+  return %res : i1
+}
+
+// -----
+
 // CHECK-LABEL: @andOfExtSI
 //       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
 //       CHECK:  %[[ext:.+]] = arith.extsi %[[comb]] : i8 to i64
@@ -947,4 +989,36 @@ func @test7(%arg0: i32) -> i1 {
   return %2 : i1
   // CHECK: %[[c3:.+]] = arith.constant 3 : i32
   // CHECK: arith.cmpi ugt, %[[arg0]], %[[c3]] : i32
+}
+
+// -----
+
+// CHECK-LABEL: @foldShl(
+// CHECK: %[[res:.+]] = arith.constant 4294967296 : i64
+// CHECK: return %[[res]]
+func @foldShl() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c32 = arith.constant 32 : i64
+  %r = arith.shli %c1, %c32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShl(
+// CHECK: %[[res:.+]] = arith.shli
+// CHECK: return %[[res]]
+func @nofoldShl() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c132 = arith.constant 132 : i64
+  %r = arith.shli %c1, %c132 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShl2(
+// CHECK: %[[res:.+]] = arith.shli
+// CHECK: return %[[res]]
+func @nofoldShl2() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %cm32 = arith.constant -32 : i64
+  %r = arith.shli %c1, %cm32 : i64
+  return %r : i64
 }

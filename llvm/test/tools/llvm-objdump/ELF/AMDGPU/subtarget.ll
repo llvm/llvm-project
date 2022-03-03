@@ -5,6 +5,11 @@ define amdgpu_kernel void @test_kernel() {
 ; Test subtarget detection. Disassembly is only supported for GFX8 and beyond.
 ;
 ; ----------------------------------GFX10--------------------------------------
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1036 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1036 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1035 -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1035 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
@@ -58,6 +63,11 @@ define amdgpu_kernel void @test_kernel() {
 
 ; ----------------------------------GFX9---------------------------------------
 ;
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx940 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx90c %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt

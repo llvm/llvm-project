@@ -788,17 +788,12 @@ define <2 x i64> @splatvar_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; X86-SSE2-LABEL: splatvar_rotate_v2i64:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,1,0,1]
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [64,0,64,0]
-; X86-SSE2-NEXT:    psubq %xmm2, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE2-NEXT:    psllq %xmm1, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    psrlq %xmm3, %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; X86-SSE2-NEXT:    psrlq %xmm3, %xmm0
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-SSE2-NEXT:    orpd %xmm2, %xmm0
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [64,0,0,0]
+; X86-SSE2-NEXT:    psubq %xmm1, %xmm2
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; X86-SSE2-NEXT:    psllq %xmm1, %xmm3
+; X86-SSE2-NEXT:    psrlq %xmm2, %xmm0
+; X86-SSE2-NEXT:    por %xmm3, %xmm0
 ; X86-SSE2-NEXT:    retl
   %splat = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
   %splat64 = sub <2 x i64> <i64 64, i64 64>, %splat
