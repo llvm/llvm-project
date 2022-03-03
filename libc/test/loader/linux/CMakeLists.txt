@@ -70,6 +70,6 @@ add_loader_test(
 #    libc.include.sys_mman
 #    libc.loader.linux.crt1
 #    libc.src.assert.__assert_fail
-#    libc.src.errno.__errno_location
+#    libc.src.errno.errno
 #    libc.src.sys.mman.mmap
 #)

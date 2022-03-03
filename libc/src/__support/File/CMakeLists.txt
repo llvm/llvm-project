@@ -5,5 +5,6 @@ add_object_library(
   HDRS
     file.h
   DEPENDS
-    libc.src.errno.__errno_location
+    libc.include.errno
+    libc.src.errno.errno
 )

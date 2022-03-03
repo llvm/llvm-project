@@ -309,7 +309,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.include.math
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
@@ -329,7 +329,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.include.math
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
@@ -349,7 +349,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.include.math
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
@@ -369,7 +369,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.include.math
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
@@ -389,7 +389,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.include.math
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
@@ -409,7 +409,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.include.math
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept

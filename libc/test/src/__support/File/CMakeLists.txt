@@ -6,6 +6,7 @@ add_libc_unittest(
   SRCS
     file_test.cpp
   DEPENDS
+    libc.include.errno
     libc.include.stdio
     libc.include.stdlib
     libc.src.__support.File.file

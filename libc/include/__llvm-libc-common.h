@@ -29,6 +29,9 @@
 #undef _Alignof
 #define _Alignof alignof
 
+#undef _Thread_local
+#define _Thread_local thread_local
+
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS

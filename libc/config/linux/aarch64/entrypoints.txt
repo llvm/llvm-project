@@ -17,9 +17,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
     
-    # errno.h entrypoints
-    libc.src.errno.__errno_location
-
     # fcntl.h entrypoints
     libc.src.fcntl.creat
     libc.src.fcntl.open
