@@ -1559,6 +1559,31 @@ enum {
   NT_GNU_PROPERTY_TYPE_0 = 5,
 };
 
+// Android note types.
+enum {
+  NT_ANDROID_TYPE_IDENT = 1,
+  NT_ANDROID_TYPE_KUSER = 3,
+  NT_ANDROID_TYPE_MEMTAG = 4,
+};
+
+// Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.
+enum {
+  // Enumeration to determine the tagging mode. In Android-land, 'SYNC' means
+  // running all threads in MTE Synchronous mode, and 'ASYNC' means to use the
+  // kernels auto-upgrade feature to allow for either MTE Asynchronous,
+  // Asymmetric, or Synchronous mode. This allows silicon vendors to specify, on
+  // a per-cpu basis what 'ASYNC' should mean. Generally, the expectation is
+  // "pick the most precise mode that's very fast".
+  NT_MEMTAG_LEVEL_NONE = 0,
+  NT_MEMTAG_LEVEL_ASYNC = 1,
+  NT_MEMTAG_LEVEL_SYNC = 2,
+  NT_MEMTAG_LEVEL_MASK = 3,
+  // Bits indicating whether the loader should prepare for MTE to be enabled on
+  // the heap and/or stack.
+  NT_MEMTAG_HEAP = 4,
+  NT_MEMTAG_STACK = 8,
+};
+
 // Property types used in GNU_PROPERTY_TYPE_0 notes.
 enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
