@@ -91,23 +91,6 @@ public:
   }
 };
 
-class FlushingFileCollector : public llvm::FileCollectorBase {
-public:
-  FlushingFileCollector(llvm::StringRef files_path, llvm::StringRef dirs_path,
-                        std::error_code &ec);
-
-protected:
-  void addFileImpl(llvm::StringRef file) override;
-
-  llvm::vfs::directory_iterator
-  addDirectoryImpl(const llvm::Twine &dir,
-                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
-                   std::error_code &dir_ec) override;
-
-  llvm::Optional<llvm::raw_fd_ostream> m_files_os;
-  llvm::Optional<llvm::raw_fd_ostream> m_dirs_os;
-};
-
 class FileProvider : public Provider<FileProvider> {
 public:
   struct Info {
@@ -116,17 +99,16 @@ public:
   };
 
   FileProvider(const FileSpec &directory) : Provider(directory) {
-    std::error_code ec;
-    m_collector = std::make_shared<FlushingFileCollector>(
-        directory.CopyByAppendingPathComponent("files.txt").GetPath(),
-        directory.CopyByAppendingPathComponent("dirs.txt").GetPath(), ec);
-    if (ec)
-      m_collector.reset();
+    m_collector = std::make_shared<llvm::FileCollector>(
+        directory.CopyByAppendingPathComponent("root").GetPath(),
+        directory.GetPath());
   }
 
-  std::shared_ptr<llvm::FileCollectorBase> GetFileCollector() {
+  std::shared_ptr<llvm::FileCollector> GetFileCollector() {
     return m_collector;
   }
+
+  void Keep() override;
 
   void RecordInterestingDirectory(const llvm::Twine &dir);
   void RecordInterestingDirectoryRecursive(const llvm::Twine &dir);
@@ -134,7 +116,7 @@ public:
   static char ID;
 
 private:
-  std::shared_ptr<FlushingFileCollector> m_collector;
+  std::shared_ptr<llvm::FileCollector> m_collector;
 };
 
 /// Provider for the LLDB version number.
