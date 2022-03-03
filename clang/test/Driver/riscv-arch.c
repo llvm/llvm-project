@@ -414,3 +414,47 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32iv1p0_zvl32b1p0 -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-ZVL-GOODVERS %s
 // RV32-ZVL-GOODVERS: "-target-feature" "+zvl32b"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izbkc1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBKC %s
+// RV32-ZBKC: "-target-feature" "+zbkc"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izbkx1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBKX %s
+// RV32-ZBKX: "-target-feature" "+zbkx"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izbkb1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBKB %s
+// RV32-ZBKB: "-target-feature" "+zbkb"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izknd1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKND %s
+// RV32-ZKND: "-target-feature" "+zknd"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izkne1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKNE %s
+// RV32-ZKNE: "-target-feature" "+zkne"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izknh1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKNH %s
+// RV32-ZKNH: "-target-feature" "+zknh"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izksed1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKSED %s
+// RV32-ZKSED: "-target-feature" "+zksed"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izksh1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKSH %s
+// RV32-ZKSH: "-target-feature" "+zksh"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izkr1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKR %s
+// RV32-ZKR: "-target-feature" "+zkr"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izkt1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZKT %s
+// RV32-ZKT: "-target-feature" "+zkt"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izk1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZK %s
+// RV32-ZK: "-target-feature" "+zk"
