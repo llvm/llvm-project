@@ -284,3 +284,160 @@ define i64 @mix_logic_lshr(i64 %x0, i64 %x1, i64 %y, i64 %z) {
   %r = or i64 %logic, %sh2
   ret i64 %r
 }
+
+; (shl (X | Y), C1) | (srl X, C2) --> (rotl X, C1) | (shl Y, C1)
+
+define i32 @or_fshl_commute0(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshl_commute0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    shldl $5, %edi, %eax
+; CHECK-NEXT:    retq
+  %or1 = or i32 %x, %y
+  %sh1 = shl i32 %or1, 5
+  %sh2 = lshr i32 %x, 27
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
+
+define i64 @or_fshl_commute1(i64 %x, i64 %y) {
+; CHECK-LABEL: or_fshl_commute1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    shldq $35, %rdi, %rax
+; CHECK-NEXT:    retq
+  %or1 = or i64 %y, %x
+  %sh1 = shl i64 %or1, 35
+  %sh2 = lshr i64 %x, 29
+  %r = or i64 %sh1, %sh2
+  ret i64 %r
+}
+
+define i16 @or_fshl_commute2(i16 %x, i16 %y) {
+; CHECK-LABEL: or_fshl_commute2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shrdw $14, %si, %ax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %or1 = or i16 %x, %y
+  %sh1 = shl i16 %or1, 2
+  %sh2 = lshr i16 %x, 14
+  %r = or i16 %sh2, %sh1
+  ret i16 %r
+}
+
+define i8 @or_fshl_commute3(i8 %x, i8 %y) {
+; CHECK-LABEL: or_fshl_commute3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shlb $5, %sil
+; CHECK-NEXT:    shrb $3, %al
+; CHECK-NEXT:    orb %sil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %or1 = or i8 %y, %x
+  %sh1 = shl i8 %or1, 5
+  %sh2 = lshr i8 %x, 3
+  %r = or i8 %sh2, %sh1
+  ret i8 %r
+}
+
+define i32 @or_fshl_wrong_shift(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshl_wrong_shift:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shll $20, %esi
+; CHECK-NEXT:    shrl $11, %eax
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    retq
+  %or1 = or i32 %x, %y
+  %sh1 = shl i32 %or1, 20
+  %sh2 = lshr i32 %x, 11
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
+
+; (shl X, C1) | (srl (X | Y), C2) --> (rotl X, C1) | (srl Y, C2)
+
+define i64 @or_fshr_commute0(i64 %x, i64 %y) {
+; CHECK-LABEL: or_fshr_commute0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    shrdq $24, %rdi, %rax
+; CHECK-NEXT:    retq
+  %or1 = or i64 %x, %y
+  %sh1 = shl i64 %x, 40
+  %sh2 = lshr i64 %or1, 24
+  %r = or i64 %sh1, %sh2
+  ret i64 %r
+}
+
+define i32 @or_fshr_commute1(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshr_commute1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    shrdl $29, %edi, %eax
+; CHECK-NEXT:    retq
+  %or1 = or i32 %y, %x
+  %sh1 = shl i32 %x, 3
+  %sh2 = lshr i32 %or1, 29
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
+
+define i16 @or_fshr_commute2(i16 %x, i16 %y) {
+; CHECK-LABEL: or_fshr_commute2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    shrdw $7, %di, %ax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %or1 = or i16 %x, %y
+  %sh1 = shl i16 %x, 9
+  %sh2 = lshr i16 %or1, 7
+  %r = or i16 %sh2, %sh1
+  ret i16 %r
+}
+
+define i8 @or_fshr_commute3(i8 %x, i8 %y) {
+; CHECK-LABEL: or_fshr_commute3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shrb $6, %sil
+; CHECK-NEXT:    leal (,%rdi,4), %eax
+; CHECK-NEXT:    orb %sil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %or1 = or i8 %y, %x
+  %sh1 = shl i8 %x, 2
+  %sh2 = lshr i8 %or1, 6
+  %r = or i8 %sh2, %sh1
+  ret i8 %r
+}
+
+define i32 @or_fshr_wrong_shift(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshr_wrong_shift:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shll $7, %edi
+; CHECK-NEXT:    shrl $26, %esi
+; CHECK-NEXT:    leal (%rsi,%rdi), %eax
+; CHECK-NEXT:    retq
+  %or1 = or i32 %x, %y
+  %sh1 = shl i32 %x, 7
+  %sh2 = lshr i32 %or1, 26
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
