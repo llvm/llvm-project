@@ -259,6 +259,8 @@ public:
   void emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                          const Stmt *S, StringRef WarningMsg) const;
   void emitAdditionOverflowBug(CheckerContext &C, ProgramStateRef State) const;
+  void emitUninitializedReadBug(CheckerContext &C, ProgramStateRef State,
+                             const Expr *E) const;
   ProgramStateRef checkAdditionOverflow(CheckerContext &C,
                                             ProgramStateRef state,
                                             NonLoc left,
