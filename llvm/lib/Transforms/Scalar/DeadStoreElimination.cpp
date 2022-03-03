@@ -1313,7 +1313,6 @@ struct DSEState {
       // memory location and not located in different loops.
       if (!isGuaranteedLoopIndependent(CurrentI, KillingI, *CurrentLoc)) {
         LLVM_DEBUG(dbgs() << "  ... not guaranteed loop independent\n");
-        WalkerStepLimit -= 1;
         CanOptimize = false;
         continue;
       }
