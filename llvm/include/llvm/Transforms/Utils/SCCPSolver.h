@@ -43,6 +43,14 @@ struct AnalysisResultsForFn {
   PostDominatorTree *PDT;
 };
 
+/// Helper struct shared between Function Specialization and SCCP Solver.
+struct ArgInfo {
+  Argument *Formal; // The Formal argument being analysed.
+  Constant *Actual; // A corresponding actual constant argument.
+
+  ArgInfo(Argument *F, Constant *A) : Formal(F), Actual(A){};
+};
+
 class SCCPInstVisitor;
 
 //===----------------------------------------------------------------------===//
@@ -143,11 +151,13 @@ public:
   /// Return a reference to the set of argument tracked functions.
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions();
 
-  /// Mark argument \p A constant with value \p C in a new function
-  /// specialization. The argument's parent function is a specialization of the
-  /// original function \p F. All other arguments of the specialization inherit
-  /// the lattice state of their corresponding values in the original function.
-  void markArgInFuncSpecialization(Function *F, Argument *A, Constant *C);
+  /// Mark the constant argument of a new function specialization. \p F points
+  /// to the cloned function and \p Arg represents the constant argument as a
+  /// pair of {formal,actual} values (the formal argument is associated with the
+  /// original function definition). All other arguments of the specialization
+  /// inherit the lattice state of their corresponding values in the original
+  /// function.
+  void markArgInFuncSpecialization(Function *F, const ArgInfo &Arg);
 
   /// Mark all of the blocks in function \p F non-executable. Clients can used
   /// this method to erase a function from the module (e.g., if it has been
