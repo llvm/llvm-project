@@ -32,11 +32,11 @@ module m03
     real(kind=k) :: a
   end type
   type(kpdt(4)) :: x
-!CHECK: .c.kpdt.0, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:0_8 init:[component::component(name=.n.a,genre=1_1,category=1_1,kind=4_1,rank=0_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL())]
+!CHECK: .c.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:0_8 init:[component::component(name=.n.a,genre=1_1,category=1_1,kind=4_1,rank=0_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL())]
 !CHECK: .dt.kpdt, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(name=.n.kpdt,uninstantiated=NULL(),kindparameter=.kp.kpdt,lenparameterkind=NULL())
-!CHECK: .dt.kpdt.0, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.kpdt,sizeinbytes=4_8,uninstantiated=.dt.kpdt,kindparameter=.kp.kpdt.0,lenparameterkind=NULL(),component=.c.kpdt.0,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
+!CHECK: .dt.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.kpdt,sizeinbytes=4_8,uninstantiated=.dt.kpdt,kindparameter=.kp.kpdt.4,lenparameterkind=NULL(),component=.c.kpdt.4,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
 !CHECK: .kp.kpdt, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(8) shape: 0_8:0_8 init:[INTEGER(8)::1_8]
-!CHECK: .kp.kpdt.0, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(8) shape: 0_8:0_8 init:[INTEGER(8)::4_8]
+!CHECK: .kp.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(8) shape: 0_8:0_8 init:[INTEGER(8)::4_8]
 end module
 
 module m04
@@ -227,18 +227,16 @@ module m11
     character(len=len) :: chauto
     real :: automatic(len)
   end type
-!CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(name=.n.t,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=.lpk.t)
+!CHECK: .b.t.automatic, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(value) shape: 0_8:1_8,0_8:0_8 init:reshape([value::value(genre=2_1,value=1_8),value(genre=3_1,value=0_8)],shape=[2,1])
+!CHECK: .c.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:3_8 init:[component::component(name=.n.allocatable,genre=3_1,category=1_1,kind=4_1,rank=1_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL()),component(name=.n.pointer,genre=2_1,category=1_1,kind=4_1,rank=0_1,offset=48_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=.di.t.pointer),component(name=.n.chauto,genre=4_1,category=3_1,kind=1_1,rank=0_1,offset=72_8,characterlen=value(genre=3_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL()),component(name=.n.automatic,genre=4_1,category=1_1,kind=4_1,rank=1_1,offset=96_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=.b.t.automatic,initialization=NULL())]
+!CHECK: .di.t.pointer, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(.dp.t.pointer) init:.dp.t.pointer(pointer=target)
+!CHECK: .dp.t.pointer (CompilerCreated): DerivedType components: pointer
+!CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=144_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=.lpk.t,component=.c.t,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=1_1)
 !CHECK: .lpk.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(1) shape: 0_8:0_8 init:[INTEGER(1)::8_1]
+!CHECK: DerivedType scope: .dp.t.pointer size=24 alignment=8 instantiation of .dp.t.pointer
+!CHECK: pointer, POINTER size=24 offset=0: ObjectEntity type: REAL(4)
  contains
   subroutine s1(x)
-!CHECK: .b.t.1.automatic, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(value) shape: 0_8:1_8,0_8:0_8 init:reshape([value::value(genre=2_1,value=1_8),value(genre=3_1,value=0_8)],shape=[2,1])
-!CHECK: .c.t.1, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:3_8 init:[component::component(name=.n.allocatable,genre=3_1,category=1_1,kind=4_1,rank=1_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL()),component(name=.n.pointer,genre=2_1,category=1_1,kind=4_1,rank=0_1,offset=48_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=.di.t.1.pointer),component(name=.n.chauto,genre=4_1,category=3_1,kind=1_1,rank=0_1,offset=72_8,characterlen=value(genre=3_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL()),component(name=.n.automatic,genre=4_1,category=1_1,kind=4_1,rank=1_1,offset=96_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=.b.t.1.automatic,initialization=NULL())]
-!CHECK: .di.t.1.pointer, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(.dp.t.1.pointer) init:.dp.t.1.pointer(pointer=target)
-!CHECK: .dp.t.1.pointer (CompilerCreated): DerivedType components: pointer
-!CHECK: .dt.t.1, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=144_8,uninstantiated=.dt.t,kindparameter=NULL(),lenparameterkind=.lpk.t.1,component=.c.t.1,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=1_1)
-!CHECK: .lpk.t.1, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(1) shape: 0_8:0_8 init:[INTEGER(1)::8_1]
-!CHECK: DerivedType scope: .dp.t.1.pointer size=24 alignment=8 instantiation of .dp.t.1.pointer
-!CHECK: pointer, POINTER size=24 offset=0: ObjectEntity type: REAL(4)
     type(t(*)), intent(in) :: x
   end subroutine
 end module

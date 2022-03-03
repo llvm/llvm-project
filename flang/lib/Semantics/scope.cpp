@@ -374,6 +374,25 @@ bool Scope::IsParameterizedDerivedType() const {
   return false;
 }
 
+bool Scope::IsKindParameterizedDerivedType() const {
+  if (!IsDerivedType()) {
+    return false;
+  }
+  if (const Scope * parent{GetDerivedTypeParent()}) {
+    if (parent->IsKindParameterizedDerivedType()) {
+      return true;
+    }
+  }
+  for (const auto &pair : symbols_) {
+    if (const auto *typeParam{pair.second->detailsIf<TypeParamDetails>()}) {
+      if (typeParam->attr() == common::TypeParamAttr::Kind) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 const DeclTypeSpec *Scope::FindInstantiatedDerivedType(
     const DerivedTypeSpec &spec, DeclTypeSpec::Category category) const {
   DeclTypeSpec type{category, spec};
