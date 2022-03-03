@@ -7,12 +7,21 @@ target triple = "x86_64-unknown-unknown"
 
 define i1 @test(ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:  "entry+land.rhs.i":
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[A:%.*]], ptr [[B:%.*]], i64 8)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
-; CHECK-NEXT:    br label [[OPEQ1_EXIT:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[LAND_RHS_I:%.*]], label [[OPEQ1_EXIT:%.*]]
+; CHECK:       land.rhs.i:
+; CHECK-NEXT:    [[SECOND_I:%.*]] = getelementptr inbounds [[S:%.*]], ptr [[A]], i64 0, i32 1
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[SECOND_I]], align 4
+; CHECK-NEXT:    [[SECOND2_I:%.*]] = getelementptr inbounds [[S]], ptr [[B]], i64 0, i32 1
+; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[SECOND2_I]], align 4
+; CHECK-NEXT:    [[CMP3_I:%.*]] = icmp eq i32 [[V2]], [[V3]]
+; CHECK-NEXT:    br label [[OPEQ1_EXIT]]
 ; CHECK:       opeq1.exit:
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP3_I]], [[LAND_RHS_I]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
 ;
 entry:
   %v0 = load i32, ptr %a, align 4

@@ -144,33 +144,31 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     LLVM_DEBUG(dbgs() << "volatile or atomic\n");
     return {};
   }
-  Value *Addr = LoadI->getOperand(0);
+  Value *const Addr = LoadI->getOperand(0);
   if (Addr->getType()->getPointerAddressSpace() != 0) {
     LLVM_DEBUG(dbgs() << "from non-zero AddressSpace\n");
     return {};
   }
-  const auto &DL = LoadI->getModule()->getDataLayout();
-  if (!isDereferenceablePointer(Addr, LoadI->getType(), DL)) {
+  auto *const GEP = dyn_cast<GetElementPtrInst>(Addr);
+  if (!GEP)
+    return {};
+  LLVM_DEBUG(dbgs() << "GEP\n");
+  if (GEP->isUsedOutsideOfBlock(LoadI->getParent())) {
+    LLVM_DEBUG(dbgs() << "used outside of block\n");
+    return {};
+  }
+  const auto &DL = GEP->getModule()->getDataLayout();
+  if (!isDereferenceablePointer(GEP, LoadI->getType(), DL)) {
     LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     // We need to make sure that we can do comparison in any order, so we
     // require memory to be unconditionnally dereferencable.
     return {};
   }
-
-  APInt Offset = APInt(DL.getPointerTypeSizeInBits(Addr->getType()), 0);
-  Value *Base = Addr;
-  auto *GEP = dyn_cast<GetElementPtrInst>(Addr);
-  if (GEP) {
-    LLVM_DEBUG(dbgs() << "GEP\n");
-    if (GEP->isUsedOutsideOfBlock(LoadI->getParent())) {
-      LLVM_DEBUG(dbgs() << "used outside of block\n");
-      return {};
-    }
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      return {};
-    Base = GEP->getPointerOperand();
-  }
-  return BCEAtom(GEP, LoadI, BaseId.getBaseId(Base), Offset);
+  APInt Offset = APInt(DL.getPointerTypeSizeInBits(GEP->getType()), 0);
+  if (!GEP->accumulateConstantOffset(DL, Offset))
+    return {};
+  return BCEAtom(GEP, LoadI, BaseId.getBaseId(GEP->getPointerOperand()),
+                 Offset);
 }
 
 // A comparison between two BCE atoms, e.g. `a == o.a` in the example at the
@@ -370,11 +368,8 @@ Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
     return None;
 
   BCECmpBlock::InstructionSet BlockInsts(
-      {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, BranchI});
-  if (Result->Lhs.GEP)
-    BlockInsts.insert(Result->Lhs.GEP);
-  if (Result->Rhs.GEP)
-    BlockInsts.insert(Result->Rhs.GEP);
+      {Result->Lhs.GEP, Result->Rhs.GEP, Result->Lhs.LoadI, Result->Rhs.LoadI,
+       Result->CmpI, BranchI});
   return BCECmpBlock(std::move(*Result), Block, BlockInsts);
 }
 
@@ -609,15 +604,8 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
                          NextCmpBlock->getParent(), InsertBefore);
   IRBuilder<> Builder(BB);
   // Add the GEPs from the first BCECmpBlock.
-  Value *Lhs, *Rhs;
-  if (FirstCmp.Lhs().GEP)
-    Lhs = Builder.Insert(FirstCmp.Lhs().GEP->clone());
-  else
-    Lhs = FirstCmp.Lhs().LoadI->getPointerOperand();
-  if (FirstCmp.Rhs().GEP)
-    Rhs = Builder.Insert(FirstCmp.Rhs().GEP->clone());
-  else
-    Rhs = FirstCmp.Rhs().LoadI->getPointerOperand();
+  Value *const Lhs = Builder.Insert(FirstCmp.Lhs().GEP->clone());
+  Value *const Rhs = Builder.Insert(FirstCmp.Rhs().GEP->clone());
 
   Value *IsEqual = nullptr;
   LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons -> "
