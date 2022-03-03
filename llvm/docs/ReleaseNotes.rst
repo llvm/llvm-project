@@ -106,6 +106,7 @@ Changes to the PowerPC Target
 -----------------------------
 
 Linux improvements:
+
 * Provided a number of builtins for compatibility with the XL compiler.
 * Allow MMA builtin types in pre-P10 compilation units.
 * Add support for Return Oriented Programming (ROP) protection for 32 bit.
@@ -113,9 +114,11 @@ Linux improvements:
 * Switched to LLD as the default linker for pre-built Linux binaries.
 * Enabled IEEE quad long double on Linux via ``PPC_LINUX_DEFAULT_IEEELONGDOUBLE``
   in cmake config.
+
   * Added ``__ibm128`` type to represent IBM double-double format, also available
     as ``__attribute__((mode(IF)))``.
   * ``-mfloat128`` can now be used in Linux subtargets with VSX enabled.
+
 * Added quadword atomic load/store support in codegen; not enabled by default.
 * Codegen improvements for splat load, byval parameter, stack lowering, etc.
 * Implemented P10 instruction scheduling model.
@@ -124,11 +127,12 @@ Linux improvements:
 * Various bug fixes.
 
 AIX Support/improvements:
-* variadic (ellipsis) functions with C complex types are now supported.
+
+* Variadic (ellipsis) functions with C complex types are now supported.
 * Added toc-data support for AIX 64-bit.
 * Added toc-data support for read-only globals.
 * Updated default target on AIX from pwr4 to pwr7.
-* AIX 64-bit now use fast-isel for O0.
+* AIX 64-bit code generation now uses fast-isel for O0.
 * Added DWARF support for 32-bit XCOFF.
 
 Changes to the X86 Target
