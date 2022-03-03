@@ -19,6 +19,12 @@ def LifetimeCheck : Pass<"cir-lifetime-check"> {
   }];
   let constructor = "mlir::createLifetimeCheckPass()";
   let dependentDialects = ["cir::CIRDialect"];
+
+  let options = [
+    ListOption<"remarksList", "remarks", "std::string",
+               "List of remark styles to enable as part of diagnostics."
+               " Supported styles: {all|pset}", "llvm::cl::ZeroOrMore">
+  ];
 }
 
 #endif // MLIR_DIALECT_CIR_PASSES

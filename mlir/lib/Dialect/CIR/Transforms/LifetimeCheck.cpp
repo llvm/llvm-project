@@ -32,6 +32,23 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkStore(StoreOp op);
   void checkLoad(LoadOp op);
 
+  struct Options {
+    enum : unsigned { None = 0, RemarkPset = 1, RemarkAll = 1 << 1 };
+    unsigned val = None;
+
+    void parseOptions(LifetimeCheckPass &pass) {
+      for (auto &remark : pass.remarksList) {
+        val |= StringSwitch<unsigned>(remark)
+                   .Case("pset", RemarkPset)
+                   .Case("all", RemarkAll)
+                   .Default(None);
+      }
+    }
+
+    bool emitRemarkAll() { return val & RemarkAll; }
+    bool emitRemarkPset() { return emitRemarkAll() || val & RemarkPset; }
+  } opts;
+
   struct State {
     using DataTy = enum {
       Invalid,
@@ -296,6 +313,7 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
 }
 
 void LifetimeCheckPass::runOnOperation() {
+  opts.parseOptions(*this);
   Operation *op = getOperation();
   checkOperation(op);
 }
