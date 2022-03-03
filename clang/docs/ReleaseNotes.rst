@@ -56,7 +56,8 @@ Major New Features
   limitations:
   - C++ driver modes use the system libc++ headers. These headers are included
     in the optional ``libc++.adt.include`` fileset on AIX.
-  - LTO, although not disabled, is not recommended.
+  - LTO, although not disabled, is not meaningfully functional for practical
+    use.
   - Shared libraries builds (``-shared``) must use explicit symbol export
     options and/or export lists (e.g., with ``-bE:``) on the link step. Clang
     currently will not automatically generate symbol export lists as implicit
