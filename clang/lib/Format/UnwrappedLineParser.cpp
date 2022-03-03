@@ -2597,10 +2597,12 @@ void UnwrappedLineParser::parseNamespace() {
     parseParens();
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
-                              tok::l_square, tok::period) ||
+                              tok::l_square, tok::period, tok::l_paren) ||
            (Style.isCSharp() && FormatTok->is(tok::kw_union)))
       if (FormatTok->is(tok::l_square))
         parseSquare();
+      else if (FormatTok->is(tok::l_paren))
+        parseParens();
       else
         nextToken();
   }
