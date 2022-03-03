@@ -15,6 +15,7 @@
 #include "DWARFUnit.h"
 
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 namespace {
 

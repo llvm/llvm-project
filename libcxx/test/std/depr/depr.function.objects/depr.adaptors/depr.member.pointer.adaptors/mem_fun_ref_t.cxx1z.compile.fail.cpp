@@ -10,9 +10,9 @@
 
 // mem_fun_ref_t
 // Removed in c++17
-// UNSUPPORTED: c++03, c++11, c++14
 
-#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// UNSUPPORTED: c++03, c++11, c++14
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <functional>
 #include <type_traits>
