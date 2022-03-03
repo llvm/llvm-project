@@ -15,6 +15,7 @@ add_flang_library(flangFrontend
   FIRBuilder
   FIRDialect
   FIRSupport
+  MLIRBuiltinAttributeInterfacesIncGen
   ${dialect_libs}
 
   LINK_LIBS
