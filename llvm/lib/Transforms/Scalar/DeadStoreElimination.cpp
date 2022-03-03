@@ -1237,6 +1237,9 @@ struct DSEState {
       // Reached TOP.
       if (MSSA.isLiveOnEntryDef(Current)) {
         LLVM_DEBUG(dbgs() << "   ...  found LiveOnEntryDef\n");
+        if (CanOptimize && Current != KillingDef->getDefiningAccess())
+          // The first clobbering def is... none.
+          KillingDef->setOptimized(Current);
         return None;
       }
 
