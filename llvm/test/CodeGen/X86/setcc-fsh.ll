@@ -166,8 +166,8 @@ define i1 @rotr_sgt_n1(i16 %x, i16 %y) nounwind {
 
 ; negative test - must be a rotate, not general funnel shift
 
-define i1 @fshl_sgt_n1(i8 %x, i8 %y, i8 %z) nounwind {
-; CHECK-LABEL: fshl_sgt_n1:
+define i1 @fshl_eq_n1(i8 %x, i8 %y, i8 %z) nounwind {
+; CHECK-LABEL: fshl_eq_n1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shll $8, %edi
@@ -183,4 +183,99 @@ define i1 @fshl_sgt_n1(i8 %x, i8 %y, i8 %z) nounwind {
   %fsh = tail call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %z)
   %r = icmp eq i8 %fsh, -1
   ret i1 %r
+}
+
+define i1 @or_rotl_eq_0(i8 %x, i8 %y, i8 %z) nounwind {
+; CHECK-LABEL: or_rotl_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    rolb %cl, %dil
+; CHECK-NEXT:    orb %sil, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %rot = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
+  %or = or i8 %rot, %y
+  %r = icmp eq i8 %or, 0
+  ret i1 %r
+}
+
+define i1 @or_rotr_ne_0(i64 %x, i64 %y, i64 %z) nounwind {
+; CHECK-LABEL: or_rotr_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-NEXT:    rorq %cl, %rdi
+; CHECK-NEXT:    orq %rsi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %rot = tail call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
+  %or = or i64 %y, %rot
+  %r = icmp ne i64 %or, 0
+  ret i1 %r
+}
+
+define i1 @or_rotl_ne_n1(i32 %x, i32 %y, i32 %z) nounwind {
+; CHECK-LABEL: or_rotl_ne_n1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    roll %cl, %edi
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    cmpl $-1, %edi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %rot = tail call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
+  %or = or i32 %y, %rot
+  %r = icmp ne i32 %or, -1
+  ret i1 %r
+}
+
+define i1 @or_rotl_ne_0_use(i32 %x, i32 %y, i32 %z) nounwind {
+; CHECK-LABEL: or_rotl_ne_0_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    roll %cl, %edi
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    callq use32@PLT
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+  %rot = tail call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
+  %or = or i32 %y, %rot
+  call void @use32(i32 %or)
+  %r = icmp ne i32 %or, 0
+  ret i1 %r
+}
+
+define <4 x i1> @or_rotl_ne_eq0(<4 x i32> %x, <4 x i32> %y) nounwind {
+; CHECK-LABEL: or_rotl_ne_eq0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [31,31,31,31]
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    pslld $23, %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,3,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm3, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,3,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; CHECK-NEXT:    por %xmm1, %xmm4
+; CHECK-NEXT:    por %xmm0, %xmm4
+; CHECK-NEXT:    pxor %xmm0, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm4, %xmm0
+; CHECK-NEXT:    retq
+  %rot = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32>%x, <4 x i32> %x, <4 x i32> %y)
+  %or = or <4 x i32> %y, %rot
+  %r = icmp eq <4 x i32> %or, <i32 0, i32 0, i32 0, i32 poison>
+  ret <4 x i1> %r
 }
