@@ -583,19 +583,8 @@ private:
 
     // The below heuristic is only concerned with exposing inlining
     // opportunities via indirect call promotion. If the argument is not a
-    // function pointer, give up.
-    if (!isa<PointerType>(A->getType()) ||
-        !isa<FunctionType>(A->getType()->getPointerElementType()))
-      return TotalCost;
-
-    // Since the argument is a function pointer, its incoming constant values
-    // should be functions or constant expressions. The code below attempts to
-    // look through cast expressions to find the function that will be called.
-    Value *CalledValue = C;
-    while (isa<ConstantExpr>(CalledValue) &&
-           cast<ConstantExpr>(CalledValue)->isCast())
-      CalledValue = cast<User>(CalledValue)->getOperand(0);
-    Function *CalledFunction = dyn_cast<Function>(CalledValue);
+    // (potentially casted) function pointer, give up.
+    Function *CalledFunction = dyn_cast<Function>(C->stripPointerCasts());
     if (!CalledFunction)
       return TotalCost;
 
