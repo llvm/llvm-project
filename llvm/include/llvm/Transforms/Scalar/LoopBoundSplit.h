@@ -10,11 +10,11 @@
 #define LLVM_TRANSFORMS_SCALAR_LOOPBOUNDSPLIT_H
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
+class LPMUpdater;
+class Loop;
 
 /// This pass transforms loops that contain a conditional branch with induction
 /// variable. For example, it transforms left code to right code:

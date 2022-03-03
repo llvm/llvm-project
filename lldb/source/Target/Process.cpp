@@ -4310,6 +4310,12 @@ public:
 
   ~IOHandlerProcessSTDIO() override = default;
 
+  void SetIsRunning(bool running) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(!running);
+    m_is_running = running;
+  }
+
   // Each IOHandler gets to run until it is done. It should read data from the
   // "in" and place output into "out" and "err and return when done.
   void Run() override {
@@ -4329,49 +4335,52 @@ public:
 // FD_ZERO, FD_SET are not supported on windows
 #ifndef _WIN32
     const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
-    m_is_running = true;
-    while (!GetIsDone()) {
+    SetIsRunning(true);
+    while (true) {
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        if (GetIsDone())
+          break;
+      }
+
       SelectHelper select_helper;
       select_helper.FDSetRead(read_fd);
       select_helper.FDSetRead(pipe_read_fd);
       Status error = select_helper.Select();
 
-      if (error.Fail()) {
-        SetIsDone(true);
-      } else {
-        char ch = 0;
-        size_t n;
-        if (select_helper.FDIsSetRead(read_fd)) {
-          n = 1;
-          if (m_read_file.Read(&ch, n).Success() && n == 1) {
-            if (m_write_file.Write(&ch, n).Fail() || n != 1)
-              SetIsDone(true);
-          } else
-            SetIsDone(true);
-        }
+      if (error.Fail())
+        break;
+
+      char ch = 0;
+      size_t n;
+      if (select_helper.FDIsSetRead(read_fd)) {
+        n = 1;
+        if (m_read_file.Read(&ch, n).Success() && n == 1) {
+          if (m_write_file.Write(&ch, n).Fail() || n != 1)
+            break;
+        } else
+          break;
+
         if (select_helper.FDIsSetRead(pipe_read_fd)) {
           size_t bytes_read;
           // Consume the interrupt byte
           Status error = m_pipe.Read(&ch, 1, bytes_read);
           if (error.Success()) {
-            switch (ch) {
-            case 'q':
-              SetIsDone(true);
+            if (ch == 'q')
               break;
-            case 'i':
+            if (ch == 'i')
               if (StateIsRunningState(m_process->GetState()))
                 m_process->SendAsyncInterrupt();
-              break;
-            }
           }
         }
       }
     }
-    m_is_running = false;
+    SetIsRunning(false);
 #endif
   }
 
   void Cancel() override {
+    std::lock_guard<std::mutex> guard(m_mutex);
     SetIsDone(true);
     // Only write to our pipe to cancel if we are in
     // IOHandlerProcessSTDIO::Run(). We can end up with a python command that
@@ -4428,7 +4437,8 @@ protected:
   NativeFile m_write_file; // Write to this file (usually the primary pty for
                            // getting io to debuggee)
   Pipe m_pipe;
-  std::atomic<bool> m_is_running{false};
+  std::mutex m_mutex;
+  bool m_is_running = false;
 };
 
 void Process::SetSTDIOFileDescriptor(int fd) {

@@ -41,6 +41,7 @@ add_llvm_unittest(IRTests
   ValueHandleTest.cpp
   ValueMapTest.cpp
   ValueTest.cpp
+  VectorBuilderTest.cpp
   VectorTypesTest.cpp
   VerifierTest.cpp
   VPIntrinsicTest.cpp

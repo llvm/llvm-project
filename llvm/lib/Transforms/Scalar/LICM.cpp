@@ -37,28 +37,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -79,7 +76,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -88,6 +84,11 @@
 #include <algorithm>
 #include <utility>
 using namespace llvm;
+
+namespace llvm {
+class BlockFrequencyInfo;
+class LPMUpdater;
+} // namespace llvm
 
 #define DEBUG_TYPE "licm"
 

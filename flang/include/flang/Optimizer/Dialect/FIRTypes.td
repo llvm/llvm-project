@@ -323,8 +323,6 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
-    
-    std::string translateNameToFrontendMangledName() const;
 
     detail::RecordTypeStorage const *uniqueKey() const;
   }];

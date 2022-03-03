@@ -1608,6 +1608,32 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  SrcTy.getSimpleVT()))
     return AdjustCost(Entry->Cost);
 
+  static const TypeConversionCostTblEntry FP16Tbl[] = {
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f16, 1}, // fcvtzs
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f16, 1},
+      {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f16, 1}, // fcvtzs
+      {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f16, 1},
+      {ISD::FP_TO_SINT, MVT::v4i32, MVT::v4f16, 2}, // fcvtl+fcvtzs
+      {ISD::FP_TO_UINT, MVT::v4i32, MVT::v4f16, 2},
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f16, 2}, // fcvtzs+xtn
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f16, 2},
+      {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f16, 1}, // fcvtzs
+      {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f16, 1},
+      {ISD::FP_TO_SINT, MVT::v8i32, MVT::v8f16, 4}, // 2*fcvtl+2*fcvtzs
+      {ISD::FP_TO_UINT, MVT::v8i32, MVT::v8f16, 4},
+      {ISD::FP_TO_SINT, MVT::v16i8, MVT::v16f16, 3}, // 2*fcvtzs+xtn
+      {ISD::FP_TO_UINT, MVT::v16i8, MVT::v16f16, 3},
+      {ISD::FP_TO_SINT, MVT::v16i16, MVT::v16f16, 2}, // 2*fcvtzs
+      {ISD::FP_TO_UINT, MVT::v16i16, MVT::v16f16, 2},
+      {ISD::FP_TO_SINT, MVT::v16i32, MVT::v16f16, 8}, // 4*fcvtl+4*fcvtzs
+      {ISD::FP_TO_UINT, MVT::v16i32, MVT::v16f16, 8},
+  };
+
+  if (ST->hasFullFP16())
+    if (const auto *Entry = ConvertCostTableLookup(
+            FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+      return AdjustCost(Entry->Cost);
+
   return AdjustCost(
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
@@ -1824,6 +1850,9 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::SHL:
     // These nodes are marked as 'custom' for combining purposes only.
     // We know that they are legal. See LowerAdd in ISelLowering.
     return (Cost + 1) * LT.first;
