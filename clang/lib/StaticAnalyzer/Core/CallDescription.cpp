@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
+#include "clang/AST/Decl.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -61,15 +62,32 @@ bool ento::CallDescription::matches(const CallEvent &Call) const {
   if (!FD)
     return false;
 
+  return matchesImpl(FD, Call.getNumArgs(), Call.parameters().size());
+}
+
+bool ento::CallDescription::matchesAsWritten(const CallExpr &CE) const {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(CE.getCalleeDecl());
+  if (!FD)
+    return false;
+
+  return matchesImpl(FD, CE.getNumArgs(), FD->param_size());
+}
+
+bool ento::CallDescription::matchesImpl(const FunctionDecl *Callee,
+                                        size_t ArgCount,
+                                        size_t ParamCount) const {
+  const auto *FD = Callee;
+  if (!FD)
+    return false;
+
   if (Flags & CDF_MaybeBuiltin) {
     return CheckerContext::isCLibraryFunction(FD, getFunctionName()) &&
-           (!RequiredArgs || *RequiredArgs <= Call.getNumArgs()) &&
-           (!RequiredParams || *RequiredParams <= Call.parameters().size());
+           (!RequiredArgs || *RequiredArgs <= ArgCount) &&
+           (!RequiredParams || *RequiredParams <= ParamCount);
   }
 
   if (!II.hasValue()) {
-    II = &Call.getState()->getStateManager().getContext().Idents.get(
-        getFunctionName());
+    II = &FD->getASTContext().Idents.get(getFunctionName());
   }
 
   const auto MatchNameOnly = [](const CallDescription &CD,
@@ -86,11 +104,11 @@ bool ento::CallDescription::matches(const CallEvent &Call) const {
   };
 
   const auto ExactMatchArgAndParamCounts =
-      [](const CallEvent &Call, const CallDescription &CD) -> bool {
-    const bool ArgsMatch =
-        !CD.RequiredArgs || *CD.RequiredArgs == Call.getNumArgs();
+      [](size_t ArgCount, size_t ParamCount,
+         const CallDescription &CD) -> bool {
+    const bool ArgsMatch = !CD.RequiredArgs || *CD.RequiredArgs == ArgCount;
     const bool ParamsMatch =
-        !CD.RequiredParams || *CD.RequiredParams == Call.parameters().size();
+        !CD.RequiredParams || *CD.RequiredParams == ParamCount;
     return ArgsMatch && ParamsMatch;
   };
 
@@ -122,7 +140,7 @@ bool ento::CallDescription::matches(const CallEvent &Call) const {
   };
 
   // Let's start matching...
-  if (!ExactMatchArgAndParamCounts(Call, *this))
+  if (!ExactMatchArgAndParamCounts(ArgCount, ParamCount, *this))
     return false;
 
   if (!MatchNameOnly(*this, FD))
@@ -143,4 +161,8 @@ ento::CallDescriptionSet::CallDescriptionSet(
 
 bool ento::CallDescriptionSet::contains(const CallEvent &Call) const {
   return static_cast<bool>(Impl.lookup(Call));
+}
+
+bool ento::CallDescriptionSet::containsAsWritten(const CallExpr &CE) const {
+  return static_cast<bool>(Impl.lookupAsWritten(CE));
 }

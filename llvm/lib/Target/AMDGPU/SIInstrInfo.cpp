@@ -3227,34 +3227,60 @@ static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
+  MachineBasicBlock &MBB = *MI.getParent();
   unsigned Opc = MI.getOpcode();
-  bool IsF16 = false;
+
+  // Handle MFMA.
+  int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
+  if (NewMFMAOpc != -1) {
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB.add(MI.getOperand(I));
+    updateLiveVariables(LV, MI, *MIB);
+    if (LIS)
+      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+    return MIB;
+  }
+
+  // Handle WMMA.
+  if (SIInstrInfo::isWMMA(MI)) {
+    const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
+    const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
+    unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
+    auto NewDest = MachineOperand::CreateReg(Src2->getReg(), true);
+    auto NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                     .setMIFlags(MI.getFlags());
+
+    NewMI->addOperand(*Dst);
+    NewMI->addOperand(NewDest);
+
+    for (unsigned I = 1, E = MI.getDesc().getNumOperands(); I != E; ++I)
+      NewMI->addOperand(MI.getOperand(I));
+
+    updateLiveVariables(LV, MI, *NewMI);
+    return NewMI;
+  }
+
+  // Handle MAC/FMAC.
+  bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
+               Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64;
   bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F32_e64 ||
                Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64 ||
                Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
   bool IsF64 = Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
-  int NewMFMAOpc = -1;
 
   switch (Opc) {
   default:
-    if (SIInstrInfo::isWMMA(MI))
-      break;
-    NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
-    if (NewMFMAOpc == -1)
-      return nullptr;
-    break;
+    return nullptr;
   case AMDGPU::V_MAC_F16_e64:
   case AMDGPU::V_FMAC_F16_e64:
-    IsF16 = true;
-    LLVM_FALLTHROUGH;
   case AMDGPU::V_MAC_F32_e64:
   case AMDGPU::V_FMAC_F32_e64:
   case AMDGPU::V_FMAC_F64_e64:
     break;
   case AMDGPU::V_MAC_F16_e32:
   case AMDGPU::V_FMAC_F16_e32:
-    IsF16 = true;
-    LLVM_FALLTHROUGH;
   case AMDGPU::V_MAC_F32_e32:
   case AMDGPU::V_FMAC_F32_e32:
   case AMDGPU::V_FMAC_F64_e32: {
@@ -3272,18 +3298,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
 
   MachineInstrBuilder MIB;
-  MachineBasicBlock &MBB = *MI.getParent();
-
-  if (NewMFMAOpc != -1) {
-    MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
-      MIB.add(MI.getOperand(I));
-    updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
-      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-    return MIB;
-  }
-
   const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
   const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
   const MachineOperand *Src0Mods =
@@ -3365,22 +3379,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         return MIB;
       }
     }
-  }
-
-  if (SIInstrInfo::isWMMA(MI)) {
-    unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
-    auto NewDest = MachineOperand::CreateReg(Src2->getReg(), true);
-    auto NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                     .setMIFlags(MI.getFlags());
-
-    NewMI->addOperand(*Dst);
-    NewMI->addOperand(NewDest);
-
-    for (unsigned I = 1, E = MI.getDesc().getNumOperands(); I != E; ++I)
-      NewMI->addOperand(MI.getOperand(I));
-
-    updateLiveVariables(LV, MI, *NewMI);
-    return NewMI;
   }
 
   unsigned NewOpc = IsFMA ? (IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64
