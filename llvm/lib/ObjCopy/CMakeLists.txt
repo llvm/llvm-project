@@ -37,6 +37,7 @@ source_group("Source Files\\XCOFF" REGULAR_EXPRESSION
 
 add_llvm_component_library(LLVMObjCopy
   Archive.cpp
+  CommonConfig.cpp
   ObjCopy.cpp
   ConfigManager.cpp
   COFF/COFFObjcopy.cpp
