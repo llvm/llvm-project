@@ -14,12 +14,13 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPPREDICATION_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPPREDICATION_H
 
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
 
+class LPMUpdater;
+class Loop;
 /// Performs Loop Predication Pass.
 class LoopPredicationPass : public PassInfoMixin<LoopPredicationPass> {
 public:

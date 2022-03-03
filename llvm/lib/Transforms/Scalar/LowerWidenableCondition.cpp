@@ -13,8 +13,6 @@
 
 #include "llvm/Transforms/Scalar/LowerWidenableCondition.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/GuardUtils.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -24,7 +22,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;
 
