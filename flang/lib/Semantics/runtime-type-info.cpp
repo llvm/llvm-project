@@ -114,7 +114,6 @@ private:
   SemanticsContext &context_;
   RuntimeDerivedTypeTables &tables_;
   std::map<const Symbol *, SymbolVector> orderedTypeParameters_;
-  int anonymousTypes_{0};
 
   const DeclTypeSpec &derivedTypeSchema_; // TYPE(DerivedType)
   const DeclTypeSpec &componentSchema_; // TYPE(Component)
@@ -339,12 +338,38 @@ template <int KIND> static SomeExpr IntExpr(std::int64_t n) {
       evaluate::Constant<evaluate::Type<TypeCategory::Integer, KIND>>{n});
 }
 
+static std::optional<std::string> GetSuffixIfTypeKindParameters(
+    const DerivedTypeSpec &derivedTypeSpec, const SymbolVector *parameters) {
+  if (parameters) {
+    std::optional<std::string> suffix;
+    for (SymbolRef ref : *parameters) {
+      const auto &tpd{ref->get<TypeParamDetails>()};
+      if (tpd.attr() == common::TypeParamAttr::Kind) {
+        if (const auto *pv{derivedTypeSpec.FindParameter(ref->name())}) {
+          if (pv->GetExplicit()) {
+            if (auto instantiatedValue{evaluate::ToInt64(*pv->GetExplicit())}) {
+              if (suffix.has_value()) {
+                *suffix += "."s + std::to_string(*instantiatedValue);
+              } else {
+                suffix = "."s + std::to_string(*instantiatedValue);
+                ;
+              }
+            }
+          }
+        }
+      }
+    }
+    return suffix;
+  }
+  return std::nullopt;
+}
+
 const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   if (const Symbol * info{dtScope.runtimeDerivedTypeDescription()}) {
     return info;
   }
   const DerivedTypeSpec *derivedTypeSpec{dtScope.derivedTypeSpec()};
-  if (!derivedTypeSpec && !dtScope.IsParameterizedDerivedType() &&
+  if (!derivedTypeSpec && !dtScope.IsKindParameterizedDerivedType() &&
       dtScope.symbol()) {
     // This derived type was declared (obviously, there's a Scope) but never
     // used in this compilation (no instantiated DerivedTypeSpec points here).
@@ -353,6 +378,16 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     // a module but used only by clients and submodules, enabling the
     // run-time "no initialization needed here" flag to work.
     DerivedTypeSpec derived{dtScope.symbol()->name(), *dtScope.symbol()};
+    if (const SymbolVector *
+        lenParameters{GetTypeParameters(*dtScope.symbol())}) {
+      // Create dummy deferred values for the length parameters so that the
+      // DerivedTypeSpec is complete and can be used in helpers.
+      for (SymbolRef lenParam : *lenParameters) {
+        derived.AddRawParamValue(
+            std::nullopt, ParamValue::Deferred(common::TypeParamAttr::Len));
+      }
+      derived.CookParameters(context_.foldingContext());
+    }
     DeclTypeSpec &decl{
         dtScope.MakeDerivedType(DeclTypeSpec::TypeDerived, std::move(derived))};
     derivedTypeSpec = &decl.derivedTypeSpec();
@@ -369,18 +404,26 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       (typeName.front() == '.' && !context_.IsTempName(typeName))) {
     return nullptr;
   }
+  const SymbolVector *parameters{GetTypeParameters(*dtSymbol)};
   std::string distinctName{typeName};
-  if (&dtScope != dtSymbol->scope()) {
-    distinctName += "."s + std::to_string(anonymousTypes_++);
-  }
-  std::string dtDescName{".dt."s + distinctName};
-  Scope &scope{GetContainingNonDerivedScope(dtScope)};
-  if (distinctName == typeName && scope.IsModule()) {
-    if (const Symbol * description{scope.FindSymbol(SourceName{dtDescName})}) {
-      dtScope.set_runtimeDerivedTypeDescription(*description);
-      return description;
+  if (&dtScope != dtSymbol->scope() && derivedTypeSpec) {
+    // Only create new type descriptions for different kind parameter values.
+    // Type with different length parameters/same kind parameters can all
+    // share the same type description available in the current scope.
+    if (auto suffix{
+            GetSuffixIfTypeKindParameters(*derivedTypeSpec, parameters)}) {
+      distinctName += *suffix;
     }
   }
+  std::string dtDescName{".dt."s + distinctName};
+  Scope *dtSymbolScope{const_cast<Scope *>(dtSymbol->scope())};
+  Scope &scope{
+      GetContainingNonDerivedScope(dtSymbolScope ? *dtSymbolScope : dtScope)};
+  if (const auto it{scope.find(SourceName{dtDescName})}; it != scope.end()) {
+    dtScope.set_runtimeDerivedTypeDescription(*it->second);
+    return &*it->second;
+  }
+
   // Create a new description object before populating it so that mutual
   // references will work as pointer targets.
   Symbol &dtObject{CreateObject(dtDescName, derivedTypeSchema_, scope)};
@@ -388,9 +431,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   evaluate::StructureConstructorValues dtValues;
   AddValue(dtValues, derivedTypeSchema_, "name"s,
       SaveNameAsPointerTarget(scope, typeName));
-  bool isPDTdefinition{
-      !derivedTypeSpec && dtScope.IsParameterizedDerivedType()};
-  if (!isPDTdefinition) {
+  bool isPDTdefinitionWithKindParameters{
+      !derivedTypeSpec && dtScope.IsKindParameterizedDerivedType()};
+  if (!isPDTdefinitionWithKindParameters) {
     auto sizeInBytes{static_cast<common::ConstantSubscript>(dtScope.size())};
     if (auto alignment{dtScope.alignment().value_or(0)}) {
       sizeInBytes += alignment - 1;
@@ -417,7 +460,6 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   using Int1 = evaluate::Type<TypeCategory::Integer, 1>;
   std::vector<Int8::Scalar> kinds;
   std::vector<Int1::Scalar> lenKinds;
-  const SymbolVector *parameters{GetTypeParameters(*dtSymbol)};
   if (parameters) {
     // Package the derived type's parameters in declaration order for
     // each category of parameter.  KIND= type parameters are described
@@ -450,7 +492,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       SaveNumericPointerTarget<Int1>(
           scope, SaveObjectName(".lpk."s + distinctName), std::move(lenKinds)));
   // Traverse the components of the derived type
-  if (!isPDTdefinition) {
+  if (!isPDTdefinitionWithKindParameters) {
     std::vector<const Symbol *> dataComponentSymbols;
     std::vector<evaluate::StructureConstructor> procPtrComponents;
     std::map<int, evaluate::StructureConstructor> specials;

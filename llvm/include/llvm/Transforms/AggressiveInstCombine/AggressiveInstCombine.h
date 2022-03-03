@@ -18,9 +18,11 @@
 #define LLVM_TRANSFORMS_AGGRESSIVEINSTCOMBINE_AGGRESSIVEINSTCOMBINE_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
+
+class Function;
+class FunctionPass;
 
 class AggressiveInstCombinePass
     : public PassInfoMixin<AggressiveInstCombinePass> {

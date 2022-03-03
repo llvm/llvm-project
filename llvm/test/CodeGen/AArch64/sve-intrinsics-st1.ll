@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 ; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+streaming-sve < %s | FileCheck %s
 
 ;
 ; ST1B
@@ -182,4 +184,4 @@ declare void @llvm.aarch64.sve.st1.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>
 declare void @llvm.aarch64.sve.st1.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double*)
 
 ; +bf16 is required for the bfloat version.
-attributes #0 = { "target-features"="+sve,+bf16" }
+attributes #0 = { "target-features"="+bf16" }
