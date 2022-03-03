@@ -82,7 +82,7 @@ private:
     EXPECT_DEATH( C1.erase(it1) );
     C1.erase(C1.begin(), C1.end());
     assert(C1.size() == 0);
-    EXPECT_DEATH_MATCHES(DebugInfoMatcher("string::pop_back(): string is already empty"), C1.pop_back() );
+    TEST_LIBCPP_ASSERT_FAILURE(C1.pop_back(), "string::pop_back(): string is already empty");
   }
 };
 

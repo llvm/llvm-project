@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxx-no-debug-mode, c++03, windows
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// UNSUPPORTED: c++03, windows
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
-#include <__debug>
+#include <cassert>
 #include <cstdio>
+#include <string>
 
 #include "check_assertion.h"
-#include "test_macros.h"
 
 template <class Func>
-inline bool TestDeathTest(const char* stmt, Func&& func, DeathTest::ResultKind ExpectResult, DebugInfoMatcher Matcher = AnyMatcher) {
+inline bool TestDeathTest(const char* stmt, Func&& func, DeathTest::ResultKind ExpectResult, AssertionInfoMatcher Matcher = AnyMatcher) {
   DeathTest DT(Matcher);
   DeathTest::ResultKind RK = DT.Run(func);
   auto OnFailure = [&](std::string msg) {
@@ -42,7 +43,7 @@ void my_libcpp_assert() {
 }
 
 void test_no_match_found() {
-  DebugInfoMatcher ExpectMatch("my message");
+  AssertionInfoMatcher ExpectMatch("my message");
   TEST_DEATH_TEST_MATCHES(DeathTest::RK_MatchFailure, ExpectMatch, my_libcpp_assert());
 }
 

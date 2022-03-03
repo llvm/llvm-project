@@ -10,52 +10,39 @@
 #ifndef _LIBCPP___ASSERT
 #define _LIBCPP___ASSERT
 
+#include <__availability>
 #include <__config>
-#include <iosfwd> // for std::string
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+// This is for backwards compatibility with code that might have been enabling
+// assertions through the Debug mode previously.
 #if _LIBCPP_DEBUG_LEVEL >= 1
-#   define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : ::std::__libcpp_debug_function(::std::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
+# ifndef _LIBCPP_ENABLE_ASSERTIONS
+#   define _LIBCPP_ENABLE_ASSERTIONS 1
+# endif
+#endif
+
+#ifndef _LIBCPP_ENABLE_ASSERTIONS
+# define _LIBCPP_ENABLE_ASSERTIONS _LIBCPP_ENABLE_ASSERTIONS_DEFAULT
+#endif
+
+#if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
+# error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
+#endif
+
+#if _LIBCPP_ENABLE_ASSERTIONS
+# define _LIBCPP_ASSERT(expression, message) ((expression) ? (void)0 : ::std::__libcpp_assertion_handler(__FILE__, __LINE__, #expression, message))
 #else
-#   define _LIBCPP_ASSERT(x, m) ((void)0)
+# define _LIBCPP_ASSERT(x, m) ((void)0)
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TEMPLATE_VIS __libcpp_debug_info {
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-  __libcpp_debug_info()
-      : __file_(nullptr), __line_(-1), __pred_(nullptr), __msg_(nullptr) {}
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-  __libcpp_debug_info(const char* __f, int __l, const char* __p, const char* __m)
-    : __file_(__f), __line_(__l), __pred_(__p), __msg_(__m) {}
-
-  _LIBCPP_FUNC_VIS string what() const;
-
-  const char* __file_;
-  int __line_;
-  const char* __pred_;
-  const char* __msg_;
-};
-
-/// __libcpp_debug_function_type - The type of the assertion failure handler.
-typedef void(*__libcpp_debug_function_type)(__libcpp_debug_info const&);
-
-/// __libcpp_debug_function - The handler function called when a _LIBCPP_ASSERT
-///    fails.
-extern _LIBCPP_EXPORTED_FROM_ABI __libcpp_debug_function_type __libcpp_debug_function;
-
-/// __libcpp_abort_debug_function - A debug handler that aborts when called.
-_LIBCPP_NORETURN _LIBCPP_FUNC_VIS
-void __libcpp_abort_debug_function(__libcpp_debug_info const&);
-
-/// __libcpp_set_debug_function - Set the debug handler to the specified
-///    function.
-_LIBCPP_FUNC_VIS
-bool __libcpp_set_debug_function(__libcpp_debug_function_type __func);
+_LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_ASSERTION_HANDLER
+void __libcpp_assertion_handler(char const* __file, int __line, char const* __expression, char const* __message);
 
 _LIBCPP_END_NAMESPACE_STD
 

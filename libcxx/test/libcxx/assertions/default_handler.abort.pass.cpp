@@ -6,26 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxx-no-debug-mode
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// Test that the default assertion handler aborts the program.
 
-// Test that the default debug handler aborts the program.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+
+// We flag uses of the assertion handler in older dylibs at compile-time to avoid runtime
+// failures when back-deploying.
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
 
 #include <__assert>
 #include <csignal>
 #include <cstdlib>
 
-#include "test_macros.h"
-
-void signal_handler(int signal)
-{
-    if (signal == SIGABRT)
-      std::_Exit(EXIT_SUCCESS);
-    std::_Exit(EXIT_FAILURE);
+void signal_handler(int signal) {
+  if (signal == SIGABRT)
+    std::_Exit(EXIT_SUCCESS);
+  std::_Exit(EXIT_FAILURE);
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   if (std::signal(SIGABRT, signal_handler) != SIG_ERR)
     _LIBCPP_ASSERT(false, "foo");
   return EXIT_FAILURE;

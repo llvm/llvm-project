@@ -4,6 +4,7 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 set(LIBCXX_SOURCES
   algorithm.cpp
   any.cpp
+  assert.cpp
   atomic.cpp
   barrier.cpp
   bind.cpp
@@ -65,8 +66,8 @@ set(LIBCXX_SOURCES
 
 if (LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
   list(APPEND LIBCXX_SOURCES
-    assert.cpp
     debug.cpp
+    legacy_debug_handler.cpp
     )
 endif()
 

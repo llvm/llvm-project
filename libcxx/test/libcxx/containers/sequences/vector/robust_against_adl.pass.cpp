@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: debug_level=0, debug_level=1
+// UNSUPPORTED: debug_level=0, debug_level=1, libcpp-has-assertions
 
 // <vector>
 
