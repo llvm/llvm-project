@@ -1117,10 +1117,8 @@ private:
       // callbacks.
       SmallVector<Value *, 8> Args;
       for (auto *CI : MergableCIs) {
-        Value *Callee =
-            CI->getArgOperand(CallbackCalleeOperand)->stripPointerCasts();
-        FunctionType *FT =
-            cast<FunctionType>(Callee->getType()->getPointerElementType());
+        Value *Callee = CI->getArgOperand(CallbackCalleeOperand);
+        FunctionType *FT = OMPInfoCache.OMPBuilder.ParallelTask;
         Args.clear();
         Args.push_back(OutlinedFn->getArg(0));
         Args.push_back(OutlinedFn->getArg(1));
