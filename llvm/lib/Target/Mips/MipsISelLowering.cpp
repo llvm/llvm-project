@@ -4732,18 +4732,19 @@ MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
 Register
 MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                       const MachineFunction &MF) const {
-  // Named registers is expected to be fairly rare. For now, just support $28
-  // since the linux kernel uses it.
+  // The Linux kernel uses $28 and sp.
   if (Subtarget.isGP64bit()) {
     Register Reg = StringSwitch<Register>(RegName)
-                         .Case("$28", Mips::GP_64)
-                         .Default(Register());
+                       .Case("$28", Mips::GP_64)
+                       .Case("sp", Mips::SP_64)
+                       .Default(Register());
     if (Reg)
       return Reg;
   } else {
     Register Reg = StringSwitch<Register>(RegName)
-                         .Case("$28", Mips::GP)
-                         .Default(Register());
+                       .Case("$28", Mips::GP)
+                       .Case("sp", Mips::SP)
+                       .Default(Register());
     if (Reg)
       return Reg;
   }
