@@ -49,11 +49,6 @@ void FileSystem::Initialize() {
   InstanceImpl().emplace();
 }
 
-void FileSystem::Initialize(std::shared_ptr<FileCollectorBase> collector) {
-  lldbassert(!InstanceImpl() && "Already initialized.");
-  InstanceImpl().emplace(collector);
-}
-
 void FileSystem::Initialize(IntrusiveRefCntPtr<vfs::FileSystem> fs) {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace(fs);
@@ -281,8 +276,6 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 std::shared_ptr<DataBufferLLVM>
 FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
                              uint64_t offset) {
-  Collect(path);
-
   const bool is_volatile = !IsLocal(path);
   std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
   if (size == 0) {
@@ -430,8 +423,6 @@ static mode_t GetOpenMode(uint32_t permissions) {
 Expected<FileUP> FileSystem::Open(const FileSpec &file_spec,
                                   File::OpenOptions options,
                                   uint32_t permissions, bool should_close_fd) {
-  Collect(file_spec.GetPath());
-
   const int open_flags = GetOpenFlags(options);
   const mode_t open_mode =
       (open_flags & O_CREAT) ? GetOpenMode(permissions) : 0;
@@ -449,20 +440,6 @@ Expected<FileUP> FileSystem::Open(const FileSpec &file_spec,
       new NativeFile(descriptor, options, should_close_fd));
   assert(file->IsValid());
   return std::move(file);
-}
-
-void FileSystem::Collect(const FileSpec &file_spec) {
-  Collect(file_spec.GetPath());
-}
-
-void FileSystem::Collect(const llvm::Twine &file) {
-  if (!m_collector)
-    return;
-
-  if (llvm::sys::fs::is_directory(file))
-    m_collector->addDirectory(file);
-  else
-    m_collector->addFile(file);
 }
 
 void FileSystem::SetHomeDirectory(std::string home_directory) {

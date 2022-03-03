@@ -191,10 +191,6 @@ protected:
     auto &r = Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
-      if (llvm::Error e = repro::Finalize(r.GetReproducerPath())) {
-        SetError(result, std::move(e));
-        return result.Succeeded();
-      }
     } else {
       result.AppendErrorWithFormat("Unable to get the reproducer generator");
       return false;

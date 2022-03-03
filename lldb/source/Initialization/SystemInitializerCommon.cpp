@@ -43,12 +43,15 @@ SystemInitializerCommon::~SystemInitializerCommon() = default;
 /// Initialize the FileSystem based on the current reproducer mode.
 static llvm::Error InitializeFileSystem() {
   auto &r = repro::Reproducer::Instance();
+
   if (repro::Generator *g = r.GetGenerator()) {
     repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
     vp.SetVersion(lldb_private::GetVersion());
 
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    FileSystem::Initialize(fp.GetFileCollector());
+
+    FileSystem::Initialize(llvm::FileCollector::createCollectorVFS(
+        llvm::vfs::getRealFileSystem(), fp.GetFileCollector()));
 
     fp.RecordInterestingDirectory(
         g->GetOrCreate<repro::WorkingDirectoryProvider>().GetDirectory());
