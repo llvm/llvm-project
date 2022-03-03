@@ -119,6 +119,11 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // FIXME: this should be a ScopedHashTable for consistency.
   using PMapType = llvm::DenseMap<mlir::Value, PSetType>;
 
+  using PSetHistType = llvm::SetVector<mlir::Location>;
+  using PMapHistType = llvm::DenseMap<mlir::Value, PSetHistType>;
+  PMapHistType pmapNullHist;
+  PMapHistType pmapInvalidHist;
+
   SmallPtrSet<mlir::Value, 8> ptrs;
 
   // Represents the scope context for IR operations (cir.scope, cir.if,
@@ -257,6 +262,13 @@ void LifetimeCheckPass::checkRegionWithScope(Region &region) {
 }
 
 void LifetimeCheckPass::checkFunc(Operation *op) {
+  // FIXME: perhaps this should be a function pass, but for now make
+  // sure we reset the state before looking at other functions.
+  if (currPmap)
+    getPmap().clear();
+  pmapNullHist.clear();
+  pmapInvalidHist.clear();
+
   // Add a new scope. Note that as part of the scope cleanup process
   // we apply section 2.3 KILL(x) functionality, turning relevant
   // references invalid.
