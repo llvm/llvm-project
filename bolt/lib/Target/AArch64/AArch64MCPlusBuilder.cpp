@@ -204,8 +204,6 @@ public:
     return Inst.getOpcode() == AArch64::BLR;
   }
 
-  MCPhysReg getNoRegister() const override { return AArch64::NoRegister; }
-
   bool hasPCRelOperand(const MCInst &Inst) const override {
     // ADRP is blacklisted and is an exception. Even though it has a
     // PC-relative operand, this operand is not a complete symbol reference

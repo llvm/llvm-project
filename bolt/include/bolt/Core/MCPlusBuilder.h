@@ -424,9 +424,7 @@ public:
 
   /// Return a register number that is guaranteed to not match with
   /// any real register on the underlying architecture.
-  virtual MCPhysReg getNoRegister() const {
-    llvm_unreachable("not implemented");
-  }
+  MCPhysReg getNoRegister() const { return MCRegister::NoRegister; }
 
   /// Return a register corresponding to a function integer argument \p ArgNo
   /// if the argument is passed in a register. Or return the result of
