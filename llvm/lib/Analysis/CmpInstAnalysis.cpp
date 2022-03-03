@@ -61,6 +61,18 @@ bool llvm::predicatesFoldable(ICmpInst::Predicate P1, ICmpInst::Predicate P2) {
          (CmpInst::isSigned(P2) && ICmpInst::isEquality(P1));
 }
 
+Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
+                                   CmpInst::Predicate &Pred) {
+  Pred = static_cast<FCmpInst::Predicate>(Code);
+  assert(FCmpInst::FCMP_FALSE <= Pred && Pred <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 0);
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 1);
+  return nullptr;
+}
+
 bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
                                 CmpInst::Predicate &Pred,
                                 Value *&X, APInt &Mask, bool LookThruTrunc) {
