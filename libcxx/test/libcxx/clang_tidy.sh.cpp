@@ -230,8 +230,10 @@
 #endif // __cplusplus >= 201103L
 
 // extended headers
-#include <ext/hash_map>
-#include <ext/hash_set>
+#ifndef _LIBCXX_MODULES_BUILD
+#    include <ext/hash_map>
+#    include <ext/hash_set>
+#endif
 
 // clang-format on
 

@@ -366,10 +366,12 @@ TEST_MACROS();
 #endif // __cplusplus >= 201103L
 
 // extended headers
-#include <ext/hash_map>
+#ifndef _LIBCXX_MODULES_BUILD
+#    include <ext/hash_map>
 TEST_MACROS();
-#include <ext/hash_set>
+#    include <ext/hash_set>
 TEST_MACROS();
+#endif
 
 // clang-format on
 

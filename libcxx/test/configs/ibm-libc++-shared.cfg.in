@@ -6,7 +6,7 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -isystem %{install}/include/c++/v1 -I %{libcxx}/test/support'
+    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{install}/include/c++/v1 -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{install}/lib -lc++ -lc++abi -latomic -Wl,-bbigtoc'

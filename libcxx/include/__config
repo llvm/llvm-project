@@ -1437,11 +1437,11 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if defined(_AIX) && !defined(_LIBCPP_COMPILER_GCC)
-#define _LIBCPP_PACKED_BYTE_FOR_AIX _Pragma("pack(1)")
-#define _LIBCPP_PACKED_BYTE_FOR_AIX_END _Pragma("pack(pop)")
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX _Pragma("pack(1)")
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX_END _Pragma("pack(pop)")
 #else
-#define _LIBCPP_PACKED_BYTE_FOR_AIX      /* empty */
-#define _LIBCPP_PACKED_BYTE_FOR_AIX_END  /* empty */
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX      /* empty */
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX_END  /* empty */
 #endif
 
 #endif // __cplusplus

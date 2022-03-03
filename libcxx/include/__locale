@@ -21,15 +21,15 @@
 #include <utility>
 
 #if defined(_LIBCPP_MSVCRT_LIKE)
-# include <cstring>
 # include <__support/win32/locale_win32.h>
+# include <cstring>
 #elif defined(_AIX) || defined(__MVS__)
 # include <__support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
 # include <__support/android/locale_bionic.h>
 #elif defined(__sun__)
-# include <xlocale.h>
 # include <__support/solaris/xlocale.h>
+# include <xlocale.h>
 #elif defined(_NEWLIB_VERSION)
 # include <__support/newlib/xlocale.h>
 #elif defined(__OpenBSD__)

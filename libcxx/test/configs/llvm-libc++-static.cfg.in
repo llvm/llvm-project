@@ -7,7 +7,7 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -isystem %{include} -isystem %{target-include} -I %{libcxx}/test/support'
+    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ -lc++abi -pthread'

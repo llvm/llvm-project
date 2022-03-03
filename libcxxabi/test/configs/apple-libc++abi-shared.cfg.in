@@ -6,7 +6,7 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -isystem %{install}/include/c++/v1 -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
+    '-nostdinc++ -I %{install}/include/c++/v1 -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
     '-I %{libcxx}/test/support -I %{libcxx}/src'
 ))
 config.substitutions.append(('%{link_flags}',
