@@ -51,7 +51,19 @@ Major New Features
   For more details refer to :ref:`the SPIR-V support section <spir-v>`.
 - Completed support of OpenCL C 3.0 and C++ for OpenCL 2021 at experimental
   state.
--  ...
+
+- Prebuilt AIX7.2 TL5 SP3+ binary available with following notes and
+  limitations:
+  - C++ driver modes use the system libc++ headers. These headers are included
+    in the optional ``libc++.adt.include`` fileset on AIX.
+  - LTO, although not disabled, is not recommended.
+  - Shared libraries builds (``-shared``) must use explicit symbol export
+    options and/or export lists (e.g., with ``-bE:``) on the link step. Clang
+    currently will not automatically generate symbol export lists as implicit
+    linker inputs.
+
+- ``float.h`` now exposes (in hosted mode) extensions made available from the
+  AIX system header.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -79,6 +91,9 @@ Non-comprehensive list of changes in this release
 - The ``-E -P`` preprocessor output now always omits blank lines, matching
   gcc behaviour. Previously, up to 8 consecutive blank lines could appear
   in the output.
+- AIX platform-related predefined macros added:
+  ``_ARCH_PPC64``, ``__HOS_AIX__``, ``__PPC``, ``__THW_BIG_ENDIAN__``,
+  ``__THW_PPC__``, and ``__powerpc``
 
 New Compiler Flags
 ------------------
@@ -102,6 +117,8 @@ New Compiler Flags
   to whitespace changes, such as reformatting using clang-format. Patches
   for `ccache <https://github.com/ccache/ccache/pull/815>`_ and
   `sccache <https://github.com/mozilla/sccache/pull/1055>`_ are under review.
+
+- Clang now accepts "allowlist" spelling for ``-objcmt-allowlist-dir-path``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -168,6 +185,8 @@ Attribute Changes in Clang
   ``__has_c_attribute``) where it would previously expand to ``0`` for all
   attributes, but will now issue an error due to the expansion of the
   predefined ``__clang__`` macro.
+
+- Improved handling of ``__attribute__((__aligned__))`` on AIX to match GCC.
 
 Windows Support
 ---------------
