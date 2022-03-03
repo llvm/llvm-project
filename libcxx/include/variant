@@ -1136,8 +1136,11 @@ class _LIBCPP_TEMPLATE_VIS __impl
   using __base_type = __copy_assignment<__traits<_Types...>>;
 
 public:
-  using __base_type::__base_type;
-  using __base_type::operator=;
+  using __base_type::__base_type; // get in_place_index_t constructor & friends
+  __impl(__impl const&) = default;
+  __impl(__impl&&) = default;
+  __impl& operator=(__impl const&) = default;
+  __impl& operator=(__impl&&) = default;
 
   template <size_t _Ip, class _Arg>
   inline _LIBCPP_INLINE_VISIBILITY

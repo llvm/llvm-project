@@ -1544,6 +1544,7 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     typename __tuple_cat_return_ref<tuple<_Types...>&&, _Tuple0&&>::type
     operator()(tuple<_Types...> __t, _Tuple0&& __t0)
     {
+        (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
         return _VSTD::forward_as_tuple(
             _VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
             _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...);
@@ -1554,6 +1555,7 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     typename __tuple_cat_return_ref<tuple<_Types...>&&, _Tuple0&&, _Tuple1&&, _Tuples&&...>::type
     operator()(tuple<_Types...> __t, _Tuple0&& __t0, _Tuple1&& __t1, _Tuples&& ...__tpls)
     {
+        (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
         typedef _LIBCPP_NODEBUG typename remove_reference<_Tuple0>::type _T0;
         typedef _LIBCPP_NODEBUG typename remove_reference<_Tuple1>::type _T1;
         return __tuple_cat<

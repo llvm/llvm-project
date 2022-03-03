@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// We voluntarily use std::default_initializable on types that have redundant
+// or ignored cv-qualifiers -- don't warn about it.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-ignored-qualifiers
+
 // template<class T>
 //     concept default_initializable = constructible_from<T> &&
 //     requires { T{}; } &&

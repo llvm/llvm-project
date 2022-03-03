@@ -418,7 +418,7 @@ __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
     }
     else
     {
-        if (__x <= __tl::max())
+        if (__x <= __to_unsigned_like(__tl::max()))
         {
             __value = __x;
             return __r;
@@ -462,11 +462,11 @@ inline _LIBCPP_HIDE_FROM_ABI from_chars_result
 __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
                          _Ts... __args)
 {
-    auto __find_non_zero = [](_It __first, _It __last) {
-        for (; __first != __last; ++__first)
-            if (*__first != '0')
+    auto __find_non_zero = [](_It __firstit, _It __lastit) {
+        for (; __firstit != __lastit; ++__firstit)
+            if (*__firstit != '0')
                 break;
-        return __first;
+        return __firstit;
     };
 
     auto __p = __find_non_zero(__first, __last);
@@ -503,16 +503,16 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
 
     return __subject_seq_combinator(
         __first, __last, __value,
-        [](const char* __first, const char* __last,
-           _Tp& __value) -> from_chars_result {
+        [](const char* _First, const char* _Last,
+           _Tp& __val) -> from_chars_result {
             __output_type __a, __b;
-            auto __p = __tx::__read(__first, __last, __a, __b);
-            if (__p == __last || !__in_pattern(*__p))
+            auto __p = __tx::__read(_First, _Last, __a, __b);
+            if (__p == _Last || !__in_pattern(*__p))
             {
                 __output_type __m = numeric_limits<_Tp>::max();
                 if (__m >= __a && __m - __a >= __b)
                 {
-                    __value = __a + __b;
+                    __val = __a + __b;
                     return {__p, {}};
                 }
             }
@@ -538,21 +538,21 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
 
     return __subject_seq_combinator(
         __first, __last, __value,
-        [](const char* __p, const char* __lastx, _Tp& __value,
-           int __base) -> from_chars_result {
+        [](const char* __p, const char* __lastp, _Tp& __val,
+           int _Base) -> from_chars_result {
             using __tl = numeric_limits<_Tp>;
-            auto __digits = __tl::digits / log2f(float(__base));
-            _Tp __a = __in_pattern(*__p++, __base).__val, __b = 0;
+            auto __digits = __tl::digits / log2f(float(_Base));
+            _Tp __a = __in_pattern(*__p++, _Base).__val, __b = 0;
 
-            for (int __i = 1; __p != __lastx; ++__i, ++__p)
+            for (int __i = 1; __p != __lastp; ++__i, ++__p)
             {
-                if (auto __c = __in_pattern(*__p, __base))
+                if (auto __c = __in_pattern(*__p, _Base))
                 {
                     if (__i < __digits - 1)
-                        __a = __a * __base + __c.__val;
+                        __a = __a * _Base + __c.__val;
                     else
                     {
-                        if (!__itoa::__mul_overflowed(__a, __base, __a))
+                        if (!__itoa::__mul_overflowed(__a, _Base, __a))
                             ++__p;
                         __b = __c.__val;
                         break;
@@ -562,11 +562,11 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                     break;
             }
 
-            if (__p == __lastx || !__in_pattern(*__p, __base))
+            if (__p == __lastp || !__in_pattern(*__p, _Base))
             {
                 if (__tl::max() - __a >= __b)
                 {
-                    __value = __a + __b;
+                    __val = __a + __b;
                     return {__p, {}};
                 }
             }

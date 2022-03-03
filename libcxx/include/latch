@@ -91,10 +91,9 @@ public:
     inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait() const
     {
-        auto const __test_fn = [=]() -> bool {
+        __cxx_atomic_wait(&__a.__a_, [&]() -> bool {
             return try_wait();
-        };
-        __cxx_atomic_wait(&__a.__a_, __test_fn);
+        });
     }
     inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait(ptrdiff_t __update = 1)
