@@ -1234,6 +1234,8 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
 //===----------------------------------------------------------------------===//
 // MIMG Instructions
 //===----------------------------------------------------------------------===//
+let OtherPredicates = [HasImageInsts] in {
+
 defm IMAGE_LOAD                 : MIMG_NoSampler <mimgopc<0x00, 0x00>, "image_load", 1>;
 defm IMAGE_LOAD_MIP             : MIMG_NoSampler <mimgopc<0x01, 0x01>, "image_load_mip", 1, 1>;
 defm IMAGE_LOAD_PCK             : MIMG_NoSampler <mimgopc<0x02, 0x02>, "image_load_pck", 0>;
@@ -1359,6 +1361,8 @@ defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_lo
 
 let SubtargetPredicate = HasGFX10_AEncoding in
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, MIMG.NOP>, "image_msaa_load">;
+
+} // End let OtherPredicates = [HasImageInsts]
 
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;

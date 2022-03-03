@@ -125,6 +125,7 @@ protected:
   bool HasDPP8;
   bool Has64BitDPP;
   bool HasPackedFP32Ops;
+  bool HasImageInsts;
   bool HasExtendedImageInsts;
   bool HasR128A16;
   bool HasGFX10A16;
@@ -861,6 +862,10 @@ public:
 
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10;
+  }
+
+  bool hasImageInsts() const {
+    return HasImageInsts;
   }
 
   bool hasExtendedImageInsts() const {

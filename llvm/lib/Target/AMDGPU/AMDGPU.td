@@ -476,6 +476,12 @@ def FeatureNSAEncoding : SubtargetFeature<"nsa-encoding",
   "Support NSA encoding for image instructions"
 >;
 
+def FeatureImageInsts : SubtargetFeature<"image-insts",
+  "HasImageInsts",
+  "true",
+  "Support image instructions"
+>;
+
 def FeatureExtendedImageInsts : SubtargetFeature<"extended-image-insts",
   "HasExtendedImageInsts",
   "true",
@@ -816,7 +822,7 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
-  FeatureTrigReducedRange, FeatureExtendedImageInsts
+  FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts
   ]
 >;
 
@@ -826,7 +832,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureWavefrontSize64, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-  FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess
+  FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
+  FeatureImageInsts
   ]
 >;
 
@@ -841,7 +848,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
-   FeatureUnalignedBufferAccess
+   FeatureUnalignedBufferAccess, FeatureImageInsts
   ]
 >;
 
@@ -878,7 +885,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureGFX10A16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts
   ]
 >;
 
@@ -983,6 +990,7 @@ def FeatureISAVersion9_0_0 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
@@ -992,6 +1000,7 @@ def FeatureISAVersion9_0_2 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
@@ -1000,6 +1009,7 @@ def FeatureISAVersion9_0_4 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureFmaMixInsts,
    FeatureImageGather4D16Bug]>;
@@ -1011,6 +1021,7 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureDLInsts,
    FeatureDot1Insts,
@@ -1026,6 +1037,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureDLInsts,
    FeatureDot1Insts,
@@ -1049,6 +1061,7 @@ def FeatureISAVersion9_0_9 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
@@ -1072,6 +1085,7 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicPkFaddNoRtnInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
@@ -1083,6 +1097,7 @@ def FeatureISAVersion9_0_C : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDsSrc2Insts,
    FeatureExtendedImageInsts,
+   FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
@@ -1240,6 +1255,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
+   FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
 
@@ -1583,6 +1599,9 @@ def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
 def HasFmaakFmamkF32Insts :
   Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
   AssemblerPredicate<(any_of FeatureGFX10Insts)>;
+
+def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
+  AssemblerPredicate<(all_of FeatureImageInsts)>;
 
 def HasExtendedImageInsts : Predicate<"Subtarget->hasExtendedImageInsts()">,
   AssemblerPredicate<(all_of FeatureExtendedImageInsts)>;
