@@ -1119,6 +1119,79 @@ func @combineIfs4(%arg0 : i1, %arg2: i64) {
 // CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
 // CHECK-NEXT:     }
 
+// CHECK-LABEL: @combineIfsUsed
+// CHECK-SAME: %[[arg0:.+]]: i1
+func @combineIfsUsed(%arg0 : i1, %arg2: i64) -> (i32, i32) {
+  %res = scf.if %arg0 -> i32 {
+    %v = "test.firstCodeTrue"() : () -> i32
+    scf.yield %v : i32
+  } else {
+    %v2 = "test.firstCodeFalse"() : () -> i32
+    scf.yield %v2 : i32
+  }
+  %res2 = scf.if %arg0 -> i32 {
+    %v = "test.secondCodeTrue"(%res) : (i32) -> i32
+    scf.yield %v : i32
+  } else {
+    %v2 = "test.secondCodeFalse"(%res) : (i32) -> i32
+    scf.yield %v2 : i32
+  }
+  return %res, %res2 : i32, i32
+}
+// CHECK-NEXT:     %[[res:.+]]:2 = scf.if %[[arg0]] -> (i32, i32) {
+// CHECK-NEXT:       %[[tval0:.+]] = "test.firstCodeTrue"() : () -> i32
+// CHECK-NEXT:       %[[tval:.+]] = "test.secondCodeTrue"(%[[tval0]]) : (i32) -> i32
+// CHECK-NEXT:       scf.yield %[[tval0]], %[[tval]] : i32, i32
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[fval0:.+]] = "test.firstCodeFalse"() : () -> i32
+// CHECK-NEXT:       %[[fval:.+]] = "test.secondCodeFalse"(%[[fval0]]) : (i32) -> i32
+// CHECK-NEXT:       scf.yield %[[fval0]], %[[fval]] : i32, i32
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return %[[res]]#0, %[[res]]#1 : i32, i32
+
+// CHECK-LABEL: @combineIfsNot
+// CHECK-SAME: %[[arg0:.+]]: i1
+func @combineIfsNot(%arg0 : i1, %arg2: i64) {
+  %true = arith.constant true
+  %not = arith.xori %arg0, %true : i1
+  scf.if %arg0 {
+    "test.firstCodeTrue"() : () -> ()
+    scf.yield
+  }
+  scf.if %not {
+    "test.secondCodeTrue"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-NEXT:     scf.if %[[arg0]] {
+// CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
+// CHECK-NEXT:     }
+
+// CHECK-LABEL: @combineIfsNot2
+// CHECK-SAME: %[[arg0:.+]]: i1
+func @combineIfsNot2(%arg0 : i1, %arg2: i64) {
+  %true = arith.constant true
+  %not = arith.xori %arg0, %true : i1
+  scf.if %not {
+    "test.firstCodeTrue"() : () -> ()
+    scf.yield
+  }
+  scf.if %arg0 {
+    "test.secondCodeTrue"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-NEXT:     scf.if %[[arg0]] {
+// CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
+// CHECK-NEXT:     }
 // -----
 
 // CHECK-LABEL: func @propagate_into_execute_region
