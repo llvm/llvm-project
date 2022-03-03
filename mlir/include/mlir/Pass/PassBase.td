@@ -92,4 +92,8 @@ class PassBase<string passArg, string base> {
 class Pass<string passArg, string operation = "">
   : PassBase<passArg, "::mlir::OperationPass<" # operation # ">">;
 
+// This class represents an mlir::InterfacePass.
+class InterfacePass<string passArg, string interface>
+  : PassBase<passArg, "::mlir::InterfacePass<" # interface # ">">;
+
 #endif // MLIR_PASS_PASSBASE

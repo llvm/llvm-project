@@ -98,7 +98,7 @@ public:
   size_t size() const;
 
   /// Return the operation name that this pass manager operates on.
-  StringAttr getOpName(MLIRContext &context) const;
+  OperationName getOpName(MLIRContext &context) const;
 
   /// Return the operation name that this pass manager operates on.
   StringRef getOpName() const;

@@ -81,6 +81,9 @@ struct InvalidPass : Pass {
   InvalidPass() : Pass(TypeID::get<InvalidPass>(), StringRef("invalid_op")) {}
   StringRef getName() const override { return "Invalid Pass"; }
   void runOnOperation() override {}
+  bool canScheduleOn(RegisteredOperationName opName) const override {
+    return true;
+  }
 
   /// A clone method to create a copy of this pass.
   std::unique_ptr<Pass> clonePass() const override {
