@@ -176,9 +176,9 @@ let Command = "breakpoint set" in {
     Desc<"Set the breakpoint on exceptions thrown by the specified language "
     "(without options, on throw but not catch.)">;
   def breakpoint_set_on_throw : Option<"on-throw", "w">, Group<10>,
-    Arg<"Boolean">, Desc<"Set the breakpoint on exception throw.">;
+    Arg<"Boolean">, Desc<"Set the breakpoint on exception throW.">;
   def breakpoint_set_on_catch : Option<"on-catch", "h">, Group<10>,
-    Arg<"Boolean">, Desc<"Set the breakpoint on exception catch.">;
+    Arg<"Boolean">, Desc<"Set the breakpoint on exception catcH.">;
   def breakpoint_set_language : Option<"language", "L">, GroupRange<3, 8>,
     Arg<"Language">,
     Desc<"Specifies the Language to use when interpreting the breakpoint's "
