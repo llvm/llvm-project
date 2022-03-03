@@ -404,6 +404,17 @@ public:
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
                                    ValueRange values);
 
+/// Lookup the buffer for the given value. If the value was not bufferized yet,
+/// wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp, from
+/// which the memref operand is returned.
+///
+/// Note: Use `BufferizationState::getBuffer` during bufferization.
+/// `lookupBuffer` is just for compatibility and gradual migration of
+/// bufferization patterns to BufferizableOpInterface-based bufferization. It
+/// does not insert any buffer copies.
+Value lookupBuffer(RewriterBase &rewriter, Value tensor,
+                   const BufferizationOptions &options);
+
 /// Replace an op with a new op. The new op must have the same number of
 /// results as the replaced op. The new op may not return any tensor values.
 template <typename OpTy, typename... Args>
