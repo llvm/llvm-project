@@ -23,8 +23,9 @@ class TypeConverter;
 
 namespace mlir {
 /// Creates an instance of the ShapeToShapeLowering pass that legalizes Shape
-/// dialect to be convertible to Standard. For example, `shape.num_elements` get
-/// transformed to `shape.reduce`, which can be lowered to SCF and Standard.
+/// dialect to be convertible to Arithmetic. For example, `shape.num_elements`
+/// get transformed to `shape.reduce`, which can be lowered to SCF and
+/// Arithmetic.
 std::unique_ptr<Pass> createShapeToShapeLowering();
 
 /// Collects a set of patterns to rewrite ops within the Shape dialect.

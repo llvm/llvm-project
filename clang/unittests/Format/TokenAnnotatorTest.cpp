@@ -70,6 +70,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("void f() {\n"
+                    "  while (p < a && *p == 'a')\n"
+                    "    p++;\n"
+                    "}");
+  EXPECT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_UnaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsClasses) {

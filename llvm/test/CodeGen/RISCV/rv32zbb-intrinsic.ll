@@ -10,5 +10,5 @@ define i32 @orcb(i32 %a) nounwind {
 ; RV32ZBB-NEXT:    orc.b a0, a0
 ; RV32ZBB-NEXT:    ret
   %tmp = call i32 @llvm.riscv.orc.b.i32(i32 %a)
- ret i32 %tmp
+  ret i32 %tmp
 }

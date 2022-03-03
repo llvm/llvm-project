@@ -45,9 +45,68 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP8]], i64 16)
 ; NOSCOPE-NEXT:    br label [[TMP9:%.*]]
 ; NOSCOPE:       9:
-; NOSCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    [[TMP10:%.*]] = tail call i1 (...) @cond()
-; NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
+; NOSCOPE-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP9]]
+; NOSCOPE:       11:
+; NOSCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
+; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 0, i64 16)
+; NOSCOPE-NEXT:    ret i32 0
+;
+  %1 = alloca i8, align 1
+  br label %2
+
+2:                                                ; preds = %2, %0
+; We should tag the memory after the br (in the loop).
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %1)
+  %3 = tail call i1 (...) @cond() #2
+; We should tag the memory before the next br (before the jump back).
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %1)
+  br i1 %3, label %4, label %2
+
+4:                                                ; preds = %2
+  call void @use(i8* nonnull %1) #2
+  ret i32 0
+}
+
+define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noinline sanitize_hwaddress {
+; SCOPE-LABEL: @standard_lifetime_optnone(
+; SCOPE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call i8* asm "", "=r,0"(i8* null)
+; SCOPE-NEXT:    [[TMP1:%.*]] = alloca { i8, [15 x i8] }, align 16
+; SCOPE-NEXT:    [[TMP2:%.*]] = bitcast { i8, [15 x i8] }* [[TMP1]] to i8*
+; SCOPE-NEXT:    [[TMP3:%.*]] = call i8 @__hwasan_generate_tag()
+; SCOPE-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
+; SCOPE-NEXT:    [[TMP5:%.*]] = ptrtoint i8* [[TMP2]] to i64
+; SCOPE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP4]], 57
+; SCOPE-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
+; SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
+; SCOPE-NEXT:    br label [[TMP8:%.*]]
+; SCOPE:       8:
+; SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
+; SCOPE-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP4]] to i8
+; SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP9]], i64 16)
+; SCOPE-NEXT:    [[TMP10:%.*]] = tail call i1 (...) @cond()
+; SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 0, i64 16)
+; SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
+; SCOPE-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP8]]
+; SCOPE:       11:
+; SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
+; SCOPE-NEXT:    ret i32 0
+;
+; NOSCOPE-LABEL: @standard_lifetime_optnone(
+; NOSCOPE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call i8* asm "", "=r,0"(i8* null)
+; NOSCOPE-NEXT:    [[TMP1:%.*]] = alloca { i8, [15 x i8] }, align 16
+; NOSCOPE-NEXT:    [[TMP2:%.*]] = bitcast { i8, [15 x i8] }* [[TMP1]] to i8*
+; NOSCOPE-NEXT:    [[TMP3:%.*]] = call i8 @__hwasan_generate_tag()
+; NOSCOPE-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
+; NOSCOPE-NEXT:    [[TMP5:%.*]] = ptrtoint i8* [[TMP2]] to i64
+; NOSCOPE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP4]], 57
+; NOSCOPE-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
+; NOSCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
+; NOSCOPE-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i8
+; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP8]], i64 16)
+; NOSCOPE-NEXT:    br label [[TMP9:%.*]]
+; NOSCOPE:       9:
+; NOSCOPE-NEXT:    [[TMP10:%.*]] = tail call i1 (...) @cond()
 ; NOSCOPE-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP9]]
 ; NOSCOPE:       11:
 ; NOSCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -153,12 +212,10 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; NOSCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
 ; NOSCOPE-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i8
 ; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP8]], i64 16)
-; NOSCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    [[TMP9:%.*]] = tail call i1 (...) @cond()
 ; NOSCOPE-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]]
 ; NOSCOPE:       10:
 ; NOSCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
-; NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; NOSCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 0, i64 16)
 ; NOSCOPE-NEXT:    ret i32 0
 ; NOSCOPE:       11:

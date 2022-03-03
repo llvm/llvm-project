@@ -429,6 +429,12 @@ FunctionPass *createLowerExpectIntrinsicPass();
 
 //===----------------------------------------------------------------------===//
 //
+// TLSVariableHoist - This pass reduce duplicated TLS address call.
+//
+FunctionPass *createTLSVariableHoistPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LowerConstantIntrinsicss - Expand any remaining llvm.objectsize and
 // llvm.is.constant intrinsic calls, even for the unknown cases.
 //

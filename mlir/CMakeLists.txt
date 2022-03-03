@@ -130,6 +130,10 @@ set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
+       "Prime the python detection by searching for a full 'Development' \
+       component first (temporary while diagnosing environment specific Python \
+       detection issues)")
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
   mlir_configure_python_dev_packages()

@@ -2624,6 +2624,9 @@ private:
     /// the current SchedulingRegionID of BlockScheduling.
     int SchedulingRegionID = 0;
 
+    /// Used for getting a "good" final ordering of instructions.
+    int SchedulingPriority = 0;
+
     /// The number of dependencies. Constitutes of the number of users of the
     /// instruction plus the number of dependent memory instructions (if any).
     /// This value is calculated on demand.
@@ -2776,8 +2779,7 @@ private:
         }
         // Handle the memory dependencies.
         for (ScheduleData *MemoryDepSD : BundleMember->MemoryDependencies) {
-          if (MemoryDepSD->hasValidDependencies() &&
-              MemoryDepSD->incrementUnscheduledDeps(-1) == 0) {
+          if (MemoryDepSD->incrementUnscheduledDeps(-1) == 0) {
             // There are no more unscheduled dependencies after decrementing,
             // so we can put the dependent instruction into the ready list.
             ScheduleData *DepBundle = MemoryDepSD->FirstInBundle;
@@ -2834,8 +2836,7 @@ private:
     void initialFillReadyList(ReadyListType &ReadyList) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
         doForAllOpcodes(I, [&](ScheduleData *SD) {
-          if (SD->isSchedulingEntity() && SD->hasValidDependencies() &&
-              SD->isReady()) {
+          if (SD->isSchedulingEntity() && SD->isReady()) {
             ReadyList.insert(SD);
             LLVM_DEBUG(dbgs()
                        << "SLP:    initially in ready list: " << *SD << "\n");
@@ -7972,36 +7973,33 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
   LLVM_DEBUG(dbgs() << "SLP: schedule block " << BS->BB->getName() << "\n");
 
-  // A key point - if we got here, pre-scheduling was able to find a valid
-  // scheduling of the sub-graph of the scheduling window which consists
-  // of all vector bundles and their transitive users.  As such, we do not
-  // need to reschedule anything *outside of* that subgraph.
-
   BS->resetSchedule();
 
   // For the real scheduling we use a more sophisticated ready-list: it is
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
-  DenseMap<ScheduleData *, unsigned> OriginalOrder;
-  auto ScheduleDataCompare = [&](ScheduleData *SD1, ScheduleData *SD2) {
-    return OriginalOrder[SD2] < OriginalOrder[SD1];
+  struct ScheduleDataCompare {
+    bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
+      return SD2->SchedulingPriority < SD1->SchedulingPriority;
+    }
   };
-  std::set<ScheduleData *, decltype(ScheduleDataCompare)>
-    ReadyInsts(ScheduleDataCompare);
+  std::set<ScheduleData *, ScheduleDataCompare> ReadyInsts;
 
-  // Ensure that all dependency data is updated (for nodes in the sub-graph)
-  // and fill the ready-list with initial instructions.
+  // Ensure that all dependency data is updated and fill the ready-list with
+  // initial instructions.
   int Idx = 0;
+  int NumToSchedule = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
+    BS->doForAllOpcodes(I, [this, &Idx, &NumToSchedule, BS](ScheduleData *SD) {
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() == (getTreeEntry(SD->Inst) != nullptr)) &&
              "scheduler and vectorizer bundle mismatch");
-      OriginalOrder[SD->FirstInBundle] = Idx++;
-
-      if (SD->isSchedulingEntity() && SD->isPartOfBundle())
+      SD->FirstInBundle->SchedulingPriority = Idx++;
+      if (SD->isSchedulingEntity()) {
         BS->calculateDependencies(SD, false, this);
+        NumToSchedule++;
+      }
     });
   }
   BS->initialFillReadyList(ReadyInsts);
@@ -8024,7 +8022,9 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     }
 
     BS->schedule(picked, ReadyInsts);
+    NumToSchedule--;
   }
+  assert(NumToSchedule == 0 && "could not schedule all instructions");
 
   // Check that we didn't break any of our invariants.
 #ifdef EXPENSIVE_CHECKS

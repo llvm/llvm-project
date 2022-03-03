@@ -355,13 +355,13 @@ func @malformed_type(%a : intt) { // expected-error {{expected non-function type
 
 func @resulterror() -> i32 {
 ^bb42:
-  return    // expected-error {{'std.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
+  return    // expected-error {{'func.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
 }
 
 // -----
 
 func @func_resulterror() -> i32 {
-  return // expected-error {{'std.return' op has 0 operands, but enclosing function (@func_resulterror) returns 1}}
+  return // expected-error {{'func.return' op has 0 operands, but enclosing function (@func_resulterror) returns 1}}
 }
 
 // -----
@@ -536,7 +536,7 @@ func @return_type_mismatch() -> i32 {
 
 func @return_inside_loop() {
   affine.for %i = 1 to 100 {
-    // expected-error@-1 {{op expects regions to end with 'affine.yield', found 'std.return'}}
+    // expected-error@-1 {{op expects regions to end with 'affine.yield', found 'func.return'}}
     // expected-note@-2 {{in custom textual format, the absence of terminator implies}}
     return
   }

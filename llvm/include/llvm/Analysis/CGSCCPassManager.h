@@ -89,20 +89,20 @@
 #define LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <utility>
 
 namespace llvm {
 
+class Function;
+class Value;
+template <typename T, unsigned int N> class SmallPriorityWorklist;
 struct CGSCCUpdateResult;
+
 class Module;
 
 // Allow debug logging in this inline function.

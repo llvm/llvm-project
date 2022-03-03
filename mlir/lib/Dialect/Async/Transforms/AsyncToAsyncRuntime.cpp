@@ -17,8 +17,8 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
@@ -175,7 +175,7 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
   // This will be the return value of a coroutine ramp function.
   SmallVector<Value, 4> ret{retToken};
   ret.insert(ret.end(), retValues.begin(), retValues.end());
-  builder.create<ReturnOp>(ret);
+  builder.create<func::ReturnOp>(ret);
 
   // `async.await` op lowering will create resume blocks for async
   // continuations, and will conditionally branch to cleanup or suspend blocks.
@@ -327,7 +327,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Replace the original `async.execute` with a call to outlined function.
   {
     ImplicitLocOpBuilder callBuilder(loc, execute);
-    auto callOutlinedFunc = callBuilder.create<CallOp>(
+    auto callOutlinedFunc = callBuilder.create<func::CallOp>(
         func.getName(), execute.getResultTypes(), functionInputs.getArrayRef());
     execute.replaceAllUsesWith(callOutlinedFunc.getResults());
     execute.erase();
@@ -561,7 +561,7 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// Convert std.assert operation to cf.cond_br into `set_error` block.
+// Convert cf.assert operation to cf.cond_br into `set_error` block.
 //===----------------------------------------------------------------------===//
 
 class AssertOpLowering : public OpConversionPattern<cf::AssertOp> {
@@ -618,7 +618,7 @@ static CoroMachinery rewriteFuncAsCoroutine(FuncOp func) {
   func.insertResult(0, TokenType::get(ctx), {});
   for (Block &block : func.getBlocks()) {
     Operation *terminator = block.getTerminator();
-    if (auto returnOp = dyn_cast<ReturnOp>(*terminator)) {
+    if (auto returnOp = dyn_cast<func::ReturnOp>(*terminator)) {
       ImplicitLocOpBuilder builder(loc, returnOp);
       builder.create<YieldOp>(returnOp.getOperands());
       returnOp.erase();
@@ -631,10 +631,10 @@ static CoroMachinery rewriteFuncAsCoroutine(FuncOp func) {
 ///
 /// The invocation of this function is safe only when call ops are traversed in
 /// reverse order of how they appear in a single block. See `funcsToCoroutines`.
-static void rewriteCallsiteForCoroutine(CallOp oldCall, FuncOp func) {
+static void rewriteCallsiteForCoroutine(func::CallOp oldCall, FuncOp func) {
   auto loc = func.getLoc();
   ImplicitLocOpBuilder callBuilder(loc, oldCall);
-  auto newCall = callBuilder.create<CallOp>(
+  auto newCall = callBuilder.create<func::CallOp>(
       func.getName(), func.getCallableResults(), oldCall.getArgOperands());
 
   // Await on the async token and all the value results and unwrap the latter.
@@ -716,7 +716,7 @@ funcsToCoroutines(ModuleOp module,
     });
     // Rewrite the callsites to await on results of the newly created coroutine.
     for (Operation *op : users) {
-      if (CallOp call = dyn_cast<mlir::CallOp>(*op)) {
+      if (func::CallOp call = dyn_cast<func::CallOp>(*op)) {
         FuncOp caller = call->getParentOfType<FuncOp>();
         rewriteCallsiteForCoroutine(call, func); // Careful, erases the call op.
         addToWorklist(caller);
@@ -794,7 +794,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
     return !walkResult.wasInterrupted();
   });
   runtimeTarget.addLegalOp<cf::AssertOp, arith::XOrIOp, arith::ConstantOp,
-                           ConstantOp, cf::BranchOp, cf::CondBranchOp>();
+                           func::ConstantOp, cf::BranchOp, cf::CondBranchOp>();
 
   // Assertions must be converted to runtime errors inside async functions.
   runtimeTarget.addDynamicallyLegalOp<cf::AssertOp>(

@@ -33,12 +33,10 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -46,6 +44,7 @@
 
 namespace llvm {
 
+class OverflowingBinaryOperator;
 class AssumptionCache;
 class BasicBlock;
 class Constant;

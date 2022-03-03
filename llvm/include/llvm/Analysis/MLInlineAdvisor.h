@@ -19,6 +19,7 @@
 #include <memory>
 
 namespace llvm {
+class DiagnosticInfoOptimizationBase;
 class Module;
 class MLInlineAdvice;
 

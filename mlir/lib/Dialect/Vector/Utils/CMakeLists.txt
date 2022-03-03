@@ -9,9 +9,9 @@ add_mlir_dialect_library(MLIRVectorUtils
   MLIRAffineAnalysis
   MLIRArithmetic
   MLIRDialectUtils
+  MLIRFunc
   MLIRIR
   MLIRMemRef
-  MLIRStandard
   MLIRTensor
   MLIRVector
   MLIRVectorInterfaces

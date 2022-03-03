@@ -16,11 +16,12 @@
 #define LLVM_TRANSFORMS_UTILS_CALLGRAPHUPDATER_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 
 namespace llvm {
+
+class CallGraph;
+class CallGraphSCC;
 
 /// Wrapper to unify "old style" CallGraph and "new style" LazyCallGraph. This
 /// simplifies the interface and the call sites, e.g., new and old pass manager

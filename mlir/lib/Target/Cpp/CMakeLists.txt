@@ -9,10 +9,10 @@ add_mlir_translation_library(MLIRTargetCpp
   MLIRArithmetic
   MLIRControlFlow
   MLIREmitC
+  MLIRFunc
   MLIRIR
   MLIRMath
   MLIRSCF
-  MLIRStandard
   MLIRSupport
   MLIRTranslation
   )

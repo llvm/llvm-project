@@ -21,12 +21,12 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Operator.h"
 #include <cassert>
 #include <cstdint>
 
 namespace llvm {
 
+class Operator;
 class AddOperator;
 class AllocaInst;
 class APInt;

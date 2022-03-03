@@ -17,7 +17,6 @@ add_mlir_conversion_library(MLIRSCFToSPIRV
   MLIRIR
   MLIRPass
   MLIRSCF
-  MLIRStandard
   MLIRSupport
   MLIRTransforms
   )
