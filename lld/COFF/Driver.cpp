@@ -2121,13 +2121,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // The embedded PDB path should be the absolute path to the PDB if no
     // /pdbaltpath flag was passed.
     if (config->pdbAltPath.empty()) {
-      config->pdbAltPath = config->pdbPath;
+      // config->pdbAltPath = config->pdbPath;
 
       // It's important to make the path absolute and remove dots.  This path
       // will eventually be written into the PE header, and certain Microsoft
       // tools won't work correctly if these assumptions are not held.
-      sys::fs::make_absolute(config->pdbAltPath);
-      sys::path::remove_dots(config->pdbAltPath);
+      // sys::fs::make_absolute(config->pdbAltPath);
+      // sys::path::remove_dots(config->pdbAltPath);
+      // This way below can hide our pdb path.
+      config->pdbAltPath =
+          sys::path::filename(config->pdbPath, sys::path::Style::windows);
     } else {
       // Don't do this earlier, so that Config->OutputFile is ready.
       parsePDBAltPath(config->pdbAltPath);
