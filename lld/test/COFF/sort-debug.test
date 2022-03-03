@@ -10,6 +10,7 @@
 
 # CHECK: Name: .text
 # CHECK: Name: .reloc
+# CHECK: Name: .rmeta
 # CHECK: Name: .debug_abbrev
 # CHECK: Name: .debug_info
 # CHECK: Name: .debug_line
@@ -18,6 +19,7 @@
 
 # NODEBUG: Name: .text
 # NODEBUG: Name: .reloc
+# NODEBUG: Name: .rmeta
 # NODEBUG-NOT: Name: .debug_abbrev
 # NODEBUG-NOT: Name: .debug_info
 # NODEBUG-NOT: Name: .debug_line
@@ -183,6 +185,10 @@ sections:
       - VirtualAddress:  43
         SymbolName:      .text
         Type:            IMAGE_REL_I386_DIR32
+  - Name:            .rmeta
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     00112233
 symbols:
   - Name:            .text
     Value:           0

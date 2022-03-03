@@ -823,8 +823,8 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
         break;
       }
     }
-    afterIP = ompBuilder->applyDynamicWorkshareLoop(
-        ompLoc.DL, loopInfo, allocaIP, schedType, !loop.nowait(), chunk);
+    ompBuilder->applyDynamicWorkshareLoop(ompLoc.DL, loopInfo, allocaIP,
+                                          schedType, !loop.nowait(), chunk);
   }
 
   // Continue building IR after the loop. Note that the LoopInfo returned by
