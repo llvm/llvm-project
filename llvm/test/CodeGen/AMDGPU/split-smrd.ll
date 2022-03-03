@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Move this to sgpr-copy.ll when this is fixed on VI.
 ; Make sure that when we split an smrd instruction in order to move it to

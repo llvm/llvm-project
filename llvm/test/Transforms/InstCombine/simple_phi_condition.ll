@@ -345,6 +345,40 @@ merge:
   ret i8 %ret
 }
 
+define i8 @test_switch_duplicate_direct_edge(i8 %cond) {
+; CHECK-LABEL: @test_switch_duplicate_direct_edge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:    i8 7, label [[MERGE:%.*]]
+; CHECK-NEXT:    i8 19, label [[MERGE]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       default:
+; CHECK-NEXT:    ret i8 42
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 1, [[SW_1]] ], [ 7, [[ENTRY:%.*]] ], [ 7, [[ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  switch i8 %cond, label %default [
+  i8 1, label %sw.1
+  i8 7, label %merge
+  i8 19, label %merge
+  ]
+
+sw.1:
+  br label %merge
+
+default:
+  ret i8 42
+
+merge:
+  %ret = phi i8 [ 1, %sw.1 ], [ 7, %entry ], [ 7, %entry ]
+  ret i8 %ret
+}
+
 define i8 @test_switch_subset(i8 %cond) {
 ; CHECK-LABEL: @test_switch_subset(
 ; CHECK-NEXT:  entry:

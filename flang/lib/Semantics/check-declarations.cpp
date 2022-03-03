@@ -2136,6 +2136,21 @@ void SubprogramMatchHelper::Check(
   if (!proc1 || !proc2) {
     return;
   }
+  if (proc1->attrs.test(Procedure::Attr::Pure) !=
+      proc2->attrs.test(Procedure::Attr::Pure)) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' and its corresponding interface body are not both PURE"_err_en_US);
+  }
+  if (proc1->attrs.test(Procedure::Attr::Elemental) !=
+      proc2->attrs.test(Procedure::Attr::Elemental)) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' and its corresponding interface body are not both ELEMENTAL"_err_en_US);
+  }
+  if (proc1->attrs.test(Procedure::Attr::BindC) !=
+      proc2->attrs.test(Procedure::Attr::BindC)) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' and its corresponding interface body are not both BIND(C)"_err_en_US);
+  }
   if (proc1->functionResult && proc2->functionResult &&
       *proc1->functionResult != *proc2->functionResult) {
     Say(symbol1, symbol2,

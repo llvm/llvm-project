@@ -10,11 +10,11 @@
 #ifndef _LIBCPP___ITERATOR_ITER_MOVE_H
 #define _LIBCPP___ITERATOR_ITER_MOVE_H
 
+#include <__concepts/class_or_enum.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <concepts> // __class_or_enum
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -36,44 +36,32 @@ template <class _Tp>
 concept __unqualified_iter_move =
   __class_or_enum<remove_cvref_t<_Tp>> &&
   requires (_Tp&& __t) {
-    iter_move(_VSTD::forward<_Tp>(__t));
+    iter_move(std::forward<_Tp>(__t));
   };
 
-// [iterator.cust.move]/1
-// The name ranges::iter_move denotes a customization point object.
-// The expression ranges::iter_move(E) for a subexpression E is
-// expression-equivalent to:
+// [iterator.cust.move]
+
 struct __fn {
-  // [iterator.cust.move]/1.1
-  // iter_move(E), if E has class or enumeration type and iter_move(E) is a
-  // well-formed expression when treated as an unevaluated operand, [...]
   template<class _Ip>
-    requires __class_or_enum<remove_cvref_t<_Ip>> && __unqualified_iter_move<_Ip>
+    requires __unqualified_iter_move<_Ip>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Ip&& __i) const
-    noexcept(noexcept(iter_move(_VSTD::forward<_Ip>(__i))))
+    noexcept(noexcept(iter_move(std::forward<_Ip>(__i))))
   {
-    return iter_move(_VSTD::forward<_Ip>(__i));
+    return iter_move(std::forward<_Ip>(__i));
   }
 
-  // [iterator.cust.move]/1.2
-  // Otherwise, if the expression *E is well-formed:
-  //  1.2.1 if *E is an lvalue, std::move(*E);
-  //  1.2.2 otherwise, *E.
   template<class _Ip>
-    requires (!(__class_or_enum<remove_cvref_t<_Ip>> && __unqualified_iter_move<_Ip>)) &&
-    requires(_Ip&& __i) { *_VSTD::forward<_Ip>(__i); }
+    requires (!__unqualified_iter_move<_Ip>) &&
+             requires { *declval<_Ip>(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Ip&& __i) const
-    noexcept(noexcept(*_VSTD::forward<_Ip>(__i)))
+    noexcept(noexcept(*std::forward<_Ip>(__i)))
   {
-    if constexpr (is_lvalue_reference_v<decltype(*_VSTD::forward<_Ip>(__i))>) {
-      return _VSTD::move(*_VSTD::forward<_Ip>(__i));
+    if constexpr (is_lvalue_reference_v<decltype(*declval<_Ip>())>) {
+      return std::move(*std::forward<_Ip>(__i));
     } else {
-      return *_VSTD::forward<_Ip>(__i);
+      return *std::forward<_Ip>(__i);
     }
   }
-
-  // [iterator.cust.move]/1.3
-  // Otherwise, ranges::iter_move(E) is ill-formed.
 };
 } // namespace __iter_move
 

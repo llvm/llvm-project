@@ -1281,16 +1281,15 @@ protected:
                 result.AppendErrorWithFormatv(
                     "no processes were found that {0} \"{1}\" on the \"{2}\" "
                     "platform\n",
-                    match_desc, match_name, platform_sp->GetPluginName());
+                    match_desc, match_name, platform_sp->GetName());
               else
                 result.AppendErrorWithFormatv(
                     "no processes were found on the \"{0}\" platform\n",
-                    platform_sp->GetPluginName());
+                    platform_sp->GetName());
             } else {
-              result.AppendMessageWithFormat(
-                  "%u matching process%s found on \"%s\"", matches,
-                  matches > 1 ? "es were" : " was",
-                  platform_sp->GetName().GetCString());
+              result.AppendMessageWithFormatv(
+                  "{0} matching process{1} found on \"{2}\"", matches,
+                  matches > 1 ? "es were" : " was", platform_sp->GetName());
               if (match_desc)
                 result.AppendMessageWithFormat(" whose name %s \"%s\"",
                                                match_desc, match_name);

@@ -7346,45 +7346,57 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
 }
 
 // Combine
-// ROTR ((GREV x, 24), 16) -> (GREVI x, 8)
-// ROTL ((GREV x, 24), 16) -> (GREVI x, 8)
-// RORW ((GREVW x, 24), 16) -> (GREVIW x, 8)
-// ROLW ((GREVW x, 24), 16) -> (GREVIW x, 8)
+// ROTR ((GREV x, 24), 16) -> (GREVI x, 8) for RV32
+// ROTL ((GREV x, 24), 16) -> (GREVI x, 8) for RV32
+// ROTR ((GREV x, 56), 32) -> (GREVI x, 24) for RV64
+// ROTL ((GREV x, 56), 32) -> (GREVI x, 24) for RV64
+// RORW ((GREVW x, 24), 16) -> (GREVIW x, 8) for RV64
+// ROLW ((GREVW x, 24), 16) -> (GREVIW x, 8) for RV64
+// The grev patterns represents BSWAP.
+// FIXME: This can be generalized to any GREV. We just need to toggle the MSB
+// off the grev.
 static SDValue combineROTR_ROTL_RORW_ROLW(SDNode *N, SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget) {
+  bool IsWInstruction =
+      N->getOpcode() == RISCVISD::RORW || N->getOpcode() == RISCVISD::ROLW;
   assert((N->getOpcode() == ISD::ROTR || N->getOpcode() == ISD::ROTL ||
-          N->getOpcode() == RISCVISD::RORW ||
-          N->getOpcode() == RISCVISD::ROLW) &&
+          IsWInstruction) &&
          "Unexpected opcode!");
   SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  unsigned Opc;
 
   if (!Subtarget.hasStdExtZbp())
     return SDValue();
 
-  if ((N->getOpcode() == ISD::ROTR || N->getOpcode() == ISD::ROTL) &&
-      Src.getOpcode() == RISCVISD::GREV)
-    Opc = RISCVISD::GREV;
-  else if ((N->getOpcode() == RISCVISD::RORW ||
-            N->getOpcode() == RISCVISD::ROLW) &&
-           Src.getOpcode() == RISCVISD::GREVW)
-    Opc = RISCVISD::GREVW;
-  else
+  unsigned GrevOpc = IsWInstruction ? RISCVISD::GREVW : RISCVISD::GREV;
+  if (Src.getOpcode() != GrevOpc)
     return SDValue();
 
   if (!isa<ConstantSDNode>(N->getOperand(1)) ||
       !isa<ConstantSDNode>(Src.getOperand(1)))
     return SDValue();
 
+  unsigned BitWidth = IsWInstruction ? 32 : VT.getSizeInBits();
+  assert(isPowerOf2_32(BitWidth) && "Expected a power of 2");
+
+  // Needs to be a rotate by half the bitwidth for ROTR/ROTL or by 16 for
+  // RORW/ROLW. And the grev should be the encoding for bswap for this width.
   unsigned ShAmt1 = N->getConstantOperandVal(1);
   unsigned ShAmt2 = Src.getConstantOperandVal(1);
-  if (ShAmt1 != 16 && ShAmt2 != 24)
+  if (BitWidth < 16 || ShAmt1 != (BitWidth / 2) || ShAmt2 != (BitWidth - 8))
     return SDValue();
 
   Src = Src.getOperand(0);
-  return DAG.getNode(Opc, DL, N->getValueType(0), Src,
-                     DAG.getConstant(8, DL, N->getOperand(1).getValueType()));
+
+  // Toggle bit the MSB of the shift.
+  unsigned CombinedShAmt = ShAmt1 ^ ShAmt2;
+  if (CombinedShAmt == 0)
+    return Src;
+
+  return DAG.getNode(
+      GrevOpc, DL, VT, Src,
+      DAG.getConstant(CombinedShAmt, DL, N->getOperand(1).getValueType()));
 }
 
 // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
@@ -11015,24 +11027,13 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   std::pair<Register, const TargetRegisterClass *> Res =
       TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 
-  if (Res.second == &RISCV::GPRF32RegClass) {
-    if (!Subtarget.is64Bit() || VT == MVT::Other)
-      return std::make_pair(Res.first, &RISCV::GPRRegClass);
-    return std::make_pair(0, nullptr);
-  }
-
-  if (Res.second == &RISCV::GPRF64RegClass ||
-      Res.second == &RISCV::GPRPF64RegClass) {
-    if (Subtarget.is64Bit() || VT == MVT::Other)
-      return std::make_pair(Res.first, &RISCV::GPRRegClass);
-    return std::make_pair(0, nullptr);
-  }
-
-  if (Res.second == &RISCV::GPRF16RegClass) {
-    if (VT == MVT::Other)
-      return std::make_pair(Res.first, &RISCV::GPRRegClass);
-    return std::make_pair(0, nullptr);
-  }
+  // If we picked one of the Zfinx register classes, remap it to the GPR class.
+  // FIXME: When Zfinx is supported in CodeGen this will need to take the
+  // Subtarget into account.
+  if (Res.second == &RISCV::GPRF16RegClass ||
+      Res.second == &RISCV::GPRF32RegClass ||
+      Res.second == &RISCV::GPRF64RegClass)
+    return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
   return Res;
 }

@@ -2518,10 +2518,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           Arg = Builder.CreateZExt(Arg, OutputTy);
         else if (isa<llvm::PointerType>(OutputTy))
           Arg = Builder.CreateZExt(Arg, IntPtrTy);
-        else {
-          assert(OutputTy->isFloatingPointTy() && "Unexpected output type");
+        else if (OutputTy->isFloatingPointTy())
           Arg = Builder.CreateFPExt(Arg, OutputTy);
-        }
       }
       // Deal with the tied operands' constraint code in adjustInlineAsmType.
       ReplaceConstraint = OutputConstraints[Output];

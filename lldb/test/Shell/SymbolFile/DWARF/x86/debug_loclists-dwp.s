@@ -6,8 +6,8 @@
 # RUN: %lldb %t -o "image lookup -v -s lookup_loclists" -o exit | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -s lookup_loclists
-# CHECK: Variable: id = {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
-# CHECK: Variable: id = {{.*}}, name = "x1", type = "int", location = DW_OP_reg1 RDX,
+# CHECK: Variable: id = {{.*}}, name = "x0", type = "int", valid ranges = <block>, location = [0x0000000000000000, 0x0000000000000003) -> DW_OP_reg0 RAX,
+# CHECK: Variable: id = {{.*}}, name = "x1", type = "int", valid ranges = <block>, location = [0x0000000000000002, 0x0000000000000004) -> DW_OP_reg1 RDX,
 
 ## This part is kept in both the main and the dwp file to be able to reference the offsets.
 loclists:

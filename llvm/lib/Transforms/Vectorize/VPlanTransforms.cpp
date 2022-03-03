@@ -368,8 +368,8 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
     if (R.mayHaveSideEffects() ||
         any_of(R.definedValues(),
                [](VPValue *V) { return V->getNumUsers() > 0; }) ||
-        (R.getUnderlyingInstr() && !isa<VPWidenIntOrFpInductionRecipe>(&R) &&
-         !isa<VPScalarIVStepsRecipe>(&R) &&
+        (!isa<VPWidenIntOrFpInductionRecipe>(&R) &&
+         !isa<VPScalarIVStepsRecipe>(&R) && R.getUnderlyingInstr() &&
          any_of(R.getUnderlyingInstr()->users(), [&OrigLoop](User *U) {
            // Check for live-out users currently not modeled in VPlan.
            // Note that exit values of inductions are generated independent of
@@ -405,9 +405,10 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       Step = new VPExpandSCEVRecipe(StepSCEV, SE);
     }
 
+    Instruction *TruncI = IV->getTruncInst();
     VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
-        IV->getPHINode(), ID, Plan.getCanonicalIV(), IV->getStartValue(), Step,
-        IV->getTruncInst());
+        IV->getPHINode()->getType(), ID, Plan.getCanonicalIV(),
+        IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
 
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
     if (Step->getDef()) {

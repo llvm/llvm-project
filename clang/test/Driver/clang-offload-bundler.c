@@ -406,8 +406,8 @@
 // Create few code object bundles and archive them to create an input archive
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.simple.bundle
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx903 -inputs=%t.o,%t.tgt1 -outputs=%t.simple1.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx906 -inputs=%t.o,%t.tgt1 -outputs=%t.simple1.bundle
-// RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx906 -inputs=%t.o,%t.tgt1 -outputs=%t.simple2.bundle
+// RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle %t.simple2.bundle
 
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906

@@ -1327,6 +1327,16 @@ public:
     return IndirectBranchType::UNKNOWN;
   }
 
+  /// Analyze branch \p Instruction in PLT section and try to determine
+  /// associated got entry address.
+  virtual uint64_t analyzePLTEntry(MCInst &Instruction,
+                                   InstructionIterator Begin,
+                                   InstructionIterator End,
+                                   uint64_t BeginPC) const {
+    llvm_unreachable("not implemented");
+    return 0;
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,

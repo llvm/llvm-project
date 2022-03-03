@@ -830,8 +830,17 @@ void Fortran::lower::mapSymbolAttributes(
     }
   };
 
-  // For symbols reaching this point, all properties are constant and can be
-  // read/computed already into ssa values.
+  // Lower length expression for non deferred and non dummy assumed length
+  // characters.
+  auto genExplicitCharLen =
+      [&](llvm::Optional<Fortran::lower::SomeExpr> charLen) -> mlir::Value {
+    if (!charLen)
+      fir::emitFatalError(loc, "expected explicit character length");
+    mlir::Value rawLen = genValue(*charLen);
+    // If the length expression is negative, the length is zero. See
+    // F2018 7.4.4.2 point 5.
+    return genMaxWithZero(builder, loc, rawLen);
+  };
 
   ba.match(
       //===--------------------------------------------------------------===//
@@ -976,13 +985,126 @@ void Fortran::lower::mapSymbolAttributes(
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::StaticArrayStaticChar &x) {
-        TODO(loc, "StaticArrayStaticChar variable lowering");
+        // if element type is a CHARACTER, determine the LEN value
+        auto charLen = x.charLen();
+        mlir::Value addr;
+        mlir::Value len;
+        if (isDummy) {
+          Fortran::lower::SymbolBox symBox = symMap.lookupSymbol(sym);
+          std::pair<mlir::Value, mlir::Value> unboxchar =
+              charHelp.createUnboxChar(symBox.getAddr());
+          addr = unboxchar.first;
+          // Set/override LEN with a constant
+          len = builder.createIntegerConstant(loc, idxTy, charLen);
+        } else {
+          // local CHARACTER variable
+          len = builder.createIntegerConstant(loc, idxTy, charLen);
+        }
+
+        // object shape is constant
+        mlir::Type castTy = builder.getRefType(converter.genType(var));
+        if (addr)
+          addr = builder.createConvert(loc, castTy, addr);
+
+        if (x.lboundAllOnes()) {
+          // if lower bounds are all ones, build simple shaped object
+          llvm::SmallVector<mlir::Value> shape;
+          for (int64_t i : x.shapes)
+            shape.push_back(genExtentValue(builder, loc, idxTy, i));
+          mlir::Value local =
+              isDummy ? addr : createNewLocal(converter, loc, var, preAlloc);
+          symMap.addCharSymbolWithShape(sym, local, len, shape, isDummy);
+          return;
+        }
+
+        // if object is an array process the lower bound and extent values
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
+        // construct constants and populate `bounds`
+        for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
+          lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, fst));
+          extents.emplace_back(genExtentValue(builder, loc, idxTy, snd));
+        }
+
+        if (isDummy) {
+          symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
+                                         true);
+          return;
+        }
+        // local CHARACTER array with computed bounds
+        assert(Fortran::lower::isExplicitShape(sym));
+        mlir::Value local =
+            createNewLocal(converter, loc, var, preAlloc, extents);
+        symMap.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
       },
 
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::StaticArrayDynamicChar &x) {
-        TODO(loc, "StaticArrayDynamicChar variable lowering");
+        mlir::Value addr;
+        mlir::Value len;
+        [[maybe_unused]] bool mustBeDummy = false;
+        auto charLen = x.charLen();
+        // if element type is a CHARACTER, determine the LEN value
+        if (isDummy) {
+          Fortran::lower::SymbolBox symBox = symMap.lookupSymbol(sym);
+          std::pair<mlir::Value, mlir::Value> unboxchar =
+              charHelp.createUnboxChar(symBox.getAddr());
+          addr = unboxchar.first;
+          if (charLen) {
+            // Set/override LEN with an expression
+            len = genExplicitCharLen(charLen);
+          } else {
+            // LEN is from the boxchar
+            len = unboxchar.second;
+            mustBeDummy = true;
+          }
+        } else {
+          // local CHARACTER variable
+          len = genExplicitCharLen(charLen);
+        }
+        llvm::SmallVector<mlir::Value> lengths = {len};
+
+        // cast to the known constant parts from the declaration
+        mlir::Type castTy = builder.getRefType(converter.genType(var));
+        if (addr)
+          addr = builder.createConvert(loc, castTy, addr);
+
+        if (x.lboundAllOnes()) {
+          // if lower bounds are all ones, build simple shaped object
+          llvm::SmallVector<mlir::Value> shape;
+          for (int64_t i : x.shapes)
+            shape.push_back(genExtentValue(builder, loc, idxTy, i));
+          if (isDummy) {
+            symMap.addCharSymbolWithShape(sym, addr, len, shape, true);
+            return;
+          }
+          // local CHARACTER array with constant size
+          mlir::Value local = createNewLocal(converter, loc, var, preAlloc,
+                                             llvm::None, lengths);
+          symMap.addCharSymbolWithShape(sym, local, len, shape);
+          return;
+        }
+
+        // if object is an array process the lower bound and extent values
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
+
+        // construct constants and populate `bounds`
+        for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
+          lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, fst));
+          extents.emplace_back(genExtentValue(builder, loc, idxTy, snd));
+        }
+        if (isDummy) {
+          symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
+                                         true);
+          return;
+        }
+        // local CHARACTER array with computed bounds
+        assert((!mustBeDummy) && (Fortran::lower::isExplicitShape(sym)));
+        mlir::Value local =
+            createNewLocal(converter, loc, var, preAlloc, llvm::None, lengths);
+        symMap.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
       },
 
       //===--------------------------------------------------------------===//
@@ -1003,6 +1125,31 @@ void Fortran::lower::mapSymbolAttributes(
         mlir::emitError(loc, "symbol analysis failed on ")
             << toStringRef(sym.name());
       });
+}
+
+void Fortran::lower::defineModuleVariable(
+    AbstractConverter &converter, const Fortran::lower::pft::Variable &var) {
+  // Use empty linkage for module variables, which makes them available
+  // for use in another unit.
+  mlir::StringAttr externalLinkage;
+  if (!var.isGlobal())
+    fir::emitFatalError(converter.getCurrentLocation(),
+                        "attempting to lower module variable as local");
+  // Define aggregate storages for equivalenced objects.
+  if (var.isAggregateStore()) {
+    const mlir::Location loc = converter.genLocation(var.getSymbol().name());
+    TODO(loc, "defineModuleVariable aggregateStore");
+  }
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  if (Fortran::semantics::FindCommonBlockContaining(var.getSymbol())) {
+    const mlir::Location loc = converter.genLocation(sym.name());
+    TODO(loc, "defineModuleVariable common block");
+  } else if (var.isAlias()) {
+    // Do nothing. Mapping will be done on user side.
+  } else {
+    std::string globalName = Fortran::lower::mangle::mangleName(sym);
+    defineGlobal(converter, var, globalName, externalLinkage);
+  }
 }
 
 void Fortran::lower::instantiateVariable(AbstractConverter &converter,

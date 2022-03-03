@@ -101,6 +101,7 @@ protected:
   bool GFX8Insts;
   bool GFX9Insts;
   bool GFX90AInsts;
+  bool GFX940Insts;
   bool GFX10Insts;
   bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
@@ -123,6 +124,7 @@ protected:
   bool HasDPP8;
   bool Has64BitDPP;
   bool HasPackedFP32Ops;
+  bool HasImageInsts;
   bool HasExtendedImageInsts;
   bool HasR128A16;
   bool HasGFX10A16;
@@ -559,7 +561,7 @@ public:
   // The ST addressing mode means no registers are used, either VGPR or SGPR,
   // but only immediate offset is swizzled and added to the FLAT scratch base.
   bool hasFlatScratchSTMode() const {
-    return hasFlatScratchInsts() && hasGFX10_3Insts();
+    return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
   }
 
   bool hasScalarFlatScratchInsts() const {
@@ -837,6 +839,10 @@ public:
     return getGeneration() >= GFX10;
   }
 
+  bool hasImageInsts() const {
+    return HasImageInsts;
+  }
+
   bool hasExtendedImageInsts() const {
     return HasExtendedImageInsts;
   }
@@ -961,6 +967,10 @@ public:
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
   bool hasPackedTID() const { return HasPackedTID; }
+
+  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // hasGFX90AInsts is also true.
+  bool hasGFX940Insts() const { return GFX940Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

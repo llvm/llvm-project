@@ -374,6 +374,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                       - Ryzen 3 Pro 4350G
                                                                                                       - Ryzen 3 Pro 4350GE
 
+     ``gfx940``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
+                                                    - tgsplit           flat
+                                                    - xnack             scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
@@ -425,6 +432,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx1035``                 ``amdgcn``   APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
+                                                                                                        Add product
+                                                                                                        names.
+
+     ``gfx1036``                 ``amdgcn``   APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+
                                                                                                         Add product
                                                                                                         names.
 
@@ -1224,12 +1238,12 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1035``    0x03d      ``gfx1035``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1034``    0x03e      ``gfx1034``
      ``EF_AMDGPU_MACH_AMDGCN_GFX90A``     0x03f      ``gfx90a``
-     *reserved*                           0x040      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX940``     0x040      ``gfx940``
      *reserved*                           0x041      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
      *reserved*                           0x043      Reserved.
      *reserved*                           0x044      Reserved.
-     *reserved*                           0x045      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1036``    0x045      ``gfx1036``
      ==================================== ========== =============================
 
 Sections
@@ -3866,7 +3880,7 @@ The fields used by CP for code objects before V3 also match those specified in
              bytes
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX90A
+                                                     GFX90A, GFX940
                                                        Compute Shader (CS)
                                                        program settings used by
                                                        CP to set up
@@ -3960,7 +3974,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX6-GFX9
                                                        - vgprs_used 0..256
                                                        - max(0, ceil(vgprs_used / 4) - 1)
-                                                     GFX90A
+                                                     GFX90A, GFX940
                                                        - vgprs_used 0..512
                                                        - vgprs_used = align(arch_vgprs, 4)
                                                                       + acc_vgprs
@@ -4408,7 +4422,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX90A
+  .. table:: compute_pgm_rsrc3 for GFX90A, GFX940
      :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table
 
      ======= ======= =============================== ===========================================================================
@@ -12268,7 +12282,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_user_sgpr_count``                              0                   GFX6-GFX10   Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`
      ``.amdhsa_user_sgpr_private_segment_buffer``             0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
-                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  GFX940)
      ``.amdhsa_user_sgpr_dispatch_ptr``                       0                   GFX6-GFX10   Controls ENABLE_SGPR_DISPATCH_PTR in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_queue_ptr``                          0                   GFX6-GFX10   Controls ENABLE_SGPR_QUEUE_PTR in
@@ -12278,7 +12293,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_user_sgpr_dispatch_id``                        0                   GFX6-GFX10   Controls ENABLE_SGPR_DISPATCH_ID in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_flat_scratch_init``                  0                   GFX6-GFX10   Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
-                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  GFX940)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10        Controls ENABLE_WAVEFRONT_SIZE32 in
@@ -12286,6 +12302,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Specific
                                                               (wavefrontsize64)
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
+                                                                                  GFX940)
+     ``.amdhsa_enable_private_segment``                       0                   GFX940       Controls ENABLE_PRIVATE_SEGMENT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX10   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
@@ -12305,15 +12324,15 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_next_free_sgpr``                               Required            GFX6-GFX10   Maximum SGPR number explicitly referenced, plus one.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
-     ``.amdhsa_accum_offset``                                 Required            GFX90A       Offset of a first AccVGPR in the unified register file.
-                                                                                               Used to calculate ACCUM_OFFSET in
+     ``.amdhsa_accum_offset``                                 Required            GFX90A,      Offset of a first AccVGPR in the unified register file.
+                                                                                  GFX940       Used to calculate ACCUM_OFFSET in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
      ``.amdhsa_reserve_vcc``                                  1                   GFX6-GFX10   Whether the kernel may use the special VCC SGPR.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
      ``.amdhsa_reserve_flat_scratch``                         1                   GFX7-GFX10   Whether the kernel may use flat instructions to access
-                                                                                               scratch memory. Used to calculate
-                                                                                               GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                                                  (except      scratch memory. Used to calculate
+                                                                                  GFX940)      GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
      ``.amdhsa_reserve_xnack_mask``                           Target              GFX8-GFX10   Whether the kernel may trigger XNACK replay.
                                                               Feature                          Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
@@ -12341,8 +12360,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX10   Controls FP16_OVFL in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
-     ``.amdhsa_tg_split``                                     Target              GFX90A       Controls TG_SPLIT in
-                                                              Feature                          :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
+     ``.amdhsa_tg_split``                                     Target              GFX90A,      Controls TG_SPLIT in
+                                                              Feature             GFX940       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
                                                               Specific
                                                               (tgsplit)
      ``.amdhsa_workgroup_processor_mode``                     Target              GFX10        Controls ENABLE_WGP_MODE in

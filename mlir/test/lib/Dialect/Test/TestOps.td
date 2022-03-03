@@ -1962,6 +1962,12 @@ def FormatOptionalResultCOp : FormatOptionalResultOpBase<"c", [{
   (`:` functional-type($optional, $variadic)^)? attr-dict
 }]>;
 
+def FormatOptionalResultDOp
+  : TEST_Op<"format_optional_result_d_op" > {
+  let results = (outs Optional<F80>:$optional);
+  let assemblyFormat = "(`:` type($optional)^)? attr-dict";
+}
+
 def FormatTwoVariadicOperandsNoBuildableTypeOp
     : TEST_Op<"format_two_variadic_operands_no_buildable_type_op",
               [AttrSizedOperandSegments]> {

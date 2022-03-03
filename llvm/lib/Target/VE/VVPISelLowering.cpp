@@ -46,6 +46,13 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
 
   // The representative and legalized vector type of this operation.
   VECustomDAG CDAG(DAG, Op);
+  // Dispatch to complex lowering functions.
+  switch (VVPOpcode) {
+  case VEISD::VVP_LOAD:
+  case VEISD::VVP_STORE:
+    return lowerVVP_LOAD_STORE(Op, CDAG);
+  };
+
   EVT OpVecVT = Op.getValueType();
   EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
   auto Packing = getTypePacking(LegalVecVT.getSimpleVT());
@@ -87,6 +94,60 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     return CDAG.getNode(VVPOpcode, LegalVecVT, {LHS, RHS, Pred, Mask, AVL});
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
+}
+
+SDValue VETargetLowering::lowerVVP_LOAD_STORE(SDValue Op,
+                                              VECustomDAG &CDAG) const {
+  auto VVPOpc = *getVVPOpcode(Op->getOpcode());
+  const bool IsLoad = (VVPOpc == VEISD::VVP_LOAD);
+
+  // Shares.
+  SDValue BasePtr = getMemoryPtr(Op);
+  SDValue Mask = getNodeMask(Op);
+  SDValue Chain = getNodeChain(Op);
+  SDValue AVL = getNodeAVL(Op);
+  // Store specific.
+  SDValue Data = getStoredValue(Op);
+  // Load specific.
+  SDValue PassThru = getNodePassthru(Op);
+
+  auto DataVT = *getIdiomaticVectorType(Op.getNode());
+  auto Packing = getTypePacking(DataVT);
+
+  assert(Packing == Packing::Normal && "TODO Packed load store isel");
+
+  // TODO: Infer lower AVL from mask.
+  if (!AVL)
+    AVL = CDAG.getConstant(DataVT.getVectorNumElements(), MVT::i32);
+
+  // Default to the all-true mask.
+  if (!Mask)
+    Mask = CDAG.getConstantMask(Packing, true);
+
+  SDValue StrideV = getLoadStoreStride(Op, CDAG);
+  if (IsLoad) {
+    MVT LegalDataVT = getLegalVectorType(
+        Packing, DataVT.getVectorElementType().getSimpleVT());
+
+    auto NewLoadV = CDAG.getNode(VEISD::VVP_LOAD, {LegalDataVT, MVT::Other},
+                                 {Chain, BasePtr, StrideV, Mask, AVL});
+
+    if (!PassThru || PassThru->isUndef())
+      return NewLoadV;
+
+    // Convert passthru to an explicit select node.
+    SDValue DataV = CDAG.getNode(VEISD::VVP_SELECT, DataVT,
+                                 {NewLoadV, PassThru, Mask, AVL});
+    SDValue NewLoadChainV = SDValue(NewLoadV.getNode(), 1);
+
+    // Merge them back into one node.
+    return CDAG.getMergeValues({DataV, NewLoadChainV});
+  }
+
+  // VVP_STORE
+  assert(VVPOpc == VEISD::VVP_STORE);
+  return CDAG.getNode(VEISD::VVP_STORE, Op.getNode()->getVTList(),
+                      {Chain, Data, BasePtr, StrideV, Mask, AVL});
 }
 
 SDValue VETargetLowering::legalizeInternalVectorOp(SDValue Op,

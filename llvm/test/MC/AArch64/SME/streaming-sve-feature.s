@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=aarch64 -mattr=+streaming-sve,+neon < %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=aarch64 -mattr=+streaming-sve < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-mc -triple=aarch64 -mattr=+sme < %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -mattr=-neon,+sme < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 // Verify NEON is disabled when targeting streaming mode, if it's not
 // explicitly requested.

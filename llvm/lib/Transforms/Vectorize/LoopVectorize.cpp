@@ -1132,6 +1132,7 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
       // handled.
       if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
           isa<VPInterleaveRecipe>(CurRec) ||
+          isa<VPScalarIVStepsRecipe>(CurRec) ||
           isa<VPCanonicalIVPHIRecipe>(CurRec))
         continue;
 
@@ -2458,12 +2459,8 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
 }
 
 /// Compute scalar induction steps. \p ScalarIV is the scalar induction
-/// variable on which to base the steps, \p Step is the size of the step, and
-/// \p EntryVal is the value from the original loop that maps to the steps.
-/// Note that \p EntryVal doesn't have to be an induction variable - it
-/// can also be a truncate instruction.
+/// variable on which to base the steps, \p Step is the size of the step.
 static void buildScalarSteps(Value *ScalarIV, Value *Step,
-                             Instruction *EntryVal,
                              const InductionDescriptor &ID, VPValue *Def,
                              VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
@@ -2707,7 +2704,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
     // the number of instructions in the loop in the common case prior to
     // InstCombine. We will be trading one vector extract for each scalar step.
     Value *ScalarIV = CreateScalarIV(Step);
-    buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, State);
+    buildScalarSteps(ScalarIV, Step, ID, Def, State);
   }
 }
 
@@ -9740,33 +9737,31 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
         IndDesc.getInductionBinOp()->getFastMathFlags());
 
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
-  auto *Trunc = dyn_cast<TruncInst>(getUnderlyingValue());
   auto CreateScalarIV = [&](Value *&Step) -> Value * {
     Value *ScalarIV = State.get(getCanonicalIV(), VPIteration(0, 0));
     auto *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
-    if (!isCanonical() || CanonicalIV->getType() != IV->getType()) {
-      ScalarIV = IV->getType()->isIntegerTy()
-                     ? State.Builder.CreateSExtOrTrunc(ScalarIV, IV->getType())
-                     : State.Builder.CreateCast(Instruction::SIToFP, ScalarIV,
-                                                IV->getType());
+    if (!isCanonical() || CanonicalIV->getType() != Ty) {
+      ScalarIV =
+          Ty->isIntegerTy()
+              ? State.Builder.CreateSExtOrTrunc(ScalarIV, Ty)
+              : State.Builder.CreateCast(Instruction::SIToFP, ScalarIV, Ty);
       ScalarIV = emitTransformedIndex(State.Builder, ScalarIV,
                                       getStartValue()->getLiveInIRValue(), Step,
                                       IndDesc);
       ScalarIV->setName("offset.idx");
     }
-    if (Trunc) {
-      auto *TruncType = cast<IntegerType>(Trunc->getType());
+    if (TruncToTy) {
       assert(Step->getType()->isIntegerTy() &&
              "Truncation requires an integer step");
-      ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncType);
-      Step = State.Builder.CreateTrunc(Step, TruncType);
+      ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
+      Step = State.Builder.CreateTrunc(Step, TruncToTy);
     }
     return ScalarIV;
   };
 
   Value *ScalarIV = CreateScalarIV(Step);
   if (State.VF.isVector()) {
-    buildScalarSteps(ScalarIV, Step, IV, IndDesc, this, State);
+    buildScalarSteps(ScalarIV, Step, IndDesc, this, State);
     return;
   }
 
@@ -9787,8 +9782,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
           ScalarIV, State.Builder.CreateMul(StartIdx, Step), "induction");
     }
     State.set(this, EntryPart, Part);
-    if (Trunc)
-      State.ILV->addMetadata(EntryPart, Trunc);
   }
 }
 

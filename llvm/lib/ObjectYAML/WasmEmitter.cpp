@@ -187,13 +187,10 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
   // SYMBOL_TABLE subsection
   if (Section.SymbolTable.size()) {
     writeUint8(OS, wasm::WASM_SYMBOL_TABLE);
-
     encodeULEB128(Section.SymbolTable.size(), SubSection.getStream());
-#ifndef NDEBUG
-    uint32_t SymbolIndex = 0;
-#endif
-    for (const WasmYAML::SymbolInfo &Info : Section.SymbolTable) {
-      assert(Info.Index == SymbolIndex++);
+    for (auto Sym : llvm::enumerate(Section.SymbolTable)) {
+      const WasmYAML::SymbolInfo &Info = Sym.value();
+      assert(Info.Index == Sym.index());
       writeUint8(SubSection.getStream(), Info.Kind);
       encodeULEB128(Info.Flags, SubSection.getStream());
       switch (Info.Kind) {
