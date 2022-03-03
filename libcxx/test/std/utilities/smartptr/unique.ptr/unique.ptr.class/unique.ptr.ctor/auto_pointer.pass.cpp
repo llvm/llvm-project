@@ -9,14 +9,13 @@
 // libc++ cannot safely provide the auto_ptr constructor without rvalue
 // references.
 // REQUIRES: c++11 || c++14
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <memory>
 
 // unique_ptr
 
 // template <class U> unique_ptr(auto_ptr<U>&&) noexcept
-
-#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <utility>
