@@ -43,6 +43,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 static lldb::addr_t
 ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,

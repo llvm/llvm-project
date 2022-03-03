@@ -16,6 +16,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::dwarf;
 
 std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
     Module &module, DWARFDataExtractor apple_names,

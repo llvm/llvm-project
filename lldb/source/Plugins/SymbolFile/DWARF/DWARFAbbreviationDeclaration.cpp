@@ -16,6 +16,7 @@
 #include "DWARFFormValue.h"
 
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() : m_attributes() {}
 
