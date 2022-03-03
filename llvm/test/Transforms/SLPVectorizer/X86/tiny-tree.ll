@@ -11,9 +11,9 @@ define void @tiny_tree_fully_vectorizable(double* noalias nocapture %dst, double
 ; CHECK-NEXT:    [[DST_ADDR_014:%.*]] = phi double* [ [[ADD_PTR4:%.*]], [[FOR_BODY]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_013:%.*]] = phi double* [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[SRC:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[SRC_ADDR_013]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[DST_ADDR_014]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[SRC_ADDR_013]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[DST_ADDR_014]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[DST_ADDR_014]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds double, double* [[SRC_ADDR_013]], i64 [[I_015]]
@@ -62,9 +62,9 @@ define void @tiny_tree_fully_vectorizable2(float* noalias nocapture %dst, float*
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[SRC_ADDR_021]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[DST_ADDR_022]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 [[I_023]]
@@ -165,16 +165,16 @@ define void @tiny_tree_not_fully_vectorizable2(float* noalias nocapture %dst, fl
 ; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[DST_ADDR_022:%.*]] = phi float* [ [[ADD_PTR8:%.*]], [[FOR_BODY]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_021:%.*]] = phi float* [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[SRC:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_021]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_021]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[ARRAYIDX4]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
