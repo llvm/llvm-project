@@ -38,7 +38,14 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkLoad(LoadOp op);
 
   struct Options {
-    enum : unsigned { None = 0, RemarkPset = 1, RemarkAll = 1 << 1 };
+    enum : unsigned {
+      None = 0,
+      RemarkPset = 1,
+      RemarkAll = 1 << 1,
+      HistoryNull = 1 << 2,
+      HistoryInvalid = 1 << 3,
+      HistoryAll = 1 << 4,
+    };
     unsigned val = None;
 
     void parseOptions(LifetimeCheckPass &pass) {
@@ -48,10 +55,23 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                    .Case("all", RemarkAll)
                    .Default(None);
       }
+      for (auto &h : pass.historyList) {
+        val |= StringSwitch<unsigned>(h)
+                   .Case("invalid", HistoryInvalid)
+                   .Case("null", HistoryNull)
+                   .Case("all", HistoryAll)
+                   .Default(None);
+      }
     }
 
     bool emitRemarkAll() { return val & RemarkAll; }
     bool emitRemarkPset() { return emitRemarkAll() || val & RemarkPset; }
+
+    bool emitHistoryAll() { return val & HistoryAll; }
+    bool emitHistoryNull() { return emitHistoryAll() || val & HistoryNull; }
+    bool emitHistoryInvalid() {
+      return emitHistoryAll() || val & HistoryInvalid;
+    }
   } opts;
 
   struct State {
