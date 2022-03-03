@@ -459,13 +459,53 @@
 // Test mixed HIP and C++ compilation. HIP program should have HIP offload kind.
 // C++ program should have no offload kind.
 
+// Test compile empty.hip and empty.cpp.
 // RUN: %clang -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -c %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
-
 // RUN: %clang -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -c %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link empty.hip and empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link empty.hip and empty.cpp with --hip-link -fgpu-rdc.
+// RUN: %clang -target x86_64-unknown-linux-gnu --hip-link -fgpu-rdc \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --hip-link -fgpu-rdc \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link -x hip empty.hip and -x c++ empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip -x c++ %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip -x c++ %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link -x hip empty.hip and empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2-NEG %s
+
+// Test compile and link empty.hip and -x hip empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip -x hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2-NEG %s
 
 // MIXED-DAG: input, "{{.*}}empty.hip", hip, (host-hip)
 // MIXED-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx803)
@@ -473,3 +513,11 @@
 // MIXED-DAG: input, "{{.*}}empty.cpp", c++
 // MIXED-NEG-NOT: input, "{{.*}}empty.cpp", c++, (host-hip)
 // MIXED-NEG-NOT: input, "{{.*}}empty.cpp", c++, (device-hip
+
+// MIXED2-DAG: input, "{{.*}}empty.hip", hip, (host-hip)
+// MIXED2-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx803)
+// MIXED2-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx900)
+// MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (host-hip)
+// MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (device-hip, gfx803)
+// MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (device-hip, gfx900)
+// MIXED2-NEG-NOT: input, "{{.*}}empty.cpp", c++
