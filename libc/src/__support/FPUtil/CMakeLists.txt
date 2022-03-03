@@ -21,6 +21,7 @@ add_header_library(
     libc.include.fenv
     libc.src.__support.common
     libc.src.__support.CPP.standalone_cpp
+    libc.src.errno.__errno_location
 )
 
 add_header_library(
