@@ -862,13 +862,14 @@ static unsigned parseDebugTypes(const opt::InputArgList &args) {
 
 static std::string getMapFile(const opt::InputArgList &args,
                               opt::OptSpecifier os, opt::OptSpecifier osFile) {
-  auto *arg = args.getLastArg(os, osFile);
-  if (!arg)
-    return "";
-  if (arg->getOption().getID() == osFile.getID())
-    return arg->getValue();
+  // Force generating map file.
+  // auto *arg = args.getLastArg(os, osFile);
+  // if (!arg)
+  //  return "";
+  // if (arg->getOption().getID() == osFile.getID())
+  //  return arg->getValue();
 
-  assert(arg->getOption().getID() == os.getID());
+  // assert(arg->getOption().getID() == os.getID());
   StringRef outFile = config->outputFile;
   return (outFile.substr(0, outFile.rfind('.')) + ".map").str();
 }
