@@ -212,8 +212,8 @@ static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #endif
 }
 
-static Value lookupBuffer(RewriterBase &rewriter, Value tensor,
-                          const BufferizationOptions &options) {
+Value mlir::bufferization::lookupBuffer(RewriterBase &rewriter, Value tensor,
+                                        const BufferizationOptions &options) {
   auto tensorType = tensor.getType().dyn_cast<TensorType>();
   assert(tensorType && "unexpected non-tensor type");
 

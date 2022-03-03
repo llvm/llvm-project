@@ -113,17 +113,6 @@ void populateFusePadTensorWithProducerLinalgOpPatterns(
 /// canonicalizations of named ops into another named op.
 void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
 
-/// Populate the given list with patterns to bufferize linalg ops.
-void populateLinalgBufferizePatterns(
-    bufferization::BufferizeTypeConverter &converter,
-    RewritePatternSet &patterns);
-
-/// Create linalg op on buffers given the original tensor-based operation and
-/// the buffers for the outputs.
-LinalgOp createLinalgOpOnBuffers(ConversionPatternRewriter &rewriter,
-                                 LinalgOp linalgOp, ValueRange inputs,
-                                 ValueRange outputs);
-
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
