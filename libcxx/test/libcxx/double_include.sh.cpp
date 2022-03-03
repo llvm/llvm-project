@@ -230,12 +230,6 @@
 #    include <experimental/vector>
 #endif // __cplusplus >= 201103L
 
-// extended headers
-#ifndef _LIBCXX_MODULES_BUILD
-#    include <ext/hash_map>
-#    include <ext/hash_set>
-#endif
-
 // clang-format on
 
 ////////////////////////////////////////////////////////////////////////////////

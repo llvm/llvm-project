@@ -91,11 +91,6 @@ headers_template = """\
 #if __cplusplus >= 201103L
 {experimental_headers}
 #endif // __cplusplus >= 201103L
-
-// extended headers
-#ifndef _LIBCXX_MODULES_BUILD
-{extended_headers}
-#endif
 """
 
 
@@ -191,9 +186,6 @@ def produce_test(test_filename, exclusions=None, post_include=None):
             exclusions=exclusions,
         ),
         experimental_headers=produce_experimental_headers(
-            post_include=post_include,
-        ),
-        extended_headers=produce_extended_headers(
             post_include=post_include,
         ),
     )

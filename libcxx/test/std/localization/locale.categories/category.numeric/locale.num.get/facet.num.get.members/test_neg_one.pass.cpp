@@ -56,7 +56,7 @@ void test_neg_one() {
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+sizeof(str)),
                   ios, err, v);
-        assert(iter.base() == str+sizeof(str)-1);
+        assert(base(iter) == str+sizeof(str)-1);
         assert(err == ios.goodbit);
         assert(v == T(-1));
     }
@@ -68,7 +68,7 @@ void test_neg_one() {
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+sizeof(str)),
                   ios, err, v);
-        assert(iter.base() == str+sizeof(str)-1);
+        assert(base(iter) == str+sizeof(str)-1);
         assert(err == ios.failbit);
         assert(v == 0);
     }
@@ -91,7 +91,7 @@ void test_negate() {
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+size+1),
                   ios, err, v);
-        assert(iter.base() == str+size);
+        assert(base(iter) == str+size);
         assert(err == ios.goodbit);
         T expected = -value;
         assert(v == expected);
@@ -109,7 +109,7 @@ void test_negate() {
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+size+1),
                   ios, err, v);
-        assert(iter.base() == str+size);
+        assert(base(iter) == str+size);
         assert(err == ios.goodbit);
         T expected = -value;
         assert(v == expected);
@@ -125,7 +125,7 @@ void test_negate() {
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+size+1),
                   ios, err, v);
-        assert(iter.base() == str+size);
+        assert(base(iter) == str+size);
         assert(err == ios.goodbit);
         T expected = -value;
         assert(v == expected);
@@ -141,7 +141,7 @@ void test_negate() {
             f.get(cpp17_input_iterator<const char*>(str),
                   cpp17_input_iterator<const char*>(str+size+1),
                   ios, err, v);
-        assert(iter.base() == str+size);
+        assert(base(iter) == str+size);
         assert(err == ios.failbit);
         assert(v == T(-1));
     }

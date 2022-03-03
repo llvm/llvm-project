@@ -49,14 +49,14 @@ int main(int, char**)
             bool v = false;
             char str[50];
             cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-            std::string ex(str, iter.base());
+            std::string ex(str, base(iter));
             assert(ex == "0");
         }
         {
             bool v = true;
             char str[50];
             cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-            std::string ex(str, iter.base());
+            std::string ex(str, base(iter));
             assert(ex == "1");
         }
     }
@@ -67,14 +67,14 @@ int main(int, char**)
             bool v = false;
             char str[50];
             cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-            std::string ex(str, iter.base());
+            std::string ex(str, base(iter));
             assert(ex == "false");
         }
         {
             bool v = true;
             char str[50];
             cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-            std::string ex(str, iter.base());
+            std::string ex(str, base(iter));
             assert(ex == "true");
         }
     }
@@ -86,14 +86,14 @@ int main(int, char**)
             bool v = false;
             char str[50];
             cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-            std::string ex(str, iter.base());
+            std::string ex(str, base(iter));
             assert(ex == "no");
         }
         {
             bool v = true;
             char str[50];
             cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-            std::string ex(str, iter.base());
+            std::string ex(str, base(iter));
             assert(ex == "yes");
         }
     }

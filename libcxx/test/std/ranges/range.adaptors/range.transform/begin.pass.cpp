@@ -34,13 +34,13 @@ constexpr bool test() {
 
   {
     std::ranges::transform_view transformView(ForwardView{buff}, PlusOneMutable{});
-    assert(transformView.begin().base().base() == buff);
+    assert(base(transformView.begin().base()) == buff);
     assert(*transformView.begin() == 1);
   }
 
   {
     std::ranges::transform_view transformView(InputView{buff}, PlusOneMutable{});
-    assert(transformView.begin().base().base() == buff);
+    assert(base(transformView.begin().base()) == buff);
     assert(*transformView.begin() == 1);
   }
 
