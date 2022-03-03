@@ -45,8 +45,8 @@ define half @add_HalfH(<4 x half> %bin.rdx)  {
 define half @add_H(<8 x half> %bin.rdx)  {
 ; FULLFP16-LABEL: add_H:
 ; FULLFP16:       // %bb.0:
-; FULLFP16-NEXT:    faddp v0.8h, v0.8h, v0.8h
-; FULLFP16-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    faddp v1.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    faddp v0.8h, v1.8h, v0.8h
 ; FULLFP16-NEXT:    faddp h0, v0.2h
 ; FULLFP16-NEXT:    ret
 ;
@@ -115,8 +115,8 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; FULLFP16-LABEL: add_2H:
 ; FULLFP16:       // %bb.0:
 ; FULLFP16-NEXT:    fadd v0.8h, v0.8h, v1.8h
-; FULLFP16-NEXT:    faddp v0.8h, v0.8h, v0.8h
-; FULLFP16-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    faddp v1.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    faddp v0.8h, v1.8h, v0.8h
 ; FULLFP16-NEXT:    faddp h0, v0.2h
 ; FULLFP16-NEXT:    ret
 ;
@@ -248,7 +248,7 @@ define float @fadd_reduction_v4f32_in_loop(float* %ptr.start) {
 ; CHECK-NEXT:    ldr q1, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp w8, #112
-; CHECK-NEXT:    faddp v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    faddp v1.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    faddp s1, v1.2s
 ; CHECK-NEXT:    fadd s0, s1, s0
 ; CHECK-NEXT:    b.ne .LBB9_1
@@ -286,7 +286,7 @@ define half @fadd_reduction_v4f16_in_loop(half* %ptr.start) {
 ; FULLFP16-NEXT:    ldr d1, [x0, x8]
 ; FULLFP16-NEXT:    add x8, x8, #8
 ; FULLFP16-NEXT:    cmp w8, #56
-; FULLFP16-NEXT:    faddp v1.4h, v1.4h, v0.4h
+; FULLFP16-NEXT:    faddp v1.4h, v1.4h, v1.4h
 ; FULLFP16-NEXT:    faddp h1, v1.2h
 ; FULLFP16-NEXT:    fadd h0, h1, h0
 ; FULLFP16-NEXT:    b.ne .LBB10_1
@@ -357,8 +357,8 @@ define half @fadd_reduction_v8f16_in_loop(half* %ptr.start) {
 ; FULLFP16-NEXT:    ldr q1, [x0, x8]
 ; FULLFP16-NEXT:    add x8, x8, #8
 ; FULLFP16-NEXT:    cmp w8, #56
-; FULLFP16-NEXT:    faddp v1.8h, v1.8h, v0.8h
-; FULLFP16-NEXT:    faddp v1.8h, v1.8h, v0.8h
+; FULLFP16-NEXT:    faddp v2.8h, v1.8h, v1.8h
+; FULLFP16-NEXT:    faddp v1.8h, v2.8h, v1.8h
 ; FULLFP16-NEXT:    faddp h1, v1.2h
 ; FULLFP16-NEXT:    fadd h0, h1, h0
 ; FULLFP16-NEXT:    b.ne .LBB11_1
