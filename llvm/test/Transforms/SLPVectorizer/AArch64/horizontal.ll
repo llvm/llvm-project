@@ -37,9 +37,9 @@ define i32 @test_select(i32* noalias nocapture readonly %blk1, i32* noalias noca
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[P1_023]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[P2_024]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[P1_023]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[P2_024]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P1_023]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[P2_024]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[P2_024]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i32> [[TMP1]], [[TMP3]]
@@ -163,9 +163,9 @@ define i32 @reduction_with_br(i32* noalias nocapture readonly %blk1, i32* noalia
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[P1_017]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[P2_018]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, i32* [[P1_017]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, i32* [[P2_018]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P1_017]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, i32* [[P2_018]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[P2_018]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP3]], [[TMP1]]
@@ -274,10 +274,10 @@ define i32 @test_unrolled_select(i8* noalias nocapture readonly %blk1, i8* noali
 ; CHECK-NEXT:    [[ARRAYIDX61:%.*]] = getelementptr inbounds i8, i8* [[P1_044]], i64 6
 ; CHECK-NEXT:    [[ARRAYIDX63:%.*]] = getelementptr inbounds i8, i8* [[P2_045]], i64 6
 ; CHECK-NEXT:    [[ARRAYIDX72:%.*]] = getelementptr inbounds i8, i8* [[P1_044]], i64 7
-; CHECK-NEXT:    [[ARRAYIDX74:%.*]] = getelementptr inbounds i8, i8* [[P2_045]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[P1_044]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[ARRAYIDX74:%.*]] = getelementptr inbounds i8, i8* [[P2_045]], i64 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[P2_045]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>

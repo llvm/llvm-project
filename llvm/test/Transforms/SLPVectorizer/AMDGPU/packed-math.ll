@@ -191,10 +191,10 @@ define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(half addrspace(3)* %a, ha
 ; GCN-LABEL: @test1_fabs_scalar_fma_v2f16(
 ; GCN-NEXT:    [[I1:%.*]] = load half, half addrspace(3)* [[B:%.*]], align 2
 ; GCN-NEXT:    [[I1_FABS:%.*]] = call half @llvm.fabs.f16(half [[I1]])
-; GCN-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds half, half addrspace(3)* [[B]], i64 1
-; GCN-NEXT:    [[I4:%.*]] = load half, half addrspace(3)* [[ARRAYIDX4]], align 2
 ; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
 ; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
+; GCN-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds half, half addrspace(3)* [[B]], i64 1
+; GCN-NEXT:    [[I4:%.*]] = load half, half addrspace(3)* [[ARRAYIDX4]], align 2
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
 ; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP3]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = insertelement <2 x half> poison, half [[I1_FABS]], i32 0

@@ -8,12 +8,12 @@ define void @vec_powi_f32(float* %a, float* %c, i32 %P) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[A]], i32 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i32 3
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i32 1
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[C]], i32 2
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[C]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP1]], i32 [[P:%.*]])
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i32 1
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[C]], i32 2
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[C]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[C]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void

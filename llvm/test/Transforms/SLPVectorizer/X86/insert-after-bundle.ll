@@ -51,16 +51,15 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[ARRAYIDX28:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 2
 ; SSE-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 2
 ; SSE-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 3
-; SSE-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 3
-; SSE-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 3
-; SSE-NEXT:    [[ARRAYIDX40:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 3
-; SSE-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 3
 ; SSE-NEXT:    [[TMP4:%.*]] = bitcast i8* [[C_ADDR_0352]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP5:%.*]] = load <4 x i8>, <4 x i8>* [[TMP4]], align 1
+; SSE-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 3
 ; SSE-NEXT:    [[TMP6:%.*]] = bitcast i8* [[D_ADDR_0353]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP7:%.*]] = load <4 x i8>, <4 x i8>* [[TMP6]], align 1
+; SSE-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 3
 ; SSE-NEXT:    [[TMP8:%.*]] = bitcast i8* [[A_ADDR_0355]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP9:%.*]] = load <4 x i8>, <4 x i8>* [[TMP8]], align 1
+; SSE-NEXT:    [[ARRAYIDX40:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 3
 ; SSE-NEXT:    [[TMP10:%.*]] = bitcast i8* [[B_ADDR_0351]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP11:%.*]] = load <4 x i8>, <4 x i8>* [[TMP10]], align 1
 ; SSE-NEXT:    [[TMP12:%.*]] = icmp ult <4 x i8> [[TMP5]], [[TMP7]]
@@ -68,6 +67,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[TMP14:%.*]] = zext <4 x i8> [[TMP13]] to <4 x i32>
 ; SSE-NEXT:    [[TMP15:%.*]] = mul <4 x i32> [[TMP14]], [[SHUFFLE]]
 ; SSE-NEXT:    [[TMP16:%.*]] = trunc <4 x i32> [[TMP15]] to <4 x i8>
+; SSE-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 3
 ; SSE-NEXT:    [[TMP17:%.*]] = bitcast i8* [[E_ADDR_0354]] to <4 x i8>*
 ; SSE-NEXT:    store <4 x i8> [[TMP16]], <4 x i8>* [[TMP17]], align 1
 ; SSE-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 4
@@ -86,16 +86,15 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[ARRAYIDX76:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 6
 ; SSE-NEXT:    [[ARRAYIDX80:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 6
 ; SSE-NEXT:    [[ARRAYIDX81:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 7
-; SSE-NEXT:    [[ARRAYIDX83:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 7
-; SSE-NEXT:    [[ARRAYIDX85:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 7
-; SSE-NEXT:    [[ARRAYIDX88:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 7
-; SSE-NEXT:    [[ARRAYIDX92:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 7
 ; SSE-NEXT:    [[TMP18:%.*]] = bitcast i8* [[ARRAYIDX45]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP19:%.*]] = load <4 x i8>, <4 x i8>* [[TMP18]], align 1
+; SSE-NEXT:    [[ARRAYIDX83:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 7
 ; SSE-NEXT:    [[TMP20:%.*]] = bitcast i8* [[ARRAYIDX47]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP21:%.*]] = load <4 x i8>, <4 x i8>* [[TMP20]], align 1
+; SSE-NEXT:    [[ARRAYIDX85:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 7
 ; SSE-NEXT:    [[TMP22:%.*]] = bitcast i8* [[ARRAYIDX49]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP23:%.*]] = load <4 x i8>, <4 x i8>* [[TMP22]], align 1
+; SSE-NEXT:    [[ARRAYIDX88:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 7
 ; SSE-NEXT:    [[TMP24:%.*]] = bitcast i8* [[ARRAYIDX52]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP25:%.*]] = load <4 x i8>, <4 x i8>* [[TMP24]], align 1
 ; SSE-NEXT:    [[TMP26:%.*]] = icmp ult <4 x i8> [[TMP19]], [[TMP21]]
@@ -103,6 +102,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[TMP28:%.*]] = zext <4 x i8> [[TMP27]] to <4 x i32>
 ; SSE-NEXT:    [[TMP29:%.*]] = mul <4 x i32> [[TMP28]], [[SHUFFLE1]]
 ; SSE-NEXT:    [[TMP30:%.*]] = trunc <4 x i32> [[TMP29]] to <4 x i8>
+; SSE-NEXT:    [[ARRAYIDX92:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 7
 ; SSE-NEXT:    [[TMP31:%.*]] = bitcast i8* [[ARRAYIDX56]] to <4 x i8>*
 ; SSE-NEXT:    store <4 x i8> [[TMP30]], <4 x i8>* [[TMP31]], align 1
 ; SSE-NEXT:    [[ARRAYIDX93:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 8
@@ -121,16 +121,15 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[ARRAYIDX124:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 10
 ; SSE-NEXT:    [[ARRAYIDX128:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 10
 ; SSE-NEXT:    [[ARRAYIDX129:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 11
-; SSE-NEXT:    [[ARRAYIDX131:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 11
-; SSE-NEXT:    [[ARRAYIDX133:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 11
-; SSE-NEXT:    [[ARRAYIDX136:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 11
-; SSE-NEXT:    [[ARRAYIDX140:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 11
 ; SSE-NEXT:    [[TMP32:%.*]] = bitcast i8* [[ARRAYIDX93]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP33:%.*]] = load <4 x i8>, <4 x i8>* [[TMP32]], align 1
+; SSE-NEXT:    [[ARRAYIDX131:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 11
 ; SSE-NEXT:    [[TMP34:%.*]] = bitcast i8* [[ARRAYIDX95]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP35:%.*]] = load <4 x i8>, <4 x i8>* [[TMP34]], align 1
+; SSE-NEXT:    [[ARRAYIDX133:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 11
 ; SSE-NEXT:    [[TMP36:%.*]] = bitcast i8* [[ARRAYIDX97]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP37:%.*]] = load <4 x i8>, <4 x i8>* [[TMP36]], align 1
+; SSE-NEXT:    [[ARRAYIDX136:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 11
 ; SSE-NEXT:    [[TMP38:%.*]] = bitcast i8* [[ARRAYIDX100]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP39:%.*]] = load <4 x i8>, <4 x i8>* [[TMP38]], align 1
 ; SSE-NEXT:    [[TMP40:%.*]] = icmp ult <4 x i8> [[TMP33]], [[TMP35]]
@@ -138,6 +137,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[TMP42:%.*]] = zext <4 x i8> [[TMP41]] to <4 x i32>
 ; SSE-NEXT:    [[TMP43:%.*]] = mul <4 x i32> [[TMP42]], [[SHUFFLE2]]
 ; SSE-NEXT:    [[TMP44:%.*]] = trunc <4 x i32> [[TMP43]] to <4 x i8>
+; SSE-NEXT:    [[ARRAYIDX140:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 11
 ; SSE-NEXT:    [[TMP45:%.*]] = bitcast i8* [[ARRAYIDX104]] to <4 x i8>*
 ; SSE-NEXT:    store <4 x i8> [[TMP44]], <4 x i8>* [[TMP45]], align 1
 ; SSE-NEXT:    [[ARRAYIDX141:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 12
@@ -156,16 +156,15 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[ARRAYIDX172:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 14
 ; SSE-NEXT:    [[ARRAYIDX176:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 14
 ; SSE-NEXT:    [[ARRAYIDX177:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 15
-; SSE-NEXT:    [[ARRAYIDX179:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 15
-; SSE-NEXT:    [[ARRAYIDX181:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 15
-; SSE-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 15
-; SSE-NEXT:    [[ARRAYIDX188:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 15
 ; SSE-NEXT:    [[TMP46:%.*]] = bitcast i8* [[ARRAYIDX141]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP47:%.*]] = load <4 x i8>, <4 x i8>* [[TMP46]], align 1
+; SSE-NEXT:    [[ARRAYIDX179:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 15
 ; SSE-NEXT:    [[TMP48:%.*]] = bitcast i8* [[ARRAYIDX143]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP49:%.*]] = load <4 x i8>, <4 x i8>* [[TMP48]], align 1
+; SSE-NEXT:    [[ARRAYIDX181:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 15
 ; SSE-NEXT:    [[TMP50:%.*]] = bitcast i8* [[ARRAYIDX145]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP51:%.*]] = load <4 x i8>, <4 x i8>* [[TMP50]], align 1
+; SSE-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 15
 ; SSE-NEXT:    [[TMP52:%.*]] = bitcast i8* [[ARRAYIDX148]] to <4 x i8>*
 ; SSE-NEXT:    [[TMP53:%.*]] = load <4 x i8>, <4 x i8>* [[TMP52]], align 1
 ; SSE-NEXT:    [[TMP54:%.*]] = icmp ult <4 x i8> [[TMP47]], [[TMP49]]
@@ -173,6 +172,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; SSE-NEXT:    [[TMP56:%.*]] = zext <4 x i8> [[TMP55]] to <4 x i32>
 ; SSE-NEXT:    [[TMP57:%.*]] = mul <4 x i32> [[TMP56]], [[SHUFFLE3]]
 ; SSE-NEXT:    [[TMP58:%.*]] = trunc <4 x i32> [[TMP57]] to <4 x i8>
+; SSE-NEXT:    [[ARRAYIDX188:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 15
 ; SSE-NEXT:    [[TMP59:%.*]] = bitcast i8* [[ARRAYIDX152]] to <4 x i8>*
 ; SSE-NEXT:    store <4 x i8> [[TMP58]], <4 x i8>* [[TMP59]], align 1
 ; SSE-NEXT:    [[INC]] = add nuw nsw i32 [[I_0356]], 1
@@ -269,16 +269,15 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; AVX512-NEXT:    [[ARRAYIDX172:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 14
 ; AVX512-NEXT:    [[ARRAYIDX176:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 14
 ; AVX512-NEXT:    [[ARRAYIDX177:%.*]] = getelementptr inbounds i8, i8* [[C_ADDR_0352]], i64 15
-; AVX512-NEXT:    [[ARRAYIDX179:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 15
-; AVX512-NEXT:    [[ARRAYIDX181:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 15
-; AVX512-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 15
-; AVX512-NEXT:    [[ARRAYIDX188:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 15
 ; AVX512-NEXT:    [[TMP1:%.*]] = bitcast i8* [[C_ADDR_0352]] to <16 x i8>*
 ; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[TMP1]], align 1
+; AVX512-NEXT:    [[ARRAYIDX179:%.*]] = getelementptr inbounds i8, i8* [[D_ADDR_0353]], i64 15
 ; AVX512-NEXT:    [[TMP3:%.*]] = bitcast i8* [[D_ADDR_0353]] to <16 x i8>*
 ; AVX512-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[TMP3]], align 1
+; AVX512-NEXT:    [[ARRAYIDX181:%.*]] = getelementptr inbounds i8, i8* [[A_ADDR_0355]], i64 15
 ; AVX512-NEXT:    [[TMP5:%.*]] = bitcast i8* [[A_ADDR_0355]] to <16 x i8>*
 ; AVX512-NEXT:    [[TMP6:%.*]] = load <16 x i8>, <16 x i8>* [[TMP5]], align 1
+; AVX512-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i8, i8* [[B_ADDR_0351]], i64 15
 ; AVX512-NEXT:    [[TMP7:%.*]] = bitcast i8* [[B_ADDR_0351]] to <16 x i8>*
 ; AVX512-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* [[TMP7]], align 1
 ; AVX512-NEXT:    [[TMP9:%.*]] = icmp ult <16 x i8> [[TMP2]], [[TMP4]]
@@ -286,6 +285,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; AVX512-NEXT:    [[TMP11:%.*]] = zext <16 x i8> [[TMP10]] to <16 x i32>
 ; AVX512-NEXT:    [[TMP12:%.*]] = mul <16 x i32> [[TMP11]], [[SHUFFLE]]
 ; AVX512-NEXT:    [[TMP13:%.*]] = trunc <16 x i32> [[TMP12]] to <16 x i8>
+; AVX512-NEXT:    [[ARRAYIDX188:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 15
 ; AVX512-NEXT:    [[TMP14:%.*]] = bitcast i8* [[E_ADDR_0354]] to <16 x i8>*
 ; AVX512-NEXT:    store <16 x i8> [[TMP13]], <16 x i8>* [[TMP14]], align 1
 ; AVX512-NEXT:    [[INC]] = add nuw nsw i32 [[I_0356]], 1
