@@ -8,7 +8,7 @@ int *p0() {
     int x = 0;
     p = &x;
     *p = 42;
-  }        // expected-note {{invalidated at end of scope}}
+  }        // expected-note {{pointee 'x' invalidated at end of scope}}
   *p = 42; // expected-warning {{use of invalid pointer 'p'}}
   return p;
 }
@@ -19,7 +19,7 @@ int *p1(bool b = true) {
     int x = 0;
     p = &x;
     *p = 42;
-  }        // expected-note {{invalidated at end of scope}}
+  }        // expected-note {{pointee 'x' invalidated at end of scope}}
   *p = 42; // expected-warning {{use of invalid pointer 'p'}}
   return p;
 }
