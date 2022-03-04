@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc -mtriple=avr < %s | FileCheck %s
 
 ; CHECK-LABEL: ret_void_args_i8
 define void @ret_void_args_i8(i8 %a) {
@@ -96,4 +96,76 @@ define void @ret_void_args_i64_i64_i16(i64 %a, i64 %b, i16 %c) {
   ; CHECK-NEXT: sts     4, r8
   store volatile i16 %c, i16* inttoptr (i64 4 to i16*)
   ret void
+}
+
+; NOTE: Both %a (i8) and %b (i8) cost two registers.
+define i8 @foo0(i8 %a, i8 %b) {
+; CHECK-LABEL: foo0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r24, r22
+; CHECK-NEXT:    ret
+  %c = sub i8 %a, %b
+  ret i8 %c
+}
+
+; NOTE: Both %a (i16) and %b (i16) cost two registers.
+define i16 @foo1(i16 %a, i16 %b) {
+; CHECK-LABEL: foo1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r24, r22
+; CHECK-NEXT:    sbc r25, r23
+; CHECK-NEXT:    ret
+  %c = sub i16 %a, %b
+  ret i16 %c
+}
+
+; NOTE: Both %a (i32) and %b (i32) cost four registers.
+define i32 @foo2(i32 %a, i32 %b) {
+; CHECK-LABEL: foo2:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r22, r18
+; CHECK-NEXT:    sbc r23, r19
+; CHECK-NEXT:    sbc r24, r20
+; CHECK-NEXT:    sbc r25, r21
+; CHECK-NEXT:    ret
+  %c = sub i32 %a, %b
+  ret i32 %c
+}
+
+; NOTE: Each argument costs four registers, and total 16 registers are used.
+define i32 @foo3(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: foo3:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r22, r10
+; CHECK-NEXT:    sbc r23, r11
+; CHECK-NEXT:    sbc r24, r12
+; CHECK-NEXT:    sbc r25, r13
+; CHECK-NEXT:    ret
+  %e = sub nsw i32 %a, %d
+  ret i32 %e
+}
+
+; NOTE: Each argument (except %e) cost four registers, and total 16 registers
+; NOTE: are used. Though there are still 2 registers are vacant, the %e has
+; NOTE: to be dropped to the stack.
+define i32 @foo4(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+; CHECK-LABEL: foo4:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    push r28
+; CHECK-NEXT:    push r29
+; CHECK-NEXT:    in r28, 61
+; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    ldd r18, Y+5
+; CHECK-NEXT:    ldd r19, Y+6
+; CHECK-NEXT:    ldd r20, Y+7
+; CHECK-NEXT:    ldd r21, Y+8
+; CHECK-NEXT:    sub r22, r18
+; CHECK-NEXT:    sbc r23, r19
+; CHECK-NEXT:    sbc r24, r20
+; CHECK-NEXT:    sbc r25, r21
+; CHECK-NEXT:    pop r29
+; CHECK-NEXT:    pop r28
+; CHECK-NEXT:    ret
+  %f = sub nsw i32 %a, %e
+  ret i32 %f
 }
