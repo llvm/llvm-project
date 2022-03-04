@@ -81,7 +81,7 @@ public:
 
     // If there is an error here then the mock symbolizer has not been
     // initialized properly.
-    if (Error E = symbolizeStackFrames())
+    if (Error E = symbolizeAndFilterStackFrames())
       report_fatal_error(std::move(E));
   }
 
@@ -91,7 +91,11 @@ private:
       : DataBuffer(std::move(DataBuffer)), Binary(std::move(Bin)) {}
   Error initialize();
   Error readRawProfile();
-  Error symbolizeStackFrames();
+  // Symbolize and cache all the virtual addresses we encounter in the
+  // callstacks from the raw profile. Also prune callstack frames which we can't
+  // symbolize or those that belong to the runtime. For profile entries where
+  // the entire callstack is pruned, we drop the entry from the profile.
+  Error symbolizeAndFilterStackFrames();
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
   Error fillRecord(const uint64_t Id, const MemInfoBlock &MIB,
