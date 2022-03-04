@@ -119,7 +119,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // FIXME: this should be a ScopedHashTable for consistency.
   using PMapType = llvm::DenseMap<mlir::Value, PSetType>;
 
-  using PSetHistType = llvm::SetVector<mlir::Location>;
+  using PSetHistType = llvm::SetVector<std::pair<mlir::Location, mlir::Value>>;
   using PMapHistType = llvm::DenseMap<mlir::Value, PSetHistType>;
   PMapHistType pmapNullHist;
   PMapHistType pmapInvalidHist;
@@ -246,19 +246,19 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
   // in the pmap with invalid. For example, if pmap is {(p1,{a}), (p2,{a'})},
   // KILL(a') would invalidate only p2, and KILL(a) would invalidate both p1 and
   // p2.
-  for (auto value : localScope->localValues) {
+  for (auto pointee : localScope->localValues) {
     for (auto &mapEntry : pmap) {
       auto ptr = mapEntry.first;
 
       // We are deleting this entry anyways, nothing to do here.
-      if (value == ptr)
+      if (pointee == ptr)
         continue;
 
       // If the local value is part of this pset, it means
       // we need to invalidate it, otherwise keep searching.
       // FIXME: add support for x', x'', etc...
       auto &pset = mapEntry.second;
-      State valState = State::getLocalValue(value);
+      State valState = State::getLocalValue(pointee);
       if (!pset.contains(valState))
         continue;
 
@@ -268,10 +268,11 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
       pset.insert(State::getInvalid());
       if (!Pass.pmapInvalidHist.count(ptr))
         Pass.pmapInvalidHist[ptr] = {};
-      Pass.pmapInvalidHist[ptr].insert(getEndLocForHist(*Pass.currScope));
+      Pass.pmapInvalidHist[ptr].insert(
+          std::make_pair(getEndLocForHist(*Pass.currScope), pointee));
     }
     // Delete the local value from pmap, since its gone now.
-    pmap.erase(value);
+    pmap.erase(pointee);
   }
 }
 
@@ -459,8 +460,13 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   printPset(getPmap()[addr], Out);
 
   if (opts.emitHistoryInvalid()) {
-    for (auto note : pmapInvalidHist[addr])
-      D.attachNote(note) << "invalidated at end of scope";
+    for (auto &info : pmapInvalidHist[addr]) {
+      auto &note = info.first;
+      auto &pointee = info.second;
+      StringRef pointeeName = getVarNameFromValue(pointee);
+      D.attachNote(note) << "pointee '" << pointeeName
+                         << "' invalidated at end of scope";
+    }
   }
 
   if (opts.emitRemarkPset())
