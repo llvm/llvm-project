@@ -118,7 +118,7 @@ static inline int test_except(int excepts) {
 }
 
 static inline int set_except(int excepts) {
-  uint32_t statusWord = FEnv::getControlWord();
+  uint32_t statusWord = FEnv::getStatusWord();
   uint32_t statusValue = FEnv::getStatusValueForExcept(excepts);
   statusWord |= (statusValue << FEnv::ExceptionStatusFlagsBitPosition);
   FEnv::writeStatusWord(statusWord);
@@ -140,13 +140,14 @@ static inline int raise_except(int excepts) {
   };
 
   uint32_t toRaise = FEnv::getStatusValueForExcept(excepts);
+  int result = 0;
 
   if (toRaise & FEnv::INVALID) {
     divfunc(zero, zero);
     uint32_t statusWord = FEnv::getStatusWord();
     if (!((statusWord >> FEnv::ExceptionStatusFlagsBitPosition) &
           FEnv::INVALID))
-      return -1;
+      result = -1;
   }
 
   if (toRaise & FEnv::DIVBYZERO) {
@@ -154,21 +155,21 @@ static inline int raise_except(int excepts) {
     uint32_t statusWord = FEnv::getStatusWord();
     if (!((statusWord >> FEnv::ExceptionStatusFlagsBitPosition) &
           FEnv::DIVBYZERO))
-      return -1;
+      result = -1;
   }
   if (toRaise & FEnv::OVERFLOW) {
     divfunc(largeValue, smallValue);
     uint32_t statusWord = FEnv::getStatusWord();
     if (!((statusWord >> FEnv::ExceptionStatusFlagsBitPosition) &
           FEnv::OVERFLOW))
-      return -1;
+      result = -1;
   }
   if (toRaise & FEnv::UNDERFLOW) {
     divfunc(smallValue, largeValue);
     uint32_t statusWord = FEnv::getStatusWord();
     if (!((statusWord >> FEnv::ExceptionStatusFlagsBitPosition) &
           FEnv::UNDERFLOW))
-      return -1;
+      result = -1;
   }
   if (toRaise & FEnv::INEXACT) {
     float two = 2.0f;
@@ -179,9 +180,9 @@ static inline int raise_except(int excepts) {
     uint32_t statusWord = FEnv::getStatusWord();
     if (!((statusWord >> FEnv::ExceptionStatusFlagsBitPosition) &
           FEnv::INEXACT))
-      return -1;
+      result = -1;
   }
-  return 0;
+  return result;
 }
 
 static inline int get_round() {
