@@ -14,7 +14,6 @@
 //               ios_base::iostate& err, long double& v) const;
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: LIBCXX-WINDOWS-FIXME
 
 #include <locale>
 #include <ios>
@@ -23,6 +22,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
+#include "locale_helpers.h"
 #include "platform_support.h" // locale name macros
 
 typedef std::money_get<char, cpp17_input_iterator<const char*> > Fn;
@@ -76,7 +76,7 @@ int main(int, char**)
             assert(ex == 0);
         }
         {   // negative one
-            std::string v = "-0.01";
+            std::string v = LocaleHelpers::negate_en_US("0.01");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -98,7 +98,7 @@ int main(int, char**)
             assert(ex == 123456789);
         }
         {   // negative
-            std::string v = "-1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("1,234,567.89");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -109,7 +109,7 @@ int main(int, char**)
             assert(ex == -123456789);
         }
         {   // negative
-            std::string v = "-1234567.89";
+            std::string v = LocaleHelpers::negate_en_US("1234567.89");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -144,7 +144,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-            std::string v = "-$0.01";
+            std::string v = LocaleHelpers::negate_en_US("$0.01");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -155,7 +155,7 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // negative one, showbase
-            std::string v = "-$0.01";
+            std::string v = LocaleHelpers::negate_en_US("$0.01");
             std::showbase(ios);
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
@@ -192,7 +192,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = "-$1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("$1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
@@ -205,7 +205,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = "-USD 1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("USD 1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
@@ -217,7 +217,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = "-USD 1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("USD 1,234,567.89");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -242,7 +242,7 @@ int main(int, char**)
             assert(ex == 0);
         }
         {   // negative one
-            std::string v = "-0.01";
+            std::string v = LocaleHelpers::negate_en_US("0.01");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -264,7 +264,7 @@ int main(int, char**)
             assert(ex == 123456789);
         }
         {   // negative
-            std::string v = "-1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("1,234,567.89");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -275,7 +275,7 @@ int main(int, char**)
             assert(ex == -123456789);
         }
         {   // negative
-            std::string v = "-1234567.89";
+            std::string v = LocaleHelpers::negate_en_US("1234567.89");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -310,7 +310,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-            std::string v = "-USD 0.01";
+            std::string v = LocaleHelpers::negate_en_US("USD 0.01");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -321,7 +321,7 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // negative one, showbase
-            std::string v = "-USD 0.01";
+            std::string v = LocaleHelpers::negate_en_US("USD 0.01");
             std::showbase(ios);
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
@@ -358,7 +358,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = "-USD 1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("USD 1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
@@ -371,7 +371,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = "-$1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("$1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
@@ -383,7 +383,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::string v = "-$1,234,567.89";
+            std::string v = LocaleHelpers::negate_en_US("$1,234,567.89");
             typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -409,7 +409,7 @@ int main(int, char**)
             assert(ex == 0);
         }
         {   // negative one
-            std::wstring v = L"-0.01";
+            std::wstring v = LocaleHelpers::negate_en_US(L"0.01");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -431,7 +431,7 @@ int main(int, char**)
             assert(ex == 123456789);
         }
         {   // negative
-            std::wstring v = L"-1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"1,234,567.89");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -442,7 +442,7 @@ int main(int, char**)
             assert(ex == -123456789);
         }
         {   // negative
-            std::wstring v = L"-1234567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"1234567.89");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -477,7 +477,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-            std::wstring v = L"-$0.01";
+            std::wstring v = LocaleHelpers::negate_en_US(L"$0.01");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -488,7 +488,7 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // negative one, showbase
-            std::wstring v = L"-$0.01";
+            std::wstring v = LocaleHelpers::negate_en_US(L"$0.01");
             std::showbase(ios);
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
@@ -525,7 +525,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = L"-$1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"$1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
@@ -538,7 +538,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = L"-USD 1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"USD 1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
@@ -550,7 +550,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = L"-USD 1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"USD 1,234,567.89");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -575,7 +575,7 @@ int main(int, char**)
             assert(ex == 0);
         }
         {   // negative one
-            std::wstring v = L"-0.01";
+            std::wstring v = LocaleHelpers::negate_en_US(L"0.01");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -597,7 +597,7 @@ int main(int, char**)
             assert(ex == 123456789);
         }
         {   // negative
-            std::wstring v = L"-1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"1,234,567.89");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -608,7 +608,7 @@ int main(int, char**)
             assert(ex == -123456789);
         }
         {   // negative
-            std::wstring v = L"-1234567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"1234567.89");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -643,7 +643,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-            std::wstring v = L"-USD 0.01";
+            std::wstring v = LocaleHelpers::negate_en_US(L"USD 0.01");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
@@ -654,7 +654,7 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // negative one, showbase
-            std::wstring v = L"-USD 0.01";
+            std::wstring v = LocaleHelpers::negate_en_US(L"USD 0.01");
             std::showbase(ios);
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
@@ -691,7 +691,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = L"-USD 1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"USD 1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
@@ -704,7 +704,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = L"-$1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"$1,234,567.89");
             std::showbase(ios);
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
@@ -716,7 +716,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = L"-$1,234,567.89";
+            std::wstring v = LocaleHelpers::negate_en_US(L"$1,234,567.89");
             typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
