@@ -2196,6 +2196,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":Support",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
