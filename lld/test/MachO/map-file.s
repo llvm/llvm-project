@@ -30,16 +30,16 @@
 # CHECK-NEXT: [  2] {{.*}}{{/|\\}}map-file.s.tmp/foo.o
 
 # CHECK-NEXT: # Sections:
-# CHECK-NEXT: # Address    Size              Segment    Section
-# CHECK-NEXT: 0x[[#TEXT]]  0x{{[0-9a-f]+}}   __TEXT  __text
-# CHECK-NEXT: 0x[[#DATA]]  0x{{[0-9a-f]+}}   __TEXT  obj
-# CHECK-NEXT: 0x[[#BSS]]   0x{{[0-9a-f]+}}   __DATA  __common
+# CHECK-NEXT: # Address       Size              Segment  Section
+# CHECK-NEXT: 0x[[#%X,TEXT]]  0x{{[0-9a-f]+}}   __TEXT   __text
+# CHECK-NEXT: 0x[[#%X,DATA]]  0x{{[0-9a-f]+}}   __TEXT   obj
+# CHECK-NEXT: 0x[[#%X,BSS]]   0x{{[0-9a-f]+}}   __DATA   __common
 
 # CHECK-NEXT: # Symbols:
-# CHECK-NEXT: # Address        File  Name
-# CHECK-NEXT: 0x[[#MAIN]]      [  1]  _main
-# CHECK-NEXT: 0x[[#FOO]]       [  2]  _foo
-# CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
+# CHECK-NEXT: # Address           File   Name
+# CHECK-NEXT: 0x[[#%X,MAIN]]      [  1]  _main
+# CHECK-NEXT: 0x[[#%X,FOO]]       [  2]  _foo
+# CHECK-NEXT: 0x[[#%X,NUMBER]]    [  1]  _number
 
 # RUN: %lld -map %t/c-string-literal-map %t/c-string-literal.o -o %t/c-string-literal-out
 # RUN: FileCheck --check-prefix=CSTRING %s < %t/c-string-literal-map
