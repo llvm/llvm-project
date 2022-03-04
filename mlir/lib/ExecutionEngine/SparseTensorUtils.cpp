@@ -758,7 +758,7 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
   std::sort(order.begin(), order.end());
   for (uint64_t i = 0; i < rank; ++i) {
     if (i != order[i]) {
-      fprintf(stderr, "Permutation is not a permutation of 0..%lu\n", rank);
+      fprintf(stderr, "Not a permutation of 0..%" PRIu64 "\n", rank);
       exit(1);
     }
   }
