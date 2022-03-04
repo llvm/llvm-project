@@ -167,7 +167,6 @@ public:
   void makeUnsplittable() { UseAndIsSplittable.setInt(false); }
 
   Use *getUse() const { return UseAndIsSplittable.getPointer(); }
-  void setUse(Use *U) { UseAndIsSplittable.setPointer(U); }
 
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
@@ -219,7 +218,7 @@ public:
 class llvm::sroa::AllocaSlices {
 public:
   /// Construct the slices of a particular alloca.
-  AllocaSlices(const DataLayout &DL, AllocaInst &AI, bool &Changed);
+  AllocaSlices(const DataLayout &DL, AllocaInst &AI);
 
   /// Test whether a pointer to the allocation escapes our analysis.
   ///
@@ -271,12 +270,6 @@ public:
     return DeadUseIfPromotable;
   }
 
-  void forgetTheDead() {
-    DeadUsers.clear();
-    DeadUseIfPromotable.clear();
-    DeadOperands.clear();
-  };
-
   /// Access the dead operands referring to this alloca.
   ///
   /// These are operands which have cannot actually be used to refer to the
@@ -302,20 +295,10 @@ private:
 
   friend class AllocaSlices::SliceBuilder;
 
-  void formBackingAlloca(AllocaInst *AI, bool &Changed);
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Handle to alloca instruction to simplify method interfaces.
   AllocaInst &AI;
 #endif
-
-  /// Certain escaping uses of an alloca (non-capturing-ones)
-  /// do not prevent promotion, but force retention of the alloca.
-  /// This records if there are any such uses.
-  bool NeedsBackingAlloca = false;
-
-  /// Track if there are any `select`s/PHI's involving the alloca pointers.
-  bool HavePHINodesOrSelectInstrs = false;
 
   /// The instruction responsible for this alloca not having a known set
   /// of slices.
@@ -1072,10 +1055,6 @@ private:
       return;
     }
 
-    AS.HavePHINodesOrSelectInstrs = true;
-    if (AS.NeedsBackingAlloca && AS.HavePHINodesOrSelectInstrs)
-      return PI.setAborted(&I);
-
     insertUse(I, Offset, Size);
   }
 
@@ -1083,24 +1062,11 @@ private:
 
   void visitSelectInst(SelectInst &SI) { visitPHINodeOrSelectInst(SI); }
 
-  void visitCallBase(CallBase &CB) {
-    if (!IsOffsetKnown || !CB.doesNotCapture(U->getOperandNo()))
-      return PI.setAborted(&CB);
-    // If we know that the callee does not retain the pointer,
-    // then it does not prevent SROA, although we have to workaround this.
-    // However, for now, only allow uses, that, at most, read from said memory.
-    if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(U->getOperandNo()))
-      return PI.setAborted(&CB);
-    AS.NeedsBackingAlloca = true;
-    if (AS.NeedsBackingAlloca && AS.HavePHINodesOrSelectInstrs)
-      return PI.setAborted(&CB);
-  }
-
   /// Disable SROA entirely if there are unhandled users of the alloca.
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
 };
 
-AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI, bool &Changed)
+AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     :
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       AI(AI),
@@ -1116,10 +1082,6 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI, bool &Changed)
     assert(PointerEscapingInstr && "Did not track a bad instruction");
     return;
   }
-
-  // We may have found that the pointer to the AI escapes, but isn't captured.
-  if (NeedsBackingAlloca)
-    formBackingAlloca(&AI, Changed);
 
   llvm::erase_if(Slices, [](const Slice &S) { return S.isDead(); });
 
@@ -3625,122 +3587,6 @@ private:
 
 } // end anonymous namespace
 
-/// Apparently, we can promote the alloca, but some uses of the alloca
-/// are calls (that don't capture it's address), which require for the
-/// trace alloca to remain. To do so, we must form a new "backing" alloca,
-/// which will be kept as an up-to-date backup of the to-be-promoted-alloca's
-/// content, and used in it's place in these non-capturing calls.
-/// FIXME: support non-readonly non-capturing calls.
-void AllocaSlices::formBackingAlloca(AllocaInst *AllocaToPromote,
-                                     bool &Changed) {
-  assert(NeedsBackingAlloca &&
-         "Should not be called if there is no need to rewrite.");
-
-  // We are going to preserve all of the original instructions that were
-  // operating on the original alloca, so we must forget any instructions
-  // that were deemed as dead-to-be-deleted during normal promotion.
-  forgetTheDead();
-
-  Changed = true;
-
-  // Now, we want to retain all of the instructions operating on the original
-  // alloca, so to avoid much hassle, create a new alloca, and swap (RAUW) them.
-  AllocaInst *ShadowAlloca = cast<AllocaInst>(AllocaToPromote->clone());
-  ShadowAlloca->takeName(AllocaToPromote);
-  AllocaToPromote->setName(ShadowAlloca->getName() + ".prom");
-  ShadowAlloca->insertBefore(AllocaToPromote);
-  AllocaToPromote->replaceAllUsesWith(ShadowAlloca);
-
-  // Avoid recomputing the same pointer over and over again, cache it.
-  SmallDenseMap<std::pair<uint64_t, Type *>, Value *> RebasedPtrsCSE;
-
-  // Don't do anything fancy, just put new insts "right after" the alloca.
-  IRBuilderTy Builder(AllocaToPromote->getContext());
-  BasicBlock *AllocaToPromoteBB = AllocaToPromote->getParent();
-  Builder.SetInsertPoint(AllocaToPromoteBB,
-                         AllocaToPromoteBB->getFirstInsertionPt());
-
-  // Give a pointer `Offset` bytes into the `AllocaToPromote` with `PtrTy` type.
-  auto getRebasedPtr = [&RebasedPtrsCSE, &Builder, AllocaToPromote,
-                        DL = AllocaToPromote->getModule()->getDataLayout()](
-                           PointerType *PtrTy, const uint64_t Offset) {
-    // Look it up in a cache first.
-    auto It = RebasedPtrsCSE.find({Offset, PtrTy});
-    if (It != RebasedPtrsCSE.end())
-      return It->second;
-
-    // Otherwise, create a new pointer, and cache it for the future.
-    Value *NewPtr = getAdjustedPtr(
-        Builder, DL, AllocaToPromote,
-        APInt(DL.getIndexSizeInBits(PtrTy->getAddressSpace()), Offset), PtrTy,
-        "");
-    RebasedPtrsCSE[{Offset, PtrTy}] = NewPtr;
-
-    return NewPtr;
-  };
-
-  // Some instructions may have several uses of an alloca, and there's
-  // a separate slice for each use, so we must cache each instruction
-  // we clone, so that we only clone it once,
-  // not for each slice that references it.
-  SmallDenseMap<Instruction *, Instruction *> InstrCloneMap;
-
-  // Now, let's just deal with each slice. Roughly, we need to clone each
-  // instruction that is referenced by a slice (once per instruction!),
-  // and change the appropriate pointer from pointing at the shadow alloca
-  // into pointing into the alloca we are going to promote.
-  //
-  // NOTE: the original instruction is generally preserved,
-  // because we need to maintain the content parity between the two allocas!
-  for (Slice &S : Slices) {
-    // Just completely ignore dead slices.
-    if (S.isDead())
-      continue;
-
-    // Which instruction does this slice represent?
-    Use *OrigUse = S.getUse();
-    auto *OrigInstr = cast<Instruction>(OrigUse->getUser());
-
-    // Now, we need to make a clone of this instruction, but operating on
-    // the alloca-to-be-promoted instead.
-    Instruction *ClonedInstr;
-    // Only clone instruction once! See if we already did that for this instr.
-    auto It = InstrCloneMap.find(OrigInstr);
-    if (It != InstrCloneMap.end())
-      ClonedInstr = It->second;
-    else {
-      // This is the first time this instruction is seen.
-      // Clone it next to the original instruction, and cache it.
-      ClonedInstr = OrigInstr->clone();
-      ClonedInstr->insertBefore(OrigInstr);
-      InstrCloneMap.insert({OrigInstr, ClonedInstr});
-
-      // Also, if the instruction was returning anything, we do that instead.
-      if (!ClonedInstr->getType()->isVoidTy()) {
-        assert(isa<LoadInst>(OrigInstr) &&
-               "Not expecting to encounter here anything other than a `load`.");
-        ClonedInstr->setName(OrigInstr->getName() + ".prom");
-        OrigInstr->replaceAllUsesWith(ClonedInstr);
-      }
-
-      if (isa<LoadInst>(OrigInstr))
-        // We know that all the offending (non-capturing) calls do not modify
-        // the content of the shadow alloca, so we do not need to propagate
-        // the content of the shadow alloca to the alloca-to-be-promoted.
-        DeadUsers.push_back(OrigInstr);
-    }
-
-    // Final touch: the slice should refer to the
-    // use of the alloca-to-be-promoted, while it currently refers to
-    // use of the shadow alloca, so rectify that.
-    Value *NewPtr = getRebasedPtr(cast<PointerType>(OrigUse->get()->getType()),
-                                  S.beginOffset());
-    Use &ClonedUse = ClonedInstr->getOperandUse(OrigUse->getOperandNo());
-    ClonedUse.set(NewPtr);
-    S.setUse(&ClonedUse);
-  }
-}
-
 /// Strip aggregate type wrapping.
 ///
 /// This removes no-op aggregate types wrapping an underlying type. It will
@@ -4766,7 +4612,7 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
   Changed |= AggRewriter.rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.
-  AllocaSlices AS(DL, AI, Changed);
+  AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
     return Changed;
