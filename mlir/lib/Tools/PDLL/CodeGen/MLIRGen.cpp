@@ -17,6 +17,8 @@
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
+#include "mlir/Tools/PDLL/ODS/Context.h"
+#include "mlir/Tools/PDLL/ODS/Operation.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -33,7 +35,8 @@ class CodeGen {
 public:
   CodeGen(MLIRContext *mlirContext, const ast::Context &context,
           const llvm::SourceMgr &sourceMgr)
-      : builder(mlirContext), sourceMgr(sourceMgr) {
+      : builder(mlirContext), odsContext(context.getODSContext()),
+        sourceMgr(sourceMgr) {
     // Make sure that the PDL dialect is loaded.
     mlirContext->loadDialect<pdl::PDLDialect>();
   }
@@ -116,6 +119,9 @@ private:
   using VariableMapTy =
       llvm::ScopedHashTable<const ast::VariableDecl *, SmallVector<Value>>;
   VariableMapTy variables;
+
+  /// A reference to the ODS context.
+  const ods::Context &odsContext;
 
   /// The source manager of the PDLL ast.
   const llvm::SourceMgr &sourceMgr;
@@ -435,7 +441,28 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
                                              builder.getI32IntegerAttr(0));
       return builder.create<pdl::ResultsOp>(loc, mlirType, parentExprs[0]);
     }
-    llvm_unreachable("unhandled operation member access expression");
+
+    assert(opType.getName() && "expected valid operation name");
+    const ods::Operation *odsOp = odsContext.lookupOperation(*opType.getName());
+    assert(odsOp && "expected valid ODS operation information");
+
+    // Find the result with the member name or by index.
+    ArrayRef<ods::OperandOrResult> results = odsOp->getResults();
+    unsigned resultIndex = results.size();
+    if (llvm::isDigit(name[0])) {
+      name.getAsInteger(/*Radix=*/10, resultIndex);
+    } else {
+      auto findFn = [&](const ods::OperandOrResult &result) {
+        return result.getName() == name;
+      };
+      resultIndex = llvm::find_if(results, findFn) - results.begin();
+    }
+    assert(resultIndex < results.size() && "invalid result index");
+
+    // Generate the result access.
+    IntegerAttr index = builder.getI32IntegerAttr(resultIndex);
+    return builder.create<pdl::ResultsOp>(loc, genType(expr->getType()),
+                                          parentExprs[0], index);
   }
 
   // Handle tuple based member access.

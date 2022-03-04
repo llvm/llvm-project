@@ -57,6 +57,29 @@ StringRef Constraint::getSummary() const {
   return def->getName();
 }
 
+StringRef Constraint::getDefName() const {
+  // Functor used to check a base def in the case where the current def is
+  // anonymous.
+  auto checkBaseDefFn = [&](StringRef baseName) {
+    if (const auto *init = dyn_cast<llvm::DefInit>(def->getValueInit(baseName)))
+      return Constraint(init->getDef(), kind).getDefName();
+    return def->getName();
+  };
+
+  switch (kind) {
+  case CK_Attr:
+    if (def->isAnonymous())
+      return checkBaseDefFn("baseAttr");
+    return def->getName();
+  case CK_Type:
+    if (def->isAnonymous())
+      return checkBaseDefFn("baseType");
+    return def->getName();
+  default:
+    return def->getName();
+  }
+}
+
 AppliedConstraint::AppliedConstraint(Constraint &&constraint,
                                      llvm::StringRef self,
                                      std::vector<std::string> &&entities)
