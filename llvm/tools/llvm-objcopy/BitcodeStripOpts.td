@@ -23,5 +23,8 @@ def V : Flag<["-"], "V">,
         Alias<version>,
         HelpText<"Alias for --version">;
 
+def remove : Flag<["-"], "r">,
+        HelpText<"Remove the __LLVM bitcode segment entirely">;
+
 def output : JoinedOrSeparate<["-"], "o">, HelpText<"Write output to <file>">,
              MetaVarName<"<file>">;
