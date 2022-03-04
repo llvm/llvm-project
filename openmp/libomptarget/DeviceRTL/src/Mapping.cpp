@@ -258,7 +258,10 @@ uint32_t mapping::getNumberOfProcessorElements() {
 /// Execution mode
 ///
 ///{
-static int SHARED(IsSPMDMode);
+
+// TODO: This is a workaround for initialization coming from kernels outside of
+//       the TU. We will need to solve this more correctly in the future.
+int __attribute__((used, retain, weak)) SHARED(IsSPMDMode);
 
 void mapping::init(bool IsSPMD) {
   if (mapping::isInitialThreadInLevel0(IsSPMD))
