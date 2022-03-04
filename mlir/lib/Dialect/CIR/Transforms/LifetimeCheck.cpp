@@ -131,7 +131,11 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // local scope.
   struct LexicalScopeContext {
     unsigned Depth = 0;
-    LexicalScopeContext() = default;
+    LexicalScopeContext() = delete;
+
+    llvm::PointerUnion<mlir::Region *, mlir::Operation *> parent;
+    LexicalScopeContext(mlir::Region *R) : parent(R) {}
+    LexicalScopeContext(mlir::Operation *Op) : parent(Op) {}
     ~LexicalScopeContext() = default;
 
     // Track all local values added in this scope
@@ -202,6 +206,34 @@ static StringRef getVarNameFromValue(mlir::Value v) {
   return "";
 }
 
+static Location getEndLoc(Location loc, int idx = 1) {
+  auto fusedLoc = loc.dyn_cast<FusedLoc>();
+  if (!fusedLoc)
+    return loc;
+  return fusedLoc.getLocations()[idx];
+}
+
+static Location getEndLocForHist(Operation *Op) {
+  return getEndLoc(Op->getLoc());
+}
+
+static Location getEndLocForHist(Region *R) {
+  auto ifOp = dyn_cast<IfOp>(R->getParentOp());
+  assert(ifOp && "what other regions create their own scope?");
+  if (&ifOp.getThenRegion() == R)
+    return getEndLoc(ifOp.getLoc());
+  return getEndLoc(ifOp.getLoc(), /*idx=*/3);
+}
+
+static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
+  assert(!lsc.parent.isNull() && "shouldn't be null");
+  if (lsc.parent.is<Region *>())
+    return getEndLocForHist(lsc.parent.get<Region *>());
+  assert(lsc.parent.is<Operation *>() &&
+         "Only support operation beyond this point");
+  return getEndLocForHist(lsc.parent.get<Operation *>());
+}
+
 void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
   auto *localScope = Pass.currScope;
   auto &pmap = Pass.getPmap();
@@ -216,13 +248,15 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
   // p2.
   for (auto value : localScope->localValues) {
     for (auto &mapEntry : pmap) {
+      auto ptr = mapEntry.first;
 
       // We are deleting this entry anyways, nothing to do here.
-      if (value == mapEntry.first)
+      if (value == ptr)
         continue;
 
       // If the local value is part of this pset, it means
       // we need to invalidate it, otherwise keep searching.
+      // FIXME: add support for x', x'', etc...
       auto &pset = mapEntry.second;
       State valState = State::getLocalValue(value);
       if (!pset.contains(valState))
@@ -230,10 +264,11 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
 
       // Erase the reference and mark this invalid.
       // FIXME: add a way to just mutate the state.
-      // FIXME: right now we are piling up invalids, if it's already
-      // invalid we don't need to add again? only if tracking the path.
       pset.erase(valState);
       pset.insert(State::getInvalid());
+      if (!Pass.pmapInvalidHist.count(ptr))
+        Pass.pmapInvalidHist[ptr] = {};
+      Pass.pmapInvalidHist[ptr].insert(getEndLocForHist(*Pass.currScope));
     }
     // Delete the local value from pmap, since its gone now.
     pmap.erase(value);
@@ -255,7 +290,7 @@ void LifetimeCheckPass::checkRegionWithScope(Region &region) {
   // Add a new scope. Note that as part of the scope cleanup process
   // we apply section 2.3 KILL(x) functionality, turning relevant
   // references invalid.
-  LexicalScopeContext lexScope{};
+  LexicalScopeContext lexScope{&region};
   LexicalScopeGuard scopeGuard{*this, &lexScope};
   for (Block &block : region.getBlocks())
     checkBlock(block);
@@ -272,7 +307,7 @@ void LifetimeCheckPass::checkFunc(Operation *op) {
   // Add a new scope. Note that as part of the scope cleanup process
   // we apply section 2.3 KILL(x) functionality, turning relevant
   // references invalid.
-  LexicalScopeContext lexScope{};
+  LexicalScopeContext lexScope{op};
   LexicalScopeGuard scopeGuard{*this, &lexScope};
 
   // Create a new pmap for this function.
@@ -416,11 +451,17 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   // Note that usually the use of the invalid address happens at the
   // load or store using the result of this loadOp.
   StringRef varName = getVarNameFromValue(addr);
-  emitWarning(loadOp.getLoc()) << "use of invalid pointer '" << varName << "'";
+  auto D = emitWarning(loadOp.getLoc());
+  D << "use of invalid pointer '" << varName << "'";
 
   llvm::SmallString<128> psetStr;
   llvm::raw_svector_ostream Out(psetStr);
   printPset(getPmap()[addr], Out);
+
+  if (opts.emitHistoryInvalid()) {
+    for (auto note : pmapInvalidHist[addr])
+      D.attachNote(note) << "invalidated at end of scope";
+  }
 
   if (opts.emitRemarkPset())
     emitRemark(loadOp.getLoc()) << "pset => " << Out.str();
@@ -441,7 +482,10 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     // No need to create a new pmap when entering a new scope since it
     // doesn't cause control flow to diverge (as it does in presence
     // of cir::IfOp).
-    LexicalScopeContext lexScope{};
+    //
+    // Also note that for dangling pointers coming from if init stmts
+    // should be caught just fine, given that a ScopeOp embraces a IfOp.
+    LexicalScopeContext lexScope{op};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
     for (Region &region : op->getRegions())
       checkRegion(region);
