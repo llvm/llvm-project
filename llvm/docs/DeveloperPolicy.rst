@@ -46,12 +46,8 @@ quality.
 Stay Informed
 -------------
 
-Developers should stay informed by reading at least the "dev" mailing list for
-the projects you are interested in, such as `llvm-dev
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ for LLVM, `cfe-dev
-<http://lists.llvm.org/mailman/listinfo/cfe-dev>`_ for Clang, or `lldb-dev
-<http://lists.llvm.org/mailman/listinfo/lldb-dev>`_ for LLDB.  If you are
-doing anything more than just casual work on LLVM, it is suggested that you also
+Developers should stay informed by reading the `LLVM Discourse forums`_. 
+If you are doing anything more than just casual work on LLVM, it is suggested that you also
 subscribe to the "commits" mailing list for the subproject you're interested in,
 such as `llvm-commits
 <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_, `cfe-commits
@@ -61,14 +57,13 @@ such as `llvm-commits
 way to see what other people are interested in and watching the flow of the
 project as a whole.
 
-We recommend that active developers register an email account with `LLVM
-Bugzilla <https://bugs.llvm.org/>`_ and preferably subscribe to the `llvm-bugs
+We recommend that active developers monitor incoming issues to our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_ and preferably subscribe to the `llvm-bugs
 <http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
 of bugs and enhancements occurring in LLVM.  We really appreciate people who are
 proactive at catching incoming bugs in their components and dealing with them
 promptly.
 
-Please be aware that all public LLVM mailing lists are public and archived, and
+Please be aware that all public LLVM mailing lists and discourse forums are public and archived, and
 that notices of confidentiality or non-disclosure cannot be respected.
 
 .. _patch:
@@ -219,7 +214,7 @@ the future that the change is responsible for.  For example:
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
 
-* You are expected to address any `Bugzilla bugs <https://bugs.llvm.org/>`_ that
+* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
   result from your change.
 
 We prefer for this to be handled before submission but understand that it isn't
@@ -281,7 +276,7 @@ Below are some guidelines about the format of the message itself:
   code snippets and gory details should be left to bug comments, web
   review or the mailing list.
 
-* If the patch fixes a bug in bugzilla, please include the PR# in the message.
+* If the patch fixes a bug in GitHub Issues, please include the PR# in the message.
 
 * Text formatting and spelling should follow the same rules as documentation
   and in-code comments, ex. capitalization, full stop, etc.
@@ -435,8 +430,7 @@ Making a Major Change
 ---------------------
 
 When a developer begins a major new project with the aim of contributing it back
-to LLVM, they should inform the community with an email to the `llvm-dev
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ email list, to the extent
+to LLVM, they should inform the community with a post to the `LLVM Discourse forums`_, to the extent
 possible. The reason for this is to:
 
 #. keep the community informed about future changes to LLVM,
@@ -593,7 +587,7 @@ C API Changes
 * Including new things into the API: If an LLVM subcomponent has a C API already
   included, then expanding that C API is acceptable. Adding C API for
   subcomponents that don't currently have one needs to be discussed on the
-  mailing list for design and maintainability feedback prior to implementation.
+  `LLVM Discourse forums`_ for design and maintainability feedback prior to implementation.
 
 * Documentation: Any changes to the C API are required to be documented in the
   release notes so that it's clear to external users who do not follow the
@@ -613,7 +607,7 @@ will only be done through the following process:
     at a minimum. This time-based guideline is not strict: we may support much
     older compilers, or decide to support fewer versions.
 
-  * An RFC is sent to the `llvm-dev mailing list`_
+  * An RFC is sent to the `LLVM Discourse forums`_
 
     - Detail upsides of the version increase (e.g. which newer C++ language or
       library features LLVM should use; avoid miscompiles in particular compiler
@@ -625,7 +619,7 @@ will only be done through the following process:
     softer transition path for developers compiling LLVM, because the
     error can be turned into a warning using a CMake flag. This is an important
     step: LLVM still doesn't have code which requires the new toolchains, but it
-    soon will. If you compile LLVM but don't read the mailing list, we should
+    soon will. If you compile LLVM but don't read the forums, we should
     tell you!
 
   * Ensure that at least one LLVM release has had this soft-error. Not all
@@ -640,7 +634,7 @@ will only be done through the following process:
   * Start using the new features in LLVM's codebase.
 
 Here's a `sample RFC
-<http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
+<https://discourse.llvm.org/t/rfc-migrating-past-c-11/50943>`_ and the
 `corresponding change <https://reviews.llvm.org/D57264>`_.
 
 .. _ci-usage:
@@ -707,7 +701,7 @@ than *peripheral* projects, and the latter may have additional differences.
 However, this is really only intended to cover common cases
 that we have seen arise: different situations are different, and we are open
 to discussing unusual cases as well - just start an RFC thread on the
-`llvm-dev mailing list`_.
+`LLVM Discourse forums`_.
 
 Adding a New Target
 -------------------
@@ -802,7 +796,7 @@ Those wishing to add a new target to LLVM must follow the procedure below:
 1. Read this section and make sure your target follows all requirements. For
    minor issues, your community will be responsible for making all necessary
    adjustments soon after the initial merge.
-2. Send a request for comment (RFC) to the llvm-dev@ mailing list, describing
+2. Send a request for comment (RFC) to the `LLVM Discourse forums`_ describing
    your target and how it follows all the requirements and what work has been
    done and will need to be done to accommodate the official target requirements.
    Make sure to expose any and all controversial issues, changes needed in the
@@ -825,7 +819,7 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    sure the progress is still consistent.
 7. Once all official requirements have been fulfilled (as above), the code owner
    should request the target to be enabled by default by sending another RFC to
-   the llvm-dev@ mailing list.
+   the `LLVM Discourse forums`_.
 
 Adding an Established Project To the LLVM Monorepo
 --------------------------------------------------
@@ -860,7 +854,7 @@ components to a high bar similar to "official targets", they:
    "should" concerns above.
 
 If you have a project that you think would make sense to add to the LLVM
-monorepo, please start an RFC thread on the `llvm-dev mailing list`_ to kick off
+monorepo, please start an RFC topic on the `LLVM Discourse forums`_ to kick off
 the discussion.  This process can take some time and iteration - please don’t
 be discouraged or intimidated by that!
 
@@ -919,10 +913,10 @@ When approved, the llvm-admin group can grant the new project:
 Graduation to the mono-repo would follow existing processes and standards for
 becoming a first-class part of the monorepo.  Similarly, an incubating project
 may be eventually retired, but no process has been established for that yet.  If
-and when this comes up, please start an RFC discussion on llvm-dev.
+and when this comes up, please start an RFC discussion on the `LLVM Discourse forums`_.
 
 This process is very new - please expect the details to change, it is always
-safe to ask on the `llvm-dev mailing list`_ about this.
+safe to ask on the `LLVM Discourse forums`_ about this.
 
 Suggested disclaimer for the project README and the main project web page:
 
@@ -957,8 +951,8 @@ process to take at least 4-6 weeks.  If you would like to contribute code
 under a different license, please create a Phabricator review with the code
 you want to contribute and email board@llvm.org requesting a review.
 
-If you have questions or comments about these topics, please contact the
-`LLVM Developer's Mailing List <mailto:llvm-dev@lists.llvm.org>`_.  However,
+If you have questions or comments about these topics, please ask on the
+`LLVM Discourse forums`_.  However,
 please realize that most compiler developers are not lawyers, and therefore you
 will not be getting official legal advice.
 
@@ -1202,4 +1196,4 @@ to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
 
-.. _llvm-dev mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev
+.. _LLVM Discourse forums: https://discourse.llvm.org
