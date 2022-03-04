@@ -1246,11 +1246,12 @@ mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
   // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
   // The if scope contains the full source range for IfStmt.
   auto scopeLoc = getLoc(S.getSourceRange());
-  auto scopeLocBegin = getLoc(S.getSourceRange().getBegin());
-  auto scopeLocEnd = getLoc(S.getSourceRange().getEnd());
   builder.create<mlir::cir::ScopeOp>(
       scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto scopeLocBegin = fusedLoc.getLocations()[0];
+        auto scopeLocEnd = fusedLoc.getLocations()[1];
         LexicalScopeContext lexScope{builder, scopeLocBegin, scopeLocEnd};
         LexicalScopeGuard lexIfScopeGuard{*this, &lexScope};
         res = ifStmtBuilder();
@@ -1457,11 +1458,13 @@ mlir::LogicalResult CIRGenModule::buildCompoundStmt(const CompoundStmt &S) {
 
   // Add local scope to track new declared variables.
   SymTableScopeTy varScope(symbolTable);
-  auto locBegin = getLoc(S.getSourceRange().getBegin());
-  auto locEnd = getLoc(S.getSourceRange().getEnd());
+  auto scopeLoc = getLoc(S.getSourceRange());
   builder.create<mlir::cir::ScopeOp>(
-      locBegin, mlir::TypeRange(), /*scopeBuilder=*/
+      scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto locBegin = fusedLoc.getLocations()[0];
+        auto locEnd = fusedLoc.getLocations()[1];
         LexicalScopeContext lexScope{builder, locBegin, locEnd};
         LexicalScopeGuard lexScopeGuard{*this, &lexScope};
         res = compoundStmtBuilder();
