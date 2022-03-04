@@ -1,15 +1,14 @@
 if (LLVM_LIBC_FULL_BUILD)
-add_entrypoint_object(
-  __errno_location
+add_object_library(
+  errno
   SRCS
-    __errno_location.cpp
+    errno.cpp
   HDRS
-    __errno_location.h
     llvmlibc_errno.h
 )
 else()
-add_entrypoint_object(
-  __errno_location
+add_object_library(
+  errno
   SRCS
     dummy_errno.cpp
   HDRS
