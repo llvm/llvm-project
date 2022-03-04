@@ -26,7 +26,7 @@ add_llvm_executable(${test_name}
   IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH
   CommandLineInitTest.cpp)
 
-target_link_libraries(${test_name} PRIVATE gtest)
+target_link_libraries(${test_name} PRIVATE llvm_gtest)
 
 add_dependencies(${test_suite} ${test_name})
 
