@@ -171,8 +171,7 @@ bool FileSystem::IsDirectory(const FileSpec &file_spec) const {
 
 bool FileSystem::IsLocal(const Twine &path) const {
   bool b = false;
-  if (m_fs)
-    m_fs->isLocal(path, b);
+  m_fs->isLocal(path, b);
   return b;
 }
 
