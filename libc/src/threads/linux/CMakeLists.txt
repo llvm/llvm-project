@@ -50,7 +50,7 @@ add_entrypoint_object(
     libc.include.threads
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.sys.mman.mmap
   COMPILE_OPTIONS
     -O3

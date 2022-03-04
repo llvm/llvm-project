@@ -11,5 +11,5 @@ add_libc_unittest(
   SRCS
     errno_test.cpp
   DEPENDS
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
