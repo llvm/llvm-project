@@ -71,7 +71,23 @@ std::wstring convert_thousands_sep_ru_RU(std::wstring const& in) {
 #endif
 }
 
+std::wstring negate_en_US(std::wstring s) {
+#if defined(_WIN32)
+  return L"(" + s + L")";
+#else
+  return L"-" + s;
+#endif
+}
+
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
+
+std::string negate_en_US(std::string s) {
+#if defined(_WIN32)
+  return "(" + s + ")";
+#else
+  return "-" + s;
+#endif
+}
 
 MultiStringType currency_symbol_ru_RU() {
 #if defined(_CS_GNU_LIBC_VERSION)
