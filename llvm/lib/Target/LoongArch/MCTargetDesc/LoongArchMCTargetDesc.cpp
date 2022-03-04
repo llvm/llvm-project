@@ -75,25 +75,12 @@ static MCInstPrinter *createLoongArchMCInstPrinter(const Triple &T,
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
   for (Target *T : {&getTheLoongArch32Target(), &getTheLoongArch64Target()}) {
-    // Register the MC register info.
     TargetRegistry::RegisterMCRegInfo(*T, createLoongArchMCRegisterInfo);
-
-    // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createLoongArchMCInstrInfo);
-
-    // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createLoongArchMCSubtargetInfo);
-
-    // Register the MC asm info.
     TargetRegistry::RegisterMCAsmInfo(*T, createLoongArchMCAsmInfo);
-
-    // Register the MC Code Emitter
     TargetRegistry::RegisterMCCodeEmitter(*T, createLoongArchMCCodeEmitter);
-
-    // Register the asm backend.
     TargetRegistry::RegisterMCAsmBackend(*T, createLoongArchAsmBackend);
-
-    // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createLoongArchMCInstPrinter);
   }
 }
