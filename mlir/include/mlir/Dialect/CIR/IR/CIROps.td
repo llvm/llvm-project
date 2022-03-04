@@ -312,23 +312,23 @@ def IfOp : CIR_Op<"if",
     } else {
       ...
     }
-    ```
 
-    `cir.if` defines no values and the 'else' can be omitted. Every region
-    must be terminated by `cir.yield`, which is implicit in the asm form.
-
-    Example:
-
-    ```mlir
-    cir.if %b  {
+    cir.if %c  {
       ...
     }
+
+    cir.if %c  {
+      ...
+      br ^a
+    ^a:
+      cir.yield
+    }
     ```
+
+    `cir.if` defines no values and the 'else' can be omitted. `cir.yield` must
+    explicitly terminate the region if it has more than one block.
   }];
   let arguments = (ins CIR_BoolType:$condition);
-
-  // FIXME: for now the "then" region only has one block, that should change
-  // soon as building CIR becomes more complex.
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
 
   // FIXME: unify these within CIR_Ops.
@@ -368,10 +368,7 @@ def YieldOp : CIR_Op<"yield", [Pure, ReturnLike, Terminator,
     but it will be useful to represent lifetime extension in the future. In
     that case the operands must match the parent operation's results.
 
-    If the parent operation defines no values, then the "cir.yield" may be
-    left out in the custom syntax and the builders will insert one implicitly.
-    Otherwise, it has to be present in the syntax to indicate which values are
-    yielded.
+    `cir.yield` be present whenever the region has more than one block.
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);

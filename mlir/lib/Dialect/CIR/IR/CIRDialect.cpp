@@ -31,7 +31,6 @@ using namespace mlir::cir;
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
-
 namespace {
 struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
@@ -155,6 +154,7 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   result.regions.reserve(2);
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
+  auto loc = parser.getCurrentLocation();
 
   auto &builder = parser.getBuilder();
   OpAsmParser::UnresolvedOperand cond;
@@ -164,29 +164,49 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(cond, boolType, result.operands))
     return failure();
 
-  auto getOrInsertTerminator = [&](Region *r) {
-    ::mlir::impl::ensureRegionTerminator(
-        *r, parser.getBuilder(), result.location,
-        [](OpBuilder &builder, Location loc) {
-          OperationState state(loc, YieldOp::getOperationName());
-          YieldOp::build(builder, state);
-          return Operation::create(state);
-        });
+  auto checkYieldTerminator = [&](Region *r) {
+    if (r->hasOneBlock()) {
+      ::mlir::impl::ensureRegionTerminator(
+          *r, parser.getBuilder(), result.location,
+          [](OpBuilder &builder, Location loc) {
+            OperationState state(loc, YieldOp::getOperationName());
+            YieldOp::build(builder, state);
+            return Operation::create(state);
+          });
+      return success();
+    }
+
+    // Soft verification: test that at least one block has a yield terminator.
+    bool foundYield = false;
+    for (Block &block : r->getBlocks()) {
+      if (block.empty())
+        continue;
+      auto &op = block.back();
+      if (op.hasTrait<mlir::OpTrait::IsTerminator>() && isa<YieldOp>(op)) {
+        foundYield = true;
+        break;
+      }
+    }
+    if (!foundYield) {
+      parser.emitError(loc, "expected at least one block with cir.yield");
+      return failure();
+    }
+    return success();
   };
 
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{},
                          /*argTypes=*/{}))
     return failure();
-  assert(thenRegion->hasOneBlock() && "not yet implemented");
-  getOrInsertTerminator(thenRegion);
+  if (checkYieldTerminator(thenRegion).failed())
+    return failure();
 
   // If we find an 'else' keyword then parse the 'else' region.
   if (!parser.parseOptionalKeyword("else")) {
     if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-    assert(elseRegion->hasOneBlock() && "not yet implemented");
-    getOrInsertTerminator(elseRegion);
+    if (checkYieldTerminator(elseRegion).failed())
+      return failure();
   }
 
   // Parse the optional attribute list.
@@ -197,9 +217,10 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void IfOp::print(OpAsmPrinter &p) {
   p << " " << getCondition() << " ";
-  p.printRegion(getThenRegion(),
+  auto &thenRegion = this->getThenRegion();
+  p.printRegion(thenRegion,
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/!thenRegion.hasOneBlock());
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = this->getElseRegion();
@@ -207,7 +228,7 @@ void IfOp::print(OpAsmPrinter &p) {
     p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/false);
+                  /*printBlockTerminators=*/!thenRegion.hasOneBlock());
   }
 
   p.printOptionalAttrDict(getOperation()->getAttrs());
@@ -292,18 +313,44 @@ ParseResult ScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create one region within 'scope'.
   result.regions.reserve(1);
   Region *scopeRegion = result.addRegion();
+  auto loc = parser.getCurrentLocation();
 
   // Parse the scope region.
   if (parser.parseRegion(*scopeRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
-  assert(scopeRegion->hasOneBlock() && "not yet implemented");
-  ::mlir::impl::ensureRegionTerminator(
-      *scopeRegion, parser.getBuilder(), result.location,
-      [](OpBuilder &builder, Location loc) {
-        OperationState state(loc, YieldOp::getOperationName());
-        YieldOp::build(builder, state);
-        return Operation::create(state);
-      });
+
+  auto checkYieldTerminator = [&](Region *r) {
+    if (r->hasOneBlock()) {
+      ::mlir::impl::ensureRegionTerminator(
+          *r, parser.getBuilder(), result.location,
+          [](OpBuilder &builder, Location loc) {
+            OperationState state(loc, YieldOp::getOperationName());
+            YieldOp::build(builder, state);
+            return Operation::create(state);
+          });
+      return success();
+    }
+
+    // Soft verification: test that at least one block has a yield terminator.
+    bool foundYield = false;
+    for (Block &block : r->getBlocks()) {
+      if (block.empty())
+        continue;
+      auto &op = block.back();
+      if (op.hasTrait<mlir::OpTrait::IsTerminator>() && isa<YieldOp>(op)) {
+        foundYield = true;
+        break;
+      }
+    }
+    if (!foundYield) {
+      parser.emitError(loc, "expected at least one block with cir.yield");
+      return failure();
+    }
+    return success();
+  };
+
+  if (checkYieldTerminator(scopeRegion).failed())
+    return failure();
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -313,9 +360,10 @@ ParseResult ScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void ScopeOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printRegion(getScopeRegion(),
+  auto &scopeRegion = this->getScopeRegion();
+  p.printRegion(scopeRegion,
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/!scopeRegion.hasOneBlock());
 
   p.printOptionalAttrDict(getOperation()->getAttrs());
 }
