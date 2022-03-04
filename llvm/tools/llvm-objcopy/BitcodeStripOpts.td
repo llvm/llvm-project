@@ -17,8 +17,11 @@ def help : Flag<["--"], "help">;
 def h : Flag<["-"], "h">, Alias<help>;
 
 def version : Flag<["--"], "version">,
-              HelpText<"Print the version and exit.">;
+              HelpText<"Print the version and exit">;
 
 def V : Flag<["-"], "V">,
         Alias<version>,
         HelpText<"Alias for --version">;
+
+def output : JoinedOrSeparate<["-"], "o">, HelpText<"Write output to <file>">,
+             MetaVarName<"<file>">;

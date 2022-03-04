@@ -1221,7 +1221,12 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
                              "llvm-bitcode-strip expects a single input file");
   assert(!Positional.empty());
   Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[0];
+
+  if (!InputArgs.hasArg(BITCODE_STRIP_output)) {
+    return createStringError(errc::invalid_argument,
+                             "-o is a required argument");
+  }
+  Config.OutputFilename = InputArgs.getLastArgValue(BITCODE_STRIP_output);
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);
