@@ -449,10 +449,18 @@ void EventThreadFunction() {
           case lldb::eStateSuspended:
             break;
           case lldb::eStateStopped:
-            // Only report a stopped event if the process was not restarted.
-            if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
-              SendStdOutStdErr(process);
-              SendThreadStoppedEvent();
+            // We launch and attach in synchronous mode then the first stop
+            // event will not be delivered. If we use "launchCommands" during a
+            // launch or "attachCommands" during an attach we might some process
+            // stop events which we do not want to send an event for. We will
+            // manually send a stopped event in request_configurationDone(...)
+            // so don't send any before then.
+            if (g_vsc.configuration_done_sent) {
+              // Only report a stopped event if the process was not restarted.
+              if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
+                SendStdOutStdErr(process);
+                SendThreadStoppedEvent();
+              }
             }
             break;
           case lldb::eStateRunning:
@@ -600,6 +608,7 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   llvm::StringRef core_file = GetString(arguments, "coreFile");
+  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
   g_vsc.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
   std::vector<std::string> postRunCommands =
@@ -657,6 +666,10 @@ void request_attach(const llvm::json::Object &request) {
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
+
+    // Make sure the process is attached and stopped before proceeding as the
+    // the launch commands are not run using the synchronous mode.
+    error = g_vsc.WaitForProcessToStop(timeout_seconds);
   }
 
   if (error.Success() && core_file.empty()) {
@@ -787,6 +800,7 @@ void request_configurationDone(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+  g_vsc.configuration_done_sent = true;
   if (g_vsc.stop_at_entry)
     SendThreadStoppedEvent();
   else
@@ -1652,6 +1666,7 @@ void request_launch(const llvm::json::Object &request) {
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1726,6 +1741,10 @@ void request_launch(const llvm::json::Object &request) {
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
+    // Make sure the process is launched and stopped at the entry point before
+    // proceeding as the the launch commands are not run using the synchronous
+    // mode.
+    error = g_vsc.WaitForProcessToStop(timeout_seconds);
   }
 
   if (error.Fail()) {

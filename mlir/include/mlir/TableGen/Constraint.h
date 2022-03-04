@@ -54,6 +54,11 @@ public:
   // description is not provided, returns the TableGen def name.
   StringRef getSummary() const;
 
+  /// Returns the name of the TablGen def of this constraint. In some cases
+  /// where the current def is anonymous, the name of the base def is used (e.g.
+  /// `Optional<>`/`Variadic<>` type constraints).
+  StringRef getDefName() const;
+
   Kind getKind() const { return kind; }
 
 protected:
