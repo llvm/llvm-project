@@ -25744,6 +25744,16 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
     ShAmt = DAG.getVectorShuffle(AmtVT, dl, ShAmt, DAG.getUNDEF(AmtVT), Mask);
   }
 
+  // Peek through any zext node if we can get back to a 128-bit source.
+  if (AmtVT.getScalarSizeInBits() == 64 &&
+      (ShAmt.getOpcode() == ISD::ZERO_EXTEND ||
+       ShAmt.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) &&
+      ShAmt.getOperand(0).getValueType().isSimple() &&
+      ShAmt.getOperand(0).getValueType().is128BitVector()) {
+    ShAmt = ShAmt.getOperand(0);
+    AmtVT = ShAmt.getSimpleValueType();
+  }
+
   // See if we can mask off the upper elements using the existing source node.
   // The shift uses the entire lower 64-bits of the amount vector, so no need to
   // do this for vXi64 types.
@@ -25784,10 +25794,13 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
   // Zero-extend bottom element to v2i64 vector type, either by extension or
   // shuffle masking.
   if (!IsMasked && AmtVT.getScalarSizeInBits() < 64) {
-    if (Subtarget.hasSSE41())
+    if (AmtVT == MVT::v4i32 && (ShAmt.getOpcode() == X86ISD::VBROADCAST ||
+                                ShAmt.getOpcode() == X86ISD::VBROADCAST_LOAD)) {
+      ShAmt = DAG.getNode(X86ISD::VZEXT_MOVL, SDLoc(ShAmt), MVT::v4i32, ShAmt);
+    } else if (Subtarget.hasSSE41()) {
       ShAmt = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(ShAmt),
                           MVT::v2i64, ShAmt);
-    else {
+    } else {
       SDValue ByteShift = DAG.getTargetConstant(
           (128 - AmtVT.getScalarSizeInBits()) / 8, SDLoc(ShAmt), MVT::i8);
       ShAmt = DAG.getBitcast(MVT::v16i8, ShAmt);
