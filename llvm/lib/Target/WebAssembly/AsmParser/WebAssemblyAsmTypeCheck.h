@@ -44,6 +44,7 @@ class WebAssemblyAsmTypeCheck final {
   bool getSymRef(SMLoc ErrorLoc, const MCInst &Inst,
                  const MCSymbolRefExpr *&SymRef);
   bool getGlobal(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
+  bool getTable(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
 
 public:
   WebAssemblyAsmTypeCheck(MCAsmParser &Parser, const MCInstrInfo &MII, bool is64);
