@@ -4,7 +4,7 @@
 # RUN: llvm-bitcode-strip %t -o %t2
 # RUN: cmp %t %t2
 
-# MISSING-ARG: llvm-bitcode-strip: error: -o is a required argument
+# MISSING-ARG: error: -o is a required argument
 
 --- !mach-o
 FileHeader:
