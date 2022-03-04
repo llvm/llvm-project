@@ -8479,6 +8479,7 @@ cc_library(
         ":IR",
         ":PDLDialect",
         ":PDLLAST",
+        ":PDLLODS",
         ":Parser",
         ":Support",
         "//llvm:Support",
@@ -8513,6 +8514,7 @@ cc_binary(
     deps = [
         ":IR",
         ":PDLLAST",
+        ":PDLLODS",
         ":PDLLCodeGen",
         ":PDLLParser",
         ":Support",
