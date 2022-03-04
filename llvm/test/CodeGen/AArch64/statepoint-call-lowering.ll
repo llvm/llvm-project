@@ -161,8 +161,8 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-LABEL: test_cross_bb:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -205,8 +205,8 @@ define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-exampl
 ; CHECK-LABEL: test_attributes:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov x18, xzr
 ; CHECK-NEXT:    ldr q0, [sp, #48]

@@ -42,7 +42,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -4079,118 +4078,6 @@ void AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
   }
 }
 
-// Convenience function to create a DWARF expression for
-//   Expr + NumBytes + NumVGScaledBytes * AArch64::VG
-static void appendVGScaledOffsetExpr(SmallVectorImpl<char> &Expr, int NumBytes,
-                                     int NumVGScaledBytes, unsigned VG,
-                                     llvm::raw_string_ostream &Comment) {
-  uint8_t buffer[16];
-
-  if (NumBytes) {
-    Expr.push_back(dwarf::DW_OP_consts);
-    Expr.append(buffer, buffer + encodeSLEB128(NumBytes, buffer));
-    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-    Comment << (NumBytes < 0 ? " - " : " + ") << std::abs(NumBytes);
-  }
-
-  if (NumVGScaledBytes) {
-    Expr.push_back((uint8_t)dwarf::DW_OP_consts);
-    Expr.append(buffer, buffer + encodeSLEB128(NumVGScaledBytes, buffer));
-
-    Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
-    Expr.append(buffer, buffer + encodeULEB128(VG, buffer));
-    Expr.push_back(0);
-
-    Expr.push_back((uint8_t)dwarf::DW_OP_mul);
-    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-
-    Comment << (NumVGScaledBytes < 0 ? " - " : " + ")
-            << std::abs(NumVGScaledBytes) << " * VG";
-  }
-}
-
-// Creates an MCCFIInstruction:
-//    { DW_CFA_def_cfa_expression, ULEB128 (sizeof expr), expr }
-static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
-                                               unsigned Reg,
-                                               const StackOffset &Offset) {
-  int64_t NumBytes, NumVGScaledBytes;
-  AArch64InstrInfo::decomposeStackOffsetForDwarfOffsets(Offset, NumBytes,
-                                                        NumVGScaledBytes);
-  std::string CommentBuffer;
-  llvm::raw_string_ostream Comment(CommentBuffer);
-
-  if (Reg == AArch64::SP)
-    Comment << "sp";
-  else if (Reg == AArch64::FP)
-    Comment << "fp";
-  else
-    Comment << printReg(Reg, &TRI);
-
-  // Build up the expression (Reg + NumBytes + NumVGScaledBytes * AArch64::VG)
-  SmallString<64> Expr;
-  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfReg));
-  Expr.push_back(0);
-  appendVGScaledOffsetExpr(Expr, NumBytes, NumVGScaledBytes,
-                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
-
-  // Wrap this into DW_CFA_def_cfa.
-  SmallString<64> DefCfaExpr;
-  DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
-  uint8_t buffer[16];
-  DefCfaExpr.append(buffer, buffer + encodeULEB128(Expr.size(), buffer));
-  DefCfaExpr.append(Expr.str());
-  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(),
-                                        Comment.str());
-}
-
-MCCFIInstruction llvm::createDefCFA(const TargetRegisterInfo &TRI,
-                                    unsigned FrameReg, unsigned Reg,
-                                    const StackOffset &Offset) {
-  if (Offset.getScalable())
-    return createDefCFAExpression(TRI, Reg, Offset);
-
-  if (FrameReg == Reg)
-    return MCCFIInstruction::cfiDefCfaOffset(nullptr, int(Offset.getFixed()));
-
-  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  return MCCFIInstruction::cfiDefCfa(nullptr, DwarfReg, (int)Offset.getFixed());
-}
-
-MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
-                                       unsigned Reg,
-                                       const StackOffset &OffsetFromDefCFA) {
-  int64_t NumBytes, NumVGScaledBytes;
-  AArch64InstrInfo::decomposeStackOffsetForDwarfOffsets(
-      OffsetFromDefCFA, NumBytes, NumVGScaledBytes);
-
-  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-
-  // Non-scalable offsets can use DW_CFA_offset directly.
-  if (!NumVGScaledBytes)
-    return MCCFIInstruction::createOffset(nullptr, DwarfReg, NumBytes);
-
-  std::string CommentBuffer;
-  llvm::raw_string_ostream Comment(CommentBuffer);
-  Comment << printReg(Reg, &TRI) << "  @ cfa";
-
-  // Build up expression (NumBytes + NumVGScaledBytes * AArch64::VG)
-  SmallString<64> OffsetExpr;
-  appendVGScaledOffsetExpr(OffsetExpr, NumBytes, NumVGScaledBytes,
-                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
-
-  // Wrap this into DW_CFA_expression
-  SmallString<64> CfaExpr;
-  CfaExpr.push_back(dwarf::DW_CFA_expression);
-  uint8_t buffer[16];
-  CfaExpr.append(buffer, buffer + encodeULEB128(DwarfReg, buffer));
-  CfaExpr.append(buffer, buffer + encodeULEB128(OffsetExpr.size(), buffer));
-  CfaExpr.append(OffsetExpr.str());
-
-  return MCCFIInstruction::createEscape(nullptr, CfaExpr.str(), Comment.str());
-}
-
 // Helper function to emit a frame offset adjustment from a given
 // pointer (SrcReg), stored into DestReg. This function is explicit
 // in that it requires the opcode.
@@ -4200,8 +4087,7 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
                                unsigned SrcReg, int64_t Offset, unsigned Opc,
                                const TargetInstrInfo *TII,
                                MachineInstr::MIFlag Flag, bool NeedsWinCFI,
-                               bool *HasWinCFI, bool EmitCFAOffset,
-                               StackOffset CFAOffset, unsigned FrameReg) {
+                               bool *HasWinCFI) {
   int Sign = 1;
   unsigned MaxEncoding, ShiftSize;
   switch (Opc) {
@@ -4225,13 +4111,6 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unsupported opcode");
   }
-
-  // `Offset` can be in bytes or in "scalable bytes".
-  int VScale = 1;
-  if (Opc == AArch64::ADDVL_XXI)
-    VScale = 16;
-  else if (Opc == AArch64::ADDPL_XXI)
-    VScale = 2;
 
   // FIXME: If the offset won't fit in 24-bits, compute the offset into a
   // scratch register.  If DestReg is a virtual register, use it as the
@@ -4270,26 +4149,6 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
           AArch64_AM::getShifterImm(AArch64_AM::LSL, LocalShiftSize));
     MBI = MBI.setMIFlag(Flag);
 
-    auto Change =
-        VScale == 1
-            ? StackOffset::getFixed(ThisVal << LocalShiftSize)
-            : StackOffset::getScalable(VScale * (ThisVal << LocalShiftSize));
-    if (Sign == -1 || Opc == AArch64::SUBXri || Opc == AArch64::SUBSXri)
-      CFAOffset += Change;
-    else
-      CFAOffset -= Change;
-    if (EmitCFAOffset && DestReg == TmpReg) {
-      MachineFunction &MF = *MBB.getParent();
-      const TargetSubtargetInfo &STI = MF.getSubtarget();
-      const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-
-      unsigned CFIIndex =
-          MF.addFrameInst(createDefCFA(TRI, FrameReg, DestReg, CFAOffset));
-      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlags(Flag);
-    }
-
     if (NeedsWinCFI) {
       assert(Sign == 1 && "SEH directives should always have a positive sign");
       int Imm = (int)(ThisVal << LocalShiftSize);
@@ -4326,9 +4185,7 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                            unsigned DestReg, unsigned SrcReg,
                            StackOffset Offset, const TargetInstrInfo *TII,
                            MachineInstr::MIFlag Flag, bool SetNZCV,
-                           bool NeedsWinCFI, bool *HasWinCFI,
-                           bool EmitCFAOffset, StackOffset CFAOffset,
-                           unsigned FrameReg) {
+                           bool NeedsWinCFI, bool *HasWinCFI) {
   int64_t Bytes, NumPredicateVectors, NumDataVectors;
   AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
       Offset, Bytes, NumPredicateVectors, NumDataVectors);
@@ -4343,13 +4200,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
       Opc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
     }
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, Opc, TII, Flag,
-                       NeedsWinCFI, HasWinCFI, EmitCFAOffset, CFAOffset,
-                       FrameReg);
-    CFAOffset += (Opc == AArch64::ADDXri || Opc == AArch64::ADDSXri)
-                     ? StackOffset::getFixed(-Bytes)
-                     : StackOffset::getFixed(Bytes);
+                       NeedsWinCFI, HasWinCFI);
     SrcReg = DestReg;
-    FrameReg = DestReg;
   }
 
   assert(!(SetNZCV && (NumPredicateVectors || NumDataVectors)) &&
@@ -4359,17 +4211,14 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
   if (NumDataVectors) {
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumDataVectors,
-                       AArch64::ADDVL_XXI, TII, Flag, NeedsWinCFI, nullptr,
-                       EmitCFAOffset, CFAOffset, FrameReg);
-    CFAOffset += StackOffset::getScalable(-NumDataVectors * 16);
+                       AArch64::ADDVL_XXI, TII, Flag, NeedsWinCFI, nullptr);
     SrcReg = DestReg;
   }
 
   if (NumPredicateVectors) {
     assert(DestReg != AArch64::SP && "Unaligned access to SP");
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumPredicateVectors,
-                       AArch64::ADDPL_XXI, TII, Flag, NeedsWinCFI, nullptr,
-                       EmitCFAOffset, CFAOffset, FrameReg);
+                       AArch64::ADDPL_XXI, TII, Flag, NeedsWinCFI, nullptr);
   }
 }
 

@@ -7,17 +7,13 @@
 # RUN: %lld -o %t/test -lSystem -lc++ -framework CoreFoundation %t/libNested.tbd %t/test.o
 # RUN: llvm-objdump --bind --no-show-raw-insn -d -r %t/test | FileCheck %s
 
-## libReexportSystem.tbd tests that we can reference symbols from a dylib,
-## re-exported by a top-level tapi document, which itself is re-exported by
-## another top-level tapi document.
-# RUN: %lld -o %t/with-reexport %S/Inputs/libReexportSystem.tbd -lc++ -framework CoreFoundation %t/libNested.tbd %t/test.o
+## libReexportSystem.tbd tests that we can reference symbols from a 2nd-level
+## tapi document, re-exported by a top-level tapi document, which itself is
+## re-exported by another top-level tapi document.
+# RUN: %lld -o %t/with-reexport -lSystem -L%t %t/libReexportNested.tbd -lc++ -framework CoreFoundation %t/test.o
 # RUN: llvm-objdump --bind --no-show-raw-insn -d -r %t/with-reexport | FileCheck %s
 
-# CHECK: Disassembly of section __TEXT,__text:
-# CHECK: movq {{.*}} ## 0x[[ADDR:[0-9a-f]+]]
-
 # CHECK: Bind table:
-# CHECK-DAG: __DATA_CONST __got 0x[[ADDR]] pointer 0 libSystem ___nan
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 CoreFoundation _OBJC_CLASS_$_NSObject
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 CoreFoundation _OBJC_METACLASS_$_NSObject
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 CoreFoundation _OBJC_IVAR_$_NSConstantArray._count
@@ -28,14 +24,7 @@
 # RUN: llvm-otool -l %t/test | FileCheck --check-prefix=LOAD %s
 
 # RUN: llvm-otool -l %t/with-reexport | \
-# RUN:     FileCheck --check-prefixes=LOAD-REEXPORT,LOAD %s
-
-# LOAD-REEXPORT:          cmd LC_LOAD_DYLIB
-# LOAD-REEXPORT-NEXT:               cmdsize
-# LOAD-REEXPORT-NEXT:                  name /usr/lib/libReexportSystem.dylib
-# LOAD-REEXPORT-NEXT:            time stamp
-# LOAD-REEXPORT-NEXT:       current version 1.0.0
-# LOAD-REEXPORT-NEXT: compatibility version
+# RUN:     FileCheck --check-prefixes=LOAD,LOAD-REEXPORT %s
 
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT:               cmdsize
@@ -44,13 +33,18 @@
 # LOAD-NEXT:       current version 1.1.1
 # LOAD-NEXT: compatibility version
 
+# LOAD-REEXPORT:          cmd LC_LOAD_DYLIB
+# LOAD-REEXPORT-NEXT:               cmdsize
+# LOAD-REEXPORT-NEXT:                  name /usr/lib/libReexportNested.dylib
+# LOAD-REEXPORT-NEXT:            time stamp
+# LOAD-REEXPORT-NEXT:       current version 1.0.0
+# LOAD-REEXPORT-NEXT: compatibility version
+
 #--- test.s
 .section __TEXT,__text
 .global _main
 
 _main:
-## This symbol is defined in an inner TAPI document within libSystem.tbd.
-  movq ___nan@GOTPCREL(%rip), %rax
   ret
 
 .data
@@ -58,6 +52,7 @@ _main:
   .quad _OBJC_METACLASS_$_NSObject
   .quad _OBJC_IVAR_$_NSConstantArray._count
   .quad _OBJC_EHTYPE_$_NSException
+## This symbol is defined in an inner TAPI document within libNested.tbd.
   .quad _deeply_nested
 
 ## This symbol is defined in libc++abi.tbd, but we are linking test.o against
@@ -93,4 +88,15 @@ install-name:     '/usr/lib/libNested3.dylib'
 exports:
   - archs:      [ x86_64 ]
     symbols:    [ _deeply_nested ]
+...
+
+#--- libReexportNested.tbd
+--- !tapi-tbd-v3
+archs:            [ i386, x86_64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000', 'x86_64: 00000000-0000-0000-0000-000000000001' ]
+platform:         macosx
+install-name:     '/usr/lib/libReexportNested.dylib'
+exports:
+  - archs:      [ i386, x86_64 ]
+    re-exports: [ 'libNested.dylib' ]
 ...

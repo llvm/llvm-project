@@ -3202,8 +3202,6 @@ public:
 
   MCPhysReg getX86R11() const override { return X86::R11; }
 
-  MCPhysReg getNoRegister() const override { return X86::NoRegister; }
-
   MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
     // FIXME: this should depend on the calling convention.
     switch (ArgNo) {

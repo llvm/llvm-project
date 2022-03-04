@@ -689,14 +689,6 @@ void sigcont_handler(int signo) {
   signal(signo, sigcont_handler);
 }
 
-void reproducer_handler(void *finalize_cmd) {
-  if (SBReproducer::Generate()) {
-    int result = std::system(static_cast<const char *>(finalize_cmd));
-    (void)result;
-    fflush(stdout);
-  }
-}
-
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB", false);

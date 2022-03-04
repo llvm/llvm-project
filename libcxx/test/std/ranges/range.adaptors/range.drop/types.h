@@ -80,8 +80,8 @@ struct InputView : std::ranges::view_base {
   constexpr int* end() const { return globalBuff + 8; }
 };
 // TODO: remove these bogus operators
-constexpr bool operator==(const cpp20_input_iterator<int*> &lhs, int* rhs) { return lhs.base() == rhs; }
-constexpr bool operator==(int* lhs, const cpp20_input_iterator<int*> &rhs) { return rhs.base() == lhs; }
+constexpr bool operator==(const cpp20_input_iterator<int*> &lhs, int* rhs) { return base(lhs) == rhs; }
+constexpr bool operator==(int* lhs, const cpp20_input_iterator<int*> &rhs) { return base(rhs) == lhs; }
 
 struct Range {
   int *begin() const;

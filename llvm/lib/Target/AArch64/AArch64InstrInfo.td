@@ -6145,6 +6145,14 @@ def : Pat<(v8i8  immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm MOVI      : SIMDModifiedImmVectorShift<0, 0b10, 0b00, "movi">;
 
+let Predicates = [HasNEON] in {
+  // Using the MOVI to materialize fp constants.
+  def : Pat<(f32 fpimm32SIMDModImmType4:$in),
+            (EXTRACT_SUBREG (MOVIv2i32 (fpimm32SIMDModImmType4XForm f32:$in),
+                                       (i32 24)),
+                            ssub)>;
+}
+
 def : InstAlias<"movi $Vd.4h, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.8h, $imm", (MOVIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.2s, $imm", (MOVIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;

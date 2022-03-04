@@ -208,7 +208,11 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
       hijacking_listener_sp.reset();
   }
 
-  if (Log *log = GetLog(LLDBLog::Events)) {
+  Log *log = GetLog(LLDBLog::Events);
+  if (!log && event_sp->GetData())
+    log = event_sp->GetData()->GetLogChannel();
+
+  if (log) {
     StreamString event_description;
     event_sp->Dump(&event_description);
     LLDB_LOGF(log,

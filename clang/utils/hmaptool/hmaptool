@@ -44,7 +44,7 @@ class HeaderMap(object):
                         path,))
 
             (version, reserved, strtable_offset, num_entries,
-             num_buckets) = struct.unpack(header_fmt, data)
+             num_buckets, _) = struct.unpack(header_fmt, data)
 
             if version != 1:
                 raise SystemExit("error: %s: unknown headermap version: %r" % (
@@ -100,7 +100,7 @@ class HeaderMap(object):
             raise SystemExit("error: %s: invalid string index" % (
                     idx,))
         end_idx = self.strtable.index(0, idx)
-        return self.strtable[idx:end_idx]
+        return self.strtable[idx:end_idx].decode()
 
     @property
     def mappings(self):

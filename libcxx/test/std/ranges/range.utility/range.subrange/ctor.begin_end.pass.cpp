@@ -35,8 +35,8 @@ static_assert( std::is_constructible_v<ForwardSubrange, ForwardIter, ForwardIter
 
 constexpr bool test() {
   ForwardSubrange a(ForwardIter(globalBuff), ForwardIter(globalBuff + 8));
-  assert(a.begin().base() == globalBuff);
-  assert(a.end().base() == globalBuff + 8);
+  assert(base(a.begin()) == globalBuff);
+  assert(base(a.end()) == globalBuff + 8);
 
   ConvertibleForwardSubrange b(ConvertibleForwardIter(globalBuff), globalBuff + 8);
   assert(b.begin() == globalBuff);

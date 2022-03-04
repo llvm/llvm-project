@@ -41,7 +41,6 @@ public:
     TEST_CONSTEXPR_CXX14 cpp17_output_iterator& operator++() {++it_; return *this;}
     TEST_CONSTEXPR_CXX14 cpp17_output_iterator operator++(int) {return cpp17_output_iterator(it_++);}
 
-    TEST_CONSTEXPR It base() const {return it_;} // TODO remove me
     friend TEST_CONSTEXPR It base(const cpp17_output_iterator& i) { return i.it_; }
 
     template <class T>
@@ -80,7 +79,6 @@ public:
     friend TEST_CONSTEXPR bool operator==(const cpp17_input_iterator& x, const cpp17_input_iterator& y) {return x.it_ == y.it_;}
     friend TEST_CONSTEXPR bool operator!=(const cpp17_input_iterator& x, const cpp17_input_iterator& y) {return x.it_ != y.it_;}
 
-    TEST_CONSTEXPR It base() const {return it_;} // TODO remove me
     friend TEST_CONSTEXPR It base(const cpp17_input_iterator& i) { return i.it_; }
 
     template <class T>
@@ -117,7 +115,6 @@ public:
     friend TEST_CONSTEXPR bool operator==(const forward_iterator& x, const forward_iterator& y) {return x.it_ == y.it_;}
     friend TEST_CONSTEXPR bool operator!=(const forward_iterator& x, const forward_iterator& y) {return x.it_ != y.it_;}
 
-    TEST_CONSTEXPR It base() const {return it_;} // TODO remove me
     friend TEST_CONSTEXPR It base(const forward_iterator& i) { return i.it_; }
 
     template <class T>
@@ -153,7 +150,6 @@ public:
     friend TEST_CONSTEXPR bool operator==(const bidirectional_iterator& x, const bidirectional_iterator& y) {return x.it_ == y.it_;}
     friend TEST_CONSTEXPR bool operator!=(const bidirectional_iterator& x, const bidirectional_iterator& y) {return x.it_ != y.it_;}
 
-    TEST_CONSTEXPR It base() const {return it_;} // TODO remove me
     friend TEST_CONSTEXPR It base(const bidirectional_iterator& i) { return i.it_; }
 
     template <class T>
@@ -201,7 +197,6 @@ public:
     friend TEST_CONSTEXPR bool operator> (const random_access_iterator& x, const random_access_iterator& y) {return x.it_ >  y.it_;}
     friend TEST_CONSTEXPR bool operator>=(const random_access_iterator& x, const random_access_iterator& y) {return x.it_ >= y.it_;}
 
-    TEST_CONSTEXPR It base() const {return it_;} // TODO remove me
     friend TEST_CONSTEXPR It base(const random_access_iterator& i) { return i.it_; }
 
     template <class T>
@@ -510,7 +505,6 @@ public:
     constexpr cpp20_input_iterator& operator++() { ++it_; return *this; }
     constexpr void operator++(int) { ++it_; }
 
-    constexpr const It& base() const& { return it_; } // TODO remove me
     friend constexpr It base(const cpp20_input_iterator& i) { return i.it_; }
 
     template <class T>

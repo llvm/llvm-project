@@ -871,6 +871,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECTOR_SPLICE);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   setTargetDAGCombine(ISD::CONCAT_VECTORS);
+  setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
   setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
   setTargetDAGCombine(ISD::STORE);
   if (Subtarget->supportsAddressTopByteIgnored())
@@ -14033,15 +14034,85 @@ static SDValue tryCombineToBSL(SDNode *N,
   return SDValue();
 }
 
+// Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
+// convert to csel(ccmp(.., cc0)), depending on cc1:
+
+// (AND (CSET cc0 cmp0) (CSET cc1 (CMP x1 y1)))
+// =>
+// (CSET cc1 (CCMP x1 y1 !cc1 cc0 cmp0))
+//
+// (OR (CSET cc0 cmp0) (CSET cc1 (CMP x1 y1)))
+// =>
+// (CSET cc1 (CCMP x1 y1 cc1 !cc0 cmp0))
+static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue CSel0 = N->getOperand(0);
+  SDValue CSel1 = N->getOperand(1);
+
+  if (CSel0.getOpcode() != AArch64ISD::CSEL ||
+      CSel1.getOpcode() != AArch64ISD::CSEL)
+    return SDValue();
+
+  if (!CSel0->hasOneUse() || !CSel1->hasOneUse())
+    return SDValue();
+
+  if (!isNullConstant(CSel0.getOperand(0)) ||
+      !isOneConstant(CSel0.getOperand(1)) ||
+      !isNullConstant(CSel1.getOperand(0)) ||
+      !isOneConstant(CSel1.getOperand(1)))
+    return SDValue();
+
+  SDValue Cmp0 = CSel0.getOperand(3);
+  SDValue Cmp1 = CSel1.getOperand(3);
+  AArch64CC::CondCode CC0 = (AArch64CC::CondCode)CSel0.getConstantOperandVal(2);
+  AArch64CC::CondCode CC1 = (AArch64CC::CondCode)CSel1.getConstantOperandVal(2);
+  if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
+    return SDValue();
+  if (Cmp1.getOpcode() != AArch64ISD::SUBS &&
+      Cmp0.getOpcode() == AArch64ISD::SUBS) {
+    std::swap(Cmp0, Cmp1);
+    std::swap(CC0, CC1);
+  }
+
+  if (Cmp1.getOpcode() != AArch64ISD::SUBS)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue CCmp;
+
+  if (N->getOpcode() == ISD::AND) {
+    AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
+    SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
+    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
+    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
+                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
+  } else {
+    SDLoc DL(N);
+    AArch64CC::CondCode InvCC1 = AArch64CC::getInvertedCondCode(CC1);
+    SDValue Condition = DAG.getConstant(CC0, DL, MVT_CC);
+    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvCC1);
+    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
+                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
+  }
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, CSel0.getOperand(0),
+                     CSel0.getOperand(1), DAG.getConstant(CC1, DL, MVT::i32),
+                     CCmp);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget) {
-  // Attempt to form an EXTR from (or (shl VAL1, #N), (srl VAL2, #RegWidth-N))
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
+
+  if (SDValue R = performANDORCSELCombine(N, DAG))
+    return R;
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
+  // Attempt to form an EXTR from (or (shl VAL1, #N), (srl VAL2, #RegWidth-N))
   if (SDValue Res = tryCombineToEXTR(N, DCI))
     return Res;
 
@@ -14170,60 +14241,13 @@ static SDValue performSVEAndCombine(SDNode *N,
   return SDValue();
 }
 
-// Given a tree of and(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
-// convert to csel(ccmp(.., cc0)), depending on cc1.
-static SDValue PerformANDCSELCombine(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-  SDValue CSel0 = N->getOperand(0);
-  SDValue CSel1 = N->getOperand(1);
-
-  if (CSel0.getOpcode() != AArch64ISD::CSEL ||
-      CSel1.getOpcode() != AArch64ISD::CSEL)
-    return SDValue();
-
-  if (!CSel0->hasOneUse() || !CSel1->hasOneUse())
-    return SDValue();
-
-  if (!isNullConstant(CSel0.getOperand(0)) ||
-      !isOneConstant(CSel0.getOperand(1)) ||
-      !isNullConstant(CSel1.getOperand(0)) ||
-      !isOneConstant(CSel1.getOperand(1)))
-    return SDValue();
-
-  SDValue Cmp0 = CSel0.getOperand(3);
-  SDValue Cmp1 = CSel1.getOperand(3);
-  AArch64CC::CondCode CC0 = (AArch64CC::CondCode)CSel0.getConstantOperandVal(2);
-  AArch64CC::CondCode CC1 = (AArch64CC::CondCode)CSel1.getConstantOperandVal(2);
-  if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
-    return SDValue();
-  if (Cmp1.getOpcode() != AArch64ISD::SUBS &&
-      Cmp0.getOpcode() == AArch64ISD::SUBS) {
-    std::swap(Cmp0, Cmp1);
-    std::swap(CC0, CC1);
-  }
-
-  if (Cmp1.getOpcode() != AArch64ISD::SUBS)
-    return SDValue();
-
-  SDLoc DL(N);
-  AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
-  SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
-  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
-  SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-  SDValue CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
-                             Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, CSel0.getOperand(0),
-                     CSel0.getOperand(1), DAG.getConstant(CC1, DL, MVT::i32),
-                     CCmp);
-}
-
 static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue LHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (SDValue R = PerformANDCSELCombine(N, DAG))
+  if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
 
   if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
@@ -14470,6 +14494,29 @@ static SDValue performConcatVectorsCombine(SDNode *N,
                      DAG.getNode(ISD::CONCAT_VECTORS, dl, ConcatTy,
                                  DAG.getNode(ISD::BITCAST, dl, RHSTy, N0),
                                  RHS));
+}
+
+static SDValue
+performExtractSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  SDValue V = N->getOperand(0);
+
+  // NOTE: This combine exists in DAGCombiner, but that version's legality check
+  // blocks this combine because the non-const case requires custom lowering.
+  //
+  // ty1 extract_vector(ty2 splat(const))) -> ty1 splat(const)
+  if (V.getOpcode() == ISD::SPLAT_VECTOR)
+    if (isa<ConstantSDNode>(V.getOperand(0)))
+      return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V.getOperand(0));
+
+  return SDValue();
 }
 
 static SDValue
@@ -16178,6 +16225,33 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT ResVT = N->getValueType(0);
+
+  // uzp1(x, undef) -> concat(truncate(x), undef)
+  if (Op1.getOpcode() == ISD::UNDEF) {
+    EVT BCVT = MVT::Other, HalfVT = MVT::Other;
+    switch (ResVT.getSimpleVT().SimpleTy) {
+    default:
+      break;
+    case MVT::v16i8:
+      BCVT = MVT::v8i16;
+      HalfVT = MVT::v8i8;
+      break;
+    case MVT::v8i16:
+      BCVT = MVT::v4i32;
+      HalfVT = MVT::v4i16;
+      break;
+    case MVT::v4i32:
+      BCVT = MVT::v2i64;
+      HalfVT = MVT::v2i32;
+      break;
+    }
+    if (BCVT != MVT::Other) {
+      SDValue BC = DAG.getBitcast(BCVT, Op0);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, HalfVT, BC);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Trunc,
+                         DAG.getUNDEF(HalfVT));
+    }
+  }
 
   // uzp1(unpklo(uzp1(x, y)), z) => uzp1(x, z)
   if (Op0.getOpcode() == AArch64ISD::UUNPKLO) {
@@ -18154,6 +18228,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performSignExtendInRegCombine(N, DCI, DAG);
   case ISD::CONCAT_VECTORS:
     return performConcatVectorsCombine(N, DCI, DAG);
+  case ISD::EXTRACT_SUBVECTOR:
+    return performExtractSubvectorCombine(N, DCI, DAG);
   case ISD::INSERT_SUBVECTOR:
     return performInsertSubvectorCombine(N, DCI, DAG);
   case ISD::SELECT:

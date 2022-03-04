@@ -1,4 +1,5 @@
-RUN: llvm-dis %p/Inputs/x86_intrcc_upgrade.bc -o - | FileCheck %s
+RUN: llvm-dis %p/Inputs/x86_intrcc_upgrade.bc -opaque-pointers=0 -o - | FileCheck %s
+RUN: llvm-dis %p/Inputs/x86_intrcc_upgrade.bc -opaque-pointers=1 -o - | FileCheck %s --check-prefix=OPAQUE
 
 Make sure we upgrade x86_intrcc to a byval with explicit type
 
@@ -9,3 +10,11 @@ CHECK: define x86_intrcc void @non_byval_ptr_struct(%struct* byval(%struct) %0)
 CHECK: declare x86_intrcc void @no_args_decl()
 CHECK: declare x86_intrcc void @non_byval_ptr_arg0_decl(i32* byval(i32))
 CHECK: declare x86_intrcc void @non_byval_ptr_struct_decl(%struct* byval(%struct))
+
+OPAQUE: define x86_intrcc void @no_args() {
+OPAQUE: define x86_intrcc void @non_byval_ptr_arg0(ptr byval(i32) %0)
+OPAQUE: define x86_intrcc void @non_byval_ptr_struct(ptr byval(%struct) %0)
+
+OPAQUE: declare x86_intrcc void @no_args_decl()
+OPAQUE: declare x86_intrcc void @non_byval_ptr_arg0_decl(ptr byval(i32))
+OPAQUE: declare x86_intrcc void @non_byval_ptr_struct_decl(ptr byval(%struct))

@@ -162,11 +162,11 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {
 ; AVX1-LABEL: blendv_split:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
 ; AVX1-NEXT:    vpslld %xmm2, %xmm4, %xmm5
 ; AVX1-NEXT:    vpslld %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
 ; AVX1-NEXT:    vpslld %xmm3, %xmm4, %xmm4
 ; AVX1-NEXT:    vpslld %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm1
@@ -180,8 +180,8 @@ define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32
 ; AVX2-LABEL: blendv_split:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
 ; AVX2-NEXT:    vpslld %xmm2, %ymm1, %ymm2
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
 ; AVX2-NEXT:    vpslld %xmm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    vmovups %ymm0, (%rdi)

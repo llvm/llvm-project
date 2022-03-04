@@ -28,11 +28,11 @@ define i32 @bar(double* nocapture %A, i32 %d) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 (...) @foo()
 ; CHECK-NEXT:    br label [[TMP7]]
 ; CHECK:       7:
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, double* [[A]], i64 8
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[TMP3]], <float 4.000000e+00, float 5.000000e+00>
-; CHECK-NEXT:    [[TMP10:%.*]] = fpext <2 x float> [[TMP9]] to <2 x double>
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP3]], <float 4.000000e+00, float 5.000000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, double* [[A]], i64 8
+; CHECK-NEXT:    [[TMP10:%.*]] = fpext <2 x float> [[TMP8]] to <2 x double>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 9.000000e+00, double 5.000000e+00>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[TMP8]] to <2 x double>*
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[TMP9]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP12]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;

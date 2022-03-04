@@ -25,30 +25,46 @@ add_entrypoint_object(
 
 add_entrypoint_object(
   mtx_init
-  ALIAS
+  SRCS
+    mtx_init.cpp
+  HDRS
+    mtx_init.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_init
+    libc.include.threads
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
   mtx_destroy
-  ALIAS
+  SRCS
+    mtx_destroy.cpp
+  HDRS
+    mtx_destroy.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_destroy
+    libc.include.threads
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
   mtx_lock
-  ALIAS
+  SRCS
+    mtx_lock.cpp
+  HDRS
+    mtx_lock.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_lock
+    libc.include.threads
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
   mtx_unlock
-  ALIAS
+  SRCS
+    mtx_unlock.cpp
+  HDRS
+    mtx_unlock.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_unlock
+    libc.include.threads
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(

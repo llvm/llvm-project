@@ -2671,6 +2671,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
                                  SmallVectorImpl<WeakTrackingVH> &Users,
                                  const TargetLibraryInfo &TLI) {
   SmallVector<Instruction*, 4> Worklist;
+  const Optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
 
   do {
@@ -2739,12 +2740,15 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (isFreeCall(I, &TLI)) {
+        if (isFreeCall(I, &TLI) && getAllocationFamily(I, &TLI) == Family) {
+          assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (isReallocLikeFn(I, &TLI)) {
+        if (isReallocLikeFn(I, &TLI) &&
+            getAllocationFamily(I, &TLI) == Family) {
+          assert(Family);
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;

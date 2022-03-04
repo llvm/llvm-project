@@ -9,8 +9,8 @@ define i32 @sink_load_and_copy(i32 %n) {
 ; CHECK-LABEL: sink_load_and_copy:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -63,8 +63,8 @@ define i32 @cant_sink_successive_call(i32 %n) {
 ; CHECK-LABEL: cant_sink_successive_call:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -120,8 +120,8 @@ define i32 @cant_sink_successive_store(i32* nocapture readnone %store, i32 %n) {
 ; CHECK-LABEL: cant_sink_successive_store:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24

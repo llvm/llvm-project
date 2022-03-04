@@ -39,8 +39,8 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false), reverse_request_seq(0),
-      waiting_for_run_in_terminal(false),
+      stop_at_entry(false), is_attach(false), configuration_done_sent(false),
+      reverse_request_seq(0), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
@@ -526,6 +526,46 @@ PacketStatus VSCode::SendReverseRequest(llvm::json::Object request,
 void VSCode::RegisterRequestCallback(std::string request,
                                      RequestCallback callback) {
   request_handlers[request] = callback;
+}
+
+lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds) {
+  lldb::SBError error;
+  lldb::SBProcess process = target.GetProcess();
+  if (!process.IsValid()) {
+    error.SetErrorString("invalid process");
+    return error;
+  }
+  auto timeout_time =
+      std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+  while (std::chrono::steady_clock::now() < timeout_time) {
+    const auto state = process.GetState();
+    switch (state) {
+      case lldb::eStateAttaching:
+      case lldb::eStateConnected:
+      case lldb::eStateInvalid:
+      case lldb::eStateLaunching:
+      case lldb::eStateRunning:
+      case lldb::eStateStepping:
+      case lldb::eStateSuspended:
+        break;
+      case lldb::eStateDetached:
+        error.SetErrorString("process detached during launch or attach");
+        return error;
+      case lldb::eStateExited:
+        error.SetErrorString("process exited during launch or attach");
+        return error;
+      case lldb::eStateUnloaded:
+        error.SetErrorString("process unloaded during launch or attach");
+        return error;
+      case lldb::eStateCrashed:
+      case lldb::eStateStopped:
+        return lldb::SBError(); // Success!
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(250));
+  }
+  error.SetErrorStringWithFormat("process failed to stop within %u seconds",
+                                 seconds);
+  return error;
 }
 
 void Variables::Clear() {

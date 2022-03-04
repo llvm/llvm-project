@@ -1642,11 +1642,11 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
 void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
   if (m_valid && module_list.GetSize()) {
     UnloadModuleSections(module_list);
+    BroadcastEvent(eBroadcastBitModulesUnloaded,
+                   new TargetEventData(this->shared_from_this(), module_list));
     m_breakpoint_list.UpdateBreakpoints(module_list, false, delete_locations);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, false,
                                                  delete_locations);
-    BroadcastEvent(eBroadcastBitModulesUnloaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
   }
 }
 

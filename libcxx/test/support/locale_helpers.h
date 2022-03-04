@@ -71,7 +71,23 @@ std::wstring convert_thousands_sep_ru_RU(std::wstring const& in) {
 #endif
 }
 
+std::wstring negate_en_US(std::wstring s) {
+#if defined(_WIN32)
+  return L"(" + s + L")";
+#else
+  return L"-" + s;
+#endif
+}
+
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
+
+std::string negate_en_US(std::string s) {
+#if defined(_WIN32)
+  return "(" + s + ")";
+#else
+  return "-" + s;
+#endif
+}
 
 MultiStringType currency_symbol_ru_RU() {
 #if defined(_CS_GNU_LIBC_VERSION)
@@ -83,6 +99,14 @@ MultiStringType currency_symbol_ru_RU() {
   return MKSTR("\u20BD"); // U+20BD RUBLE SIGN
 #else
   return MKSTR("\u0440\u0443\u0431.");
+#endif
+}
+
+MultiStringType currency_symbol_zh_CN() {
+#if defined(_WIN32)
+  return MKSTR("\u00A5"); // U+00A5 YEN SIGN
+#else
+  return MKSTR("\uFFE5"); // U+FFE5 FULLWIDTH YEN SIGN
 #endif
 }
 
