@@ -1325,8 +1325,7 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
       continue;
     }
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U.getUser())) {
-      if (CE->isCast() && CE->getType()->isPointerTy() &&
-          CE->getType()->getPointerElementType()->isFunctionTy()) {
+      if (CE->isCast() && CE->getType()->isPointerTy()) {
         LLVM_DEBUG(
             dbgs() << "[Attributor] Use, is constant cast expression, add "
                    << CE->getNumUses()
