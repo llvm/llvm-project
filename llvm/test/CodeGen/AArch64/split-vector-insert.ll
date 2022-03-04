@@ -17,10 +17,9 @@ define <vscale x 2 x i64> @test_nxv2i64_v8i64(<vscale x 2 x i64> %a, <8 x i64> %
 ; CHECK-LABEL: test_nxv2i64_v8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    mov w9, #2
 ; CHECK-NEXT:    sub x8, x8, #2
@@ -71,10 +70,9 @@ define <vscale x 2 x double> @test_nxv2f64_v8f64(<vscale x 2 x double> %a, <8 x 
 ; CHECK-LABEL: test_nxv2f64_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    mov w9, #2
 ; CHECK-NEXT:    sub x8, x8, #2

@@ -932,13 +932,12 @@ define void @shuffle_ext_invalid(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: shuffle_ext_invalid:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]

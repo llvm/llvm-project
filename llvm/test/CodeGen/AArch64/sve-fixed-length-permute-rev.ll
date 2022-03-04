@@ -195,13 +195,12 @@ define void @test_rev_elts_fail(<4 x i64>* %a) #1 {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.d, z0.d[2]
@@ -232,13 +231,12 @@ define void @test_revv8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: test_revv8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov w8, v0.s[1]
@@ -349,13 +347,12 @@ define void @test_rev_fail(<16 x i16>* %a) #1 {
 ; CHECK-LABEL: test_rev_fail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.h, z0.h[8]
@@ -414,13 +411,12 @@ define void @test_revv8i16v8i16(<8 x i16>* %a, <8 x i16>* %b, <16 x i16>* %c) #1
 ; CHECK-LABEL: test_revv8i16v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    orr x9, x8, #0x1e

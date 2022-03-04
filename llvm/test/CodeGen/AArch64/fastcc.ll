@@ -13,7 +13,6 @@ define fastcc void @func_stack0() {
 
 ; CHECK-TAIL-LABEL: func_stack0:
 ; CHECK-TAIL: sub sp, sp, #48
-; CHECK-TAIL-NEXT: .cfi_def_cfa_offset 48
 ; CHECK-TAIL-NEXT: stp x29, x30, [sp, #32]
 ; CHECK-TAIL-NEXT: add x29, sp, #32
 ; CHECK-TAIL: str w{{[0-9]+}}, [sp]
@@ -190,7 +189,6 @@ define fastcc void @func_stack32_leaf([8 x i64], i128 %stacked0, i128 %stacked1)
 define fastcc void @func_stack32_leaf_local([8 x i64], i128 %stacked0, i128 %stacked1) {
 ; CHECK-LABEL: func_stack32_leaf_local:
 ; CHECK: sub     sp, sp, #32
-; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT: str     x20, [sp, #16]
 ; CHECK: nop
 ; CHECK-NEXT: //NO_APP
@@ -200,7 +198,6 @@ define fastcc void @func_stack32_leaf_local([8 x i64], i128 %stacked0, i128 %sta
 
 ; CHECK-TAIL-LABEL: func_stack32_leaf_local:
 ; CHECK-TAIL: sub     sp, sp, #32
-; CHECK-TAIL-NEXT: .cfi_def_cfa_offset 32
 ; CHECK-TAIL-NEXT: str     x20, [sp, #16]
 ; CHECK-TAIL: nop
 ; CHECK-TAIL-NEXT: //NO_APP

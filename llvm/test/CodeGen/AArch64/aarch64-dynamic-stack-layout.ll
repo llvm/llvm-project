@@ -99,9 +99,9 @@ entry:
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK: sub	sp, sp, #32
-; CHECK: .cfi_def_cfa_offset 32
 ; CHECK: stp	x30, x19, [sp, #16]
 ;   Check correctness of cfi pseudo-instructions
+; CHECK: .cfi_def_cfa_offset 32
 ; CHECK: .cfi_offset w19, -8
 ; CHECK: .cfi_offset w30, -16
 ;   Check correct access to arguments passed on the stack, through stack pointer
@@ -118,7 +118,6 @@ entry:
 ; CHECK-MACHO: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK-MACHO: sub	sp, sp, #48
-; CHECK-MACHO:.cfi_def_cfa_offset 48
 ; CHECK-MACHO: stp	x20, x19, [sp, #16]
 ;   Check that the frame pointer is created:
 ; CHECK-MACHO: stp	x29, x30, [sp, #32]
@@ -182,18 +181,17 @@ entry:
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK: stp	x29, x30, [sp, #-32]!
-; CHECK: .cfi_def_cfa_offset 32
 ;   Check that the frame pointer is created:
 ; CHECK: str	x19, [sp, #16]
 ; CHECK: mov	x29, sp
+;   Check the dynamic realignment of the stack pointer to a 128-byte boundary
+; CHECK: sub	x9, sp, #96
+; CHECK: and	sp, x9, #0xffffffffffffff80
 ;   Check correctness of cfi pseudo-instructions
 ; CHECK: .cfi_def_cfa w29, 32
 ; CHECK: .cfi_offset w19, -16
 ; CHECK: .cfi_offset w30, -24
 ; CHECK: .cfi_offset w29, -32
-;   Check the dynamic realignment of the stack pointer to a 128-byte boundary
-; CHECK: sub	x9, sp, #96
-; CHECK: and	sp, x9, #0xffffffffffffff80
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
@@ -211,19 +209,18 @@ entry:
 ; CHECK-MACHO: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK-MACHO: stp	x20, x19, [sp, #-32]!
-; CHECK-MACHO: .cfi_def_cfa_offset 32
 ;   Check that the frame pointer is created:
 ; CHECK-MACHO: stp	x29, x30, [sp, #16]
 ; CHECK-MACHO: add	x29, sp, #16
+;   Check the dynamic realignment of the stack pointer to a 128-byte boundary
+; CHECK-MACHO: sub	x9, sp, #96
+; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
 ;   Check correctness of cfi pseudo-instructions
 ; CHECK-MACHO: .cfi_def_cfa w29, 16
 ; CHECK-MACHO: .cfi_offset w30, -8
 ; CHECK-MACHO: .cfi_offset w29, -16
 ; CHECK-MACHO: .cfi_offset w19, -24
 ; CHECK-MACHO: .cfi_offset w20, -32
-;   Check the dynamic realignment of the stack pointer to a 128-byte boundary
-; CHECK-MACHO: sub	x9, sp, #96
-; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
 ; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
@@ -288,19 +285,18 @@ entry:
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK: stp	x29, x30, [sp, #-32]!
-; CHECK: .cfi_def_cfa_offset 32
 ;   Check that the frame pointer is created:
 ; CHECK: stp	x20, x19, [sp, #16]
 ; CHECK: mov	x29, sp
+;   Check that space is reserved on the stack for the local variable,
+;   rounded up to a multiple of 16 to keep the stack pointer 16-byte aligned.
+; CHECK: sub	sp, sp, #16
 ;   Check correctness of cfi pseudo-instructions
 ; CHECK: .cfi_def_cfa w29, 32
 ; CHECK: .cfi_offset w19, -8
 ; CHECK: .cfi_offset w20, -16
 ; CHECK: .cfi_offset w30, -24
 ; CHECK: .cfi_offset w29, -32
-;   Check that space is reserved on the stack for the local variable,
-;   rounded up to a multiple of 16 to keep the stack pointer 16-byte aligned.
-; CHECK: sub	sp, sp, #16
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
@@ -390,18 +386,10 @@ entry:
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK: stp	x29, x30, [sp, #-48]!
-; CHECK: .cfi_def_cfa_offset 48
 ; CHECK: str	x21, [sp, #16]
 ; CHECK: stp	x20, x19, [sp, #32]
 ;   Check that the frame pointer is created:
 ; CHECK: mov	x29, sp
-;   Check correctness of cfi pseudo-instructions
-; CHECK: .cfi_def_cfa w29, 48
-; CHECK: .cfi_offset w19, -8
-; CHECK: .cfi_offset w20, -16
-; CHECK: .cfi_offset w21, -32
-; CHECK: .cfi_offset w30, -40
-; CHECK: .cfi_offset w29, -48
 ;   Check that the stack pointer gets re-aligned to 128
 ;   bytes & the base pointer (x19) gets initialized to
 ;   this 128-byte aligned area for local variables &
@@ -409,6 +397,13 @@ entry:
 ; CHECK: sub	x9, sp, #80
 ; CHECK: and	sp, x9, #0xffffffffffffff80
 ; CHECK: mov    x19, sp
+;   Check correctness of cfi pseudo-instructions
+; CHECK: .cfi_def_cfa w29, 48
+; CHECK: .cfi_offset w19, -8
+; CHECK: .cfi_offset w20, -16
+; CHECK: .cfi_offset w21, -32
+; CHECK: .cfi_offset w30, -40
+; CHECK: .cfi_offset w29, -48
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #56]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #72]
@@ -437,11 +432,17 @@ entry:
 ; CHECK-MACHO: .cfi_startproc
 ;   Check that used callee-saved registers are saved
 ; CHECK-MACHO: stp	x22, x21, [sp, #-48]!
-; CHECK-MACHO: .cfi_def_cfa_offset 48
 ; CHECK-MACHO: stp	x20, x19, [sp, #16]
 ;   Check that the frame pointer is created:
 ; CHECK-MACHO: stp	x29, x30, [sp, #32]
 ; CHECK-MACHO: add	x29, sp, #32
+;   Check that the stack pointer gets re-aligned to 128
+;   bytes & the base pointer (x19) gets initialized to
+;   this 128-byte aligned area for local variables &
+;   spill slots
+; CHECK-MACHO: sub	x9, sp, #80
+; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
+; CHECK-MACHO: mov    x19, sp
 ;   Check correctness of cfi pseudo-instructions
 ; CHECK-MACHO: .cfi_def_cfa w29, 16
 ; CHECK-MACHO: .cfi_offset w30, -8
@@ -450,13 +451,6 @@ entry:
 ; CHECK-MACHO: .cfi_offset w20, -32
 ; CHECK-MACHO: .cfi_offset w21, -40
 ; CHECK-MACHO: .cfi_offset w22, -48
-;   Check that the stack pointer gets re-aligned to 128
-;   bytes & the base pointer (x19) gets initialized to
-;   this 128-byte aligned area for local variables &
-;   spill slots
-; CHECK-MACHO: sub	x9, sp, #80
-; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
-; CHECK-MACHO: mov    x19, sp
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]

@@ -132,13 +132,12 @@ define void @zip_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 ; VBITS_EQ_512-LABEL: zip_v4f64:
 ; VBITS_EQ_512:       // %bb.0:
 ; VBITS_EQ_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_512-NEXT:    .cfi_def_cfa_offset 16
+; VBITS_EQ_512-NEXT:    sub x9, sp, #48
 ; VBITS_EQ_512-NEXT:    mov x29, sp
+; VBITS_EQ_512-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; VBITS_EQ_512-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_EQ_512-NEXT:    .cfi_offset w30, -8
 ; VBITS_EQ_512-NEXT:    .cfi_offset w29, -16
-; VBITS_EQ_512-NEXT:    sub x9, sp, #48
-; VBITS_EQ_512-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; VBITS_EQ_512-NEXT:    ptrue p0.d, vl4
 ; VBITS_EQ_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
@@ -649,13 +648,12 @@ define void @zip_vscale2_4(<4 x double>* %a, <4 x double>* %b) #2 {
 ; CHECK-LABEL: zip_vscale2_4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]

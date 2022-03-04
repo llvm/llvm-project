@@ -807,10 +807,10 @@ define <16 x i8> @srem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-LABEL: srem16x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x26, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -1171,10 +1171,10 @@ define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-LABEL: urem16x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x26, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -1469,8 +1469,8 @@ define <2 x float> @frem2f32(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: frem2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -1498,8 +1498,8 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: frem4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
@@ -1554,8 +1554,8 @@ define <2 x double> @frem2d64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: frem2d64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov d0, v0.d[1]
