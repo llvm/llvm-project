@@ -1633,7 +1633,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     bool IsScalarMove = Node->getOpcode() == RISCVISD::VMV_S_X_VL ||
                         Node->getOpcode() == RISCVISD::VFMV_S_F_VL;
     bool HasPassthruOperand = Node->getOpcode() != ISD::SPLAT_VECTOR;
-    if (HasPassthruOperand && !IsScalarMove && !Node->getOperand(0).isUndef())
+    if (HasPassthruOperand && !Node->getOperand(0).isUndef())
       break;
     SDValue Src = HasPassthruOperand ? Node->getOperand(1) : Node->getOperand(0);
     auto *Ld = dyn_cast<LoadSDNode>(Src);
