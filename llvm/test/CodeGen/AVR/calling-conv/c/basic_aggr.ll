@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc -mtriple=avr < %s | FileCheck %s
 
 ; CHECK-LABEL: ret_void_args_struct_i8_i32
 define void @ret_void_args_struct_i8_i32({ i8, i32 } %a) {
@@ -82,3 +82,94 @@ start:
   ret void
 }
 
+; NOTE: The %0 (8-byte array) costs 8 registers and %1 (10-byte array)
+; NOTE: costs 10 registers.
+define i8 @foo0([8 x i8] %0, [10 x i8] %1) {
+; CHECK-LABEL: foo0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r18, r8
+; CHECK-NEXT:    mov r24, r18
+; CHECK-NEXT:    ret
+  %3 = extractvalue [8 x i8] %0, 0
+  %4 = extractvalue [10 x i8] %1, 0
+  %5 = sub i8 %3, %4
+  ret i8 %5
+}
+
+; NOTE: The %0 (7-byte array) costs 8 registers and %1 (9-byte array)
+; NOTE: costs 10 registers.
+define i8 @foo1([7 x i8] %0, [9 x i8] %1) {
+; CHECK-LABEL: foo1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r18, r8
+; CHECK-NEXT:    mov r24, r18
+; CHECK-NEXT:    ret
+  %3 = extractvalue [7 x i8] %0, 0
+  %4 = extractvalue [9 x i8] %1, 0
+  %5 = sub i8 %3, %4
+  ret i8 %5
+}
+
+; NOTE: Each argument (6-byte array) costs 6 registers.
+define i8 @foo2([6 x i8] %0, [6 x i8] %1, [6 x i8] %2) {
+; CHECK-LABEL: foo2:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub r20, r14
+; CHECK-NEXT:    add r20, r8
+; CHECK-NEXT:    mov r24, r20
+; CHECK-NEXT:    ret
+  %4 = extractvalue [6 x i8] %0, 0
+  %5 = extractvalue [6 x i8] %1, 0
+  %6 = extractvalue [6 x i8] %2, 0
+  %7 = sub i8 %4, %5
+  %8 = add i8 %7, %6
+  ret i8 %8
+}
+
+; NOTE: The %0 (9-byte array) costs 10 registers. Though there are
+; NOTE: 8 registers are vacant, the %b (9-byte array) has to be dropped
+; NOTE: to the stack.
+define i8 @foo3([9 x i8] %0, [9 x i8] %1) {
+; CHECK-LABEL: foo3:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    push r16
+; CHECK-NEXT:    push r28
+; CHECK-NEXT:    push r29
+; CHECK-NEXT:    in r28, 61
+; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    ldd r24, Y+6
+; CHECK-NEXT:    sub r16, r24
+; CHECK-NEXT:    mov r24, r16
+; CHECK-NEXT:    pop r29
+; CHECK-NEXT:    pop r28
+; CHECK-NEXT:    pop r16
+; CHECK-NEXT:    ret
+  %3 = extractvalue [9 x i8] %0, 0
+  %4 = extractvalue [9 x i8] %1, 0
+  %5 = sub i8 %3, %4
+  ret i8 %5
+}
+
+; NOTE: Both %0 and %1 are 7-byte arrays, and cost total 16 registers.
+; NOTE: Though there are 2 registers are vacant, the %2 (7-byte array) has to
+; NOTE: be dropped to the stack.
+define i8 @foo4([7 x i8] %0, [7 x i8] %1, [7 x i8] %2) {
+; CHECK-LABEL: foo4:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    push r28
+; CHECK-NEXT:    push r29
+; CHECK-NEXT:    in r28, 61
+; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    sub r18, r10
+; CHECK-NEXT:    ldd r24, Y+5
+; CHECK-NEXT:    add r24, r18
+; CHECK-NEXT:    pop r29
+; CHECK-NEXT:    pop r28
+; CHECK-NEXT:    ret
+  %4 = extractvalue [7 x i8] %0, 0
+  %5 = extractvalue [7 x i8] %1, 0
+  %6 = extractvalue [7 x i8] %2, 0
+  %7 = sub i8 %4, %5
+  %8 = add i8 %7, %6
+  ret i8 %8
+}
