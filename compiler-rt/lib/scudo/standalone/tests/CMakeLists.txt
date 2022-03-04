@@ -73,7 +73,7 @@ macro(add_scudo_unittest testname)
         "${testname}-${arch}-Test" ${arch}
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         COMPILE_DEPS ${SCUDO_TEST_HEADERS}
-        DEPS gtest scudo_standalone
+        DEPS llvm_gtest scudo_standalone
         RUNTIME ${RUNTIME}
         CFLAGS ${SCUDO_UNITTEST_CFLAGS}
         LINK_FLAGS ${LINK_FLAGS})

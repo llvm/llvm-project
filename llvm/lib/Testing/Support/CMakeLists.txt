@@ -12,7 +12,7 @@ add_llvm_library(LLVMTestingSupport
   Support
   )
 
-target_link_libraries(LLVMTestingSupport PRIVATE gtest)
+target_link_libraries(LLVMTestingSupport PRIVATE llvm_gtest)
 
 # This is to avoid the error in gtest-death-test-internal.h
 # (150,16): error: 'Create' overrides a member function but

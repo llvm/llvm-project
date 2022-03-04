@@ -25,8 +25,8 @@ function(add_libc_benchmark_unittest target_name)
   )
   target_link_libraries(${target_name}
     PRIVATE
-    gtest_main
-    gtest
+    llvm_gtest_main
+    llvm_gtest
     ${LIBC_BENCHMARKS_UNITTEST_DEPENDS}
   )
   llvm_update_compile_flags(${target_name})
