@@ -3010,6 +3010,7 @@ void CommandInterpreter::PrintCommandOutput(Stream &stream,
   if (size > 0) {
     stream.Printf("\n... Interrupted.\n");
   }
+  stream.Flush();
 }
 
 bool CommandInterpreter::EchoCommandNonInteractive(
