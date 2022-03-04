@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
 
-#include "FEnvUtils.h"
+#include "FEnvImpl.h"
 #include "FPBits.h"
 
 #include "src/__support/CPP/TypeTraits.h"
