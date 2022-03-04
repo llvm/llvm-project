@@ -33,7 +33,7 @@ add_libc_unittest(
     sigprocmask_test.cpp
   DEPENDS
     libc.include.errno
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
@@ -63,7 +63,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.signal
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.signal
     libc.test.errno_setter_matcher

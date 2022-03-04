@@ -91,9 +91,6 @@ headers_template = """\
 #if __cplusplus >= 201103L
 {experimental_headers}
 #endif // __cplusplus >= 201103L
-
-// extended headers
-{extended_headers}
 """
 
 
@@ -166,7 +163,7 @@ def produce_experimental_headers(post_include=None, exclusions=None):
 
 
 def produce_extended_headers(post_include=None, exclusions=None):
-    return produce_headers([include_path, 'ext'], 0, post_include=post_include, exclusions=exclusions)
+    return produce_headers([include_path, 'ext'], 1, post_include=post_include, exclusions=exclusions)
 
 
 def replace_generated_headers(test_path, test_str):
@@ -189,9 +186,6 @@ def produce_test(test_filename, exclusions=None, post_include=None):
             exclusions=exclusions,
         ),
         experimental_headers=produce_experimental_headers(
-            post_include=post_include,
-        ),
-        extended_headers=produce_extended_headers(
             post_include=post_include,
         ),
     )

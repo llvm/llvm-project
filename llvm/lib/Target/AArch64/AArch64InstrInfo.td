@@ -5345,19 +5345,22 @@ defm FMAXP   : SIMDFPPairwiseScalar<0, 0b01111, "fmaxp">;
 defm FMINNMP : SIMDFPPairwiseScalar<1, 0b01100, "fminnmp">;
 defm FMINP   : SIMDFPPairwiseScalar<1, 0b01111, "fminp">;
 
+// Only the lower half of the result of the inner FADDP is used in the patterns
+// below, so the second operand does not matter. Re-use the first input
+// operand, so no additional dependencies need to be introduced.
 let Predicates = [HasFullFP16] in {
 def : Pat<(f16 (vecreduce_fadd (v8f16 V128:$Rn))),
             (FADDPv2i16p
               (EXTRACT_SUBREG
-                 (FADDPv8f16 (FADDPv8f16 V128:$Rn, (v8f16 (IMPLICIT_DEF))), (v8f16 (IMPLICIT_DEF))),
+                 (FADDPv8f16 (FADDPv8f16 V128:$Rn, V128:$Rn), V128:$Rn),
                dsub))>;
 def : Pat<(f16 (vecreduce_fadd (v4f16 V64:$Rn))),
-          (FADDPv2i16p (FADDPv4f16 V64:$Rn, (v4f16 (IMPLICIT_DEF))))>;
+          (FADDPv2i16p (FADDPv4f16 V64:$Rn, V64:$Rn))>;
 }
 def : Pat<(f32 (vecreduce_fadd (v4f32 V128:$Rn))),
           (FADDPv2i32p
             (EXTRACT_SUBREG
-              (FADDPv4f32 V128:$Rn, (v4f32 (IMPLICIT_DEF))),
+              (FADDPv4f32 V128:$Rn, V128:$Rn),
              dsub))>;
 def : Pat<(f32 (vecreduce_fadd (v2f32 V64:$Rn))),
           (FADDPv2i32p V64:$Rn)>;
@@ -6141,6 +6144,14 @@ def : Pat<(v8i8  immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm MOVI      : SIMDModifiedImmVectorShift<0, 0b10, 0b00, "movi">;
+
+let Predicates = [HasNEON] in {
+  // Using the MOVI to materialize fp constants.
+  def : Pat<(f32 fpimm32SIMDModImmType4:$in),
+            (EXTRACT_SUBREG (MOVIv2i32 (fpimm32SIMDModImmType4XForm f32:$in),
+                                       (i32 24)),
+                            ssub)>;
+}
 
 def : InstAlias<"movi $Vd.4h, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.8h, $imm", (MOVIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;

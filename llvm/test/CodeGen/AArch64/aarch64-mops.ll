@@ -690,8 +690,8 @@ define void @memset_size(i8* %dst, i64 %size, i32 %value) {
 ; GISel-WITHOUT-MOPS-O0-LABEL: memset_size:
 ; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
 ; GISel-WITHOUT-MOPS-O0-NEXT:    sub sp, sp, #32
-; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x1, [sp, #8] // 8-byte Folded Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, w2
@@ -759,8 +759,8 @@ define void @memset_size_volatile(i8* %dst, i64 %size, i32 %value) {
 ; GISel-WITHOUT-MOPS-O0-LABEL: memset_size_volatile:
 ; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
 ; GISel-WITHOUT-MOPS-O0-NEXT:    sub sp, sp, #32
-; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x1, [sp, #8] // 8-byte Folded Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, w2

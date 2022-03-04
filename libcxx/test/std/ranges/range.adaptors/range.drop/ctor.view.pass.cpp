@@ -23,7 +23,7 @@ constexpr bool test() {
   assert(dropView1.begin() == globalBuff + 4);
 
   std::ranges::drop_view dropView2(ForwardView(), 4);
-  assert(dropView2.begin().base() == globalBuff + 4);
+  assert(base(dropView2.begin()) == globalBuff + 4);
 
   return true;
 }

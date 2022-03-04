@@ -29,14 +29,14 @@ public:
     typedef int *                                                 pointer;
     typedef int &                                                 reference;
 
-    constexpr int *base() const {return it_;}
+    friend constexpr int *base(const AssignableFromIter& i) {return i.it_;}
 
     AssignableFromIter() = default;
     explicit constexpr AssignableFromIter(int *it) : it_(it) {}
-    constexpr AssignableFromIter(const forward_iterator<int*>& it) : it_(it.base()) {}
+    constexpr AssignableFromIter(const forward_iterator<int*>& it) : it_(base(it)) {}
 
     constexpr AssignableFromIter& operator=(const forward_iterator<int*> &other) {
-      it_ = other.base();
+      it_ = base(other);
       return *this;
     }
 
@@ -70,11 +70,11 @@ constexpr bool test() {
   {
     std::counted_iterator iter1(AssignableFromIter{buffer}, 8);
     std::counted_iterator iter2(forward_iterator<int*>{buffer + 2}, 6);
-    assert(iter1.base().base() == buffer);
+    assert(base(iter1.base()) == buffer);
     assert(iter1.count() == 8);
     std::counted_iterator<AssignableFromIter>& result = (iter1 = iter2);
     assert(&result == &iter1);
-    assert(iter1.base().base() == buffer + 2);
+    assert(base(iter1.base()) == buffer + 2);
     assert(iter1.count() == 6);
 
     ASSERT_SAME_TYPE(decltype(iter1 = iter2), std::counted_iterator<AssignableFromIter>&);
@@ -82,11 +82,11 @@ constexpr bool test() {
   {
     std::counted_iterator iter1(AssignableFromIter{buffer}, 8);
     const std::counted_iterator iter2(forward_iterator<int*>{buffer + 2}, 6);
-    assert(iter1.base().base() == buffer);
+    assert(base(iter1.base()) == buffer);
     assert(iter1.count() == 8);
     std::counted_iterator<AssignableFromIter>& result = (iter1 = iter2);
     assert(&result == &iter1);
-    assert(iter1.base().base() == buffer + 2);
+    assert(base(iter1.base()) == buffer + 2);
     assert(iter1.count() == 6);
 
     ASSERT_SAME_TYPE(decltype(iter1 = iter2), std::counted_iterator<AssignableFromIter>&);

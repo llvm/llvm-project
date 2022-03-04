@@ -416,9 +416,9 @@ define void @combine_non_adjacent_cmp_br(%struct.Struct* nocapture readonly %hdC
 ; CHECK-LABEL: combine_non_adjacent_cmp_br:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -474,8 +474,8 @@ define i32 @do_nothing_if_resultant_opcodes_would_differ() #0 {
 ; CHECK-LABEL: do_nothing_if_resultant_opcodes_would_differ:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -642,8 +642,8 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-LABEL: fcmpri:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str d8, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    .cfi_offset b8, -32

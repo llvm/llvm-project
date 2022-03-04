@@ -48,14 +48,14 @@ int main(int, char**)
         std::string pat("Today is %A which is abbreviated %a.");
         cpp17_output_iterator<char*> iter =
             f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
-        std::string ex(str, iter.base());
+        std::string ex(str, base(iter));
         assert(ex == "Today is Saturday which is abbreviated Sat.");
     }
     {
         std::string pat("The number of the month is %Om.");
         cpp17_output_iterator<char*> iter =
             f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
-        std::string ex(str, iter.base());
+        std::string ex(str, base(iter));
         assert(ex == "The number of the month is 05.");
     }
 

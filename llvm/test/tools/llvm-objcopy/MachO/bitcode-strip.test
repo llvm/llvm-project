@@ -1,0 +1,44 @@
+## Test output flag is required.
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-bitcode-strip %t 2>&1 | FileCheck --check-prefix=MISSING-ARG %s
+# RUN: llvm-bitcode-strip %t -o %t2
+# RUN: cmp %t %t2
+
+# MISSING-ARG: error: -o is a required argument
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         184
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          184
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000

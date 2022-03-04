@@ -51,7 +51,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_year(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_year == 109);
         assert(err == std::ios_base::eofbit);
     }
@@ -61,7 +61,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_year(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_year == 109);
         assert(err == std::ios_base::eofbit);
     }
@@ -71,7 +71,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_year(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_year == 109);
         assert(err == std::ios_base::eofbit);
     }
@@ -81,7 +81,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_year(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_year == 109);
         assert(err == std::ios_base::eofbit);
     }

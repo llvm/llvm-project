@@ -3,6 +3,7 @@
 
 define i32 @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %F, <16 x i16> %G, <32 x i8> %H, i32* %loadptr) nounwind {
 ; CHECK-LABEL: f:
+; CHECK:    movl (%rsi), %eax
 ; CHECK:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK:    vmovntps %ymm0, (%rdi)
 ; CHECK:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0

@@ -16,6 +16,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::dwarf;
 
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,

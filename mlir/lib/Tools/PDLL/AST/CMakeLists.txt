@@ -6,5 +6,6 @@ add_mlir_library(MLIRPDLLAST
   Types.cpp
 
   LINK_LIBS PUBLIC
+  MLIRPDLLODS
   MLIRSupport
   )

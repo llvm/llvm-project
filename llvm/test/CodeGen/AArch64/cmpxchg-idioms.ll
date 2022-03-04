@@ -25,8 +25,8 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-LABEL: test_return:
 ; OUTLINE-ATOMICS:       ; %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -75,8 +75,8 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; OUTLINE-ATOMICS-LABEL: test_return_bool:
 ; OUTLINE-ATOMICS:       ; %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -120,8 +120,8 @@ define void @test_conditional(i32* %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-LABEL: test_conditional:
 ; OUTLINE-ATOMICS:       ; %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -166,9 +166,9 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK-LABEL: test_conditional2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -222,9 +222,9 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; OUTLINE-ATOMICS-LABEL: test_conditional2:
 ; OUTLINE-ATOMICS:       ; %bb.0: ; %entry
 ; OUTLINE-ATOMICS-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 48
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 48
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24

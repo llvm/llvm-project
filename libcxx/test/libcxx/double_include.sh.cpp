@@ -230,10 +230,6 @@
 #    include <experimental/vector>
 #endif // __cplusplus >= 201103L
 
-// extended headers
-#include <ext/hash_map>
-#include <ext/hash_set>
-
 // clang-format on
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -173,8 +173,8 @@ define <4 x i32> @sign_4xi32_multi_use(<4 x i32> %a) {
 ; CHECK-LABEL: sign_4xi32_multi_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    cmlt v2.4s, v0.4s, #0

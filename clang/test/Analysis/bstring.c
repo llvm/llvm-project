@@ -2,13 +2,15 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false
+// RUN:   -analyzer-config eagerly-assume=false  
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
@@ -16,6 +18,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
@@ -23,6 +26,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 
@@ -315,7 +319,7 @@ void mempcpy15(void) {
 
   p1 = (&s2) + 1;
   p2 = mempcpy(&s2, &s1, sizeof(struct st));
-
+  
   clang_analyzer_eval(p1 == p2); // expected-warning{{TRUE}}
 }
 

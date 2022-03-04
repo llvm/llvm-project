@@ -326,10 +326,10 @@ define void @no_version(i32* nocapture %dst, i32* nocapture readonly %src) {
 ; CHECK-LABEL: @no_version(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_GEP_1:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[DST_GEP_1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[SRC]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    [[DST_GEP_1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DST]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], <2 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
@@ -902,7 +902,12 @@ define i32 @block_partly_vectorized_without_versioning(%struct.spam* readonly %a
 ; CHECK-NEXT:    [[A_GEP_14:%.*]] = getelementptr i8, i8* [[A]], i64 14
 ; CHECK-NEXT:    [[B_GEP_14:%.*]] = getelementptr i8, i8* [[B]], i64 14
 ; CHECK-NEXT:    [[A_GEP_15:%.*]] = getelementptr i8, i8* [[A]], i64 15
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[A_GEP_0]] to <16 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[B_GEP_15:%.*]] = getelementptr i8, i8* [[B]], i64 15
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[B_GEP_0]] to <16 x i8>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i8> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[R_GEP_0:%.*]] = getelementptr i8, i8* [[ARG1]], i64 0
 ; CHECK-NEXT:    [[R_GEP_1:%.*]] = getelementptr i8, i8* [[ARG1]], i64 1
 ; CHECK-NEXT:    [[R_GEP_2:%.*]] = getelementptr i8, i8* [[ARG1]], i64 2
@@ -919,11 +924,6 @@ define i32 @block_partly_vectorized_without_versioning(%struct.spam* readonly %a
 ; CHECK-NEXT:    [[R_GEP_13:%.*]] = getelementptr i8, i8* [[ARG1]], i64 13
 ; CHECK-NEXT:    [[R_GEP_14:%.*]] = getelementptr i8, i8* [[ARG1]], i64 14
 ; CHECK-NEXT:    [[R_GEP_15:%.*]] = getelementptr i8, i8* [[ARG1]], i64 15
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[A_GEP_0]] to <16 x i8>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[B_GEP_0]] to <16 x i8>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i8> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[R_GEP_0]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[TMP5]], align 1
 ; CHECK-NEXT:    [[T21:%.*]] = getelementptr inbounds i8, i8* [[ARG3]], i64 15

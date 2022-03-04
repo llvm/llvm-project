@@ -43,42 +43,15 @@ SystemInitializerCommon::~SystemInitializerCommon() = default;
 /// Initialize the FileSystem based on the current reproducer mode.
 static llvm::Error InitializeFileSystem() {
   auto &r = repro::Reproducer::Instance();
-  if (repro::Loader *loader = r.GetLoader()) {
-    FileSpec vfs_mapping = loader->GetFile<FileProvider::Info>();
-    if (vfs_mapping) {
-      if (llvm::Error e = FileSystem::Initialize(vfs_mapping))
-        return e;
-    } else {
-      FileSystem::Initialize();
-    }
-
-    // Set the current working directory form the reproducer.
-    llvm::Expected<std::string> working_dir =
-        repro::GetDirectoryFrom<WorkingDirectoryProvider>(loader);
-    if (!working_dir)
-      return working_dir.takeError();
-    if (std::error_code ec = FileSystem::Instance()
-                                 .GetVirtualFileSystem()
-                                 ->setCurrentWorkingDirectory(*working_dir)) {
-      return llvm::errorCodeToError(ec);
-    }
-
-    // Set the home directory from the reproducer.
-    llvm::Expected<std::string> home_dir =
-        repro::GetDirectoryFrom<HomeDirectoryProvider>(loader);
-    if (!home_dir)
-      return home_dir.takeError();
-    FileSystem::Instance().SetHomeDirectory(*home_dir);
-
-    return llvm::Error::success();
-  }
 
   if (repro::Generator *g = r.GetGenerator()) {
     repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
     vp.SetVersion(lldb_private::GetVersion());
 
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    FileSystem::Initialize(fp.GetFileCollector());
+
+    FileSystem::Initialize(llvm::FileCollector::createCollectorVFS(
+        llvm::vfs::getRealFileSystem(), fp.GetFileCollector()));
 
     fp.RecordInterestingDirectory(
         g->GetOrCreate<repro::WorkingDirectoryProvider>().GetDirectory());

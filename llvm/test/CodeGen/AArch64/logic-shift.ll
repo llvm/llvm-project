@@ -228,3 +228,146 @@ define i64 @mix_logic_lshr(i64 %x0, i64 %x1, i64 %y, i64 %z) {
   %r = or i64 %logic, %sh2
   ret i64 %r
 }
+
+; (shl (X | Y), C1) | (srl X, C2) --> (rotl X, C1) | (shl Y, C1)
+
+define i32 @or_fshl_commute0(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshl_commute0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    extr w0, w8, w0, #27
+; CHECK-NEXT:    ret
+  %or1 = or i32 %x, %y
+  %sh1 = shl i32 %or1, 5
+  %sh2 = lshr i32 %x, 27
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
+
+define i64 @or_fshl_commute1(i64 %x, i64 %y) {
+; CHECK-LABEL: or_fshl_commute1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w1, w0
+; CHECK-NEXT:    extr x0, x8, x0, #29
+; CHECK-NEXT:    ret
+  %or1 = or i64 %y, %x
+  %sh1 = shl i64 %or1, 35
+  %sh2 = lshr i64 %x, 29
+  %r = or i64 %sh1, %sh2
+  ret i64 %r
+}
+
+define i16 @or_fshl_commute2(i16 %x, i16 %y) {
+; CHECK-LABEL: or_fshl_commute2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    lsl w8, w8, #2
+; CHECK-NEXT:    bfxil w8, w0, #14, #2
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ret
+  %or1 = or i16 %x, %y
+  %sh1 = shl i16 %or1, 2
+  %sh2 = lshr i16 %x, 14
+  %r = or i16 %sh2, %sh1
+  ret i16 %r
+}
+
+define i8 @or_fshl_commute3(i8 %x, i8 %y) {
+; CHECK-LABEL: or_fshl_commute3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w1, w0
+; CHECK-NEXT:    lsl w8, w8, #5
+; CHECK-NEXT:    bfxil w8, w0, #3, #5
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ret
+  %or1 = or i8 %y, %x
+  %sh1 = shl i8 %or1, 5
+  %sh2 = lshr i8 %x, 3
+  %r = or i8 %sh2, %sh1
+  ret i8 %r
+}
+
+define i32 @or_fshl_wrong_shift(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshl_wrong_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    lsl w8, w8, #20
+; CHECK-NEXT:    orr w0, w8, w0, lsr #11
+; CHECK-NEXT:    ret
+  %or1 = or i32 %x, %y
+  %sh1 = shl i32 %or1, 20
+  %sh2 = lshr i32 %x, 11
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
+
+; (shl X, C1) | (srl (X | Y), C2) --> (rotl X, C1) | (srl Y, C2)
+
+define i64 @or_fshr_commute0(i64 %x, i64 %y) {
+; CHECK-LABEL: or_fshr_commute0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr x8, x0, x1
+; CHECK-NEXT:    extr x0, x0, x8, #24
+; CHECK-NEXT:    ret
+  %or1 = or i64 %x, %y
+  %sh1 = shl i64 %x, 40
+  %sh2 = lshr i64 %or1, 24
+  %r = or i64 %sh1, %sh2
+  ret i64 %r
+}
+
+define i32 @or_fshr_commute1(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshr_commute1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w1, w0
+; CHECK-NEXT:    extr w0, w0, w8, #29
+; CHECK-NEXT:    ret
+  %or1 = or i32 %y, %x
+  %sh1 = shl i32 %x, 3
+  %sh2 = lshr i32 %or1, 29
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
+
+define i16 @or_fshr_commute2(i16 %x, i16 %y) {
+; CHECK-LABEL: or_fshr_commute2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    lsl w0, w0, #9
+; CHECK-NEXT:    bfxil w0, w8, #7, #9
+; CHECK-NEXT:    ret
+  %or1 = or i16 %x, %y
+  %sh1 = shl i16 %x, 9
+  %sh2 = lshr i16 %or1, 7
+  %r = or i16 %sh2, %sh1
+  ret i16 %r
+}
+
+define i8 @or_fshr_commute3(i8 %x, i8 %y) {
+; CHECK-LABEL: or_fshr_commute3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w1, w0
+; CHECK-NEXT:    lsl w0, w0, #2
+; CHECK-NEXT:    bfxil w0, w8, #6, #2
+; CHECK-NEXT:    ret
+  %or1 = or i8 %y, %x
+  %sh1 = shl i8 %x, 2
+  %sh2 = lshr i8 %or1, 6
+  %r = or i8 %sh2, %sh1
+  ret i8 %r
+}
+
+define i32 @or_fshr_wrong_shift(i32 %x, i32 %y) {
+; CHECK-LABEL: or_fshr_wrong_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    lsr w8, w8, #26
+; CHECK-NEXT:    bfi w8, w0, #7, #25
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ret
+  %or1 = or i32 %x, %y
+  %sh1 = shl i32 %x, 7
+  %sh2 = lshr i32 %or1, 26
+  %r = or i32 %sh1, %sh2
+  ret i32 %r
+}
