@@ -54,6 +54,12 @@ void test_s_decperflevel(int x)
   __builtin_amdgcn_s_decperflevel(x); // expected-error {{argument to '__builtin_amdgcn_s_decperflevel' must be a constant integer}}
 }
 
+void test_s_setprio(int x)
+{
+  __builtin_amdgcn_s_setprio(x); // expected-error {{argument to '__builtin_amdgcn_s_setprio' must be a constant integer}}
+  __builtin_amdgcn_s_setprio(65536); // expected-warning {{implicit conversion from 'int' to 'short' changes value from 65536 to 0}}
+}
+
 void test_sicmp_i32(global ulong* out, int a, int b, uint c)
 {
   *out = __builtin_amdgcn_sicmp(a, b, c); // expected-error {{argument to '__builtin_amdgcn_sicmp' must be a constant integer}}
