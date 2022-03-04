@@ -5950,6 +5950,53 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0), SignMask);
 }
 
+/// Given a bitwise logic operation N with a matching bitwise logic operand,
+/// fold a pattern where 2 of the source operands are identically shifted
+/// values. For example:
+/// ((X0 << Y) | Z) | (X1 << Y) --> ((X0 | X1) << Y) | Z
+static SDValue foldLogicOfShifts(SDNode *N, SDValue LogicOp, SDValue ShiftOp,
+                                 SelectionDAG &DAG) {
+  unsigned LogicOpcode = N->getOpcode();
+  assert((LogicOpcode == ISD::AND || LogicOpcode == ISD::OR ||
+          LogicOpcode == ISD::XOR)
+         && "Expected bitwise logic operation");
+
+  if (!LogicOp.hasOneUse() || !ShiftOp.hasOneUse())
+    return SDValue();
+
+  // Match another bitwise logic op and a shift.
+  unsigned ShiftOpcode = ShiftOp.getOpcode();
+  if (LogicOp.getOpcode() != LogicOpcode ||
+      !(ShiftOpcode == ISD::SHL || ShiftOpcode == ISD::SRL ||
+        ShiftOpcode == ISD::SRA))
+    return SDValue();
+
+  // Match another shift op inside the first logic operand. Handle both commuted
+  // possibilities.
+  // LOGIC (LOGIC (SH X0, Y), Z), (SH X1, Y) --> LOGIC (SH (LOGIC X0, X1), Y), Z
+  // LOGIC (LOGIC Z, (SH X0, Y)), (SH X1, Y) --> LOGIC (SH (LOGIC X0, X1), Y), Z
+  SDValue X1 = ShiftOp.getOperand(0);
+  SDValue Y = ShiftOp.getOperand(1);
+  SDValue X0, Z;
+  if (LogicOp.getOperand(0).getOpcode() == ShiftOpcode &&
+      LogicOp.getOperand(0).getOperand(1) == Y) {
+    X0 = LogicOp.getOperand(0).getOperand(0);
+    Z = LogicOp.getOperand(1);
+  } else if (LogicOp.getOperand(1).getOpcode() == ShiftOpcode &&
+             LogicOp.getOperand(1).getOperand(1) == Y) {
+    X0 = LogicOp.getOperand(1).getOperand(0);
+    Z = LogicOp.getOperand(0);
+  } else {
+    return SDValue();
+  }
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue LogicX = DAG.getNode(LogicOpcode, DL, VT, X0, X1);
+  SDValue NewShift = DAG.getNode(ShiftOpcode, DL, VT, LogicX, Y);
+  return DAG.getNode(LogicOpcode, DL, VT, NewShift, Z);
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -6218,6 +6265,11 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (N0.getOpcode() == N1.getOpcode())
     if (SDValue V = hoistLogicOpWithSameOpcodeHands(N))
       return V;
+
+  if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
+    return R;
+  if (SDValue R = foldLogicOfShifts(N, N1, N0, DAG))
+    return R;
 
   // Masking the negated extension of a boolean is just the zero-extended
   // boolean:
@@ -6694,52 +6746,6 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
   }
 
   return SDValue();
-}
-
-/// Given a bitwise logic operation N with a matching bitwise logic operand,
-/// fold a pattern where 2 of the source operands are identically shifted
-/// values. For example:
-/// ((X0 << Y) | Z) | (X1 << Y) --> ((X0 | X1) << Y) | Z
-static SDValue foldLogicOfShifts(SDNode *N, SDValue LogicOp, SDValue ShiftOp,
-                                 SelectionDAG &DAG) {
-  // TODO: This should be extended to allow AND/XOR.
-  assert(N->getOpcode() == ISD::OR && "Expected bitwise logic operation");
-
-  if (!LogicOp.hasOneUse() || !ShiftOp.hasOneUse())
-    return SDValue();
-
-  // Match another bitwise logic op and a shift.
-  unsigned LogicOpcode = N->getOpcode();
-  unsigned ShiftOpcode = ShiftOp.getOpcode();
-  if (LogicOp.getOpcode() != LogicOpcode ||
-      !(ShiftOpcode == ISD::SHL || ShiftOpcode == ISD::SRL ||
-        ShiftOpcode == ISD::SRA))
-    return SDValue();
-
-  // Match another shift op inside the first logic operand. Handle both commuted
-  // possibilities.
-  // LOGIC (LOGIC (SH X0, Y), Z), (SH X1, Y) --> LOGIC (SH (LOGIC X0, X1), Y), Z
-  // LOGIC (LOGIC Z, (SH X0, Y)), (SH X1, Y) --> LOGIC (SH (LOGIC X0, X1), Y), Z
-  SDValue X1 = ShiftOp.getOperand(0);
-  SDValue Y = ShiftOp.getOperand(1);
-  SDValue X0, Z;
-  if (LogicOp.getOperand(0).getOpcode() == ShiftOpcode &&
-      LogicOp.getOperand(0).getOperand(1) == Y) {
-    X0 = LogicOp.getOperand(0).getOperand(0);
-    Z = LogicOp.getOperand(1);
-  } else if (LogicOp.getOperand(1).getOpcode() == ShiftOpcode &&
-             LogicOp.getOperand(1).getOperand(1) == Y) {
-    X0 = LogicOp.getOperand(1).getOperand(0);
-    Z = LogicOp.getOperand(0);
-  } else {
-    return SDValue();
-  }
-
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-  SDValue LogicX = DAG.getNode(LogicOpcode, DL, VT, X0, X1);
-  SDValue NewShift = DAG.getNode(ShiftOpcode, DL, VT, LogicX, Y);
-  return DAG.getNode(LogicOpcode, DL, VT, NewShift, Z);
 }
 
 /// OR combines for which the commuted variant will be tried as well.
@@ -8393,6 +8399,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if (N0Opcode == N1.getOpcode())
     if (SDValue V = hoistLogicOpWithSameOpcodeHands(N))
       return V;
+
+  if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
+    return R;
+  if (SDValue R = foldLogicOfShifts(N, N1, N0, DAG))
+    return R;
 
   // Unfold  ((x ^ y) & m) ^ y  into  (x & m) | (y & ~m)  if profitable
   if (SDValue MM = unfoldMaskedMerge(N))
