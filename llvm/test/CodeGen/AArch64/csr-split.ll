@@ -30,8 +30,8 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-APPLE-LABEL: test1:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24
@@ -102,8 +102,8 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-APPLE-LABEL: test2:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24
@@ -155,8 +155,8 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -176,8 +176,8 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-APPLE-LABEL: test3:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24

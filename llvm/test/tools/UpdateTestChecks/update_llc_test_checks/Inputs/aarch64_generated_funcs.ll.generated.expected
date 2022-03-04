@@ -65,7 +65,6 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
@@ -98,7 +97,6 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16

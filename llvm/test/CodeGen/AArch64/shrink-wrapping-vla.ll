@@ -78,7 +78,6 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK-LABEL: f
 
 ; CHECK:      stp x29, x30, [sp, #-16]!
-; CHECK-NEXT: .cfi_def_cfa_offset 16
 ; CHECK-NEXT: mov x29, sp
 
 ; VLA allocation
