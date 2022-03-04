@@ -1,0 +1,87 @@
+## Test bitcode section removal.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-bitcode-strip -r %t -o %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck --implicit-check-not=Name: %s
+
+# CHECK:      Name: __text
+# CHECK-NEXT: Segment: __TEXT
+# CHECK:      Name: __bundle
+# CHECK-NEXT: Segment: __DATA
+# CHECK:      Name: __notbundle
+# CHECK-NEXT: Segment: __LLVM
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      392
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          16
+    fileoff:         424
+    filesize:        16
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          424
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __bundle
+        segname:         __DATA
+        addr:            0x0000000000000004
+        content:         'DDAADDAA'
+        size:            4
+        offset:          428
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __bundle
+        segname:         __LLVM
+        addr:            0x0000000000000008
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          432
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __notbundle
+        segname:         __LLVM
+        addr:            0x0000000000000008
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          436
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
