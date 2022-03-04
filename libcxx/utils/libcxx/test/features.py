@@ -105,6 +105,18 @@ DEFAULT_FEATURES = [
             }
           """)),
 
+  # Check for Glibc < 2.27, where the ru_RU.UTF-8 locale had
+  # mon_decimal_point == ".", which our tests don't handle.
+  Feature(name='glibc-old-ru_RU-decimal-point',
+          when=lambda cfg: not '_LIBCPP_HAS_NO_LOCALIZATION' in compilerMacros(cfg) and not programSucceeds(cfg, """
+            #include <locale.h>
+            #include <string.h>
+            int main(int, char**) {
+              setlocale(LC_ALL, "ru_RU.UTF-8");
+              return strcmp(localeconv()->mon_decimal_point, ",");
+            }
+          """)),
+
   # Whether Bash can run on the executor.
   # This is not always the case, for example when running on embedded systems.
   #

@@ -11,6 +11,8 @@
 
 // REQUIRES: locale.ru_RU.UTF-8
 
+// XFAIL: glibc-old-ru_RU-decimal-point
+
 // <locale>
 
 // class money_put<charT, OutputIterator>
