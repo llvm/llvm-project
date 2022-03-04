@@ -3,13 +3,14 @@
 
 declare i1 @cond()
 
+; FIXME: Range of phi_1 and phi_2 here can be sharpened to [10, 21).
 define void @test_01() {
 ; CHECK-LABEL: 'test_01'
 ; CHECK-NEXT:  Classifying expressions for: @test_01
 ; CHECK-NEXT:    %phi_1 = phi i32 [ 10, %entry ], [ %phi_2, %loop ]
-; CHECK-NEXT:    --> %phi_1 U: [10,21) S: [10,21) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %phi_1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %phi_2 = phi i32 [ 20, %entry ], [ %phi_1, %loop ]
-; CHECK-NEXT:    --> %phi_2 U: [10,21) S: [10,21) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %phi_2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = call i1 @cond()
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
@@ -37,15 +38,15 @@ define void @test_02(i32* %p, i32* %q) {
 ; CHECK-NEXT:    %start = load i32, i32* %p, align 4, !range !0
 ; CHECK-NEXT:    --> %start U: [0,1000) S: [0,1000)
 ; CHECK-NEXT:    %outer_phi = phi i32 [ %start, %entry ], [ %inner_lcssa, %outer_backedge ]
-; CHECK-NEXT:    --> %outer_phi U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
+; CHECK-NEXT:    --> %outer_phi U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:    %inner_phi = phi i32 [ %outer_phi, %outer_loop ], [ %inner_load, %inner_loop ]
-; CHECK-NEXT:    --> %inner_phi U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
+; CHECK-NEXT:    --> %inner_phi U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_load = load i32, i32* %q, align 4, !range !1
 ; CHECK-NEXT:    --> %inner_load U: [2000,3000) S: [2000,3000) Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %inner_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_lcssa = phi i32 [ %inner_phi, %inner_loop ]
-; CHECK-NEXT:    --> %inner_lcssa U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
+; CHECK-NEXT:    --> %inner_lcssa U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:    %outer_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %outer_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_02
@@ -79,6 +80,7 @@ exit:
   ret void
 }
 
+; FIXME: All phis should have range [0, 3000)
 define void @test_03(i32* %p, i32* %q) {
 ; CHECK-LABEL: 'test_03'
 ; CHECK-NEXT:  Classifying expressions for: @test_03
@@ -87,15 +89,15 @@ define void @test_03(i32* %p, i32* %q) {
 ; CHECK-NEXT:    %start_2 = load i32, i32* %q, align 4, !range !1
 ; CHECK-NEXT:    --> %start_2 U: [2000,3000) S: [2000,3000)
 ; CHECK-NEXT:    %outer_phi = phi i32 [ %start_1, %entry ], [ %inner_lcssa, %outer_backedge ]
-; CHECK-NEXT:    --> %outer_phi U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
+; CHECK-NEXT:    --> %outer_phi U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:    %inner_phi_1 = phi i32 [ %outer_phi, %outer_loop ], [ %inner_phi_2, %inner_loop ]
-; CHECK-NEXT:    --> %inner_phi_1 U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
+; CHECK-NEXT:    --> %inner_phi_1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_phi_2 = phi i32 [ %start_2, %outer_loop ], [ %inner_phi_1, %inner_loop ]
-; CHECK-NEXT:    --> %inner_phi_2 U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
+; CHECK-NEXT:    --> %inner_phi_2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %inner_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_lcssa = phi i32 [ %inner_phi_1, %inner_loop ]
-; CHECK-NEXT:    --> %inner_lcssa U: [0,3000) S: [0,3000) Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
+; CHECK-NEXT:    --> %inner_lcssa U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:    %outer_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %outer_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_03
