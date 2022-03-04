@@ -119,22 +119,22 @@ struct CacheSignature {
     m_obj_mod_time = llvm::None;
   }
 
-  /// Return true if any of the signature member variables have valid values.
-  bool IsValid() const {
-    return m_uuid.hasValue() || m_mod_time.hasValue() ||
-           m_obj_mod_time.hasValue();
-  }
+  /// Return true only if the CacheSignature is valid.
+  ///
+  /// Cache signatures are considered valid only if there is a UUID in the file
+  /// that can uniquely identify the file. Some build systems play with
+  /// modification times of file so we can not trust them without using valid
+  /// unique idenifier like the UUID being valid.
+  bool IsValid() const { return m_uuid.hasValue(); }
 
   /// Check if two signatures are the same.
-  bool operator!=(const CacheSignature &rhs) {
-    if (m_uuid != rhs.m_uuid)
-      return true;
-    if (m_mod_time != rhs.m_mod_time)
-      return true;
-    if (m_obj_mod_time != rhs.m_obj_mod_time)
-      return true;
-    return false;
+  bool operator==(const CacheSignature &rhs) const {
+    return m_uuid == rhs.m_uuid && m_mod_time == rhs.m_mod_time &&
+           m_obj_mod_time == rhs.m_obj_mod_time;
   }
+
+  /// Check if two signatures differ.
+  bool operator!=(const CacheSignature &rhs) const { return !(*this == rhs); }
   /// Encode this object into a data encoder object.
   ///
   /// This allows this object to be serialized to disk. The CacheSignature
@@ -149,7 +149,7 @@ struct CacheSignature {
   ///   True if a signature was encoded, and false if there were no member
   ///   variables that had value. False indicates this data should not be
   ///   cached to disk because we were unable to encode a valid signature.
-  bool Encode(DataEncoder &encoder);
+  bool Encode(DataEncoder &encoder) const;
 
   /// Decode a serialized version of this object from data.
   ///
