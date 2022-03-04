@@ -645,6 +645,25 @@ TEST(SetTest, coalesceDoubleIncrement) {
   expectCoalesce(3, set);
 }
 
+TEST(SetTest, coalesceDiv) {
+  PresburgerSet set =
+      parsePresburgerSetFromPolyStrings(1, {
+                                               "(x) : (x floordiv 2 == 0)",
+                                               "(x) : (x floordiv 2 - 1 == 0)",
+                                           });
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceDivOtherContained) {
+  PresburgerSet set =
+      parsePresburgerSetFromPolyStrings(1, {
+                                               "(x) : (x floordiv 2 == 0)",
+                                               "(x) : (x == 0)",
+                                               "(x) : (x >= 0, -x + 1 >= 0)",
+                                           });
+  expectCoalesce(2, set);
+}
+
 static void
 expectComputedVolumeIsValidOverapprox(const PresburgerSet &set,
                                       Optional<uint64_t> trueVolume,
