@@ -16,6 +16,21 @@ v_madmk_f32 v0, v1, 0, v2
 v_mad_legacy_f32 v0, v1, v2, v3
 // GFX940: error: instruction not supported on this GPU
 
+v_mov_b64 v[2:3], v[4:5] row_shl:1
+// GFX940: error: 64 bit dpp only supports row_newbcast
+
+v_mov_b64 v[2:3], -v[4:5]
+// GFX940: error: not a valid operand.
+
+v_mov_b64 v[2:3], |v[4:5]|
+// GFX940: error: not a valid operand.
+
+v_mov_b64 v[2:3], v[4:5] dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+// GFX940: error: not a valid operand.
+
+v_mov_b64_sdwa v[2:3], v[4:5]
+// GFX940: error: sdwa variant of this instruction is not supported
+
 global_load_dword v2, v[2:3], off glc
 // GFX940: error: invalid operand for instruction
 

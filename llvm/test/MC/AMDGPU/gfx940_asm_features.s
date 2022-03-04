@@ -33,6 +33,26 @@ s_load_dword s2, s[2:3], 0x0 glc
 // GFX940: buffer_load_dword v5, off, s[8:11], s3 sc0 nt sc1 ; encoding: [0x00,0xc0,0x52,0xe0,0x00,0x05,0x02,0x03]
 buffer_load_dword v5, off, s[8:11], s3 sc0 nt sc1
 
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_mov_b64_e32 v[2:3], v[4:5]            ; encoding: [0x04,0x71,0x04,0x7e]
+v_mov_b64 v[2:3], v[4:5]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_mov_b64_dpp v[2:3], v[4:5] row_newbcast:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x70,0x04,0x7e,0x04,0x51,0x01,0xff]
+v_mov_b64 v[2:3], v[4:5]  row_newbcast:1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_mov_b64_e32 v[2:3], s[4:5]            ; encoding: [0x04,0x70,0x04,0x7e]
+v_mov_b64 v[2:3], s[4:5]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_mov_b64_e32 v[2:3], 1                 ; encoding: [0x81,0x70,0x04,0x7e]
+v_mov_b64 v[2:3], 1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_mov_b64_e32 v[2:3], 0x64              ; encoding: [0xff,0x70,0x04,0x7e,0x64,0x00,0x00,0x00]
+v_mov_b64 v[2:3], 0x64
+
 // NOT-GFX940: error: invalid operand for instruction
 // GFX940: buffer_atomic_swap v5, off, s[8:11], s3 sc0 ; encoding: [0x00,0x40,0x00,0xe1,0x00,0x05,0x02,0x03]
 buffer_atomic_swap v5, off, s[8:11], s3 sc0
