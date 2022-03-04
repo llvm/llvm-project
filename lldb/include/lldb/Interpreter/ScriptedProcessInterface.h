@@ -57,7 +57,7 @@ public:
     return nullptr;
   }
 
-  virtual StructuredData::DictionarySP GetLoadedImages() { return nullptr; }
+  virtual StructuredData::ArraySP GetLoadedImages() { return nullptr; }
 
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 

@@ -189,6 +189,11 @@ public:
   /// dependences.
   void propagateHostOffloadInfo(unsigned OKinds, const char *OArch);
 
+  void setHostOffloadInfo(unsigned OKinds, const char *OArch) {
+    ActiveOffloadKindMask |= OKinds;
+    OffloadingArch = OArch;
+  }
+
   /// Set the offload info of this action to be the same as the provided action,
   /// and propagate it to its dependences.
   void propagateOffloadInfo(const Action *A);

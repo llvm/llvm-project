@@ -86,7 +86,7 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
   };
 
   if (Is("bitcode-strip") || Is("bitcode_strip"))
-    return parseBitcodeStripOptions(Args);
+    return parseBitcodeStripOptions(Args, reportWarning);
   else if (Is("strip"))
     return parseStripOptions(Args, reportWarning);
   else if (Is("install-name-tool") || Is("install_name_tool"))
