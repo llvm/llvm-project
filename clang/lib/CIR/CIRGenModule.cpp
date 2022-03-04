@@ -1189,17 +1189,19 @@ mlir::LogicalResult CIRGenModule::buildIfOnBoolExpr(const Expr *cond,
       loc, condV, elseS,
       /*thenBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto bLoc = getLoc(thenS->getSourceRange().getBegin());
-        auto eLoc = getLoc(thenS->getSourceRange().getEnd());
-        LexicalScopeContext lexScope{builder, bLoc, eLoc};
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto locBegin = fusedLoc.getLocations()[0];
+        auto locEnd = fusedLoc.getLocations()[1];
+        LexicalScopeContext lexScope{builder, locBegin, locEnd};
         LexicalScopeGuard lexThenGuard{*this, &lexScope};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
       },
       /*elseBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto bLoc = getLoc(elseS->getSourceRange().getBegin());
-        auto eLoc = getLoc(elseS->getSourceRange().getEnd());
-        LexicalScopeContext lexScope{builder, bLoc, eLoc};
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto locBegin = fusedLoc.getLocations()[2];
+        auto locEnd = fusedLoc.getLocations()[3];
+        LexicalScopeContext lexScope{builder, locBegin, locEnd};
         LexicalScopeGuard lexElseGuard{*this, &lexScope};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
       });
@@ -1234,12 +1236,20 @@ mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
     }
 
     // TODO: PGO and likelihood.
-    // The mlir::Location for cir.if skips the init/cond part of IfStmt,
-    // and effectively spans from "then-begin" to "else-end||then-end".
-    auto ifLocStart = getLoc(S.getThen()->getSourceRange().getBegin());
-    auto ifLocEnd = getLoc(S.getSourceRange().getEnd());
-    return buildIfOnBoolExpr(S.getCond(), getLoc(ifLocStart, ifLocEnd),
-                             S.getThen(), S.getElse());
+    // Attempt to be more accurate as possible with IfOp location, generate
+    // one fused location that has either 2 or 4 total locations, depending
+    // on else's availability.
+    SmallVector<mlir::Location, 4> ifLocs;
+    mlir::Attribute metadata;
+    ifLocs.push_back(getLoc(S.getThen()->getSourceRange().getBegin()));
+    ifLocs.push_back(getLoc(S.getThen()->getSourceRange().getEnd()));
+    if (S.getElse()) {
+      ifLocs.push_back(getLoc(S.getElse()->getSourceRange().getBegin()));
+      ifLocs.push_back(getLoc(S.getElse()->getSourceRange().getEnd()));
+    }
+
+    auto ifLoc = mlir::FusedLoc::get(ifLocs, metadata, builder.getContext());
+    return buildIfOnBoolExpr(S.getCond(), ifLoc, S.getThen(), S.getElse());
   };
 
   // TODO: Add a new scoped symbol table.
