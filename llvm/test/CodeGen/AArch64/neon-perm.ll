@@ -2203,7 +2203,7 @@ entry:
 define <16 x i8> @test_undef_vuzp1q_s8(<16 x i8> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_s8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -2223,7 +2223,7 @@ entry:
 define <8 x i16> @test_undef_vuzp1q_s16(<8 x i16> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -2233,7 +2233,7 @@ entry:
 define <4 x i32> @test_undef_vuzp1q_s32(<4 x i32> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -2253,7 +2253,7 @@ entry:
 define <16 x i8> @test_undef_vuzp1q_u8(<16 x i8> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_u8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -2273,7 +2273,7 @@ entry:
 define <8 x i16> @test_undef_vuzp1q_u16(<8 x i16> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_u16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -2283,7 +2283,7 @@ entry:
 define <4 x i32> @test_undef_vuzp1q_u32(<4 x i32> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_u32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -2313,7 +2313,7 @@ entry:
 define <16 x i8> @test_undef_vuzp1q_p8(<16 x i8> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_p8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -2333,7 +2333,7 @@ entry:
 define <8 x i16> @test_undef_vuzp1q_p16(<8 x i16> %a) {
 ; CHECK-LABEL: test_undef_vuzp1q_p16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
