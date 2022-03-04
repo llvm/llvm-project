@@ -415,10 +415,6 @@ void AssumingOp::build(
   result.addTypes(assumingTypes);
 }
 
-LogicalResult AssumingOp::verify() {
-  return RegionBranchOpInterface::verifyTypes(*this);
-}
-
 //===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//

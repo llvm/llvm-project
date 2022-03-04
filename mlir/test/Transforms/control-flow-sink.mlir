@@ -3,32 +3,38 @@
 // Test that operations can be sunk.
 
 // CHECK-LABEL: @test_simple_sink
-// CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
 // CHECK-NEXT: %[[V0:.*]] = arith.subi %[[ARG2]], %[[ARG1]]
-// CHECK-NEXT: %[[V1:.*]] = test.region_if %[[ARG0]]: i1 -> i32 then {
+// CHECK-NEXT: %[[V1:.*]] = test.region_if %[[ARG0]]: i32 -> i32 then {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   %[[V2:.*]] = arith.subi %[[ARG1]], %[[ARG2]]
 // CHECK-NEXT:   test.region_if_yield %[[V2]]
 // CHECK-NEXT: } else {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   %[[V2:.*]] = arith.addi %[[ARG1]], %[[ARG1]]
 // CHECK-NEXT:   %[[V3:.*]] = arith.addi %[[V0]], %[[V2]]
 // CHECK-NEXT:   test.region_if_yield %[[V3]]
 // CHECK-NEXT: } join {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   %[[V2:.*]] = arith.addi %[[ARG2]], %[[ARG2]]
 // CHECK-NEXT:   %[[V3:.*]] = arith.addi %[[V2]], %[[V0]]
 // CHECK-NEXT:   test.region_if_yield %[[V3]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V1]]
-func @test_simple_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
+func @test_simple_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.subi %arg1, %arg2 : i32
   %1 = arith.subi %arg2, %arg1 : i32
   %2 = arith.addi %arg1, %arg1 : i32
   %3 = arith.addi %arg2, %arg2 : i32
-  %4 = test.region_if %arg0: i1 -> i32 then {
+  %4 = test.region_if %arg0: i32 -> i32 then {
+  ^bb0(%arg3: i32):
     test.region_if_yield %0 : i32
   } else {
+  ^bb0(%arg3: i32):
     %5 = arith.addi %1, %2 : i32
     test.region_if_yield %5 : i32
   } join {
+  ^bb0(%arg3: i32):
     %5 = arith.addi %3, %1 : i32
     test.region_if_yield %5 : i32
   }
@@ -38,37 +44,49 @@ func @test_simple_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // Test that a region op can be sunk.
 
 // CHECK-LABEL: @test_region_sink
-// CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
-// CHECK-NEXT: %[[V0:.*]] = test.region_if %[[ARG0]]: i1 -> i32 then {
-// CHECK-NEXT:   %[[V1:.*]] = test.region_if %[[ARG0]]: i1 -> i32 then {
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
+// CHECK-NEXT: %[[V0:.*]] = test.region_if %[[ARG0]]: i32 -> i32 then {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
+// CHECK-NEXT:   %[[V1:.*]] = test.region_if %[[ARG0]]: i32 -> i32 then {
+// CHECK-NEXT:   ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:     test.region_if_yield %[[ARG1]]
 // CHECK-NEXT:   } else {
+// CHECK-NEXT:   ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:     %[[V2:.*]] = arith.subi %[[ARG1]], %[[ARG2]]
 // CHECK-NEXT:     test.region_if_yield %[[V2]]
 // CHECK-NEXT:   } join {
+// CHECK-NEXT:   ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:     test.region_if_yield %[[ARG2]]
 // CHECK-NEXT:   }
 // CHECK-NEXT:   test.region_if_yield %[[V1]]
 // CHECK-NEXT: } else {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   test.region_if_yield %[[ARG1]]
 // CHECK-NEXT: } join {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   test.region_if_yield %[[ARG2]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V0]]
-func @test_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
+func @test_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.subi %arg1, %arg2 : i32
-  %1 = test.region_if %arg0: i1 -> i32 then {
+  %1 = test.region_if %arg0: i32 -> i32 then {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg1 : i32
   } else {
+  ^bb0(%arg3: i32):
     test.region_if_yield %0 : i32
   } join {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg2 : i32
   }
-  %2 = test.region_if %arg0: i1 -> i32 then {
+  %2 = test.region_if %arg0: i32 -> i32 then {
+  ^bb0(%arg3: i32):
     test.region_if_yield %1 : i32
   } else {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg1 : i32
   } join {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg2 : i32
   }
   return %2 : i32
@@ -77,8 +95,9 @@ func @test_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // Test that an entire subgraph can be sunk.
 
 // CHECK-LABEL: @test_subgraph_sink
-// CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
-// CHECK-NEXT: %[[V0:.*]] = test.region_if %[[ARG0]]: i1 -> i32 then {
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
+// CHECK-NEXT: %[[V0:.*]] = test.region_if %[[ARG0]]: i32 -> i32 then {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   %[[V1:.*]] = arith.subi %[[ARG1]], %[[ARG2]]
 // CHECK-NEXT:   %[[V2:.*]] = arith.addi %[[ARG1]], %[[ARG2]]
 // CHECK-NEXT:   %[[V3:.*]] = arith.subi %[[ARG2]], %[[ARG1]]
@@ -87,23 +106,28 @@ func @test_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT:   %[[V6:.*]] = arith.addi %[[V5]], %[[V4]]
 // CHECK-NEXT:   test.region_if_yield %[[V6]]
 // CHECK-NEXT: } else {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   test.region_if_yield %[[ARG1]]
 // CHECK-NEXT: } join {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   test.region_if_yield %[[ARG2]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V0]]
-func @test_subgraph_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
+func @test_subgraph_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.addi %arg1, %arg2 : i32
   %1 = arith.subi %arg1, %arg2 : i32
   %2 = arith.subi %arg2, %arg1 : i32
   %3 = arith.muli %0, %1 : i32
   %4 = arith.muli %2, %2 : i32
   %5 = arith.addi %3, %4 : i32
-  %6 = test.region_if %arg0: i1 -> i32 then {
+  %6 = test.region_if %arg0: i32 -> i32 then {
+  ^bb0(%arg3: i32):
     test.region_if_yield %5 : i32
   } else {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg1 : i32
   } join {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg2 : i32
   }
   return %6 : i32
@@ -112,7 +136,7 @@ func @test_subgraph_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // Test that ops can be sunk into regions with multiple blocks.
 
 // CHECK-LABEL: @test_multiblock_region_sink
-// CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
 // CHECK-NEXT: %[[V0:.*]] = arith.addi %[[ARG1]], %[[ARG2]]
 // CHECK-NEXT: %[[V1:.*]] = "test.any_cond"() ({
 // CHECK-NEXT:   %[[V3:.*]] = arith.addi %[[V0]], %[[ARG2]]
@@ -124,7 +148,7 @@ func @test_subgraph_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT: })
 // CHECK-NEXT: %[[V2:.*]] = arith.addi %[[V0]], %[[V1]]
 // CHECK-NEXT: return %[[V2]]
-func @test_multiblock_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
+func @test_multiblock_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.addi %arg1, %arg2 : i32
   %1 = arith.addi %0, %arg2 : i32
   %2 = arith.addi %1, %arg1 : i32
@@ -141,37 +165,49 @@ func @test_multiblock_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // Test that ops can be sunk recursively into nested regions.
 
 // CHECK-LABEL: @test_nested_region_sink
-// CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32) -> i32 {
-// CHECK-NEXT: %[[V0:.*]] = test.region_if %[[ARG0]]: i1 -> i32 then {
-// CHECK-NEXT:   %[[V1:.*]] = test.region_if %[[ARG0]]: i1 -> i32 then {
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32 {
+// CHECK-NEXT: %[[V0:.*]] = test.region_if %[[ARG0]]: i32 -> i32 then {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
+// CHECK-NEXT:   %[[V1:.*]] = test.region_if %[[ARG0]]: i32 -> i32 then {
+// CHECK-NEXT:   ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:     %[[V2:.*]] = arith.addi %[[ARG1]], %[[ARG1]]
 // CHECK-NEXT:     test.region_if_yield %[[V2]]
 // CHECK-NEXT:   } else {
+// CHECK-NEXT:   ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:     test.region_if_yield %[[ARG1]]
 // CHECK-NEXT:   } join {
+// CHECK-NEXT:   ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:     test.region_if_yield %[[ARG1]]
 // CHECK-NEXT:   }
 // CHECK-NEXT:   test.region_if_yield %[[V1]]
 // CHECK-NEXT: } else {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   test.region_if_yield %[[ARG1]]
 // CHECK-NEXT: } join {
+// CHECK-NEXT: ^bb0(%{{.*}}: i32):
 // CHECK-NEXT:   test.region_if_yield %[[ARG1]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V0]]
-func @test_nested_region_sink(%arg0: i1, %arg1: i32) -> i32 {
+func @test_nested_region_sink(%arg0: i32, %arg1: i32) -> i32 {
   %0 = arith.addi %arg1, %arg1 : i32
-  %1 = test.region_if %arg0: i1 -> i32 then {
-    %2 = test.region_if %arg0: i1 -> i32 then {
+  %1 = test.region_if %arg0: i32 -> i32 then {
+  ^bb0(%arg3: i32):
+    %2 = test.region_if %arg0: i32 -> i32 then {
+    ^bb0(%arg4: i32):
       test.region_if_yield %0 : i32
     } else {
+    ^bb0(%arg4: i32):
       test.region_if_yield %arg1 : i32
     } join {
+    ^bb0(%arg4: i32):
       test.region_if_yield %arg1 : i32
     }
     test.region_if_yield %2 : i32
   } else {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg1 : i32
   } join {
+  ^bb0(%arg3: i32):
     test.region_if_yield %arg1 : i32
   }
   return %1 : i32

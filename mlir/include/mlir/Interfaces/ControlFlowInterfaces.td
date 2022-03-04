@@ -24,6 +24,13 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
   let description = [{
     This interface provides information for branching terminator operations,
     i.e. terminator operations with successors.
+
+    This interface is meant to model well-defined cases of control-flow of
+    value propagation, where what occurs along control-flow edges is assumed to
+    be side-effect free. For example, corresponding successor operands and
+    successor block arguments may have different types. In such cases,
+    `areTypesCompatible` can be implemented to compare types along control-flow
+    edges. By default, type equality is used.
   }];
   let cppNamespace = "::mlir";
 
@@ -73,7 +80,15 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       "::mlir::Block *", "getSuccessorForOperands",
       (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands), [{}],
       /*defaultImplementation=*/[{ return nullptr; }]
-    >
+    >,
+    InterfaceMethod<[{
+        This method is called to compare types along control-flow edges. By
+        default, the types are checked as equal.
+      }],
+      "bool", "areTypesCompatible",
+      (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
+       [{ return lhs == rhs; }]
+    >,
   ];
 
   let verify = [{
@@ -96,6 +111,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     This interface provides information for region operations that contain
     branching behavior between held regions, i.e. this interface allows for
     expressing control flow information for region holding operations.
+
+    This interface is meant to model well-defined cases of control-flow of
+    value propagation, where what occurs along control-flow edges is assumed to
+    be side-effect free. For example, corresponding successor operands and
+    successor block arguments may have different types. In such cases,
+    `areTypesCompatible` can be implemented to compare types along control-flow
+    edges. By default, type equality is used.
   }];
   let cppNamespace = "::mlir";
 
@@ -156,12 +178,20 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
        [{ invocationBounds.append($_op->getNumRegions(),
                                   ::mlir::InvocationBounds::getUnknown()); }]
     >,
+    InterfaceMethod<[{
+        This method is called to compare types along control-flow edges. By
+        default, the types are checked as equal.
+      }],
+      "bool", "areTypesCompatible",
+      (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
+       [{ return lhs == rhs; }]
+    >,
   ];
 
   let verify = [{
     static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegion>(),
                   "expected operation to have non-zero regions");
-    return success();
+    return detail::verifyTypesAlongControlFlowEdges($_op);
   }];
 
   let extraClassDeclaration = [{
@@ -170,11 +200,6 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
                              SmallVectorImpl<RegionSuccessor> &regions) {
        SmallVector<Attribute, 2> nullAttrs(getOperation()->getNumOperands());
        getSuccessorRegions(index, nullAttrs, regions);
-    }
-
-    /// Verify types along control flow edges described by this interface.
-    static LogicalResult verifyTypes(Operation *op) {
-      return detail::verifyTypesAlongControlFlowEdges(op);
     }
   }];
 }

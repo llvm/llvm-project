@@ -54,8 +54,7 @@ struct SequentialRegionsOp
   void getSuccessorRegions(Optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    assert(index.hasValue() && "expected index");
-    if (*index == 0) {
+    if (index == 0u) {
       Operation *thisOp = this->getOperation();
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }

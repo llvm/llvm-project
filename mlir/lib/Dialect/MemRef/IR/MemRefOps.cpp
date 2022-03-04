@@ -244,10 +244,6 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-LogicalResult AllocaScopeOp::verify() {
-  return RegionBranchOpInterface::verifyTypes(*this);
-}
-
 void AllocaScopeOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
