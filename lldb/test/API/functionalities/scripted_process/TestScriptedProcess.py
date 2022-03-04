@@ -80,7 +80,7 @@ class ScriptedProcesTestCase(TestBase):
 
         self.assertIn("Failed to get scripted thread registers data.", log)
 
-    @skipIf(archs=no_match(['x86_64', 'arm64', 'arm64e']))
+    @skipUnlessDarwin
     def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
         check its process ID, read string from memory, check scripted thread
