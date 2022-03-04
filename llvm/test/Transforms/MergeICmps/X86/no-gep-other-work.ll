@@ -10,22 +10,13 @@ declare void @other_work()
 
 define i1 @test(i8* dereferenceable(2) %arg, i8* dereferenceable(2) %arg1) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  "if+entry":
 ; CHECK-NEXT:    call void @other_work()
-; CHECK-NEXT:    [[ARG_OFF:%.*]] = getelementptr inbounds i8, i8* [[ARG:%.*]], i64 1
-; CHECK-NEXT:    [[ARG1_OFF:%.*]] = getelementptr inbounds i8, i8* [[ARG1:%.*]], i64 1
-; CHECK-NEXT:    [[ARG_OFF_VAL:%.*]] = load i8, i8* [[ARG_OFF]], align 1
-; CHECK-NEXT:    [[ARG1_OFF_VAL:%.*]] = load i8, i8* [[ARG1_OFF]], align 1
-; CHECK-NEXT:    [[CMP_OFF:%.*]] = icmp eq i8 [[ARG_OFF_VAL]], [[ARG1_OFF_VAL]]
-; CHECK-NEXT:    br i1 [[CMP_OFF]], label [[IF:%.*]], label [[JOIN:%.*]]
-; CHECK:       if:
-; CHECK-NEXT:    [[ARG_VAL:%.*]] = load i8, i8* [[ARG]], align 1
-; CHECK-NEXT:    [[ARG1_VAL:%.*]] = load i8, i8* [[ARG1]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ARG_VAL]], [[ARG1_VAL]]
-; CHECK-NEXT:    br label [[JOIN]]
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[ARG:%.*]], i8* [[ARG1:%.*]], i64 2)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP]], [[IF]] ]
-; CHECK-NEXT:    ret i1 [[PHI]]
+; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
   call void @other_work()
