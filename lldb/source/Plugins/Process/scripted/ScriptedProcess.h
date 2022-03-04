@@ -89,6 +89,9 @@ public:
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
+  lldb_private::StructuredData::ObjectSP
+  GetLoadedDynamicLibrariesInfos() override;
+
 protected:
   Status DoStop();
 

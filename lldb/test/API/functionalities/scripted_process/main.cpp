@@ -2,16 +2,20 @@
 #include <mutex>
 #include <thread>
 
+extern "C" {
+int baz(int);
+}
+
 int bar(int i) {
   int j = i * i;
-  return j; // break here
+  return j;
 }
 
 int foo(int i) { return bar(i); }
 
 void call_and_wait(int &n) {
   std::cout << "waiting for computation!" << std::endl;
-  while (n != 42 * 42)
+  while (baz(n) != 42)
     ;
   std::cout << "finished computation!" << std::endl;
 }
