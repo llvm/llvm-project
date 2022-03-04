@@ -35,8 +35,7 @@ env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > multi.memprofraw
 
 RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw --profiled-binary %p/Inputs/multi.memprofexe -o - | FileCheck %s
 
-We expect 2 MIB entries, 1 each for the malloc calls in the program. Unlike the
-memprof-basic.test we do not see any allocation from glibc.
+We expect 2 MIB entries, 1 each for the malloc calls in the program.
 
 CHECK: MemprofProfile:
 CHECK-NEXT:   -

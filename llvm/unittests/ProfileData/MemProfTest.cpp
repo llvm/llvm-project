@@ -62,6 +62,7 @@ struct MockInfo {
   uint32_t Line;
   uint32_t StartLine;
   uint32_t Column;
+  std::string FileName = "valid/path.cc";
 };
 DIInliningInfo makeInliningInfo(std::initializer_list<MockInfo> MockFrames) {
   DIInliningInfo Result;
@@ -71,6 +72,7 @@ DIInliningInfo makeInliningInfo(std::initializer_list<MockInfo> MockFrames) {
     Frame.Line = Item.Line;
     Frame.StartLine = Item.StartLine;
     Frame.Column = Item.Column;
+    Frame.FileName = Item.FileName;
     Result.addFrame(Frame);
   }
   return Result;
@@ -233,5 +235,59 @@ TEST(MemProf, RecordSerializationRoundTrip) {
   EXPECT_EQ(GotRecords.size(), Records.size());
   EXPECT_THAT(GotRecords[0], EqualsRecord(Records[0]));
   EXPECT_THAT(GotRecords[1], EqualsRecord(Records[1]));
+}
+
+TEST(MemProf, SymbolizationFilter) {
+  std::unique_ptr<MockSymbolizer> Symbolizer(new MockSymbolizer());
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x1000},
+                                                specifier(), false))
+      .Times(1) // once since we don't lookup invalid PCs repeatedly.
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"malloc", 70, 57, 3, "memprof/memprof_malloc_linux.cpp"},
+      })));
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x2000},
+                                                specifier(), false))
+      .Times(1) // once since we don't lookup invalid PCs repeatedly.
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"new", 70, 57, 3, "memprof/memprof_new_delete.cpp"},
+      })));
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x3000},
+                                                specifier(), false))
+      .Times(1) // once since we don't lookup invalid PCs repeatedly.
+      .WillRepeatedly(Return(makeInliningInfo({
+          {DILineInfo::BadString, 0, 0, 0},
+      })));
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x4000},
+                                                specifier(), false))
+      .Times(1)
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"foo", 10, 5, 30},
+      })));
+
+  CallStackMap CSM;
+  CSM[0x1] = {0x1000, 0x2000, 0x3000, 0x4000};
+  // This entry should be dropped since all PCs are either not
+  // symbolizable or belong to the runtime.
+  CSM[0x2] = {0x1000, 0x2000};
+
+  llvm::MapVector<uint64_t, MemInfoBlock> Prof;
+  Prof[0x1].AllocCount = 1;
+  Prof[0x2].AllocCount = 1;
+
+  auto Seg = makeSegments();
+
+  RawMemProfReader Reader(std::move(Symbolizer), Seg, Prof, CSM);
+
+  std::vector<MemProfRecord> Records;
+  for (const MemProfRecord &R : Reader) {
+    Records.push_back(R);
+  }
+  ASSERT_EQ(Records.size(), 1U);
+  ASSERT_EQ(Records[0].CallStack.size(), 1U);
+  EXPECT_THAT(Records[0].CallStack[0], FrameContains("foo", 5U, 30U, false));
 }
 } // namespace

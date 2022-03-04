@@ -33,8 +33,8 @@ env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > basic.memprofraw
 
 RUN: llvm-profdata show --memory %p/Inputs/basic.memprofraw --profiled-binary %p/Inputs/basic.memprofexe -o - | FileCheck %s
 
-We expect 3 MIB entries, 1 each for the malloc calls in the program and one
-additional entry from a realloc in glibc/libio/vasprintf.c.
+We expect 2 MIB entries, 1 each for the malloc calls in the program. Any
+additional allocations which do not originate from the main binary are pruned.
 
 CHECK: MemprofProfile:
 CHECK-NEXT:   -
@@ -49,50 +49,8 @@ CHECK-NEXT:   -
 CHECK-NEXT:     Callstack:
 CHECK-NEXT:     -
 CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 73
-CHECK-NEXT:       Column: 3
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 0
-CHECK-NEXT:       Column: 0
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     MemInfoBlock:
-CHECK-NEXT:       AllocCount: 1
-CHECK-NEXT:       TotalAccessCount: 0
-CHECK-NEXT:       MinAccessCount: 0
-CHECK-NEXT:       MaxAccessCount: 0
-CHECK-NEXT:       TotalSize: 53
-CHECK-NEXT:       MinSize: 53
-CHECK-NEXT:       MaxSize: 53
-CHECK-NEXT:       AllocTimestamp: 0
-CHECK-NEXT:       DeallocTimestamp: 987
-CHECK-NEXT:       TotalLifetime: 987
-CHECK-NEXT:       MinLifetime: 987
-CHECK-NEXT:       MaxLifetime: 987
-CHECK-NEXT:       AllocCpuId: 4294967295
-CHECK-NEXT:       DeallocCpuId: 56
-CHECK-NEXT:       NumMigratedCpu: 1
-CHECK-NEXT:       NumLifetimeOverlaps: 0
-CHECK-NEXT:       NumSameAllocCpu: 0
-CHECK-NEXT:       NumSameDeallocCpu: 0
-CHECK-NEXT:       DataTypeId: {{[0-9]+}}
-CHECK-NEXT:   -
-CHECK-NEXT:     Callstack:
-CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 57
-CHECK-NEXT:       Column: 3
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
 CHECK-NEXT:       LineOffset: 1
 CHECK-NEXT:       Column: 21
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 0
-CHECK-NEXT:       Column: 0
 CHECK-NEXT:       Inline: 0
 CHECK-NEXT:     MemInfoBlock:
 CHECK-NEXT:       AllocCount: 1
@@ -118,18 +76,8 @@ CHECK-NEXT:   -
 CHECK-NEXT:     Callstack:
 CHECK-NEXT:     -
 CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 57
-CHECK-NEXT:       Column: 3
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
 CHECK-NEXT:       LineOffset: 5
 CHECK-NEXT:       Column: 15
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 0
-CHECK-NEXT:       Column: 0
 CHECK-NEXT:       Inline: 0
 CHECK-NEXT:     MemInfoBlock:
 CHECK-NEXT:       AllocCount: 1
