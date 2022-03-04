@@ -9,6 +9,8 @@
 #ifndef ____LIBUNWIND_CONFIG_H__
 #define ____LIBUNWIND_CONFIG_H__
 
+#define _LIBUNWIND_VERSION 15000
+
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
     !defined(__ARM_DWARF_EH__)
 #define _LIBUNWIND_ARM_EHABI
