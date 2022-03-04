@@ -11,7 +11,7 @@ declare void @print(i32) nounwind
 
 declare void @bar(i8*)
 
-declare fastcc void @f.resume(%f.frame*)
+declare fastcc void @f.resume(%f.frame* align 4 dereferenceable(4))
 declare fastcc void @f.destroy(%f.frame*)
 declare fastcc void @f.cleanup(%f.frame*)
 
