@@ -1520,6 +1520,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Dereferenceable;
   case bitc::ATTR_KIND_DEREFERENCEABLE_OR_NULL:
     return Attribute::DereferenceableOrNull;
+  case bitc::ATTR_KIND_ALLOC_ALIGN:
+    return Attribute::AllocAlign;
   case bitc::ATTR_KIND_ALLOC_SIZE:
     return Attribute::AllocSize;
   case bitc::ATTR_KIND_NO_RED_ZONE:
