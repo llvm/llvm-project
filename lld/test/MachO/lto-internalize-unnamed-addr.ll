@@ -13,10 +13,10 @@
 ; RUN: %lld -lSystem -dylib %t/test.o %t/test2.o -o %t/test.dylib
 ; RUN: llvm-nm -m %t/test.dylib | FileCheck %s --check-prefix=LTO-DYLIB
 
-; RUN: %lld -lSystem %t/test.thinlto.o %t/test2.o -o %t/test.thinlto
+; RUN: %lld -lSystem %t/test.thinlto.o %t/test2.thinlto.o -o %t/test.thinlto
 ; RUN: llvm-nm -m %t/test.thinlto | FileCheck %s --check-prefix=THINLTO
 
-; RUN: %lld -lSystem -dylib %t/test.thinlto.o %t/test2.o -o %t/test.thinlto.dylib
+; RUN: %lld -lSystem -dylib %t/test.thinlto.o %t/test2.thinlto.o -o %t/test.thinlto.dylib
 ; RUN: llvm-nm -m %t/test.thinlto.dylib | FileCheck %s --check-prefix=THINLTO
 
 ; LTO-DAG: (__DATA,__data) non-external _global_unnamed
@@ -40,10 +40,8 @@
 
 ; THINLTO-DAG: (__DATA,__data) non-external (was a private external) _global_unnamed
 ; THINLTO-DAG: (__DATA,__data) weak external _local_unnamed
-;; The next two symbols are rendered as non-external (was a private external)
-;; by LD64. This is a missed optimization on LLD's end.
-; THINLTO-DAG: (__TEXT,__const) weak external _local_unnamed_always_const
-; THINLTO-DAG: (__TEXT,__const) weak external _local_unnamed_const
+; THINLTO-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_always_const
+; THINLTO-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_const
 ;; LD64 actually fails to link when the following symbol is included in the test
 ;; input, instead producing this error:
 ;; reference to bitcode symbol '_local_unnamed_sometimes_const' which LTO has not compiled in '_used' from /tmp/lto.o for architecture x86_64
