@@ -117,7 +117,7 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
 PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  OS << "Cost Model for function '" << F.getName() << "'\n";
+  OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
   for (BasicBlock &B : F) {
     for (Instruction &Inst : B) {
       // TODO: Use a pass parameter instead of cl::opt CostKind to determine

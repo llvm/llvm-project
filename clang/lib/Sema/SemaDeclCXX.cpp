@@ -3395,6 +3395,14 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
       return nullptr;
     }
 
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
+      Diag(D.getIdentifierLoc(), diag::err_member_with_template_arguments)
+          << II
+          << SourceRange(D.getName().TemplateId->LAngleLoc,
+                         D.getName().TemplateId->RAngleLoc)
+          << D.getName().TemplateId->LAngleLoc;
+    }
+
     if (SS.isSet() && !SS.isInvalid()) {
       // The user provided a superfluous scope specifier inside a class
       // definition:

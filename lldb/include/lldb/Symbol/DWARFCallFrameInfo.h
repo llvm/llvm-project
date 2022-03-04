@@ -106,7 +106,8 @@ private:
     CIE(dw_offset_t offset)
         : cie_offset(offset), version(-1), code_align(0), data_align(0),
           return_addr_reg_num(LLDB_INVALID_REGNUM), inst_offset(0),
-          inst_length(0), ptr_encoding(0), lsda_addr_encoding(DW_EH_PE_omit),
+          inst_length(0), ptr_encoding(0),
+          lsda_addr_encoding(llvm::dwarf::DW_EH_PE_omit),
           personality_loc(LLDB_INVALID_ADDRESS) {}
   };
 

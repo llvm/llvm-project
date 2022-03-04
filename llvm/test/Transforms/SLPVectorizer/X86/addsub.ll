@@ -302,21 +302,21 @@ define void @reorder_alt_subTree() #0 {
 define void @reorder_alt_rightsubTree(double* nocapture %c, double* noalias nocapture readonly %a, double* noalias nocapture readonly %b, double* noalias nocapture readonly %d) {
 ; CHECK-LABEL: @reorder_alt_rightsubTree(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, double* [[D:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[D]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[D]] to <2 x double>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[A]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[A]] to <2 x double>*
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, <2 x double>* [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[B]] to <2 x double>*
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, <2 x double>* [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fsub <2 x double> [[TMP11]], [[TMP6]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP11]], [[TMP6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> [[TMP13]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double* [[B]] to <2 x double>*
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, <2 x double>* [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast double* [[C]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP14]], <2 x double>* [[TMP15]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP13]], <2 x double>* [[TMP15]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = load double, double* %a

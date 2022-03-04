@@ -365,12 +365,6 @@ TEST_MACROS();
 TEST_MACROS();
 #endif // __cplusplus >= 201103L
 
-// extended headers
-#include <ext/hash_map>
-TEST_MACROS();
-#include <ext/hash_set>
-TEST_MACROS();
-
 // clang-format on
 
 ////////////////////////////////////////////////////////////////////////////////

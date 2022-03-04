@@ -20,7 +20,6 @@
 int main(int, char**)
 {
     std::ios ios(0);
-    assert(ios.fill() == ' ');
     char c = ios.fill('*');
     assert(c == ' ');
     assert(ios.fill() == '*');

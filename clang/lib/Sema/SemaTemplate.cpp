@@ -9740,7 +9740,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
       if (!getDLLAttr(Def) && getDLLAttr(Specialization) &&
           (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-           !Context.getTargetInfo().getTriple().isPS4CPU())) {
+           !Context.getTargetInfo().getTriple().isPS4())) {
         // An explicit instantiation definition can add a dll attribute to a
         // template with a previous instantiation declaration. MinGW doesn't
         // allow this.
@@ -9758,7 +9758,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
         !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
     if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
         (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-         !Context.getTargetInfo().getTriple().isPS4CPU())) {
+         !Context.getTargetInfo().getTriple().isPS4())) {
       // An explicit instantiation definition can add a dll attribute to a
       // template with a previous implicit instantiation. MinGW doesn't allow
       // this. We limit clang to only adding dllexport, to avoid potentially

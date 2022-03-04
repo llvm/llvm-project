@@ -45,40 +45,6 @@ void VersionProvider::Keep() {
   os << m_version << "\n";
 }
 
-FlushingFileCollector::FlushingFileCollector(llvm::StringRef files_path,
-                                             llvm::StringRef dirs_path,
-                                             std::error_code &ec) {
-  auto clear = llvm::make_scope_exit([this]() {
-    m_files_os.reset();
-    m_dirs_os.reset();
-  });
-  m_files_os.emplace(files_path, ec, llvm::sys::fs::OF_Append);
-  if (ec)
-    return;
-  m_dirs_os.emplace(dirs_path, ec, llvm::sys::fs::OF_Append);
-  if (ec)
-    return;
-  clear.release();
-}
-
-void FlushingFileCollector::addFileImpl(StringRef file) {
-  if (m_files_os) {
-    *m_files_os << file << '\0';
-    m_files_os->flush();
-  }
-}
-
-llvm::vfs::directory_iterator
-FlushingFileCollector::addDirectoryImpl(const Twine &dir,
-                                        IntrusiveRefCntPtr<vfs::FileSystem> vfs,
-                                        std::error_code &dir_ec) {
-  if (m_dirs_os) {
-    *m_dirs_os << dir << '\0';
-    m_dirs_os->flush();
-  }
-  return vfs->dir_begin(dir, dir_ec);
-}
-
 void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
   if (m_collector)
     m_collector->addFile(dir);
@@ -87,6 +53,13 @@ void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
 void FileProvider::RecordInterestingDirectoryRecursive(const llvm::Twine &dir) {
   if (m_collector)
     m_collector->addDirectory(dir);
+}
+
+void FileProvider::Keep() {
+  if (m_collector) {
+    FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+    m_collector->writeMapping(file.GetPath());
+  }
 }
 
 llvm::Expected<std::unique_ptr<ProcessInfoRecorder>>

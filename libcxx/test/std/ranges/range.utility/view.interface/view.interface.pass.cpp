@@ -58,7 +58,7 @@ using ForwardIter = forward_iterator<int*>;
 
 // So that we conform to sized_sentinel_for.
 constexpr std::ptrdiff_t operator-(const ForwardIter& x, const ForwardIter& y) {
-    return x.base() - y.base();
+    return base(x) - base(y);
 }
 
 struct ForwardRange : std::ranges::view_interface<ForwardRange> {
@@ -136,10 +136,10 @@ struct BoolConvertibleComparison : std::ranges::view_interface<BoolConvertibleCo
     int *base_;
     explicit SentinelType() = default;
     constexpr explicit SentinelType(int *base) : base_(base) {}
-    friend constexpr ResultType operator==(ForwardIter const& iter, SentinelType const& sent) noexcept { return {iter.base() == sent.base_}; }
-    friend constexpr ResultType operator==(SentinelType const& sent, ForwardIter const& iter) noexcept { return {iter.base() == sent.base_}; }
-    friend constexpr ResultType operator!=(ForwardIter const& iter, SentinelType const& sent) noexcept { return {iter.base() != sent.base_}; }
-    friend constexpr ResultType operator!=(SentinelType const& sent, ForwardIter const& iter) noexcept { return {iter.base() != sent.base_}; }
+    friend constexpr ResultType operator==(ForwardIter const& iter, SentinelType const& sent) noexcept { return {base(iter) == sent.base_}; }
+    friend constexpr ResultType operator==(SentinelType const& sent, ForwardIter const& iter) noexcept { return {base(iter) == sent.base_}; }
+    friend constexpr ResultType operator!=(ForwardIter const& iter, SentinelType const& sent) noexcept { return {base(iter) != sent.base_}; }
+    friend constexpr ResultType operator!=(SentinelType const& sent, ForwardIter const& iter) noexcept { return {base(iter) != sent.base_}; }
   };
 
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};

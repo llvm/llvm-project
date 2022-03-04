@@ -649,16 +649,10 @@ public:
     return getObjectFormat() == Triple::XCOFF;
   }
 
-  /// Tests whether the target is the PS4 CPU
-  bool isPS4CPU() const {
+  /// Tests whether the target is the PS4 platform.
+  bool isPS4() const {
     return getArch() == Triple::x86_64 &&
            getVendor() == Triple::SCEI &&
-           getOS() == Triple::PS4;
-  }
-
-  /// Tests whether the target is the PS4 platform
-  bool isPS4() const {
-    return getVendor() == Triple::SCEI &&
            getOS() == Triple::PS4;
   }
 
@@ -888,7 +882,7 @@ public:
   }
 
   /// Tests if the environment supports dllimport/export annotations.
-  bool hasDLLImportExport() const { return isOSWindows() || isPS4CPU(); }
+  bool hasDLLImportExport() const { return isOSWindows() || isPS4(); }
 
   /// @}
   /// @name Mutators

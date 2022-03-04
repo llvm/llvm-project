@@ -32,7 +32,7 @@ namespace memprof {
 
 // Map from id (recorded from sanitizer stack depot) to virtual addresses for
 // each program counter address in the callstack.
-using CallStackMap = llvm::DenseMap<uint64_t, llvm::SmallVector<uint64_t, 32>>;
+using CallStackMap = llvm::DenseMap<uint64_t, llvm::SmallVector<uint64_t>>;
 
 class RawMemProfReader {
 public:
@@ -75,7 +75,15 @@ public:
                    llvm::MapVector<uint64_t, MemInfoBlock> &Prof,
                    CallStackMap &SM)
       : Symbolizer(std::move(Sym)), SegmentInfo(Seg.begin(), Seg.end()),
-        ProfileData(Prof), StackMap(SM) {}
+        ProfileData(Prof), StackMap(SM) {
+    // We don't call initialize here since there is no raw profile to read. The
+    // test should pass in the raw profile as structured data.
+
+    // If there is an error here then the mock symbolizer has not been
+    // initialized properly.
+    if (Error E = symbolizeStackFrames())
+      report_fatal_error(std::move(E));
+  }
 
 private:
   RawMemProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
@@ -83,6 +91,7 @@ private:
       : DataBuffer(std::move(DataBuffer)), Binary(std::move(Bin)) {}
   Error initialize();
   Error readRawProfile();
+  Error symbolizeStackFrames();
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
   Error fillRecord(const uint64_t Id, const MemInfoBlock &MIB,
@@ -101,6 +110,10 @@ private:
   // information recorded for that allocation context.
   llvm::MapVector<uint64_t, MemInfoBlock> ProfileData;
   CallStackMap StackMap;
+
+  // Cached symbolization from PC to Frame.
+  llvm::DenseMap<uint64_t, llvm::SmallVector<MemProfRecord::Frame>>
+      SymbolizedFrame;
 
   // Iterator to read from the ProfileData MapVector.
   llvm::MapVector<uint64_t, MemInfoBlock>::iterator Iter = ProfileData.end();

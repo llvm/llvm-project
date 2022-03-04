@@ -24974,6 +24974,20 @@ TEST_F(FormatTest, RemoveBraces) {
                "};",
                Style);
 
+  verifyFormat("if (a)\n"
+               "  foo();\n"
+               "else\n"
+               "  bar();",
+               "if (a)\n"
+               "{\n"
+               "  foo();\n"
+               "}\n"
+               "else\n"
+               "{\n"
+               "  bar();\n"
+               "}",
+               Style);
+
   // FIXME: See https://github.com/llvm/llvm-project/issues/53543.
 #if 0
   Style.ColumnLimit = 65;
