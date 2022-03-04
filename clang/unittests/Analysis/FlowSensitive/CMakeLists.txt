@@ -7,8 +7,10 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   DataflowAnalysisContextTest.cpp
   DataflowEnvironmentTest.cpp
   MapLatticeTest.cpp
+  MatchSwitchTest.cpp
   MultiVarConstantPropagationTest.cpp
   SingleVarConstantPropagationTest.cpp
+  SourceLocationsLatticeTest.cpp
   TestingSupport.cpp
   TestingSupportTest.cpp
   TransferTest.cpp

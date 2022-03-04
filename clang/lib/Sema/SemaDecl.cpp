@@ -14674,18 +14674,20 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       if (getLangOpts().CPlusPlus14) {
         if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
             FD->getReturnType()->isUndeducedType()) {
-          // If the function has a deduced result type but contains no 'return'
-          // statements, the result type as written must be exactly 'auto', and
-          // the deduced result type is 'void'.
+          // For a function with a deduced result type to return void,
+          // the result type as written must be 'auto' or 'decltype(auto)',
+          // possibly cv-qualified or constrained, but not ref-qualified.
           if (!FD->getReturnType()->getAs<AutoType>()) {
             Diag(dcl->getLocation(), diag::err_auto_fn_no_return_but_not_auto)
                 << FD->getReturnType();
             FD->setInvalidDecl();
           } else {
-            // Substitute 'void' for the 'auto' in the type.
-            TypeLoc ResultType = getReturnTypeLoc(FD);
-            Context.adjustDeducedFunctionResultType(
-                FD, SubstAutoType(ResultType.getType(), Context.VoidTy));
+            // Falling off the end of the function is the same as 'return;'.
+            Expr *Dummy = nullptr;
+            if (DeduceFunctionTypeFromReturnExpr(
+                    FD, dcl->getLocation(), Dummy,
+                    FD->getReturnType()->getAs<AutoType>()))
+              FD->setInvalidDecl();
           }
         }
       } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu                                                  -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-apple-darwin -code-model=large                             -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LARGE
+; RUN: llc -mtriple=aarch64-apple-darwin -code-model=large                             -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LARGE
 ; RUN: llc -mtriple=aarch64-none-eabi    -code-model=tiny                              -verify-machineinstrs < %s | FileCheck %s
 
 @varf32 = global float 0.0
@@ -15,8 +15,7 @@ define void @check_float() {
 
   %newval2 = fadd float %val, 128.0
   store volatile float %newval2, float* @varf32
-; CHECK-DAG: mov [[W128:w[0-9]+]], #1124073472
-; CHECK-DAG: fmov {{s[0-9]+}}, [[W128]]
+; CHECK-DAG: movi [[REG:v[0-9s]+]].2s, #67, lsl #24
 
 ; CHECK: ret
   ret void

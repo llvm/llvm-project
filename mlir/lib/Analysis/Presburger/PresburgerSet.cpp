@@ -523,8 +523,10 @@ coalescePair(unsigned i, unsigned j,
 
   IntegerPolyhedron &a = polyhedrons[i];
   IntegerPolyhedron &b = polyhedrons[j];
-  assert(a.getNumLocalIds() == 0 && b.getNumLocalIds() == 0 &&
-         "Locals are not yet supported!");
+  /// Handling of local ids is not yet implemented, so these cases are skipped.
+  /// TODO: implement local id support.
+  if (a.getNumLocalIds() != 0 || b.getNumLocalIds() != 0)
+    return failure();
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
 

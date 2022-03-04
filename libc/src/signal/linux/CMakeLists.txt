@@ -41,7 +41,7 @@ add_entrypoint_object(
     libc.include.signal
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -55,7 +55,7 @@ add_entrypoint_object(
     libc.include.signal
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -68,7 +68,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.errno
     libc.include.signal
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -81,7 +81,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.errno
     libc.include.signal
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -106,7 +106,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.errno
     libc.include.signal
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -119,5 +119,5 @@ add_entrypoint_object(
   DEPENDS
     libc.include.errno
     libc.include.signal
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )

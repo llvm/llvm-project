@@ -239,6 +239,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
     constant->setAlignment(llvm::MaybeAlign(bitwidth / 8));
   };
 
+  // Set up control variables in the module instead of linking in tiny bitcode
   if (needOcml) {
     // TODO(kdrewnia): Enable math optimizations once we have support for
     // `-ffast-math`-like options
@@ -277,7 +278,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
 
   if (!mbModules) {
     getOperation()
-            .emitWarning("Could not load required device labraries")
+            .emitWarning("Could not load required device libraries")
             .attachNote()
         << "This will probably cause link-time or run-time failures";
     return ret; // We can still abort here
