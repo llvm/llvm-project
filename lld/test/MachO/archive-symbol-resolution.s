@@ -10,6 +10,8 @@
 # RUN: llvm-ar rcs %t/libf2_g.a %t/f2.o %t/g.o
 # RUN: llvm-ar rcs %t/libfg.a %t/fg.o
 
+## (Strong) dylib symbols and archive symbols have equal precedence.
+
 # RUN: %lld %t/libf1.dylib %t/libf2_g.a %t/test.o -o %t/test.out -lSystem
 # RUN: llvm-objdump --syms --macho --lazy-bind %t/test.out | FileCheck %s --check-prefix DYLIB-FIRST
 # DYLIB-FIRST:      SYMBOL TABLE:
@@ -27,6 +29,8 @@
 # ARCHIVE-FIRST-NEXT: segment  section            address       dylib            symbol
 # ARCHIVE-FIRST-EMPTY:
 
+## Once an archive member is fetched, all the extern symbols in that member
+## take precedence over dylib symbols of the same name.
 # RUN: %lld %t/libf1.dylib %t/libfg.a %t/test.o -o %t/test.out -lSystem
 # RUN: llvm-objdump --syms --macho --lazy-bind %t/test.out | FileCheck %s --check-prefix ARCHIVE-PRIORITY
 # ARCHIVE-PRIORITY:      SYMBOL TABLE:
