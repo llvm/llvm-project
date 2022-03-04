@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
-//   constexpr T bit_width(T x) noexcept;
+//   constexpr int bit_width(T x) noexcept;
 
 // Constraints: T is an unsigned integer type
 // Returns: If x == 0, 0; otherwise one plus the base-2 logarithm of x, with any fractional part discarded.
@@ -29,28 +29,28 @@ enum class E2 : unsigned char { red };
 template <class T>
 constexpr bool test()
 {
-    ASSERT_SAME_TYPE(decltype(std::bit_width(T())), T);
+    ASSERT_SAME_TYPE(decltype(std::bit_width(T())), int);
     ASSERT_NOEXCEPT(std::bit_width(T()));
     T max = std::numeric_limits<T>::max();
 
-    assert(std::bit_width(T(0)) == T(0));
-    assert(std::bit_width(T(1)) == T(1));
-    assert(std::bit_width(T(2)) == T(2));
-    assert(std::bit_width(T(3)) == T(2));
-    assert(std::bit_width(T(4)) == T(3));
-    assert(std::bit_width(T(5)) == T(3));
-    assert(std::bit_width(T(6)) == T(3));
-    assert(std::bit_width(T(7)) == T(3));
-    assert(std::bit_width(T(8)) == T(4));
-    assert(std::bit_width(T(9)) == T(4));
-    assert(std::bit_width(T(125)) == T(7));
-    assert(std::bit_width(T(126)) == T(7));
-    assert(std::bit_width(T(127)) == T(7));
-    assert(std::bit_width(T(128)) == T(8));
-    assert(std::bit_width(T(129)) == T(8));
-    assert(std::bit_width(T(130)) == T(8));
-    assert(std::bit_width(T(max - 1)) == T(std::numeric_limits<T>::digits));
-    assert(std::bit_width(max) == T(std::numeric_limits<T>::digits));
+    assert(std::bit_width(T(0)) == 0);
+    assert(std::bit_width(T(1)) == 1);
+    assert(std::bit_width(T(2)) == 2);
+    assert(std::bit_width(T(3)) == 2);
+    assert(std::bit_width(T(4)) == 3);
+    assert(std::bit_width(T(5)) == 3);
+    assert(std::bit_width(T(6)) == 3);
+    assert(std::bit_width(T(7)) == 3);
+    assert(std::bit_width(T(8)) == 4);
+    assert(std::bit_width(T(9)) == 4);
+    assert(std::bit_width(T(125)) == 7);
+    assert(std::bit_width(T(126)) == 7);
+    assert(std::bit_width(T(127)) == 7);
+    assert(std::bit_width(T(128)) == 8);
+    assert(std::bit_width(T(129)) == 8);
+    assert(std::bit_width(T(130)) == 8);
+    assert(std::bit_width(T(max - 1)) == std::numeric_limits<T>::digits);
+    assert(std::bit_width(max) == std::numeric_limits<T>::digits);
 
 #ifndef TEST_HAS_NO_INT128
     if constexpr (std::is_same_v<T, __uint128_t>) {
