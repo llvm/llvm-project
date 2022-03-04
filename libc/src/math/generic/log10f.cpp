@@ -9,7 +9,7 @@
 #include "src/math/log10f.h"
 #include "common_constants.h" // Lookup table for (1/f)
 #include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fenv/fesetexceptflag.h"
-#include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
 #include <fenv.h>
