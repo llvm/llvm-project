@@ -193,6 +193,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
                   "expected operation to have non-zero regions");
     return detail::verifyTypesAlongControlFlowEdges($_op);
   }];
+  let verifyWithRegions = 1;
 
   let extraClassDeclaration = [{
     /// Convenience helper in case none of the operands is known.
