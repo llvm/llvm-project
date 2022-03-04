@@ -68,7 +68,7 @@
 // CHECK-UNVERSIONED: void acceptClosure(void (^block)(void) __attribute__((noescape)));
 // CHECK-VERSIONED: void acceptClosure(void (^block)(void));
 
-// CHECK-UNVERSIONED: void privateFunc() __attribute__((swift_private));
+// CHECK-UNVERSIONED: void privateFunc(void) __attribute__((swift_private));
 
 // CHECK-UNVERSIONED: typedef double MyDoubleWrapper __attribute__((swift_wrapper("struct")));
 
@@ -79,7 +79,7 @@
 // CHECK-UNVERSIONED: __attribute__((swift_bridge("MyValueType")))
 // CHECK-UNVERSIONED: @interface MyReferenceType
 
-// CHECK-VERSIONED: void privateFunc();
+// CHECK-VERSIONED: void privateFunc(void);
 
 // CHECK-VERSIONED: typedef double MyDoubleWrapper;
 

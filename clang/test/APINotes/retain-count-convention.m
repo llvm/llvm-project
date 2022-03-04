@@ -5,11 +5,11 @@
 
 #import <SimpleKit/SimpleKit.h>
 
-// CHECK: void *getCFOwnedToUnowned() __attribute__((cf_returns_not_retained));
-// CHECK: void *getCFUnownedToOwned() __attribute__((cf_returns_retained));
-// CHECK: void *getCFOwnedToNone() __attribute__((cf_unknown_transfer));
-// CHECK: id getObjCOwnedToUnowned() __attribute__((ns_returns_not_retained));
-// CHECK: id getObjCUnownedToOwned() __attribute__((ns_returns_retained));
+// CHECK: void *getCFOwnedToUnowned(void) __attribute__((cf_returns_not_retained));
+// CHECK: void *getCFUnownedToOwned(void) __attribute__((cf_returns_retained));
+// CHECK: void *getCFOwnedToNone(void) __attribute__((cf_unknown_transfer));
+// CHECK: id getObjCOwnedToUnowned(void) __attribute__((ns_returns_not_retained));
+// CHECK: id getObjCUnownedToOwned(void) __attribute__((ns_returns_retained));
 // CHECK: int indirectGetCFOwnedToUnowned(void * _Nullable *out __attribute__((cf_returns_not_retained)));
 // CHECK: int indirectGetCFUnownedToOwned(void * _Nullable *out __attribute__((cf_returns_retained)));
 // CHECK: int indirectGetCFOwnedToNone(void * _Nullable *out);
