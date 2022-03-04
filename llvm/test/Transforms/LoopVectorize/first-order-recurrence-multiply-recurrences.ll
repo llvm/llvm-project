@@ -43,3 +43,52 @@ for.cond1.for.end_crit_edge:                      ; preds = %for.body
   %res = add i32 %add.lcssa, %sext.lcssa
   ret i32 %res
 }
+
+
+; The 'previous' instruction of %for.2 is in a separate block.
+; PR54195.
+define void @multiple_recurrences_with_previous_in_different_block(i32 %a, i8 %b, i64* %ptr) {
+; CHECK-LABEL: @multiple_recurrences_with_previous_in_different_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i8 [ 10, [[ENTRY:%.*]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[FOR_1]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CONV]], [[FOR_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[FOR_1_NEXT]] = xor i8 [[B:%.*]], 6
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[PTR_GEP:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[SUB]], i64* [[PTR_GEP]], align 4
+; CHECK-NEXT:    [[FOR_2_NEXT]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %for.1 = phi i8 [ 10, %entry ], [ %for.1.next, %loop.latch ]
+  %for.2 = phi i64  [0, %entry ], [ %for.2.next, %loop.latch ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %conv = sext i8 %for.1 to i64
+  %sub = sub nsw i64 %conv, %for.2
+  %iv.next = add nuw i64 %iv, 1
+  %for.1.next = xor i8 %b, 6
+  %exitcond = icmp eq i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop.latch
+
+loop.latch:
+  %ptr.gep = getelementptr inbounds i64, i64* %ptr, i64 %iv
+  store i64 %sub, i64* %ptr.gep
+  %for.2.next = zext i32 %a to i64
+  br label %loop.header
+
+exit:
+  ret void
+}
