@@ -1,4 +1,4 @@
-// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
+// RUN: not mlir-pdll %s -I %S -I %S/../../../include -split-input-file 2>&1 | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Reference Expr
@@ -272,6 +272,26 @@ Pattern {
   // CHECK: expected `)` after operation result type list
   let value: TypeRange;
   let foo = op<> -> (value<;
+}
+
+// -----
+
+#include "include/ops.td"
+
+Pattern {
+  // CHECK: invalid number of operand groups for `test.all_empty`; expected 0, but got 2
+  // CHECK: see the definition of `test.all_empty` here
+  let foo = op<test.all_empty>(operand1: Value, operand2: Value);
+}
+
+// -----
+
+#include "include/ops.td"
+
+Pattern {
+  // CHECK: invalid number of result groups for `test.all_empty`; expected 0, but got 2
+  // CHECK: see the definition of `test.all_empty` here
+  let foo = op<test.all_empty> -> (result1: Type, result2: Type);
 }
 
 // -----
