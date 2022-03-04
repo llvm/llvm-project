@@ -234,9 +234,9 @@
 // CHK-PHASES-WITH-CUDA: 19: assembler, {18}, object, (device-openmp)
 // CHK-PHASES-WITH-CUDA: 20: linker, {19}, image, (device-openmp)
 // CHK-PHASES-WITH-CUDA: 21: offload, "device-openmp (nvptx64-nvidia-cuda)" {20}, image
-// CHK-PHASES-WITH-CUDA: 22: clang-offload-wrapper, {21}, ir, (host-cuda-openmp)
-// CHK-PHASES-WITH-CUDA: 23: backend, {22}, assembler, (host-cuda-openmp)
-// CHK-PHASES-WITH-CUDA: 24: assembler, {23}, object, (host-cuda-openmp)
+// CHK-PHASES-WITH-CUDA: 22: clang-offload-wrapper, {21}, ir, (host-openmp)
+// CHK-PHASES-WITH-CUDA: 23: backend, {22}, assembler, (host-openmp)
+// CHK-PHASES-WITH-CUDA: 24: assembler, {23}, object, (host-openmp)
 // CHK-PHASES-WITH-CUDA: 25: linker, {13, 24}, image, (host-cuda-openmp)
 
 /// ###########################################################################
