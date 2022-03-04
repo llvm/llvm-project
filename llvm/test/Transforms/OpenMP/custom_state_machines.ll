@@ -912,14 +912,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1037,14 +1037,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1188,14 +1188,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1314,14 +1314,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1438,14 +1438,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1562,14 +1562,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1668,14 +1668,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU:       is_worker_check:
 ; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; AMDGPU:       is_worker_check:
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; AMDGPU:       worker_state_machine.begin:
 ; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
@@ -1888,14 +1888,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -2012,14 +2012,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -2162,14 +2162,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -2287,14 +2287,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -2410,14 +2410,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -2533,14 +2533,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -2638,14 +2638,14 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX:       is_worker_check:
 ; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; NVPTX:       is_worker_check:
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])

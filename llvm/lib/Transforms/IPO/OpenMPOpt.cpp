@@ -3733,9 +3733,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
     //                         __kmpc_get_hardware_num_threads_in_block();
     //                       WarpSize = __kmpc_get_warp_size();
     //                       BlockSize = BlockHwSize - WarpSize;
-    //                       if (InitCB >= BlockSize) return;
-    // IsWorkerCheckBB:      bool IsWorker = InitCB >= 0;
+    // IsWorkerCheckBB:      bool IsWorker = InitCB != -1;
     //                       if (IsWorker) {
+    //                         if (InitCB >= BlockSize) return;
     // SMBeginBB:               __kmpc_barrier_simple_generic(...);
     //                         void *WorkFn;
     //                         bool Active = __kmpc_kernel_parallel(&WorkFn);
@@ -3792,6 +3792,13 @@ struct AAKernelInfoFunction : AAKernelInfo {
     ReturnInst::Create(Ctx, StateMachineFinishedBB)->setDebugLoc(DLoc);
     InitBB->getTerminator()->eraseFromParent();
 
+    Instruction *IsWorker =
+        ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_NE, KernelInitCB,
+                         ConstantInt::get(KernelInitCB->getType(), -1),
+                         "thread.is_worker", InitBB);
+    IsWorker->setDebugLoc(DLoc);
+    BranchInst::Create(IsWorkerCheckBB, UserCodeEntryBB, IsWorker, InitBB);
+
     Module &M = *Kernel->getParent();
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     FunctionCallee BlockHwSizeFn =
@@ -3801,29 +3808,22 @@ struct AAKernelInfoFunction : AAKernelInfo {
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_get_warp_size);
     CallInst *BlockHwSize =
-        CallInst::Create(BlockHwSizeFn, "block.hw_size", InitBB);
+        CallInst::Create(BlockHwSizeFn, "block.hw_size", IsWorkerCheckBB);
     OMPInfoCache.setCallingConvention(BlockHwSizeFn, BlockHwSize);
     BlockHwSize->setDebugLoc(DLoc);
-    CallInst *WarpSize = CallInst::Create(WarpSizeFn, "warp.size", InitBB);
+    CallInst *WarpSize =
+        CallInst::Create(WarpSizeFn, "warp.size", IsWorkerCheckBB);
     OMPInfoCache.setCallingConvention(WarpSizeFn, WarpSize);
     WarpSize->setDebugLoc(DLoc);
-    Instruction *BlockSize =
-        BinaryOperator::CreateSub(BlockHwSize, WarpSize, "block.size", InitBB);
+    Instruction *BlockSize = BinaryOperator::CreateSub(
+        BlockHwSize, WarpSize, "block.size", IsWorkerCheckBB);
     BlockSize->setDebugLoc(DLoc);
-    Instruction *IsMainOrWorker =
-        ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB,
-                         BlockSize, "thread.is_main_or_worker", InitBB);
+    Instruction *IsMainOrWorker = ICmpInst::Create(
+        ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB, BlockSize,
+        "thread.is_main_or_worker", IsWorkerCheckBB);
     IsMainOrWorker->setDebugLoc(DLoc);
-    BranchInst::Create(IsWorkerCheckBB, StateMachineFinishedBB, IsMainOrWorker,
-                       InitBB);
-
-    Instruction *IsWorker =
-        ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_NE, KernelInitCB,
-                         ConstantInt::get(KernelInitCB->getType(), -1),
-                         "thread.is_worker", IsWorkerCheckBB);
-    IsWorker->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineBeginBB, UserCodeEntryBB, IsWorker,
-                       IsWorkerCheckBB);
+    BranchInst::Create(StateMachineBeginBB, StateMachineFinishedBB,
+                       IsMainOrWorker, IsWorkerCheckBB);
 
     // Create local storage for the work function pointer.
     const DataLayout &DL = M.getDataLayout();
