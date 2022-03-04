@@ -132,7 +132,7 @@ TEST(MemProf, FillsValue) {
 
   EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x2000},
                                                 specifier(), false))
-      .Times(2)
+      .Times(1) // Only once since we cache the result for future lookups.
       .WillRepeatedly(Return(makeInliningInfo({
           {"foo", 10, 5, 30},
           {"bar", 201, 150, 20},

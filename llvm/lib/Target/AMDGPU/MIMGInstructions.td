@@ -1179,8 +1179,7 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
   def "" : MIMGBaseOpcode {
     let BVH = 1;
   }
-  let OtherPredicates = [HasGFX10_AEncoding],
-      AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
+  let AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
       dmask = 0xf,
       unorm = 1,
       d16 = 0,
@@ -1359,15 +1358,17 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUS
 let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_BEncoding] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
-let SubtargetPredicate = HasGFX10_AEncoding in
+let OtherPredicates = [HasGFX10_AEncoding] in
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, MIMG.NOP>, "image_msaa_load">;
 
-} // End let OtherPredicates = [HasImageInsts]
-
+let OtherPredicates = [HasGFX10_AEncoding] in {
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
+} // End OtherPredicates = [HasGFX10_AEncoding]
+
+} // End let OtherPredicates = [HasImageInsts]
 
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/

@@ -25,5 +25,6 @@ unittest("TableGenTests") {
   sources = [
     "AutomataTest.cpp",
     "CodeExpanderTest.cpp",
+    "ParserEntryPointTest.cpp",
   ]
 }

@@ -15,15 +15,15 @@ define void @test(i64* %ptr, i64* noalias %res) {
 ; CHECK-NEXT:    [[CALL_I_I:%.*]] = call i32* @get_ptr()
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 2
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 1
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 3
-; CHECK-NEXT:    [[RES_1:%.*]] = getelementptr i64, i64* [[RES:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[CALL_I_I]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 2
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[GEP_1]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[RES_1:%.*]] = getelementptr i64, i64* [[RES:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[RES]] to <2 x i64>*
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 8
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()

@@ -65,7 +65,8 @@ def OpenMP_PointerLikeType : Type<
 
 def ParallelOp : OpenMP_Op<"parallel", [
                  AutomaticAllocationScope, AttrSizedOperandSegments,
-                 DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>]> {
+                 DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
+                 RecursiveSideEffects]> {
   let summary = "parallel construct";
   let description = [{
     The parallel construct includes a region of code which is to be executed
@@ -210,7 +211,8 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 //===----------------------------------------------------------------------===//
 
 def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
-                         AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
+                         AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                         RecursiveSideEffects]> {
   let summary = "workshare loop construct";
   let description = [{
     The workshare loop construct specifies that the iterations of the loop(s)

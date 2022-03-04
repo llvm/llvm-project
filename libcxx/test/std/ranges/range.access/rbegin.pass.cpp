@@ -423,31 +423,31 @@ static_assert( std::same_as<std::invoke_result_t<RangeCRBeginT, MemberBeginAndRB
 constexpr bool testBeginEnd() {
   MemberBeginEnd a{};
   const MemberBeginEnd aa{};
-  assert(std::ranges::rbegin(a).base().base() == &a.e);
-  assert(std::ranges::crbegin(a).base().base() == &a.ce);
-  assert(std::ranges::rbegin(aa).base().base() == &aa.ce);
-  assert(std::ranges::crbegin(aa).base().base() == &aa.ce);
+  assert(base(std::ranges::rbegin(a).base()) == &a.e);
+  assert(base(std::ranges::crbegin(a).base()) == &a.ce);
+  assert(base(std::ranges::rbegin(aa).base()) == &aa.ce);
+  assert(base(std::ranges::crbegin(aa).base()) == &aa.ce);
 
   FunctionBeginEnd b{};
   const FunctionBeginEnd bb{};
-  assert(std::ranges::rbegin(b).base().base() == &b.e);
-  assert(std::ranges::crbegin(b).base().base() == &b.ce);
-  assert(std::ranges::rbegin(bb).base().base() == &bb.ce);
-  assert(std::ranges::crbegin(bb).base().base() == &bb.ce);
+  assert(base(std::ranges::rbegin(b).base()) == &b.e);
+  assert(base(std::ranges::crbegin(b).base()) == &b.ce);
+  assert(base(std::ranges::rbegin(bb).base()) == &bb.ce);
+  assert(base(std::ranges::crbegin(bb).base()) == &bb.ce);
 
   MemberBeginFunctionEnd c{};
   const MemberBeginFunctionEnd cc{};
-  assert(std::ranges::rbegin(c).base().base() == &c.e);
-  assert(std::ranges::crbegin(c).base().base() == &c.ce);
-  assert(std::ranges::rbegin(cc).base().base() == &cc.ce);
-  assert(std::ranges::crbegin(cc).base().base() == &cc.ce);
+  assert(base(std::ranges::rbegin(c).base()) == &c.e);
+  assert(base(std::ranges::crbegin(c).base()) == &c.ce);
+  assert(base(std::ranges::rbegin(cc).base()) == &cc.ce);
+  assert(base(std::ranges::crbegin(cc).base()) == &cc.ce);
 
   FunctionBeginMemberEnd d{};
   const FunctionBeginMemberEnd dd{};
-  assert(std::ranges::rbegin(d).base().base() == &d.e);
-  assert(std::ranges::crbegin(d).base().base() == &d.ce);
-  assert(std::ranges::rbegin(dd).base().base() == &dd.ce);
-  assert(std::ranges::crbegin(dd).base().base() == &dd.ce);
+  assert(base(std::ranges::rbegin(d).base()) == &d.e);
+  assert(base(std::ranges::crbegin(d).base()) == &d.ce);
+  assert(base(std::ranges::rbegin(dd).base()) == &dd.ce);
+  assert(base(std::ranges::crbegin(dd).base()) == &dd.ce);
 
   return true;
 }

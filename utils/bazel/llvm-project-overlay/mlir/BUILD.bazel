@@ -2196,6 +2196,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":Support",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -8434,6 +8435,22 @@ cc_binary(
 )
 
 cc_library(
+    name = "PDLLODS",
+    srcs = glob(
+        [
+            "lib/Tools/PDLL/ODS/*.cpp",
+            "lib/Tools/PDLL/ODS/*.h",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Tools/PDLL/ODS/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PDLLAST",
     srcs = glob(
         [
@@ -8463,6 +8480,7 @@ cc_library(
         ":IR",
         ":PDLDialect",
         ":PDLLAST",
+        ":PDLLODS",
         ":Parser",
         ":Support",
         "//llvm:Support",
@@ -8481,9 +8499,11 @@ cc_library(
     includes = ["include"],
     deps = [
         ":PDLLAST",
+        ":PDLLODS",
         ":Support",
         ":TableGen",
         "//llvm:Support",
+        "//llvm:TableGen",
     ],
 )
 
@@ -8495,6 +8515,7 @@ cc_binary(
     deps = [
         ":IR",
         ":PDLLAST",
+        ":PDLLODS",
         ":PDLLCodeGen",
         ":PDLLParser",
         ":Support",

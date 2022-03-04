@@ -2650,6 +2650,7 @@ Limitations:
   
    - Due to limitations of the memory modeling in the analyzer, one can likely
      observe a lot of false-positive reports like this:
+
       .. code-block:: c
   
         void false_positive() {

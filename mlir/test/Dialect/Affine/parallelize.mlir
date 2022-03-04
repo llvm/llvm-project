@@ -269,3 +269,57 @@ func @nested_min_max(%m: memref<?xf32>, %lb0: index,
   }
   return
 }
+
+// Test in the presence of locally allocated memrefs.
+
+// CHECK: func @local_alloc
+func @local_alloc() {
+  %cst = arith.constant 0.0 : f32
+  affine.for %i = 0 to 100 {
+    %m = memref.alloc() : memref<1xf32>
+    %ma = memref.alloca() : memref<1xf32>
+    affine.store %cst, %m[0] : memref<1xf32>
+  }
+  // CHECK: affine.parallel
+  return
+}
+
+// CHECK: func @local_alloc_cast
+func @local_alloc_cast() {
+  %cst = arith.constant 0.0 : f32
+  affine.for %i = 0 to 100 {
+    %m = memref.alloc() : memref<128xf32>
+    affine.for %j = 0 to 128 {
+      affine.store %cst, %m[%j] : memref<128xf32>
+    }
+    affine.for %j = 0 to 128 {
+      affine.store %cst, %m[0] : memref<128xf32>
+    }
+    %r = memref.reinterpret_cast %m to offset: [0], sizes: [8, 16],
+           strides: [16, 1] : memref<128xf32> to memref<8x16xf32>
+    affine.for %j = 0 to 8 {
+      affine.store %cst, %r[%j, %j] : memref<8x16xf32>
+    }
+  }
+  // CHECK: affine.parallel
+  // CHECK:   affine.parallel
+  // CHECK:   }
+  // CHECK:   affine.for
+  // CHECK:   }
+  // CHECK:   affine.parallel
+  // CHECK:   }
+  // CHECK: }
+
+  return
+}
+
+// CHECK-LABEL: @iter_arg_memrefs
+func @iter_arg_memrefs(%in: memref<10xf32>) {
+  %mi = memref.alloc() : memref<f32>
+  // Loop-carried memrefs are treated as serializing the loop.
+  // CHECK: affine.for
+  %mo = affine.for %i = 0 to 10 iter_args(%m_arg = %mi) -> (memref<f32>) {
+    affine.yield %m_arg : memref<f32>
+  }
+  return
+}

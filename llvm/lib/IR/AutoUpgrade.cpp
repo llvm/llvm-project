@@ -4496,13 +4496,6 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     SFPV.visit(F);
   }
 
-  if (F.getCallingConv() == CallingConv::X86_INTR &&
-      !F.arg_empty() && !F.hasParamAttribute(0, Attribute::ByVal)) {
-    Type *ByValTy = F.getArg(0)->getType()->getPointerElementType();
-    Attribute NewAttr = Attribute::getWithByValType(F.getContext(), ByValTy);
-    F.addParamAttr(0, NewAttr);
-  }
-
   // Remove all incompatibile attributes from function.
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())

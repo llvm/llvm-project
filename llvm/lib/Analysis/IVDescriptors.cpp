@@ -931,7 +931,7 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
 
       // SinkCandidate is already being sunk after an instruction after
       // Previous. Nothing left to do.
-      if (Previous->comesBefore(OtherPrev) || Previous == OtherPrev)
+      if (DT->dominates(Previous, OtherPrev) || Previous == OtherPrev)
         return true;
       // Otherwise, Previous comes after OtherPrev and SinkCandidate needs to be
       // re-sunk to Previous, instead of sinking to OtherPrev.

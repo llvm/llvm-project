@@ -23,7 +23,7 @@ constexpr bool test() {
 
   {
     std::ranges::subrange<MoveOnlyForwardIter, int*> a(MoveOnlyForwardIter(buff), buff + 5, 5);
-    assert(a.begin().base == buff);
+    assert(base(a.begin()) == buff);
     assert(!a.empty());
     assert(a.size() == 5);
   }

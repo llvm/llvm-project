@@ -350,6 +350,3 @@ def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
 def : MergeRule<"setAND<MustProgressAttr>">;
-
-// Target dependent attributes
-include "llvm/IR/AttributesAMDGPU.td"
