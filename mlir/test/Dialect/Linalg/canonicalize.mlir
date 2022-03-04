@@ -772,9 +772,32 @@ func @fold_linalgop_with_cast_consumer(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 //  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
-//       CHECK:  %[[OUT_CAST:.+]] = tensor.cast %[[ARG2]] : tensor<?x?xf32> to tensor<4x8xf32>
+//   CHECK-DAG:  %[[LHS_CAST:.+]] = tensor.cast %[[ARG0]] : tensor<?x?xf32> to tensor<4x?xf32>
+//   CHECK-DAG:  %[[RHS_CAST:.+]] = tensor.cast %[[ARG1]] : tensor<?x?xf32> to tensor<?x8xf32>
+//   CHECK-DAG:  %[[OUT_CAST:.+]] = tensor.cast %[[ARG2]] : tensor<?x?xf32> to tensor<4x8xf32>
 //       CHECK:  %[[MATMUL:.+]] = linalg.matmul
-//  CHECK-SAME:      ins(%[[ARG0]], %[[ARG1]] :
+//  CHECK-SAME:      ins(%[[LHS_CAST]], %[[RHS_CAST]] :
 //  CHECK-SAME:      outs(%[[OUT_CAST]] :
 //       CHECK:  %[[RESULT_CAST:.+]] = tensor.cast %[[MATMUL]]
 //       CHECK:  return %[[MATMUL]], %[[RESULT_CAST]]
+
+// -----
+
+func @fold_conv_op_with_cast_consumer(%arg0 : tensor<?x?x?x?xf32>,
+    %arg1 : tensor<?x?x?x?xf32>,  %arg2 : tensor<?x?x?x?xf32>) ->
+    (tensor<4x8x12x16xf32>, tensor<?x?x?x?xf32>) {
+  %0 = linalg.conv_2d_nchw_fchw ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+      outs(%arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  %1 = tensor.cast %0 : tensor<?x?x?x?xf32> to tensor<4x8x12x16xf32>
+  return %1, %0 : tensor<4x8x12x16xf32>, tensor<?x?x?x?xf32>
+}
+//       CHECK: func @fold_conv_op_with_cast_consumer(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?x?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?x?x?xf32>
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?x?x?xf32>)
+//       CHECK:  %[[OUT_CAST:.+]] = tensor.cast %[[ARG2]] : tensor<?x?x?x?xf32> to tensor<4x8x12x16xf32>
+//       CHECK:  %[[CONV:.+]] = linalg.conv_2d_nchw_fchw
+//  CHECK-SAME:      ins(%[[ARG0]], %[[ARG1]] :
+//  CHECK-SAME:      outs(%[[OUT_CAST]] :
+//       CHECK:  %[[RESULT_CAST:.+]] = tensor.cast %[[CONV]]
+//       CHECK:  return %[[CONV]], %[[RESULT_CAST]]
