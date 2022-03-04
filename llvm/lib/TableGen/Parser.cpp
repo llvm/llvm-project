@@ -21,6 +21,7 @@ bool llvm::TableGenParseFile(std::unique_ptr<MemoryBuffer> Buffer,
   RecordKeeper Records;
   Records.saveInputFilename(Buffer->getBufferIdentifier().str());
 
+  SrcMgr = SourceMgr();
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
   SrcMgr.setIncludeDirs(IncludeDirs);
   TGParser Parser(SrcMgr, /*Macros=*/None, Records);
