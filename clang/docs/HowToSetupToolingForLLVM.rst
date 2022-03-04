@@ -53,6 +53,54 @@ Now you are ready to build and test LLVM using make:
 
   $ make check-all
 
+Setup Clang Tooling Using CMake on Windows
+==========================================
+
+For Windows developers, the Visual Studio project generators in CMake do
+not support `CMAKE_EXPORT_COMPILE_COMMANDS
+<https://cmake.org/cmake/help/latest/variable/CMAKE_EXPORT_COMPILE_COMMANDS.html>`_.
+However, the Ninja generator does support this variable and can be used
+on Windows to generate a suitable ``compile_commands.json`` that invokes
+the MSVC compiler.
+
+First, you will need to install `Ninja`_.  Once installed, the Ninja
+executable will need to be in your search path for CMake to locate it.
+
+Next, assuming you already have Visual Studio installed on your machine, you
+need to have the appropriate environment variables configured so that CMake
+will locate the MSVC compiler for the Ninja generator.  The `documentation
+<https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#path_and_environment>`_
+describes the necessary environment variable settings, but the simplest thing
+is to use a `developer command-prompt window
+<https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_prompt_shortcuts>`_
+or call a `developer command file
+<https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_file_locations>`_
+to set the environment variables appropriately.
+
+Now you can run CMake with the Ninja generator to export a compilation
+database:
+
+.. code-block:: console
+
+  C:\> mkdir build-ninja
+  C:\> cd build-ninja
+  C:\build-ninja> cmake -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON path/to/llvm/sources
+
+It is best to keep your Visual Studio IDE build folder separate from the
+Ninja build folder.  This prevents the two build systems from negatively
+interacting with each other.
+
+Once the ``compile_commands.json`` file has been created by Ninja, you can
+use that compilation database with Clang Tooling.  One caveat is that because
+there are indirect settings obtained through the environment variables,
+you may need to run any Clang Tooling executables through a command prompt
+window created for use with Visual Studio as described above.  An
+alternative, e.g. for using the Visual Studio debugger on a Clang Tooling
+executable, is to ensure that the environment variables are also visible
+to the debugger settings.  This can be done locally in Visual Studio's
+debugger configuration locally or globally by launching the Visual Studio
+IDE from a suitable command-prompt window.
+
 Using Clang Tools
 =================
 
@@ -143,9 +191,9 @@ Examples:
 Using Ninja Build System
 =======================================
 
-Optionally you can use the `Ninja <https://github.com/martine/ninja>`_
-build system instead of make. It is aimed at making your builds faster.
-Currently this step will require building Ninja from sources.
+Optionally you can use the `Ninja`_ build system instead of make. It is
+aimed at making your builds faster.  Currently this step will require
+building Ninja from sources.
 
 To take advantage of using Clang Tools along with Ninja build you need
 at least CMake 2.8.9.
@@ -197,3 +245,5 @@ Now you are ready to build and test LLVM using Ninja:
   $ ninja check-all
 
 Other target names can be used in the same way as with make.
+
+.. _Ninja: https://ninja-build.org/
