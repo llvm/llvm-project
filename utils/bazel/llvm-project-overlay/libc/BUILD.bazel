@@ -73,7 +73,6 @@ fputil_common_hdrs = [
     "src/__support/FPUtil/BasicOperations.h",
     "src/__support/FPUtil/DivisionAndRemainderOperations.h",
     "src/__support/FPUtil/FEnvImpl.h",
-    "src/__support/FPUtil/FEnvUtils.h",
     "src/__support/FPUtil/FPBits.h",
     "src/__support/FPUtil/FloatProperties.h",
     "src/__support/FPUtil/Hypot.h",
