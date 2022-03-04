@@ -10,8 +10,8 @@
 #include "lsp/Logging.h"
 #include "lsp/Protocol.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Parser.h"
 #include "mlir/Parser/AsmParserState.h"
+#include "mlir/Parser/Parser.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;

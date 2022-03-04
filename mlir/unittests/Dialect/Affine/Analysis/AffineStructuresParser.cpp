@@ -8,7 +8,7 @@
 
 #include "./AffineStructuresParser.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 using namespace mlir;
 
