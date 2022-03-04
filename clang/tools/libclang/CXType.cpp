@@ -116,6 +116,7 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(Elaborated);
     TKCASE(Pipe);
     TKCASE(Attributed);
+    TKCASE(BTFTagAttributed);
     TKCASE(Atomic);
     default:
       return CXType_Unexposed;
@@ -135,6 +136,10 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
         // equivalent type.
         return MakeCXType(ATT->getEquivalentType(), TU);
       }
+    }
+    if (auto *ATT = T->getAs<BTFTagAttributedType>()) {
+      if (!(TU->ParsingOptions & CXTranslationUnit_IncludeAttributedTypes))
+        return MakeCXType(ATT->getWrappedType(), TU);
     }
     // Handle paren types as the original type
     if (auto *PTT = T->getAs<ParenType>()) {
@@ -610,6 +615,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Elaborated);
     TKIND(Pipe);
     TKIND(Attributed);
+    TKIND(BTFTagAttributed);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -1050,6 +1056,9 @@ CXType clang_Type_getModifiedType(CXType CT) {
 
   if (auto *ATT = T->getAs<AttributedType>())
     return MakeCXType(ATT->getModifiedType(), GetTU(CT));
+
+  if (auto *ATT = T->getAs<BTFTagAttributedType>())
+    return MakeCXType(ATT->getWrappedType(), GetTU(CT));
 
   return MakeCXType(QualType(), GetTU(CT));
 }

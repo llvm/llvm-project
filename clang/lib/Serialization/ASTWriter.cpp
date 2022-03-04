@@ -479,6 +479,10 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
 }
 
+void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }

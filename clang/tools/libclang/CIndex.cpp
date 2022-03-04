@@ -1672,6 +1672,10 @@ bool CursorVisitor::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   return Visit(TL.getModifiedLoc());
 }
 
+bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+  return Visit(TL.getWrappedLoc());
+}
+
 bool CursorVisitor::VisitFunctionTypeLoc(FunctionTypeLoc TL,
                                          bool SkipResultType) {
   if (!SkipResultType && Visit(TL.getReturnLoc()))

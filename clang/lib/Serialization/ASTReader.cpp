@@ -6695,6 +6695,10 @@ void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   TL.setAttr(ReadAttr());
 }
 
+void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }

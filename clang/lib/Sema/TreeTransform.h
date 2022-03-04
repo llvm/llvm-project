@@ -6865,6 +6865,13 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   return result;
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
+    TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
+  // The BTFTagAttributedType is available for C only.
+  llvm_unreachable("Unexpected TreeTransform for BTFTagAttributedType");
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,

@@ -2380,6 +2380,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(
                   cast<AttributedType>(T)->getEquivalentType().getTypePtr());
 
+  case Type::BTFTagAttributed:
+    return getTypeInfo(
+        cast<BTFTagAttributedType>(T)->getWrappedType().getTypePtr());
+
   case Type::Atomic: {
     // Start with the base type information.
     TypeInfo Info = getTypeInfo(cast<AtomicType>(T)->getValueType());
@@ -4684,6 +4688,26 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
   AttributedTypes.InsertNode(type, insertPos);
 
   return QualType(type, 0);
+}
+
+QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
+                                             QualType Wrapped) {
+  llvm::FoldingSetNodeID ID;
+  BTFTagAttributedType::Profile(ID, Wrapped, BTFAttr);
+
+  void *InsertPos = nullptr;
+  BTFTagAttributedType *Ty =
+      BTFTagAttributedTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  QualType Canon = getCanonicalType(Wrapped);
+  Ty = new (*this, TypeAlignment) BTFTagAttributedType(Canon, Wrapped, BTFAttr);
+
+  Types.push_back(Ty);
+  BTFTagAttributedTypes.InsertNode(Ty, InsertPos);
+
+  return QualType(Ty, 0);
 }
 
 /// Retrieve a substitution-result type.

@@ -928,28 +928,8 @@ static llvm::dwarf::Tag getNextQualifier(Qualifiers &Q) {
   return (llvm::dwarf::Tag)0;
 }
 
-// Strip MacroQualifiedTypeLoc and AttributedTypeLoc
-// as their corresponding types will be ignored
-// during code generation. Stripping them allows
-// to maintain proper TypeLoc for a given type
-// during code generation.
-static TypeLoc StripMacroAttributed(TypeLoc TL) {
-  if (!TL)
-    return TL;
-
-  while (true) {
-    if (auto MTL = TL.getAs<MacroQualifiedTypeLoc>())
-      TL = MTL.getInnerLoc();
-    else if (auto ATL = TL.getAs<AttributedTypeLoc>())
-      TL = ATL.getModifiedLoc();
-    else
-      break;
-  }
-  return TL;
-}
-
-llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty, llvm::DIFile *Unit,
-                                               TypeLoc TL) {
+llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
+                                               llvm::DIFile *Unit) {
   QualifierCollector Qc;
   const Type *T = Qc.strip(Ty);
 
@@ -963,15 +943,7 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty, llvm::DIFile *Unit,
     return getOrCreateType(QualType(T, 0), Unit);
   }
 
-  QualType NextTy = Qc.apply(CGM.getContext(), T);
-  TypeLoc NextTL;
-  if (NextTy.hasQualifiers())
-    NextTL = TL;
-  else if (TL) {
-    if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-      NextTL = StripMacroAttributed(QTL.getNextTypeLoc());
-  }
-  auto *FromTy = getOrCreateType(NextTy, Unit, NextTL);
+  auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);
 
   // No need to fill in the Name, Line, Size, Alignment, Offset in case of
   // CVR derived types.
@@ -1015,10 +987,10 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCObjectPointerType *Ty,
                                Ty->getPointeeType(), Unit);
 }
 
-llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty, llvm::DIFile *Unit,
-                                      TypeLoc TL) {
+llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
+                                      llvm::DIFile *Unit) {
   return CreatePointerLikeType(llvm::dwarf::DW_TAG_pointer_type, Ty,
-                               Ty->getPointeeType(), Unit, TL);
+                               Ty->getPointeeType(), Unit);
 }
 
 /// \return whether a C++ mangling exists for the type defined by TD.
@@ -1159,8 +1131,7 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
 llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
                                                  const Type *Ty,
                                                  QualType PointeeTy,
-                                                 llvm::DIFile *Unit,
-                                                 TypeLoc TL) {
+                                                 llvm::DIFile *Unit) {
   // Bit size, align and offset of the type.
   // Size is always the size of a pointer. We can't use getTypeSize here
   // because that does not return the correct value for references.
@@ -1170,52 +1141,32 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
   Optional<unsigned> DWARFAddressSpace =
       CGM.getTarget().getDWARFAddressSpace(AddressSpace);
 
-  llvm::DINodeArray Annotations = nullptr;
-  TypeLoc NextTL;
-  if (TL) {
-    SmallVector<llvm::Metadata *, 4> Annots;
-    NextTL = TL.getNextTypeLoc();
-    if (NextTL) {
-      // Traverse all MacroQualifiedTypeLoc, QualifiedTypeLoc and
-      // AttributedTypeLoc type locations so we can collect
-      // BTFTypeTag attributes for this pointer.
-      while (true) {
-        if (auto MTL = NextTL.getAs<MacroQualifiedTypeLoc>()) {
-          NextTL = MTL.getInnerLoc();
-        } else if (auto QTL = NextTL.getAs<QualifiedTypeLoc>()) {
-          NextTL = QTL.getNextTypeLoc();
-        } else if (auto ATL = NextTL.getAs<AttributedTypeLoc>()) {
-          if (const auto *A = ATL.getAttrAs<BTFTypeTagAttr>()) {
-            StringRef BTFTypeTag = A->getBTFTypeTag();
-            if (!BTFTypeTag.empty()) {
-              llvm::Metadata *Ops[2] = {
-                  llvm::MDString::get(CGM.getLLVMContext(),
-                                      StringRef("btf_type_tag")),
-                  llvm::MDString::get(CGM.getLLVMContext(), BTFTypeTag)};
-              Annots.insert(Annots.begin(),
-                            llvm::MDNode::get(CGM.getLLVMContext(), Ops));
-            }
-          }
-          NextTL = ATL.getModifiedLoc();
-        } else {
-          break;
-        }
-      }
+  SmallVector<llvm::Metadata *, 4> Annots;
+  auto *BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
+  while (BTFAttrTy) {
+    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
+    if (!Tag.empty()) {
+      llvm::Metadata *Ops[2] = {
+          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
+          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
+      Annots.insert(Annots.begin(),
+                    llvm::MDNode::get(CGM.getLLVMContext(), Ops));
     }
-
-    NextTL = StripMacroAttributed(TL.getNextTypeLoc());
-    if (Annots.size() > 0)
-      Annotations = DBuilder.getOrCreateArray(Annots);
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
   }
+
+  llvm::DINodeArray Annotations = nullptr;
+  if (Annots.size() > 0)
+    Annotations = DBuilder.getOrCreateArray(Annots);
 
   if (Tag == llvm::dwarf::DW_TAG_reference_type ||
       Tag == llvm::dwarf::DW_TAG_rvalue_reference_type)
     return DBuilder.createReferenceType(Tag, getOrCreateType(PointeeTy, Unit),
                                         Size, Align, DWARFAddressSpace);
   else
-    return DBuilder.createPointerType(getOrCreateType(PointeeTy, Unit, NextTL),
-                                      Size, Align, DWARFAddressSpace,
-                                      StringRef(), Annotations);
+    return DBuilder.createPointerType(getOrCreateType(PointeeTy, Unit), Size,
+                                      Align, DWARFAddressSpace, StringRef(),
+                                      Annotations);
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateStructPtrType(StringRef Name,
@@ -1332,11 +1283,8 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                       llvm::DIFile *Unit) {
-  TypeLoc TL;
-  if (const TypeSourceInfo *TSI = Ty->getDecl()->getTypeSourceInfo())
-    TL = TSI->getTypeLoc();
   llvm::DIType *Underlying =
-      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit, TL);
+      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit);
 
   if (Ty->getDecl()->hasAttr<NoDebugAttr>())
     return Underlying;
@@ -1410,7 +1358,7 @@ static llvm::DINode::DIFlags getRefFlags(const FunctionProtoType *Func) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
-                                      llvm::DIFile *Unit, TypeLoc TL) {
+                                      llvm::DIFile *Unit) {
   const auto *FPT = dyn_cast<FunctionProtoType>(Ty);
   if (FPT) {
     if (llvm::DIType *QTy = CreateQualifiedType(FPT, Unit))
@@ -1422,12 +1370,7 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   SmallVector<llvm::Metadata *, 16> EltTys;
 
   // Add the result type at least.
-  TypeLoc RetTL;
-  if (TL) {
-    if (auto FTL = TL.getAs<FunctionTypeLoc>())
-      RetTL = FTL.getReturnLoc();
-  }
-  EltTys.push_back(getOrCreateType(Ty->getReturnType(), Unit, RetTL));
+  EltTys.push_back(getOrCreateType(Ty->getReturnType(), Unit));
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   // Set up remainder of arguments if there is a prototype.
@@ -1436,30 +1379,8 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
     EltTys.push_back(DBuilder.createUnspecifiedParameter());
   } else {
     Flags = getRefFlags(FPT);
-    bool DoneWithTL = false;
-    if (TL) {
-      if (auto FTL = TL.getAs<FunctionTypeLoc>()) {
-        DoneWithTL = true;
-        unsigned Idx = 0;
-        unsigned FTL_NumParams = FTL.getNumParams();
-        for (const QualType &ParamType : FPT->param_types()) {
-          TypeLoc ParamTL;
-          if (Idx < FTL_NumParams) {
-            if (ParmVarDecl *Param = FTL.getParam(Idx)) {
-              if (const TypeSourceInfo *TSI = Param->getTypeSourceInfo())
-                ParamTL = TSI->getTypeLoc();
-            }
-          }
-          EltTys.push_back(getOrCreateType(ParamType, Unit, ParamTL));
-          Idx++;
-        }
-      }
-    }
-
-    if (!DoneWithTL) {
-      for (const QualType &ParamType : FPT->param_types())
-        EltTys.push_back(getOrCreateType(ParamType, Unit));
-    }
+    for (const QualType &ParamType : FPT->param_types())
+      EltTys.push_back(getOrCreateType(ParamType, Unit));
     if (FPT->isVariadic())
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
   }
@@ -1530,13 +1451,11 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
       Flags, DebugType, Annotations);
 }
 
-llvm::DIType *
-CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
-                             AccessSpecifier AS, uint64_t offsetInBits,
-                             uint32_t AlignInBits, llvm::DIFile *tunit,
-                             llvm::DIScope *scope, const RecordDecl *RD,
-                             llvm::DINodeArray Annotations, TypeLoc TL) {
-  llvm::DIType *debugType = getOrCreateType(type, tunit, TL);
+llvm::DIType *CGDebugInfo::createFieldType(
+    StringRef name, QualType type, SourceLocation loc, AccessSpecifier AS,
+    uint64_t offsetInBits, uint32_t AlignInBits, llvm::DIFile *tunit,
+    llvm::DIScope *scope, const RecordDecl *RD, llvm::DINodeArray Annotations) {
+  llvm::DIType *debugType = getOrCreateType(type, tunit);
 
   // Get the location for the field.
   llvm::DIFile *file = getOrCreateFile(loc);
@@ -1644,12 +1563,9 @@ void CGDebugInfo::CollectRecordNormalField(
   } else {
     auto Align = getDeclAlignIfRequired(field, CGM.getContext());
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(field);
-    TypeLoc TL;
-    if (const TypeSourceInfo *TSI = field->getTypeSourceInfo())
-      TL = TSI->getTypeLoc();
-    FieldType = createFieldType(name, type, field->getLocation(),
-                                field->getAccess(), OffsetInBits, Align, tunit,
-                                RecordTy, RD, Annotations, TL);
+    FieldType =
+        createFieldType(name, type, field->getLocation(), field->getAccess(),
+                        OffsetInBits, Align, tunit, RecordTy, RD, Annotations);
   }
 
   elements.push_back(FieldType);
@@ -3366,6 +3282,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::Attributed:
       T = cast<AttributedType>(T)->getEquivalentType();
       break;
+    case Type::BTFTagAttributed:
+      T = cast<BTFTagAttributedType>(T)->getWrappedType();
+      break;
     case Type::Elaborated:
       T = cast<ElaboratedType>(T)->getNamedType();
       break;
@@ -3427,8 +3346,7 @@ void CGDebugInfo::completeUnusedClass(const CXXRecordDecl &D) {
   RetainedTypes.push_back(CGM.getContext().getRecordType(&D).getAsOpaquePtr());
 }
 
-llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit,
-                                           TypeLoc TL) {
+llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {
   if (Ty.isNull())
     return nullptr;
 
@@ -3445,7 +3363,7 @@ llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit,
   if (auto *T = getTypeOrNull(Ty))
     return T;
 
-  llvm::DIType *Res = CreateTypeNode(Ty, Unit, TL);
+  llvm::DIType *Res = CreateTypeNode(Ty, Unit);
   void *TyPtr = Ty.getAsOpaquePtr();
 
   // And update the type cache.
@@ -3489,11 +3407,10 @@ llvm::DIModule *CGDebugInfo::getParentModuleOrNull(const Decl *D) {
   return nullptr;
 }
 
-llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit,
-                                          TypeLoc TL) {
+llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   // Handle qualifiers, which recursively handles what they refer to.
   if (Ty.hasLocalQualifiers())
-    return CreateQualifiedType(Ty, Unit, TL);
+    return CreateQualifiedType(Ty, Unit);
 
   // Work out details of type.
   switch (Ty->getTypeClass()) {
@@ -3522,7 +3439,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit,
   case Type::Complex:
     return CreateType(cast<ComplexType>(Ty));
   case Type::Pointer:
-    return CreateType(cast<PointerType>(Ty), Unit, TL);
+    return CreateType(cast<PointerType>(Ty), Unit);
   case Type::BlockPointer:
     return CreateType(cast<BlockPointerType>(Ty), Unit);
   case Type::Typedef:
@@ -3533,7 +3450,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit,
     return CreateEnumType(cast<EnumType>(Ty));
   case Type::FunctionProto:
   case Type::FunctionNoProto:
-    return CreateType(cast<FunctionType>(Ty), Unit, TL);
+    return CreateType(cast<FunctionType>(Ty), Unit);
   case Type::ConstantArray:
   case Type::VariableArray:
   case Type::IncompleteArray:
@@ -3560,6 +3477,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit,
 
   case Type::Auto:
   case Type::Attributed:
+  case Type::BTFTagAttributed:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
@@ -4082,12 +4000,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
                                            getDwarfCC(CC));
     }
 
-  TypeLoc TL;
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
-      TL = TSI->getTypeLoc();
-  }
-  return cast<llvm::DISubroutineType>(getOrCreateType(FnType, F, TL));
+  return cast<llvm::DISubroutineType>(getOrCreateType(FnType, F));
 }
 
 QualType
@@ -4489,12 +4402,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   uint64_t XOffset = 0;
   if (VD->hasAttr<BlocksAttr>())
     Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
-  else {
-    TypeLoc TL;
-    if (const TypeSourceInfo *TSI = VD->getTypeSourceInfo())
-      TL = TSI->getTypeLoc();
-    Ty = getOrCreateType(VD->getType(), Unit, TL);
-  }
+  else
+    Ty = getOrCreateType(VD->getType(), Unit);
 
   // If there is no debug info for this type then do not emit debug info
   // for this variable.
@@ -5365,14 +5274,10 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     }
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
-    TypeLoc TL;
-    if (const TypeSourceInfo *TSI = D->getTypeSourceInfo())
-      TL = TSI->getTypeLoc();
-
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
     GVE = DBuilder.createGlobalVariableExpression(
-        DContext, DeclName, LinkageName, Unit, LineNo,
-        getOrCreateType(T, Unit, TL), Var->hasLocalLinkage(), true,
+        DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
+        Var->hasLocalLinkage(), true,
         Expr.empty() ? nullptr : DBuilder.createExpression(Expr),
         getOrCreateStaticDataMemberDeclarationOrNull(D), TemplateParameters,
         Align, Annotations);

@@ -901,6 +901,29 @@ public:
   }
 };
 
+struct BTFTagAttributedLocInfo {}; // Nothing.
+
+/// Type source information for an btf_tag attributed type.
+class BTFTagAttributedTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, BTFTagAttributedTypeLoc,
+                             BTFTagAttributedType, BTFTagAttributedLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+
+  /// The btf_type_tag attribute.
+  const BTFTypeTagAttr *getAttr() const { return getTypePtr()->getAttr(); }
+
+  template <typename T> T *getAttrAs() {
+    return dyn_cast_or_null<T>(getAttr());
+  }
+
+  SourceRange getLocalSourceRange() const;
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+
+  QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
+};
+
 struct ObjCObjectTypeLocInfo {
   SourceLocation TypeArgsLAngleLoc;
   SourceLocation TypeArgsRAngleLoc;
@@ -2589,6 +2612,8 @@ inline T TypeLoc::getAsAdjusted() const {
       Cur = PTL.getInnerLoc();
     else if (auto ATL = Cur.getAs<AttributedTypeLoc>())
       Cur = ATL.getModifiedLoc();
+    else if (auto ATL = Cur.getAs<BTFTagAttributedTypeLoc>())
+      Cur = ATL.getWrappedLoc();
     else if (auto ETL = Cur.getAs<ElaboratedTypeLoc>())
       Cur = ETL.getNamedTypeLoc();
     else if (auto ATL = Cur.getAs<AdjustedTypeLoc>())
