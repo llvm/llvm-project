@@ -9,7 +9,7 @@
 #include "src/threads/mtx_destroy.h"
 #include "include/threads.h" // For mtx_t definition.
 #include "src/__support/common.h"
-#include "src/threads/linux/Mutex.h"
+#include "src/__support/threads/mutex.h"
 
 namespace __llvm_libc {
 

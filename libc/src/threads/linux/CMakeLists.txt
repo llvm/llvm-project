@@ -27,7 +27,6 @@ add_header_library(
   HDRS
     CndVar.h
     Futex.h
-    Mutex.h
     Thread.h
   DEPENDS
     .thread_start_args_h
@@ -35,6 +34,7 @@ add_header_library(
     libc.include.threads
     libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
@@ -75,50 +75,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  mtx_init
-  SRCS
-    mtx_init.cpp
-  HDRS
-    ../mtx_init.h
-  DEPENDS
-    .threads_utils
-    libc.include.threads
-)
-
-add_entrypoint_object(
-  mtx_destroy
-  SRCS
-    mtx_destroy.cpp
-  HDRS
-    ../mtx_destroy.h
-  DEPENDS
-    .threads_utils
-    libc.include.threads
-)
-
-add_entrypoint_object(
-  mtx_lock
-  SRCS
-    mtx_lock.cpp
-  HDRS
-    ../mtx_lock.h
-  DEPENDS
-    .threads_utils
-    libc.include.threads
-)
-
-add_entrypoint_object(
-  mtx_unlock
-  SRCS
-    mtx_unlock.cpp
-  HDRS
-    ../mtx_unlock.h
-  DEPENDS
-    .threads_utils
-    libc.include.threads
-)
-
-add_entrypoint_object(
   cnd_init
   SRCS
     cnd_init.cpp
@@ -149,6 +105,7 @@ add_entrypoint_object(
   DEPENDS
     .threads_utils
     libc.include.threads
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(

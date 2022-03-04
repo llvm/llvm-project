@@ -57,3 +57,4 @@ add_header_library(
 add_subdirectory(File)
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
+add_subdirectory(threads)
