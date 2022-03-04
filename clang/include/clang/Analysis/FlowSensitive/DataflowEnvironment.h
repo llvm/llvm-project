@@ -69,25 +69,38 @@ public:
     ///  `Val1` and `Val2` must be distinct.
     ///
     ///  `Val1` and `Val2` must model values of type `Type`.
+    ///
+    ///  `Val1` and `Val2` must be assigned to the same storage location in
+    ///  `Env1` and `Env2` respectively.
     virtual bool compareEquivalent(QualType Type, const Value &Val1,
-                                   const Value &Val2) {
+                                   const Environment &Env1, const Value &Val2,
+                                   const Environment &Env2) {
       // FIXME: Consider adding QualType to StructValue and removing the Type
       // argument here.
       return false;
     }
 
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
-    /// be a strict lattice join or a more general widening operation. If this
-    /// function returns true, `MergedVal` will be assigned to a storage
-    /// location of type `Type` in `Env`.
+    /// be a strict lattice join or a more general widening operation.
+    ///
+    /// If this function returns true, `MergedVal` will be assigned to a storage
+    /// location of type `Type` in `MergedEnv`.
+    ///
+    /// `Env1` and `Env2` can be used to query child values and path condition
+    /// implications of `Val1` and `Val2` respectively.
     ///
     /// Requirements:
     ///
     ///  `Val1` and `Val2` must be distinct.
     ///
     ///  `Val1`, `Val2`, and `MergedVal` must model values of type `Type`.
-    virtual bool merge(QualType Type, const Value &Val1, const Value &Val2,
-                       Value &MergedVal, Environment &Env) {
+    ///
+    ///  `Val1` and `Val2` must be assigned to the same storage location in
+    ///  `Env1` and `Env2` respectively.
+    virtual bool merge(QualType Type, const Value &Val1,
+                       const Environment &Env1, const Value &Val2,
+                       const Environment &Env2, Value &MergedVal,
+                       Environment &MergedEnv) {
       return false;
     }
   };
@@ -236,13 +249,15 @@ public:
   }
 
   /// Returns an atomic boolean value.
-  BoolValue &makeAtomicBoolValue() { return DACtx->createAtomicBoolValue(); }
+  BoolValue &makeAtomicBoolValue() const {
+    return DACtx->createAtomicBoolValue();
+  }
 
   /// Returns a boolean value that represents the conjunction of `LHS` and
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
-  BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) {
+  BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) const {
     return DACtx->getOrCreateConjunctionValue(LHS, RHS);
   }
 
@@ -250,13 +265,13 @@ public:
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
-  BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) {
+  BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) const {
     return DACtx->getOrCreateDisjunctionValue(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the negation of `Val`. Subsequent
   /// calls with the same argument will return the same result.
-  BoolValue &makeNot(BoolValue &Val) {
+  BoolValue &makeNot(BoolValue &Val) const {
     return DACtx->getOrCreateNegationValue(Val);
   }
 
@@ -264,7 +279,7 @@ public:
   /// the same arguments, regardless of their order, will return the same
   /// result. If the given boolean values represent the same value, the result
   /// will be a value that represents the true boolean literal.
-  BoolValue &makeImplication(BoolValue &LHS, BoolValue &RHS) {
+  BoolValue &makeImplication(BoolValue &LHS, BoolValue &RHS) const {
     return &LHS == &RHS ? getBoolLiteralValue(true) : makeOr(makeNot(LHS), RHS);
   }
 
@@ -272,7 +287,7 @@ public:
   /// the same arguments, regardless of their order, will return the same
   /// result. If the given boolean values represent the same value, the result
   /// will be a value that represents the true boolean literal.
-  BoolValue &makeIff(BoolValue &LHS, BoolValue &RHS) {
+  BoolValue &makeIff(BoolValue &LHS, BoolValue &RHS) const {
     return &LHS == &RHS
                ? getBoolLiteralValue(true)
                : makeAnd(makeImplication(LHS, RHS), makeImplication(RHS, LHS));
@@ -283,7 +298,7 @@ public:
 
   /// Returns true if and only if the clauses that constitute the flow condition
   /// imply that `Val` is true.
-  bool flowConditionImplies(BoolValue &Val);
+  bool flowConditionImplies(BoolValue &Val) const;
 
 private:
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
