@@ -19,6 +19,7 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "DataflowAnalysisContextTest.cpp",
     "DataflowEnvironmentTest.cpp",
     "MapLatticeTest.cpp",
+    "MatchSwitchTest.cpp",
     "MultiVarConstantPropagationTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
     "SolverTest.cpp",
