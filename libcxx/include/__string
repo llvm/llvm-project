@@ -1163,6 +1163,7 @@ struct __quoted_output_proxy
     _CharT  __delim_;
     _CharT  __escape_;
 
+    _LIBCPP_HIDE_FROM_ABI
     explicit __quoted_output_proxy(_Iter __f, _Iter __l, _CharT __d, _CharT __e)
         : __first_(__f), __last_(__l), __delim_(__d), __escape_(__e) {}
 };
