@@ -51,7 +51,7 @@ int s0(int a, int b) {
 // CHECK: #[[loc10]] = loc("{{.*}}sourcelocation.cpp":6:7)
 // CHECK: #[[loc11]] = loc("{{.*}}sourcelocation.cpp":6:11)
 // CHECK: #[[loc12]] = loc(fused["{{.*}}sourcelocation.cpp":6:7, "{{.*}}sourcelocation.cpp":6:11])
-// CHECK: #[[loc13]] = loc(fused["{{.*}}sourcelocation.cpp":7:5, "{{.*}}sourcelocation.cpp":9:9])
+// CHECK: #[[loc13]] = loc(fused["{{.*}}sourcelocation.cpp":7:5, "{{.*}}sourcelocation.cpp":7:9, "{{.*}}sourcelocation.cpp":9:5, "{{.*}}sourcelocation.cpp":9:9])
 // CHECK: #[[loc14]] = loc("{{.*}}sourcelocation.cpp":7:9)
 // CHECK: #[[loc15]] = loc(fused["{{.*}}sourcelocation.cpp":7:5, "{{.*}}sourcelocation.cpp":7:9])
 // CHECK: #[[loc16]] = loc("{{.*}}sourcelocation.cpp":9:9)
