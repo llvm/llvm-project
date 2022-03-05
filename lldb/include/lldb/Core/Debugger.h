@@ -329,6 +329,8 @@ public:
 
   bool SetUseColor(bool use_color);
 
+  bool GetShowProgress() const;
+
   bool GetUseAutosuggestion() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
@@ -439,6 +441,8 @@ protected:
                              uint64_t completed, uint64_t total,
                              llvm::Optional<lldb::user_id_t> debugger_id);
 
+  void PrintProgress(const Debugger::ProgressEventData &data);
+
   bool StartEventHandlerThread();
 
   void StopEventHandlerThread();
@@ -465,6 +469,8 @@ protected:
   void HandleProcessEvent(const lldb::EventSP &event_sp);
 
   void HandleThreadEvent(const lldb::EventSP &event_sp);
+
+  void HandleProgressEvent(const lldb::EventSP &event_sp);
 
   // Ensures two threads don't attempt to flush process output in parallel.
   std::mutex m_output_flush_mutex;
@@ -513,6 +519,8 @@ protected:
 
   IOHandlerStack m_io_handler_stack;
   std::recursive_mutex m_io_handler_synchronous_mutex;
+
+  llvm::Optional<uint64_t> m_current_event_id;
 
   llvm::StringMap<std::weak_ptr<llvm::raw_ostream>> m_log_streams;
   std::shared_ptr<llvm::raw_ostream> m_log_callback_stream_sp;

@@ -131,6 +131,10 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to use Ansi color codes or not.">;
+  def ShowProgress: Property<"show-progress", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Whether to show progress or not if the debugger's output is an interactive color-enabled terminal.">;
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,
