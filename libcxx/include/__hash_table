@@ -17,12 +17,14 @@
 #include <__config>
 #include <__debug>
 #include <__functional/hash.h>
+#include <__utility/swap.h>
 #include <cmath>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <type_traits>
-#include <utility>
+
+#include <utility> // TODO: Remove this
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -83,6 +83,8 @@ namespace std {
 #include <__availability>
 #include <__config>
 #include <__utility/forward.h>
+#include <__utility/in_place.h>
+#include <__utility/move.h>
 #include <cstdlib>
 #include <memory>
 #include <type_traits>

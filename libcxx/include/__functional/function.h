@@ -22,6 +22,7 @@
 #include <__memory/shared_ptr.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 #include <exception>
 #include <memory> // TODO: replace with <__memory/__builtin_new_allocator.h>
 #include <type_traits>

@@ -50,6 +50,8 @@ struct hash<type_index>
 #include <typeinfo>
 #include <version>
 
+#include <utility> // TODO: Remove this
+
 // TODO: remove these headers
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
@@ -59,7 +61,6 @@ struct hash<type_index>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
 #include <new>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

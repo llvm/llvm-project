@@ -20,6 +20,7 @@
 #include <__format/format_fwd.h>
 #include <__format/format_string.h>
 #include <__format/parser_std_format_spec.h>
+#include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <string_view>
 

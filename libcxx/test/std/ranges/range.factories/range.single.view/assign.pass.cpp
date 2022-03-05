@@ -13,8 +13,9 @@
 
 // Tests that <value_> is a <copyable-box>.
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 

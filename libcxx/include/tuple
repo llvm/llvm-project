@@ -175,11 +175,15 @@ template <class... Types>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
+#include <__utility/piecewise_construct.h>
+#include <__utility/swap.h>
 #include <compare>
 #include <cstddef>
 #include <type_traits>
-#include <utility>
 #include <version>
+
+#include <utility> // TODO: Remove this
 
 // TODO: remove these headers
 #include <__functional/binary_function.h>

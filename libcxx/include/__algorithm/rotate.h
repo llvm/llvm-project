@@ -16,6 +16,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 #include <iterator>
 

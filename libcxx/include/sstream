@@ -181,6 +181,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 */
 
 #include <__config>
+#include <__utility/swap.h>
 #include <istream>
 #include <ostream>
 #include <string>

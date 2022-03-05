@@ -288,6 +288,8 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__iterator/wrap_iter.h>
 #include <__split_buffer>
 #include <__utility/forward.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <climits>
 #include <compare>
 #include <cstdlib>
@@ -300,6 +302,8 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <type_traits>
 #include <version>
 
+#include <utility> // TODO: Remove this
+
 // TODO: remove these headers
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
@@ -308,7 +312,6 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__functional/unary_function.h>
 #include <__functional/weak_result_type.h>
 #include <typeinfo>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

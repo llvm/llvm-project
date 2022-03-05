@@ -66,6 +66,7 @@ namespace pmr {
 
 #include <__assert>
 #include <__tuple>
+#include <__utility/move.h>
 #include <cstddef>
 #include <cstdlib>
 #include <experimental/__config>
@@ -75,7 +76,8 @@ namespace pmr {
 #include <new>
 #include <stdexcept>
 #include <type_traits>
-#include <utility>
+
+#include <utility> // TODO: Remove this
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
