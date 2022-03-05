@@ -934,7 +934,9 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
       if (DT->dominates(Previous, OtherPrev) || Previous == OtherPrev)
         return true;
       // Otherwise, Previous comes after OtherPrev and SinkCandidate needs to be
-      // re-sunk to Previous, instead of sinking to OtherPrev.
+      // re-sunk to Previous, instead of sinking to OtherPrev. Remove
+      // SinkCandidate from SinkAfter to ensure it's insert position is updated.
+      SinkAfter.erase(SinkCandidate);
     }
 
     // If we reach a PHI node that is not dominated by Previous, we reached a

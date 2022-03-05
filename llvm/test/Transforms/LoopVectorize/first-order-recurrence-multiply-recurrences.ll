@@ -92,3 +92,82 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @test_pr54223_sink_after_insertion_order(float* noalias %a, float* noalias %b, float* noalias %dst) {
+; CHECK-LABEL: @test_pr54223_sink_after_insertion_order(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x float> [ <float poison, float poison, float poison, float 0.000000e+00>, [[VECTOR_PH]] ], [ [[BROADCAST_SPLAT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x float> [ <float poison, float poison, float poison, float 0.000000e+00>, [[VECTOR_PH]] ], [ [[BROADCAST_SPLAT3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[A:%.*]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR]], <4 x float> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[B:%.*]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP4]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR1]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = fneg <4 x float> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, float* [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP7]], <4 x float>* [[TMP9]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, 10000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT4:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT3]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI5:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT3]], i32 2
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT6:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT4]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR7:%.*]] = phi float [ [[SCALAR_RECUR_INIT6]], [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SCALAR_RECUR7]]
+; CHECK-NEXT:    [[MULADD:%.*]] = call float @llvm.fmuladd.f32(float [[SCALAR_RECUR]], float [[NEG]], float 0.000000e+00)
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds float, float* [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[FOR_1_NEXT]] = load float, float* [[A]], align 4
+; CHECK-NEXT:    [[FOR_2_NEXT]] = load float, float* [[B]], align 4
+; CHECK-NEXT:    store float [[MULADD]], float* [[DST_GEP]], align 4
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %for.1 = phi float [ 0.0, %entry ], [ %for.1.next, %loop ]
+  %for.2 = phi float [ 0.0, %entry ], [ %for.2.next, %loop ]
+  %neg = fneg float %for.2
+  %muladd = call float @llvm.fmuladd.f32(float %for.1, float %neg, float 0.000000e+00)
+  %dst.gep = getelementptr inbounds float, float* %dst, i64 %iv
+  %iv.next = add nuw nsw i64 %iv, 1
+  %for.1.next = load float, float* %a, align 4
+  %for.2.next = load float, float* %b, align 4
+  store float %muladd, float* %dst.gep
+  %exitcond.not = icmp eq i64 %iv.next, 10000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+declare float @llvm.fmuladd.f32(float, float, float) #1
