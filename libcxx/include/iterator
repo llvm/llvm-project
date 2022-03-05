@@ -654,8 +654,9 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <cstddef>
 #include <initializer_list>
 #include <type_traits>
-#include <utility>
 #include <version>
+
+#include <utility> // TODO: Remove this
 
 // TODO: remove these headers
 #include <__functional/binary_function.h>

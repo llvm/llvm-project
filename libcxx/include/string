@@ -527,6 +527,9 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <__debug>
 #include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
+#include <__utility/auto_cast.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <compare>
 #include <cstdio>  // EOF
 #include <cstdlib>
@@ -538,8 +541,9 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
-#include <utility>
 #include <version>
+
+#include <utility> // TODO: Remove this
 
 // TODO: remove these headers
 #include <__functional/binary_function.h>
