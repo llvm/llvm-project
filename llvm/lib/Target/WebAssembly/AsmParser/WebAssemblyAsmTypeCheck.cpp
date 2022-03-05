@@ -182,6 +182,20 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
   return false;
 }
 
+bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCInst &Inst,
+                                       wasm::ValType &Type) {
+  const MCSymbolRefExpr *SymRef;
+  if (getSymRef(ErrorLoc, Inst, SymRef))
+    return true;
+  auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  if (WasmSym->getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA) !=
+      wasm::WASM_SYMBOL_TYPE_TABLE)
+    return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
+                                   " missing .tabletype");
+  Type = static_cast<wasm::ValType>(WasmSym->getTableType().ElemType);
+  return false;
+}
+
 bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
   // Check the return types.
   for (auto RVT : llvm::reverse(ReturnTypes)) {
@@ -224,6 +238,28 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
     if (getGlobal(ErrorLoc, Inst, Type))
       return true;
     if (popType(ErrorLoc, Type))
+      return true;
+  } else if (Name == "table.get") {
+    if (getTable(ErrorLoc, Inst, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    Stack.push_back(Type);
+  } else if (Name == "table.set") {
+    if (getTable(ErrorLoc, Inst, Type))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+  } else if (Name == "table.fill") {
+    if (getTable(ErrorLoc, Inst, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
   } else if (Name == "drop") {
     if (popType(ErrorLoc, {}))
