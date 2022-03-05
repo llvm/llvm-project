@@ -172,7 +172,7 @@ function(add_asan_tests arch test_runtime)
   function(generate_asan_tests test_objects test_suite testname)
     generate_compiler_rt_tests(${test_objects} ${test_suite} ${testname} ${arch}
       COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_IGNORELIST_FILE}
-      DEPS gtest asan
+      DEPS llvm_gtest asan
       KIND ${TEST_KIND}
       ${ARGN}
       )

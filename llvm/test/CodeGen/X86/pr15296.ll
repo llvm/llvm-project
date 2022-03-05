@@ -62,11 +62,11 @@ allocas:
 define <4 x i64> @shiftInput___64in32bitmode(<4 x i64> %input, i64 %shiftval) nounwind {
 ; X86-LABEL: shiftInput___64in32bitmode:
 ; X86:       # %bb.0: # %allocas
-; X86-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X86-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
-; X86-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vpsrlq %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shiftInput___64in32bitmode:
@@ -87,11 +87,11 @@ allocas:
 define <4 x i64> @shiftInput___2x32bitcast(<4 x i64> %input, i32 %shiftval) nounwind {
 ; X86-LABEL: shiftInput___2x32bitcast:
 ; X86:       # %bb.0: # %allocas
-; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X86-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
-; X86-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vpsrlq %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shiftInput___2x32bitcast:

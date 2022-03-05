@@ -3762,8 +3762,8 @@ TypeLoc Sema::getReturnTypeLoc(FunctionDecl *FD) const {
 bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
                                             SourceLocation ReturnLoc,
                                             Expr *&RetExpr,
-                                            AutoType *AT) {
-  // If this is the conversion function for a lambda, we choose to deduce it
+                                            const AutoType *AT) {
+  // If this is the conversion function for a lambda, we choose to deduce its
   // type from the corresponding call operator, not from the synthesized return
   // statement within it. See Sema::DeduceReturnType.
   if (isLambdaConversionOperator(FD))
@@ -3808,19 +3808,26 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     LocalTypedefNameReferencer Referencer(*this);
     Referencer.TraverseType(RetExpr->getType());
   } else {
-    //  In the case of a return with no operand, the initializer is considered
-    //  to be void().
-    //
-    // Deduction here can only succeed if the return type is exactly 'cv auto'
-    // or 'decltype(auto)', so just check for that case directly.
+    // For a function with a deduced result type to return void,
+    // the result type as written must be 'auto' or 'decltype(auto)',
+    // possibly cv-qualified or constrained, but not ref-qualified.
     if (!OrigResultType.getType()->getAs<AutoType>()) {
       Diag(ReturnLoc, diag::err_auto_fn_return_void_but_not_auto)
         << OrigResultType.getType();
       return true;
     }
-    // We always deduce U = void in this case.
-    Deduced = SubstAutoType(OrigResultType.getType(), Context.VoidTy);
-    if (Deduced.isNull())
+    // In the case of a return with no operand, the initializer is considered
+    // to be 'void()'.
+    Expr *Dummy = new (Context) CXXScalarValueInitExpr(
+        Context.VoidTy,
+        Context.getTrivialTypeSourceInfo(Context.VoidTy, ReturnLoc), ReturnLoc);
+    DeduceAutoResult DAR = DeduceAutoType(OrigResultType, Dummy, Deduced);
+
+    if (DAR == DAR_Failed && !FD->isInvalidDecl())
+      Diag(ReturnLoc, diag::err_auto_fn_deduction_failure)
+          << OrigResultType.getType() << Dummy->getType();
+
+    if (DAR != DAR_Succeeded)
       return true;
   }
 

@@ -4,7 +4,6 @@ add_header_library(
     FEnvImpl.h
     BasicOperations.h
     DivisionAndRemainderOperations.h
-    FEnvUtils.h
     FloatProperties.h
     FPBits.h
     BasicOperations.h
@@ -21,7 +20,7 @@ add_header_library(
     libc.include.fenv
     libc.src.__support.common
     libc.src.__support.CPP.standalone_cpp
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )
 
 add_header_library(

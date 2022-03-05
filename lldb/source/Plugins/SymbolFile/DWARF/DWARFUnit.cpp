@@ -26,7 +26,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
-using namespace std;
 
 extern int g_verbose;
 
@@ -449,7 +448,7 @@ ParseListTableHeader(const llvm::DWARFDataExtractor &data, uint64_t offset,
 
   uint64_t HeaderSize = llvm::DWARFListTableHeader::getHeaderSize(format);
   if (offset < HeaderSize)
-    return llvm::createStringError(errc::invalid_argument,
+    return llvm::createStringError(std::errc::invalid_argument,
                                    "did not detect a valid"
                                    " list table with base = 0x%" PRIx64 "\n",
                                    offset);
@@ -559,10 +558,10 @@ DWARFUnit::GetRnglistTable() {
 // This function is called only for DW_FORM_rnglistx.
 llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
   if (!GetRnglistTable())
-    return llvm::createStringError(errc::invalid_argument,
+    return llvm::createStringError(std::errc::invalid_argument,
                                    "missing or invalid range list table");
   if (!m_ranges_base)
-    return llvm::createStringError(errc::invalid_argument,
+    return llvm::createStringError(std::errc::invalid_argument,
                                    "DW_FORM_rnglistx cannot be used without "
                                    "DW_AT_rnglists_base for CU at 0x%8.8x",
                                    GetOffset());
@@ -570,7 +569,7 @@ llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
           GetRnglistData().GetAsLLVM(), Index))
     return *off + m_ranges_base;
   return llvm::createStringError(
-      errc::invalid_argument,
+      std::errc::invalid_argument,
       "invalid range list table index %u; OffsetEntryCount is %u, "
       "DW_AT_rnglists_base is %" PRIu64,
       Index, GetRnglistTable()->getOffsetEntryCount(), m_ranges_base);
@@ -999,7 +998,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   }
 
   if (!GetRnglistTable())
-    return llvm::createStringError(errc::invalid_argument,
+    return llvm::createStringError(std::errc::invalid_argument,
                                    "missing or invalid range list table");
 
   llvm::DWARFDataExtractor data = GetRnglistData().GetAsLLVM();

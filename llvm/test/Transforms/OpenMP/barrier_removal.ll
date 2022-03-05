@@ -26,7 +26,6 @@ declare void @llvm.amdgcn.s.barrier()
 ;.
 define void @pos_empty_1() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_1() {
-; CHECK-NEXT:    call void @unknown() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown() "llvm.assume"="ompx_aligned_barrier"
@@ -34,7 +33,6 @@ define void @pos_empty_1() {
 }
 define void @pos_empty_2() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_2() {
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    ret void
 ;
   call void @aligned_barrier()
@@ -42,7 +40,6 @@ define void @pos_empty_2() {
 }
 define void @pos_empty_3() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_3() {
-; CHECK-NEXT:    call void @llvm.nvvm.barrier0()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.barrier0()
@@ -50,7 +47,6 @@ define void @pos_empty_3() {
 }
 define void @pos_empty_4() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_4() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.nvvm.barrier0.and(i32 0)
 ; CHECK-NEXT:    ret void
 ;
   call i32 @llvm.nvvm.barrier0.and(i32 0)
@@ -58,7 +54,6 @@ define void @pos_empty_4() {
 }
 define void @pos_empty_5() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_5() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.nvvm.barrier0.or(i32 0)
 ; CHECK-NEXT:    ret void
 ;
   call i32 @llvm.nvvm.barrier0.or(i32 0)
@@ -66,7 +61,6 @@ define void @pos_empty_5() {
 }
 define void @pos_empty_6() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_6() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.nvvm.barrier0.popc(i32 0)
 ; CHECK-NEXT:    ret void
 ;
   call i32 @llvm.nvvm.barrier0.popc(i32 0)
@@ -104,9 +98,7 @@ define void @pos_constant_loads() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_constant_loads() {
 ; CHECK-NEXT:    [[ARG:%.*]] = load i32 addrspace(4)*, i32 addrspace(4)** addrspacecast (i32 addrspace(4)* addrspace(4)* @GPtr4 to i32 addrspace(4)**), align 8
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @GC1, align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[B:%.*]] = load i32, i32* addrspacecast (i32 addrspace(4)* @GC2 to i32*), align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast i32 addrspace(4)* [[ARG]] to i32*
 ; CHECK-NEXT:    [[C:%.*]] = load i32, i32* [[ARGC]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
@@ -169,15 +161,12 @@ define void @pos_priv_mem() {
 ; CHECK-NEXT:    [[ARG:%.*]] = load i32 addrspace(5)*, i32 addrspace(5)** @GPtr5, align 8
 ; CHECK-NEXT:    [[LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @PG1, align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    store i32 [[A]], i32* [[LOC]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = load i32, i32* addrspacecast (i32 addrspace(5)* @PG2 to i32*), align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast i32 addrspace(5)* [[ARG]] to i32*
 ; CHECK-NEXT:    store i32 [[B]], i32* [[ARGC]], align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    store i32 [[A]], i32* @PG1, align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    ret void
 ;
   %arg = load i32 addrspace(5)*, i32 addrspace(5)** @GPtr5
@@ -207,7 +196,6 @@ define void @neg_mem() {
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[B:%.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @G2 to i32*), align 4
 ; CHECK-NEXT:    store i32 [[B]], i32* @G1, align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    ret void
 ;
   %arg = load i32*, i32** @GPtr
@@ -224,14 +212,7 @@ define void @neg_mem() {
 
 define void @pos_multiple() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_multiple() {
-; CHECK-NEXT:    call void @llvm.nvvm.barrier0()
-; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    call void @llvm.nvvm.barrier0()
-; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.barrier0()
@@ -263,7 +244,7 @@ define void @pos_multiple() {
 !12 = !{i32 7, !"openmp", i32 50}
 !13 = !{i32 7, !"openmp-device", i32 50}
 ;.
-; CHECK: attributes #[[ATTR0]] = { "llvm.assume"="ompx_aligned_barrier" }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind willreturn }
 ;.

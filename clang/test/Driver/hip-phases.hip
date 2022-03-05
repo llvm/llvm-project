@@ -338,7 +338,7 @@
 // RL2-NB-NOT: linker
 // RL2-NB-NOT: offload
 
-// NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image, (host-[[T:hip]])
+// NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image
 // RL2-EM-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]], [[P9]]}, image, (host-[[T]])
 // RL2-DEV-NOT: linker
 
@@ -455,3 +455,69 @@
 // PPELLVM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, ir
 // PPELLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip, )
 // PPELLVM2-NOT: host
+
+// Test mixed HIP and C++ compilation. HIP program should have HIP offload kind.
+// C++ program should have no offload kind.
+
+// Test compile empty.hip and empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -c %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -c %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link empty.hip and empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link empty.hip and empty.cpp with --hip-link -fgpu-rdc.
+// RUN: %clang -target x86_64-unknown-linux-gnu --hip-link -fgpu-rdc \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --hip-link -fgpu-rdc \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link -x hip empty.hip and -x c++ empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip -x c++ %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip -x c++ %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
+
+// Test compile and link -x hip empty.hip and empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2-NEG %s
+
+// Test compile and link empty.hip and -x hip empty.cpp.
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: %S/Inputs/empty.hip -x hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2-NEG %s
+
+// MIXED-DAG: input, "{{.*}}empty.hip", hip, (host-hip)
+// MIXED-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx803)
+// MIXED-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx900)
+// MIXED-DAG: input, "{{.*}}empty.cpp", c++
+// MIXED-NEG-NOT: input, "{{.*}}empty.cpp", c++, (host-hip)
+// MIXED-NEG-NOT: input, "{{.*}}empty.cpp", c++, (device-hip
+
+// MIXED2-DAG: input, "{{.*}}empty.hip", hip, (host-hip)
+// MIXED2-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx803)
+// MIXED2-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx900)
+// MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (host-hip)
+// MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (device-hip, gfx803)
+// MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (device-hip, gfx900)
+// MIXED2-NEG-NOT: input, "{{.*}}empty.cpp", c++

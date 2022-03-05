@@ -66,7 +66,7 @@ macro(msan_compile obj_list source arch kind cflags)
     ${obj_list} ${source} ${arch}
     KIND ${kind}
     COMPILE_DEPS ${MSAN_UNITTEST_HEADERS}
-    DEPS gtest msan
+    DEPS llvm_gtest msan
     CFLAGS -isystem ${CMAKE_CURRENT_BINARY_DIR}/../libcxx_msan_${arch}/include/c++/v1
            ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
   )

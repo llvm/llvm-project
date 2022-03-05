@@ -29,19 +29,19 @@ declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
-; CHECK-NEXT:    call void @foo() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    call void @bar() #[[ATTR4]]
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 true, i1 true)
+; CHECK-NEXT:    call void @foo() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @bar() #[[ATTR5]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
-; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR4:[0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR4]]
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR3:[0-9]+]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 true, i1 true)
+; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR5:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR5]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -78,17 +78,17 @@ define internal void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR4]], !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR5:[0-9]+]], !dbg [[DBG8]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR5]], !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR6:[0-9]+]], !dbg [[DBG8]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR5]]
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@bar
 ; CHECK-DISABLED-SAME: () #[[ATTR0]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR4]], !dbg [[DBG8:![0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR5:[0-9]+]], !dbg [[DBG8]]
-; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR4]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR5]], !dbg [[DBG8:![0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR6:[0-9]+]], !dbg [[DBG8]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR5]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
@@ -183,16 +183,18 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR0]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR3]] = { "llvm.assume"="omp_no_openmp" }
-; CHECK: attributes #[[ATTR4]] = { nounwind }
-; CHECK: attributes #[[ATTR5]] = { nosync nounwind writeonly }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
+; CHECK: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR5]] = { nounwind }
+; CHECK: attributes #[[ATTR6]] = { nosync nounwind writeonly }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { nosync nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; CHECK-DISABLED: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn writeonly }
-; CHECK-DISABLED: attributes #[[ATTR3]] = { "llvm.assume"="omp_no_openmp" }
-; CHECK-DISABLED: attributes #[[ATTR4]] = { nounwind }
-; CHECK-DISABLED: attributes #[[ATTR5]] = { nosync nounwind writeonly }
+; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
+; CHECK-DISABLED: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR5]] = { nounwind }
+; CHECK-DISABLED: attributes #[[ATTR6]] = { nosync nounwind writeonly }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "remove_globalization.c", directory: "/tmp/remove_globalization.c")

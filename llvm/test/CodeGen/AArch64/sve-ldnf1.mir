@@ -44,10 +44,9 @@ body:             |
     ; CHECK: liveins: $p0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -4
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: renamable $z0 = LDNF1B_IMM renamable $p0, $sp, 7 :: (load (s8) from %ir.object, align 2)
     ; CHECK-NEXT: renamable $z0 = LDNF1B_H_IMM renamable $p0, $sp, 7 :: (load (s8) from %ir.object, align 2)
     ; CHECK-NEXT: renamable $z0 = LDNF1B_S_IMM renamable $p0, $sp, 7 :: (load (s8) from %ir.object, align 2)
@@ -100,10 +99,9 @@ body:             |
     ; CHECK: liveins: $p0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -4
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: renamable $z0 = LDNF1B_IMM renamable $p0, $sp, -8 :: (load (s8) from %ir.object, align 2)
     ; CHECK-NEXT: renamable $z0 = LDNF1B_H_IMM renamable $p0, $sp, -8 :: (load (s8) from %ir.object, align 2)
     ; CHECK-NEXT: renamable $z0 = LDNF1B_S_IMM renamable $p0, $sp, -8 :: (load (s8) from %ir.object, align 2)
@@ -156,10 +154,9 @@ body:             |
     ; CHECK: liveins: $p0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -4
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, 1
     ; CHECK-NEXT: renamable $z0 = LDNF1B_IMM renamable $p0, killed $x8, 7 :: (load (s8) from %ir.object, align 2)
     ; CHECK-NEXT: $x8 = ADDPL_XXI $sp, 4
@@ -225,10 +222,9 @@ body:             |
     ; CHECK: liveins: $p0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -4
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK-NEXT: $x8 = ADDVL_XXI $sp, -1
     ; CHECK-NEXT: renamable $z0 = LDNF1B_IMM renamable $p0, killed $x8, -8 :: (load (s8) from %ir.object, align 2)
     ; CHECK-NEXT: $x8 = ADDPL_XXI $sp, -4

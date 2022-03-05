@@ -13,7 +13,7 @@ define weak void @__omp_offloading_fd02_c0934fc2_foo_l4() #0 {
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: @__omp_offloading_fd02_c0934fc2_foo_l4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 1, i1 false, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 1, i1 true, i1 true)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:

@@ -19,7 +19,7 @@ class ScriptedProcess:
     memory_regions = None
     stack_memory_dump = None
     loaded_images = None
-    threads = {}
+    threads = None
 
     @abstractmethod
     def __init__(self, target, args):
@@ -41,6 +41,8 @@ class ScriptedProcess:
             self.dbg = target.GetDebugger()
         if isinstance(args, lldb.SBStructuredData) and args.IsValid():
             self.args = args
+        self.threads = {}
+        self.loaded_images = []
 
     @abstractmethod
     def get_memory_region_containing_address(self, addr):
@@ -116,8 +118,7 @@ class ScriptedProcess:
 
         ```
         class ScriptedProcessImage:
-            def __init__(name, file_spec, uuid, load_address):
-              self.name = name
+            def __init__(file_spec, uuid, load_address):
               self.file_spec = file_spec
               self.uuid = uuid
               self.load_address = load_address

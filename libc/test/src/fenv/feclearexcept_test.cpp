@@ -8,7 +8,7 @@
 
 #include "src/fenv/feclearexcept.h"
 
-#include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
@@ -24,56 +24,17 @@ TEST(LlvmLibcFEnvTest, ClearTest) {
     ASSERT_EQ(__llvm_libc::fputil::test_except(e), 0);
 
   __llvm_libc::fputil::raise_except(FE_ALL_EXCEPT);
-  for (uint16_t e : excepts) {
-    // We clear one exception and test to verify that it was cleared.
-    __llvm_libc::feclearexcept(e);
-    ASSERT_EQ(uint16_t(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT)),
-              uint16_t(FE_ALL_EXCEPT & ~e));
-    // After clearing, we raise the exception again.
-    __llvm_libc::fputil::raise_except(e);
-  }
-
-  for (uint16_t e1 : excepts) {
-    for (uint16_t e2 : excepts) {
-      __llvm_libc::feclearexcept(e1 | e2);
-      ASSERT_EQ(uint16_t(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT)),
-                uint16_t(FE_ALL_EXCEPT & ~(e1 | e2)));
-      __llvm_libc::fputil::raise_except(e1 | e2);
-    }
-  }
-
-  for (uint16_t e1 : excepts) {
-    for (uint16_t e2 : excepts) {
-      for (uint16_t e3 : excepts) {
-        __llvm_libc::feclearexcept(e1 | e2 | e3);
-        ASSERT_EQ(uint16_t(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT)),
-                  uint16_t(FE_ALL_EXCEPT & ~(e1 | e2 | e3)));
-        __llvm_libc::fputil::raise_except(e1 | e2 | e3);
-      }
-    }
-  }
-
-  for (uint16_t e1 : excepts) {
-    for (uint16_t e2 : excepts) {
-      for (uint16_t e3 : excepts) {
-        for (uint16_t e4 : excepts) {
-          __llvm_libc::feclearexcept(e1 | e2 | e3 | e4);
-          ASSERT_EQ(uint16_t(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT)),
-                    uint16_t(FE_ALL_EXCEPT & ~(e1 | e2 | e3 | e4)));
-          __llvm_libc::fputil::raise_except(e1 | e2 | e3 | e4);
-        }
-      }
-    }
-  }
 
   for (uint16_t e1 : excepts) {
     for (uint16_t e2 : excepts) {
       for (uint16_t e3 : excepts) {
         for (uint16_t e4 : excepts) {
           for (uint16_t e5 : excepts) {
+            // We clear one exception and test to verify that it was cleared.
             __llvm_libc::feclearexcept(e1 | e2 | e3 | e4 | e5);
-            ASSERT_EQ(uint16_t(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT)),
-                      uint16_t(FE_ALL_EXCEPT & ~(e1 | e2 | e3 | e4 | e5)));
+            ASSERT_EQ(__llvm_libc::fputil::test_except(e1 | e2 | e3 | e4 | e5),
+                      0);
+            // After clearing, we raise the exception again.
             __llvm_libc::fputil::raise_except(e1 | e2 | e3 | e4 | e5);
           }
         }
