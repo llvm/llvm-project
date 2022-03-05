@@ -4557,8 +4557,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
 // Some RVV intrinsics may claim that they want an integer operand to be
 // promoted or expanded.
-static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
-                                          const RISCVSubtarget &Subtarget) {
+static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
+                                           const RISCVSubtarget &Subtarget) {
   assert((Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN) &&
          "Unexpected opcode");
@@ -4619,6 +4619,77 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
       ScalarOp = DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32);
       return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
     }
+  }
+
+  switch (IntNo) {
+  case Intrinsic::riscv_vslide1up:
+  case Intrinsic::riscv_vslide1down:
+  case Intrinsic::riscv_vslide1up_mask:
+  case Intrinsic::riscv_vslide1down_mask: {
+    // We need to special case these when the scalar is larger than XLen.
+    unsigned NumOps = Op.getNumOperands();
+    bool IsMasked = NumOps == 7;
+
+    // Convert the vector source to the equivalent nxvXi32 vector.
+    MVT I32VT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+    SDValue Vec = DAG.getBitcast(I32VT, Operands[2]);
+
+    SDValue ScalarLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, ScalarOp,
+                                   DAG.getConstant(0, DL, XLenVT));
+    SDValue ScalarHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, ScalarOp,
+                                   DAG.getConstant(1, DL, XLenVT));
+
+    // Double the VL since we halved SEW.
+    SDValue VL = getVLOperand(Op);
+    SDValue I32VL =
+        DAG.getNode(ISD::SHL, DL, XLenVT, VL, DAG.getConstant(1, DL, XLenVT));
+
+    MVT I32MaskVT = MVT::getVectorVT(MVT::i1, I32VT.getVectorElementCount());
+    SDValue I32Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, I32MaskVT, VL);
+
+    // Shift the two scalar parts in using SEW=32 slide1up/slide1down
+    // instructions.
+    SDValue Passthru;
+    if (IsMasked)
+      Passthru = DAG.getUNDEF(I32VT);
+    else
+      Passthru = DAG.getBitcast(I32VT, Operands[1]);
+
+    if (IntNo == Intrinsic::riscv_vslide1up ||
+        IntNo == Intrinsic::riscv_vslide1up_mask) {
+      Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Passthru, Vec,
+                        ScalarHi, I32Mask, I32VL);
+      Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Passthru, Vec,
+                        ScalarLo, I32Mask, I32VL);
+    } else {
+      Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Passthru, Vec,
+                        ScalarLo, I32Mask, I32VL);
+      Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Passthru, Vec,
+                        ScalarHi, I32Mask, I32VL);
+    }
+
+    // Convert back to nxvXi64.
+    Vec = DAG.getBitcast(VT, Vec);
+
+    if (!IsMasked)
+      return Vec;
+    // Apply mask after the operation.
+    SDValue Mask = Operands[NumOps - 3];
+    SDValue MaskedOff = Operands[1];
+    // Assume Policy operand is the last operand.
+    uint64_t Policy =
+        cast<ConstantSDNode>(Operands[NumOps - 1])->getZExtValue();
+    // We don't need to select maskedoff if it's undef.
+    if (MaskedOff.isUndef())
+      return Vec;
+    // TAMU
+    if (Policy == RISCVII::TAIL_AGNOSTIC)
+      return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, Mask, Vec, MaskedOff,
+                         VL);
+    // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
+    // It's fine because vmerge does not care mask policy.
+    return DAG.getNode(RISCVISD::VP_MERGE_VL, DL, VT, Mask, Vec, MaskedOff, VL);
+  }
   }
 
   // We need to convert the scalar to a splat vector.
@@ -4746,99 +4817,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, SelectCond, SplattedVal,
                        Vec, VL);
   }
-  case Intrinsic::riscv_vslide1up:
-  case Intrinsic::riscv_vslide1down:
-  case Intrinsic::riscv_vslide1up_mask:
-  case Intrinsic::riscv_vslide1down_mask: {
-    // We need to special case these when the scalar is larger than XLen.
-    unsigned NumOps = Op.getNumOperands();
-    bool IsMasked = NumOps == 7;
-    SDValue Scalar = Op.getOperand(3);
-    if (Scalar.getValueType().bitsLE(XLenVT))
-      break;
-
-    // Splatting a sign extended constant is fine.
-    if (auto *CVal = dyn_cast<ConstantSDNode>(Scalar))
-      if (isInt<32>(CVal->getSExtValue()))
-        break;
-
-    MVT VT = Op.getSimpleValueType();
-    assert(VT.getVectorElementType() == MVT::i64 &&
-           Scalar.getValueType() == MVT::i64 && "Unexpected VTs");
-
-    // Convert the vector source to the equivalent nxvXi32 vector.
-    MVT I32VT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
-    SDValue Vec = DAG.getBitcast(I32VT, Op.getOperand(2));
-
-    SDValue ScalarLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                                   DAG.getConstant(0, DL, XLenVT));
-    SDValue ScalarHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                                   DAG.getConstant(1, DL, XLenVT));
-
-    // Double the VL since we halved SEW.
-    SDValue VL = getVLOperand(Op);
-    SDValue I32VL =
-        DAG.getNode(ISD::SHL, DL, XLenVT, VL, DAG.getConstant(1, DL, XLenVT));
-
-    MVT I32MaskVT = MVT::getVectorVT(MVT::i1, I32VT.getVectorElementCount());
-    SDValue I32Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, I32MaskVT, VL);
-
-    // Shift the two scalar parts in using SEW=32 slide1up/slide1down
-    // instructions.
-    SDValue Passthru = DAG.getBitcast(I32VT, Op.getOperand(1));
-    if (!IsMasked) {
-      if (IntNo == Intrinsic::riscv_vslide1up) {
-        Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Passthru, Vec,
-                          ScalarHi, I32Mask, I32VL);
-        Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Passthru, Vec,
-                          ScalarLo, I32Mask, I32VL);
-      } else {
-        Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Passthru, Vec,
-                          ScalarLo, I32Mask, I32VL);
-        Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Passthru, Vec,
-                          ScalarHi, I32Mask, I32VL);
-      }
-    } else {
-      // TODO Those VSLIDE1 could be TAMA because we use vmerge to select
-      // maskedoff
-      SDValue Undef = DAG.getUNDEF(I32VT);
-      if (IntNo == Intrinsic::riscv_vslide1up_mask) {
-        Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Undef, Vec,
-                          ScalarHi, I32Mask, I32VL);
-        Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Undef, Vec,
-                          ScalarLo, I32Mask, I32VL);
-      } else {
-        Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Undef, Vec,
-                          ScalarLo, I32Mask, I32VL);
-        Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Undef, Vec,
-                          ScalarHi, I32Mask, I32VL);
-      }
-    }
-
-    // Convert back to nxvXi64.
-    Vec = DAG.getBitcast(VT, Vec);
-
-    if (!IsMasked)
-      return Vec;
-    // Apply mask after the operation.
-    SDValue Mask = Op.getOperand(NumOps - 3);
-    SDValue MaskedOff = Op.getOperand(1);
-    // Assume Policy operand is the last operand.
-    uint64_t Policy = Op.getConstantOperandVal(NumOps - 1);
-    // We don't need to select maskedoff if it's undef.
-    if (MaskedOff.isUndef())
-      return Vec;
-    // TAMU
-    if (Policy == RISCVII::TAIL_AGNOSTIC)
-      return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, Mask, Vec, MaskedOff,
-                         VL);
-    // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
-    // It's fine because vmerge does not care mask policy.
-    return DAG.getNode(RISCVISD::VP_MERGE_VL, DL, VT, Mask, Vec, MaskedOff, VL);
-  }
   }
 
-  return lowerVectorIntrinsicSplats(Op, DAG, Subtarget);
+  return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
@@ -4899,7 +4880,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   }
 
-  return lowerVectorIntrinsicSplats(Op, DAG, Subtarget);
+  return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
