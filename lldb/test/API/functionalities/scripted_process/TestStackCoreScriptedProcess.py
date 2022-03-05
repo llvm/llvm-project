@@ -120,6 +120,9 @@ class StackCoreScriptedProcesTestCase(TestBase):
         self.assertEqual(int(frame.vars.GetFirstValueByName('j').GetValue()), 42 * 42)
         self.assertEqual(int(frame.vars.GetFirstValueByName('k').GetValue()), 42)
 
+        corefile_dylib = self.get_module_with_name(corefile_target, 'libbaz.dylib')
+        self.assertTrue(corefile_dylib, "Dynamic library libbaz.dylib not found.")
         scripted_dylib = self.get_module_with_name(target, 'libbaz.dylib')
         self.assertTrue(scripted_dylib, "Dynamic library libbaz.dylib not found.")
-        self.assertEqual(scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x1001e0000)
+        self.assertEqual(scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target),
+                         corefile_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target))
