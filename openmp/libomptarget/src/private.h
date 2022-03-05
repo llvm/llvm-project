@@ -125,7 +125,9 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
 /// dump a table of all the host-target pointer pairs on failure
 static inline void dumpTargetPointerMappings(const ident_t *Loc,
                                              DeviceTy &Device) {
-  if (Device.HostDataToTargetMap.empty())
+  DeviceTy::HDTTMapAccessorTy HDTTMap =
+      Device.HostDataToTargetMap.getExclusiveAccessor();
+  if (HDTTMap->empty())
     return;
 
   SourceInfo Kernel(Loc);
@@ -135,18 +137,16 @@ static inline void dumpTargetPointerMappings(const ident_t *Loc,
   INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
        "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
        "Declaration");
-  Device.DataMapMtx.lock();
-  for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
-    SourceInfo Info(HostTargetMap.HstPtrName);
+  for (const auto &It : *HDTTMap) {
+    HostDataToTargetTy &HDTT = *It.HDTT;
+    SourceInfo Info(HDTT.HstPtrName);
     INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
          DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
-         DPxPTR(HostTargetMap.HstPtrBegin), DPxPTR(HostTargetMap.TgtPtrBegin),
-         HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
-         HostTargetMap.dynRefCountToStr().c_str(),
-         HostTargetMap.holdRefCountToStr().c_str(), Info.getName(),
-         Info.getFilename(), Info.getLine(), Info.getColumn());
+         DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
+         HDTT.HstPtrEnd - HDTT.HstPtrBegin, HDTT.dynRefCountToStr().c_str(),
+         HDTT.holdRefCountToStr().c_str(), Info.getName(), Info.getFilename(),
+         Info.getLine(), Info.getColumn());
   }
-  Device.DataMapMtx.unlock();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

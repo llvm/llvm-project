@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <list>
 #include <map>
 #include <memory>
@@ -22,6 +23,7 @@
 #include <set>
 #include <vector>
 
+#include "ExclusiveAccess.h"
 #include "omptarget.h"
 #include "rtl.h"
 
@@ -214,19 +216,31 @@ public:
   void unlock() const { States->UpdateMtx.unlock(); }
 };
 
-typedef uintptr_t HstPtrBeginTy;
-inline bool operator<(const HostDataToTargetTy &lhs, const HstPtrBeginTy &rhs) {
-  return lhs.HstPtrBegin < rhs;
-}
-inline bool operator<(const HstPtrBeginTy &lhs, const HostDataToTargetTy &rhs) {
-  return lhs < rhs.HstPtrBegin;
-}
-inline bool operator<(const HostDataToTargetTy &lhs,
-                      const HostDataToTargetTy &rhs) {
-  return lhs.HstPtrBegin < rhs.HstPtrBegin;
-}
+/// Wrapper around the HostDataToTargetTy to be used in the HDTT map. In
+/// addition to the HDTT pointer we store the key value explicitly. This
+/// allows the set to inspect (sort/search/...) this entry without an additional
+/// load of HDTT. HDTT is a pointer to allow the modification of the set without
+/// invalidating HDTT entries which can now be inspected at the same time.
+struct HostDataToTargetMapKeyTy {
+  uintptr_t KeyValue;
 
-typedef std::set<HostDataToTargetTy, std::less<>> HostDataToTargetListTy;
+  HostDataToTargetMapKeyTy(void *Key) : KeyValue(uintptr_t(Key)) {}
+  HostDataToTargetMapKeyTy(HostDataToTargetTy *HDTT)
+      : KeyValue(HDTT->HstPtrBegin), HDTT(HDTT) {}
+  HostDataToTargetTy *HDTT;
+};
+inline bool operator<(const HostDataToTargetMapKeyTy &lhs,
+                      const uintptr_t &rhs) {
+  return lhs.KeyValue < rhs;
+}
+inline bool operator<(const uintptr_t &lhs,
+                      const HostDataToTargetMapKeyTy &rhs) {
+  return lhs < rhs.KeyValue;
+}
+inline bool operator<(const HostDataToTargetMapKeyTy &lhs,
+                      const HostDataToTargetMapKeyTy &rhs) {
+  return lhs.KeyValue < rhs.KeyValue;
+}
 
 struct LookupResult {
   struct {
@@ -235,7 +249,8 @@ struct LookupResult {
     unsigned ExtendsAfter : 1;
   } Flags;
 
-  HostDataToTargetListTy::iterator Entry;
+  /// The corresponding map table entry which is stable.
+  HostDataToTargetTy *Entry = nullptr;
 
   LookupResult() : Flags({0, 0, 0}), Entry() {}
 };
@@ -250,8 +265,8 @@ struct TargetPointerResultTy {
     unsigned IsHostPointer : 1;
   } Flags = {0, 0};
 
-  /// The iterator to the corresponding map table entry
-  HostDataToTargetListTy::iterator MapTableEntry{};
+  /// The corresponding map table entry which is stable.
+  HostDataToTargetTy *Entry = nullptr;
 
   /// The corresponding target pointer
   void *TargetPointer = nullptr;
@@ -282,12 +297,24 @@ struct DeviceTy {
   std::once_flag InitFlag;
   bool HasPendingGlobals;
 
-  HostDataToTargetListTy HostDataToTargetMap;
+  /// Host data to device map type with a wrapper key indirection that allows
+  /// concurrent modification of the entries without invalidating the underlying
+  /// entries.
+  using HostDataToTargetListTy =
+      std::set<HostDataToTargetMapKeyTy, std::less<>>;
+
+  /// The HDTTMap is a protected object that can only be accessed by one thread
+  /// at a time.
+  ProtectedObj<HostDataToTargetListTy> HostDataToTargetMap;
+
+  /// The type used to access the HDTT map.
+  using HDTTMapAccessorTy = decltype(HostDataToTargetMap)::AccessorTy;
+
   PendingCtorsDtorsPerLibrary PendingCtorsDtors;
 
   ShadowPtrListTy ShadowPtrMap;
 
-  std::mutex DataMapMtx, PendingGlobalsMtx, ShadowMtx;
+  std::mutex PendingGlobalsMtx, ShadowMtx;
 
   // NOTE: Once libomp gains full target-task support, this state should be
   // moved into the target task in libomp.
@@ -303,7 +330,11 @@ struct DeviceTy {
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
 
-  LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
+  /// Lookup the mapping of \p HstPtrBegin in \p HDTTMap. The accessor ensures
+  /// exclusive access to the HDTT map.
+  LookupResult lookupMapping(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
+                             int64_t Size);
+
   /// Get the target pointer based on host pointer begin and base. If the
   /// mapping already exists, the target pointer will be returned directly. In
   /// addition, if required, the memory region pointed by \p HstPtrBegin of size
@@ -320,7 +351,12 @@ struct DeviceTy {
                    bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
                    bool HasCloseModifier, bool HasPresentModifier,
                    bool HasHoldModifier, AsyncInfoTy &AsyncInfo);
-  void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
+
+  /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
+  /// ensures exclusive access to the HDTT map.
+  void *getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
+                       int64_t Size);
+
   TargetPointerResultTy getTgtPtrBegin(void *HstPtrBegin, int64_t Size,
                                        bool &IsLast, bool UpdateRefCount,
                                        bool UseHoldRefCount, bool &IsHostPtr,

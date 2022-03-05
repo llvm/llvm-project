@@ -135,8 +135,8 @@ static int InitLibrary(DeviceTy &Device) {
         break;
       }
 
-      // process global data that needs to be mapped.
-      std::lock_guard<decltype(Device.DataMapMtx)> LG(Device.DataMapMtx);
+      DeviceTy::HDTTMapAccessorTy HDTTMap =
+          Device.HostDataToTargetMap.getExclusiveAccessor();
 
       __tgt_target_table *HostTable = &TransTable->HostTable;
       for (__tgt_offload_entry *CurrDeviceEntry = TargetTable->EntriesBegin,
@@ -153,21 +153,23 @@ static int InitLibrary(DeviceTy &Device) {
           // therefore we must allow for multiple weak symbols to be loaded from
           // the fat binary. Treat these mappings as any other "regular"
           // mapping. Add entry to map.
-          if (Device.getTgtPtrBegin(CurrHostEntry->addr, CurrHostEntry->size))
+          if (Device.getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
+                                    CurrHostEntry->size))
             continue;
+
           DP("Add mapping from host " DPxMOD " to device " DPxMOD
              " with size %zu"
              "\n",
              DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
              CurrDeviceEntry->size);
-          Device.HostDataToTargetMap.emplace(
+          HDTTMap->emplace(new HostDataToTargetTy(
               (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
               (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
               (uintptr_t)CurrHostEntry->addr +
                   CurrHostEntry->size /*HstPtrEnd*/,
               (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
               false /*UseHoldRefCount*/, nullptr /*Name*/,
-              true /*IsRefCountINF*/);
+              true /*IsRefCountINF*/));
         }
       }
     }
@@ -572,13 +574,12 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
         // create or update shadow pointers for this entry
         Device.ShadowPtrMap[Pointer_HstPtrBegin] = {
             HstPtrBase, PointerTgtPtrBegin, ExpectedTgtPtrBase};
-        Pointer_TPR.MapTableEntry->setMayContainAttachedPointers();
+        Pointer_TPR.Entry->setMayContainAttachedPointers();
         UpdateDevPtr = true;
       }
 
       if (UpdateDevPtr) {
-        std::lock_guard<decltype(*Pointer_TPR.MapTableEntry)> LG(
-            *Pointer_TPR.MapTableEntry);
+        std::lock_guard<decltype(*Pointer_TPR.Entry)> LG(*Pointer_TPR.Entry);
         Device.ShadowMtx.unlock();
 
         DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
@@ -593,7 +594,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
           REPORT("Copying data to device failed.\n");
           return OFFLOAD_FAIL;
         }
-        if (Pointer_TPR.MapTableEntry->addEventIfNecessary(Device, AsyncInfo) !=
+        if (Pointer_TPR.Entry->addEventIfNecessary(Device, AsyncInfo) !=
             OFFLOAD_SUCCESS)
           return OFFLOAD_FAIL;
       } else
@@ -634,8 +635,7 @@ static void applyToShadowMapEntries(DeviceTy &Device, CBTy CB, void *Begin,
 
   // If the map entry for the object was never marked as containing attached
   // pointers, no need to do any checking.
-  if (TPR.MapTableEntry == HostDataToTargetListTy::iterator{} ||
-      !TPR.MapTableEntry->getMayContainAttachedPointers())
+  if (!TPR.Entry || !TPR.Entry->getMayContainAttachedPointers())
     return;
 
   uintptr_t LB = (uintptr_t)Begin;
