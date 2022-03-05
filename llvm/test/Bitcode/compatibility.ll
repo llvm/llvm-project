@@ -560,6 +560,8 @@ declare void @f.param.swiftasync(i8* swiftasync)
 ; CHECK: declare void @f.param.swiftasync(i8* swiftasync)
 declare void @f.param.swifterror(i8** swifterror)
 ; CHECK: declare void @f.param.swifterror(i8** swifterror)
+declare void @f.param.allocalign(i32 allocalign)
+; CHECK: declare void @f.param.allocalign(i32 allocalign)
 
 ; Functions -- unnamed_addr and local_unnamed_addr
 declare void @f.unnamed_addr() unnamed_addr

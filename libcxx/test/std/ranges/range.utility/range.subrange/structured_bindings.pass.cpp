@@ -12,9 +12,10 @@
 
 // class std::ranges::subrange;
 
-#include <ranges>
-
 #include <cassert>
+#include <ranges>
+#include <utility>
+
 #include "test_macros.h"
 
 constexpr void test_sized_subrange()

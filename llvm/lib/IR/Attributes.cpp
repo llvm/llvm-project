@@ -1780,7 +1780,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty) {
   if (!Ty->isIntegerTy())
     // Attributes that only apply to integers.
     Incompatible.addAttribute(Attribute::SExt)
-      .addAttribute(Attribute::ZExt);
+        .addAttribute(Attribute::ZExt)
+        .addAttribute(Attribute::AllocAlign);
 
   if (!Ty->isPointerTy())
     // Attributes that only apply to pointers.

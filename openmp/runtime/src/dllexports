@@ -556,6 +556,7 @@ kmp_set_disp_num_buffers                    890
     omp_get_interop_int                     807
     omp_get_interop_ptr                     808
     omp_get_interop_str                     809
+    omp_in_explicit_task                    769
 
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA

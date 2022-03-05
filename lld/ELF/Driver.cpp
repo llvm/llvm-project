@@ -2471,6 +2471,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
     for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
 
+  // Archive members defining __wrap symbols may be extracted.
+  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
+
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
   parallelForEach(objectFiles, initializeLocalSymbols);
@@ -2497,8 +2500,6 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
   Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
-
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!config->relocatable)

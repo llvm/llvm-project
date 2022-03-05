@@ -3998,6 +3998,27 @@ bool Sema::CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum) {
          << Arg->getSourceRange();
 }
 
+static bool isRISCV32Builtin(unsigned BuiltinID) {
+  // These builtins only work on riscv32 targets.
+  switch (BuiltinID) {
+  case RISCV::BI__builtin_riscv_zip_32:
+  case RISCV::BI__builtin_riscv_unzip_32:
+  case RISCV::BI__builtin_riscv_aes32dsi_32:
+  case RISCV::BI__builtin_riscv_aes32dsmi_32:
+  case RISCV::BI__builtin_riscv_aes32esi_32:
+  case RISCV::BI__builtin_riscv_aes32esmi_32:
+  case RISCV::BI__builtin_riscv_sha512sig0h_32:
+  case RISCV::BI__builtin_riscv_sha512sig0l_32:
+  case RISCV::BI__builtin_riscv_sha512sig1h_32:
+  case RISCV::BI__builtin_riscv_sha512sig1l_32:
+  case RISCV::BI__builtin_riscv_sha512sum0r_32:
+  case RISCV::BI__builtin_riscv_sha512sum1r_32:
+    return true;
+  }
+
+  return false;
+}
+
 bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID,
                                          CallExpr *TheCall) {
@@ -4007,6 +4028,12 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   SmallVector<StringRef> ReqFeatures;
   StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
   Features.split(ReqFeatures, ',');
+
+  // Check for 32-bit only builtins on a 64-bit target.
+  const llvm::Triple &TT = TI.getTriple();
+  if (TT.getArch() != llvm::Triple::riscv32 && isRISCV32Builtin(BuiltinID))
+    return Diag(TheCall->getCallee()->getBeginLoc(),
+                diag::err_32_bit_builtin_64_bit_tgt);
 
   // Check if each required feature is included
   for (StringRef F : ReqFeatures) {
@@ -4055,6 +4082,17 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vsetvlimax:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
            CheckRISCVLMUL(TheCall, 1);
+  // Check if byteselect is in [0, 3]
+  case RISCV::BI__builtin_riscv_aes32dsi_32:
+  case RISCV::BI__builtin_riscv_aes32dsmi_32:
+  case RISCV::BI__builtin_riscv_aes32esi_32:
+  case RISCV::BI__builtin_riscv_aes32esmi_32:
+  case RISCV::BI__builtin_riscv_sm4ks:
+  case RISCV::BI__builtin_riscv_sm4ed:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 3);
+  // Check if rnum is in [0, 10]
+  case RISCV::BI__builtin_riscv_aes64ks1i_64:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 10);
   }
 
   return false;

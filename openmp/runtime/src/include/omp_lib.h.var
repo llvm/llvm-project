@@ -796,6 +796,11 @@
           integer(omp_allocator_handle_kind), value :: allocator
         end subroutine omp_free
 
+        function omp_in_explicit_task() bind(c)
+          import
+          logical (kind=omp_logical_kind) omp_in_explicit_task
+        end function omp_in_explicit_task
+
 !       ***
 !       *** kmp_* entry points
 !       ***

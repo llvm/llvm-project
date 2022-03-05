@@ -2,8 +2,6 @@
 #include <iostream>
 #include <thread>
 
-using namespace std;
-
 void g() { assert(false); }
 
 void f() { g(); }
@@ -19,12 +17,12 @@ size_t h() {
 }
 
 int main() {
-  thread t1(f);
+  std::thread t1(f);
 
   size_t x = h();
 
   t1.join();
 
-  cout << "X is " << x << "\n";
+  std::cout << "X is " << x << "\n";
   return 0;
 }

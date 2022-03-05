@@ -315,8 +315,7 @@ LogicalResult ForOp::verify() {
 
     i++;
   }
-
-  return RegionBranchOpInterface::verifyTypes(*this);
+  return success();
 }
 
 Optional<Value> ForOp::getSingleInductionVar() { return getInductionVar(); }
@@ -1075,8 +1074,7 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 LogicalResult IfOp::verify() {
   if (getNumResults() != 0 && getElseRegion().empty())
     return emitOpError("must have an else block if defining values");
-
-  return RegionBranchOpInterface::verifyTypes(*this);
+  return success();
 }
 
 ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2335,9 +2333,6 @@ static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
 }
 
 LogicalResult scf::WhileOp::verify() {
-  if (failed(RegionBranchOpInterface::verifyTypes(*this)))
-    return failure();
-
   auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
       *this, getBefore(),
       "expects the 'before' region to terminate with 'scf.condition'");

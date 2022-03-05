@@ -537,14 +537,16 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__node_handle>
 #include <__tree>
 #include <__utility/forward.h>
+#include <__utility/swap.h>
 #include <compare>
 #include <functional>
 #include <initializer_list>
 #include <iterator> // __libcpp_erase_if_container
 #include <memory>
 #include <type_traits>
-#include <utility>
 #include <version>
+
+#include <utility> // TODO: Remove this
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -4,7 +4,6 @@ add_header_library(
     FEnvImpl.h
     BasicOperations.h
     DivisionAndRemainderOperations.h
-    FEnvUtils.h
     FloatProperties.h
     FPBits.h
     BasicOperations.h

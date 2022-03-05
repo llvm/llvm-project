@@ -115,12 +115,15 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__assert>
 #include <__config>
 #include <__tuple>
+#include <__utility/integer_sequence.h>
+#include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>
-#include <utility>
 #include <version>
+
+#include <utility> // TODO: Remove this
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

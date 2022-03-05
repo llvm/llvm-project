@@ -208,6 +208,9 @@ unsigned ELFHeader::GetRelocationJumpSlotType() const {
   case EM_S390:
     slot = R_390_JMP_SLOT;
     break;
+  case EM_RISCV:
+    slot = R_RISCV_JUMP_SLOT;
+    break;
   }
 
   return slot;
