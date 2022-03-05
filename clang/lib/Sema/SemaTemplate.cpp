@@ -4280,7 +4280,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     bool IsPartialSpecialization) {
   // D must be variable template id.
   assert(D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId &&
-         "Variable template specialization is declared with a template it.");
+         "Variable template specialization is declared with a template id.");
 
   TemplateIdAnnotation *TemplateId = D.getName().TemplateId;
   TemplateArgumentListInfo TemplateArgs =
