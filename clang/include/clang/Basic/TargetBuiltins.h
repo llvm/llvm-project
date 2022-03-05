@@ -121,7 +121,12 @@ namespace clang {
 
   /// VE builtins
   namespace VE {
-  enum { LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1, LastTSBuiltin };
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsVE.def"
+    LastTSBuiltin
+  };
   }
 
   namespace RISCVVector {

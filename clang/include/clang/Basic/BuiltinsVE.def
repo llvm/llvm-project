@@ -1,0 +1,17 @@
+//===--- BuiltinsVE.def - VE Builtin function database ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the VE-specific builtin function database.  Users of
+// this file must define the BUILTIN macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+// Use generated BUILTIN definitions
+#include "clang/Basic/BuiltinsVEVL.gen.def"
+
+#undef BUILTIN
