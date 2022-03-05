@@ -476,6 +476,7 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
                                   : TT_Unknown;
   const bool IsPrecededByCommentOrPPDirective =
       !Style.RemoveBracesLLVM || precededByCommentOrPPDirective();
+  bool HasLabel = false;
   unsigned StatementCount = 0;
   bool SwitchLabelEncountered = false;
   do {
@@ -486,9 +487,9 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
       kind = tok::r_brace;
 
     auto ParseDefault = [this, HasOpeningBrace, IfKind, NextLevelLBracesType,
-                         &StatementCount] {
-      parseStructuralElement(IfKind, /*IsTopLevel=*/!HasOpeningBrace,
-                             /*NextLBracesType=*/NextLevelLBracesType);
+                         &HasLabel, &StatementCount] {
+      parseStructuralElement(IfKind, !HasOpeningBrace, NextLevelLBracesType,
+                             HasLabel ? nullptr : &HasLabel);
       ++StatementCount;
       assert(StatementCount > 0 && "StatementCount overflow!");
     };
@@ -523,7 +524,7 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
       if (HasOpeningBrace) {
         if (!Style.RemoveBracesLLVM)
           return false;
-        if (FormatTok->isNot(tok::r_brace) || StatementCount != 1 ||
+        if (FormatTok->isNot(tok::r_brace) || StatementCount != 1 || HasLabel ||
             IsPrecededByCommentOrPPDirective ||
             precededByCommentOrPPDirective())
           return false;
@@ -1312,7 +1313,8 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 
 void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
                                                  bool IsTopLevel,
-                                                 TokenType NextLBracesType) {
+                                                 TokenType NextLBracesType,
+                                                 bool *HasLabel) {
   if (Style.Language == FormatStyle::LK_TableGen &&
       FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -1758,6 +1760,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
         if (FormatTok->is(tok::colon) && !Line->MustBeDeclaration) {
           Line->Tokens.begin()->Tok->MustBreakBefore = true;
           parseLabel(!Style.IndentGotoLabels);
+          if (HasLabel)
+            *HasLabel = true;
           return;
         }
         // Recognize function-like macro usages without trailing semicolon as

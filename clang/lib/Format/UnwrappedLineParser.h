@@ -112,7 +112,8 @@ private:
   void readTokenWithJavaScriptASI();
   void parseStructuralElement(IfStmtKind *IfKind = nullptr,
                               bool IsTopLevel = false,
-                              TokenType NextLBracesType = TT_Unknown);
+                              TokenType NextLBracesType = TT_Unknown,
+                              bool *HasLabel = nullptr);
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);

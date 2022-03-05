@@ -25018,6 +25018,23 @@ TEST_F(FormatTest, RemoveBraces) {
                "}",
                Style);
 
+  verifyFormat("if (a) {\n"
+               "Label:\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "Label:\n"
+               "  f();\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  f();\n"
+               "Label:\n"
+               "}",
+               Style);
+
   // FIXME: See https://github.com/llvm/llvm-project/issues/53543.
 #if 0
   Style.ColumnLimit = 65;
