@@ -24,6 +24,7 @@
 #include <__memory/unique_ptr.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 #include <cstddef>
 #include <cstdlib> // abort
 #include <iosfwd>

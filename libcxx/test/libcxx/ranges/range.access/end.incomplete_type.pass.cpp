@@ -12,9 +12,10 @@
 // Test the libc++-specific behavior that we handle the IFNDR case for ranges::end
 // by being SFINAE-friendly.
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
 #include <type_traits>
+#include <utility>
 
 struct Incomplete;
 
