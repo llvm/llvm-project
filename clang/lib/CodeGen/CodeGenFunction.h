@@ -2713,6 +2713,10 @@ public:
                          AggValueSlot::Overlap_t MayOverlap,
                          bool isVolatile = false);
 
+  bool hasAddrOfLocalVar(const VarDecl *VD) {
+    return LocalDeclMap.find(VD) != LocalDeclMap.end();
+  }
+
   /// GetAddrOfLocalVar - Return the address of a local variable.
   Address GetAddrOfLocalVar(const VarDecl *VD) {
     auto it = LocalDeclMap.find(VD);
@@ -3214,6 +3218,14 @@ public:
   /// calling EmitBlock, EmitBranch, or EmitStmt.
   void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = None);
 
+  /// EmitNoLoopKernel - For an OpenMP target directive, emit the
+  /// kernel code assuming that related runtime environment variables
+  /// can be ignored.
+  ///
+  /// This function should be called after ensuring that legality
+  /// conditions for a no-loop kernel are met.
+  void EmitNoLoopKernel(const Stmt *S, SourceLocation Loc);
+
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
   /// because the statement amounts to a jump or a container of other
@@ -3341,8 +3353,10 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                     SourceLocation Loc);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
+                                     const OMPExecutableDirective &D,
+                                     SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,

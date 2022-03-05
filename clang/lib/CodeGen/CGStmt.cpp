@@ -12,6 +12,7 @@
 
 #include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
+#include "CGOpenMPRuntimeGPU.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
@@ -48,6 +49,133 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
 
     LastStopPoint = Loc;
   }
+}
+
+void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
+  assert(S && "Null statement?");
+
+  if (!HaveInsertPoint())
+    EnsureInsertPoint();
+
+  auto handleForStmt = [](const ForStmt &FStmt, CodeGenFunction *CGFunc) {
+    auto getAddressFromDeclStmt = [](const ForStmt &FStmt,
+                                     CodeGenFunction *CGFunc) {
+      const Stmt *InitStmt = FStmt.getInit();
+      const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
+      const Decl *InitDecl = InitDeclStmt.getSingleDecl();
+      // Do an emit so as to populate the appropriate data structures.
+      CGFunc->EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
+      return CGFunc->GetAddrOfLocalVar(cast<VarDecl>(InitDecl));
+    };
+
+    auto getAddressFromExpr = [](const ForStmt &FStmt,
+                                 CodeGenFunction *CGFunc) {
+      assert(CGFunc->CGM.checkInitExpr(FStmt) && "Check for init expr failed");
+      const Stmt *InitStmt = FStmt.getInit();
+      const Expr *InitExpr = cast<Expr>(InitStmt);
+      const Expr *InitExprLHS = cast<BinaryOperator>(InitExpr)->getLHS();
+      const VarDecl *InitDecl =
+          cast<VarDecl>(cast<DeclRefExpr>(InitExprLHS)->getDecl());
+      if (!CGFunc->hasAddrOfLocalVar(InitDecl))
+        CGFunc->EmitAutoVarDecl(*InitDecl);
+      Address IvAddr = CGFunc->GetAddrOfLocalVar(InitDecl);
+      llvm::Value *InitVal =
+          CGFunc->EmitScalarExpr(cast<BinaryOperator>(InitExpr)->getRHS());
+      CGFunc->Builder.CreateStore(InitVal, IvAddr);
+      return IvAddr;
+    };
+
+    Address IvAddr = CGFunc->CGM.checkDeclStmt(FStmt)
+                         ? getAddressFromDeclStmt(FStmt, CGFunc)
+                         : getAddressFromExpr(FStmt, CGFunc);
+
+    // We generate NoLoop kernel for the device, not the host
+    assert(CGFunc->CGM.getLangOpts().OpenMPIsDevice);
+
+    // Generate myid = workgroup_id * workgroup_size + workitem_id
+    auto &RT =
+        static_cast<CGOpenMPRuntimeGPU &>(CGFunc->CGM.getOpenMPRuntime());
+
+    // workitem_id
+    llvm::Value *GpuThreadId = RT.getGPUThreadID(*CGFunc);
+
+    // workgroup_size
+    llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*CGFunc);
+
+    // workgroup_id
+    llvm::Value *WorkGroupId = RT.getGPUBlockID(*CGFunc);
+
+    llvm::Value *WorkGroup =
+        CGFunc->Builder.CreateMul(WorkGroupId, WorkGroupSize);
+    llvm::Value *GlobalGpuThreadId =
+        CGFunc->Builder.CreateAdd(WorkGroup, GpuThreadId);
+
+    // Generate my_index = my_index + myid. Note that my_index was already
+    // initialized
+    llvm::Value *Gtid = CGFunc->Builder.CreateIntCast(
+        GlobalGpuThreadId, IvAddr.getElementType(), false);
+    llvm::Value *Iv =
+        CGFunc->Builder.CreateAdd(Gtid, CGFunc->Builder.CreateLoad(IvAddr));
+    CGFunc->Builder.CreateStore(Iv, IvAddr);
+
+    // Check the loop increment
+    assert(CGFunc->CGM.checkLoopStep(FStmt) && "Loop incr check failed");
+
+    // Check the loop condition
+    assert(CGFunc->CGM.checkLoopStop(FStmt) && "Loop cond check failed");
+
+    // Now branch to the appropriate code block if my_index is within upper
+    // bound
+    const BinaryOperator &FCondOp = cast<BinaryOperator>(*FStmt.getCond());
+    llvm::Value *RhsVal = CGFunc->EmitScalarExpr(FCondOp.getRHS());
+
+    assert(Iv->getType()->isIntegerTy());
+    llvm::CmpInst::Predicate IvCmpOp;
+    switch (FCondOp.getOpcode()) {
+    case BO_LT:
+      IvCmpOp = llvm::CmpInst::ICMP_ULT;
+      break;
+    case BO_GT:
+      IvCmpOp = llvm::CmpInst::ICMP_UGT;
+      break;
+    case BO_LE:
+      IvCmpOp = llvm::CmpInst::ICMP_ULE;
+      break;
+    case BO_GE:
+      IvCmpOp = llvm::CmpInst::ICMP_UGE;
+      break;
+    case BO_EQ:
+      IvCmpOp = llvm::CmpInst::ICMP_EQ;
+      break;
+    case BO_NE:
+      IvCmpOp = llvm::CmpInst::ICMP_NE;
+      break;
+    default:
+      assert(0 && "Unsupported opcode");
+      break;
+    }
+
+    llvm::Value *IvCmp = CGFunc->Builder.CreateICmp(
+        IvCmpOp, Iv,
+        CGFunc->Builder.CreateIntCast(RhsVal, Iv->getType(), false));
+
+    llvm::BasicBlock *ExecBB = CGFunc->createBasicBlock("omp.kernel.body");
+    llvm::BasicBlock *DoneBB = CGFunc->createBasicBlock("omp.kernel.done");
+    CGFunc->Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
+
+    // Emit the kernel body block
+    CGFunc->EmitBlock(ExecBB);
+    CGFunc->EmitStmt(FStmt.getBody());
+    CGFunc->EmitBranch(DoneBB);
+
+    CGFunc->EmitBlock(DoneBB);
+    CGFunc->Builder.CreateRetVoid();
+    CGFunc->Builder.ClearInsertionPoint();
+  };
+
+  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
+  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
+  handleForStmt(*CapturedForStmt, this);
 }
 
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {

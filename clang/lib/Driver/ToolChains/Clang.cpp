@@ -6015,6 +6015,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-optimistic-collapse");
 
+      if (Args.hasArg(options::OPT_fopenmp_target_ignore_env_vars))
+        CmdArgs.push_back("-fopenmp-target-ignore-env-vars");
+
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
       if (Args.hasFlag(options::OPT_fopenmp_cuda_mode,

@@ -40,6 +40,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
@@ -6681,4 +6682,181 @@ bool CodeGenModule::stopAutoInit() {
 void CodeGenModule::printPostfixForExternalizedStaticVar(
     llvm::raw_ostream &OS) const {
   OS << "__static__" << getContext().getCUIDHash();
+}
+
+namespace {
+class NoLoopChecker final : public ConstStmtVisitor<NoLoopChecker> {
+public:
+  NoLoopChecker() : RejectNoLoop{false} {}
+  bool isRejectNoLoop() const { return RejectNoLoop; }
+
+  // Reject if there is a nested OpenMP directive
+  void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
+    RejectNoLoop = true;
+    // No need to continue visiting any more
+  }
+
+  void VisitCallExpr(const CallExpr *C) {
+    // Reject if calling an OpenMP API
+    if (C) {
+      auto *FD = dyn_cast_or_null<FunctionDecl>(C->getCalleeDecl());
+      if (FD) {
+        std::string Name = FD->getNameInfo().getAsString();
+        if (Name.find("omp_") == 0) {
+          RejectNoLoop = true;
+          // No need to continue visiting any more
+          return;
+        }
+      }
+    }
+    for (const Stmt *Child : C->children())
+      if (Child)
+        Visit(Child);
+  }
+
+  void VisitCapturedStmt(const CapturedStmt *S) {
+    if (!S)
+      return;
+    Visit(S->getCapturedDecl()->getBody());
+  }
+
+  void VisitStmt(const Stmt *S) {
+    if (!S)
+      return;
+    for (const Stmt *Child : S->children())
+      if (Child)
+        Visit(Child);
+  }
+
+private:
+  bool RejectNoLoop;
+};
+} // namespace
+
+const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
+  if (!isa<CapturedStmt>(S))
+    return nullptr;
+  while (S->getStmtClass() == Stmt::CapturedStmtClass) {
+    S = cast<CapturedStmt>(S)->getCapturedDecl()->getBody();
+  }
+  if (S->getStmtClass() == Stmt::ForStmtClass)
+    return cast<ForStmt>(S);
+  else if (S->getStmtClass() == Stmt::CompoundStmtClass) {
+    const CompoundStmt &CompStmt = cast<CompoundStmt>(*S);
+    if (CompStmt.size() != 1)
+      return nullptr;
+    if (CompStmt.body_front()->getStmtClass() != Stmt::ForStmtClass)
+      return nullptr;
+    return cast<ForStmt>(CompStmt.body_front());
+  }
+  return nullptr;
+}
+
+bool CodeGenModule::checkDeclStmt(const ForStmt &FStmt) {
+  const Stmt *InitStmt = FStmt.getInit();
+  // We require an explicit init in the construct
+  if (!InitStmt)
+    return false;
+  if (InitStmt->getStmtClass() != Stmt::DeclStmtClass)
+    return false;
+  const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
+  if (!InitDeclStmt.isSingleDecl())
+    return false;
+  const Decl &InitDecl = *InitDeclStmt.getSingleDecl();
+  if (InitDecl.getKind() != Decl::Var)
+    return false;
+  if (!cast<VarDecl>(InitDecl).getType()->isIntegerType())
+    return false;
+  return true;
+}
+
+bool CodeGenModule::checkInitExpr(const ForStmt &FStmt) {
+  const Stmt *InitStmt = FStmt.getInit();
+  // We require an explicit init in the construct
+  if (!InitStmt)
+    return false;
+  if (!isa<BinaryOperator>(InitStmt))
+    return false;
+  const Expr *InitExprLHS = cast<BinaryOperator>(InitStmt)->getLHS();
+  if (!isa<DeclRefExpr>(InitExprLHS))
+    return false;
+  if (!cast<DeclRefExpr>(InitExprLHS)->getType()->isIntegerType())
+    return false;
+  return true;
+}
+
+bool CodeGenModule::checkLoopInit(const ForStmt &FStmt) {
+  if (!checkDeclStmt(FStmt) && !checkInitExpr(FStmt))
+    return false;
+  return true;
+}
+
+bool CodeGenModule::checkLoopStep(const ForStmt &FStmt) {
+  const Expr *Inc = FStmt.getInc();
+  if (Inc->getStmtClass() == Expr::UnaryOperatorClass &&
+      cast<UnaryOperator>(Inc)->isIncrementOp())
+    return true;
+  // TODO handle binary increment
+  return false;
+}
+
+bool CodeGenModule::checkLoopStop(const ForStmt &FStmt) {
+  const Expr *Cond = FStmt.getCond();
+  if (!isa<BinaryOperator>(Cond))
+    return false;
+  BinaryOperator::Opcode CondOp = cast<BinaryOperator>(Cond)->getOpcode();
+  if (CondOp != BO_LT && CondOp != BO_GT && CondOp != BO_LE &&
+      CondOp != BO_GE && CondOp != BO_EQ && CondOp != BO_NE)
+    return false;
+  return true;
+}
+
+bool CodeGenModule::isGeneratingNoLoopKernel(const OMPExecutableDirective &D) {
+  if (!getLangOpts().OpenMPTargetIgnoreEnvVars) return false;
+
+  if (D.getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for &&
+      D.getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for_simd)
+    return false;
+  if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
+      D.hasClausesOfKind<OMPDependClause>() ||
+      D.hasClausesOfKind<OMPDeviceClause>() ||
+      D.hasClausesOfKind<OMPIfClause>() ||
+      D.hasClausesOfKind<OMPInReductionClause>() ||
+      D.hasClausesOfKind<OMPThreadLimitClause>() ||
+      D.hasClausesOfKind<OMPDefaultClause>() ||
+      D.hasClausesOfKind<OMPNumTeamsClause>() ||
+      D.hasClausesOfKind<OMPReductionClause>() ||
+      D.hasClausesOfKind<OMPSharedClause>() ||
+      D.hasClausesOfKind<OMPCollapseClause>() ||
+      D.hasClausesOfKind<OMPDistScheduleClause>() ||
+      D.hasClausesOfKind<OMPLastprivateClause>() ||
+      D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
+      D.hasClausesOfKind<OMPCopyinClause>() ||
+      D.hasClausesOfKind<OMPProcBindClause>() ||
+      D.hasClausesOfKind<OMPOrderedClause>() ||
+      D.hasClausesOfKind<OMPScheduleClause>())
+    return false;
+
+  if (!D.hasAssociatedStmt())
+    return false;
+
+  NoLoopChecker Checker;
+  Checker.Visit(D.getAssociatedStmt());
+  if (Checker.isRejectNoLoop())
+    return false;
+
+  // Now ensure that code generation will handle this construct
+
+  const ForStmt *FStmt = getSingleForStmt(D.getAssociatedStmt());
+  if (FStmt == nullptr)
+    return false;
+
+  if (!checkLoopInit(*FStmt) || !checkLoopStep(*FStmt) ||
+      !checkLoopStop(*FStmt))
+    return false;
+
+  // All checks passed
+  return true;
 }

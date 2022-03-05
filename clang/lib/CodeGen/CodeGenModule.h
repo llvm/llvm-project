@@ -302,7 +302,6 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
-
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
@@ -325,6 +324,9 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
+
+  /// A set of OpenMP directives for which no-loop kernels are generated.
+  llvm::SmallPtrSet<const Stmt *, 1> NoLoopKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -1450,6 +1452,30 @@ public:
   /// Print the postfix for externalized static variable for single source
   /// offloading languages CUDA and HIP.
   void printPostfixForExternalizedStaticVar(llvm::raw_ostream &OS) const;
+
+  /// Helper functions for generating a NoLoop kernel
+  /// For a captured statement, get the single For statement, if it exists,
+  /// otherwise return nullptr.
+  const ForStmt *getSingleForStmt(const Stmt *S);
+
+  /// Does the loop init qualify for a NoLoop kernel?
+  bool checkDeclStmt(const ForStmt &FStmt);
+  bool checkInitExpr(const ForStmt &FStmt);
+  bool checkLoopInit(const ForStmt &FStmt);
+
+  /// Does the loop increment qualify for a NoLoop kernel?
+  bool checkLoopStep(const ForStmt &FStmt);
+
+  /// Does the loop condition qualify for a NoLoop kernel?
+  bool checkLoopStop(const ForStmt &FStmt);
+
+  /// Are we able to generate a NoLoop kernel for this directive?
+  bool isGeneratingNoLoopKernel(const OMPExecutableDirective &D);
+
+  /// Utility routines for tracking a NoLoop kernel
+  void setNoLoopKernel(const Stmt *S) { NoLoopKernels.insert(S); }
+  void resetNoLoopKernel(const Stmt *S) { NoLoopKernels.erase(S); }
+  bool isNoLoopKernel(const Stmt *S) { return NoLoopKernels.contains(S); }
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(

@@ -1226,13 +1226,11 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
 // 'generic', the runtime reserves one warp for the master, otherwise, all
 // warps participate in parallel work.
 static void setPropertyExecutionMode(CodeGenModule &CGM, StringRef Name,
-                                     bool Mode) {
+                                     OMPTgtExecModeFlags Mode) {
   auto *GVMode = new llvm::GlobalVariable(
       CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
       llvm::GlobalValue::WeakAnyLinkage,
-      llvm::ConstantInt::get(CGM.Int8Ty, Mode ? OMP_TGT_EXEC_MODE_SPMD
-                                              : OMP_TGT_EXEC_MODE_GENERIC),
-      Twine(Name, "_exec_mode"));
+      llvm::ConstantInt::get(CGM.Int8Ty, Mode), Twine(Name, "_exec_mode"));
   CGM.addCompilerUsedGlobal(GVMode);
 }
 
@@ -1272,15 +1270,30 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
+  const Stmt *DirectiveStmt = D.getAssociatedStmt();
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
-  if (Mode)
+  if (Mode) {
+    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN() &&
+        CGM.isGeneratingNoLoopKernel(D)) {
+      assert(DirectiveStmt && "Cannot generate kernel for null statement");
+      CGM.setNoLoopKernel(DirectiveStmt);
+    }
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
-  else
+  } else
     emitNonSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                       CodeGen);
 
-  setPropertyExecutionMode(CGM, OutlinedFn->getName(), Mode);
+  setPropertyExecutionMode(
+      CGM, OutlinedFn->getName(),
+      Mode ? (DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt)
+                  ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
+                  : OMP_TGT_EXEC_MODE_SPMD)
+           : OMP_TGT_EXEC_MODE_GENERIC);
+  if (Mode && DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt))
+    CGM.resetNoLoopKernel(DirectiveStmt);
+  assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
+         "No-loop attribute not reset after emit");
 }
 
 namespace {
@@ -4129,6 +4142,13 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUWarpSize(CodeGenFunction &CGF) {
   return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                  CGM.getModule(), OMPRTL___kmpc_get_warp_size),
                              Args);
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
+  CGBuilderTy &Bld = CGF.Builder;
+  llvm::Function *F =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workgroup_id_x);
+  return Bld.CreateCall(F, llvm::None, "nvptx_block_id");
 }
 
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {

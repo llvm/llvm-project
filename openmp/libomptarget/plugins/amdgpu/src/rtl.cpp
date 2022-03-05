@@ -1575,13 +1575,20 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
 
   int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
 
-  getLaunchVals(threadsPerGroup, num_groups, DeviceInfo.WarpSize[device_id],
-                DeviceInfo.Env, KernelInfo->ConstWGSize,
-                KernelInfo->ExecutionMode,
-                num_teams,      // From run_region arg
-                thread_limit,   // From run_region arg
-                loop_tripcount, // From run_region arg
-                DeviceInfo.NumTeams[KernelInfo->device_id]);
+  if (KernelInfo->ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+    assert(loop_tripcount &&
+           "No loop exec mode needs a non-zero loop tripcount");
+    num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
+  } else {
+    getLaunchVals(threadsPerGroup, num_groups, DeviceInfo.WarpSize[device_id],
+                  DeviceInfo.Env, KernelInfo->ConstWGSize,
+                  KernelInfo->ExecutionMode,
+                  num_teams,      // From run_region arg
+                  thread_limit,   // From run_region arg
+                  loop_tripcount, // From run_region arg
+                  DeviceInfo.NumTeams[KernelInfo->device_id]);
+  }
 
   if (print_kernel_trace >= LAUNCH) {
     // enum modes are SPMD, GENERIC, NONE 0,1,2
@@ -2644,7 +2651,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
          ExecModeVal);
 
       if (ExecModeVal < llvm::omp::OMP_TGT_EXEC_MODE_GENERIC ||
-          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD) {
+          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
         DP("Error wrong exec_mode value specified in HSA code object file: "
            "%d\n",
            ExecModeVal);

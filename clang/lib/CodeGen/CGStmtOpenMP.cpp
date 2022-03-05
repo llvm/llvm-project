@@ -651,9 +651,9 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   return F;
 }
 
-llvm::Function *
-CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                    SourceLocation Loc) {
+llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
+    const CapturedStmt &S, const OMPExecutableDirective &D,
+    SourceLocation Loc) {
   assert(
       CapturedStmtInfo &&
       "CapturedStmtInfo should be set when generating the captured function");
@@ -687,7 +687,16 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   for (const auto &VLASizePair : VLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
   PGO.assignRegionCounters(GlobalDecl(CD), F);
-  CapturedStmtInfo->EmitBody(*this, CD->getBody());
+
+  if (D.hasAssociatedStmt() && CGM.isNoLoopKernel(D.getAssociatedStmt())) {
+    OMPPrivateScope PrivateScope(*this);
+    EmitOMPPrivateClause(D, PrivateScope);
+    (void)PrivateScope.Privatize();
+    EmitNoLoopKernel(D.getAssociatedStmt(), Loc);
+  } else {
+    CapturedStmtInfo->EmitBody(*this, CD->getBody());
+  }
+
   (void)LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
   if (!NeedWrapperFunction)
@@ -5592,13 +5601,14 @@ void CodeGenFunction::EmitOMPDistributeDirective(
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_distribute, CodeGen);
 }
 
-static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
-                                                   const CapturedStmt *S,
-                                                   SourceLocation Loc) {
+static llvm::Function *
+emitOutlinedOrderedFunction(CodeGenModule &CGM, const CapturedStmt *S,
+                            const OMPExecutableDirective &D,
+                            SourceLocation Loc) {
   CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
   CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
   CGF.CapturedStmtInfo = &CapStmtInfo;
-  llvm::Function *Fn = CGF.GenerateOpenMPCapturedStmtFunction(*S, Loc);
+  llvm::Function *Fn = CGF.GenerateOpenMPCapturedStmtFunction(*S, D, Loc);
   Fn->setDoesNotRecurse();
   return Fn;
 }
@@ -5651,7 +5661,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
           llvm::SmallVector<llvm::Value *, 16> CapturedVars;
           GenerateOpenMPCapturedVars(*CS, CapturedVars);
           llvm::Function *OutlinedFn =
-              emitOutlinedOrderedFunction(CGM, CS, S.getBeginLoc());
+              emitOutlinedOrderedFunction(CGM, CS, S, S.getBeginLoc());
           assert(S.getBeginLoc().isValid() &&
                  "Outlined function call location must be valid.");
           ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
@@ -5687,7 +5697,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
       llvm::SmallVector<llvm::Value *, 16> CapturedVars;
       CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
       llvm::Function *OutlinedFn =
-          emitOutlinedOrderedFunction(CGM, CS, S.getBeginLoc());
+          emitOutlinedOrderedFunction(CGM, CS, S, S.getBeginLoc());
       CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, S.getBeginLoc(),
                                                       OutlinedFn, CapturedVars);
     } else {
@@ -6866,6 +6876,7 @@ void CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitTargetTeamsDistributeParallelForRegion(CGF, S, Action);
   };
+
   llvm::Function *Fn;
   llvm::Constant *Addr;
   // Emit target region as a standalone region.
@@ -6918,6 +6929,7 @@ void CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitTargetTeamsDistributeParallelForSimdRegion(CGF, S, Action);
   };
+
   llvm::Function *Fn;
   llvm::Constant *Addr;
   // Emit target region as a standalone region.
