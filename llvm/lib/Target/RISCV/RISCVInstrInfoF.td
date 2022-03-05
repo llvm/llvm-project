@@ -154,7 +154,7 @@ def FSQRT_S : FPUnaryOp_r_frm<0b0101100, FPR32, FPR32, "fsqrt.s">,
 }
 def         : FPUnaryOpDynFrmAlias<FSQRT_S, "fsqrt.s", FPR32, FPR32>;
 
-def FEXP_S : FPUnaryOp_r_frm<0b1010011, FPR32, FPR32, "fexp.s">,
+def FEXP_S : FPUnaryOp_r_frm<0b0111100, FPR32, FPR32, "fexp.s">,
               Sched<[WriteFSqrt32, ReadFSqrt32]> {
   let rs2 = 0b00000;
 }
