@@ -9,6 +9,7 @@ define amdgpu_kernel void @test_get_doorbell(i32 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 128)
   store i32 %ret, i32 addrspace(1)* %out
@@ -23,6 +24,7 @@ define amdgpu_kernel void @test_get_ddid(i32 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 129)
   store i32 %ret, i32 addrspace(1)* %out
@@ -38,6 +40,7 @@ define amdgpu_kernel void @test_get_tma(i64 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 130)
   store i64 %ret, i64 addrspace(1)* %out
@@ -53,6 +56,7 @@ define amdgpu_kernel void @test_get_realtime(i64 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 131)
   store i64 %ret, i64 addrspace(1)* %out
@@ -67,6 +71,7 @@ define amdgpu_kernel void @test_savewave(i32 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 132)
   store i32 %ret, i32 addrspace(1)* %out
@@ -82,6 +87,7 @@ define amdgpu_kernel void @test_get_tba(i64 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 133)
   store i64 %ret, i64 addrspace(1)* %out

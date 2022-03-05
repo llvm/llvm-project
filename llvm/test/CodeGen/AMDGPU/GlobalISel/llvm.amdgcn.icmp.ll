@@ -17,6 +17,7 @@ define amdgpu_ps void @test_intr_icmp_eq_i64(i64 addrspace(1)* %out, i32 %src) #
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %src, i32 100, i32 32)
   store i64 %result, i64 addrspace(1)* %out
@@ -36,6 +37,7 @@ define amdgpu_ps void @test_intr_icmp_ne_i32(i32 addrspace(1)* %out, i32 %src) #
 ; GFX11-NEXT:    v_cmp_ne_u32_e64 s0, 0x64, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32.i32(i32 %src, i32 100, i32 33)
   store i32 %result, i32 addrspace(1)* %out
@@ -47,6 +49,12 @@ define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(i32 addrspace(1)* %out, i32
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_endpgm
+;
+; GFX11-LABEL: test_intr_icmp_i32_invalid_cc:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32.i32(i32 %src, i32 100, i32 9999)
   store i32 %result, i32 addrspace(1)* %out
   ret void

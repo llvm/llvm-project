@@ -107,6 +107,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(float addrs
 ; GFX11-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
@@ -254,6 +255,7 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; GFX11-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
 ; GFX11-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
@@ -385,6 +387,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
 ; GFX11-NEXT:    v_sub_f32_e64 v3, s2, |v3|
 ; GFX11-NEXT:    v_med3_f32 v1, v1, |v2|, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
@@ -527,6 +530,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(float add
 ; GFX11-NEXT:    v_sub_f32_e64 v3, s2, |v3|
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
@@ -664,6 +668,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
 ; GFX11-NEXT:    v_add_f32_e32 v3, 4.0, v3
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
@@ -827,6 +832,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid

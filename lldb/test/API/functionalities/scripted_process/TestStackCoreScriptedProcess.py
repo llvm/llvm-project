@@ -25,12 +25,18 @@ class StackCoreScriptedProcesTestCase(TestBase):
     def create_stack_skinny_corefile(self, file):
         self.build()
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, "// break here",
-                                                                       lldb.SBFileSpec("main.cpp"))
+                                                                       lldb.SBFileSpec("baz.c"))
         self.assertTrue(process.IsValid(), "Process is invalid.")
         # FIXME: Use SBAPI to save the process corefile.
         self.runCmd("process save-core -s stack  " + file)
         self.assertTrue(os.path.exists(file), "No stack-only corefile found.")
         self.assertTrue(self.dbg.DeleteTarget(target), "Couldn't delete target")
+
+    def get_module_with_name(self, target, name):
+        for module in target.modules:
+            if name in module.GetFileSpec().GetFilename():
+                return module
+        return None
 
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
@@ -41,14 +47,14 @@ class StackCoreScriptedProcesTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
-        for module in target.modules:
-            if 'a.out' in module.GetFileSpec().GetFilename():
-                main_module = module
-                break
-
+        main_module = self.get_module_with_name(target, 'a.out')
         self.assertTrue(main_module, "Invalid main module.")
         error = target.SetModuleLoadAddress(main_module, 0)
         self.assertSuccess(error, "Reloading main module at offset 0 failed.")
+
+        scripted_dylib = self.get_module_with_name(target, 'libbaz.dylib')
+        self.assertTrue(scripted_dylib, "Dynamic library libbaz.dylib not found.")
+        self.assertEqual(scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target), 0xffffffffffffffff)
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
         def cleanup():
@@ -68,7 +74,8 @@ class StackCoreScriptedProcesTestCase(TestBase):
 
         structured_data = lldb.SBStructuredData()
         structured_data.SetFromJSON(json.dumps({
-            "backing_target_idx" : self.dbg.GetIndexOfTarget(corefile_process.GetTarget())
+            "backing_target_idx" : self.dbg.GetIndexOfTarget(corefile_process.GetTarget()),
+            "libbaz_path" : self.getBuildArtifact("libbaz.dylib")
         }))
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
@@ -81,10 +88,10 @@ class StackCoreScriptedProcesTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
 
-        self.assertEqual(process.GetNumThreads(), 3)
+        self.assertEqual(process.GetNumThreads(), 2)
         thread = process.GetSelectedThread()
         self.assertTrue(thread, "Invalid thread.")
-        self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-2")
+        self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-1")
 
         self.assertTrue(target.triple, "Invalid target triple")
         arch = target.triple.split('-')[0]
@@ -102,9 +109,20 @@ class StackCoreScriptedProcesTestCase(TestBase):
         else:
             self.assertTrue(thread.GetStopReason(), lldb.eStopReasonSignal)
 
-        self.assertEqual(thread.GetNumFrames(), 6)
+        self.assertEqual(thread.GetNumFrames(), 5)
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame, "Invalid frame.")
-        self.assertIn("bar", frame.GetFunctionName())
-        self.assertEqual(int(frame.FindValue("i", lldb.eValueTypeVariableArgument).GetValue()), 42)
-        self.assertEqual(int(frame.FindValue("j", lldb.eValueTypeVariableLocal).GetValue()), 42 * 42)
+        func = frame.GetFunction()
+        self.assertTrue(func, "Invalid function.")
+
+        self.assertIn("baz", frame.GetFunctionName())
+        self.assertEqual(frame.vars.GetSize(), 2)
+        self.assertEqual(int(frame.vars.GetFirstValueByName('j').GetValue()), 42 * 42)
+        self.assertEqual(int(frame.vars.GetFirstValueByName('k').GetValue()), 42)
+
+        corefile_dylib = self.get_module_with_name(corefile_target, 'libbaz.dylib')
+        self.assertTrue(corefile_dylib, "Dynamic library libbaz.dylib not found.")
+        scripted_dylib = self.get_module_with_name(target, 'libbaz.dylib')
+        self.assertTrue(scripted_dylib, "Dynamic library libbaz.dylib not found.")
+        self.assertEqual(scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target),
+                         corefile_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target))

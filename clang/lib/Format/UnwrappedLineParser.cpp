@@ -2597,10 +2597,12 @@ void UnwrappedLineParser::parseNamespace() {
     parseParens();
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
-                              tok::l_square, tok::period) ||
+                              tok::l_square, tok::period, tok::l_paren) ||
            (Style.isCSharp() && FormatTok->is(tok::kw_union)))
       if (FormatTok->is(tok::l_square))
         parseSquare();
+      else if (FormatTok->is(tok::l_paren))
+        parseParens();
       else
         nextToken();
   }
@@ -2814,6 +2816,57 @@ void UnwrappedLineParser::parseSwitch() {
     NestedTooDeep.pop_back();
 }
 
+// Operators that can follow a C variable.
+static bool isCOperatorFollowingVar(tok::TokenKind kind) {
+  switch (kind) {
+  case tok::ampamp:
+  case tok::ampequal:
+  case tok::arrow:
+  case tok::caret:
+  case tok::caretequal:
+  case tok::comma:
+  case tok::ellipsis:
+  case tok::equal:
+  case tok::equalequal:
+  case tok::exclaim:
+  case tok::exclaimequal:
+  case tok::greater:
+  case tok::greaterequal:
+  case tok::greatergreater:
+  case tok::greatergreaterequal:
+  case tok::l_paren:
+  case tok::l_square:
+  case tok::less:
+  case tok::lessequal:
+  case tok::lessless:
+  case tok::lesslessequal:
+  case tok::minus:
+  case tok::minusequal:
+  case tok::minusminus:
+  case tok::percent:
+  case tok::percentequal:
+  case tok::period:
+  case tok::pipe:
+  case tok::pipeequal:
+  case tok::pipepipe:
+  case tok::plus:
+  case tok::plusequal:
+  case tok::plusplus:
+  case tok::question:
+  case tok::r_brace:
+  case tok::r_paren:
+  case tok::r_square:
+  case tok::semi:
+  case tok::slash:
+  case tok::slashequal:
+  case tok::star:
+  case tok::starequal:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void UnwrappedLineParser::parseAccessSpecifier() {
   FormatToken *AccessSpecifierCandidate = FormatTok;
   nextToken();
@@ -2825,9 +2878,7 @@ void UnwrappedLineParser::parseAccessSpecifier() {
     nextToken();
     addUnwrappedLine();
   } else if (!FormatTok->is(tok::coloncolon) &&
-             !std::binary_search(COperatorsFollowingVar.begin(),
-                                 COperatorsFollowingVar.end(),
-                                 FormatTok->Tok.getKind())) {
+             !isCOperatorFollowingVar(FormatTok->Tok.getKind())) {
     // Not a variable name nor namespace name.
     addUnwrappedLine();
   } else if (AccessSpecifierCandidate) {

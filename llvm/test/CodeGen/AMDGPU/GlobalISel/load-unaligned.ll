@@ -448,6 +448,7 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(<8 x i32> addrspace(4)*
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[2:3] offset:16
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %load = load <8 x i32>, <8 x i32> addrspace(4)* %ptr, align 1
   store <8 x i32> %load, <8 x i32> addrspace(1)* %out

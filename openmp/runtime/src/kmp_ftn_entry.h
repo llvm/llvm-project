@@ -1567,6 +1567,15 @@ void FTN_STDCALL FTN_DISPLAY_ENV(int verbose) {
 #endif
 }
 
+int FTN_STDCALL FTN_IN_EXPLICIT_TASK(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  int gtid = __kmp_entry_gtid();
+  return __kmp_thread_from_gtid(gtid)->th.th_current_task->td_flags.tasktype;
+#endif
+}
+
 // GCC compatibility (versioned symbols)
 #ifdef KMP_USE_VERSION_SYMBOLS
 

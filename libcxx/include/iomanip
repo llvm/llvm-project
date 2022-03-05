@@ -514,15 +514,14 @@ put_time(const tm* __tm, const _CharT* __fmt)
 }
 
 template <class _CharT, class _Traits, class _ForwardIterator>
-basic_ostream<_CharT, _Traits> &
-__quoted_output ( basic_ostream<_CharT, _Traits> &__os,
-        _ForwardIterator __first, _ForwardIterator __last, _CharT __delim, _CharT __escape )
+basic_ostream<_CharT, _Traits>&
+__quoted_output(basic_ostream<_CharT, _Traits>& __os,
+                _ForwardIterator __first, _ForwardIterator __last, _CharT __delim, _CharT __escape)
 {
     basic_string<_CharT, _Traits> __str;
     __str.push_back(__delim);
-    for ( ; __first != __last; ++ __first )
-    {
-        if (_Traits::eq (*__first, __escape) || _Traits::eq (*__first, __delim))
+    for (; __first != __last; ++__first) {
+        if (_Traits::eq(*__first, __escape) || _Traits::eq(*__first, __delim))
             __str.push_back(__escape);
         __str.push_back(*__first);
     }
@@ -531,69 +530,66 @@ __quoted_output ( basic_ostream<_CharT, _Traits> &__os,
 }
 
 template <class _CharT, class _Traits, class _String>
-basic_istream<_CharT, _Traits> &
-__quoted_input ( basic_istream<_CharT, _Traits> &__is, _String & __string, _CharT __delim, _CharT __escape )
+basic_istream<_CharT, _Traits>&
+__quoted_input(basic_istream<_CharT, _Traits>& __is, _String& __string, _CharT __delim, _CharT __escape)
 {
-    __string.clear ();
+    __string.clear();
     _CharT __c;
     __is >> __c;
-    if ( __is.fail ())
+    if (__is.fail())
         return __is;
 
-    if (!_Traits::eq (__c, __delim))    // no delimiter, read the whole string
-    {
-        __is.unget ();
+    if (!_Traits::eq(__c, __delim)) {
+        // no delimiter, read the whole string
+        __is.unget();
         __is >> __string;
         return __is;
     }
 
     __save_flags<_CharT, _Traits> sf(__is);
-    noskipws (__is);
-    while (true)
-        {
+    std::noskipws(__is);
+    while (true) {
         __is >> __c;
-        if ( __is.fail ())
+        if (__is.fail())
             break;
-        if (_Traits::eq (__c, __escape))
-        {
+        if (_Traits::eq(__c, __escape)) {
             __is >> __c;
-            if ( __is.fail ())
+            if (__is.fail())
                 break;
-        }
-        else if (_Traits::eq (__c, __delim))
+        } else if (_Traits::eq(__c, __delim))
             break;
-        __string.push_back ( __c );
-        }
+        __string.push_back(__c);
+    }
     return __is;
 }
-
 
 template <class _CharT, class _Traits, class _Iter>
 basic_ostream<_CharT, _Traits>& operator<<(
          basic_ostream<_CharT, _Traits>& __os,
-         const __quoted_output_proxy<_CharT, _Iter, _Traits> & __proxy)
+         const __quoted_output_proxy<_CharT, _Iter, _Traits>& __proxy)
 {
-    return __quoted_output(__os, __proxy.__first, __proxy.__last, __proxy.__delim, __proxy.__escape);
+    return std::__quoted_output(__os, __proxy.__first_, __proxy.__last_, __proxy.__delim_, __proxy.__escape_);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 struct __quoted_proxy
 {
-    basic_string<_CharT, _Traits, _Allocator> &__string;
-    _CharT  __delim;
-    _CharT  __escape;
+    basic_string<_CharT, _Traits, _Allocator>& __string_;
+    _CharT __delim_;
+    _CharT __escape_;
 
-    explicit __quoted_proxy(basic_string<_CharT, _Traits, _Allocator> &__s, _CharT __d, _CharT __e)
-        : __string(__s), __delim(__d), __escape(__e) {}
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __quoted_proxy(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __d, _CharT __e)
+        : __string_(__s), __delim_(__d), __escape_(__e) {}
 };
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
 basic_ostream<_CharT, _Traits>& operator<<(
         basic_ostream<_CharT, _Traits>& __os,
-        const __quoted_proxy<_CharT, _Traits, _Allocator> & __proxy)
+        const __quoted_proxy<_CharT, _Traits, _Allocator>& __proxy)
 {
-    return __quoted_output (__os, __proxy.__string.cbegin (), __proxy.__string.cend (), __proxy.__delim, __proxy.__escape);
+    return std::__quoted_output(__os, __proxy.__string_.cbegin(), __proxy.__string_.cend(), __proxy.__delim_, __proxy.__escape_);
 }
 
 //  extractor for non-const basic_string& proxies
@@ -601,69 +597,63 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>& operator>>(
         basic_istream<_CharT, _Traits>& __is,
-        const __quoted_proxy<_CharT, _Traits, _Allocator> & __proxy)
+        const __quoted_proxy<_CharT, _Traits, _Allocator>& __proxy)
 {
-    return __quoted_input ( __is, __proxy.__string, __proxy.__delim, __proxy.__escape );
+    return std::__quoted_input(__is, __proxy.__string_, __proxy.__delim_, __proxy.__escape_);
 }
-
 
 template <class _CharT>
 _LIBCPP_INLINE_VISIBILITY
 __quoted_output_proxy<_CharT, const _CharT *>
-quoted ( const _CharT *__s, _CharT __delim = _CharT('"'), _CharT __escape =_CharT('\\'))
+quoted(const _CharT *__s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\'))
 {
     const _CharT *__end = __s;
-    while ( *__end ) ++__end;
-    return __quoted_output_proxy<_CharT, const _CharT *> ( __s, __end, __delim, __escape );
+    while (*__end) ++__end;
+    return __quoted_output_proxy<_CharT, const _CharT *>(__s, __end, __delim, __escape);
 }
-
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
 __quoted_output_proxy<_CharT, typename basic_string <_CharT, _Traits, _Allocator>::const_iterator>
-__quoted ( const basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+__quoted(const basic_string <_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\'))
 {
-    return __quoted_output_proxy<_CharT,
-            typename basic_string <_CharT, _Traits, _Allocator>::const_iterator>
-                    ( __s.cbegin(), __s.cend (), __delim, __escape );
+    return __quoted_output_proxy<_CharT, typename basic_string<_CharT, _Traits, _Allocator>::const_iterator>(__s.cbegin(), __s.cend(), __delim, __escape);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
 __quoted_proxy<_CharT, _Traits, _Allocator>
-__quoted ( basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+__quoted(basic_string <_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\'))
 {
-    return __quoted_proxy<_CharT, _Traits, _Allocator>( __s, __delim, __escape );
+    return __quoted_proxy<_CharT, _Traits, _Allocator>(__s, __delim, __escape);
 }
-
 
 #if _LIBCPP_STD_VER > 11
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
-__quoted_output_proxy<_CharT, typename basic_string <_CharT, _Traits, _Allocator>::const_iterator>
-quoted ( const basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+__quoted_output_proxy<_CharT, typename basic_string<_CharT, _Traits, _Allocator>::const_iterator>
+quoted(const basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\'))
 {
-    return __quoted(__s, __delim, __escape);
+    return std::__quoted(__s, __delim, __escape);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
 __quoted_proxy<_CharT, _Traits, _Allocator>
-quoted ( basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\'))
 {
-    return __quoted(__s, __delim, __escape);
+    return std::__quoted(__s, __delim, __escape);
 }
 
 template <class _CharT, class _Traits>
 __quoted_output_proxy<_CharT, const _CharT *, _Traits>
-quoted (basic_string_view <_CharT, _Traits> __sv,
-             _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+quoted(basic_string_view<_CharT, _Traits> __sv, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\'))
 {
-    return __quoted_output_proxy<_CharT, const _CharT *, _Traits>
-         ( __sv.data(), __sv.data() + __sv.size(), __delim, __escape );
+    return __quoted_output_proxy<_CharT, const _CharT *, _Traits>(__sv.data(), __sv.data() + __sv.size(), __delim, __escape);
 }
-#endif
+
+#endif // _LIBCPP_STD_VER > 11
 
 _LIBCPP_END_NAMESPACE_STD
 

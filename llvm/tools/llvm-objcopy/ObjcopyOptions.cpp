@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -1183,7 +1184,8 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
 }
 
 Expected<DriverConfig>
-objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
+objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
+                                  function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ConfigManager ConfigMgr;
   CommonConfig &Config = ConfigMgr.Common;
@@ -1227,6 +1229,13 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
                              "-o is a required argument");
   }
   Config.OutputFilename = InputArgs.getLastArgValue(BITCODE_STRIP_output);
+
+  if (!InputArgs.hasArg(BITCODE_STRIP_remove))
+    return createStringError(errc::invalid_argument, "no action specified");
+
+  // We only support -r for now, which removes all bitcode sections.
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__bundle", MatchStyle::Literal, ErrorCallback)));
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);

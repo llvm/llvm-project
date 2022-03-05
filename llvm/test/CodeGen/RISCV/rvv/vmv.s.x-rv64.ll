@@ -286,3 +286,17 @@ entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vmv.s.x.nxv8i64(<vscale x 8 x i64> %0, i64 %1, i64 %2)
   ret <vscale x 8 x i64> %a
 }
+
+; We should not emit a tail agnostic vlse for a tail undisturbed vmv.s.x
+define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64_bug(<vscale x 1 x i64> %0, i64* %1) nounwind {
+; CHECK-LABEL: intrinsic_vmv.s.x_x_nxv1i64_bug:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
+entry:
+  %a = load i64, i64* %1, align 8
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(<vscale x 1 x i64> %0, i64 %a, i64 1)
+  ret <vscale x 1 x i64> %b
+}

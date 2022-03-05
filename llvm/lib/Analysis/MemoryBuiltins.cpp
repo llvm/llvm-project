@@ -334,10 +334,15 @@ Value *llvm::getAllocAlignment(const CallBase *V,
   assert(isAllocationFn(V, TLI));
 
   const Optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
-  if (!FnData.hasValue() || FnData->AlignParam < 0) {
-    return nullptr;
+  if (FnData.hasValue() && FnData->AlignParam >= 0) {
+    return V->getOperand(FnData->AlignParam);
   }
-  return V->getOperand(FnData->AlignParam);
+  unsigned AllocAlignParam;
+  if (V->getAttributes().hasAttrSomewhere(Attribute::AllocAlign,
+                                          &AllocAlignParam)) {
+    return V->getOperand(AllocAlignParam-1);
+  }
+  return nullptr;
 }
 
 /// When we're compiling N-bit code, and the user uses parameters that are

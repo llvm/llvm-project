@@ -184,9 +184,12 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__availability>
 #include <__config>
 #include <__locale>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <istream>
 #include <ostream>
 #include <version>

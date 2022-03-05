@@ -13,7 +13,6 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
-@skipIfDarwin
 class EventAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -171,9 +170,9 @@ class EventAPITestCase(TestBase):
                 # Let's only try at most 3 times to retrieve any kind of event.
                 while not count > 3:
                     if listener.WaitForEvent(5, event):
-                        self.trace("Got a valid event:", event)
-                        self.trace("Event data flavor:", event.GetDataFlavor())
-                        self.trace("Event type:", lldbutil.state_type_to_str(event.GetType()))
+                        self.context.trace("Got a valid event:", event)
+                        self.context.trace("Event data flavor:", event.GetDataFlavor())
+                        self.context.trace("Event type:", lldbutil.state_type_to_str(event.GetType()))
                         listener.Clear()
                         return
                     count = count + 1
@@ -187,6 +186,7 @@ class EventAPITestCase(TestBase):
 
         # Let's start the listening thread to retrieve the event.
         my_thread = MyListeningThread()
+        my_thread.context = self
         my_thread.start()
 
         # Wait until the 'MyListeningThread' terminates.
@@ -256,7 +256,7 @@ class EventAPITestCase(TestBase):
         class MyListeningThread(threading.Thread):
 
             def run(self):
-                self.trace("Running MyListeningThread:", self)
+                self.context.trace("Running MyListeningThread:", self)
 
                 # Regular expression pattern for the event description.
                 pattern = re.compile("data = {.*, state = (.*)}$")
@@ -266,7 +266,7 @@ class EventAPITestCase(TestBase):
                 while True:
                     if listener.WaitForEvent(5, event):
                         desc = lldbutil.get_description(event)
-                        self.trace("Event description:", desc)
+                        self.context.trace("Event description:", desc)
                         match = pattern.search(desc)
                         if not match:
                             break

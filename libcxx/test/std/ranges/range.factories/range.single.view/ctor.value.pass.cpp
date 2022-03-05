@@ -13,8 +13,9 @@
 // constexpr explicit single_view(const T& t);
 // constexpr explicit single_view(T&& t);
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 

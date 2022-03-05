@@ -40,12 +40,32 @@ std::string computeName(const FormatToken *NamespaceTok) {
       Tok = Tok->getNextNonComment();
     }
   } else {
+    // Skip attributes.
+    if (Tok && Tok->is(tok::l_square)) {
+      for (int NestLevel = 1; NestLevel > 0;) {
+        Tok = Tok->getNextNonComment();
+        if (!Tok)
+          break;
+        if (Tok->is(tok::l_square))
+          ++NestLevel;
+        else if (Tok->is(tok::r_square))
+          --NestLevel;
+      }
+      if (Tok)
+        Tok = Tok->getNextNonComment();
+    }
+
+    // Use the string after `namespace` as a name candidate until `{` or `::` or
+    // `(`. If the name is empty, use the candicate.
+    std::string FirstNSName;
     // For `namespace [[foo]] A::B::inline C {` or
     // `namespace MACRO1 MACRO2 A::B::inline C {`, returns "A::B::inline C".
-    // Peek for the first '::' (or '{') and then return all tokens from one
-    // token before that up until the '{'.
+    // Peek for the first '::' (or '{' or '(')) and then return all tokens from
+    // one token before that up until the '{'. A '(' might be a macro with
+    // arguments.
     const FormatToken *FirstNSTok = Tok;
-    while (Tok && !Tok->is(tok::l_brace) && !Tok->is(tok::coloncolon)) {
+    while (Tok && !Tok->isOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
+      FirstNSName += FirstNSTok->TokenText;
       FirstNSTok = Tok;
       Tok = Tok->getNextNonComment();
     }
@@ -57,6 +77,8 @@ std::string computeName(const FormatToken *NamespaceTok) {
         name += " ";
       Tok = Tok->getNextNonComment();
     }
+    if (name.empty())
+      name = FirstNSName;
   }
   return name;
 }

@@ -103,6 +103,7 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; MUBUF11-NEXT:    v_add_nc_u32_e32 v0, 0x3039, v0
 ; MUBUF11-NEXT:    scratch_store_b32 off, v0, s0
 ; MUBUF11-NEXT:  .LBB0_2: ; %shader_eval_surface.exit
+; MUBUF11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MUBUF11-NEXT:    s_endpgm
 ;
 ; FLATSCR11-LABEL: kernel_background_evaluate:
@@ -130,6 +131,7 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR11-NEXT:    v_add_nc_u32_e32 v0, 0x3039, v0
 ; FLATSCR11-NEXT:    scratch_store_b32 off, v0, s0
 ; FLATSCR11-NEXT:  .LBB0_2: ; %shader_eval_surface.exit
+; FLATSCR11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; FLATSCR11-NEXT:    s_endpgm
 entry:
   %sd = alloca < 1339 x i32>, align 8192, addrspace(5)

@@ -155,6 +155,7 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    global_store_b128 v64, v[24:27], s[2:3] offset:224
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v64, v[28:31], s[2:3] offset:240
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr <64 x i32>, <64 x i32> addrspace(1)* %ptr.in, i32 %id
