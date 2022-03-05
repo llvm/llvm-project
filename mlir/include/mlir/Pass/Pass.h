@@ -20,6 +20,7 @@
 namespace mlir {
 namespace detail {
 class OpToOpPassAdaptor;
+struct OpPassManagerImpl;
 
 /// The state for a single execution of a pass. This provides a unified
 /// interface for accessing and initializing necessary state for pass execution.
@@ -184,6 +185,11 @@ protected:
   /// pipeline won't execute.
   virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
+  /// Indicate if the current pass can be scheduled on the given operation type.
+  /// This is useful for generic operation passes to add restrictions on the
+  /// operations they operate on.
+  virtual bool canScheduleOn(RegisteredOperationName opName) const = 0;
+
   /// Schedule an arbitrary pass pipeline on the provided operation.
   /// This can be invoke any time in a pass to dynamic schedule more passes.
   /// The provided operation must be the current one or one nested below.
@@ -313,6 +319,9 @@ private:
   /// Allow access to 'clone'.
   friend class OpPassManager;
 
+  /// Allow access to 'canScheduleOn'.
+  friend detail::OpPassManagerImpl;
+
   /// Allow access to 'passState'.
   friend detail::OpToOpPassAdaptor;
 
@@ -346,6 +355,11 @@ protected:
     return pass->getOpName() == OpT::getOperationName();
   }
 
+  /// Indicate if the current pass can be scheduled on the given operation type.
+  bool canScheduleOn(RegisteredOperationName opName) const final {
+    return opName.getStringRef() == getOpName();
+  }
+
   /// Return the current operation being transformed.
   OpT getOperation() { return cast<OpT>(Pass::getOperation()); }
 
@@ -373,6 +387,46 @@ template <> class OperationPass<void> : public Pass {
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
   OperationPass(const OperationPass &) = default;
+
+  /// Indicate if the current pass can be scheduled on the given operation type.
+  /// By default, generic operation passes can be scheduled on any operation.
+  bool canScheduleOn(RegisteredOperationName opName) const override {
+    return true;
+  }
+};
+
+/// Pass to transform an operation that implements the given interface.
+///
+/// Interface passes must not:
+///   - modify any other operations within the parent region, as other threads
+///     may be manipulating them concurrently.
+///   - modify any state within the parent operation, this includes adding
+///     additional operations.
+///
+/// Derived interface passes are expected to provide the following:
+///   - A 'void runOnOperation()' method.
+///   - A 'StringRef getName() const' method.
+///   - A 'std::unique_ptr<Pass> clonePass() const' method.
+template <typename InterfaceT>
+class InterfacePass : public OperationPass<> {
+protected:
+  using OperationPass::OperationPass;
+
+  /// Indicate if the current pass can be scheduled on the given operation type.
+  /// For an InterfacePass, this checks if the operation implements the given
+  /// interface.
+  bool canScheduleOn(RegisteredOperationName opName) const final {
+    return opName.hasInterface<InterfaceT>();
+  }
+
+  /// Return the current operation being transformed.
+  InterfaceT getOperation() { return cast<InterfaceT>(Pass::getOperation()); }
+
+  /// Query an analysis for the current operation.
+  template <typename AnalysisT>
+  AnalysisT &getAnalysis() {
+    return Pass::getAnalysis<AnalysisT, InterfaceT>();
+  }
 };
 
 /// This class provides a CRTP wrapper around a base pass class to define

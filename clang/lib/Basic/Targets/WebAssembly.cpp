@@ -256,9 +256,10 @@ ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
                                    LangOptions &Opts) {
   TargetInfo::adjust(Diags, Opts);
-  // If the Atomics feature isn't available, turn off POSIXThreads and
-  // ThreadModel, so that we don't predefine _REENTRANT or __STDCPP_THREADS__.
-  if (!HasAtomics) {
+  // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
+  // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
+  // because they are unsupported.
+  if (!HasAtomics || !HasBulkMemory) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
     Opts.ThreadsafeStatics = false;
