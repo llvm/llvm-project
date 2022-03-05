@@ -45,7 +45,7 @@ int *p2() {
 // CHECK-NEXT:      %7 = cir.cst(42 : i32) : i32
 // CHECK-NEXT:      %8 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
 // CHECK-NEXT:      cir.store %7, %8 : i32, cir.ptr <i32>
-// CHECK-NEXT:    } loc(#loc15)
+// CHECK-NEXT:    } loc(#[[loc15:loc[0-9]+]])
 // CHECK-NEXT:    %2 = cir.cst(42 : i32) : i32
 // CHECK-NEXT:    %3 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
 // CHECK-NEXT:    cir.store %2, %3 : i32, cir.ptr <i32>
