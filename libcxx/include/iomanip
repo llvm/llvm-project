@@ -578,6 +578,7 @@ struct __quoted_proxy
     _CharT __delim_;
     _CharT __escape_;
 
+    _LIBCPP_HIDE_FROM_ABI
     explicit __quoted_proxy(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __d, _CharT __e)
         : __string_(__s), __delim_(__d), __escape_(__e) {}
 };
