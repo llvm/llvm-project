@@ -23,7 +23,6 @@ class Block;
 class BlockAndValueMapping;
 class CallableOpInterface;
 class CallOpInterface;
-class FuncOp;
 class OpBuilder;
 class Operation;
 class Region;
