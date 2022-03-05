@@ -119,9 +119,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // FIXME: this should be a ScopedHashTable for consistency.
   using PMapType = llvm::DenseMap<mlir::Value, PSetType>;
 
-  using PSetInvalidHistType =
-      llvm::SetVector<std::pair<mlir::Location, mlir::Value>>;
-  using PMapInvalidHistType = llvm::DenseMap<mlir::Value, PSetInvalidHistType>;
+  using PMapInvalidHistType =
+      llvm::DenseMap<mlir::Value,
+                     std::pair<std::optional<mlir::Location>, mlir::Value>>;
   PMapInvalidHistType pmapInvalidHist;
 
   using PMapNullHistType =
@@ -270,10 +270,8 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
       // FIXME: add a way to just mutate the state.
       pset.erase(valState);
       pset.insert(State::getInvalid());
-      if (!Pass.pmapInvalidHist.count(ptr))
-        Pass.pmapInvalidHist[ptr] = {};
-      Pass.pmapInvalidHist[ptr].insert(
-          std::make_pair(getEndLocForHist(*Pass.currScope), pointee));
+      Pass.pmapInvalidHist[ptr] =
+          std::make_pair(getEndLocForHist(*Pass.currScope), pointee);
     }
     // Delete the local value from pmap, since its gone now.
     pmap.erase(pointee);
@@ -464,13 +462,12 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
 
   if (hasInvalid && opts.emitHistoryInvalid()) {
     assert(pmapInvalidHist.count(addr) && "expected invalid hist");
-    for (auto &info : pmapInvalidHist[addr]) {
-      auto &note = info.first;
-      auto &pointee = info.second;
-      StringRef pointeeName = getVarNameFromValue(pointee);
-      D.attachNote(note) << "pointee '" << pointeeName
-                         << "' invalidated at end of scope";
-    }
+    auto &info = pmapInvalidHist[addr];
+    auto &note = info.first;
+    auto &pointee = info.second;
+    StringRef pointeeName = getVarNameFromValue(pointee);
+    D.attachNote(note) << "pointee '" << pointeeName
+                       << "' invalidated at end of scope";
   }
 
   if (hasNullptr && opts.emitHistoryNull()) {
