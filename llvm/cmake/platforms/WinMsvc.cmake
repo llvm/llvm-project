@@ -265,7 +265,8 @@ set(COMPILE_FLAGS
     --target=${TRIPLE_ARCH}-windows-msvc
     -fms-compatibility-version=19.20
     -vctoolsversion ${MSVC_VER}
-    -winsdkversion ${WINSDK_VER})
+    -winsdkversion ${WINSDK_VER}
+    -winsysroot ${LLVM_WINSYSROOT})
 
 if(case_sensitive_filesystem)
   # Ensure all sub-configures use the top-level VFS overlay instead of generating their own.
