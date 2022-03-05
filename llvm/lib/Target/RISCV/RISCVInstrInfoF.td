@@ -154,6 +154,16 @@ def FSQRT_S : FPUnaryOp_r_frm<0b0101100, FPR32, FPR32, "fsqrt.s">,
 }
 def         : FPUnaryOpDynFrmAlias<FSQRT_S, "fsqrt.s", FPR32, FPR32>;
 
+def FEXP_S : FPUnaryOp_r_frm<0b1010011, FPR32, FPR32, "fexp.s">,
+              Sched<[WriteFSqrt32, ReadFSqrt32]> {
+  let rs2 = 0b00000;
+}
+def         : FPUnaryOpDynFrmAlias<FEXP_S, "fexp.s", FPR32, FPR32>;
+
+def FPOW_S : FPALUS_rr_frm<0b0110000, "fpow.s">,
+             Sched<[WriteFALU32, ReadFALU32, ReadFALU32]>;
+def        : FPALUSDynFrmAlias<FPOW_S, "fpow.s">;
+
 def FSGNJ_S  : FPALUS_rr<0b0010000, 0b000, "fsgnj.s">,
                Sched<[WriteFSGNJ32, ReadFSGNJ32, ReadFSGNJ32]>;
 def FSGNJN_S : FPALUS_rr<0b0010000, 0b001, "fsgnjn.s">,
