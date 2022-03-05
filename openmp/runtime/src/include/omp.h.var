@@ -497,6 +497,9 @@
     #pragma omp end declare variant
 #   endif
 
+    /* OpenMP 5.2 */
+    extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
+
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP
 
