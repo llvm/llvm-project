@@ -73,7 +73,7 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     MLIRSupport
     MLIRTargetLLVMIRExport
     MLIRTransforms
-    MLIRTranslation
+    MLIRTranslateLib
     ${Vulkan_LIBRARY}
   )
 

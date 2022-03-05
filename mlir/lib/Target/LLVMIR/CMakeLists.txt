@@ -30,7 +30,7 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   MLIRDLTI
   MLIRLLVMIR
   MLIRLLVMIRTransforms
-  MLIRTranslation
+  MLIRTranslateLib
   )
 
 add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
@@ -62,5 +62,5 @@ add_mlir_translation_library(MLIRTargetLLVMIRImport
   LINK_LIBS PUBLIC
   MLIRDLTI
   MLIRLLVMIR
-  MLIRTranslation
+  MLIRTranslateLib
   )

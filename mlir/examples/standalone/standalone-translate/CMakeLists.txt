@@ -17,7 +17,7 @@ target_link_libraries(standalone-translate
   MLIRParser
   MLIRPass
   MLIRSPIRV
-  MLIRTranslation
+  MLIRTranslateLib
   MLIRSupport
   )
 

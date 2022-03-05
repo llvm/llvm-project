@@ -14,5 +14,5 @@ add_mlir_translation_library(MLIRTargetCpp
   MLIRMath
   MLIRSCF
   MLIRSupport
-  MLIRTranslation
+  MLIRTranslateLib
   )

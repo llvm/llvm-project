@@ -20,7 +20,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"

@@ -15,7 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace mlir;
