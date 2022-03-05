@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: cir-tool %t.cir -cir-lifetime-check="history=invalid" -verify-diagnostics -o %t-out.cir
+// RUN: cir-tool %t.cir -cir-lifetime-check="history=invalid,null" -verify-diagnostics -o %t-out.cir
 // XFAIL: *
 
 int *p0() {
@@ -14,7 +14,7 @@ int *p0() {
 }
 
 int *p1(bool b = true) {
-  int *p = nullptr;
+  int *p = nullptr; // expected-note {{invalidated here}}
   if (b) {
     int x = 0;
     p = &x;

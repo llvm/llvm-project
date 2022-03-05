@@ -119,10 +119,14 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // FIXME: this should be a ScopedHashTable for consistency.
   using PMapType = llvm::DenseMap<mlir::Value, PSetType>;
 
-  using PSetHistType = llvm::SetVector<std::pair<mlir::Location, mlir::Value>>;
-  using PMapHistType = llvm::DenseMap<mlir::Value, PSetHistType>;
-  PMapHistType pmapNullHist;
-  PMapHistType pmapInvalidHist;
+  using PSetInvalidHistType =
+      llvm::SetVector<std::pair<mlir::Location, mlir::Value>>;
+  using PMapInvalidHistType = llvm::DenseMap<mlir::Value, PSetInvalidHistType>;
+  PMapInvalidHistType pmapInvalidHist;
+
+  using PMapNullHistType =
+      llvm::DenseMap<mlir::Value, std::optional<mlir::Location>>;
+  PMapNullHistType pmapNullHist;
 
   SmallPtrSet<mlir::Value, 8> ptrs;
 
@@ -390,7 +394,9 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
 
   // If other styles of initialization gets added, required to add support
   // here.
-  assert(allocaOp.getInitAttr().getValue() == mlir::cir::InitStyle::cinit &&
+  assert((allocaOp.getInitAttr().getValue() == mlir::cir::InitStyle::cinit ||
+          allocaOp.getInitAttr().getValue() ==
+              mlir::cir::InitStyle::uninitialized) &&
          "other init styles tbd");
 }
 
@@ -407,20 +413,22 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   // initialization is treated as a separate operation
   if (auto cstOp = dyn_cast<ConstantOp>(data.getDefiningOp())) {
     assert(cstOp.isNullPtr() && "not implemented");
+    assert(getPmap().count(addr) && "address should always be valid");
     // 2.4.2 - If the initialization is default initialization or zero
     // initialization, set pset(p) = {null}; for example:
     //
     //  int* p; => pset(p) == {invalid}
     //  int* p{}; or string_view p; => pset(p) == {null}.
     //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
-    getPmap()[addr] = {};
+    getPmap()[addr].clear();
     getPmap()[addr].insert(State::getNullPtr());
+    pmapNullHist[addr] = storeOp.getValue().getLoc();
     return;
   }
 
   if (auto allocaOp = dyn_cast<AllocaOp>(data.getDefiningOp())) {
     // p = &x;
-    getPmap()[addr] = {};
+    getPmap()[addr].clear();
     getPmap()[addr].insert(State::getLocalValue(data));
     return;
   }
@@ -433,33 +441,29 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
 void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   auto addr = loadOp.getAddr();
   // Only interested in checking deference on top of pointer types.
+  // Note that usually the use of the invalid address happens at the
+  // load or store using the result of this loadOp.
   if (!getPmap().count(addr) || !ptrs.count(addr))
     return;
 
   if (!loadOp.getIsDeref())
     return;
 
-  // 2.4.2 - On every dereference of a Pointer p, enforce that p is not
-  // invalid.
-  if (!getPmap()[addr].count(State::getInvalid())) {
-    // FIXME: perhaps add a remark that we got a valid dereference
-    return;
-  }
+  bool hasInvalid = getPmap()[addr].count(State::getInvalid());
+  bool hasNullptr = getPmap()[addr].count(State::getNullPtr());
 
-  // Looks like we found a invalid path leading to this deference point,
+  // 2.4.2 - On every dereference of a Pointer p, enforce that p is valid.
+  if (!hasInvalid && !hasNullptr)
+    return;
+
+  // Looks like we found a bad path leading to this deference point,
   // diagnose it.
-  //
-  // Note that usually the use of the invalid address happens at the
-  // load or store using the result of this loadOp.
   StringRef varName = getVarNameFromValue(addr);
   auto D = emitWarning(loadOp.getLoc());
   D << "use of invalid pointer '" << varName << "'";
 
-  llvm::SmallString<128> psetStr;
-  llvm::raw_svector_ostream Out(psetStr);
-  printPset(getPmap()[addr], Out);
-
-  if (opts.emitHistoryInvalid()) {
+  if (hasInvalid && opts.emitHistoryInvalid()) {
+    assert(pmapInvalidHist.count(addr) && "expected invalid hist");
     for (auto &info : pmapInvalidHist[addr]) {
       auto &note = info.first;
       auto &pointee = info.second;
@@ -469,8 +473,18 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
     }
   }
 
-  if (opts.emitRemarkPset())
+  if (hasNullptr && opts.emitHistoryNull()) {
+    assert(pmapNullHist.count(addr) && "expected nullptr hist");
+    auto &note = pmapNullHist[addr];
+    D.attachNote(*note) << "invalidated here";
+  }
+
+  if (opts.emitRemarkPset()) {
+    llvm::SmallString<128> psetStr;
+    llvm::raw_svector_ostream Out(psetStr);
+    printPset(getPmap()[addr], Out);
     emitRemark(loadOp.getLoc()) << "pset => " << Out.str();
+  }
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
