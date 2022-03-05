@@ -338,24 +338,24 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   SmallVector<std::string, 8> Columns;
 
   // Format a coverage triple and add the result to the list of columns.
-  auto AddCoverageTripleToColumn = [&Columns](unsigned Hit, unsigned Total,
-                                              float Pctg) {
-    std::string S;
-    {
-      raw_string_ostream RSO{S};
-      if (Total)
-        RSO << format("%*.2f", 7, Pctg) << "% ";
-      else
-        RSO << "- ";
-      RSO << '(' << Hit << '/' << Total << ')';
-    }
-    const char *CellClass = "column-entry-yellow";
-    if (Hit == Total)
-      CellClass = "column-entry-green";
-    else if (Pctg < 80.0)
-      CellClass = "column-entry-red";
-    Columns.emplace_back(tag("td", tag("pre", S), CellClass));
-  };
+  auto AddCoverageTripleToColumn =
+      [&Columns, this](unsigned Hit, unsigned Total, float Pctg) {
+        std::string S;
+        {
+          raw_string_ostream RSO{S};
+          if (Total)
+            RSO << format("%*.2f", 7, Pctg) << "% ";
+          else
+            RSO << "- ";
+          RSO << '(' << Hit << '/' << Total << ')';
+        }
+        const char *CellClass = "column-entry-yellow";
+        if (Pctg >= Opts.HighCovWatermark)
+          CellClass = "column-entry-green";
+        else if (Pctg < Opts.LowCovWatermark)
+          CellClass = "column-entry-red";
+        Columns.emplace_back(tag("td", tag("pre", S), CellClass));
+      };
 
   // Simplify the display file path, and wrap it in a link if requested.
   std::string Filename;

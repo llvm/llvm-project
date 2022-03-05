@@ -963,6 +963,12 @@ def : Pat<(select (XLenVT (setge GPR:$x, GPR:$y)), GPR:$rs3, GPR:$rs1),
           (CMOV GPR:$rs1, (SLT GPR:$x, GPR:$y), GPR:$rs3)>;
 def : Pat<(select (XLenVT (setle GPR:$y, GPR:$x)), GPR:$rs3, GPR:$rs1),
           (CMOV GPR:$rs1, (SLT GPR:$x, GPR:$y), GPR:$rs3)>;
+
+// setge X, 0 is canonicalized to setgt X, -1.
+// FIXME: This can be generalized to more immediates by using SLTI.
+def : Pat<(select (XLenVT (setgt GPR:$x, -1)), GPR:$rs3, GPR:$rs1),
+          (CMOV GPR:$rs1, (SLT GPR:$x, X0), GPR:$rs3)>;
+
 def : Pat<(select GPR:$rs2, GPR:$rs1, GPR:$rs3),
           (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 } // Predicates = [HasStdExtZbt]
