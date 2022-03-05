@@ -537,9 +537,8 @@ template <class T> struct has_PolymorphicTraits {
 };
 
 inline bool isNumeric(StringRef S) {
-  const static auto skipDigits = [](StringRef Input) {
-    return Input.drop_front(
-        std::min(Input.find_first_not_of("0123456789"), Input.size()));
+  const auto skipDigits = [](StringRef Input) {
+    return Input.ltrim("0123456789");
   };
 
   // Make S.front() and S.drop_front().front() (if S.front() is [+-]) calls
@@ -666,8 +665,7 @@ inline QuotingType needsQuotes(StringRef S) {
   // 7.3.3 Plain Style
   // Plain scalars must not begin with most indicators, as this would cause
   // ambiguity with other YAML constructs.
-  static constexpr char Indicators[] = R"(-?:\,[]{}#&*!|>'"%@`)";
-  if (S.find_first_of(Indicators) == 0)
+  if (std::strchr(R"(-?:\,[]{}#&*!|>'"%@`)", S[0]) != nullptr)
     MaxQuotingNeeded = QuotingType::Single;
 
   for (unsigned char C : S) {
