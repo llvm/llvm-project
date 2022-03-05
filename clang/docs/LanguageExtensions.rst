@@ -3592,6 +3592,9 @@ with :doc:`ThreadSanitizer`.
 Use ``__has_feature(memory_sanitizer)`` to check if the code is being built
 with :doc:`MemorySanitizer`.
 
+Use ``__has_feature(dataflow_sanitizer)`` to check if the code is being built
+with :doc:`DataFlowSanitizer`.
+
 Use ``__has_feature(safe_stack)`` to check if the code is being built
 with :doc:`SafeStack`.
 

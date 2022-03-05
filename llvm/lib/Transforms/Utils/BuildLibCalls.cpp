@@ -222,6 +222,13 @@ static bool setWillReturn(Function &F) {
   return true;
 }
 
+static bool setAlignedAllocParam(Function &F, unsigned ArgNo) {
+  if (F.hasParamAttribute(ArgNo, Attribute::AllocAlign))
+    return false;
+  F.addParamAttr(ArgNo, Attribute::AllocAlign);
+  return true;
+}
+
 bool llvm::inferLibFuncAttributes(Module *M, StringRef Name,
                                   const TargetLibraryInfo &TLI) {
   Function *F = M->getFunction(Name);
@@ -414,6 +421,8 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
   case LibFunc_aligned_alloc:
+    Changed |= setAlignedAllocParam(F, 0);
+    LLVM_FALLTHROUGH;
   case LibFunc_valloc:
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
@@ -479,6 +488,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_memalign:
+    Changed |= setAlignedAllocParam(F, 0);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);

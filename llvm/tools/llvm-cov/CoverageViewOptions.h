@@ -50,6 +50,8 @@ struct CoverageViewOptions {
   std::string CreatedTimeStr;
   unsigned NumThreads;
   std::string CompilationDirectory;
+  float HighCovWatermark;
+  float LowCovWatermark;
 
   /// Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,

@@ -973,6 +973,11 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       "project-title", cl::Optional,
       cl::desc("Set project title for the coverage report"));
 
+  cl::opt<std::string> CovWatermark(
+      "coverage-watermark", cl::Optional,
+      cl::desc("<high>,<low> value indicate thresholds for high and low"
+               "coverage watermark"));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -980,6 +985,47 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (ViewOpts.Format == CoverageViewOptions::OutputFormat::Lcov) {
     error("Lcov format should be used with 'llvm-cov export'.");
     return 1;
+  }
+
+  ViewOpts.HighCovWatermark = 100.0;
+  ViewOpts.LowCovWatermark = 80.0;
+  if (!CovWatermark.empty()) {
+    auto WaterMarkPair = StringRef(CovWatermark).split(',');
+    if (WaterMarkPair.first.empty() || WaterMarkPair.second.empty()) {
+      error("invalid argument '" + CovWatermark +
+                "', must be in format 'high,low'",
+            "-coverage-watermark");
+      return 1;
+    }
+
+    char *EndPointer = nullptr;
+    ViewOpts.HighCovWatermark =
+        strtod(WaterMarkPair.first.begin(), &EndPointer);
+    if (EndPointer != WaterMarkPair.first.end()) {
+      error("invalid number '" + WaterMarkPair.first +
+                "', invalid value for 'high'",
+            "-coverage-watermark");
+      return 1;
+    }
+
+    ViewOpts.LowCovWatermark =
+        strtod(WaterMarkPair.second.begin(), &EndPointer);
+    if (EndPointer != WaterMarkPair.second.end()) {
+      error("invalid number '" + WaterMarkPair.second +
+                "', invalid value for 'low'",
+            "-coverage-watermark");
+      return 1;
+    }
+
+    if (ViewOpts.HighCovWatermark > 100 || ViewOpts.LowCovWatermark < 0 ||
+        ViewOpts.HighCovWatermark <= ViewOpts.LowCovWatermark) {
+      error(
+          "invalid number range '" + CovWatermark +
+              "', must be both high and low should be between 0-100, and high "
+              "> low",
+          "-coverage-watermark");
+      return 1;
+    }
   }
 
   ViewOpts.ShowLineNumbers = true;

@@ -32,7 +32,6 @@
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
-using namespace std;
 extern int g_verbose;
 
 // Extract a debug info entry for a given DWARFUnit from the data

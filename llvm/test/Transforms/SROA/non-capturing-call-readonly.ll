@@ -1335,6 +1335,59 @@ entry:
   ret i8 %r
 }
 
+define [2 x i32] @select_of_ptrs(i32* %data, i1 %c, i32 %v) {
+; CHECK-LABEL: @select_of_ptrs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[RETVAL_BASE:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i64 0, i64 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i64 0, i64 1
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i32* [[RETVAL_BASE]], i32* [[RETVAL]]
+; CHECK-NEXT:    store i32 [[V:%.*]], i32* [[PTR]], align 4
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(i32* [[RETVAL_BASE]])
+; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, i32* [[I1_FCA_0_GEP]], align 4
+; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, i32* [[I1_FCA_1_GEP]], align 4
+; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
+; CHECK-OPAQUE-LABEL: @select_of_ptrs(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[RETVAL_FULL:%.*]] = alloca [2 x i32], align 4
+; CHECK-OPAQUE-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-OPAQUE-NEXT:    store i32 0, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[RETVAL_BASE:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 0
+; CHECK-OPAQUE-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
+; CHECK-OPAQUE-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr [[RETVAL_BASE]], ptr [[RETVAL]]
+; CHECK-OPAQUE-NEXT:    store i32 [[V:%.*]], ptr [[PTR]], align 4
+; CHECK-OPAQUE-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL_BASE]])
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
+; CHECK-OPAQUE-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-OPAQUE-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
+entry:
+  %retval.full = alloca [2 x i32], align 4
+  store [2 x i32] zeroinitializer, [2 x i32]* %retval.full, align 4
+  %retval.base = getelementptr inbounds [2 x i32], [2 x i32]* %retval.full, i64 0, i64 0
+  %retval = getelementptr inbounds [2 x i32], [2 x i32]* %retval.full, i64 0, i64 1
+  %ptr = select i1 %c, i32* %retval.base, i32* %retval
+  store i32 %v, i32* %ptr
+  %i0 = call i32 @user_of_alloca(i32* %retval.base)
+  %i1 = load [2 x i32], [2 x i32]* %retval.full, align 4
+  ret [2 x i32] %i1
+}
+
 declare dso_local i32 @user_of_alloca(i32* nocapture readonly)
 declare dso_local i32 @user_of_alloca_with_multiple_args(i32* nocapture readonly, i32* nocapture readonly)
 declare dso_local i32 @capture_of_alloca(i32 *)

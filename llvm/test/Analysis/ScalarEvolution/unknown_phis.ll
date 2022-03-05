@@ -30,6 +30,8 @@ merge:
 }
 
 define void @merge_values_with_ranges_looped(i32 *%a_len_ptr, i32 *%b_len_ptr) {
+; TODO: We could be much smarter here. So far we just make sure that we do not
+;       go into infinite loop analyzing these Phis.
 ; CHECK-LABEL: 'merge_values_with_ranges_looped'
 ; CHECK-NEXT:  Classifying expressions for: @merge_values_with_ranges_looped
 ; CHECK-NEXT:    %len_a = load i32, i32* %a_len_ptr, align 4, !range !0
@@ -37,9 +39,9 @@ define void @merge_values_with_ranges_looped(i32 *%a_len_ptr, i32 *%b_len_ptr) {
 ; CHECK-NEXT:    %len_b = load i32, i32* %b_len_ptr, align 4, !range !0
 ; CHECK-NEXT:    --> %len_b U: [0,2147483647) S: [0,2147483647)
 ; CHECK-NEXT:    %p1 = phi i32 [ %len_a, %entry ], [ %p2, %loop ]
-; CHECK-NEXT:    --> %p1 U: [0,2147483647) S: [0,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %p1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %p2 = phi i32 [ %len_b, %entry ], [ %p1, %loop ]
-; CHECK-NEXT:    --> %p2 U: [0,2147483647) S: [0,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %p2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1

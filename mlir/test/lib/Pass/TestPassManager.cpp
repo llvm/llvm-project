@@ -29,6 +29,18 @@ struct TestFunctionPass
     return "Test a function pass in the pass manager";
   }
 };
+class TestInterfacePass
+    : public PassWrapper<TestInterfacePass,
+                         InterfacePass<FunctionOpInterface>> {
+  void runOnOperation() final {
+    getOperation()->emitRemark() << "Executing interface pass on operation";
+  }
+  StringRef getArgument() const final { return "test-interface-pass"; }
+  StringRef getDescription() const final {
+    return "Test an interface pass (running on FunctionOpInterface) in the "
+           "pass manager";
+  }
+};
 class TestOptionsPass
     : public PassWrapper<TestOptionsPass, OperationPass<FuncOp>> {
 public:
@@ -127,6 +139,8 @@ void registerPassManagerTestPass() {
   PassRegistration<TestModulePass>();
 
   PassRegistration<TestFunctionPass>();
+
+  PassRegistration<TestInterfacePass>();
 
   PassRegistration<TestCrashRecoveryPass>();
   PassRegistration<TestFailurePass>();
