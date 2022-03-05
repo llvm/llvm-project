@@ -968,7 +968,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, path& __p) {
     basic_string<_CharT, _Traits> __tmp;
-    __is >> __quoted(__tmp);
+    __is >> _VSTD::__quoted(__tmp);
     __p = __tmp;
     return __is;
   }
