@@ -23,3 +23,19 @@ int *p1(bool b = true) {
   *p = 42; // expected-warning {{use of invalid pointer 'p'}}
   return p;
 }
+
+void p2() {
+  int *p = nullptr; // expected-note {{invalidated here}}
+  *p = 42;          // expected-warning {{use of invalid pointer 'p'}}
+}
+
+void p3() {
+  int *p;
+  p = nullptr; // expected-note {{invalidated here}}
+  *p = 42;     // expected-warning {{use of invalid pointer 'p'}}
+}
+
+void p4() {
+  int *p;  // expected-note {{uninitialized here}}
+  *p = 42; // expected-warning {{use of invalid pointer 'p'}}
+}
