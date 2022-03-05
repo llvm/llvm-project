@@ -192,10 +192,12 @@ file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main()
 
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
-if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND
-    NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(FATAL_ERROR "Please use architecture with 4 or 8 byte pointers.")
-endif()
+# Force set to 4
+set (CMAKE_SIZEOF_VOID_P 4)
+# if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND
+#    NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+#  message(FATAL_ERROR "Please use architecture with 4 or 8 byte pointers.")
+# endif()
 
 test_targets()
 
