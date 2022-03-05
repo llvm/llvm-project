@@ -1159,14 +1159,14 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                         PGOOpt->ProfileRemappingFile);
   }
 
-  // Re-require GloblasAA here prior to function passes. This is particularly
+  // Re-compute GlobalsAA here prior to function passes. This is particularly
   // useful as the above will have inlined, DCE'ed, and function-attr
   // propagated everything. We should at this point have a reasonably minimal
   // and richly annotated call graph. By computing aliasing and mod/ref
   // information for all local globals here, the late loop passes and notably
   // the vectorizer will be able to use them to help recognize vectorizable
   // memory operations.
-  MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
+  MPM.addPass(RecomputeGlobalsAAPass());
 
   FunctionPassManager OptimizePM;
   OptimizePM.addPass(Float2IntPass());

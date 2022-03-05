@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_GLOBALSMODREF_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <list>
@@ -77,6 +78,8 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
       const DataLayout &DL,
       std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
 
+  friend struct RecomputeGlobalsAAPass;
+
 public:
   GlobalsAAResult(GlobalsAAResult &&Arg);
   ~GlobalsAAResult();
@@ -135,6 +138,10 @@ public:
   typedef GlobalsAAResult Result;
 
   GlobalsAAResult run(Module &M, ModuleAnalysisManager &AM);
+};
+
+struct RecomputeGlobalsAAPass : PassInfoMixin<RecomputeGlobalsAAPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the GlobalsAAResult object.

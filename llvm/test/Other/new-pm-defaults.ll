@@ -217,7 +217,7 @@
 ; CHECK-DEFAULT-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-LTO-NOT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass on f
