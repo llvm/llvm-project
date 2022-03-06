@@ -20,7 +20,6 @@ if (LLVM_LINK_LLVM_DYLIB)
   set(LINK_LLVM_LIBS LLVM)
 endif()
 target_link_libraries(elf_common INTERFACE ${LINK_LLVM_LIBS})
-include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 add_dependencies(elf_common ${LINK_LLVM_LIBS})
 
 # The code uses Debug.h, which requires threads support.
