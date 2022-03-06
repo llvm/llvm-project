@@ -13,6 +13,17 @@ define i32 @fsl_i32(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %1
 }
 
+define i32 @fsl_i32_demandedbits(i32 %a, i32 %b, i32 %c) nounwind {
+; RV32ZBT-LABEL: fsl_i32_demandedbits:
+; RV32ZBT:       # %bb.0:
+; RV32ZBT-NEXT:    andi a1, a1, 31
+; RV32ZBT-NEXT:    fsl a0, a0, a1, a2
+; RV32ZBT-NEXT:    ret
+  %bmask = and i32 %b, 95
+  %1 = call i32 @llvm.riscv.fsl.i32(i32 %a, i32 %bmask, i32 %c)
+  ret i32 %1
+}
+
 declare i32 @llvm.riscv.fsr.i32(i32, i32, i32)
 
 define i32 @fsr_i32(i32 %a, i32 %b, i32 %c) nounwind {
@@ -21,6 +32,17 @@ define i32 @fsr_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-NEXT:    fsr a0, a0, a1, a2
 ; RV32ZBT-NEXT:    ret
   %1 = call i32 @llvm.riscv.fsr.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %1
+}
+
+define i32 @fsr_i32_demandedbits(i32 %a, i32 %b, i32 %c) nounwind {
+; RV32ZBT-LABEL: fsr_i32_demandedbits:
+; RV32ZBT:       # %bb.0:
+; RV32ZBT-NEXT:    andi a1, a1, 31
+; RV32ZBT-NEXT:    fsr a0, a0, a1, a2
+; RV32ZBT-NEXT:    ret
+  %bmask = and i32 %b, 95
+  %1 = call i32 @llvm.riscv.fsr.i32(i32 %a, i32 %bmask, i32 %c)
   ret i32 %1
 }
 
