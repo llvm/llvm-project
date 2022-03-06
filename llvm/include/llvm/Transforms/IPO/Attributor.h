@@ -199,9 +199,24 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                  bool &UsedAssumedInformation,
                                  bool Intraprocedural = false);
 
+/// Collect all potential values \p LI could read into \p PotentialValues. That
+/// is, the only values read by \p LI are assumed to be known and all are in
+/// \p PotentialValues. Dependences onto \p QueryingAA are properly tracked,
+/// \p UsedAssumedInformation will inform the caller if assumed information was
+/// used.
+///
+/// \returns True if the assumed potential copies are all in \p PotentialValues,
+///          false if something went wrong and the copies could not be
+///          determined.
+bool getPotentiallyLoadedValues(Attributor &A, LoadInst &LI,
+                                SmallSetVector<Value *, 4> &PotentialValues,
+                                const AbstractAttribute &QueryingAA,
+                                bool &UsedAssumedInformation,
+                                bool OnlyExact = false);
+
 /// Collect all potential values of the one stored by \p SI into
 /// \p PotentialCopies. That is, the only copies that were made via the
-/// store are assumed to be known and all in \p PotentialCopies. Dependences
+/// store are assumed to be known and all are in \p PotentialCopies. Dependences
 /// onto \p QueryingAA are properly tracked, \p UsedAssumedInformation will
 /// inform the caller if assumed information was used.
 ///
@@ -210,7 +225,8 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
 ///          determined.
 bool getPotentialCopiesOfStoredValue(
     Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
-    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation);
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
+    bool OnlyExact = false);
 
 /// Return true if \p IRP is readonly. This will query respective AAs that
 /// deduce the information and introduce dependences for \p QueryingAA.
