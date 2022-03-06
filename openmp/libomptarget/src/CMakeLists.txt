@@ -23,8 +23,6 @@ set(LIBOMPTARGET_SRC_FILES
 
 set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
 
-include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
-
 # Build libomptarget library with libdl dependency.
 add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
 set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN")
