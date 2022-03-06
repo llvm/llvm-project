@@ -13,6 +13,17 @@ define i32 @fsl_i32(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %1
 }
 
+define i32 @fsl_i32_demandedbits(i32 %a, i32 %b, i32 %c) nounwind {
+; RV64ZBT-LABEL: fsl_i32_demandedbits:
+; RV64ZBT:       # %bb.0:
+; RV64ZBT-NEXT:    andi a1, a1, 31
+; RV64ZBT-NEXT:    fslw a0, a0, a1, a2
+; RV64ZBT-NEXT:    ret
+  %bmask = and i32 %b, 95
+  %1 = call i32 @llvm.riscv.fsl.i32(i32 %a, i32 %bmask, i32 %c)
+  ret i32 %1
+}
+
 declare i32 @llvm.riscv.fsr.i32(i32, i32, i32)
 
 define i32 @fsr_i32(i32 %a, i32 %b, i32 %c) nounwind {
@@ -21,6 +32,17 @@ define i32 @fsr_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV64ZBT-NEXT:    fsrw a0, a0, a1, a2
 ; RV64ZBT-NEXT:    ret
   %1 = call i32 @llvm.riscv.fsr.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %1
+}
+
+define i32 @fsr_i32_demandedbits(i32 %a, i32 %b, i32 %c) nounwind {
+; RV64ZBT-LABEL: fsr_i32_demandedbits:
+; RV64ZBT:       # %bb.0:
+; RV64ZBT-NEXT:    andi a1, a1, 31
+; RV64ZBT-NEXT:    fsrw a0, a0, a1, a2
+; RV64ZBT-NEXT:    ret
+  %bmask = and i32 %b, 95
+  %1 = call i32 @llvm.riscv.fsr.i32(i32 %a, i32 %bmask, i32 %c)
   ret i32 %1
 }
 
@@ -53,6 +75,17 @@ define i64 @fsl_i64(i64 %a, i64 %b, i64 %c) nounwind {
   ret i64 %1
 }
 
+define i64 @fsl_i64_demandedbits(i64 %a, i64 %b, i64 %c) nounwind {
+; RV64ZBT-LABEL: fsl_i64_demandedbits:
+; RV64ZBT:       # %bb.0:
+; RV64ZBT-NEXT:    andi a1, a1, 63
+; RV64ZBT-NEXT:    fsl a0, a0, a1, a2
+; RV64ZBT-NEXT:    ret
+  %bmask = and i64 %b, 191
+  %1 = call i64 @llvm.riscv.fsl.i64(i64 %a, i64 %bmask, i64 %c)
+  ret i64 %1
+}
+
 declare i64 @llvm.riscv.fsr.i64(i64, i64, i64)
 
 define i64 @fsr_i64(i64 %a, i64 %b, i64 %c) nounwind {
@@ -61,6 +94,17 @@ define i64 @fsr_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV64ZBT-NEXT:    fsr a0, a0, a1, a2
 ; RV64ZBT-NEXT:    ret
   %1 = call i64 @llvm.riscv.fsr.i64(i64 %a, i64 %b, i64 %c)
+  ret i64 %1
+}
+
+define i64 @fsr_i64_demandedbits(i64 %a, i64 %b, i64 %c) nounwind {
+; RV64ZBT-LABEL: fsr_i64_demandedbits:
+; RV64ZBT:       # %bb.0:
+; RV64ZBT-NEXT:    andi a1, a1, 63
+; RV64ZBT-NEXT:    fsr a0, a0, a1, a2
+; RV64ZBT-NEXT:    ret
+  %bmask = and i64 %b, 191
+  %1 = call i64 @llvm.riscv.fsr.i64(i64 %a, i64 %bmask, i64 %c)
   ret i64 %1
 }
 
