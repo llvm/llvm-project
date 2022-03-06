@@ -319,6 +319,8 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
   // on B (A appears after B), A needs to be sinked first before B can be
   // sinked.
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+    if (isa<PHINode>(&I))
+      continue;
     // No need to check for instruction's operands are loop invariant.
     assert(L.hasLoopInvariantOperands(&I) &&
            "Insts in a loop's preheader should have loop invariant operands!");
