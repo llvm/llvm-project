@@ -14,6 +14,7 @@
 //   explicit join_view(R&&) -> join_view<views::all_t<R>>;
 
 #include <ranges>
+#include <utility>
 
 struct Child {
   int *begin() const;

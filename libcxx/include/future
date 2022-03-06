@@ -370,6 +370,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__memory/uses_allocator.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <exception>
 #include <memory>
 #include <mutex>

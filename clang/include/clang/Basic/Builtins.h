@@ -70,7 +70,7 @@ class Context {
   llvm::ArrayRef<Info> AuxTSRecords;
 
 public:
-  Context() {}
+  Context() = default;
 
   /// Perform target-specific initialization
   /// \param AuxTarget Target info to incorporate builtins from. May be nullptr.
