@@ -12799,12 +12799,15 @@ SDValue AArch64TargetLowering::LowerSVEStructLoad(unsigned Intrinsic,
   assert(VT.isScalableVector() && "Can only lower scalable vectors");
 
   unsigned N, Opcode;
-  static std::map<unsigned, std::pair<unsigned, unsigned>> IntrinsicMap = {
-      {Intrinsic::aarch64_sve_ld2, {2, AArch64ISD::SVE_LD2_MERGE_ZERO}},
-      {Intrinsic::aarch64_sve_ld3, {3, AArch64ISD::SVE_LD3_MERGE_ZERO}},
-      {Intrinsic::aarch64_sve_ld4, {4, AArch64ISD::SVE_LD4_MERGE_ZERO}}};
+  static const std::pair<unsigned, std::pair<unsigned, unsigned>>
+      IntrinsicMap[] = {
+          {Intrinsic::aarch64_sve_ld2, {2, AArch64ISD::SVE_LD2_MERGE_ZERO}},
+          {Intrinsic::aarch64_sve_ld3, {3, AArch64ISD::SVE_LD3_MERGE_ZERO}},
+          {Intrinsic::aarch64_sve_ld4, {4, AArch64ISD::SVE_LD4_MERGE_ZERO}}};
 
-  std::tie(N, Opcode) = IntrinsicMap[Intrinsic];
+  std::tie(N, Opcode) = llvm::find_if(IntrinsicMap, [&](auto P) {
+                          return P.first == Intrinsic;
+                        })->second;
   assert(VT.getVectorElementCount().getKnownMinValue() % N == 0 &&
          "invalid tuple vector type!");
 

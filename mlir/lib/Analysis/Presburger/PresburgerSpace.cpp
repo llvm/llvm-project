@@ -188,7 +188,7 @@ void PresburgerLocalSpace::print(llvm::raw_ostream &os) const {
     os << "Dimension: " << getNumDomainIds() << ", ";
   }
   os << "Symbols: " << getNumSymbolIds() << ", "
-     << "Locals" << getNumLocalIds() << "\n";
+     << "Locals: " << getNumLocalIds() << "\n";
 }
 
 void PresburgerLocalSpace::dump() const { print(llvm::errs()); }
