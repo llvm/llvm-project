@@ -811,7 +811,7 @@ static void expandPseudoVFMK(const TargetInstrInfo &TI, MachineInstr &MI) {
   // replace to pvfmk.w.up and pvfmk.w.lo
   // replace to pvfmk.s.up and pvfmk.s.lo
 
-  static std::map<unsigned, std::pair<unsigned, unsigned>> VFMKMap = {
+  static const std::pair<unsigned, std::pair<unsigned, unsigned>> VFMKMap[] = {
       {VE::VFMKyal, {VE::VFMKLal, VE::VFMKLal}},
       {VE::VFMKynal, {VE::VFMKLnal, VE::VFMKLnal}},
       {VE::VFMKWyvl, {VE::PVFMKWUPvl, VE::PVFMKWLOvl}},
@@ -822,8 +822,9 @@ static void expandPseudoVFMK(const TargetInstrInfo &TI, MachineInstr &MI) {
 
   unsigned Opcode = MI.getOpcode();
 
-  auto Found = VFMKMap.find(Opcode);
-  if (Found == VFMKMap.end())
+  const auto *Found =
+      llvm::find_if(VFMKMap, [&](auto P) { return P.first == Opcode; });
+  if (Found == std::end(VFMKMap))
     report_fatal_error("unexpected opcode for pseudo vfmk");
 
   unsigned OpcodeUpper = (*Found).second.first;
