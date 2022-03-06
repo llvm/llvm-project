@@ -8207,6 +8207,21 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case RISCVISD::FSR:
+  case RISCVISD::FSL:
+  case RISCVISD::FSRW:
+  case RISCVISD::FSLW: {
+    bool IsWInstruction =
+        N->getOpcode() == RISCVISD::FSRW || N->getOpcode() == RISCVISD::FSLW;
+    unsigned BitWidth =
+        IsWInstruction ? 32 : N->getSimpleValueType(0).getSizeInBits();
+    assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
+    // Only the lower log2(Bitwidth)+1 bits of the the shift amount are read.
+    if (SimplifyDemandedLowBitsHelper(1, Log2_32(BitWidth) + 1))
+      return SDValue(N, 0);
+
+    break;
+  }
   case RISCVISD::FMV_X_ANYEXTH:
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
     SDLoc DL(N);
