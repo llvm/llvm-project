@@ -1027,45 +1027,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
       MVT Src1VT = Src1.getSimpleValueType();
       unsigned VMSLTOpcode, VMSLTMaskOpcode, VMXOROpcode, VMANDNOpcode,
-          VMSetOpcode, VMANDOpcode;
+          VMOROpcode;
       switch (RISCVTargetLowering::getLMUL(Src1VT)) {
       default:
         llvm_unreachable("Unexpected LMUL!");
-#define CASE_VMSLT_VMSET_OPCODES(lmulenum, suffix, suffix_b)                   \
+#define CASE_VMSLT_OPCODES(lmulenum, suffix, suffix_b)                         \
   case RISCVII::VLMUL::lmulenum:                                               \
     VMSLTOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_##suffix                 \
                              : RISCV::PseudoVMSLT_VX_##suffix;                 \
     VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_##suffix##_MASK      \
                                  : RISCV::PseudoVMSLT_VX_##suffix##_MASK;      \
-    VMSetOpcode = RISCV::PseudoVMSET_M_##suffix_b;                             \
     break;
-        CASE_VMSLT_VMSET_OPCODES(LMUL_F8, MF8, B1)
-        CASE_VMSLT_VMSET_OPCODES(LMUL_F4, MF4, B2)
-        CASE_VMSLT_VMSET_OPCODES(LMUL_F2, MF2, B4)
-        CASE_VMSLT_VMSET_OPCODES(LMUL_1, M1, B8)
-        CASE_VMSLT_VMSET_OPCODES(LMUL_2, M2, B16)
-        CASE_VMSLT_VMSET_OPCODES(LMUL_4, M4, B32)
-        CASE_VMSLT_VMSET_OPCODES(LMUL_8, M8, B64)
-#undef CASE_VMSLT_VMSET_OPCODES
+        CASE_VMSLT_OPCODES(LMUL_F8, MF8, B1)
+        CASE_VMSLT_OPCODES(LMUL_F4, MF4, B2)
+        CASE_VMSLT_OPCODES(LMUL_F2, MF2, B4)
+        CASE_VMSLT_OPCODES(LMUL_1, M1, B8)
+        CASE_VMSLT_OPCODES(LMUL_2, M2, B16)
+        CASE_VMSLT_OPCODES(LMUL_4, M4, B32)
+        CASE_VMSLT_OPCODES(LMUL_8, M8, B64)
+#undef CASE_VMSLT_OPCODES
       }
       // Mask operations use the LMUL from the mask type.
       switch (RISCVTargetLowering::getLMUL(VT)) {
       default:
         llvm_unreachable("Unexpected LMUL!");
-#define CASE_VMXOR_VMANDN_VMAND_OPCODES(lmulenum, suffix)                       \
+#define CASE_VMXOR_VMANDN_VMOR_OPCODES(lmulenum, suffix)                       \
   case RISCVII::VLMUL::lmulenum:                                               \
     VMXOROpcode = RISCV::PseudoVMXOR_MM_##suffix;                              \
     VMANDNOpcode = RISCV::PseudoVMANDN_MM_##suffix;                            \
-    VMANDOpcode = RISCV::PseudoVMAND_MM_##suffix;                              \
+    VMOROpcode = RISCV::PseudoVMOR_MM_##suffix;                                \
     break;
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_F8, MF8)
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_F4, MF4)
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_F2, MF2)
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_1, M1)
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_2, M2)
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_4, M4)
-        CASE_VMXOR_VMANDN_VMAND_OPCODES(LMUL_8, M8)
-#undef CASE_VMXOR_VMANDN_VMAND_OPCODES
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_F8, MF8)
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_F4, MF4)
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_F2, MF2)
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_1, M1)
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_2, M2)
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_4, M4)
+        CASE_VMXOR_VMANDN_VMOR_OPCODES(LMUL_8, M8)
+#undef CASE_VMXOR_VMANDN_VMOR_OPCODES
       }
       SDValue SEW = CurDAG->getTargetConstant(
           Log2_32(Src1VT.getScalarSizeInBits()), DL, XLenVT);
@@ -1075,12 +1074,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue MaskedOff = Node->getOperand(1);
       SDValue Mask = Node->getOperand(4);
 
-      // If vmsgeu_mask with 0 immediate, expand it to {vmset, vmand}.
+      // If vmsgeu_mask with 0 immediate, expand it to vmor mask, maskedoff.
       if (IsCmpUnsignedZero) {
-        SDValue VMSet =
-            SDValue(CurDAG->getMachineNode(VMSetOpcode, DL, VT, VL, SEW), 0);
-        ReplaceNode(Node, CurDAG->getMachineNode(VMANDOpcode, DL, VT,
-                                                 {Mask, VMSet, VL, MaskSEW}));
+        // We don't need vmor if the MaskedOff and the Mask are the same
+        // value.
+        if (Mask == MaskedOff) {
+          ReplaceUses(Node, Mask.getNode());
+          return;
+        }
+        ReplaceNode(Node,
+                    CurDAG->getMachineNode(VMOROpcode, DL, VT,
+                                           {Mask, MaskedOff, VL, MaskSEW}));
         return;
       }
 

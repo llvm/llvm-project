@@ -2097,9 +2097,8 @@ entry:
 define <vscale x 2 x i1> @intrinsic_vmsgeu_mask_vi_nxv2i16_i16(<vscale x 2 x i1> %0, <vscale x 2 x i16> %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsgeu_mask_vi_nxv2i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vmset.m v8
-; CHECK-NEXT:    vmand.mm v0, v9, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vmor.mm v0, v9, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i1> @llvm.riscv.vmsgeu.mask.nxv2i16.i16(
@@ -2108,6 +2107,21 @@ entry:
     i16 0,
     <vscale x 2 x i1> %2,
     i32 %3)
+
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 2 x i1> @intrinsic_vmsgeu_mask_vi_nxv2i16_i16_same_mask_maskedoff(<vscale x 2 x i1> %0, <vscale x 2 x i16> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vmsgeu_mask_vi_nxv2i16_i16_same_mask_maskedoff:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 2 x i1> @llvm.riscv.vmsgeu.mask.nxv2i16.i16(
+    <vscale x 2 x i1> %0,
+    <vscale x 2 x i16> %1,
+    i16 0,
+    <vscale x 2 x i1> %0,
+    i32 %2)
 
   ret <vscale x 2 x i1> %a
 }
