@@ -21639,9 +21639,10 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
       SVT = (SVT.bitsLT(Op.getValueType()) ? Op.getValueType() : SVT);
   if (SVT != VT.getScalarType())
     for (SDValue &Op : Ops)
-      Op = TLI.isZExtFree(Op.getValueType(), SVT)
-               ? DAG.getZExtOrTrunc(Op, SDLoc(SVN), SVT)
-               : DAG.getSExtOrTrunc(Op, SDLoc(SVN), SVT);
+      Op = Op.isUndef() ? DAG.getUNDEF(SVT)
+                        : (TLI.isZExtFree(Op.getValueType(), SVT)
+                               ? DAG.getZExtOrTrunc(Op, SDLoc(SVN), SVT)
+                               : DAG.getSExtOrTrunc(Op, SDLoc(SVN), SVT));
   return DAG.getBuildVector(VT, SDLoc(SVN), Ops);
 }
 
