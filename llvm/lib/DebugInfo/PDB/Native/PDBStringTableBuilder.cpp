@@ -71,7 +71,7 @@ static uint32_t computeBucketCount(uint32_t NumStrings) {
   // This list contains all StringCount, BucketCount pairs where BucketCount was
   // just incremented.  It ends before the first BucketCount entry where
   // BucketCount * 3 would overflow a 32-bit unsigned int.
-  static std::map<uint32_t, uint32_t> StringsToBuckets = {
+  static const std::pair<uint32_t, uint32_t> StringsToBuckets[] = {
       {0, 1},
       {1, 2},
       {2, 4},
@@ -124,8 +124,9 @@ static uint32_t computeBucketCount(uint32_t NumStrings) {
       {517197275, 1034394550},
       {775795913, 1551591826},
       {1163693870, 2327387740}};
-  auto Entry = StringsToBuckets.lower_bound(NumStrings);
-  assert(Entry != StringsToBuckets.end());
+  const auto *Entry = llvm::lower_bound(
+      StringsToBuckets, std::make_pair(NumStrings, 0U), llvm::less_first());
+  assert(Entry != std::end(StringsToBuckets));
   return Entry->second;
 }
 
