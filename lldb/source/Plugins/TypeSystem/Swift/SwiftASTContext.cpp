@@ -3880,7 +3880,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
                found_library.GetCString());
     return true;
   } else {
-    all_dlopen_errors.Printf("Failed to find \"%s\" in paths:\n,",
+    all_dlopen_errors.Printf("Failed to find \"%s\" in paths:\n",
                              library_fullname.c_str());
     for (const std::string &search_dir : uniqued_paths)
       all_dlopen_errors.Printf("  %s\n", search_dir.c_str());
