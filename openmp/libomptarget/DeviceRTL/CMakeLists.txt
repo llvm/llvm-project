@@ -18,11 +18,6 @@ if (NOT LIBOMPTARGET_BUILD_DEVICERTL_BCLIB)
   return()
 endif()
 
-if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
-  libomptarget_say("Not building DeviceRTL: Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
-  return()
-endif()
-
 if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
   find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
