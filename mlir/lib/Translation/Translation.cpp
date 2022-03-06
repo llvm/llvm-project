@@ -101,7 +101,7 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     DialectRegistry registry;
     dialectRegistration(registry);
     context->appendDialectRegistry(registry);
-    auto module = OwningOpRef<ModuleOp>(parseSourceFile(sourceMgr, context));
+    auto module = parseSourceFile<ModuleOp>(sourceMgr, context);
     if (!module || failed(verify(*module)))
       return failure();
     return function(module.get(), output);

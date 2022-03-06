@@ -122,7 +122,7 @@ static OwningOpRef<ModuleOp> parseMLIRInput(StringRef inputFilename,
 
   llvm::SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-  return OwningOpRef<ModuleOp>(parseSourceFile(sourceMgr, context));
+  return parseSourceFile<ModuleOp>(sourceMgr, context);
 }
 
 static inline Error makeStringError(const Twine &message) {

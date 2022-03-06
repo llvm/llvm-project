@@ -98,7 +98,7 @@ int dumpMLIR() {
   llvm::SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
   mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceFile(sourceMgr, &context);
+      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   if (!module) {
     llvm::errs() << "Error can't load file " << inputFilename << "\n";
     return 3;

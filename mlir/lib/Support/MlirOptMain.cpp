@@ -59,7 +59,7 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
 
   // Parse the input file and reset the context threading state.
   TimingScope parserTiming = timing.nest("Parser");
-  OwningOpRef<ModuleOp> module(parseSourceFile(sourceMgr, context));
+  OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, context));
   context->enableMultithreading(wasThreadingEnabled);
   if (!module)
     return failure();
