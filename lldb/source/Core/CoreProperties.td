@@ -135,6 +135,14 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to show progress or not if the debugger's output is an interactive color-enabled terminal.">;
+  def ShowProgressAnsiPrefix: Property<"show-progress-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the progress message.">;
+  def ShowProgressAnsiSuffix: Property<"show-progress-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,

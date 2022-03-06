@@ -384,6 +384,16 @@ bool Debugger::GetShowProgress() const {
       nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
+llvm::StringRef Debugger::GetShowProgressAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowProgressAnsiPrefix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
+llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowProgressAnsiSuffix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
 bool Debugger::GetUseAutosuggestion() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -1779,6 +1789,12 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
     return;
   }
 
+  const bool use_color = GetUseColor();
+  llvm::StringRef ansi_prefix = GetShowProgressAnsiPrefix();
+  if (!ansi_prefix.empty())
+    output.Printf(
+        "%s", ansi::FormatAnsiTerminalCodes(ansi_prefix, use_color).c_str());
+
   // Print over previous line, if any.
   output.Printf("\r");
 
@@ -1790,6 +1806,11 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   } else {
     output.Printf("%s...", message.c_str());
   }
+
+  llvm::StringRef ansi_suffix = GetShowProgressAnsiSuffix();
+  if (!ansi_suffix.empty())
+    output.Printf(
+        "%s", ansi::FormatAnsiTerminalCodes(ansi_suffix, use_color).c_str());
 
   // Clear until the end of the line.
   output.Printf("\x1B[K");
