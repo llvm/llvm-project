@@ -31,6 +31,17 @@
 // CHECK-NOT: __riscv_zfh
 // CHECK-NOT: __riscv_v
 // CHECK-NOT: __riscv_vector
+// CHECK-NOT: __riscv_zbkc
+// CHECK-NOT: __riscv_zbkx
+// CHECK-NOT: __riscv_zbkb
+// CHECK-NOT: __riscv_zkne
+// CHECK-NOT: __riscv_zknd
+// CHECK-NOT: __riscv_zknh
+// CHECK-NOT: __riscv_zksh
+// CHECK-NOT: __riscv_zksed
+// CHECK-NOT: __riscv_zkr
+// CHECK-NOT: __riscv_zkt
+// CHECK-NOT: __riscv_zk
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
@@ -343,3 +354,58 @@
 // CHECK-ZVE32X-EXT: __riscv_v_min_vlen 32
 // CHECK-ZVE32X-EXT: __riscv_vector 1
 // CHECK-ZVE32X-EXT: __riscv_zve32x 1000000{{$}}
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izbkc1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZBKC-EXT %s
+// CHECK-ZBKC-EXT: __riscv_zbkc
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izbkx1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZBKX-EXT %s
+// CHECK-ZBKX-EXT: __riscv_zbkx
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izbkb1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZBKB-EXT %s
+// CHECK-ZBKB-EXT: __riscv_zbkb
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izknd1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKND-EXT %s
+// CHECK-ZKND-EXT: __riscv_zknd
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izkne1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKNE-EXT %s
+// CHECK-ZKNE-EXT: __riscv_zkne
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izknh1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKNH-EXT %s
+// CHECK-ZKNH-EXT: __riscv_zknh
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izksh1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKSH-EXT %s
+// CHECK-ZKSH-EXT: __riscv_zksh
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izksed1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKSED-EXT %s
+// CHECK-ZKSED-EXT: __riscv_zksed
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izkr1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKR-EXT %s
+// CHECK-ZKR-EXT: __riscv_zkr
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izkt1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZKT-EXT %s
+// CHECK-ZKT-EXT: __riscv_zkt
+
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izk1p0 -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-ZK-EXT %s
+// CHECK-ZK-EXT: __riscv_zk

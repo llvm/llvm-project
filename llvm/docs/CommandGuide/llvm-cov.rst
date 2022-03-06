@@ -349,6 +349,13 @@ OPTIONS
  to generate the coverage data on one machine, and then use llvm-cov on a
  different machine where you have the same files on a different path.
 
+.. option:: -coverage-watermark=<high>,<low>
+
+ Set high and low watermarks for coverage in html format output. This allows you
+ to set the high and low watermark of coverage as desired, green when
+ coverage >= high, red when coverage < low, and yellow otherwise. Both high and
+ low should be between 0-100 and high > low.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
