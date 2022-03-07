@@ -282,8 +282,9 @@ void ICF::run() {
             hash += dylibSym->stubsHelperIndex;
           else if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec) {
-              if (auto isec = dyn_cast<ConcatInputSection>(defined->isec))
-                hash += defined->value + isec->icfEqClass[icfPass % 2];
+              if (auto referentIsec =
+                      dyn_cast<ConcatInputSection>(defined->isec))
+                hash += defined->value + referentIsec->icfEqClass[icfPass % 2];
               else
                 hash += defined->isec->kind() +
                         defined->isec->getOffset(defined->value);
