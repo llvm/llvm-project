@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import shlex
 
 ##### Common utilities for update_*test_checks.py
 
@@ -1072,7 +1073,7 @@ def get_autogennote_suffix(parser, args):
 def check_for_command(line, parser, args, argv, argparse_callback):
     cmd_m = UTC_ARGS_CMD.match(line)
     if cmd_m:
-        for option in cmd_m.group('cmd').strip().split(' '):
+        for option in shlex.split(cmd_m.group('cmd').strip()):
             if option:
                 argv.append(option)
         args = parser.parse_args(filter(lambda arg: arg not in args.tests, argv))
