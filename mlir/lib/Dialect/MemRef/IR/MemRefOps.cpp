@@ -400,7 +400,7 @@ struct AllocaScopeHoister : public OpRewritePattern<AllocaScopeOp> {
       return WalkResult::advance();
     });
 
-    if (!toHoist.size())
+    if (toHoist.empty())
       return failure();
     rewriter.setInsertionPoint(lastParentWithoutScope);
     for (auto op : toHoist) {

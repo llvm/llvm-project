@@ -62,20 +62,20 @@ body: |
 ---
 # CHECK-LABEL: test_B:
 # CHECK-ENC: 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0
-# CHECK-ASM: b	20
+# CHECK-ASM: b	80
 name: test_B
 body: |
   bb.0:
-    B 20
+    B 80
 ...
 ---
 # CHECK-LABEL: test_BL:
 # CHECK-ENC: 0 1 0 1 0 1 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0
-# CHECK-ASM: bl	34
+# CHECK-ASM: bl	136
 name: test_BL
 body: |
   bb.0:
-    BL 34
+    BL 136
 ...
 
 # --------------------------------------------------------------------------------------------------------
