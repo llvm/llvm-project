@@ -145,6 +145,162 @@ TEST(DirectiveMap, ParseBroken) {
   EXPECT_EQ(0u, X.End.Tokens.size());
 }
 
+TEST(DirectiveMap, ChooseBranches) {
+  LangOptions Opts;
+  const std::string Cases[] = {
+      R"cpp(
+        // Branches with no alternatives are taken
+        #if COND // TAKEN
+        int x;
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Empty branches are better than nothing
+        #if COND // TAKEN
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Trivially false branches are not taken, even with no alternatives.
+        #if 0
+        int x;
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Longer branches are preferred over shorter branches
+        #if COND // TAKEN
+        int x = 1;
+        #else
+        int x;
+        #endif
+
+        #if COND
+        int x;
+        #else // TAKEN
+        int x = 1;
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Trivially true branches are taken if previous branches are trivial.
+        #if 1 // TAKEN
+        #else
+          int x = 1;
+        #endif
+
+        #if 0
+          int x = 1;
+        #elif 0
+          int x = 2;
+        #elif 1 // TAKEN
+          int x;
+        #endif
+
+        #if 0
+          int x = 1;
+        #elif FOO // TAKEN
+          int x = 2;
+        #elif 1
+          int x;
+        #endif
+      )cpp",
+
+      R"cpp(
+        // #else is a trivially true branch
+        #if 0
+          int x = 1;
+        #elif 0
+          int x = 2;
+        #else // TAKEN
+          int x;
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Directives break ties, but nondirective text is more important.
+        #if FOO
+          #define A 1 2 3
+        #else // TAKEN
+          #define B 4 5 6
+          #define C 7 8 9
+        #endif
+
+        #if FOO // TAKEN
+          ;
+          #define A 1 2 3
+        #else
+          #define B 4 5 6
+          #define C 7 8 9
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Avoid #error directives.
+        #if FOO
+          int x = 42;
+          #error This branch is no good
+        #else // TAKEN
+        #endif
+
+        #if FOO
+          // All paths here lead to errors.
+          int x = 42;
+          #if 1 // TAKEN
+            #if COND // TAKEN
+              #error This branch is no good
+            #else
+              #error This one is no good either
+            #endif
+          #endif
+        #else // TAKEN
+        #endif
+      )cpp",
+
+      R"cpp(
+        // Populate taken branches recursively.
+        #if FOO // TAKEN
+          int x = 42;
+          #if BAR
+            ;
+          #else // TAKEN
+            int y = 43;
+          #endif
+        #else
+          int x;
+          #if BAR // TAKEN
+            int y;
+          #else
+            ;
+          #endif
+        #endif
+      )cpp",
+  };
+  for (const auto &Code : Cases) {
+    TokenStream S = cook(lex(Code, Opts), Opts);
+
+    std::function<void(const DirectiveMap &)> Verify =
+        [&](const DirectiveMap &M) {
+          for (const auto &C : M.Chunks) {
+            if (C.kind() != DirectiveMap::Chunk::K_Conditional)
+              continue;
+            const DirectiveMap::Conditional &Cond(C);
+            for (unsigned I = 0; I < Cond.Branches.size(); ++I) {
+              auto Directive = S.tokens(Cond.Branches[I].first.Tokens);
+              EXPECT_EQ(I == Cond.Taken, Directive.back().text() == "// TAKEN")
+                  << "At line " << Directive.front().Line << " of: " << Code;
+              Verify(Cond.Branches[I].second);
+            }
+          }
+        };
+
+    DirectiveMap Map = DirectiveMap::parse(S);
+    chooseConditionalBranches(Map, S);
+    Verify(Map);
+  }
+}
+
 } // namespace
 } // namespace pseudo
 } // namespace clang

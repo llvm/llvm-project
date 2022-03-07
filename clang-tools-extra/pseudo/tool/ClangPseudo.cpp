@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
     clang::LangOptions LangOpts; // FIXME: use real options.
     auto Stream = clang::pseudo::lex(Text, LangOpts);
     auto Structure = clang::pseudo::DirectiveMap::parse(Stream);
+    clang::pseudo::chooseConditionalBranches(Structure, Stream);
 
     if (PrintDirectiveMap)
       llvm::outs() << Structure;
