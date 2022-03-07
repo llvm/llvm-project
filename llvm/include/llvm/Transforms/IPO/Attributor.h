@@ -4853,21 +4853,13 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual bool forallInterferingAccesses(
       OffsetAndSize OAS, function_ref<bool(const Access &, bool)> CB) const = 0;
 
-  /// Call \p CB on all accesses that might interfere with \p LI and return true
-  /// if all such accesses were known and the callback returned true for all of
-  /// them, false otherwise.
-  virtual bool forallInterferingAccesses(
-      LoadInst &LI, function_ref<bool(const Access &, bool)> CB) const = 0;
-  virtual bool forallInterferingAccesses(
-      StoreInst &SI, function_ref<bool(const Access &, bool)> CB) const = 0;
-
-  /// Call \p CB on all write accesses that might interfere with \p LI and
+  /// Call \p CB on all accesses that might interfere with \p I and
   /// return true if all such accesses were known and the callback returned true
   /// for all of them, false otherwise. In contrast to forallInterferingAccesses
   /// this function will perform reasoning to exclude write accesses that cannot
   /// affect the load even if they on the surface look as if they would.
-  virtual bool forallInterferingWrites(
-      Attributor &A, const AbstractAttribute &QueryingAA, LoadInst &LI,
+  virtual bool forallInterferingAccesses(
+      Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       function_ref<bool(const Access &, bool)> CB) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo

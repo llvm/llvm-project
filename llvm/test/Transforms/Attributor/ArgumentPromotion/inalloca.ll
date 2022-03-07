@@ -85,5 +85,5 @@ entry:
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nosync nounwind readonly willreturn }
 ;.

@@ -92,7 +92,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; IS__CGSCC____-NEXT:    [[W:%.*]] = call i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC____-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR3:[0-9]+]]
 ; IS__CGSCC____-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
-; IS__CGSCC____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR4:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    br label [[OK:%.*]]
 ; IS__CGSCC____:       OK:
 ; IS__CGSCC____-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
@@ -139,7 +139,6 @@ declare i32 @__gxx_personality_v0(...)
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR3]] = { nosync nounwind readnone willreturn }
 ;.

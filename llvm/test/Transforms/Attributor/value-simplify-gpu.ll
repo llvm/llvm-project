@@ -69,7 +69,6 @@ define internal void @level1Kernel(i32 %C) {
 ; IS__CGSCC____-NEXT:    call void @level2Kernelb() #[[ATTR4]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END]]
 ; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    call void @level2Kernelall_late() #[[ATTR6:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -236,7 +235,7 @@ define internal void @level1(i32 %C) {
 ; IS__CGSCC_OPM-NEXT:    call void @level2b(i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef) #[[ATTR4]]
 ; IS__CGSCC_OPM-NEXT:    br label [[IF_END]]
 ; IS__CGSCC_OPM:       if.end:
-; IS__CGSCC_OPM-NEXT:    call void @level2all_late(i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef) #[[ATTR7:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call void @level2all_late(i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef) #[[ATTR6:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: norecurse nosync nounwind
@@ -251,10 +250,10 @@ define internal void @level1(i32 %C) {
 ; IS__CGSCC_NPM-NEXT:    call void @level2a(i32 undef) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    br label [[IF_END:%.*]]
 ; IS__CGSCC_NPM:       if.else:
-; IS__CGSCC_NPM-NEXT:    call void @level2b(i32 undef) #[[ATTR7:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @level2b(i32 undef) #[[ATTR6:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    br label [[IF_END]]
 ; IS__CGSCC_NPM:       if.end:
-; IS__CGSCC_NPM-NEXT:    call void @level2all_late(i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef) #[[ATTR8:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @level2all_late(i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef) #[[ATTR7:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -413,8 +412,7 @@ declare dso_local void @use(i32, i32, i32) nosync norecurse nounwind
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR5]] = { nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR6]] = { nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nounwind writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR6]] = { nounwind writeonly }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { norecurse nosync nounwind "kernel" }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { norecurse nosync nounwind }
@@ -422,7 +420,6 @@ declare dso_local void @use(i32, i32, i32) nosync norecurse nounwind
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR4]] = { nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR5]] = { nounwind willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nosync nounwind }
-; IS__CGSCC_NPM: attributes #[[ATTR8]] = { nosync nounwind writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nosync nounwind }
+; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nosync nounwind writeonly }
 ;.
