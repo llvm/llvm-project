@@ -194,7 +194,8 @@ public:
   class Handler : public DebugActionManager::HandlerBase {
   public:
     Handler()
-        : HandlerBase(TypeID::get<DebugAction<ParameterTs...>::Handler>()) {}
+        : HandlerBase(
+              TypeID::get<typename DebugAction<ParameterTs...>::Handler>()) {}
 
     /// This hook allows for controlling whether an action should execute or
     /// not. `parameters` correspond to the set of values provided by the
@@ -207,7 +208,7 @@ public:
     /// Provide classof to allow casting between handler types.
     static bool classof(const DebugActionManager::HandlerBase *handler) {
       return handler->getHandlerID() ==
-             TypeID::get<DebugAction<ParameterTs...>::Handler>();
+             TypeID::get<typename DebugAction<ParameterTs...>::Handler>();
     }
   };
 
