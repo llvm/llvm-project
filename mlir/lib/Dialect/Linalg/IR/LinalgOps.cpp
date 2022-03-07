@@ -105,6 +105,33 @@ static LogicalResult foldMemRefCast(Operation *op) {
   return success(folded);
 }
 
+/// Helper function to find if there is atleast one dimension in an AffineMap
+/// testMap that is contained in `testMapLocation` of  `maps` but not in any
+/// other locations
+static bool hasaUniqueDim(ArrayRef<AffineMap> maps, unsigned testMapLocation) {
+  AffineMap testMap = maps[testMapLocation];
+  llvm::SmallDenseSet<unsigned> dimsToCheck;
+  for (auto result : testMap.getResults()) {
+    auto expr = result.dyn_cast<AffineDimExpr>();
+    if (expr != nullptr)
+      dimsToCheck.insert(expr.getPosition());
+  }
+  for (auto It : llvm::enumerate(maps)) {
+    if (It.index() == testMapLocation)
+      continue;
+    auto map = It.value();
+    for (auto result : map.getResults()) {
+      auto expr = result.dyn_cast<AffineDimExpr>();
+      if (expr != nullptr) {
+        dimsToCheck.erase(expr.getPosition());
+      }
+      if (dimsToCheck.empty())
+        return false;
+    }
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Region builder helper.
 // TODO: Move this to a utility library.
@@ -826,11 +853,95 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     return success();
   }
 };
+
+/// Drop dead args of a linalg generic op.
+/// An arg is dead if it has zero uses in the op region.
+struct DeadArgsGenericOpInputs : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<AffineMap> oldIndexingMaps = genericOp.getIndexingMaps();
+    // Maps must be projected permutations.
+    if (llvm::any_of(genericOp.getIndexingMaps(), [](AffineMap map) {
+          return !map.isProjectedPermutation();
+        }))
+      return failure();
+    Block &payload = genericOp.region().front();
+    SmallVector<Value> newInputOperands;
+    SmallVector<AffineMap> newIndexingMaps;
+    bool deadArgFound = false;
+    int inputSize = genericOp.getInputOperands().size();
+    for (int i = inputSize - 1; i >= 0; i--) {
+      OpOperand *opOperand = genericOp.getInputOperand(i);
+      // Iterate in reverse, so that we erase later args first, preventing the
+      // argument list from shifting unexpectedly and invalidating all our
+      // indices.
+      if (payload.getArgument(i).use_empty() &&
+          !hasaUniqueDim(oldIndexingMaps, i)) {
+        payload.eraseArgument(i);
+        deadArgFound = true;
+        // remove this indexing map out of consideration for hasaUniqueDim check
+        oldIndexingMaps.erase(oldIndexingMaps.begin() + i);
+      } else {
+        newInputOperands.insert(newInputOperands.begin(), opOperand->get());
+        newIndexingMaps.insert(newIndexingMaps.begin(),
+                               genericOp.getTiedIndexingMap(opOperand));
+      }
+    }
+    // Bail out if there are no dead args.
+    if (!deadArgFound)
+      return failure();
+    for (OpOperand *opOperand : genericOp.getOutputOperands())
+      newIndexingMaps.push_back(genericOp.getTiedIndexingMap(opOperand));
+    SmallVector<Value> outputOperands = genericOp.getOutputOperands();
+
+    auto newOp = rewriter.create<GenericOp>(
+        genericOp.getLoc(), genericOp->getResultTypes(), newInputOperands,
+        outputOperands, rewriter.getAffineMapArrayAttr(newIndexingMaps),
+        genericOp.iterator_types(), genericOp.docAttr(),
+        genericOp.library_callAttr());
+    // Copy over unknown attributes. They might be load bearing for some flow.
+    ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
+    for (NamedAttribute kv : genericOp->getAttrs()) {
+      if (!llvm::is_contained(odsAttrs, kv.getName().getValue())) {
+        newOp->setAttr(kv.getName(), kv.getValue());
+      }
+    }
+    rewriter.inlineRegionBefore(genericOp.region(), newOp.region(),
+                                newOp.region().begin());
+    rewriter.replaceOp(genericOp, newOp->getResults());
+    return success();
+  }
+};
+
+/// Fold linalg.fill into linalg.generic
+struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    if (!genericOp.hasTensorSemantics())
+      return failure();
+    bool fillFound = false;
+    Block &payload = genericOp.region().front();
+    for (OpOperand *opOperand : genericOp.getInputOperands()) {
+      FillOp fillOp = opOperand->get().getDefiningOp<FillOp>();
+      if (fillOp) {
+        fillFound = true;
+        payload.getArgument(opOperand->getOperandNumber())
+            .replaceAllUsesWith(fillOp.value());
+      }
+    }
+    // fail if there are no FillOps to fold.
+    return success(fillFound);
+  }
+};
 } // namespace
 
 void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<DeduplicateGenericOpInputs, EraseIdentityGenericOp>(context);
+  results.add<DeduplicateGenericOpInputs, EraseIdentityGenericOp,
+              DeadArgsGenericOpInputs, FoldFillWithGenericOp>(context);
 }
 
 LogicalResult GenericOp::fold(ArrayRef<Attribute>,

@@ -46,7 +46,8 @@ func @fuse_indexed_consumer(%A: memref<?x?xf32>,
         %10 = arith.index_cast %7 : index to i32
         %11 = arith.sitofp %10 : i32 to f32
         %12 = arith.addf %9, %11 : f32
-        linalg.yield %12 : f32
+        %13 = arith.addf %12, %arg4 : f32
+        linalg.yield %13 : f32
       }
     }
   }
