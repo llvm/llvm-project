@@ -1502,6 +1502,16 @@ StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
   return Result.first->first();
 }
 
+const GlobalDecl CodeGenModule::getMangledNameDecl(StringRef Name) {
+  auto it = MangledDeclNames.begin();
+  while (it != MangledDeclNames.end()) {
+    if (it->second == Name)
+      return it->first;
+    it++;
+  }
+  return GlobalDecl();
+}
+
 llvm::GlobalValue *CodeGenModule::GetGlobalValue(StringRef Name) {
   return getModule().getNamedValue(Name);
 }
@@ -5171,6 +5181,13 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
       setTLSMode(GA, *VD);
 
   SetCommonAttributes(GD, GA);
+
+  // Emit global alias debug information.
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (CGDebugInfo *DI = getModuleDebugInfo()) {
+      DI->EmitGlobalAlias(cast<llvm::GlobalValue>(GA->getAliasee()), GD);
+    }
+  }
 }
 
 void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {

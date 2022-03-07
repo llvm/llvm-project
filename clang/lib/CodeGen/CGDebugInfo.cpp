@@ -3845,6 +3845,17 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
     auto N = I->second;
     if (auto *GVE = dyn_cast_or_null<llvm::DIGlobalVariableExpression>(N))
       return GVE->getVariable();
+    return cast<llvm::DINode>(N);
+  }
+
+  // Search imported declaration cache if it is already defined
+  // as imported declaration.
+  auto IE = ImportedDeclCache.find(D->getCanonicalDecl());
+
+  if (IE != ImportedDeclCache.end()) {
+    auto N = IE->second;
+    if (auto *GVE = dyn_cast_or_null<llvm::DIImportedEntity>(N))
+      return cast<llvm::DINode>(GVE);
     return dyn_cast_or_null<llvm::DINode>(N);
   }
 
@@ -5390,6 +5401,47 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
           DContext, Name, StringRef(), Unit, getLineNumber(D->getLocation()),
           Ty, false, false, nullptr, nullptr, nullptr, Align);
   Var->addDebugInfo(GVE);
+}
+
+void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
+                                  const GlobalDecl GD) {
+
+  assert(GV);
+
+  if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
+    return;
+
+  const auto *D = cast<ValueDecl>(GD.getDecl());
+  if (D->hasAttr<NoDebugAttr>())
+    return;
+
+  auto AliaseeDecl = CGM.getMangledNameDecl(GV->getName());
+  llvm::DINode *DI;
+
+  if (!AliaseeDecl)
+    // FIXME: Aliasee not declared yet - possibly declared later
+    // For example,
+    //
+    //   1 extern int newname __attribute__((alias("oldname")));
+    //   2 int oldname = 1;
+    //
+    // No debug info would be generated for 'newname' in this case.
+    //
+    // Fix compiler to generate "newname" as imported_declaration
+    // pointing to the DIE of "oldname".
+    return;
+  if (!(DI = getDeclarationOrDefinition(
+            AliaseeDecl.getCanonicalDecl().getDecl())))
+    return;
+
+  llvm::DIScope *DContext = getDeclContextDescriptor(D);
+  auto Loc = D->getLocation();
+
+  llvm::DIImportedEntity *ImportDI = DBuilder.createImportedDeclaration(
+      DContext, DI, getOrCreateFile(Loc), getLineNumber(Loc), D->getName());
+
+  // Record this DIE in the cache for nested declaration reference.
+  ImportedDeclCache[GD.getCanonicalDecl().getDecl()].reset(ImportDI);
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {
