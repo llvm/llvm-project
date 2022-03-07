@@ -35,8 +35,8 @@ static bool isSparseTensor(OpOperand *op) {
   if (auto enc = getSparseTensorEncoding(op->get().getType())) {
     ArrayRef<SparseTensorEncodingAttr::DimLevelType> dimTypes =
         enc.getDimLevelType();
-    for (unsigned i = 0, e = dimTypes.size(); i < e; i++)
-      if (dimTypes[i] == SparseTensorEncodingAttr::DimLevelType::Compressed)
+    for (auto dimType : dimTypes)
+      if (dimType == SparseTensorEncodingAttr::DimLevelType::Compressed)
         return true; // at least one compressed
   }
   return false;
