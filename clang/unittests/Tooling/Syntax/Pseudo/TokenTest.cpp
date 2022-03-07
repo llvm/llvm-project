@@ -172,6 +172,23 @@ no_indent \
                             }));
 }
 
+TEST(TokenTest, DropComments) {
+  LangOptions Opts;
+  std::string Code = R"cpp(
+  // comment
+  int /*abc*/;
+)cpp";
+  TokenStream Raw = cook(lex(Code, Opts), Opts);
+  TokenStream Stripped = stripComments(Raw);
+  EXPECT_THAT(Raw.tokens(),
+              ElementsAreArray(
+                  {token("// comment", tok::comment), token("int", tok::kw_int),
+                   token("/*abc*/", tok::comment), token(";", tok::semi)}));
+
+  EXPECT_THAT(Stripped.tokens(), ElementsAreArray({token("int", tok::kw_int),
+                                                   token(";", tok::semi)}));
+}
+
 } // namespace
 } // namespace pseudo
 } // namespace syntax
