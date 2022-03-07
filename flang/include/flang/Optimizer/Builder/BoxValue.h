@@ -346,7 +346,11 @@ public:
   bool isAllocatable() const {
     return getBoxTy().getEleTy().isa<fir::HeapType>();
   }
-  /// Does this entity have any non deferred length parameters ?
+  // Replace the fir.ref<fir.box>, keeping any non-deferred parameters.
+  MutableBoxValue clone(mlir::Value newBox) const {
+    return {newBox, lenParams, mutableProperties};
+  }
+  /// Does this entity has any non deferred length parameters ?
   bool hasNonDeferredLenParams() const { return !lenParams.empty(); }
   /// Return the non deferred length parameters.
   llvm::ArrayRef<mlir::Value> nonDeferredLenParams() const { return lenParams; }
@@ -354,7 +358,7 @@ public:
                                        const MutableBoxValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
 
-  /// Set of variables is used instead of a descriptor to hold the entity
+  /// Set of variable is used instead of a descriptor to hold the entity
   /// properties instead of a fir.ref<fir.box<>>.
   bool isDescribedByVariables() const { return !mutableProperties.isEmpty(); }
 
