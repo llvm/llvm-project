@@ -1,4 +1,4 @@
-//===- TestConvertCallOp.cpp - Test LLVM Conversion of Standard CallOp ----===//
+//===- TestConvertCallOp.cpp - Test LLVM Conversion of Func CallOp --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "TestDialect.h"
 #include "TestTypes.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
@@ -58,7 +58,7 @@ public:
 
     // Populate patterns.
     RewritePatternSet patterns(m.getContext());
-    populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    populateFuncToLLVMConversionPatterns(typeConverter, patterns);
     patterns.add<TestTypeProducerOpConverter>(typeConverter);
 
     // Set target.

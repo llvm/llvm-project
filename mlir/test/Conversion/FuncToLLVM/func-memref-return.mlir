@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-std-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
-// RUN: mlir-opt -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1'  -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1'  -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
 
 // These tests were separated from func-memref.mlir because applying
 // -reconcile-unrealized-casts resulted in `llvm.extractvalue` ops getting

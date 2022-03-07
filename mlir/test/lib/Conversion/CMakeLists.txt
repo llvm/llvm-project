@@ -1,1 +1,1 @@
-add_subdirectory(StandardToLLVM)
+add_subdirectory(FuncToLLVM)
