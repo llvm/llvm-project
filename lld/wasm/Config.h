@@ -35,6 +35,7 @@ struct Configuration {
   bool exportAll;
   bool exportDynamic;
   bool exportTable;
+  bool extendedConst;
   bool growableTable;
   bool gcSections;
   bool importMemory;
