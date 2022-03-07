@@ -844,7 +844,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
     Diagnostic diag;
   };
 
-  ParallelDiagnosticHandlerImpl(MLIRContext *ctx) : handlerID(0), context(ctx) {
+  ParallelDiagnosticHandlerImpl(MLIRContext *ctx) : context(ctx) {
     handlerID = ctx->getDiagEngine().registerHandler([this](Diagnostic &diag) {
       uint64_t tid = llvm::get_threadid();
       llvm::sys::SmartScopedLock<true> lock(mutex);
@@ -942,7 +942,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   mutable std::vector<ThreadDiagnostic> diagnostics;
 
   /// The unique id for the parallel handler.
-  DiagnosticEngine::HandlerID handlerID;
+  DiagnosticEngine::HandlerID handlerID = 0;
 
   /// The context to emit the diagnostics to.
   MLIRContext *context;

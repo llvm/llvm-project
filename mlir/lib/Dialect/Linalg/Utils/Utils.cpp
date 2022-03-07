@@ -57,7 +57,7 @@ namespace {
 //   `d0 + 2 * d1 + d3` is tiled by [0, 0, 0, 2] but not by [0, 0, 2, 0]
 //
 struct TileCheck : public AffineExprVisitor<TileCheck> {
-  TileCheck(ValueRange tileSizes) : isTiled(false), tileSizes(tileSizes) {}
+  TileCheck(ValueRange tileSizes) : tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
     isTiled |= !isZero(tileSizes[expr.getPosition()]);
@@ -69,7 +69,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
       assert(expr.getRHS().cast<AffineConstantExpr>().getValue() > 0 &&
              "nonpositive multiplying coefficient");
   }
-  bool isTiled;
+  bool isTiled = false;
   ValueRange tileSizes;
 };
 

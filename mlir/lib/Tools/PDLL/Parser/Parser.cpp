@@ -43,8 +43,7 @@ class Parser {
 public:
   Parser(ast::Context &ctx, llvm::SourceMgr &sourceMgr)
       : ctx(ctx), lexer(sourceMgr, ctx.getDiagEngine()),
-        curToken(lexer.lexToken()), curDeclScope(nullptr),
-        valueTy(ast::ValueType::get(ctx)),
+        curToken(lexer.lexToken()), valueTy(ast::ValueType::get(ctx)),
         valueRangeTy(ast::ValueRangeType::get(ctx)),
         typeTy(ast::TypeType::get(ctx)),
         typeRangeTy(ast::TypeRangeType::get(ctx)),
@@ -469,7 +468,7 @@ private:
   Token curToken;
 
   /// The most recently defined decl scope.
-  ast::DeclScope *curDeclScope;
+  ast::DeclScope *curDeclScope = nullptr;
   llvm::SpecificBumpPtrAllocator<ast::DeclScope> scopeAllocator;
 
   /// The current context of the parser.

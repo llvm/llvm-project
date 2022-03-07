@@ -243,7 +243,7 @@ private:
   StaticMatcherHelper &staticMatcherHelper;
 
   // The next unused ID for newly created values.
-  unsigned nextValueId;
+  unsigned nextValueId = 0;
 
   raw_indented_ostream os;
 
@@ -333,8 +333,7 @@ private:
 PatternEmitter::PatternEmitter(Record *pat, RecordOperatorMap *mapper,
                                raw_ostream &os, StaticMatcherHelper &helper)
     : loc(pat->getLoc()), opMap(mapper), pattern(pat, mapper),
-      symbolInfoMap(pat->getLoc()), staticMatcherHelper(helper), nextValueId(0),
-      os(os) {
+      symbolInfoMap(pat->getLoc()), staticMatcherHelper(helper), os(os) {
   fmtCtx.withBuilder("rewriter");
 }
 

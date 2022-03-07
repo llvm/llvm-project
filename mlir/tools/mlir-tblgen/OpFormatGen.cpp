@@ -301,8 +301,8 @@ struct OperationFormat {
   };
 
   OperationFormat(const Operator &op)
-      : allOperands(false), allOperandTypes(false), allResultTypes(false),
-        infersResultTypes(false) {
+
+  {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
@@ -346,10 +346,10 @@ struct OperationFormat {
 
   /// A flag indicating if all operand/result types were seen. If the format
   /// contains these, it can not contain individual type resolvers.
-  bool allOperands, allOperandTypes, allResultTypes;
+  bool allOperands = false, allOperandTypes = false, allResultTypes = false;
 
   /// A flag indicating if this operation infers its result types
-  bool infersResultTypes;
+  bool infersResultTypes = false;
 
   /// A flag indicating if this operation has the SingleBlockImplicitTerminator
   /// trait.

@@ -716,7 +716,7 @@ private:
   int64_t version;
 
   /// The number of lines in the file.
-  int64_t totalNumLines;
+  int64_t totalNumLines = 0;
 
   /// The chunks of this file. The order of these chunks is the order in which
   /// they appear in the text file.
@@ -728,7 +728,7 @@ MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
                            int64_t version, DialectRegistry &registry,
                            std::vector<lsp::Diagnostic> &diagnostics)
     : context(registry, MLIRContext::Threading::DISABLED),
-      contents(fileContents.str()), version(version), totalNumLines(0) {
+      contents(fileContents.str()), version(version) {
   context.allowUnregisteredDialects();
 
   // Split the file into separate MLIR documents.
