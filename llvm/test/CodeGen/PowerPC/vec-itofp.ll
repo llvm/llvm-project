@@ -307,34 +307,33 @@ define void @stest8(<8 x double>* nocapture %Sink, <8 x i16>* nocapture readonly
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_0@toc@l
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_1@toc@l
-; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_2@toc@l
-; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 16(r3)
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_3@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs1, 48(r3)
+; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs2, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs2, 0(r3)
+; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs3, v2
-; CHECK-BE-NEXT:    stxv vs3, 32(r3)
+; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <8 x i16>, <8 x i16>* %SrcPtr, align 16
@@ -395,20 +394,19 @@ define void @stest4(<4 x double>* nocapture %Sink, <4 x i16>* nocapture readonly
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI4_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor v3, v3, v3
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI4_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI4_1@toc@l
-; CHECK-BE-NEXT:    vperm v3, v3, v2, v4
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 16(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v2
-; CHECK-BE-NEXT:    stxv vs1, 0(r3)
+; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <4 x i16>, <4 x i16>* %SrcPtr, align 16

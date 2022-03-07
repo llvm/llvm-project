@@ -459,20 +459,19 @@ define void @test4elt_signed(<4 x double>* noalias nocapture sret(<4 x double>) 
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mtvsrd v2, r4
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor v3, v3, v3
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI5_0@toc@l
-; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI5_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI5_1@toc@l
-; CHECK-BE-NEXT:    vperm v3, v3, v2, v4
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 16(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v2
-; CHECK-BE-NEXT:    stxv vs1, 0(r3)
+; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast i64 %a.coerce to <4 x i16>
@@ -564,34 +563,33 @@ define void @test8elt_signed(<8 x double>* noalias nocapture sret(<8 x double>) 
 ; CHECK-BE-LABEL: test8elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_0@toc@l
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_1@toc@l
-; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_2@toc@l
-; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
-; CHECK-BE-NEXT:    stxv vs0, 16(r3)
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_3@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs1, 48(r3)
+; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    vextsh2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs2, v3
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs2, 0(r3)
+; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs3, v2
-; CHECK-BE-NEXT:    stxv vs3, 32(r3)
+; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = sitofp <8 x i16> %a to <8 x double>
@@ -730,52 +728,51 @@ define void @test16elt_signed(<16 x double>* noalias nocapture sret(<16 x double
 ; CHECK-BE-LABEL: test16elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis r5, r2, .LCPI7_0@toc@ha
-; CHECK-BE-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-NEXT:    lxv v1, 16(r4)
-; CHECK-BE-NEXT:    xxlxor v5, v5, v5
-; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_2@toc@ha
+; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    addi r5, r5, .LCPI7_0@toc@l
-; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_2@toc@l
-; CHECK-BE-NEXT:    lxv v2, 0(r5)
+; CHECK-BE-NEXT:    lxv v3, 0(r5)
 ; CHECK-BE-NEXT:    addis r5, r2, .LCPI7_1@toc@ha
 ; CHECK-BE-NEXT:    addi r5, r5, .LCPI7_1@toc@l
-; CHECK-BE-NEXT:    lxv v3, 0(r5)
-; CHECK-BE-NEXT:    vperm v0, v5, v4, v2
-; CHECK-BE-NEXT:    vperm v2, v5, v1, v2
-; CHECK-BE-NEXT:    vextsh2d v2, v2
-; CHECK-BE-NEXT:    vextsh2d v0, v0
-; CHECK-BE-NEXT:    xvcvsxddp vs2, v2
-; CHECK-BE-NEXT:    vperm v2, v5, v1, v3
-; CHECK-BE-NEXT:    xvcvsxddp vs0, v0
-; CHECK-BE-NEXT:    vperm v0, v5, v4, v3
-; CHECK-BE-NEXT:    vextsh2d v2, v2
-; CHECK-BE-NEXT:    vextsh2d v0, v0
-; CHECK-BE-NEXT:    xvcvsxddp vs3, v2
-; CHECK-BE-NEXT:    lxv v2, 0(r4)
-; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_3@toc@ha
-; CHECK-BE-NEXT:    xvcvsxddp vs1, v0
-; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_3@toc@l
-; CHECK-BE-NEXT:    stxv vs2, 80(r3)
-; CHECK-BE-NEXT:    stxv vs0, 16(r3)
-; CHECK-BE-NEXT:    vperm v3, v4, v4, v2
-; CHECK-BE-NEXT:    vperm v2, v1, v1, v2
-; CHECK-BE-NEXT:    stxv vs3, 112(r3)
-; CHECK-BE-NEXT:    stxv vs1, 48(r3)
-; CHECK-BE-NEXT:    vextsh2d v3, v3
-; CHECK-BE-NEXT:    vextsh2d v2, v2
-; CHECK-BE-NEXT:    xvcvsxddp vs4, v3
-; CHECK-BE-NEXT:    lxv v3, 0(r4)
-; CHECK-BE-NEXT:    xvcvsxddp vs6, v2
-; CHECK-BE-NEXT:    vperm v4, v4, v4, v3
-; CHECK-BE-NEXT:    vperm v2, v1, v1, v3
-; CHECK-BE-NEXT:    stxv vs6, 64(r3)
-; CHECK-BE-NEXT:    stxv vs4, 0(r3)
+; CHECK-BE-NEXT:    lxv v5, 0(r5)
+; CHECK-BE-NEXT:    addis r5, r2, .LCPI7_2@toc@ha
+; CHECK-BE-NEXT:    vperm v4, v2, v2, v3
+; CHECK-BE-NEXT:    addi r5, r5, .LCPI7_2@toc@l
 ; CHECK-BE-NEXT:    vextsh2d v4, v4
+; CHECK-BE-NEXT:    lxv v0, 0(r5)
+; CHECK-BE-NEXT:    addis r5, r2, .LCPI7_3@toc@ha
+; CHECK-BE-NEXT:    xvcvsxddp vs0, v4
+; CHECK-BE-NEXT:    vperm v4, v2, v2, v5
+; CHECK-BE-NEXT:    addi r5, r5, .LCPI7_3@toc@l
+; CHECK-BE-NEXT:    lxv v1, 0(r5)
+; CHECK-BE-NEXT:    vextsh2d v4, v4
+; CHECK-BE-NEXT:    xvcvsxddp vs1, v4
+; CHECK-BE-NEXT:    vperm v4, v2, v2, v0
+; CHECK-BE-NEXT:    vperm v2, v2, v2, v1
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
+; CHECK-BE-NEXT:    vextsh2d v4, v4
+; CHECK-BE-NEXT:    xvcvsxddp vs2, v4
+; CHECK-BE-NEXT:    lxv v4, 16(r4)
+; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
-; CHECK-BE-NEXT:    xvcvsxddp vs5, v4
+; CHECK-BE-NEXT:    xvcvsxddp vs3, v2
+; CHECK-BE-NEXT:    vperm v2, v4, v4, v3
+; CHECK-BE-NEXT:    stxv vs2, 32(r3)
+; CHECK-BE-NEXT:    vextsh2d v2, v2
+; CHECK-BE-NEXT:    stxv vs3, 48(r3)
+; CHECK-BE-NEXT:    xvcvsxddp vs4, v2
+; CHECK-BE-NEXT:    vperm v2, v4, v4, v5
+; CHECK-BE-NEXT:    vextsh2d v2, v2
+; CHECK-BE-NEXT:    xvcvsxddp vs5, v2
+; CHECK-BE-NEXT:    vperm v2, v4, v4, v0
+; CHECK-BE-NEXT:    stxv vs4, 64(r3)
+; CHECK-BE-NEXT:    vextsh2d v2, v2
+; CHECK-BE-NEXT:    xvcvsxddp vs6, v2
+; CHECK-BE-NEXT:    vperm v2, v4, v4, v1
+; CHECK-BE-NEXT:    stxv vs5, 80(r3)
+; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs7, v2
-; CHECK-BE-NEXT:    stxv vs7, 96(r3)
-; CHECK-BE-NEXT:    stxv vs5, 32(r3)
+; CHECK-BE-NEXT:    stxv vs6, 96(r3)
+; CHECK-BE-NEXT:    stxv vs7, 112(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = load <16 x i16>, <16 x i16>* %0, align 32

@@ -352,7 +352,7 @@ Function *HotColdSplitting::extractColdRegion(
   // TODO: Pass BFI and BPI to update profile information.
   CodeExtractor CE(Region, &DT, /* AggregateArgs */ false, /* BFI */ nullptr,
                    /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
-                   /* AllowAlloca */ false,
+                   /* AllowAlloca */ false, /* AllocaBlock */ nullptr,
                    /* Suffix */ "cold." + std::to_string(Count));
 
   // Perform a simple cost/benefit analysis to decide whether or not to permit
