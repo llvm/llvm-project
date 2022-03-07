@@ -3008,20 +3008,11 @@ cc_library(
 
 cc_library(
     name = "Support",
-    srcs = glob(
-        [
-            "lib/Support/*.cpp",
-            "lib/Support/*.h",
-        ],
-        exclude = [
-            # TODO(jpienaar): Move this out, else Support depends on Analysis/
-            "lib/Support/MlirOptMain.cpp",
-        ],
-    ),
-    hdrs = glob(
-        ["include/mlir/Support/*.h"],
-        exclude = ["include/mlir/Support/MlirOptMain.h"],
-    ),
+    srcs = glob([
+        "lib/Support/*.cpp",
+        "lib/Support/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
     deps = ["//llvm:Support"],
 )
@@ -3064,9 +3055,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/mlir/Parser/*.h",
-    ]) + [
-        "include/mlir/Parser.h",
-    ],
+    ]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -5548,11 +5537,8 @@ cc_library(
 
 cc_library(
     name = "Translation",
-    srcs = glob([
-        "lib/Translation/*.cpp",
-        "lib/Translation/*.h",
-    ]),
-    hdrs = ["include/mlir/Translation.h"],
+    srcs = glob(["lib/Tools/mlir-translate/*.cpp"]),
+    hdrs = glob(["include/mlir/Tools/mlir-translate/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -5846,8 +5832,8 @@ cc_library(
 
 cc_library(
     name = "MlirOptLib",
-    srcs = ["lib/Support/MlirOptMain.cpp"],
-    hdrs = ["include/mlir/Support/MlirOptMain.h"],
+    srcs = ["lib/Tools/mlir-opt/MlirOptMain.cpp"],
+    hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
     includes = ["include"],
     deps = [
         ":IR",
