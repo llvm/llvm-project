@@ -188,6 +188,11 @@ public:
   SDValue annotateLegalAVL(SDValue AVL) const;
   VETargetMasks getTargetSplitMask(SDValue RawMask, SDValue RawAVL,
                                    PackElem Part) const;
+
+  // Splitting support
+  SDValue getSplitPtrOffset(SDValue Ptr, SDValue ByteStride,
+                            PackElem Part) const;
+  SDValue getSplitPtrStride(SDValue PackStride) const;
 };
 
 } // namespace llvm
