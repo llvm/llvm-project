@@ -86,6 +86,33 @@ TEST_F(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
       /*ApplyBuiltinTransfer=*/false);
 }
 
+TEST_F(TransferTest, BoolVarDecl) {
+  std::string Code = R"(
+    void target() {
+      bool Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const StorageLocation *FooLoc =
+                    Env.getStorageLocation(*FooDecl, SkipPast::None);
+                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+
+                const Value *FooVal = Env.getValue(*FooLoc);
+                EXPECT_TRUE(isa_and_nonnull<BoolValue>(FooVal));
+              });
+}
+
 TEST_F(TransferTest, IntVarDecl) {
   std::string Code = R"(
     void target() {
@@ -2035,9 +2062,7 @@ TEST_F(TransferTest, AssignFromBoolLiteral) {
 
 TEST_F(TransferTest, AssignFromBoolConjunction) {
   std::string Code = R"(
-    void target() {
-      bool Foo = true;
-      bool Bar = true;
+    void target(bool Foo, bool Bar) {
       bool Baz = (Foo) && (Bar);
       // [[p]]
     }
@@ -2078,9 +2103,7 @@ TEST_F(TransferTest, AssignFromBoolConjunction) {
 
 TEST_F(TransferTest, AssignFromBoolDisjunction) {
   std::string Code = R"(
-    void target() {
-      bool Foo = true;
-      bool Bar = true;
+    void target(bool Foo, bool Bar) {
       bool Baz = (Foo) || (Bar);
       // [[p]]
     }
