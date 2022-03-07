@@ -105,6 +105,13 @@ void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
 void bcopy(void *s1, void *s2, size_t n);
 
+typedef size_t socklen_t;
+
+struct sockaddr {
+  unsigned short sa_family;
+  char sa_data[14];
+};
+
 #define BUFSIZE 10
 
 int Buffer[BUFSIZE];
@@ -437,8 +444,6 @@ int testGethostname(char *name, size_t len) {
   return system(name); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-struct sockaddr;
-typedef size_t socklen_t;
 int getnameinfo(const struct sockaddr *restrict addr, socklen_t addrlen,
                 char *restrict host, socklen_t hostlen,
                 char *restrict serv, socklen_t servlen, int flags);
@@ -505,13 +510,6 @@ void testRecv(int *buf, size_t len, int flags) {
   clang_analyzer_isTainted_int(*buf); // expected-warning {{YES}}
   clang_analyzer_isTainted_int(read); // expected-warning {{YES}}
 }
-
-typedef size_t socklen_t;
-
-struct sockaddr {
-  unsigned short sa_family;
-  char sa_data[14];
-};
 
 ssize_t recvfrom(int sockfd, void *restrict buf, size_t len, int flags,
                  struct sockaddr *restrict src_addr,
