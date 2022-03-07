@@ -40,21 +40,6 @@ void populateShapeRewritePatterns(RewritePatternSet &patterns);
 void populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns);
 std::unique_ptr<OperationPass<FuncOp>> createRemoveShapeConstraintsPass();
 
-/// Populates patterns for shape dialect structural type conversions and sets up
-/// the provided ConversionTarget with the appropriate legality configuration
-/// for the ops to get converted properly.
-///
-/// A "structural" type conversion is one where the underlying ops are
-/// completely agnostic to the actual types involved and simply need to update
-/// their types consistently. An example of this is shape.assuming -- the
-/// shape.assuming op and the corresponding shape.assuming_yield op need to have
-/// consistent types, but the exact types don't matter. So all that we need to
-/// do for a structural type conversion is to update both of their types
-/// consistently to the new types prescribed by the TypeConverter.
-void populateShapeStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target);
-
 // Bufferizes shape dialect ops.
 //
 // Note that most shape dialect ops must be converted to std before
