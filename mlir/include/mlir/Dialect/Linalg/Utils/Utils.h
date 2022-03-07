@@ -397,7 +397,7 @@ private:
 FailureOr<TileLoopNest> tileConsumerAndFuseProducers(
     OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
     ArrayRef<int64_t> tileInterchange,
-    Optional<LinalgLoopDistributionOptions> tileDistribution);
+    const Optional<LinalgLoopDistributionOptions> &tileDistribution);
 
 //===----------------------------------------------------------------------===//
 // Generic op region utilities

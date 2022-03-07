@@ -415,7 +415,7 @@ SmallVector<LinalgOp> TileLoopNest::getAllTiledAndFusedOps() {
 FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
     OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
     ArrayRef<int64_t> tileInterchange,
-    Optional<LinalgLoopDistributionOptions> tileDistribution) {
+    const Optional<LinalgLoopDistributionOptions> &tileDistribution) {
   assert(tileSizes.size() == tileInterchange.size() &&
          "expect the number of tile sizes and interchange dims to match");
   assert(isPermutation(tileInterchange) &&

@@ -1862,8 +1862,8 @@ LogicalResult arith::SelectOp::verify() {
 OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
   // Don't fold if shifting more than the bit width.
   bool bounded = false;
-  auto result =
-      constFoldBinaryOp<IntegerAttr>(operands, [&](APInt a, const APInt &b) {
+  auto result = constFoldBinaryOp<IntegerAttr>(
+      operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
         return std::move(a).shl(b);
       });

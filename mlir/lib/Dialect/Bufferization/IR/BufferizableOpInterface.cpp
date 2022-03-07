@@ -64,8 +64,8 @@ BufferizationOptions::dynCastBufferizableOp(Value value) const {
   return nullptr;
 }
 
-void BufferizationOptions::addDialectStateInitializer(StringRef name,
-                                                      DialectStateInitFn fn) {
+void BufferizationOptions::addDialectStateInitializer(
+    StringRef name, const DialectStateInitFn &fn) {
   stateInitializers.push_back(
       [=](BufferizationState &state) { state.insertDialectState(name, fn()); });
 }
