@@ -278,9 +278,7 @@ void ICF::run() {
       uint64_t hash = isec->icfEqClass[icfPass % 2];
       for (const Reloc &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
-          if (auto *dylibSym = dyn_cast<DylibSymbol>(sym))
-            hash += dylibSym->stubsHelperIndex;
-          else if (auto *defined = dyn_cast<Defined>(sym)) {
+          if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec) {
               if (auto referentIsec =
                       dyn_cast<ConcatInputSection>(defined->isec))
@@ -291,8 +289,9 @@ void ICF::run() {
             } else {
               hash += defined->value;
             }
-          } else if (!isa<Undefined>(sym)) // ICF runs before Undefined diags.
+          } else if (!isa<Undefined>(sym)) { // ICF runs before Undefined diags
             llvm_unreachable("foldIdenticalSections symbol kind");
+          }
         }
       }
       // Set MSB to 1 to avoid collisions with non-hashed classes.
