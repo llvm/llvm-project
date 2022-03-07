@@ -331,6 +331,10 @@ public:
 
   bool GetUseAutosuggestion() const;
 
+  llvm::StringRef GetAutosuggestionAnsiPrefix() const;
+
+  llvm::StringRef GetAutosuggestionAnsiSuffix() const;
+
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);

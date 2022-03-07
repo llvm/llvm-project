@@ -163,4 +163,12 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"If true, LLDB will show suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F.">;
+  def ShowAutosuggestionAnsiPrefix: Property<"show-autosuggestion-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying suggestion in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately before the suggestion.">;
+  def ShowAutosuggestionAnsiSuffix: Property<"show-autosuggestion-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying suggestion in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
 }

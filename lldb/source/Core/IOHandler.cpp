@@ -17,6 +17,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
@@ -273,10 +274,14 @@ IOHandlerEditline::IOHandlerEditline(
       this->AutoCompleteCallback(request);
     });
 
-    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor()) {
+    if (debugger.GetUseAutosuggestion()) {
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
         return this->SuggestionCallback(line);
       });
+      m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+          debugger.GetAutosuggestionAnsiPrefix()));
+      m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+          debugger.GetAutosuggestionAnsiSuffix()));
     }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
