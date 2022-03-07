@@ -302,13 +302,20 @@ add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
 
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
-  if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  # If LIBCXX_ENABLE_SHARED isn't set (by the user on the cmake command
+  # line or via a cache file), use its expected default value (enabled).
+  if ((LIBCXX_ENABLE_SHARED OR NOT DEFINED LIBCXX_ENABLE_SHARED) AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
     # Building libcxxabi statically, but intending for it to be statically
     # linked into a shared libcxx; keep dllexport enabled within libcxxabi,
     # as the symbols will need to be exported from libcxx.
   else()
     # Regular static build; disable dllexports.
     add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
+    if (NOT LIBCXXABI_HERMETIC_STATIC_LIBRARY)
+      # TODO: Enable this warning message as soon as we're sure this is the solution.
+      # message(WARNING "Implicitly disabling dllexport on Win32 is not supported anymore. Please build with "
+      #                 "LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON instead. This will become an error in LLVM 16.")
+    endif()
   endif()
 endif()
 
