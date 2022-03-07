@@ -6,7 +6,7 @@
 
 ; RUN: llvm-objcopy --strip-debug %S/Inputs/inline-cs-pseudoprobe.perfbin %t4
 ; RUN: llvm-objcopy --only-keep-debug %S/Inputs/inline-cs-pseudoprobe.perfbin %t5
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%t4 --debug-binary=%t5 --output=%t6 --profile-summary-hot-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%t4 --debug-binary=%t5 --output=%t6 --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t6 --check-prefix=CHECK-CS-PROBE
 
 ; CHECK: bar:0:0
