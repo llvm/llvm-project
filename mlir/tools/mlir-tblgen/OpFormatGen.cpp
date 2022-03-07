@@ -2851,7 +2851,7 @@ OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
     if (failed(lelement))
       return failure();
     literalElements.push_back(*lelement);
-    parsingElements.push_back(std::vector<FormatElement *>());
+    parsingElements.emplace_back();
     std::vector<FormatElement *> &currParsingElements = parsingElements.back();
     while (peekToken().getKind() != FormatToken::pipe &&
            peekToken().getKind() != FormatToken::r_paren) {
