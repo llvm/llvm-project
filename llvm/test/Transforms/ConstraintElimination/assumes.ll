@@ -164,7 +164,7 @@ define i1 @assume_does_not_dominates_successor_with_may_unwind_call_before_assum
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 0
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[C_2]]
 ;
 entry:
   br i1 %i.0, label %exit, label %if.then
