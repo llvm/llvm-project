@@ -1722,15 +1722,9 @@ let TargetPrefix = "ppc" in {
                    [llvm_float_ty, llvm_float_ty, llvm_float_ty],
                    [IntrNoMem]>;
   def int_ppc_fnmsub
-      : GCCBuiltin<"__builtin_ppc_fnmsub">,
-        Intrinsic <[llvm_double_ty],
-                   [llvm_double_ty, llvm_double_ty, llvm_double_ty],
-                   [IntrNoMem]>;
-  def int_ppc_fnmsubs
-      : GCCBuiltin<"__builtin_ppc_fnmsubs">,
-        Intrinsic <[llvm_float_ty],
-                   [llvm_float_ty, llvm_float_ty, llvm_float_ty],
-                   [IntrNoMem]>;
+      : Intrinsic<[llvm_anyfloat_ty],
+                  [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                  [IntrNoMem]>;
   def int_ppc_fre
       : GCCBuiltin<"__builtin_ppc_fre">,
         Intrinsic <[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
