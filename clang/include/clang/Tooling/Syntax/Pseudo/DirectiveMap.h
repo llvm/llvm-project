@@ -1,4 +1,4 @@
-//===--- Preprocess.h - Preprocess token streams -----------------*- C++-*-===//
+//===--- DirectiveMap.h - Find and strip preprocessor directives -*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,7 +56,7 @@ namespace pseudo {
 ///
 /// Unlike the clang preprocessor, we model the full tree explicitly.
 /// This class does not recognize macro usage, only directives.
-struct PPStructure {
+struct DirectiveMap {
   /// A range of code (and possibly comments) containing no directives.
   struct Code {
     Token::Range Tokens;
@@ -76,7 +76,7 @@ struct PPStructure {
     ///
     /// The first branch will have an #if type directive.
     /// Subsequent branches will have #else type directives.
-    std::vector<std::pair<Directive, PPStructure>> Branches;
+    std::vector<std::pair<Directive, DirectiveMap>> Branches;
     /// The directive terminating the conditional, should be #endif.
     Directive End;
   };
@@ -86,22 +86,22 @@ struct PPStructure {
   std::vector<Chunk> Chunks;
 
   /// Extract preprocessor structure by examining the raw tokens.
-  static PPStructure parse(const TokenStream &);
+  static DirectiveMap parse(const TokenStream &);
 
   // FIXME: add heuristically selection of conditional branches.
   // FIXME: allow deriving a preprocessed stream
 };
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const PPStructure &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const PPStructure::Chunk &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const PPStructure::Code &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap::Chunk &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap::Code &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
-                              const PPStructure::Directive &);
+                              const DirectiveMap::Directive &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
-                              const PPStructure::Conditional &);
+                              const DirectiveMap::Conditional &);
 
 // FIXME: This approximates std::variant<Code, Directive, Conditional>.
 //         Switch once we can use C++17.
-class PPStructure::Chunk {
+class DirectiveMap::Chunk {
 public:
   enum Kind { K_Empty, K_Code, K_Directive, K_Conditional };
   Kind kind() const {

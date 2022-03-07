@@ -1,4 +1,4 @@
-//===--- Preprocess.cpp - Preprocess token streams ------------------------===//
+//===--- DirectiveMap.cpp - Find and strip preprocessor directives --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/Preprocess.h"
+#include "clang/Tooling/Syntax/Pseudo/DirectiveMap.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -16,10 +16,11 @@ namespace syntax {
 namespace pseudo {
 namespace {
 
-class PPParser {
+class DirectiveParser {
 public:
-  explicit PPParser(const TokenStream &Code) : Code(Code), Tok(&Code.front()) {}
-  void parse(PPStructure *Result) { parse(Result, /*TopLevel=*/true); }
+  explicit DirectiveParser(const TokenStream &Code)
+      : Code(Code), Tok(&Code.front()) {}
+  void parse(DirectiveMap *Result) { parse(Result, /*TopLevel=*/true); }
 
 private:
   // Roles that a directive might take within a conditional block.
@@ -42,10 +43,11 @@ private:
     }
   }
 
-  // Parses tokens starting at Tok into PP.
-  // If we reach an End or Else directive that ends PP, returns it.
+  // Parses tokens starting at Tok into Map.
+  // If we reach an End or Else directive that ends Map, returns it.
   // If TopLevel is true, then we do not expect End and always return None.
-  llvm::Optional<PPStructure::Directive> parse(PPStructure *PP, bool TopLevel) {
+  llvm::Optional<DirectiveMap::Directive> parse(DirectiveMap *Map,
+                                                bool TopLevel) {
     auto StartsDirective =
         [&, AllowDirectiveAt((const Token *)nullptr)]() mutable {
           if (Tok->flag(LexFlags::StartsPPLine)) {
@@ -65,29 +67,29 @@ private:
         do
           ++Tok;
         while (Tok->Kind != tok::eof && !StartsDirective());
-        PP->Chunks.push_back(PPStructure::Code{
+        Map->Chunks.push_back(DirectiveMap::Code{
             Token::Range{Code.index(*Start), Code.index(*Tok)}});
         continue;
       }
 
       // We have some kind of directive.
-      PPStructure::Directive Directive;
+      DirectiveMap::Directive Directive;
       parseDirective(&Directive);
       Cond Kind = classifyDirective(Directive.Kind);
       if (Kind == Cond::If) {
         // #if or similar, starting a nested conditional block.
-        PPStructure::Conditional Conditional;
+        DirectiveMap::Conditional Conditional;
         Conditional.Branches.emplace_back();
         Conditional.Branches.back().first = std::move(Directive);
         parseConditional(&Conditional);
-        PP->Chunks.push_back(std::move(Conditional));
+        Map->Chunks.push_back(std::move(Conditional));
       } else if ((Kind == Cond::Else || Kind == Cond::End) && !TopLevel) {
-        // #endif or similar, ending this PPStructure scope.
+        // #endif or similar, ending this PStructure scope.
         // (#endif is unexpected at the top level, treat as simple directive).
         return std::move(Directive);
       } else {
         // #define or similar, a simple directive at the current scope.
-        PP->Chunks.push_back(std::move(Directive));
+        Map->Chunks.push_back(std::move(Directive));
       }
     }
     return None;
@@ -95,7 +97,7 @@ private:
 
   // Parse the rest of a conditional section, after seeing the If directive.
   // Returns after consuming the End directive.
-  void parseConditional(PPStructure::Conditional *C) {
+  void parseConditional(DirectiveMap::Conditional *C) {
     assert(C->Branches.size() == 1 &&
            C->Branches.front().second.Chunks.empty() &&
            "Should be ready to parse first branch body");
@@ -118,7 +120,7 @@ private:
   }
 
   // Parse a directive. Tok is the hash.
-  void parseDirective(PPStructure::Directive *D) {
+  void parseDirective(DirectiveMap::Directive *D) {
     assert(Tok->Kind == tok::hash);
 
     // Directive spans from the hash until the end of line or file.
@@ -142,25 +144,26 @@ private:
 
 } // namespace
 
-PPStructure PPStructure::parse(const TokenStream &Code) {
-  PPStructure Result;
-  PPParser(Code).parse(&Result);
+DirectiveMap DirectiveMap::parse(const TokenStream &Code) {
+  DirectiveMap Result;
+  DirectiveParser(Code).parse(&Result);
   return Result;
 }
 
-static void dump(llvm::raw_ostream &OS, const PPStructure &, unsigned Indent);
-static void dump(llvm::raw_ostream &OS, const PPStructure::Directive &Directive,
+static void dump(llvm::raw_ostream &OS, const DirectiveMap &, unsigned Indent);
+static void dump(llvm::raw_ostream &OS, const DirectiveMap::Directive &Directive,
                  unsigned Indent) {
   OS.indent(Indent) << llvm::formatv("#{0} ({1} tokens)\n",
                                      tok::getPPKeywordSpelling(Directive.Kind),
                                      Directive.Tokens.size());
 }
-static void dump(llvm::raw_ostream &OS, const PPStructure::Code &Code,
+static void dump(llvm::raw_ostream &OS, const DirectiveMap::Code &Code,
                  unsigned Indent) {
   OS.indent(Indent) << llvm::formatv("code ({0} tokens)\n", Code.Tokens.size());
 }
 static void dump(llvm::raw_ostream &OS,
-                 const PPStructure::Conditional &Conditional, unsigned Indent) {
+                 const DirectiveMap::Conditional &Conditional,
+                 unsigned Indent) {
   for (const auto &Branch : Conditional.Branches) {
     dump(OS, Branch.first, Indent);
     dump(OS, Branch.second, Indent + 2);
@@ -168,23 +171,23 @@ static void dump(llvm::raw_ostream &OS,
   dump(OS, Conditional.End, Indent);
 }
 
-static void dump(llvm::raw_ostream &OS, const PPStructure::Chunk &Chunk,
+static void dump(llvm::raw_ostream &OS, const DirectiveMap::Chunk &Chunk,
                  unsigned Indent) {
   switch (Chunk.kind()) {
-  case PPStructure::Chunk::K_Empty:
+  case DirectiveMap::Chunk::K_Empty:
     llvm_unreachable("invalid chunk");
-  case PPStructure::Chunk::K_Code:
-    return dump(OS, (const PPStructure::Code &)Chunk, Indent);
-  case PPStructure::Chunk::K_Directive:
-    return dump(OS, (const PPStructure::Directive &)Chunk, Indent);
-  case PPStructure::Chunk::K_Conditional:
-    return dump(OS, (const PPStructure::Conditional &)Chunk, Indent);
+  case DirectiveMap::Chunk::K_Code:
+    return dump(OS, (const DirectiveMap::Code &)Chunk, Indent);
+  case DirectiveMap::Chunk::K_Directive:
+    return dump(OS, (const DirectiveMap::Directive &)Chunk, Indent);
+  case DirectiveMap::Chunk::K_Conditional:
+    return dump(OS, (const DirectiveMap::Conditional &)Chunk, Indent);
   }
 }
 
-static void dump(llvm::raw_ostream &OS, const PPStructure &PP,
+static void dump(llvm::raw_ostream &OS, const DirectiveMap &Map,
                  unsigned Indent) {
-  for (const auto &Chunk : PP.Chunks)
+  for (const auto &Chunk : Map.Chunks)
     dump(OS, Chunk, Indent);
 }
 
@@ -194,11 +197,11 @@ static void dump(llvm::raw_ostream &OS, const PPStructure &PP,
     dump(OS, T, 0);                                                            \
     return OS;                                                                 \
   }
-OSTREAM_DUMP(PPStructure)
-OSTREAM_DUMP(PPStructure::Chunk)
-OSTREAM_DUMP(PPStructure::Directive)
-OSTREAM_DUMP(PPStructure::Conditional)
-OSTREAM_DUMP(PPStructure::Code)
+OSTREAM_DUMP(DirectiveMap)
+OSTREAM_DUMP(DirectiveMap::Chunk)
+OSTREAM_DUMP(DirectiveMap::Directive)
+OSTREAM_DUMP(DirectiveMap::Conditional)
+OSTREAM_DUMP(DirectiveMap::Code)
 #undef OSTREAM_DUMP
 
 } // namespace pseudo
