@@ -677,6 +677,9 @@ public:
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
+  const char *GetCStrFromSection(Section *section,
+                                 lldb::offset_t section_offset) const;
+
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
   // Strip linker annotations (such as @@VERSION) from symbol names.
