@@ -417,11 +417,9 @@ def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
-
-  let verifier = [{
-    // allow `undef : ref<T>` since it is a possible from transformations
-    return mlir::success();
-  }];
+  
+  // Note: we allow `undef : ref<T>` since it is a possible from transformations.
+  let hasVerifier = 0;
 }
 
 def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
