@@ -899,7 +899,40 @@ void Fortran::lower::mapSymbolAttributes(
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::ScalarDynamicChar &x) {
-        TODO(loc, "ScalarDynamicChar variable lowering");
+        // type is a CHARACTER, determine the LEN value
+        auto charLen = x.charLen();
+        if (replace) {
+          Fortran::lower::SymbolBox symBox = symMap.lookupSymbol(sym);
+          mlir::Value boxAddr = symBox.getAddr();
+          mlir::Value len;
+          mlir::Type addrTy = boxAddr.getType();
+          if (addrTy.isa<fir::BoxCharType>() || addrTy.isa<fir::BoxType>()) {
+            std::tie(boxAddr, len) = charHelp.createUnboxChar(symBox.getAddr());
+          } else {
+            // dummy from an other entry case: we cannot get a dynamic length
+            // for it, it's illegal for the user program to use it. However,
+            // since we are lowering all function unit statements regardless
+            // of whether the execution will reach them or not, we need to
+            // fill a value for the length here.
+            len = builder.createIntegerConstant(
+                loc, builder.getCharacterLengthType(), 1);
+          }
+          // Override LEN with an expression
+          if (charLen)
+            len = genExplicitCharLen(charLen);
+          symMap.addCharSymbol(sym, boxAddr, len, true);
+          return;
+        }
+        // local CHARACTER variable
+        mlir::Value len = genExplicitCharLen(charLen);
+        if (preAlloc) {
+          symMap.addCharSymbol(sym, preAlloc, len);
+          return;
+        }
+        llvm::SmallVector<mlir::Value> lengths = {len};
+        mlir::Value local =
+            createNewLocal(converter, loc, var, preAlloc, llvm::None, lengths);
+        symMap.addCharSymbol(sym, local, len);
       },
 
       //===--------------------------------------------------------------===//

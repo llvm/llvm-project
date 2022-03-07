@@ -26,6 +26,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Factory.h"
+#include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Semantics/expression.h"
@@ -1116,8 +1117,16 @@ public:
     // will be used only if there is no explicit length in the local interface).
     mlir::Value funcPointer;
     mlir::Value charFuncPointerLength;
-    if (caller.getIfIndirectCallSymbol()) {
-      TODO(loc, "genCallOpAndResult indirect call");
+    if (const Fortran::semantics::Symbol *sym =
+            caller.getIfIndirectCallSymbol()) {
+      funcPointer = symMap.lookupSymbol(*sym).getAddr();
+      if (!funcPointer)
+        fir::emitFatalError(loc, "failed to find indirect call symbol address");
+      if (fir::isCharacterProcedureTuple(funcPointer.getType(),
+                                         /*acceptRawFunc=*/false))
+        std::tie(funcPointer, charFuncPointerLength) =
+            fir::factory::extractCharacterProcedureTuple(builder, loc,
+                                                         funcPointer);
     }
 
     mlir::IndexType idxTy = builder.getIndexType();
@@ -1156,7 +1165,20 @@ public:
       }
 
       if (!extents.empty() || !lengths.empty()) {
-        TODO(loc, "genCallOpResult extents and length");
+        auto *bldr = &converter.getFirOpBuilder();
+        auto stackSaveFn = fir::factory::getLlvmStackSave(builder);
+        auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
+        mlir::Value sp =
+            bldr->create<fir::CallOp>(loc, stackSaveFn.getType().getResults(),
+                                      stackSaveSymbol, mlir::ValueRange{})
+                .getResult(0);
+        stmtCtx.attachCleanup([bldr, loc, sp]() {
+          auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
+          auto stackRestoreSymbol =
+              bldr->getSymbolRefAttr(stackRestoreFn.getName());
+          bldr->create<fir::CallOp>(loc, stackRestoreFn.getType().getResults(),
+                                    stackRestoreSymbol, mlir::ValueRange{sp});
+        });
       }
       mlir::Value temp =
           builder.createTemporary(loc, type, ".result", extents, resultLengths);
@@ -1302,7 +1324,11 @@ public:
       allocatedResult->match(
           [&](const fir::MutableBoxValue &box) {
             if (box.isAllocatable()) {
-              TODO(loc, "allocatedResult for allocatable");
+              // 9.7.3.2 point 4. Finalize allocatables.
+              fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
+              stmtCtx.attachCleanup([bldr, loc, box]() {
+                fir::factory::genFinalization(*bldr, loc, box);
+              });
             }
           },
           [](const auto &) {});
