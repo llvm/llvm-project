@@ -290,7 +290,8 @@ DataInitializationCompiler<DSV>::ConvertElement(
             exprAnalyzer_.GetFoldingContext(), type, expr)}) {
       if (context.ShouldWarn(
               common::LanguageFeature::LogicalIntegerAssignment)) {
-        context.Say("nonstandard usage: initialization of %s with %s"_en_US,
+        context.Say(
+            "nonstandard usage: initialization of %s with %s"_port_en_US,
             type.AsFortran(), expr.GetType().value().AsFortran());
       }
       return {std::make_pair(std::move(*converted), false)};
@@ -398,11 +399,11 @@ bool DataInitializationCompiler<DSV>::InitElement(
       if (IsBOZLiteral(*expr) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
         exprAnalyzer_.Say(
-            "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_en_US,
+            "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
       } else if (converted->second) {
         exprAnalyzer_.context().Say(
-            "DATA statement value initializes '%s' of type '%s' with CHARACTER"_en_US,
+            "DATA statement value initializes '%s' of type '%s' with CHARACTER"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
       }
       auto folded{evaluate::Fold(context, std::move(converted->first))};

@@ -173,7 +173,7 @@ static Expr<T> FoldProduct(
     }};
     if (overflow) {
       context.messages().Say(
-          "PRODUCT() of %s data overflowed"_en_US, T::AsFortran());
+          "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     } else {
       return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
@@ -212,7 +212,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
     }};
     if (overflow) {
       context.messages().Say(
-          "SUM() of %s data overflowed"_en_US, T::AsFortran());
+          "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     } else {
       return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }

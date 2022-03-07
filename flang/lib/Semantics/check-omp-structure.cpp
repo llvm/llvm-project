@@ -519,7 +519,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   if (!eligibleTarget) {
     context_.Say(parser::FindSourceLocation(c),
         "If %s directive is nested inside TARGET region, the behaviour "
-        "is unspecified"_en_US,
+        "is unspecified"_port_en_US,
         parser::ToUpperCaseLetters(
             getDirectiveName(ineligibleTargetDir).str()));
   }
@@ -874,7 +874,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       llvm::omp::Directive::OMPD_declare_target)
                     context_.Say(name->source,
                         "The entity with PARAMETER attribute is used in a %s "
-                        "directive"_en_US,
+                        "directive"_warn_en_US,
                         ContextDirectiveAsFortran());
                 } else if (FindCommonBlockContaining(*name->symbol)) {
                   context_.Say(name->source,

@@ -954,7 +954,7 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   CHECK(sourceFile);
   if (!VerifyHeader(sourceFile->content())) {
-    Say(name, ancestorName, "File has invalid checksum: %s"_en_US,
+    Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
         sourceFile->path());
     return nullptr;
   }
