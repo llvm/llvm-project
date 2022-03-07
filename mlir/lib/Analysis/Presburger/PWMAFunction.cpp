@@ -30,7 +30,7 @@ PresburgerSet PWMAFunction::getDomain() const {
   PresburgerSet domain =
       PresburgerSet::getEmptySet(getNumDimIds(), getNumSymbolIds());
   for (const MultiAffineFunction &piece : pieces)
-    domain.unionPolyInPlace(piece.getDomain());
+    domain.unionInPlace(piece.getDomain());
   return domain;
 }
 

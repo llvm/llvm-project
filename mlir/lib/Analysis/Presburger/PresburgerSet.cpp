@@ -18,45 +18,44 @@ using namespace presburger;
 
 PresburgerSet::PresburgerSet(const IntegerPolyhedron &poly)
     : PresburgerSpace(poly) {
-  unionPolyInPlace(poly);
+  unionInPlace(poly);
 }
 
 unsigned PresburgerSet::getNumPolys() const {
   return integerPolyhedrons.size();
 }
 
-ArrayRef<IntegerPolyhedron> PresburgerSet::getAllIntegerPolyhedron() const {
+ArrayRef<IntegerPolyhedron> PresburgerSet::getAllPolys() const {
   return integerPolyhedrons;
 }
 
-const IntegerPolyhedron &
-PresburgerSet::getIntegerPolyhedron(unsigned index) const {
+const IntegerPolyhedron &PresburgerSet::getPoly(unsigned index) const {
   assert(index < integerPolyhedrons.size() && "index out of bounds!");
   return integerPolyhedrons[index];
 }
 
 /// Mutate this set, turning it into the union of this set and the given
 /// IntegerPolyhedron.
-void PresburgerSet::unionPolyInPlace(const IntegerPolyhedron &poly) {
+void PresburgerSet::unionInPlace(const IntegerPolyhedron &poly) {
   assert(PresburgerSpace::isEqual(poly) && "Spaces should match");
   integerPolyhedrons.push_back(poly);
 }
 
 /// Mutate this set, turning it into the union of this set and the given set.
 ///
-/// This is accomplished by simply adding all the Poly of the given set to this
-/// set.
-void PresburgerSet::unionSetInPlace(const PresburgerSet &set) {
+/// This is accomplished by simply adding all the polyhedrons of the given set
+/// to this set.
+void PresburgerSet::unionInPlace(const PresburgerSet &set) {
   assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   for (const IntegerPolyhedron &poly : set.integerPolyhedrons)
-    unionPolyInPlace(poly);
+    unionInPlace(poly);
 }
 
 /// Return the union of this set and the given set.
 PresburgerSet PresburgerSet::unionSet(const PresburgerSet &set) const {
   assert(PresburgerSpace::isEqual(set) && "Spaces should match");
   PresburgerSet result = *this;
-  result.unionSetInPlace(set);
+  result.unionInPlace(set);
   return result;
 }
 
@@ -70,7 +69,7 @@ bool PresburgerSet::containsPoint(ArrayRef<int64_t> point) const {
 PresburgerSet PresburgerSet::getUniverse(unsigned numDims,
                                          unsigned numSymbols) {
   PresburgerSet result(numDims, numSymbols);
-  result.unionPolyInPlace(IntegerPolyhedron::getUniverse(numDims, numSymbols));
+  result.unionInPlace(IntegerPolyhedron::getUniverse(numDims, numSymbols));
   return result;
 }
 
@@ -96,7 +95,7 @@ PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
       csACopy.mergeLocalIds(csBCopy);
       csACopy.append(csBCopy);
       if (!csACopy.isEmpty())
-        result.unionPolyInPlace(csACopy);
+        result.unionInPlace(csACopy);
     }
   }
   return result;
@@ -153,9 +152,10 @@ static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
 /// division inequality is added, as these parts will become empty anyway.
 ///
 /// As a heuristic, we try adding all the constraints and check if simplex
-/// says that the intersection is empty. If it is, then subtracting this Poly is
-/// a no-op and we just skip it. Also, in the process we find out that some
-/// constraints are redundant. These redundant constraints are ignored.
+/// says that the intersection is empty. If it is, then subtracting this
+/// polyhedrons is a no-op and we just skip it. Also, in the process we find out
+/// that some constraints are redundant. These redundant constraints are
+/// ignored.
 ///
 /// b and simplex are callee saved, i.e., their values on return are
 /// semantically equivalent to their values when the function is called.
@@ -163,10 +163,10 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
                                 const PresburgerSet &s, unsigned i,
                                 PresburgerSet &result) {
   if (i == s.getNumPolys()) {
-    result.unionPolyInPlace(b);
+    result.unionInPlace(b);
     return;
   }
-  IntegerPolyhedron sI = s.getIntegerPolyhedron(i);
+  IntegerPolyhedron sI = s.getPoly(i);
 
   // Below, we append some additional constraints and ids to b. We want to
   // rollback b to its initial state before returning, which we will do by
@@ -299,17 +299,18 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 
 /// Return the set difference poly \ set.
 ///
-/// The Poly here is modified in subtractRecursively, so it cannot be a const
-/// reference even though it is restored to its original state before returning
-/// from that function.
-PresburgerSet PresburgerSet::getSetDifference(IntegerPolyhedron poly,
-                                              const PresburgerSet &set) {
+/// The polyhedron here is modified in subtractRecursively, so it cannot be a
+/// const reference even though it is restored to its original state before
+/// returning from that function.
+static PresburgerSet getSetDifference(IntegerPolyhedron poly,
+                                      const PresburgerSet &set) {
   assert(poly.PresburgerSpace::isEqual(set) && "Spaces should match");
   if (poly.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(poly.getNumDimIds(),
                                       poly.getNumSymbolIds());
 
-  PresburgerSet result(poly.getNumDimIds(), poly.getNumSymbolIds());
+  PresburgerSet result =
+      PresburgerSet::getEmptySet(poly.getNumDimIds(), poly.getNumSymbolIds());
   Simplex simplex(poly);
   subtractRecursively(poly, simplex, set, 0, result);
   return result;
@@ -328,7 +329,7 @@ PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   PresburgerSet result(getNumDimIds(), getNumSymbolIds());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const IntegerPolyhedron &poly : integerPolyhedrons)
-    result.unionSetInPlace(getSetDifference(poly, set));
+    result.unionInPlace(getSetDifference(poly, set));
   return result;
 }
 
@@ -636,13 +637,13 @@ PresburgerSet PresburgerSet::coalesce() const {
   }
 
   for (unsigned i = 0, e = polyhedrons.size(); i < e; ++i)
-    newSet.unionPolyInPlace(polyhedrons[i]);
+    newSet.unionInPlace(polyhedrons[i]);
 
   return newSet;
 }
 
 void PresburgerSet::print(raw_ostream &os) const {
-  os << getNumPolys() << " IntegerPolyhedron:\n";
+  os << "Number of Polyhedrons: " << getNumPolys() << "\n";
   for (const IntegerPolyhedron &poly : integerPolyhedrons) {
     poly.print(os);
     os << '\n';

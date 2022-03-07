@@ -32,7 +32,7 @@ static PresburgerSet
 parsePresburgerSetFromPolyStrings(unsigned numDims, ArrayRef<StringRef> strs) {
   PresburgerSet set = PresburgerSet::getEmptySet(numDims);
   for (StringRef str : strs)
-    set.unionPolyInPlace(parsePoly(str));
+    set.unionInPlace(parsePoly(str));
   return set;
 }
 
@@ -103,7 +103,7 @@ static PresburgerSet makeSetFromPoly(unsigned numDims,
                                      ArrayRef<IntegerPolyhedron> polys) {
   PresburgerSet set = PresburgerSet::getEmptySet(numDims);
   for (const IntegerPolyhedron &poly : polys)
-    set.unionPolyInPlace(poly);
+    set.unionInPlace(poly);
   return set;
 }
 
