@@ -23,6 +23,8 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
+static constexpr bool verboseDiagnostics = false;
+
 class ICF {
 public:
   ICF(std::vector<ConcatInputSection *> &inputs);
@@ -47,6 +49,8 @@ public:
 
   unsigned icfPass = 0;
   std::atomic<bool> icfRepeat{false};
+  std::atomic<uint64_t> equalsConstantCount{0};
+  std::atomic<uint64_t> equalsVariableCount{0};
 };
 
 ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
@@ -87,6 +91,8 @@ ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
 // except references to other ConcatInputSections.
 bool ICF::equalsConstant(const ConcatInputSection *ia,
                          const ConcatInputSection *ib) {
+  if (verboseDiagnostics)
+    ++equalsConstantCount;
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
@@ -159,6 +165,8 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
 // handled by equalsConstant().
 bool ICF::equalsVariable(const ConcatInputSection *ia,
                          const ConcatInputSection *ib) {
+  if (verboseDiagnostics)
+    ++equalsVariableCount;
   assert(ia->relocs.size() == ib->relocs.size());
   auto f = [this](const Reloc &ra, const Reloc &rb) {
     // We already filtered out mismatching values/addends in equalsConstant.
@@ -307,6 +315,10 @@ void ICF::run() {
     });
   } while (icfRepeat);
   log("ICF needed " + Twine(icfPass) + " iterations");
+  if (verboseDiagnostics) {
+    log("equalsConstant() called " + Twine(equalsConstantCount) + " times");
+    log("equalsVariable() called " + Twine(equalsVariableCount) + " times");
+  }
 
   // Fold sections within equivalence classes
   forEachClass([&](size_t begin, size_t end) {
