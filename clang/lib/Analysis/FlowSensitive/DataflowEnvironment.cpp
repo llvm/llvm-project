@@ -366,7 +366,8 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
       assert(Field != nullptr);
       StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
       MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
-      setValue(FieldLoc, StructVal->getChild(*Field));
+      if (auto *FieldVal = StructVal->getChild(*Field))
+        setValue(FieldLoc, *FieldVal);
     }
   }
 
@@ -485,9 +486,9 @@ Value *Environment::createValueUnlessSelfReferential(
         continue;
 
       Visited.insert(FieldType.getCanonicalType());
-      FieldValues.insert(
-          {Field, createValueUnlessSelfReferential(
-                      FieldType, Visited, Depth + 1, CreatedValuesCount)});
+      if (auto *FieldValue = createValueUnlessSelfReferential(
+              FieldType, Visited, Depth + 1, CreatedValuesCount))
+        FieldValues.insert({Field, FieldValue});
       Visited.erase(FieldType.getCanonicalType());
     }
 
