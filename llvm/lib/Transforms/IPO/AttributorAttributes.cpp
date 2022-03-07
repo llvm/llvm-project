@@ -4521,13 +4521,7 @@ struct AAAlignImpl : AAAlign {
       takeKnownMaximum(Attr.getValueAsInt());
 
     Value &V = getAssociatedValue();
-    // TODO: This is a HACK to avoid getPointerAlignment to introduce a ptr2int
-    //       use of the function pointer. This was caused by D73131. We want to
-    //       avoid this for function pointers especially because we iterate
-    //       their uses and int2ptr is not handled. It is not a correctness
-    //       problem though!
-    if (!V.getType()->getPointerElementType()->isFunctionTy())
-      takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
+    takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
 
     if (getIRPosition().isFnInterfaceKind() &&
         (!getAnchorScope() ||
