@@ -621,8 +621,6 @@ public:
         break;
       }
       case MCCFIInstruction::OpDefCfaOffset: {
-        if (StackSize != 0)
-          return CU::UNWIND_ARM64_MODE_DWARF;
         StackSize = std::abs(Inst.getOffset());
         break;
       }
