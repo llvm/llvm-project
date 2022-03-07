@@ -308,11 +308,11 @@ define internal void @level2a(i32* %addr) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: norecurse nosync nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@level2a
-; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree nonnull readnone align 4294967296 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* undef, align 4
+; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* undef, align 4294967296
 ; IS__CGSCC_OPM-NEXT:    call void @use(i32 [[TMP0]], i32 [[TMP1]], i32 17) #[[ATTR4]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
@@ -347,11 +347,11 @@ define internal void @level2b(i32* %addr) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: norecurse nosync nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@level2b
-; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree nonnull readnone align 4294967296 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* undef, align 4
+; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* undef, align 4294967296
 ; IS__CGSCC_OPM-NEXT:    call void @use(i32 [[TMP0]], i32 [[TMP1]], i32 17) #[[ATTR4]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;

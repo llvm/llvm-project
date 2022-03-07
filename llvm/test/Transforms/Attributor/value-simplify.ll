@@ -916,7 +916,7 @@ define internal void @callee_is_undef(void ()* %fn) {
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callee_is_undef
-; IS__CGSCC____-SAME: (void ()* nocapture nofree noundef nonnull [[FN:%.*]]) {
+; IS__CGSCC____-SAME: (void ()* nocapture nofree noundef nonnull align 4294967296 [[FN:%.*]]) {
 ; IS__CGSCC____-NEXT:    call void [[FN]]()
 ; IS__CGSCC____-NEXT:    ret void
 ;
