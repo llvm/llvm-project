@@ -117,7 +117,7 @@ public:
   // Points to the surviving section after this one is folded by ICF
   ConcatInputSection *replacement = nullptr;
   // Equivalence-class ID for ICF
-  uint64_t icfEqClass[2] = {0, 0};
+  uint32_t icfEqClass[2] = {0, 0};
 
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the

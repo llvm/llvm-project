@@ -30,7 +30,7 @@ using namespace lld::macho;
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
 static_assert(sizeof(void *) != 8 ||
-                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 96,
+                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 

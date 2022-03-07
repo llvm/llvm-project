@@ -275,7 +275,7 @@ void ICF::run() {
   // Into each origin-section hash, combine all reloc referent section hashes.
   for (icfPass = 0; icfPass < 2; ++icfPass) {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
-      uint64_t hash = isec->icfEqClass[icfPass % 2];
+      uint32_t hash = isec->icfEqClass[icfPass % 2];
       for (const Reloc &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
@@ -295,7 +295,7 @@ void ICF::run() {
         }
       }
       // Set MSB to 1 to avoid collisions with non-hashed classes.
-      isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 63);
+      isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 31);
     });
   }
 
@@ -391,7 +391,7 @@ void macho::foldIdenticalSections() {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
-    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 63);
+    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 31);
   });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.
