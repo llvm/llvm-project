@@ -9,8 +9,9 @@
 // Registry for user-provided translations.
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_TRANSLATION_H
-#define MLIR_TRANSLATION_H
+
+#ifndef MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H
+#define MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H
 
 #include "llvm/Support/CommandLine.h"
 
@@ -96,14 +97,6 @@ struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
                        size_t globalWidth) const override;
 };
 
-/// Translate to/from an MLIR module from/to an external representation (e.g.
-/// LLVM IR, SPIRV binary, ...). This is the entry point for the implementation
-/// of tools like `mlir-translate`. The translation to perform is parsed from
-/// the command line. The `toolName` argument is used for the header displayed
-/// by `--help`.
-LogicalResult mlirTranslateMain(int argc, char **argv,
-                                llvm::StringRef toolName);
-
 } // namespace mlir
 
-#endif // MLIR_TRANSLATION_H
+#endif // MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H

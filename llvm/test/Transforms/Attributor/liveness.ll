@@ -2281,7 +2281,7 @@ define void @call_via_pointer_with_dead_args(i32* %a, i32* %b, void (i32*, i32*,
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)
   ret void
 }
-; FIXME: We have to prevent the propagation of %fp in the new pm CGSCC pass until the CallGraphUpdater can handle the new call edge.
+
 define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
@@ -2289,8 +2289,8 @@ define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
-; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]]) {
-; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* noalias nocapture nofree nonnull readnone align 128 dereferenceable(4) [[B:%.*]]) {
+; IS__CGSCC____-NEXT:    call void @called_via_pointer(i32* [[A]], i32* noalias nocapture nofree nonnull readnone align 128 dereferenceable(4) undef, i32* noalias nocapture nofree readnone undef, i64 undef, i32** noalias nocapture nofree readnone align 4294967296 undef)
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)
@@ -2303,8 +2303,8 @@ define internal void @call_via_pointer_with_dead_args_internal_b(i32* %a, i32* %
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
-; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]]) {
-; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* noalias nocapture nofree nonnull readnone align 128 dereferenceable(4) [[B:%.*]]) {
+; IS__CGSCC____-NEXT:    call void @called_via_pointer_internal_2(i32* [[A]])
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)
@@ -2327,12 +2327,10 @@ define void @call_via_pointer_with_dead_args_caller(i32* %a, i32* %b) {
 ; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* [[B:%.*]]) {
 ; IS__CGSCC____-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
 ; IS__CGSCC____-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
-; IS__CGSCC____-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
-; IS__CGSCC____-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
 ; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR1]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer)
 ; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR2]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer_internal_1)
-; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR3]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer)
-; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR4]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer_internal_2)
+; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* noalias nocapture nofree nonnull readnone align 128 dereferenceable(4) undef)
+; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* noalias nocapture nofree nonnull readnone align 128 dereferenceable(4) undef)
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %ptr1 = alloca i32, align 128
@@ -2373,12 +2371,19 @@ entry:
 }
 ; FIXME: Figure out why the MODULE has the unused arguments still
 define internal void @called_via_pointer_internal_2(i32* %a, i32* %b, i32* %c, i64 %d, i32** %e) {
-; CHECK-LABEL: define {{[^@]+}}@called_via_pointer_internal_2
-; CHECK-SAME: (i32* [[A:%.*]], i32* nocapture nofree readnone [[B:%.*]], i32* nocapture nofree readnone [[C:%.*]], i64 [[D:%.*]], i32** nocapture nofree readnone [[E:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @use_i32p(i32* [[A]])
-; CHECK-NEXT:    tail call void @use_i32p(i32* [[A]])
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@called_via_pointer_internal_2
+; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* nocapture nofree readnone [[B:%.*]], i32* nocapture nofree readnone [[C:%.*]], i64 [[D:%.*]], i32** nocapture nofree readnone [[E:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    tail call void @use_i32p(i32* [[A]])
+; NOT_CGSCC_NPM-NEXT:    tail call void @use_i32p(i32* [[A]])
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@called_via_pointer_internal_2
+; IS__CGSCC____-SAME: (i32* [[A:%.*]]) {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    tail call void @use_i32p(i32* [[A]])
+; IS__CGSCC____-NEXT:    tail call void @use_i32p(i32* [[A]])
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   tail call void @use_i32p(i32* %a)

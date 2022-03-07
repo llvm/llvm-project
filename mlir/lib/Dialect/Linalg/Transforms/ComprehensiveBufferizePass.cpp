@@ -40,7 +40,7 @@ struct LinalgComprehensiveModuleBufferize
       const LinalgComprehensiveModuleBufferize &p) = default;
 
   explicit LinalgComprehensiveModuleBufferize(
-      AnalysisBufferizationOptions options)
+      const AnalysisBufferizationOptions &options)
       : options(options) {}
 
   void runOnOperation() override;

@@ -21,7 +21,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -98,7 +98,7 @@ int loadMLIR(llvm::SourceMgr &sourceMgr, mlir::MLIRContext &context,
 
   // Parse the input mlir.
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
-  module = mlir::parseSourceFile(sourceMgr, &context);
+  module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   if (!module) {
     llvm::errs() << "Error can't load file " << inputFilename << "\n";
     return 3;

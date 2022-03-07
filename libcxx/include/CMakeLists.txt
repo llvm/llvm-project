@@ -448,6 +448,7 @@ set(files
   ctgmath
   ctime
   ctype.h
+  cuchar
   cwchar
   cwctype
   deque
@@ -541,6 +542,7 @@ set(files
   type_traits
   typeindex
   typeinfo
+  uchar.h
   unordered_map
   unordered_set
   utility

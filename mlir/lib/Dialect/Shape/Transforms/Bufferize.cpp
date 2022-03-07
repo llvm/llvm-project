@@ -8,29 +8,31 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
+#include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
+using namespace bufferization;
 
 namespace {
 struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
   void runOnOperation() override {
-    MLIRContext &ctx = getContext();
+    BufferizationOptions options = getPartialBufferizationOptions();
+    options.allowDialectInFilter<shape::ShapeDialect>();
 
-    RewritePatternSet patterns(&ctx);
-    bufferization::BufferizeTypeConverter typeConverter;
-    ConversionTarget target(ctx);
-
-    bufferization::populateBufferizeMaterializationLegality(target);
-    populateShapeStructuralTypeConversionsAndLegality(typeConverter, patterns,
-                                                      target);
-
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<bufferization::BufferizationDialect, memref::MemRefDialect,
+                    shape::ShapeDialect>();
+    shape::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
 } // namespace
