@@ -995,8 +995,6 @@ public:
   AntiDepBreakMode getAntiDepBreakMode() const override {
     return TargetSubtargetInfo::ANTIDEP_CRITICAL;
   }
-
-  bool enableAdvancedRASplitCost() const override { return false; }
 };
 
 } // end namespace llvm
