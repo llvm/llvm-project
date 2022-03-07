@@ -3183,8 +3183,7 @@ define dso_local i32 @round_trip_malloc(i32 %x) {
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__TUNIT_OPM-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR17]]
+; IS__TUNIT_OPM-NEXT:    call void @free(i8* noundef [[CALL]]) #[[ATTR17]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@round_trip_malloc
@@ -3203,8 +3202,7 @@ define dso_local i32 @round_trip_malloc(i32 %x) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR16]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[CALL]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -3224,8 +3222,7 @@ define dso_local i32 @round_trip_malloc_constant() {
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__TUNIT_OPM-NEXT:    store i32 7, i32* [[TMP0]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR17]]
+; IS__TUNIT_OPM-NEXT:    call void @free(i8* noundef [[CALL]]) #[[ATTR17]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@round_trip_malloc_constant() {
@@ -3238,8 +3235,7 @@ define dso_local i32 @round_trip_malloc_constant() {
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    store i32 7, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR16]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[CALL]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
