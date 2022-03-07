@@ -3452,7 +3452,7 @@ struct AAIsDeadValueImpl : public AAIsDead {
   }
 
   /// See AbstractAttribute::getAsStr().
-  const std::string getAsStr() const override {
+  virtual const std::string getAsStr() const override {
     return isAssumedDead() ? "assumed-dead" : "assumed-live";
   }
 
@@ -3536,6 +3536,15 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       return A.isAssumedDead(IRPosition::value(*V), this, nullptr,
                              UsedAssumedInformation);
     });
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
+    if (isa_and_nonnull<StoreInst>(I))
+      if (isValidState())
+        return "assumed-dead-store";
+    return AAIsDeadValueImpl::getAsStr();
   }
 
   /// See AbstractAttribute::updateImpl(...).
