@@ -779,7 +779,7 @@
 // TARGET: "-triple" "i686-pc-windows-msvc19.14.0"
 
 // RUN: %clang_cl /JMC /c -### -- %s 2>&1 | FileCheck %s --check-prefix JMCWARN
-// JMCWARN: /JMC requires debug info. Use '/Zi', '/Z7' or other debug options; option ignored
+// JMCWARN: /JMC requires debug info. Use '/Zi', '/Z7' or debug options that enable debugger's stepping function; option ignored
 
 // RUN: %clang_cl /JMC /c -### -- %s 2>&1 | FileCheck %s --check-prefix NOJMC
 // RUN: %clang_cl /JMC /Z7 /JMC- /c -### -- %s 2>&1 | FileCheck %s --check-prefix NOJMC

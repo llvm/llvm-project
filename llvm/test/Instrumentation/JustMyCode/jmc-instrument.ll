@@ -6,8 +6,8 @@
 ; CHECK: $__JustMyCode_Default = comdat any
 
 ; CHECK: @"__E6EA670F_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !0
-; CHECK: @"__A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !5
 ; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void (i8*)* @__JustMyCode_Default to i8*)], section "llvm.metadata"
+; CHECK: @"__A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !5
 
 ; CHECK: define void @l1() !dbg !13 {
 ; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__E6EA670F_x@c")
@@ -39,11 +39,11 @@
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: declare void @__CheckForDebuggerJustMyCode(i8* noundef) unnamed_addr
-
 ; CHECK: define void @__JustMyCode_Default(i8* noundef %0) unnamed_addr comdat {
 ; CHECK:   ret void
 ; CHECK: }
+
+; CHECK: declare void @__CheckForDebuggerJustMyCode(i8* noundef) unnamed_addr
 
 ; CHECK: !llvm.linker.options = !{!12}
 
