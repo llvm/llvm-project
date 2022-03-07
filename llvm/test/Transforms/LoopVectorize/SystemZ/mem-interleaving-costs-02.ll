@@ -10,7 +10,7 @@
 ; registers. Each of the 4 vector values must then be constructed from the
 ; two vector registers using one vperm each, which gives a cost of 2 + 4 = 6.
 ;
-; CHECK: LV: Checking a loop in "fun0"
+; CHECK: LV: Checking a loop in 'fun0'
 ; CHECK: LV: Found an estimated cost of 6 for VF 4 For instruction:   %ld0 = load i16
 ; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %ld1 = load i16
 ; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %ld2 = load i16
@@ -48,7 +48,7 @@ for.end:
 ; 3 vector registers, and then constructing the vector value with two vperms,
 ; which gives a cost of 5.
 ;
-; CHECK: LV: Checking a loop in "fun1"
+; CHECK: LV: Checking a loop in 'fun1'
 ; CHECK: LV: Found an estimated cost of 5 for VF 16 For instruction:   %ld0 = load i8
 define void @fun1(i8 *%ptr, i8 *%dst) {
 entry:
@@ -74,7 +74,7 @@ for.end:
 ; 32. At VF=2, this means loading 2 vector registers, and using 4 vperms to
 ; produce the vector values, which gives a cost of 6.
 ;
-; CHECK: LV: Checking a loop in "fun2"
+; CHECK: LV: Checking a loop in 'fun2'
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction:   %ld0 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld1 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld2 = load i8
@@ -114,7 +114,7 @@ for.end:
 ; as in fun2, except the stride makes the second iterations values overlap a
 ; vector register boundary.
 ;
-; CHECK: LV: Checking a loop in "fun3"
+; CHECK: LV: Checking a loop in 'fun3'
 ; CHECK: LV: Found an estimated cost of 7 for VF 2 For instruction:   %ld0 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld1 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %ld2 = load i8
