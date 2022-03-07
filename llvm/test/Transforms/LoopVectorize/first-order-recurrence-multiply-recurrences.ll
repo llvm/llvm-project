@@ -171,3 +171,52 @@ exit:
 }
 
 declare float @llvm.fmuladd.f32(float, float, float) #1
+
+define void @test_pr54227(i32* noalias %a, i32* noalias %b) {
+; CHECK-LABEL: @test_pr54227(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[AND17:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[AND1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[MUL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[E_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[AND17]], 255
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[E_0]]
+; CHECK-NEXT:    [[AND1]] = and i32 [[E_0]], [[F_0]]
+; CHECK-NEXT:    [[MUL]] = shl nsw i32 [[OR]], 1
+; CHECK-NEXT:    [[ADD]] = or i32 [[AND1]], 1
+; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[MUL]], i32* [[B_GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %and17 = phi i32 [ 0, %entry ], [ %and1, %loop ]
+  %f.0 = phi i32 [ 0, %entry ], [ %mul, %loop ]
+  %e.0 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %and = and i32 %and17, 255
+  %or = or i32 %and, %e.0
+  %and1 = and i32 %e.0, %f.0
+  %mul = shl nsw i32 %or, 1
+  %add = or i32 %and1, 1
+  %a.gep = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 %add, i32* %a.gep, align 4
+  %b.gep = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 %mul, i32* %b.gep, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
