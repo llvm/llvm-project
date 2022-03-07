@@ -687,7 +687,6 @@ struct AACallSiteReturnedFromReturned : public BaseType {
     return clampStateAndIndicateChange(S, AA.getState());
   }
 };
-} // namespace
 
 /// Helper function to accumulate uses.
 template <class AAType, typename StateType = typename AAType::StateType>
@@ -799,6 +798,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
     S += ParentState;
   }
 }
+} // namespace
 
 /// ------------------------ PointerInfo ---------------------------------------
 
@@ -1059,6 +1059,7 @@ private:
   BooleanState BS;
 };
 
+namespace {
 struct AAPointerInfoImpl
     : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
   using BaseTy = StateWrapper<AA::PointerInfo::State, AAPointerInfo>;
@@ -1624,9 +1625,11 @@ struct AAPointerInfoCallSiteReturned final : AAPointerInfoFloating {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
 };
+} // namespace
 
 /// -----------------------NoUnwind Function Attribute--------------------------
 
+namespace {
 struct AANoUnwindImpl : AANoUnwind {
   AANoUnwindImpl(const IRPosition &IRP, Attributor &A) : AANoUnwind(IRP, A) {}
 
@@ -1698,9 +1701,11 @@ struct AANoUnwindCallSite final : AANoUnwindImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nounwind); }
 };
+} // namespace
 
 /// --------------------- Function Return Values -------------------------------
 
+namespace {
 /// "Attribute" that collects all potential returned values and the return
 /// instructions that they arise from.
 ///
@@ -1947,19 +1952,9 @@ struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
+} // namespace
 
 /// ------------------------ NoSync Function Attribute -------------------------
-
-struct AANoSyncImpl : AANoSync {
-  AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
-
-  const std::string getAsStr() const override {
-    return getAssumed() ? "nosync" : "may-sync";
-  }
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override;
-};
 
 bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
   if (!I->isAtomic())
@@ -2002,6 +1997,18 @@ bool AANoSync::isNoSyncIntrinsic(const Instruction *I) {
     return !MI->isVolatile();
   return false;
 }
+
+namespace {
+struct AANoSyncImpl : AANoSync {
+  AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
+
+  const std::string getAsStr() const override {
+    return getAssumed() ? "nosync" : "may-sync";
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+};
 
 ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
 
@@ -2065,9 +2072,11 @@ struct AANoSyncCallSite final : AANoSyncImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nosync); }
 };
+} // namespace
 
 /// ------------------------ No-Free Attributes ----------------------------
 
+namespace {
 struct AANoFreeImpl : public AANoFree {
   AANoFreeImpl(const IRPosition &IRP, Attributor &A) : AANoFree(IRP, A) {}
 
@@ -2249,8 +2258,10 @@ struct AANoFreeCallSiteReturned final : AANoFreeFloating {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nofree) }
 };
+} // namespace
 
 /// ------------------------ NonNull Argument Attribute ------------------------
+namespace {
 static int64_t getKnownNonNullAndDerefBytesForUse(
     Attributor &A, const AbstractAttribute &QueryingAA, Value &AssociatedValue,
     const Use *U, const Instruction *I, bool &IsNonNull, bool &TrackUse) {
@@ -2480,9 +2491,11 @@ struct AANonNullCallSiteReturned final
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nonnull) }
 };
+} // namespace
 
 /// ------------------------ No-Recurse Attributes ----------------------------
 
+namespace {
 struct AANoRecurseImpl : public AANoRecurse {
   AANoRecurseImpl(const IRPosition &IRP, Attributor &A) : AANoRecurse(IRP, A) {}
 
@@ -2558,9 +2571,11 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(norecurse); }
 };
+} // namespace
 
 /// -------------------- Undefined-Behavior Attributes ------------------------
 
+namespace {
 struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   AAUndefinedBehaviorImpl(const IRPosition &IRP, Attributor &A)
       : AAUndefinedBehavior(IRP, A) {}
@@ -2784,7 +2799,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     case Instruction::AtomicRMW:
       return !AssumedNoUBInsts.count(I);
     case Instruction::Br: {
-      auto BrInst = cast<BranchInst>(I);
+      auto *BrInst = cast<BranchInst>(I);
       if (BrInst->isUnconditional())
         return false;
       return !AssumedNoUBInsts.count(I);
@@ -2885,9 +2900,11 @@ struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
         KnownUBInsts.size();
   }
 };
+} // namespace
 
 /// ------------------------ Will-Return Attributes ----------------------------
 
+namespace {
 // Helper function that checks whether a function has any cycle which we don't
 // know if it is bounded or not.
 // Loops with maximum trip count are considered bounded, any other cycle not.
@@ -3026,9 +3043,11 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(willreturn); }
 };
+} // namespace
 
 /// -------------------AAReachability Attribute--------------------------
 
+namespace {
 struct AAReachabilityImpl : AAReachability {
   AAReachabilityImpl(const IRPosition &IRP, Attributor &A)
       : AAReachability(IRP, A) {}
@@ -3055,9 +3074,11 @@ struct AAReachabilityFunction final : public AAReachabilityImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(reachable); }
 };
+} // namespace
 
 /// ------------------------ NoAlias Argument Attribute ------------------------
 
+namespace {
 struct AANoAliasImpl : AANoAlias {
   AANoAliasImpl(const IRPosition &IRP, Attributor &A) : AANoAlias(IRP, A) {
     assert(getAssociatedType()->isPointerTy() &&
@@ -3431,9 +3452,11 @@ struct AANoAliasCallSiteReturned final : AANoAliasImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noalias); }
 };
+} // namespace
 
 /// -------------------AAIsDead Function Attribute-----------------------
 
+namespace {
 struct AAIsDeadValueImpl : public AAIsDead {
   AAIsDeadValueImpl(const IRPosition &IRP, Attributor &A) : AAIsDead(IRP, A) {}
 
@@ -4161,9 +4184,11 @@ struct AAIsDeadCallSite final : AAIsDeadFunction {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
+} // namespace
 
 /// -------------------- Dereferenceable Argument Attribute --------------------
 
+namespace {
 struct AADereferenceableImpl : AADereferenceable {
   AADereferenceableImpl(const IRPosition &IRP, Attributor &A)
       : AADereferenceable(IRP, A) {}
@@ -4399,9 +4424,11 @@ struct AADereferenceableCallSiteReturned final
     STATS_DECLTRACK_CS_ATTR(dereferenceable);
   }
 };
+} // namespace
 
 // ------------------------ Align Argument Attribute ------------------------
 
+namespace {
 static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
                                     const Instruction *I, bool &TrackUse) {
@@ -4708,8 +4735,10 @@ struct AAAlignCallSiteReturned final
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };
+} // namespace
 
 /// ------------------ Function No-Return Attribute ----------------------------
+namespace {
 struct AANoReturnImpl : public AANoReturn {
   AANoReturnImpl(const IRPosition &IRP, Attributor &A) : AANoReturn(IRP, A) {}
 
@@ -4777,9 +4806,11 @@ struct AANoReturnCallSite final : AANoReturnImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noreturn); }
 };
+} // namespace
 
 /// ----------------------- Variable Capturing ---------------------------------
 
+namespace {
 /// A class to hold the state of for no-capture attributes.
 struct AANoCaptureImpl : public AANoCapture {
   AANoCaptureImpl(const IRPosition &IRP, Attributor &A) : AANoCapture(IRP, A) {}
@@ -5232,6 +5263,7 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
     STATS_DECLTRACK_CSRET_ATTR(nocapture)
   }
 };
+} // namespace
 
 /// ------------------ Value Simplify Attribute ----------------------------
 
@@ -5252,6 +5284,7 @@ bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
   return true;
 }
 
+namespace {
 struct AAValueSimplifyImpl : AAValueSimplify {
   AAValueSimplifyImpl(const IRPosition &IRP, Attributor &A)
       : AAValueSimplify(IRP, A) {}
@@ -5892,8 +5925,10 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
     STATS_DECLTRACK_CSARG_ATTR(value_simplify)
   }
 };
+} // namespace
 
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
+namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
 
   struct AllocationInfo {
@@ -6446,8 +6481,10 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
   return Changed;
 }
+} // namespace
 
 /// ----------------------- Privatizable Pointers ------------------------------
+namespace {
 struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
   AAPrivatizablePtrImpl(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtr(IRP, A), PrivatizableType(llvm::None) {}
@@ -7046,10 +7083,12 @@ struct AAPrivatizablePtrReturned final : public AAPrivatizablePtrFloating {
     STATS_DECLTRACK_FNRET_ATTR(privatizable_ptr);
   }
 };
+} // namespace
 
 /// -------------------- Memory Behavior Attributes ----------------------------
 /// Includes read-none, read-only, and write-only.
 /// ----------------------------------------------------------------------------
+namespace {
 struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
   AAMemoryBehaviorImpl(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehavior(IRP, A) {}
@@ -7549,6 +7588,7 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use &U,
   if (UserI->mayWriteToMemory())
     removeAssumedBits(NO_WRITES);
 }
+} // namespace
 
 /// -------------------- Memory Locations Attributes ---------------------------
 /// Includes read-none, argmemonly, inaccessiblememonly,
@@ -7582,6 +7622,7 @@ std::string AAMemoryLocation::getMemoryLocationsAsStr(
   return S;
 }
 
+namespace {
 struct AAMemoryLocationImpl : public AAMemoryLocation {
 
   AAMemoryLocationImpl(const IRPosition &IRP, Attributor &A)
@@ -8098,9 +8139,11 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
       STATS_DECLTRACK_CS_ATTR(readnone)
   }
 };
+} // namespace
 
 /// ------------------ Value Constant Range Attribute -------------------------
 
+namespace {
 struct AAValueConstantRangeImpl : AAValueConstantRange {
   using StateType = IntegerRangeState;
   AAValueConstantRangeImpl(const IRPosition &IRP, Attributor &A)
@@ -8741,9 +8784,11 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
     STATS_DECLTRACK_CSARG_ATTR(value_range)
   }
 };
+} // namespace
 
 /// ------------------ Potential Values Attribute -------------------------
 
+namespace {
 struct AAPotentialValuesImpl : AAPotentialValues {
   using StateType = PotentialConstantIntValuesState;
 
@@ -9928,8 +9973,10 @@ private:
   /// This is for instruction queries than scan "forward".
   DenseMap<const Instruction *, QueryResolver> InstQueries;
 };
+} // namespace
 
 /// ---------------------- Assumption Propagation ------------------------------
+namespace {
 struct AAAssumptionInfoImpl : public AAAssumptionInfo {
   AAAssumptionInfoImpl(const IRPosition &IRP, Attributor &A,
                        const DenseSet<StringRef> &Known)
@@ -10063,6 +10110,7 @@ private:
     return Assumptions;
   }
 };
+} // namespace
 
 AACallGraphNode *AACallEdgeIterator::operator*() const {
   return static_cast<AACallGraphNode *>(const_cast<AACallEdges *>(
