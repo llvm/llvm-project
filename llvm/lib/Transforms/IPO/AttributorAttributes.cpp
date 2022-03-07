@@ -440,10 +440,11 @@ bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
   return true;
 }
 
-const Value *stripAndAccumulateMinimalOffsets(
-    Attributor &A, const AbstractAttribute &QueryingAA, const Value *Val,
-    const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
-    bool UseAssumed = false) {
+static const Value *
+stripAndAccumulateOffsets(Attributor &A, const AbstractAttribute &QueryingAA,
+                          const Value *Val, const DataLayout &DL, APInt &Offset,
+                          bool GetMinOffset, bool AllowNonInbounds,
+                          bool UseAssumed = false) {
 
   auto AttributorAnalysis = [&](Value &V, APInt &ROffset) -> bool {
     const IRPosition &Pos = IRPosition::value(V);
@@ -456,12 +457,15 @@ const Value *stripAndAccumulateMinimalOffsets(
                                      : ValueConstantRangeAA.getKnown();
     // We can only use the lower part of the range because the upper part can
     // be higher than what the value can really be.
-    ROffset = Range.getSignedMin();
+    if (GetMinOffset)
+      ROffset = Range.getSignedMin();
+    else
+      ROffset = Range.getSignedMax();
     return true;
   };
 
   return Val->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds,
-                                                /* AllowInvariant */ false,
+                                                /* AllowInvariant */ true,
                                                 AttributorAnalysis);
 }
 
@@ -470,8 +474,9 @@ getMinimalBaseOfPointer(Attributor &A, const AbstractAttribute &QueryingAA,
                         const Value *Ptr, int64_t &BytesOffset,
                         const DataLayout &DL, bool AllowNonInbounds = false) {
   APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
-  const Value *Base = stripAndAccumulateMinimalOffsets(
-      A, QueryingAA, Ptr, DL, OffsetAPInt, AllowNonInbounds);
+  const Value *Base =
+      stripAndAccumulateOffsets(A, QueryingAA, Ptr, DL, OffsetAPInt,
+                                /* GetMinOffset */ true, AllowNonInbounds);
 
   BytesOffset = OffsetAPInt.getSExtValue();
   return Base;
@@ -4274,8 +4279,9 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       unsigned IdxWidth =
           DL.getIndexSizeInBits(V.getType()->getPointerAddressSpace());
       APInt Offset(IdxWidth, 0);
-      const Value *Base =
-          stripAndAccumulateMinimalOffsets(A, *this, &V, DL, Offset, false);
+      const Value *Base = stripAndAccumulateOffsets(
+          A, *this, &V, DL, Offset, /* GetMinOffset */ false,
+          /* AllowNonInbounds */ true);
 
       const auto &AA = A.getAAFor<AADereferenceable>(
           *this, IRPosition::value(*Base), DepClassTy::REQUIRED);
