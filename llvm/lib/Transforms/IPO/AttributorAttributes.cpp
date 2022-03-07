@@ -1573,7 +1573,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
         LengthVal = Length->getSExtValue();
       Value &Ptr = getAssociatedValue();
       unsigned ArgNo = getIRPosition().getCallSiteArgNo();
-      ChangeStatus Changed;
+      ChangeStatus Changed = ChangeStatus::UNCHANGED;
       if (ArgNo == 0) {
         handleAccess(A, *MI, Ptr, nullptr, AccessKind::AK_WRITE, 0, Changed,
                      nullptr, LengthVal);
