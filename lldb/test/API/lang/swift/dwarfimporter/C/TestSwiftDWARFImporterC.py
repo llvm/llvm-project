@@ -40,8 +40,6 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     # This test needs a working Remote Mirrors implementation.
     @skipIf(oslist=['windows'])
     def test_dwarf_importer(self):
-        lldb.SBDebugger.MemoryPressureDetected()
-        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
@@ -63,17 +61,12 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         #            substrs=["(DoubleLongUnion)", "long_val = 42"])
         self.expect("target variable fromSubmodule",
                     substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
-        process.Clear()
-        target.Clear()
-        lldb.SBDebugger.MemoryPressureDetected()
 
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
     @skipIf(oslist=['windows'])
     def test_dwarf_importer_exprs(self):
-        lldb.SBDebugger.MemoryPressureDetected()
-        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
@@ -95,12 +88,10 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.expect("expr union", substrs=["(DoubleLongUnion)", "long_val = 42"])
         self.expect("expr fromSubmodule",
                     substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
-        process.Clear()
-        target.Clear()
-        lldb.SBDebugger.MemoryPressureDetected()
         
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     def test_negative(self):
         lldb.SBDebugger.MemoryPressureDetected()
         self.runCmd("settings set symbols.use-swift-dwarfimporter false")
@@ -113,9 +104,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         #                        target.FindFirstGlobalVariable("point"),
         #                        typename="Point", num_children=2)
         # This can't be resolved.
-        lldbutil.check_variable(self,
-                                target.FindFirstGlobalVariable("swiftStructCMember"),
-                                num_children=0)
+        self.expect("expr swiftStructCMember", error=True)
 
         found = False
         import io
