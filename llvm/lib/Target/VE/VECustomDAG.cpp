@@ -155,6 +155,10 @@ Optional<int> getAVLPos(unsigned Opc) {
     return 1;
   case VEISD::VVP_SELECT:
     return 3;
+  case VEISD::VVP_LOAD:
+    return 4;
+  case VEISD::VVP_STORE:
+    return 5;
   }
 
   return None;
@@ -429,6 +433,21 @@ VETargetMasks VECustomDAG::getTargetSplitMask(SDValue RawMask, SDValue RawAVL,
     NewMask = getUnpack(MVT::v256i1, RawMask, Part, NewAVL);
 
   return VETargetMasks(NewMask, NewAVL);
+}
+
+SDValue VECustomDAG::getSplitPtrOffset(SDValue Ptr, SDValue ByteStride,
+                                       PackElem Part) const {
+  // High starts at base ptr but has more significant bits in the 64bit vector
+  // element.
+  if (Part == PackElem::Hi)
+    return Ptr;
+  return getNode(ISD::ADD, MVT::i64, {Ptr, ByteStride});
+}
+
+SDValue VECustomDAG::getSplitPtrStride(SDValue PackStride) const {
+  if (auto ConstBytes = dyn_cast<ConstantSDNode>(PackStride))
+    return getConstant(2 * ConstBytes->getSExtValue(), MVT::i64);
+  return getNode(ISD::SHL, MVT::i64, {PackStride, getConstant(1, MVT::i32)});
 }
 
 } // namespace llvm
