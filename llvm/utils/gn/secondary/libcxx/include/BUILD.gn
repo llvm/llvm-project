@@ -596,6 +596,7 @@ if (current_toolchain == default_toolchain) {
       "type_traits",
       "typeindex",
       "typeinfo",
+      "uchar.h",
       "unordered_map",
       "unordered_set",
       "utility",

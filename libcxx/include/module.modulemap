@@ -80,7 +80,10 @@ module std [system] {
       header "string.h"
       export *
     }
-    // FIXME: <uchar.h> is missing.
+    module uchar_h {
+      header "uchar.h"
+      export *
+    }
     // <time.h> provided by C library.
     module wchar_h {
       // <wchar.h>'s __need_* macros require textual inclusion.
@@ -203,7 +206,10 @@ module std [system] {
       header "ctime"
       export *
     }
-    // FIXME: <cuchar> is missing.
+    module cuchar {
+      header "cuchar"
+      export *
+    }
     module cwchar {
       header "cwchar"
       export depr.stdio_h
