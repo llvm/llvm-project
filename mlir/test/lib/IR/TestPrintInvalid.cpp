@@ -24,7 +24,7 @@ struct TestPrintInvalidPass
   StringRef getDescription() const final {
     return "Test printing invalid ops.";
   }
-  void getDependentDialects(DialectRegistry &registry) const {
+  void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<func::FuncDialect>();
   }
 
