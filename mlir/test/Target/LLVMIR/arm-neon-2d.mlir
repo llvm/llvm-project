@@ -1,4 +1,4 @@
-// RUN: mlir-opt -arm-neon-2d-to-intr %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.func(arm-neon-2d-to-intr)" %s | FileCheck %s
 
 // CHECK-LABEL: arm_neon_sdot2d_4x4_i8i8
 func @arm_neon_sdot2d_4x4_i8i8(%a: vector<4xi32>, %b: vector<4x4xi8>, %c: vector<4x4xi8>) -> vector<4xi32> {

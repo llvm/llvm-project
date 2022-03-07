@@ -15,6 +15,7 @@
 
 namespace mlir {
 class AffineDialect;
+class FunctionOpInterface;
 
 // Forward declaration from Dialect.h
 template <typename ConcreteDialect>

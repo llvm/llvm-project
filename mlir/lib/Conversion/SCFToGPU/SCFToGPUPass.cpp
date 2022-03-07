@@ -34,7 +34,8 @@ struct ForLoopMapper : public ConvertAffineForToGPUBase<ForLoopMapper> {
   }
 
   void runOnOperation() override {
-    for (Operation &op : llvm::make_early_inc_range(getOperation().getOps())) {
+    for (Operation &op :
+         llvm::make_early_inc_range(getOperation().getBody().getOps())) {
       if (auto forOp = dyn_cast<AffineForOp>(&op)) {
         if (failed(convertAffineLoopNestToGPULaunch(forOp, numBlockDims,
                                                     numThreadDims)))
@@ -61,11 +62,12 @@ struct ParallelLoopToGpuPass
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
 mlir::createAffineForToGPUPass(unsigned numBlockDims, unsigned numThreadDims) {
   return std::make_unique<ForLoopMapper>(numBlockDims, numThreadDims);
 }
-std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineForToGPUPass() {
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
+mlir::createAffineForToGPUPass() {
   return std::make_unique<ForLoopMapper>();
 }
 
