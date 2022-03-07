@@ -12,9 +12,11 @@
 
 #include "CSKYMCTargetDesc.h"
 #include "CSKYAsmBackend.h"
+#include "CSKYELFStreamer.h"
 #include "CSKYInstPrinter.h"
 #include "CSKYMCAsmInfo.h"
 #include "CSKYMCCodeEmitter.h"
+#include "CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -73,6 +75,38 @@ static MCSubtargetInfo *createCSKYMCSubtargetInfo(const Triple &TT,
   return createCSKYMCSubtargetInfoImpl(TT, CPUName, /*TuneCPU=*/CPUName, FS);
 }
 
+static MCTargetStreamer *
+createCSKYObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  const Triple &TT = STI.getTargetTriple();
+  if (TT.isOSBinFormatELF())
+    return new CSKYTargetELFStreamer(S, STI);
+  return nullptr;
+}
+
+static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
+                                     std::unique_ptr<MCAsmBackend> &&MAB,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                     bool RelaxAll) {
+  CSKYELFStreamer *S = new CSKYELFStreamer(Ctx, std::move(MAB), std::move(OW),
+                                           std::move(Emitter));
+
+  if (RelaxAll)
+    S->getAssembler().setRelaxAll(true);
+  return S;
+}
+
+static MCTargetStreamer *createCSKYAsmTargetStreamer(MCStreamer &S,
+                                                     formatted_raw_ostream &OS,
+                                                     MCInstPrinter *InstPrinter,
+                                                     bool isVerboseAsm) {
+  return new CSKYTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *createCSKYNullTargetStreamer(MCStreamer &S) {
+  return new CSKYTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
   auto &CSKYTarget = getTheCSKYTarget();
   TargetRegistry::RegisterMCAsmBackend(CSKYTarget, createCSKYAsmBackend);
@@ -83,4 +117,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
   TargetRegistry::RegisterMCInstPrinter(CSKYTarget, createCSKYMCInstPrinter);
   TargetRegistry::RegisterMCSubtargetInfo(CSKYTarget,
                                           createCSKYMCSubtargetInfo);
+  TargetRegistry::RegisterELFStreamer(CSKYTarget, createELFStreamer);
+  TargetRegistry::RegisterObjectTargetStreamer(CSKYTarget,
+                                               createCSKYObjectTargetStreamer);
+  TargetRegistry::RegisterAsmTargetStreamer(CSKYTarget,
+                                            createCSKYAsmTargetStreamer);
+  // Register the null target streamer.
+  TargetRegistry::RegisterNullTargetStreamer(CSKYTarget,
+                                             createCSKYNullTargetStreamer);
 }
