@@ -779,8 +779,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <vector>
 #include <version>
 
-#include <utility> // TODO: Remove this
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

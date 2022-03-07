@@ -50,8 +50,6 @@ struct hash<type_index>
 #include <typeinfo>
 #include <version>
 
-#include <utility> // TODO: Remove this
-
 // TODO: remove these headers
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
