@@ -415,9 +415,22 @@ define i32 @highmask_i64_mask32(i64 %val) {
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    testq $-1048576, %rdi # encoding: [0x48,0xf7,0xc7,0x00,0x00,0xf0,0xff]
 ; CHECK-NEXT:    # imm = 0xFFF00000
-; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -1048576
+  %cmp = icmp eq i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @highmask_i64_mask8(i64 %val) {
+; CHECK-LABEL: highmask_i64_mask8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testq $-16, %rdi # encoding: [0x48,0xf7,0xc7,0xf0,0xff,0xff,0xff]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, -16
   %cmp = icmp ne i64 %and, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
@@ -428,10 +441,91 @@ define i32 @lowmask_i64_mask64(i64 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    shlq $16, %rdi # encoding: [0x48,0xc1,0xe7,0x10]
-; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 281474976710655
+  %cmp = icmp eq i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @lowmask_i64_mask32(i64 %val) {
+; CHECK-LABEL: lowmask_i64_mask32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
+; CHECK-NEXT:    # imm = 0xFFFFF
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, 1048575
   %cmp = icmp ne i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @lowmask_i64_mask8(i64 %val) {
+; CHECK-LABEL: lowmask_i64_mask8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, 31
+  %cmp = icmp eq i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @highmask_i32_mask32(i32 %val) {
+; CHECK-LABEL: highmask_i32_mask32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testl $-1048576, %edi # encoding: [0xf7,0xc7,0x00,0x00,0xf0,0xff]
+; CHECK-NEXT:    # imm = 0xFFF00000
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i32 %val, -1048576
+  %cmp = icmp ne i32 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @highmask_i32_mask8(i32 %val) {
+; CHECK-LABEL: highmask_i32_mask8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testl $-16, %edi # encoding: [0xf7,0xc7,0xf0,0xff,0xff,0xff]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i32 %val, -16
+  %cmp = icmp eq i32 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @lowmask_i32_mask32(i32 %val) {
+; CHECK-LABEL: lowmask_i32_mask32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
+; CHECK-NEXT:    # imm = 0xFFFFF
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i32 %val, 1048575
+  %cmp = icmp eq i32 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @lowmask_i32_mask8(i32 %val) {
+; CHECK-LABEL: lowmask_i32_mask8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i32 %val, 31
+  %cmp = icmp ne i32 %and, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
 }
@@ -461,13 +555,13 @@ define i32 @pr42189(i16 signext %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x7FFF
-; CHECK-NEXT:    jne .LBB26_2 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB26_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    jne .LBB33_2 # encoding: [0x75,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB33_2-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
-; CHECK-NEXT:  .LBB26_2: # %if.end
+; CHECK-NEXT:  .LBB33_2: # %if.end
 ; CHECK-NEXT:    jmp f@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
