@@ -33,7 +33,9 @@ class UImmAsmOperand<int width, string suffix = "">
 }
 
 def uimm2 : Operand<GRLenVT>;
-def uimm2_plus1 : Operand<GRLenVT>;
+def uimm2_plus1 : Operand<GRLenVT> {
+  let EncoderMethod = "getImmOpValueSub1";
+}
 def uimm3 : Operand<GRLenVT>;
 def uimm5 : Operand<GRLenVT>;
 def uimm6 : Operand<GRLenVT>;
@@ -41,12 +43,20 @@ def uimm12 : Operand<GRLenVT>;
 def uimm15 : Operand<GRLenVT>;
 def simm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isInt<12>(Imm);}]>;
 def simm14 : Operand<GRLenVT>;
-def simm14_lsl2 : Operand<GRLenVT>;
+def simm14_lsl2 : Operand<GRLenVT> {
+  let EncoderMethod = "getImmOpValueAsr2";
+}
 def simm16 : Operand<GRLenVT>;
-def simm16_lsl2 : Operand<GRLenVT>;
+def simm16_lsl2 : Operand<GRLenVT> {
+  let EncoderMethod = "getImmOpValueAsr2";
+}
 def simm20 : Operand<GRLenVT>;
-def simm21_lsl2 : Operand<GRLenVT>;
-def simm26_lsl2 : Operand<GRLenVT>;
+def simm21_lsl2 : Operand<GRLenVT> {
+  let EncoderMethod = "getImmOpValueAsr2";
+}
+def simm26_lsl2 : Operand<GRLenVT> {
+  let EncoderMethod = "getImmOpValueAsr2";
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
