@@ -3452,7 +3452,7 @@ struct AAIsDeadValueImpl : public AAIsDead {
   }
 
   /// See AbstractAttribute::getAsStr().
-  const std::string getAsStr() const override {
+  virtual const std::string getAsStr() const override {
     return isAssumedDead() ? "assumed-dead" : "assumed-live";
   }
 
@@ -3536,6 +3536,15 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       return A.isAssumedDead(IRPosition::value(*V), this, nullptr,
                              UsedAssumedInformation);
     });
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
+    if (isa_and_nonnull<StoreInst>(I))
+      if (isValidState())
+        return "assumed-dead-store";
+    return AAIsDeadValueImpl::getAsStr();
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -5539,6 +5548,11 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
 
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    if (!A.isRunOn(*getAnchorScope()))
+      return Changed;
+
+    assert(!hasCallBaseContext() && "Should never manifest a simplified "
+                                    "function return with call base context!");
 
     if (auto *NewV = getReplacementValue(A)) {
       auto PredForReturned =
