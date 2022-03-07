@@ -1009,6 +1009,84 @@ struct CombineContractBroadcast
   }
 };
 
+/// Reorders cast(broadcast) to broadcast(cast). This makes broadcast ops and
+/// contraction ops closer, which kicks in CombineContractBroadcast pattern when
+/// casting ops are around these operations.
+/// Ex:
+/// ```
+///   %0 = vector.broadcast %arg0 : vector<32x16xi8> to vector<8x32x16xi8>
+///   %1 = arith.extsi %0 : vector<8x32x16xi8> to vector<8x32x16xi32>
+/// ```
+/// Gets converted to:
+/// ```
+///   %0 = arith.extsi %0 : vector<32x16xi8> to vector<32x16xi32>
+///   %1 = vector.broadcast %arg0 : vector<32x16xi32> to vector<8x32x16xi32>
+/// ```
+struct ReorderCastOpsOnBroadcast
+    : public OpInterfaceRewritePattern<CastOpInterface> {
+  using OpInterfaceRewritePattern<CastOpInterface>::OpInterfaceRewritePattern;
+
+  LogicalResult matchAndRewrite(CastOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 1)
+      return failure();
+    auto bcastOp = op->getOperand(0).getDefiningOp<vector::BroadcastOp>();
+    if (!bcastOp)
+      return failure();
+
+    Type castResTy = getElementTypeOrSelf(op->getResult(0));
+    if (auto vecTy = bcastOp.getSourceType().dyn_cast<VectorType>())
+      castResTy = VectorType::get(vecTy.getShape(), castResTy);
+    OperationState state(op->getLoc(), op->getName(), bcastOp.source(),
+                         castResTy, op->getAttrs());
+    auto castOp = rewriter.createOperation(state);
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        op, op->getResult(0).getType(), castOp->getResult(0));
+    return success();
+  }
+};
+
+/// Reorders cast(transpose) to transpose(cast). This makes broadcast ops and
+/// contraction ops closer, which kicks in CombineContractTranspose pattern when
+/// casting ops are around these operations.
+/// Ex:
+/// ```
+///   %0 = vector.transpose %arg0, [2, 0, 1]
+///     : vector<32x16x8xi8> to vector<8x32x16xi8>
+///   %1 = arith.extsi %0 : vector<8x32x16xi8> to vector<8x32x16xi32>
+/// ```
+/// Gets converted to:
+/// ```
+///   %0 = arith.extsi %0 : vector<32x16x8xi8> to vector<32x16x8xi32>
+///   %1 = vector.transpose %arg0, [2, 0, 1]
+///     : vector<32x16x8xi32> to vector<8x32x16xi32>
+/// ```
+struct ReorderCastOpsOnTranspose
+    : public OpInterfaceRewritePattern<CastOpInterface> {
+
+  using OpInterfaceRewritePattern<CastOpInterface>::OpInterfaceRewritePattern;
+
+  LogicalResult matchAndRewrite(CastOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 1)
+      return failure();
+    auto transpOp = op->getOperand(0).getDefiningOp<vector::TransposeOp>();
+    if (!transpOp)
+      return failure();
+
+    auto castResTy = transpOp.getVectorType();
+    castResTy = VectorType::get(castResTy.getShape(),
+                                getElementTypeOrSelf(op->getResult(0)));
+    OperationState state(op->getLoc(), op->getName(), transpOp.vector(),
+                         castResTy, op->getAttrs());
+    auto castOp = rewriter.createOperation(state);
+    rewriter.replaceOpWithNewOp<vector::TransposeOp>(
+        op, op->getResult(0).getType(), castOp->getResult(0),
+        transpOp.getTransp());
+    return success();
+  }
+};
+
 } // namespace
 
 /// Creates an AddIOp if `isInt` is true otherwise create an arith::AddFOp using
@@ -2585,7 +2663,8 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
 void mlir::vector::populateVectorReductionToContractPatterns(
     RewritePatternSet &patterns) {
   patterns.add<MultiReduceToContract, CombineContractBroadcast,
-               CombineContractTranspose>(patterns.getContext());
+               CombineContractTranspose, ReorderCastOpsOnBroadcast,
+               ReorderCastOpsOnTranspose>(patterns.getContext());
 }
 
 void mlir::vector::
