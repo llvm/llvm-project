@@ -11,9 +11,9 @@ unittest("ClangPseudoTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "DirectiveMapTest.cpp",
     "GrammarTest.cpp",
     "LRTableTest.cpp",
-    "PreprocessTest.cpp",
     "TokenTest.cpp",
   ]
 }
