@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ; Ensure that we don't create interleave groups for predicated
 ; strided accesses. 
 
-; CHECK: LV: Checking a loop in "masked_strided"
+; CHECK: LV: Checking a loop in 'masked_strided'
 ; CHECK: LV: Analyzing interleaved accesses...
 ; CHECK-NOT: LV: Creating an interleave group
 

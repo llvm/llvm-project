@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 @b = common global [2048 x i32] zeroinitializer, align 16
 @c = common global [2048 x i32] zeroinitializer, align 16
 
-; CHECK: Checking a loop in "scalarselect"
+; CHECK: Checking a loop in 'scalarselect'
 define void @scalarselect(i1 %cond) {
   br label %1
 
@@ -36,7 +36,7 @@ define void @scalarselect(i1 %cond) {
   ret void
 }
 
-; CHECK: Checking a loop in "vectorselect"
+; CHECK: Checking a loop in 'vectorselect'
 define void @vectorselect(i1 %cond) {
   br label %1
 
