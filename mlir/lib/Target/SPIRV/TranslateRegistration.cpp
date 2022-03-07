@@ -21,7 +21,7 @@
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/SPIRV/Deserialization.h"
 #include "mlir/Target/SPIRV/Serialization.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"

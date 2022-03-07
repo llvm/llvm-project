@@ -13,7 +13,7 @@
 
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
 
 #include "Standalone/StandaloneDialect.h"
 
