@@ -26,20 +26,27 @@ using namespace lld::macho;
 class ICF {
 public:
   ICF(std::vector<ConcatInputSection *> &inputs);
-
   void run();
-  void segregate(size_t begin, size_t end,
-                 std::function<bool(const ConcatInputSection *,
-                                    const ConcatInputSection *)>
-                     equals);
+
+  using EqualsFn = bool (ICF::*)(const ConcatInputSection *,
+                                 const ConcatInputSection *);
+  void segregate(size_t begin, size_t end, EqualsFn);
   size_t findBoundary(size_t begin, size_t end);
   void forEachClassRange(size_t begin, size_t end,
                          std::function<void(size_t, size_t)> func);
   void forEachClass(std::function<void(size_t, size_t)> func);
 
+  bool equalsConstant(const ConcatInputSection *ia,
+                      const ConcatInputSection *ib);
+  bool equalsVariable(const ConcatInputSection *ia,
+                      const ConcatInputSection *ib);
+
   // ICF needs a copy of the inputs vector because its equivalence-class
   // segregation algorithm destroys the proper sequence.
   std::vector<ConcatInputSection *> icfInputs;
+
+  unsigned icfPass = 0;
+  std::atomic<bool> icfRepeat{false};
 };
 
 ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
@@ -76,13 +83,10 @@ ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
 // FIXME(gkm): implement keep-unique attributes
 // FIXME(gkm): implement address-significance tables for MachO object files
 
-static unsigned icfPass = 0;
-static std::atomic<bool> icfRepeat{false};
-
 // Compare "non-moving" parts of two ConcatInputSections, namely everything
 // except references to other ConcatInputSections.
-static bool equalsConstant(const ConcatInputSection *ia,
-                           const ConcatInputSection *ib) {
+bool ICF::equalsConstant(const ConcatInputSection *ia,
+                         const ConcatInputSection *ib) {
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
@@ -153,10 +157,10 @@ static bool equalsConstant(const ConcatInputSection *ia,
 
 // Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
 // handled by equalsConstant().
-static bool equalsVariable(const ConcatInputSection *ia,
-                           const ConcatInputSection *ib) {
+bool ICF::equalsVariable(const ConcatInputSection *ia,
+                         const ConcatInputSection *ib) {
   assert(ia->relocs.size() == ib->relocs.size());
-  auto f = [](const Reloc &ra, const Reloc &rb) {
+  auto f = [this](const Reloc &ra, const Reloc &rb) {
     // We already filtered out mismatching values/addends in equalsConstant.
     if (ra.referent == rb.referent)
       return true;
@@ -291,14 +295,15 @@ void ICF::run() {
       icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
-  forEachClass(
-      [&](size_t begin, size_t end) { segregate(begin, end, equalsConstant); });
+  forEachClass([&](size_t begin, size_t end) {
+    segregate(begin, end, &ICF::equalsConstant);
+  });
 
   // Split equivalence groups by comparing relocations until convergence
   do {
     icfRepeat = false;
     forEachClass([&](size_t begin, size_t end) {
-      segregate(begin, end, equalsVariable);
+      segregate(begin, end, &ICF::equalsVariable);
     });
   } while (icfRepeat);
   log("ICF needed " + Twine(icfPass) + " iterations");
@@ -314,18 +319,15 @@ void ICF::run() {
 }
 
 // Split an equivalence class into smaller classes.
-void ICF::segregate(
-    size_t begin, size_t end,
-    std::function<bool(const ConcatInputSection *, const ConcatInputSection *)>
-        equals) {
+void ICF::segregate(size_t begin, size_t end, EqualsFn equals) {
   while (begin < end) {
     // Divide [begin, end) into two. Let mid be the start index of the
     // second group.
-    auto bound = std::stable_partition(icfInputs.begin() + begin + 1,
-                                       icfInputs.begin() + end,
-                                       [&](ConcatInputSection *isec) {
-                                         return equals(icfInputs[begin], isec);
-                                       });
+    auto bound = std::stable_partition(
+        icfInputs.begin() + begin + 1, icfInputs.begin() + end,
+        [&](ConcatInputSection *isec) {
+          return (this->*equals)(icfInputs[begin], isec);
+        });
     size_t mid = bound - icfInputs.begin();
 
     // Split [begin, end) into [begin, mid) and [mid, end). We use mid as an
