@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-typedef ulong uptr;
+#include "asan_util.h"
 extern void __asan_report_load1 (uptr addr);
 extern void __asan_report_load1_noabort (uptr addr);
 extern void __asan_report_load2 (uptr addr);
@@ -72,7 +72,10 @@ extern void __asan_unregister_elf_globals(uptr flag, uptr start, uptr stop);
 extern void __asan_init(void);
 extern void __asan_version_mismatch_check_v8(void);
 
-void
+//  Functions called within the below function must not get inlined and their
+//  names want to be preserved at higher opt level to enable linking between
+//  module compiled with asan instrumentation and asan device rtl.
+OPT_NONE void
 __amdgpu_device_library_preserve_asan_functions(void)
 {
     __asan_report_load1(0);

@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-typedef ulong uptr;
+#include "asan_util.h"
 
 void __asan_handle_no_return(void) {}
 
@@ -25,7 +25,7 @@ void __asan_register_elf_globals(uptr flag, uptr start, uptr stop) {}
 
 void __asan_unregister_elf_globals(uptr flag, uptr start, uptr stop) {}
 
-void __asan_init(void) {}
+OPT_NONE NO_SANITIZE_ADDR void __asan_init(void) {}
 
-void __asan_version_mismatch_check_v8(void) {}
+OPT_NONE NO_SANITIZE_ADDR void __asan_version_mismatch_check_v8(void) {}
 
