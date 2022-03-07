@@ -5548,6 +5548,11 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
 
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    if (!A.isRunOn(*getAnchorScope()))
+      return Changed;
+
+    assert(!hasCallBaseContext() && "Should never manifest a simplified "
+                                    "function return with call base context!");
 
     if (auto *NewV = getReplacementValue(A)) {
       auto PredForReturned =
