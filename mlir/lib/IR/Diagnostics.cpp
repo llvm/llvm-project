@@ -121,6 +121,17 @@ Diagnostic &Diagnostic::operator<<(OperationName val) {
   return *this;
 }
 
+/// Adjusts operation printing flags used in diagnostics for the given severity
+/// level.
+static OpPrintingFlags adjustPrintingFlags(OpPrintingFlags flags,
+                                           DiagnosticSeverity severity) {
+  flags.useLocalScope();
+  flags.elideLargeElementsAttrs();
+  if (severity == DiagnosticSeverity::Error)
+    flags.printGenericOpForm();
+  return flags;
+}
+
 /// Stream in an Operation.
 Diagnostic &Diagnostic::operator<<(Operation &val) {
   return appendOp(val, OpPrintingFlags());
@@ -128,8 +139,7 @@ Diagnostic &Diagnostic::operator<<(Operation &val) {
 Diagnostic &Diagnostic::appendOp(Operation &val, const OpPrintingFlags &flags) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  val.print(os,
-            OpPrintingFlags(flags).useLocalScope().elideLargeElementsAttrs());
+  val.print(os, adjustPrintingFlags(flags, severity));
   return *this << os.str();
 }
 
@@ -137,7 +147,7 @@ Diagnostic &Diagnostic::appendOp(Operation &val, const OpPrintingFlags &flags) {
 Diagnostic &Diagnostic::operator<<(Value val) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  val.print(os);
+  val.print(os, adjustPrintingFlags(OpPrintingFlags(), severity));
   return *this << os.str();
 }
 
