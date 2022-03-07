@@ -54,8 +54,8 @@ typedef void (*PrintSymbolCallback)(const char *, void *);
 
 struct Symbolizer {
   Symbolizer(std::unique_ptr<ObjectFile> &&CodeObject,
-             PrintSymbolCallback PrintSymbol)
-      : CodeObject(std::move(CodeObject)), PrintSymbol(PrintSymbol) {}
+             PrintSymbolCallback PrintSymbol);
+  ~Symbolizer();
 
   static amd_comgr_symbolizer_info_t convert(Symbolizer *SymbolizerObj) {
     amd_comgr_symbolizer_info_t Handle = {

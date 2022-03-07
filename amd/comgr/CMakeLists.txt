@@ -55,7 +55,12 @@ if(COMGR_BUILD_SHARED_LIBS)
   add_library(amd_comgr SHARED ${SOURCES})
   # Windows doesn't have a strip utility, so CMAKE_STRIP won't be set.
   if((CMAKE_BUILD_TYPE STREQUAL "Release") AND NOT ("${CMAKE_STRIP}" STREQUAL ""))
-    add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:amd_comgr>)
+    if (APPLE)
+      # Building on Mac fails unless -x is passed to the strip command
+      add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} -x $<TARGET_FILE:amd_comgr>)
+    else()
+      add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:amd_comgr>)
+    endif()
   endif()
 else()
   add_library(amd_comgr STATIC ${SOURCES})
@@ -209,7 +214,7 @@ target_include_directories(amd_comgr
 set(AMD_COMGR_CONFIG_NAME amd_comgr-config.cmake)
 set(AMD_COMGR_TARGETS_NAME amd_comgr-targets.cmake)
 set(AMD_COMGR_VERSION_NAME amd_comgr-config-version.cmake)
-set(AMD_COMGR_PACKAGE_PREFIX lib/cmake/amd_comgr)
+set(AMD_COMGR_PACKAGE_PREFIX ${CMAKE_INSTALL_LIBDIR}/cmake/amd_comgr)
 
 # Generate the build-tree package.
 set(AMD_COMGR_PREFIX_CODE)
@@ -249,7 +254,7 @@ install(FILES
   "LICENSE.txt"
   "NOTICES.txt"
   COMPONENT amd-comgr
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/amd_comgr)
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/amd_comgr)
 
 # Generate the install-tree package.
 set(AMD_COMGR_PREFIX_CODE "
@@ -335,12 +340,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
-  # Install License file
-  install(FILES
-    "${CPACK_RESOURCE_FILE_LICENSE}"
-    COMPONENT amd-comgr
-    DESTINATION ${CMAKE_INSTALL_DOCDIR}/${CPACK_PACKAGE_NAME})
-
   # Make proper version for appending
   set(ROCM_VERSION_FOR_PACKAGE "")
   if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
@@ -371,7 +370,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   else()
     set(CPACK_RPM_PACKAGE_RELEASE "local")
   endif()
-  set(CPACK_RPM_PACKAGE_LICENSE "BSD")
+  set(CPACK_RPM_PACKAGE_LICENSE "NCSA")
 
   # Get rpm distro
   if(CPACK_RPM_PACKAGE_RELEASE)

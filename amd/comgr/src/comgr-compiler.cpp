@@ -453,7 +453,7 @@ static bool executeAssemblerImpl(AssemblerInvocation &Opts,
     std::unique_ptr<MCCodeEmitter> MCE;
     std::unique_ptr<MCAsmBackend> MAB;
     if (Opts.ShowEncoding) {
-      MCE.reset(TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+      MCE.reset(TheTarget->createMCCodeEmitter(*MCII, Ctx));
       MCTargetOptions Options;
       MAB.reset(TheTarget->createMCAsmBackend(*STI, *MRI, Options));
     }
@@ -472,7 +472,7 @@ static bool executeAssemblerImpl(AssemblerInvocation &Opts,
       Out = BOS.get();
     }
 
-    MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
+    MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, Ctx);
     MCTargetOptions Options;
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, Options);
     Triple T(Opts.Triple);
