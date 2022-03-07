@@ -65,10 +65,7 @@ static void applyFoldConstantExtractSlicePatterns(FuncOp funcOp) {
 
         auto resultType = op.result().getType().cast<ShapedType>();
         constexpr int64_t kConstantFoldingMaxNumElements = 1024;
-        if (resultType.getNumElements() > kConstantFoldingMaxNumElements)
-          return false;
-
-        return true;
+        return resultType.getNumElements() <= kConstantFoldingMaxNumElements;
       };
 
   tensor::populateFoldConstantExtractSlicePatterns(patterns, controlFn);
