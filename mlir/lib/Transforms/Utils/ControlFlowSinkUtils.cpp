@@ -35,8 +35,7 @@ public:
   /// Create an operation sinker with given dominance info.
   Sinker(function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion,
          DominanceInfo &domInfo)
-      : shouldMoveIntoRegion(shouldMoveIntoRegion), domInfo(domInfo),
-        numSunk(0) {}
+      : shouldMoveIntoRegion(shouldMoveIntoRegion), domInfo(domInfo) {}
 
   /// Given a list of regions, find operations to sink and sink them. Return the
   /// number of operations sunk.
@@ -65,7 +64,7 @@ private:
   /// Dominance info to determine op user dominance with respect to regions.
   DominanceInfo &domInfo;
   /// The number of operations sunk.
-  size_t numSunk;
+  size_t numSunk = 0;
 };
 } // end anonymous namespace
 
