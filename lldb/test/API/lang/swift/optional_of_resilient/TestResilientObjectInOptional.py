@@ -56,9 +56,3 @@ class TestResilientObjectInOptional(TestBase):
         a_var = opt_var.GetChildMemberWithName("a")
         self.assertTrue(a_var.GetError().Success(), "The resilient child was 'a'")
         lldbutil.check_variable(self, a_var, False, value="1")
-        
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

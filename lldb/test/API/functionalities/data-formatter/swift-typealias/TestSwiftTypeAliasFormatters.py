@@ -62,10 +62,3 @@ class TestSwiftTypeAliasFormatters(TestBase):
         self.runCmd("type summary add -C no -v a.Foo -s hello")
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
-
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lambda: lldb.SBDebugger.Terminate())
-    unittest2.main()
