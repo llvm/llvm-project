@@ -300,6 +300,18 @@ public:
   }
 };
 
+/// Return the number of leftmost dimensions from the first rightmost transposed
+/// dimension found in 'transpose'.
+size_t getNumDimsFromFirstTransposedDim(ArrayRef<int64_t> transpose) {
+  size_t numTransposedDims = transpose.size();
+  for (size_t transpDim : llvm::reverse(transpose)) {
+    if (transpDim != numTransposedDims - 1)
+      break;
+    numTransposedDims--;
+  }
+  return numTransposedDims;
+}
+
 /// Progressive lowering of TransposeOp.
 /// One:
 ///   %x = vector.transpose %y, [1, 0]
@@ -351,35 +363,51 @@ public:
       return success();
     }
 
-    // Generate fully unrolled extract/insert ops.
+    // Generate unrolled extract/insert ops. We do not unroll the rightmost
+    // (i.e., highest-order) dimensions that are not transposed and leave them
+    // in vector form to improve performance.
+    size_t numLeftmostTransposedDims = getNumDimsFromFirstTransposedDim(transp);
+
+    // The type of the extract operation will be scalar if all the dimensions
+    // are unrolled. Otherwise, it will be a vector with the shape of the
+    // dimensions that are not transposed.
+    Type extractType =
+        numLeftmostTransposedDims == transp.size()
+            ? resType.getElementType()
+            : VectorType::Builder(resType).setShape(
+                  resType.getShape().drop_front(numLeftmostTransposedDims));
+
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resType, rewriter.getZeroAttr(resType));
-    SmallVector<int64_t, 4> lhs(transp.size(), 0);
-    SmallVector<int64_t, 4> rhs(transp.size(), 0);
-    rewriter.replaceOp(op, expandIndices(loc, resType, 0, transp, lhs, rhs,
-                                         op.vector(), result, rewriter));
+    SmallVector<int64_t, 4> lhs(numLeftmostTransposedDims, 0);
+    SmallVector<int64_t, 4> rhs(numLeftmostTransposedDims, 0);
+    rewriter.replaceOp(op, expandIndices(loc, resType, extractType, 0,
+                                         numLeftmostTransposedDims, transp, lhs,
+                                         rhs, op.vector(), result, rewriter));
     return success();
   }
 
 private:
   // Builds the indices arrays for the lhs and rhs. Generates the extract/insert
-  // operation when al ranks are exhausted.
-  Value expandIndices(Location loc, VectorType resType, int64_t pos,
+  // operations when all the ranks go over the last dimension being transposed.
+  Value expandIndices(Location loc, VectorType resType, Type extractType,
+                      int64_t pos, int64_t numLeftmostTransposedDims,
                       SmallVector<int64_t, 4> &transp,
                       SmallVector<int64_t, 4> &lhs,
                       SmallVector<int64_t, 4> &rhs, Value input, Value result,
                       PatternRewriter &rewriter) const {
-    if (pos >= resType.getRank()) {
+    if (pos >= numLeftmostTransposedDims) {
       auto ridx = rewriter.getI64ArrayAttr(rhs);
       auto lidx = rewriter.getI64ArrayAttr(lhs);
-      Type eltType = resType.getElementType();
-      Value e = rewriter.create<vector::ExtractOp>(loc, eltType, input, ridx);
+      Value e =
+          rewriter.create<vector::ExtractOp>(loc, extractType, input, ridx);
       return rewriter.create<vector::InsertOp>(loc, resType, e, result, lidx);
     }
     for (int64_t d = 0, e = resType.getDimSize(pos); d < e; ++d) {
       lhs[pos] = d;
       rhs[transp[pos]] = d;
-      result = expandIndices(loc, resType, pos + 1, transp, lhs, rhs, input,
+      result = expandIndices(loc, resType, extractType, pos + 1,
+                             numLeftmostTransposedDims, transp, lhs, rhs, input,
                              result, rewriter);
     }
     return result;
