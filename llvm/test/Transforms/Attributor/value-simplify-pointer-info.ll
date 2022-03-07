@@ -3417,6 +3417,7 @@ define dso_local i32 @conditional_calloc(i32 %x) {
 ; IS________NPM-NEXT:    br label [[IF_END]]
 ; IS________NPM:       if.end:
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
+; IS________NPM-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP1]] to i8*
 ; IS________NPM-NEXT:    ret i32 [[TMP2]]
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@conditional_calloc
@@ -3473,10 +3474,12 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
+; IS________NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS________NPM-NEXT:    br i1 [[C]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS________NPM:       if.then:
 ; IS________NPM-NEXT:    br label [[IF_END]]
 ; IS________NPM:       if.end:
+; IS________NPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
 ; IS________NPM-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@conditional_calloc_zero
