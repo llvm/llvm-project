@@ -1809,11 +1809,11 @@ static void translateRegister(MCInst &mcInst, Reg reg) {
 /// @param isBranch   - If the instruction is a branch instruction
 /// @param Address    - The starting address of the instruction
 /// @param Offset     - The byte offset to this immediate in the instruction
-/// @param InstSize   - Size of the instruction in bytes
+/// @param Width      - The byte width of this immediate in the instruction
 ///
 /// If the getOpInfo() function was set when setupForSymbolicDisassembly() was
 /// called then that function is called to get any symbolic information for the
-/// immediate in the instruction using the Address, Offset and InstSize. If that
+/// immediate in the instruction using the Address, Offset and Width.  If that
 /// returns non-zero then the symbolic information it returns is used to create
 /// an MCExpr and that is added as an operand to the MCInst.  If getOpInfo()
 /// returns zero and isBranch is true then a symbol look up for immediate Value
@@ -1822,10 +1822,10 @@ static void translateRegister(MCInst &mcInst, Reg reg) {
 /// if it adds an operand to the MCInst and false otherwise.
 static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
                                      uint64_t Address, uint64_t Offset,
-                                     uint64_t InstSize, MCInst &MI,
+                                     uint64_t Width, MCInst &MI,
                                      const MCDisassembler *Dis) {
-  return Dis->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset,
-                                       InstSize);
+  return Dis->tryAddingSymbolicOperand(MI, Value, Address, isBranch,
+                                       Offset, Width);
 }
 
 /// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
@@ -1914,7 +1914,8 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
   uint64_t pcrel = 0;
   if (type == TYPE_REL) {
     isBranch = true;
-    pcrel = insn.startLocation + insn.length;
+    pcrel = insn.startLocation +
+            insn.immediateOffset + insn.immediateSize;
     switch (operand.encoding) {
     default:
       break;
@@ -1989,8 +1990,9 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
     break;
   }
 
-  if (!tryAddingSymbolicOperand(immediate + pcrel, isBranch, insn.startLocation,
-                                insn.immediateOffset, insn.length, mcInst, Dis))
+  if(!tryAddingSymbolicOperand(immediate + pcrel, isBranch, insn.startLocation,
+                               insn.immediateOffset, insn.immediateSize,
+                               mcInst, Dis))
     mcInst.addOperand(MCOperand::createImm(immediate));
 
   if (type == TYPE_MOFFS) {
@@ -2127,7 +2129,8 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
         return true;
       }
       if (insn.mode == MODE_64BIT){
-        pcrel = insn.startLocation + insn.length;
+        pcrel = insn.startLocation +
+                insn.displacementOffset + insn.displacementSize;
         tryAddingPcLoadReferenceComment(insn.startLocation +
                                         insn.displacementOffset,
                                         insn.displacement + pcrel, Dis);
@@ -2190,13 +2193,9 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
   mcInst.addOperand(baseReg);
   mcInst.addOperand(scaleAmount);
   mcInst.addOperand(indexReg);
-
-  const uint8_t dispOffset =
-      (insn.eaDisplacement == EA_DISP_NONE) ? 0 : insn.displacementOffset;
-
-  if (!tryAddingSymbolicOperand(insn.displacement + pcrel, false,
-                                insn.startLocation, dispOffset, insn.length,
-                                mcInst, Dis))
+  if(!tryAddingSymbolicOperand(insn.displacement + pcrel, false,
+                               insn.startLocation, insn.displacementOffset,
+                               insn.displacementSize, mcInst, Dis))
     mcInst.addOperand(displacement);
   mcInst.addOperand(segmentReg);
   return false;
