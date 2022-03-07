@@ -27,7 +27,7 @@ module b {}
 //
 // RUN: %clang_cc1 -module-file-info %t/cache-without-b/a.pcm | FileCheck %s --check-prefix=CHECK-B
 // RUN: %clang_cc1 -module-file-info %t/cache-with-b/a.pcm | FileCheck %s --check-prefix=CHECK-B
-// CHECK-B-NOT: Input file: {{.*}}/b.modulemap
+// CHECK-B-NOT: Input file: {{.*}}b.modulemap
 
 //--- c.modulemap
 module c [no_undeclared_includes] { header "c.h" }
@@ -54,5 +54,5 @@ module d { header "d.h" }
 // The PCM file considers 'd.modulemap' an input because it affects the compilation,
 // although it doesn't describe the built module or its imports.
 //
-// RUN: %clang_cc1 -module-file-info %t/cache/c.pcm | FileCheck %s --check-prefix=CHECK-D -DDIR=%t
-// CHECK-D: Input file: [[DIR]]/d.modulemap
+// RUN: %clang_cc1 -module-file-info %t/cache/c.pcm | FileCheck %s --check-prefix=CHECK-D
+// CHECK-D: Input file: {{.*}}d.modulemap
