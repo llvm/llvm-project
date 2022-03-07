@@ -19,10 +19,6 @@ E: arsenm2@gmail.com
 I: arsenm
 D: InferAddressSpaces
 
-N: Simon Atanasyan
-E: simon@atanasyan.com
-D: MIPS Backend (lib/Target/Mips/*)
-
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
