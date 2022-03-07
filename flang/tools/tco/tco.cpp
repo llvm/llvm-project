@@ -79,7 +79,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   mlir::MLIRContext context(registry);
   fir::support::loadDialects(context);
   fir::support::registerLLVMTranslation(context);
-  auto owningRef = mlir::parseSourceFile(sourceMgr, &context);
+  auto owningRef = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
 
   if (!owningRef) {
     errs() << "Error can't load file " << inputFilename << '\n';
