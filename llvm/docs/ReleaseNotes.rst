@@ -135,6 +135,30 @@ AIX Support/improvements:
 * AIX 64-bit code generation now uses fast-isel for O0.
 * Added DWARF support for 32-bit XCOFF.
 
+Changes to the RISC-V Target
+----------------------------
+
+* Codegen improvements for RV64 around the selection of addw/subw/mulw/slliw
+  instructions and removal of redundant sext.w instructions (using the new
+  RISCVSExtWRemoval pass).
+* The various RISC-V vector extensions were updated to version 1.0 and are no
+  longer experimental.
+* The Zba, Zbb, Zbc, and Zbs bit-manipulation extensions were updated to
+  version 1.0 and are no longer experimental.
+* Added MC layer support for the ratified scalar cryptography extensions.
+* The Zfh and Zfhmin extensions for half-precision floating point were updated
+  to version 1.0 and are no longer experimental.
+* Added support for the ``.insn`` directive.
+* Various improvements to immediate materialisation, including when
+  bit-manipulation extensions are enabled. Additionally, the constant pool is
+  now used for large integers.
+* Added support for constrained FP intrinsics for scalar types.
+* Added support for CSRs introduced in the Sscofpmf, Smstateen, and Sstc
+  extensions.
+* The experimental 'Zbproposedc' extension was removed, as was the 'B'
+  extension (including all bit-manipulation sub-extensions). Individual 'Zb*'
+  extensions should be used instead.
+
 Changes to the X86 Target
 -------------------------
 
