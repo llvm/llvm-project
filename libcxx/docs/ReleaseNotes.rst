@@ -66,6 +66,9 @@ API Changes
   (as an extension) ``__int128_t``, and the unsigned versions thereof.
   In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
 
+- The C++14 function ``std::quoted(const char*)`` is no longer supported in
+  C++03 or C++11 modes.
+
 ABI Changes
 -----------
 
