@@ -1459,7 +1459,7 @@ def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
 
 def HasFmaakFmamkF32Insts :
   Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX10Insts, FeatureGFX940Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
