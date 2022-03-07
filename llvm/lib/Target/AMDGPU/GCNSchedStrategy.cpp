@@ -13,6 +13,7 @@
 
 #include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 #define DEBUG_TYPE "machine-scheduler"
 

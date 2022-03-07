@@ -16,15 +16,16 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include <utility>
 #include <vector>
 
 namespace llvm {
 
+template <typename T, unsigned int N> class SmallSetVector;
+template <typename Fn> class function_ref;
+class MBFIWrapper;
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
 class MachineFunction;

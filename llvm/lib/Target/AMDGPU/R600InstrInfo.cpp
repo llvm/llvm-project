@@ -18,6 +18,7 @@
 #include "R600Defines.h"
 #include "R600Subtarget.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 
