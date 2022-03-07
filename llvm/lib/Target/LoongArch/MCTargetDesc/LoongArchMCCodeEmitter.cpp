@@ -51,6 +51,23 @@ public:
   unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  /// Return binary encoding of an immediate operand specified by OpNo.
+  /// The value returned is the value of the immediate minus 1.
+  /// Note that this function is dedicated to specific immediate types,
+  /// e.g. uimm2_plus1.
+  unsigned getImmOpValueSub1(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
+  /// Return binary encoding of an immediate operand specified by OpNo.
+  /// The value returned is the value of the immediate shifted right
+  //  arithmetically by 2.
+  /// Note that this function is dedicated to specific immediate types,
+  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2 and simm26_lsl2.
+  unsigned getImmOpValueAsr2(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -66,6 +83,22 @@ LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     return static_cast<unsigned>(MO.getImm());
 
   llvm_unreachable("Unhandled expression!");
+}
+
+unsigned
+LoongArchMCCodeEmitter::getImmOpValueSub1(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  return MI.getOperand(OpNo).getImm() - 1;
+}
+
+unsigned
+LoongArchMCCodeEmitter::getImmOpValueAsr2(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  unsigned Res = MI.getOperand(OpNo).getImm();
+  assert((Res & 3) == 0 && "lowest 2 bits are non-zero");
+  return Res >> 2;
 }
 
 void LoongArchMCCodeEmitter::encodeInstruction(
