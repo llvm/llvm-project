@@ -101,7 +101,7 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
 }
 
 /// Prints GFLOPS rating.
-extern "C" void printFlops(double flops) {
+extern "C" void print_flops(double flops) {
   fprintf(stderr, "%lf GFLOPS\n", flops / 1.0E9);
 }
 
