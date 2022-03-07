@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_PARSER_H
-#define MLIR_PARSER_H
+#ifndef MLIR_PARSER_PARSER_H
+#define MLIR_PARSER_PARSER_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -206,21 +206,21 @@ inline OwningOpRef<ContainerOpT> parseSourceString(llvm::StringRef sourceStr,
 
 /// TODO: These methods are deprecated in favor of the above template versions.
 /// They should be removed when usages have been updated.
-inline OwningOpRef<ModuleOp> parseSourceFile(const llvm::SourceMgr &sourceMgr,
-                                             MLIRContext *context) {
+[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
+parseSourceFile(const llvm::SourceMgr &sourceMgr, MLIRContext *context) {
   return parseSourceFile<ModuleOp>(sourceMgr, context);
 }
-inline OwningOpRef<ModuleOp> parseSourceFile(llvm::StringRef filename,
-                                             MLIRContext *context) {
+[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
+parseSourceFile(llvm::StringRef filename, MLIRContext *context) {
   return parseSourceFile<ModuleOp>(filename, context);
 }
-inline OwningOpRef<ModuleOp> parseSourceFile(llvm::StringRef filename,
-                                             llvm::SourceMgr &sourceMgr,
-                                             MLIRContext *context) {
+[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
+parseSourceFile(llvm::StringRef filename, llvm::SourceMgr &sourceMgr,
+                MLIRContext *context) {
   return parseSourceFile<ModuleOp>(filename, sourceMgr, context);
 }
-inline OwningOpRef<ModuleOp> parseSourceString(llvm::StringRef moduleStr,
-                                               MLIRContext *context) {
+[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
+parseSourceString(llvm::StringRef moduleStr, MLIRContext *context) {
   return parseSourceString<ModuleOp>(moduleStr, context);
 }
 
@@ -268,4 +268,4 @@ IntegerSet parseIntegerSet(llvm::StringRef str, MLIRContext *context,
 
 } // namespace mlir
 
-#endif // MLIR_PARSER_H
+#endif // MLIR_PARSER_PARSER_H

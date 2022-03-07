@@ -903,7 +903,9 @@ define void @test_callee_is_undef(void (i32)* %fn) {
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_callee_is_undef
 ; IS__CGSCC____-SAME: (void (i32)* nocapture nofree [[FN:%.*]]) {
-; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____-NEXT:    call void @callee_is_undef()
+; IS__CGSCC____-NEXT:    call void @unknown_calle_arg_is_undef(void (i32)* nocapture nofree noundef nonnull [[FN]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @callee_is_undef(void ()* undef)
   call void @unknown_calle_arg_is_undef(void (i32)* %fn, i32 undef)
@@ -911,14 +913,9 @@ define void @test_callee_is_undef(void (i32)* %fn) {
 }
 define internal void @callee_is_undef(void ()* %fn) {
 ;
-; IS__TUNIT____-LABEL: define {{[^@]+}}@callee_is_undef() {
-; IS__TUNIT____-NEXT:    call void undef()
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@callee_is_undef
-; IS__CGSCC____-SAME: (void ()* nocapture nofree noundef nonnull [[FN:%.*]]) {
-; IS__CGSCC____-NEXT:    call void [[FN]]()
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@callee_is_undef() {
+; CHECK-NEXT:    call void undef()
+; CHECK-NEXT:    ret void
 ;
   call void %fn()
   ret void

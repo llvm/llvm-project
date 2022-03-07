@@ -24,5 +24,5 @@ add_mlir_translation_library(MLIRSPIRVTranslateRegistration
   MLIRSPIRVSerialization
   MLIRSPIRVDeserialization
   MLIRSupport
-  MLIRTranslation
+  MLIRTranslateLib
   )

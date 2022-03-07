@@ -164,8 +164,8 @@ namespace {
 std::set<const FileEntry *> GetAllModuleMaps(const HeaderSearch &HS,
                                              Module *RootModule) {
   std::set<const FileEntry *> ModuleMaps{};
-  std::set<Module *> ProcessedModules;
-  SmallVector<Module *> ModulesToProcess{RootModule};
+  std::set<const Module *> ProcessedModules;
+  SmallVector<const Module *> ModulesToProcess{RootModule};
 
   SmallVector<const FileEntry *, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
@@ -209,6 +209,11 @@ std::set<const FileEntry *> GetAllModuleMaps(const HeaderSearch &HS,
       }
       ModulesToProcess.push_back(ImportedModule);
     }
+
+    for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
+      if (UndeclaredModule &&
+          ProcessedModules.find(UndeclaredModule) == ProcessedModules.end())
+        ModulesToProcess.push_back(UndeclaredModule);
   }
 
   return ModuleMaps;
@@ -2860,6 +2865,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     //FIXME: How do we emit the 'use'd modules?  They may not be submodules.
     // Might be unnecessary as use declarations are only used to build the
     // module itself.
+
+    // TODO: Consider serializing undeclared uses of modules.
 
     // Emit the link libraries.
     for (const auto &LL : Mod->LinkLibraries) {

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SUPPORT_MLIROPTMAIN_H
-#define MLIR_SUPPORT_MLIROPTMAIN_H
+#ifndef MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
+#define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
@@ -95,4 +95,4 @@ inline int asMainReturnCode(LogicalResult r) {
 
 } // namespace mlir
 
-#endif // MLIR_SUPPORT_MLIROPTMAIN_H
+#endif // MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H

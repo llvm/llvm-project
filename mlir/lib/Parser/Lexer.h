@@ -14,7 +14,7 @@
 #define MLIR_LIB_PARSER_LEXER_H
 
 #include "Token.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 namespace mlir {
 class Location;

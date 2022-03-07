@@ -29,7 +29,7 @@ if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
     MLIRSPIRV
     MLIRTargetLLVMIRExport
     MLIRTransforms
-    MLIRTranslation
+    MLIRTranslateLib
     MLIRSupport
   )
 endif()
