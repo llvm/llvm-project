@@ -288,7 +288,7 @@ struct __shared_ptr_emplace
         : __storage_(_VSTD::move(__a))
     {
 #if _LIBCPP_STD_VER > 17
-        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
+        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, remove_cv_t<_Tp>>::type;
         _TpAlloc __tmp(*__get_alloc());
         allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
 #else
@@ -305,7 +305,7 @@ struct __shared_ptr_emplace
 private:
     virtual void __on_zero_shared() _NOEXCEPT {
 #if _LIBCPP_STD_VER > 17
-        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
+        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, remove_cv_t<_Tp>>::type;
         _TpAlloc __tmp(*__get_alloc());
         allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
 #else
@@ -960,7 +960,7 @@ template<class _Tp, class ..._Args, class = __enable_if_t<!is_array<_Tp>::value>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared(_Args&& ...__args)
 {
-    return _VSTD::allocate_shared<_Tp>(allocator<_Tp>(), _VSTD::forward<_Args>(__args)...);
+    return _VSTD::allocate_shared<_Tp>(allocator<typename remove_cv<_Tp>::type>(), _VSTD::forward<_Args>(__args)...);
 }
 
 template<class _Tp, class _Up>
