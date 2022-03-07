@@ -23347,7 +23347,7 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
-  // These tests are not in NamespaceFixer because that doesn't
+  // These tests are not in NamespaceEndCommentsFixerTest because that doesn't
   // test its interaction with line wrapping
   FormatStyle Style = getLLVMStyleWithColumns(80);
   verifyFormat("namespace {\n"

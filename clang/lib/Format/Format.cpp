@@ -3190,7 +3190,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       return BracesRemover(Env, Expanded).process();
     });
 
-  if (Style.Language == FormatStyle::LK_Cpp) {
+  if (Style.isCpp()) {
     if (Style.FixNamespaceComments)
       Passes.emplace_back([&](const Environment &Env) {
         return NamespaceEndCommentsFixer(Env, Expanded).process();
