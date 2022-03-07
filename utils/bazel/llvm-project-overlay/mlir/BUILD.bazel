@@ -2702,7 +2702,10 @@ cc_library(
         "lib/Dialect/Shape/Transforms/*.cpp",
         "lib/Dialect/Shape/Transforms/*.h",
     ]),
-    hdrs = ["include/mlir/Dialect/Shape/Transforms/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h",
+        "include/mlir/Dialect/Shape/Transforms/Passes.h",
+    ],
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
