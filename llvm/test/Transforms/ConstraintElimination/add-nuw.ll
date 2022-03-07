@@ -463,10 +463,10 @@ define i1 @add_nuw_neg_pr54224_i16(i16 %a) {
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
-; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[C_3]]
 ;
 entry:
   %neg2 = add nuw i16 %a, -305
@@ -493,7 +493,7 @@ define i1 @add_nuw_neg_pr54224_i64(i64 %a) {
 ; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i64 [[A]], 0
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[C_3]]
 ;
 entry:
   %neg2 = add nuw i64 %a, -305
@@ -518,12 +518,12 @@ define i1 @add_nuw_neg2_i8(i8 %a) {
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[A]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[A]], 1
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[A]], 3
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[A]], 2
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[C_3]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[C_3]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:

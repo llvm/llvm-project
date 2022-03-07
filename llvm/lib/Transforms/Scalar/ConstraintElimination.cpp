@@ -153,9 +153,9 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
-    if (CI->isNegative() || CI->uge(MaxConstraintValue))
+    if (CI->uge(MaxConstraintValue))
       return {};
-    return {{CI->getSExtValue(), nullptr}};
+    return {{CI->getZExtValue(), nullptr}};
   }
   auto *GEP = dyn_cast<GetElementPtrInst>(V);
   if (GEP && GEP->getNumOperands() == 2 && GEP->isInBounds()) {
@@ -208,8 +208,9 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
 
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))))
-    return {{CI->getSExtValue(), nullptr}, {1, Op0}};
+  if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
+      !CI->uge(MaxConstraintValue))
+    return {{CI->getZExtValue(), nullptr}, {1, Op0}};
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative()) {
     Preconditions.emplace_back(
         CmpInst::ICMP_UGE, Op0,
