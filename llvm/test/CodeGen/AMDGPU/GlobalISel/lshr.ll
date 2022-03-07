@@ -1644,8 +1644,8 @@ define i65 @v_lshr_i65(i65 %value, i65 %amount) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_and_b32_e32 v4, 1, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-NEXT:    v_and_b32_e32 v4, 1, v2
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v2, 64, v3
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v10, 64, v3
 ; GFX10-NEXT:    v_lshrrev_b64 v[6:7], v3, v[0:1]

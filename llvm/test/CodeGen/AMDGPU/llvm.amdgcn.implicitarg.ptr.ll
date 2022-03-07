@@ -197,6 +197,8 @@ define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func([112 x i8]) #
 ; GCN-NOT: s8
 ; GCN-NOT: s9
 ; GCN-NOT: s[8:9]
+; GCN: s_swappc_b64
+; GCN: s_setpc_b64 s[30:31]
 define void @func_call_implicitarg_ptr_func() #0 {
   call void @func_implicitarg_ptr()
   ret void
@@ -206,6 +208,8 @@ define void @func_call_implicitarg_ptr_func() #0 {
 ; GCN-NOT: s8
 ; GCN-NOT: s9
 ; GCN-NOT: s[8:9]
+; GCN: s_swappc_b64
+; GCN: s_setpc_b64 s[30:31]
 define void @opencl_func_call_implicitarg_ptr_func() #0 {
   call void @func_implicitarg_ptr()
   ret void

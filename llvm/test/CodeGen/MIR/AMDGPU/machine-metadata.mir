@@ -77,10 +77,9 @@ machineMetadataNodes:
   - '!7 = distinct !{!7, !"MemcpyLoweringDomain"}'
 body:             |
   bb.0 (%ir-block.0):
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: test_memcpy
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
@@ -96,11 +95,8 @@ body:             |
     ; CHECK: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; CHECK: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY8]], killed [[COPY9]], 0, implicit $exec
-    ; CHECK: [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
     ; CHECK: $vgpr0 = COPY [[V_ADD_U32_e64_]]
-    ; CHECK: [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY10]]
-    ; CHECK: S_SETPC_B64_return [[COPY11]], implicit $vgpr0
-    %4:sreg_64 = COPY $sgpr30_sgpr31
+    ; CHECK: SI_RETURN implicit $vgpr0
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
     %1:vgpr_32 = COPY $vgpr1
@@ -116,10 +112,8 @@ body:             |
     %13:vgpr_32 = COPY %11.sub0
     %14:vgpr_32 = COPY %11.sub1
     %15:vgpr_32 = V_ADD_U32_e64 killed %13, killed %14, 0, implicit $exec
-    %5:ccr_sgpr_64 = COPY %4
     $vgpr0 = COPY %15
-    %16:ccr_sgpr_64 = COPY %5
-    S_SETPC_B64_return %16, implicit $vgpr0
+    SI_RETURN implicit $vgpr0
 
 ...
 ---
@@ -134,10 +128,9 @@ machineMetadataNodes:
   - '!10 = !{!1, !9}'
 body:             |
   bb.0 (%ir-block.0):
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: test_memcpy_inline
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
@@ -153,11 +146,8 @@ body:             |
     ; CHECK: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; CHECK: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY8]], killed [[COPY9]], 0, implicit $exec
-    ; CHECK: [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
     ; CHECK: $vgpr0 = COPY [[V_ADD_U32_e64_]]
-    ; CHECK: [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY10]]
-    ; CHECK: S_SETPC_B64_return [[COPY11]], implicit $vgpr0
-    %4:sreg_64 = COPY $sgpr30_sgpr31
+    ; CHECK: SI_RETURN implicit $vgpr0
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
     %1:vgpr_32 = COPY $vgpr1
@@ -173,9 +163,7 @@ body:             |
     %13:vgpr_32 = COPY %11.sub0
     %14:vgpr_32 = COPY %11.sub1
     %15:vgpr_32 = V_ADD_U32_e64 killed %13, killed %14, 0, implicit $exec
-    %5:ccr_sgpr_64 = COPY %4
     $vgpr0 = COPY %15
-    %16:ccr_sgpr_64 = COPY %5
-    S_SETPC_B64_return %16, implicit $vgpr0
+    SI_RETURN implicit $vgpr0
 
 ...

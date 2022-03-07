@@ -58,15 +58,13 @@ define void @returnaddress_debug_loc(i8* addrspace(1)* %ptr) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[COPY2]], debug-location !6
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[COPY3]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE]], [[COPY4]], 0, 0, implicit $exec :: (store (p0) into %ir.ptr, addrspace 1)
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY5]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31, debug-location !6
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY]]
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE]], [[COPY3]], 0, 0, implicit $exec :: (store (p0) into %ir.ptr, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
 entry:
   %returnaddr = call i8* @llvm.returnaddress(i32 0), !dbg !6
   store i8* %returnaddr, i8* addrspace(1)* %ptr, align 8

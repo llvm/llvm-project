@@ -36,7 +36,7 @@
 name: and_v2i16
 body: |
   bb.1:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; GFX7-LABEL: name: and_v2i16
     ; GFX7: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -47,15 +47,13 @@ body: |
     ; GFX7-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX7-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
     ; GFX7-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR1]](<2 x s32>)
-    ; GFX7-NEXT: [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
     ; GFX7-NEXT: [[AND:%[0-9]+]]:_(<2 x s16>) = G_AND [[TRUNC]], [[TRUNC1]]
     ; GFX7-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[AND]](<2 x s16>)
     ; GFX7-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX7-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX7-NEXT: $vgpr0 = COPY [[BITCAST]](s32)
     ; GFX7-NEXT: $vgpr1 = COPY [[LSHR]](s32)
-    ; GFX7-NEXT: [[COPY5:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY4]]
-    ; GFX7-NEXT: S_SETPC_B64_return [[COPY5]], implicit $vgpr0, implicit $vgpr1
+    ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     %3:_(s32) = COPY $vgpr0
     %4:_(s32) = COPY $vgpr1
     %5:_(<2 x s32>) = G_BUILD_VECTOR %3(s32), %4(s32)
@@ -64,15 +62,13 @@ body: |
     %7:_(s32) = COPY $vgpr3
     %8:_(<2 x s32>) = G_BUILD_VECTOR %6(s32), %7(s32)
     %1:_(<2 x s16>) = G_TRUNC %8(<2 x s32>)
-    %2:sgpr_64 = COPY $sgpr30_sgpr31
     %9:_(<2 x s16>) = G_AND %0, %1
     %13:_(s16), %14:_(s16) = G_UNMERGE_VALUES %9(<2 x s16>)
     %11:_(s32) = G_ANYEXT %13(s16)
     %12:_(s32) = G_ANYEXT %14(s16)
     $vgpr0 = COPY %11(s32)
     $vgpr1 = COPY %12(s32)
-    %10:ccr_sgpr_64 = COPY %2
-    S_SETPC_B64_return %10, implicit $vgpr0, implicit $vgpr1
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
 
 ...
 
@@ -80,7 +76,7 @@ body: |
 name: add_v3i16
 body: |
   bb.1:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; GFX7-LABEL: name: add_v3i16
     ; GFX7: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -89,15 +85,13 @@ body: |
     ; GFX7-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX7-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GFX7-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; GFX7-NEXT: [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
     ; GFX7-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY3]]
     ; GFX7-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY4]]
     ; GFX7-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY5]]
     ; GFX7-NEXT: $vgpr0 = COPY [[ADD]](s32)
     ; GFX7-NEXT: $vgpr1 = COPY [[ADD1]](s32)
     ; GFX7-NEXT: $vgpr2 = COPY [[ADD2]](s32)
-    ; GFX7-NEXT: [[COPY7:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY6]]
-    ; GFX7-NEXT: S_SETPC_B64_return [[COPY7]], implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     %3:_(s32) = COPY $vgpr0
     %4:_(s32) = COPY $vgpr1
     %5:_(s32) = COPY $vgpr2
@@ -108,7 +102,6 @@ body: |
     %9:_(s32) = COPY $vgpr5
     %10:_(<3 x s32>) = G_BUILD_VECTOR %7(s32), %8(s32), %9(s32)
     %1:_(<3 x s16>) = G_TRUNC %10(<3 x s32>)
-    %2:sgpr_64 = COPY $sgpr30_sgpr31
     %11:_(<3 x s16>) = G_ADD %0, %1
     %16:_(s16), %17:_(s16), %18:_(s16) = G_UNMERGE_VALUES %11(<3 x s16>)
     %13:_(s32) = G_ANYEXT %16(s16)
@@ -117,8 +110,7 @@ body: |
     $vgpr0 = COPY %13(s32)
     $vgpr1 = COPY %14(s32)
     $vgpr2 = COPY %15(s32)
-    %12:ccr_sgpr_64 = COPY %2
-    S_SETPC_B64_return %12, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
 
 ...
 
@@ -126,7 +118,7 @@ body: |
 name: shl_v3i16
 body: |
   bb.1:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; GFX7-LABEL: name: shl_v3i16
     ; GFX7: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -135,7 +127,6 @@ body: |
     ; GFX7-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX7-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GFX7-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; GFX7-NEXT: [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
     ; GFX7-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX7-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
@@ -146,8 +137,7 @@ body: |
     ; GFX7-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; GFX7-NEXT: $vgpr1 = COPY [[SHL1]](s32)
     ; GFX7-NEXT: $vgpr2 = COPY [[SHL2]](s32)
-    ; GFX7-NEXT: [[COPY7:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY6]]
-    ; GFX7-NEXT: S_SETPC_B64_return [[COPY7]], implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     %3:_(s32) = COPY $vgpr0
     %4:_(s32) = COPY $vgpr1
     %5:_(s32) = COPY $vgpr2
@@ -158,7 +148,6 @@ body: |
     %9:_(s32) = COPY $vgpr5
     %10:_(<3 x s32>) = G_BUILD_VECTOR %7(s32), %8(s32), %9(s32)
     %1:_(<3 x s16>) = G_TRUNC %10(<3 x s32>)
-    %2:sgpr_64 = COPY $sgpr30_sgpr31
     %11:_(<3 x s16>) = G_SHL %0, %1(<3 x s16>)
     %16:_(s16), %17:_(s16), %18:_(s16) = G_UNMERGE_VALUES %11(<3 x s16>)
     %13:_(s32) = G_ANYEXT %16(s16)
@@ -167,8 +156,7 @@ body: |
     $vgpr0 = COPY %13(s32)
     $vgpr1 = COPY %14(s32)
     $vgpr2 = COPY %15(s32)
-    %12:ccr_sgpr_64 = COPY %2
-    S_SETPC_B64_return %12, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
 
 ...
 
@@ -176,7 +164,7 @@ body: |
 name: fma_v4f16
 body: |
   bb.1:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11
 
     ; GFX7-LABEL: name: fma_v4f16
     ; GFX7: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -191,7 +179,6 @@ body: |
     ; GFX7-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
     ; GFX7-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
     ; GFX7-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; GFX7-NEXT: [[COPY12:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
     ; GFX7-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX7-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
     ; GFX7-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
@@ -232,8 +219,7 @@ body: |
     ; GFX7-NEXT: $vgpr1 = COPY [[ANYEXT1]](s32)
     ; GFX7-NEXT: $vgpr2 = COPY [[ANYEXT2]](s32)
     ; GFX7-NEXT: $vgpr3 = COPY [[ANYEXT3]](s32)
-    ; GFX7-NEXT: [[COPY13:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY12]]
-    ; GFX7-NEXT: S_SETPC_B64_return [[COPY13]], implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     %4:_(s32) = COPY $vgpr0
     %5:_(s32) = COPY $vgpr1
     %6:_(s32) = COPY $vgpr2
@@ -252,7 +238,6 @@ body: |
     %17:_(s32) = COPY $vgpr11
     %18:_(<4 x s32>) = G_BUILD_VECTOR %14(s32), %15(s32), %16(s32), %17(s32)
     %2:_(<4 x s16>) = G_TRUNC %18(<4 x s32>)
-    %3:sgpr_64 = COPY $sgpr30_sgpr31
     %19:_(<4 x s16>) = G_FMA %0, %1, %2
     %25:_(s16), %26:_(s16), %27:_(s16), %28:_(s16) = G_UNMERGE_VALUES %19(<4 x s16>)
     %21:_(s32) = G_ANYEXT %25(s16)
@@ -263,8 +248,7 @@ body: |
     $vgpr1 = COPY %22(s32)
     $vgpr2 = COPY %23(s32)
     $vgpr3 = COPY %24(s32)
-    %20:ccr_sgpr_64 = COPY %3
-    S_SETPC_B64_return %20, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 ...
 
 ---

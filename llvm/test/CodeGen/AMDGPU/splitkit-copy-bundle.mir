@@ -89,11 +89,11 @@ body:             |
   ; VR:   renamable $sgpr37 = S_MOV_B32 -1
   ; VR:   renamable $sgpr36 = S_MOV_B32 -1
   ; VR:   renamable $sgpr68 = S_MOV_B32 0
+  ; VR:   renamable $sgpr30_sgpr31 = IMPLICIT_DEF
   ; VR:   renamable $sgpr34_sgpr35 = IMPLICIT_DEF
-  ; VR:   renamable $sgpr66_sgpr67 = IMPLICIT_DEF
   ; VR: bb.1:
   ; VR:   successors: %bb.2(0x80000000)
-  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr34_sgpr35, $sgpr66_sgpr67
+  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr30_sgpr31, $sgpr34_sgpr35
   ; VR:   renamable $sgpr38 = COPY renamable $sgpr36
   ; VR:   renamable $sgpr39 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr40 = COPY renamable $sgpr36
@@ -155,8 +155,8 @@ body:             |
   ; VR:   renamable $sgpr99 = COPY renamable $sgpr68
   ; VR: bb.2:
   ; VR:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr34_sgpr35, $sgpr66_sgpr67
-  ; VR:   S_NOP 0, csr_amdgpu_highregs, implicit renamable $sgpr34_sgpr35, implicit renamable $sgpr66_sgpr67
+  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr30_sgpr31, $sgpr34_sgpr35
+  ; VR:   S_NOP 0, csr_amdgpu_highregs, implicit renamable $sgpr30_sgpr31, implicit renamable $sgpr34_sgpr35
   ; VR:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
   ; VR:   S_BRANCH %bb.2
   bb.0:

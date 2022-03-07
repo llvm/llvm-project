@@ -7,7 +7,7 @@
 define void @void_a31i32_i32([31 x i32] %arg0, i32 %arg1) {
   ; FIXED-LABEL: name: void_a31i32_i32
   ; FIXED: bb.1 (%ir-block.0):
-  ; FIXED-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
+  ; FIXED-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30
   ; FIXED-NEXT: {{  $}}
   ; FIXED-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; FIXED-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
@@ -42,11 +42,9 @@ define void @void_a31i32_i32([31 x i32] %arg0, i32 %arg1) {
   ; FIXED-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; FIXED-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; FIXED-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
-  ; FIXED-NEXT:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; FIXED-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; FIXED-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-  ; FIXED-NEXT:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
-  ; FIXED-NEXT:   S_SETPC_B64_return [[COPY32]]
+  ; FIXED-NEXT:   SI_RETURN
   store i32 %arg1, i32 addrspace(1)* undef
   ret void
 }
