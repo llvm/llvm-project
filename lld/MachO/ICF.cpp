@@ -33,8 +33,8 @@ public:
   void segregate(size_t begin, size_t end, EqualsFn);
   size_t findBoundary(size_t begin, size_t end);
   void forEachClassRange(size_t begin, size_t end,
-                         std::function<void(size_t, size_t)> func);
-  void forEachClass(std::function<void(size_t, size_t)> func);
+                         llvm::function_ref<void(size_t, size_t)> func);
+  void forEachClass(llvm::function_ref<void(size_t, size_t)> func);
 
   bool equalsConstant(const ConcatInputSection *ia,
                       const ConcatInputSection *ib);
@@ -225,7 +225,7 @@ size_t ICF::findBoundary(size_t begin, size_t end) {
 
 // Invoke FUNC on subranges with matching equivalence class
 void ICF::forEachClassRange(size_t begin, size_t end,
-                            std::function<void(size_t, size_t)> func) {
+                            llvm::function_ref<void(size_t, size_t)> func) {
   while (begin < end) {
     size_t mid = findBoundary(begin, end);
     func(begin, mid);
@@ -235,7 +235,7 @@ void ICF::forEachClassRange(size_t begin, size_t end,
 
 // Split icfInputs into shards, then parallelize invocation of FUNC on subranges
 // with matching equivalence class
-void ICF::forEachClass(std::function<void(size_t, size_t)> func) {
+void ICF::forEachClass(llvm::function_ref<void(size_t, size_t)> func) {
   // Only use threads when the benefits outweigh the overhead.
   const size_t threadingThreshold = 1024;
   if (icfInputs.size() < threadingThreshold) {
