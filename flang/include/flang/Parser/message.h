@@ -296,6 +296,11 @@ public:
     }
   }
 
+  template <typename... A>
+  Message *Say(std::optional<CharBlock> at, A &&...args) {
+    return Say(at.value_or(at_), std::forward<A>(args)...);
+  }
+
   template <typename... A> Message *Say(A &&...args) {
     return Say(at_, std::forward<A>(args)...);
   }
