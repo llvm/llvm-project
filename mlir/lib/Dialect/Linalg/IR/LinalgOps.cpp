@@ -22,7 +22,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -873,7 +873,7 @@ static void populateMap(GenericOp genericOp, ArrayRef<OpOperand *> operands,
     // Get the `sourceShape` of the `sourceType`. If the operand is a result of
     // `tensor.cast` operation and source of the cast operation has a static
     // shape, then assign it to the `sourceShape`.
-    auto parentOp = src.getDefiningOp();
+    auto *parentOp = src.getDefiningOp();
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
     if (parentOp) {
       if (auto castOp = dyn_cast<tensor::CastOp>(parentOp)) {

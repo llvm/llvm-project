@@ -38,7 +38,9 @@ void initTLS() {
     return;
 
   // We will assume the alignment is always a power of two.
-  uintptr_t tlsSize = (app.tls.size + app.tls.align) & -app.tls.align;
+  uintptr_t tlsSize = app.tls.size & -app.tls.align;
+  if (tlsSize != app.tls.size)
+    tlsSize += app.tls.align;
 
   // Per the x86_64 TLS ABI, the entry pointed to by the thread pointer is the
   // address of the TLS block. So, we add more size to accomodate this address

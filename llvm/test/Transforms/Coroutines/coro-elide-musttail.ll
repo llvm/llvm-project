@@ -13,7 +13,7 @@
 @"bar.resumers" = private constant [3 x void (%"bar.Frame"*)*] [void (%"bar.Frame"*)* @"bar.resume", void (%"bar.Frame"*)* undef, void (%"bar.Frame"*)* undef]
 
 declare dso_local void @"bar"() align 2
-declare dso_local fastcc void @"bar.resume"(%"bar.Frame"*) align 2
+declare dso_local fastcc void @"bar.resume"(%"bar.Frame"* align 8 dereferenceable(24)) align 2
 
 ; There is a musttail call.
 ; With alias analysis, we can tell that the frame does not interfere with CALL34, and hence we can keep the tailcalls.

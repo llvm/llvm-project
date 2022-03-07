@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_PARSER_H
-#define MLIR_PARSER_H
+#ifndef MLIR_PARSER_PARSER_H
+#define MLIR_PARSER_PARSER_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -268,4 +268,4 @@ IntegerSet parseIntegerSet(llvm::StringRef str, MLIRContext *context,
 
 } // namespace mlir
 
-#endif // MLIR_PARSER_H
+#endif // MLIR_PARSER_PARSER_H
