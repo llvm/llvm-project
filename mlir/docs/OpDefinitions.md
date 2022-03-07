@@ -601,6 +601,15 @@ Note that the second phase will be run after the operations in the region are
 verified. Verifiers further down the order can rely on certain invariants being
 verified by a previous verifier and do not need to re-verify them.
 
+#### Emitting diagnostics in custom verifiers
+
+Custom verifiers should avoid printing operations using custom operation
+printers, because they require the printed operation (and sometimes its parent
+operation) to be verified first. In particular, when emitting diagnostics,
+custom verifiers should use the `Error` severity level, which prints operations
+in generic form by default, and avoid using lower severity levels (`Note`,
+`Remark`, `Warning`).
+
 ### Declarative Assembly Format
 
 The custom assembly form of the operation may be specified in a declarative

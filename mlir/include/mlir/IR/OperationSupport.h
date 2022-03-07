@@ -726,6 +726,9 @@ public:
   /// Always print operations in the generic form.
   OpPrintingFlags &printGenericOpForm();
 
+  /// Do not verify the operation when using custom operation printers.
+  OpPrintingFlags &assumeVerified();
+
   /// Use local scope when printing the operation. This allows for using the
   /// printer in a more localized and thread-safe setting, but may not
   /// necessarily be identical to what the IR will look like when dumping
@@ -747,6 +750,9 @@ public:
   /// Return if operations should be printed in the generic form.
   bool shouldPrintGenericOpForm() const;
 
+  /// Return if operation verification should be skipped.
+  bool shouldAssumeVerified() const;
+
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
 
@@ -761,6 +767,9 @@ private:
 
   /// Print operations in the generic form.
   bool printGenericOpFormFlag : 1;
+
+  /// Skip operation verification.
+  bool assumeVerifiedFlag : 1;
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;

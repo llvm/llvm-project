@@ -1097,6 +1097,8 @@ LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
           // Check that any value that is used by an operation is defined in the
           // same region as either an operation result.
           auto *operandRegion = operand.getParentRegion();
+          if (!operandRegion)
+            return op.emitError("operation's operand is unlinked");
           if (!region.isAncestor(operandRegion)) {
             return op.emitOpError("using value defined outside the region")
                        .attachNote(isolatedOp->getLoc())

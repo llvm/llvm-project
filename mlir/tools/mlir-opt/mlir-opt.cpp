@@ -45,6 +45,7 @@ void registerTestLoopPermutationPass();
 void registerTestMatchers();
 void registerTestOperationEqualPass();
 void registerTestPrintDefUsePass();
+void registerTestPrintInvalidPass();
 void registerTestPrintNestingPass();
 void registerTestReducer();
 void registerTestSpirvEntryPointABIPass();
@@ -132,6 +133,7 @@ void registerTestPasses() {
   registerTestMatchers();
   registerTestOperationEqualPass();
   registerTestPrintDefUsePass();
+  registerTestPrintInvalidPass();
   registerTestPrintNestingPass();
   registerTestReducer();
   registerTestSpirvEntryPointABIPass();
