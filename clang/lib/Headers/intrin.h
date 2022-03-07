@@ -534,7 +534,8 @@ static __inline__ void __DEFAULT_FN_ATTRS __stosq(unsigned __int64 *__dst,
 /*----------------------------------------------------------------------------*\
 |* Misc
 \*----------------------------------------------------------------------------*/
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(_WIN64) ||             \
+    defined(_AMD64_) || defined(_X86_)
 #if defined(__i386__)
 #define __cpuid_count(__leaf, __count, __eax, __ebx, __ecx, __edx)             \
   __asm("cpuid"                                                                \
