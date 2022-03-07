@@ -5501,15 +5501,6 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
                  Attribute::StructRet, Attribute::Nest, Attribute::ByVal},
                 /* IgnoreSubsumingPositions */ true))
       indicatePessimisticFixpoint();
-
-    // FIXME: This is a hack to prevent us from propagating function poiner in
-    // the new pass manager CGSCC pass as it creates call edges the
-    // CallGraphUpdater cannot handle yet.
-    Value &V = getAssociatedValue();
-    if (V.getType()->isPointerTy() &&
-        V.getType()->getPointerElementType()->isFunctionTy() &&
-        !A.isModulePass())
-      indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(...).

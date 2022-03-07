@@ -914,7 +914,7 @@ extern "C" {
     assert(tensor &&iref &&vref);                                              \
     assert(iref->strides[0] == 1);                                             \
     index_type *indx = iref->data + iref->offset;                              \
-    (V) *value = vref->data + vref->offset;                                    \
+    V *value = vref->data + vref->offset;                                      \
     const uint64_t isize = iref->sizes[0];                                     \
     auto iter = static_cast<SparseTensorCOO<V> *>(tensor);                     \
     const Element<V> *elem = iter->getNext();                                  \
@@ -950,7 +950,7 @@ extern "C" {
     assert(aref->strides[0] == 1);                                             \
     assert(vref->sizes[0] == fref->sizes[0]);                                  \
     index_type *cursor = cref->data + cref->offset;                            \
-    (V) *values = vref->data + vref->offset;                                   \
+    V *values = vref->data + vref->offset;                                     \
     bool *filled = fref->data + fref->offset;                                  \
     index_type *added = aref->data + aref->offset;                             \
     static_cast<SparseTensorStorageBase *>(tensor)->expInsert(                 \
