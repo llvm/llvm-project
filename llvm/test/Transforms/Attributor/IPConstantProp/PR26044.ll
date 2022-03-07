@@ -78,7 +78,7 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
 ; IS__TUNIT____:       if.end:
 ; IS__TUNIT____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
 ; IS__TUNIT____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
 ; IS__TUNIT____-NEXT:    br label [[FOR_COND1]]
 ; IS__TUNIT____:       exit:

@@ -1171,13 +1171,13 @@ define i8* @aligned_8_return_caller(i8* align(16) %a, i1 %c1, i1 %c2) {
 ; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@aligned_8_return_caller
 ; NOT_CGSCC_OPM-SAME: (i8* nofree readnone align 16 "no-capture-maybe-returned" [[A:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR9]] {
-; NOT_CGSCC_OPM-NEXT:    [[R:%.*]] = call i8* @aligned_8_return(i8* noalias nofree readnone align 16 "no-capture-maybe-returned" [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR12:[0-9]+]]
+; NOT_CGSCC_OPM-NEXT:    [[R:%.*]] = call align 8 i8* @aligned_8_return(i8* noalias nofree readnone align 16 "no-capture-maybe-returned" [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR12:[0-9]+]]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[R]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@aligned_8_return_caller
 ; IS__CGSCC_OPM-SAME: (i8* nofree readnone align 16 "no-capture-maybe-returned" [[A:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR10]] {
-; IS__CGSCC_OPM-NEXT:    [[R:%.*]] = call i8* @aligned_8_return(i8* noalias nofree readnone align 16 "no-capture-maybe-returned" [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR13:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[R:%.*]] = call align 8 i8* @aligned_8_return(i8* noalias nofree readnone align 16 "no-capture-maybe-returned" [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR13:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[R]]
 ;
   %r = call i8* @aligned_8_return(i8* %a, i1 %c1, i1 %c2)

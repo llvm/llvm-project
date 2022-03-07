@@ -28,7 +28,7 @@ define internal i32 @deref(i32* %x) nounwind {
 ; IS__CGSCC_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %tmp2 = load i32, i32* %x, align 4
