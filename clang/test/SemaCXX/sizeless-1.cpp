@@ -205,15 +205,11 @@ void func(int sel) {
   -init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   --init_int8;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   init_int8--;      // expected-error {{cannot decrement value of type 'svint8_t'}}
-  ~init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   !init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   *init_int8;       // expected-error {{indirection requires pointer operand}}
   __real init_int8; // expected-error {{invalid type 'svint8_t'}}
   __imag init_int8; // expected-error {{invalid type 'svint8_t'}}
 
-  local_int8 &init_int8;   // expected-error {{invalid operands to binary expression}}
-  local_int8 | init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 << init_int8; // expected-error {{invalid operands to binary expression}}
   local_int8 >> init_int8; // expected-error {{invalid operands to binary expression}}
   local_int8 < init_int8;  // expected-error {{invalid operands to binary expression}}
@@ -225,9 +221,6 @@ void func(int sel) {
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
 
-  local_int8 &= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 |= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^= init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 <<= init_int8; // expected-error {{invalid operands to binary expression}}
   local_int8 >>= init_int8; // expected-error {{invalid operands to binary expression}}
 
