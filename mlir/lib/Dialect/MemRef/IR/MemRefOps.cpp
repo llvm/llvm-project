@@ -403,8 +403,8 @@ struct AllocaScopeHoister : public OpRewritePattern<AllocaScopeOp> {
     if (toHoist.empty())
       return failure();
     rewriter.setInsertionPoint(lastParentWithoutScope);
-    for (auto op : toHoist) {
-      auto cloned = rewriter.clone(*op);
+    for (auto *op : toHoist) {
+      auto *cloned = rewriter.clone(*op);
       rewriter.replaceOp(op, cloned->getResults());
     }
     return success();
