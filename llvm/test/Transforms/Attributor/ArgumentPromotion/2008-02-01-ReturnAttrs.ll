@@ -28,7 +28,7 @@ define internal i32 @deref(i32* %x) nounwind {
 ; IS__CGSCC_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %tmp2 = load i32, i32* %x, align 4
@@ -76,7 +76,7 @@ entry:
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nounwind readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nosync nounwind readonly willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

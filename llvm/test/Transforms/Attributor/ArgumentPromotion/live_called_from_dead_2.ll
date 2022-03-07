@@ -78,5 +78,5 @@ define i32 @callercaller() {
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR3]] = { nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR3]] = { nosync nounwind willreturn writeonly }
 ;.

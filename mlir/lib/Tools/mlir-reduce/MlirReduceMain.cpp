@@ -31,7 +31,7 @@ using namespace mlir;
 static LogicalResult loadModule(MLIRContext &context,
                                 OwningOpRef<ModuleOp> &module,
                                 StringRef inputFilename) {
-  module = parseSourceFile(inputFilename, &context);
+  module = parseSourceFile<ModuleOp>(inputFilename, &context);
   if (!module)
     return failure();
 
