@@ -102,8 +102,9 @@ This is an example work-flow and configuration to get and build the LLVM source:
 
         * Running a serial build will be **slow**.  To improve speed, try running a
           parallel build.  That's done by default in Ninja; for ``make``, use the option
-          ``-j NNN``, where ``NNN`` is the number of parallel jobs, e.g. the number of
-          CPUs you have.
+          ``-j NNN``, where ``NNN`` is the number of parallel jobs to run.
+          In most cases, you get the best performance if you specify the number of CPU threads you have.
+          On some Unix systems, you can specify this with ``-j$(nproc)``.
 
       * For more information see [CMake](https://llvm.org/docs/CMake.html)
 
