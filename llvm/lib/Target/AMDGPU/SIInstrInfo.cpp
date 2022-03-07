@@ -908,6 +908,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   const TargetRegisterClass *SrcRC = RI.getPhysRegClass(SrcReg);
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
+    if (ST.hasMovB64()) {
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+      return;
+    }
     if (ST.hasPackedFP32Ops()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
@@ -951,7 +956,10 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              (RI.isProperlyAlignedRC(*RC) &&
               (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
-    if (ST.hasPackedFP32Ops()) {
+    if (ST.hasMovB64()) {
+      Opcode = AMDGPU::V_MOV_B64_e32;
+      EltSize = 8;
+    } else if (ST.hasPackedFP32Ops()) {
       Opcode = AMDGPU::V_PK_MOV_B32;
       EltSize = 8;
     }
@@ -1833,6 +1841,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
+    if (ST.hasMovB64()) {
+      MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
+      if (!isLiteralConstant(MI, 1) || isUInt<32>(SrcOp.getImm()))
+        break;
+    }
     if (SrcOp.isImm()) {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
@@ -2823,6 +2836,8 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
+  case AMDGPU::V_MOV_B64_e32:
+  case AMDGPU::V_MOV_B64_e64:
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B64:
   case AMDGPU::COPY:

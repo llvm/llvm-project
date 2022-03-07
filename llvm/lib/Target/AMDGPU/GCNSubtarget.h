@@ -892,6 +892,8 @@ public:
 
   bool hasMadF16() const;
 
+  bool hasMovB64() const { return GFX940Insts; }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }
