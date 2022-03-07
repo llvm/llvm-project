@@ -1652,7 +1652,7 @@ private:
             Current.Previous->isOneOf(
                 tok::kw_namespace, tok::r_paren, tok::r_square, tok::r_brace,
                 tok::kw_false, tok::kw_true, Keywords.kw_type, Keywords.kw_get,
-                Keywords.kw_set) ||
+                Keywords.kw_init, Keywords.kw_set) ||
             Current.Previous->Tok.isLiteral()) {
           Current.setType(TT_NonNullAssertion);
           return;
