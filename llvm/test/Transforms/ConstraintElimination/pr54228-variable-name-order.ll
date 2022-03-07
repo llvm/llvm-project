@@ -24,7 +24,7 @@ define i1 @test_pr54228(i32 %a, i32 %b, i1 %i.0, i1 %i.1) {
 ; CHECK-NEXT:    br i1 [[C_3]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[C_4]]
 ;
 entry:
   br i1 %i.0, label %ph.1, label %loop.header
