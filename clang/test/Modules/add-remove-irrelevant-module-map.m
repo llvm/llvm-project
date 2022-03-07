@@ -25,6 +25,34 @@ module b {}
 
 // Neither PCM file considers 'b.modulemap' an input:
 //
-// RUN: %clang_cc1 -module-file-info %t/cache-without-b/a.pcm | FileCheck %s
-// RUN: %clang_cc1 -module-file-info %t/cache-with-b/a.pcm | FileCheck %s
-// CHECK-NOT: Input file: {{.*}}/b.modulemap
+// RUN: %clang_cc1 -module-file-info %t/cache-without-b/a.pcm | FileCheck %s --check-prefix=CHECK-B
+// RUN: %clang_cc1 -module-file-info %t/cache-with-b/a.pcm | FileCheck %s --check-prefix=CHECK-B
+// CHECK-B-NOT: Input file: {{.*}}/b.modulemap
+
+//--- c.modulemap
+module c [no_undeclared_includes] { header "c.h" }
+
+//--- c.h
+#if __has_include("d.h") // This should use 'd.modulemap' in order to determine that 'd.h'
+                         // doesn't exist for 'c' because of its '[no_undeclared_includes]'.
+#endif
+
+//--- d.modulemap
+module d { header "d.h" }
+
+//--- d.h
+// empty
+
+//--- test-no-undeclared-includes.m
+// expected-no-diagnostics
+@import c;
+
+// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t/cache -fdisable-module-hash \
+// RUN:   -fmodule-map-file=%t/c.modulemap -fmodule-map-file=%t/d.modulemap \
+// RUN:   %t/test-no-undeclared-includes.m -verify
+
+// The PCM file considers 'd.modulemap' an input because it affects the compilation,
+// although it doesn't describe the built module or its imports.
+//
+// RUN: %clang_cc1 -module-file-info %t/cache/c.pcm | FileCheck %s --check-prefix=CHECK-D -DDIR=%t
+// CHECK-D: Input file: [[DIR]]/d.modulemap
