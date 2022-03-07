@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
@@ -1265,11 +1266,11 @@ private:
   //===--------------------------------------------------------------------===//
 
   void genFIR(const Fortran::parser::AllocateStmt &stmt) {
-    TODO(toLocation(), "AllocateStmt lowering");
+    Fortran::lower::genAllocateStmt(*this, stmt, toLocation());
   }
 
   void genFIR(const Fortran::parser::DeallocateStmt &stmt) {
-    TODO(toLocation(), "DeallocateStmt lowering");
+    Fortran::lower::genDeallocateStmt(*this, stmt, toLocation());
   }
 
   void genFIR(const Fortran::parser::NullifyStmt &stmt) {
