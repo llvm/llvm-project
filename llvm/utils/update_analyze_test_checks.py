@@ -149,7 +149,8 @@ def main():
             continue
 
         # Print out the various check lines here.
-        common.add_analyze_checks(output_lines, ';', prefix_list, func_dict, func_name)
+        common.add_analyze_checks(output_lines, ';', prefix_list, func_dict, func_name,
+                                  is_filtered=builder.is_filtered())
         is_in_function_start = False
 
       if is_in_function:
