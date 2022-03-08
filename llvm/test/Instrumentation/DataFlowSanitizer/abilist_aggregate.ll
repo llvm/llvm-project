@@ -137,7 +137,7 @@ define {i1, i7} @call_custom_cb({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i[[#SBITS]]] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i[[#SBITS]]] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i[[#SBITS]] [[B0]], [[B1]]
-  ; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i1, i7 } ({ i32, i1 }, [2 x i7])*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)* @"dfst0$custom_cb", i8* bitcast ({ i1, i7 } ({ i32, i1 }, [2 x i7])* @cb.dfsan to i8*), { i32, i1 } %a, [2 x i7] %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[A01]], i[[#SBITS]] zeroext [[B01]], i[[#SBITS]]* %labelreturn)
+  ; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i32, i1 }, [2 x i7])* @cb.dfsan, { i32, i1 } %a, [2 x i7] %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[A01]], i[[#SBITS]] zeroext [[B01]], i[[#SBITS]]* %labelreturn)
   ; CHECK: [[RE:%.*]] = load i[[#SBITS]], i[[#SBITS]]* %labelreturn, align [[#SBYTES]]
   ; CHECK: [[RS0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] [[RE]], 0
   ; CHECK: [[RS1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[RS0]], i[[#SBITS]] [[RE]], 1
@@ -186,19 +186,17 @@ define {i1, i7}  ({i32, i1}, [2 x i7])* @ret_custom() {
 ; CHECK: [[B:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES) + max(SBYTES,2)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
 ; CHECK: [[A:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 ; CHECK: [[CB:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
-; CHECK: [[CAST:%.*]] = bitcast { i1, i7 } ({ i32, i1 }, [2 x i7])* %0 to i8*
 ; CHECK: [[A0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[A]], 0
 ; CHECK: [[A1:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[A]], 1
 ; CHECK: [[A01:%.*]] = or i[[#SBITS]] [[A0]], [[A1]]
 ; CHECK: [[B0:%.*]] = extractvalue [2 x i[[#SBITS]]] [[B]], 0
 ; CHECK: [[B1:%.*]] = extractvalue [2 x i[[#SBITS]]] [[B]], 1
 ; CHECK: [[B01:%.*]] = or i[[#SBITS]] [[B0]], [[B1]]
-; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i1, i7 } ({ i32, i1 }, [2 x i7])*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)* @"dfst0$custom_cb", i8* [[CAST]], { i32, i1 } %1, [2 x i7] %2, i[[#SBITS]] zeroext [[CB]], i[[#SBITS]] zeroext [[A01]], i[[#SBITS]] zeroext [[B01]], i[[#SBITS]]* %labelreturn)
+; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i32, i1 }, [2 x i7])* %0, { i32, i1 } %1, [2 x i7] %2, i[[#SBITS]] zeroext [[CB]], i[[#SBITS]] zeroext [[A01]], i[[#SBITS]] zeroext [[B01]], i[[#SBITS]]* %labelreturn)
 ; CHECK: [[RE:%.*]] = load i[[#SBITS]], i[[#SBITS]]* %labelreturn, align [[#SBYTES]]
 ; CHECK: [[RS0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] [[RE]], 0
 ; CHECK: [[RS1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[RS0]], i[[#SBITS]] [[RE]], 1
 ; CHECK: store { i[[#SBITS]], i[[#SBITS]] } [[RS1]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
-
 
 define {i1, i7} @custom_with_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: define linkonce_odr { i1, i7 } @"dfsw$custom_with_ret"({ i32, i1 } %0, [2 x i7] %1)
@@ -250,19 +248,4 @@ define void @custom_varg({i32, i1} %a, ...) {
 ; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]])
 ; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i[[#SBITS]], i[[#SBITS]]*, ...)
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i1, i7 } ({ i32, i1 }, [2 x i7])*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)*, i8*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)
-
-; CHECK: define linkonce_odr { i1, i7 } @"dfst0$custom_cb"({ i1, i7 } ({ i32, i1 }, [2 x i7])* %0, { i32, i1 } %1, [2 x i7] %2, i[[#SBITS]] %3, i[[#SBITS]] %4, i[[#SBITS]]* %5) {
-; CHECK: [[A0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] %3, 0
-; CHECK: [[A1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[A0]], i[[#SBITS]] %3, 1
-; CHECK: [[B0:%.*]] = insertvalue [2 x i[[#SBITS]]] undef, i[[#SBITS]] %4, 0
-; CHECK: [[B1:%.*]] = insertvalue [2 x i[[#SBITS]]] [[B0]], i[[#SBITS]] %4, 1
-; CHECK: store { i[[#SBITS]], i[[#SBITS]] } [[A1]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
-; CHECK: store [2 x i[[#SBITS]]] [[B1]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN]]
-; CHECK: [[R:%.*]] = call { i1, i7 } %0({ i32, i1 } %1, [2 x i7] %2)
-; CHECK: %_dfsret = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
-; CHECK: [[RE0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } %_dfsret, 0
-; CHECK: [[RE1:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } %_dfsret, 1
-; CHECK: [[RE01:%.*]] = or i[[#SBITS]] [[RE0]], [[RE1]]
-; CHECK: store i[[#SBITS]] [[RE01]], i[[#SBITS]]* %5, align [[#SBYTES]]
-; CHECK: ret { i1, i7 } [[R]]
+; CHECK: declare { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i32, i1 }, [2 x i7])*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)
