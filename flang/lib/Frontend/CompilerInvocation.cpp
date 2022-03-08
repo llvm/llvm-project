@@ -168,6 +168,9 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_fdebug_dump_parse_tree:
       opts.programAction = DebugDumpParseTree;
       break;
+    case clang::driver::options::OPT_fdebug_dump_pft:
+      opts.programAction = DebugDumpPFT;
+      break;
     case clang::driver::options::OPT_fdebug_dump_all:
       opts.programAction = DebugDumpAll;
       break;

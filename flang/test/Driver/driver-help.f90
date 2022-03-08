@@ -82,6 +82,7 @@
 ! HELP-FC1-NEXT: -fdebug-dump-parse-tree Dump the parse tree
 ! HELP-FC1-NEXT: -fdebug-dump-parsing-log
 ! HELP-FC1-NEXT:                   Run instrumented parse and dump the parsing log
+! HELP-FC1-NEXT: -fdebug-dump-pft        Dump the pre-fir parse tree
 ! HELP-FC1-NEXT: -fdebug-dump-provenance Dump provenance
 ! HELP-FC1-NEXT: -fdebug-dump-symbols    Dump symbols after the semantic analysis
 ! HELP-FC1-NEXT: -fdebug-measure-parse-tree
