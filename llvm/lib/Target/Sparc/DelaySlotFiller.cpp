@@ -174,17 +174,20 @@ Filler::findDelayInstr(MachineBasicBlock &MBB,
   if (slot == MBB.begin())
     return MBB.end();
 
-  if (slot->getOpcode() == SP::RET || slot->getOpcode() == SP::TLS_CALL)
+  unsigned Opc = slot->getOpcode();
+
+  if (Opc == SP::RET || Opc == SP::TLS_CALL)
     return MBB.end();
 
-  if (slot->getOpcode() == SP::RETL) {
+  if (Opc == SP::RETL || Opc == SP::TAIL_CALL || Opc == SP::TAIL_CALLri) {
     MachineBasicBlock::iterator J = slot;
     --J;
 
     if (J->getOpcode() == SP::RESTORErr
         || J->getOpcode() == SP::RESTOREri) {
       // change retl to ret.
-      slot->setDesc(Subtarget->getInstrInfo()->get(SP::RET));
+      if (Opc == SP::RETL)
+        slot->setDesc(Subtarget->getInstrInfo()->get(SP::RET));
       return J;
     }
   }
@@ -360,6 +363,8 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   case SP::CALLrr:
   case SP::CALLri: structSizeOpNum = 2; break;
   case SP::TLS_CALL: return false;
+  case SP::TAIL_CALLri:
+  case SP::TAIL_CALL: return false;
   }
 
   const MachineOperand &MO = I->getOperand(structSizeOpNum);
