@@ -111,8 +111,6 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
-    if (ra.addend != rb.addend)
-      return false;
     if (ra.referent.is<Symbol *>() != rb.referent.is<Symbol *>())
       return false;
 
@@ -125,16 +123,16 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       const auto *sb = rb.referent.get<Symbol *>();
       if (sa->kind() != sb->kind())
         return false;
-      if (!isa<Defined>(sa)) {
-        // ICF runs before Undefineds are reported.
-        assert(isa<DylibSymbol>(sa) || isa<Undefined>(sa));
-        return sa == sb;
-      }
+      // ICF runs before Undefineds are treated (and potentially converted into
+      // DylibSymbols).
+      if (isa<DylibSymbol>(sa) || isa<Undefined>(sa))
+        return sa == sb && ra.addend == rb.addend;
+      assert(isa<Defined>(sa));
       const auto *da = cast<Defined>(sa);
       const auto *db = cast<Defined>(sb);
       if (!da->isec || !db->isec) {
         assert(da->isAbsolute() && db->isAbsolute());
-        return da->value == db->value;
+        return da->value + ra.addend == db->value + rb.addend;
       }
       isecA = da->isec;
       valueA = da->value;
@@ -151,7 +149,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     assert(isecA->kind() == isecB->kind());
     // We will compare ConcatInputSection contents in equalsVariable.
     if (isa<ConcatInputSection>(isecA))
-      return true;
+      return ra.addend == rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
     return isecA->getOffset(valueA + ra.addend) ==
@@ -389,6 +387,17 @@ void macho::foldIdenticalSections() {
     }
   }
   parallelForEach(hashable, [](ConcatInputSection *isec) {
+    // __cfstring has embedded addends that foil ICF's hashing / equality
+    // checks. (We can ignore embedded addends when doing ICF because the same
+    // information gets recorded in our Reloc structs.) We therefore create a
+    // mutable copy of the CFString and zero out the embedded addends before
+    // performing any hashing / equality checks.
+    if (isCfStringSection(isec)) {
+      MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
+      for (const Reloc &r : isec->relocs)
+        target->relocateOne(copy.data() + r.offset, r, /*va=*/0, /*relocVA=*/0);
+      isec->data = copy;
+    }
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
