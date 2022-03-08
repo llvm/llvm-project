@@ -174,7 +174,7 @@ def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
 // ComplexToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm", "ModuleOp"> {
+def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm"> {
   let summary = "Convert Complex dialect to LLVM dialect";
   let constructor = "mlir::createConvertComplexToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
