@@ -303,7 +303,6 @@ private:
   void lowerAllocation(const Allocation &alloc) {
     fir::MutableBoxValue boxAddr =
         genMutableBoxValue(converter, loc, alloc.getAllocObj());
-    mlir::Value backupBox;
 
     if (sourceExpr) {
       genSourceAllocation(alloc, boxAddr);
