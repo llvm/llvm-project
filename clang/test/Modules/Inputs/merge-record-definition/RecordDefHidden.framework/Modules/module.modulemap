@@ -1,0 +1,9 @@
+framework module RecordDefHidden {
+  header "Visible.h"
+  export *
+
+  explicit module Hidden {
+    header "Hidden.h"
+    export *
+  }
+}
