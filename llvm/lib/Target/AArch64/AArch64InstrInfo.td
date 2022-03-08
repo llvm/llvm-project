@@ -234,6 +234,8 @@ def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
 def HasITE           : Predicate<"Subtarget->hasITE()">,
                        AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
+def HasRCPC3         : Predicate<"Subtarget->hasRCPC3()">,
+                       AssemblerPredicate<(all_of FeatureRCPC3), "rcpc3">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -3903,6 +3905,21 @@ def STLRX  : StoreRelease  <0b11, 1, 0, 0, 1, GPR64, "stlr">;
 def STLRB  : StoreRelease  <0b00, 1, 0, 0, 1, GPR32, "stlrb">;
 def STLRH  : StoreRelease  <0b01, 1, 0, 0, 1, GPR32, "stlrh">;
 
+/*
+Aliases for when offset=0. Note that in contrast to LoadAcquire which has a $Rn
+of type GPR64sp0, we deliberately choose to make $Rn of type GPR64sp and add an
+alias for the case of immediate #0. This is because new STLR versions (from
+LRCPC3 extension) do have a non-zero immediate value, so GPR64sp0 is not
+appropriate anymore (it parses and discards the optional zero). This is not the
+case for LoadAcquire because the new LRCPC3 LDAR instructions are post-indexed,
+and the immediate values are not inside the [] brackets and thus not accepted
+by GPR64sp0 parser.
+*/
+def STLRW0  : InstAlias<"stlr\t$Rt, [$Rn, #0]" , (STLRW   GPR32: $Rt, GPR64sp:$Rn)>;
+def STLRX0  : InstAlias<"stlr\t$Rt, [$Rn, #0]" , (STLRX   GPR64: $Rt, GPR64sp:$Rn)>;
+def STLRB0  : InstAlias<"stlrb\t$Rt, [$Rn, #0]", (STLRB   GPR32: $Rt, GPR64sp:$Rn)>;
+def STLRH0  : InstAlias<"stlrh\t$Rt, [$Rn, #0]", (STLRH   GPR32: $Rt, GPR64sp:$Rn)>;
+
 def STLXRW : StoreExclusive<0b10, 0, 0, 0, 1, GPR32, "stlxr">;
 def STLXRX : StoreExclusive<0b11, 0, 0, 0, 1, GPR64, "stlxr">;
 def STLXRB : StoreExclusive<0b00, 0, 0, 0, 1, GPR32, "stlxrb">;
@@ -3937,6 +3954,12 @@ let Predicates = [HasLOR] in {
   def STLLRX  : StoreRelease   <0b11, 1, 0, 0, 0, GPR64, "stllr">;
   def STLLRB  : StoreRelease   <0b00, 1, 0, 0, 0, GPR32, "stllrb">;
   def STLLRH  : StoreRelease   <0b01, 1, 0, 0, 0, GPR32, "stllrh">;
+
+  // Aliases for when offset=0
+  def STLLRW0 : InstAlias<"stllr\t$Rt,  [$Rn, #0]",  (STLLRW   GPR32: $Rt, GPR64sp:$Rn)>;
+  def STLLRX0 : InstAlias<"stllr\t$Rt,  [$Rn, #0]",  (STLLRX   GPR64: $Rt, GPR64sp:$Rn)>;
+  def STLLRB0 : InstAlias<"stllrb\t$Rt, [$Rn, #0]",  (STLLRB   GPR32: $Rt, GPR64sp:$Rn)>;
+  def STLLRH0 : InstAlias<"stllrh\t$Rt, [$Rn, #0]",  (STLLRH   GPR32: $Rt, GPR64sp:$Rn)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8526,6 +8549,53 @@ def RPRFM:
   // Fail, the decoder should attempt to decode RPRFM. This requires setting
   // the decoder namespace to "Fallback".
   let DecoderNamespace = "Fallback";
+}
+
+//===----------------------------------------------------------------------===//
+// RCPC Instructions (FEAT_LRCPC3)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasRCPC3] in {
+  //                                             size   opc    opc2
+  def STILPWpre:  BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-8]!", "$Rn = $wback">;
+  def STILPXpre:  BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-16]!", "$Rn = $wback">;
+  def STILPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0001, (outs), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def STILPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0001, (outs), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPWpre: BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0000, (outs GPR64sp:$wback, GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #8", "$Rn = $wback">;
+  def LDIAPPXpre: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
+  def LDIAPPW:    BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPX:    BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+
+  // Aliases for when offset=0
+  def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;
+  def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPX GPR64: $Rt, GPR64: $Rt2, GPR64sp:$Rn)>;
+
+  //                                        size   opc
+  def STLRWpre:  BaseLRCPC3IntegerLoadStore<0b10, 0b10, (outs GPR64sp:$wback),            (ins GPR32:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-4]!", "$Rn = $wback">;
+  def STLRXpre:  BaseLRCPC3IntegerLoadStore<0b11, 0b10, (outs GPR64sp:$wback),            (ins GPR64:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-8]!", "$Rn = $wback">;
+  def LDAPRWpre: BaseLRCPC3IntegerLoadStore<0b10, 0b11, (outs GPR64sp:$wback, GPR32:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #4",   "$Rn = $wback">;
+  def LDAPRXpre: BaseLRCPC3IntegerLoadStore<0b11, 0b11, (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #8",   "$Rn = $wback">;
+}
+
+let Predicates = [HasRCPC3, HasNEON] in {
+  //                                              size   opc regtype
+  defm STLURb:  LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b00, FPR8  , (outs), (ins FPR8  :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURh:  LRCPC3NEONLoadStoreUnscaledOffset<0b01, 0b00, FPR16 , (outs), (ins FPR16 :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURs:  LRCPC3NEONLoadStoreUnscaledOffset<0b10, 0b00, FPR32 , (outs), (ins FPR32 :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURd:  LRCPC3NEONLoadStoreUnscaledOffset<0b11, 0b00, FPR64 , (outs), (ins FPR64 :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURq:  LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b10, FPR128, (outs), (ins FPR128:$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm LDAPURb: LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b01, FPR8  , (outs FPR8  :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURh: LRCPC3NEONLoadStoreUnscaledOffset<0b01, 0b01, FPR16 , (outs FPR16 :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURs: LRCPC3NEONLoadStoreUnscaledOffset<0b10, 0b01, FPR32 , (outs FPR32 :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURd: LRCPC3NEONLoadStoreUnscaledOffset<0b11, 0b01, FPR64 , (outs FPR64 :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURq: LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b11, FPR128, (outs FPR128:$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+
+  //                                L
+  def STL1:  LRCPC3NEONLdStSingle<0b0, (outs), (ins VecListOned:$Vt, VectorIndexD:$Q, GPR64sp:$Rn) , "stl1", "">;
+  def LDAP1: LRCPC3NEONLdStSingle<0b1, (outs VecListOned:$dst), (ins VecListOned:$Vt, VectorIndexD:$Q, GPR64sp0:$Rn), "ldap1", "$Vt = $dst">;
+
+  // Aliases for when offset=0
+  def : InstAlias<"stl1\t$Vt$Q, [$Rn, #0]", (STL1 VecListOned:$Vt, VectorIndexD:$Q, GPR64sp:$Rn)>;
 }
 
 include "AArch64InstrAtomics.td"
