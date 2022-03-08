@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
+import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
@@ -58,7 +59,6 @@ write_lit_config("lit_site_cfg") {
     # (That check also checks LLVM_HOST_TRIPLE.)
     "HOST_LDFLAGS=",
 
-    "LLVM_ENABLE_CURL=0",
     "LLVM_ENABLE_FFI=0",
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
@@ -207,6 +207,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
     extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
+  }
+
+  if (llvm_enable_libcurl) {
+    extra_values += [ "LLVM_ENABLE_CURL=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_CURL=0" ]  # Must be 0.
   }
 }
 

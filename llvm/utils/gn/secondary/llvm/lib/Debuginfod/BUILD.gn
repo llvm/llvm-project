@@ -1,6 +1,9 @@
 static_library("Debuginfod") {
   output_name = "LLVMDebuginfod"
-  deps = [ "//llvm/lib/Support" ]
+  deps = [
+    "//llvm/lib/Support",
+    "//llvm/utils/gn/build/libs/curl",
+  ]
   sources = [
     "DIFetcher.cpp",
     "Debuginfod.cpp",
