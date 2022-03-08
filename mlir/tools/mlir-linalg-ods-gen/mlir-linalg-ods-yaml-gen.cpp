@@ -678,7 +678,7 @@ ArrayAttr {0}::indexing_maps() {{
     getNumParallelLoops(), context);
   SmallVector<AffineMap> indexingMaps;
   for (OpOperand *opOperand : getInputAndOutputOperands())
-    indexingMaps.push_back(isScalar(opOperand) ? scalarMap : tensorMap);
+    indexingMaps.push_back(getRank(opOperand) == 0 ? scalarMap : tensorMap);
   return Builder(getContext()).getAffineMapArrayAttr(indexingMaps);
 }
 )FMT";
