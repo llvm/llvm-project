@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-mapping-to-processing-elements %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -pass-pipeline="builtin.func(test-mapping-to-processing-elements)" %s | FileCheck %s
 
 // CHECK: #[[mul_map:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
 // CHECK: #[[add_map:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>

@@ -23,7 +23,7 @@ using namespace mlir;
 
 namespace {
 class TestLoopMappingPass
-    : public PassWrapper<TestLoopMappingPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLoopMappingPass, OperationPass<>> {
 public:
   StringRef getArgument() const final {
     return "test-mapping-to-processing-elements";
@@ -38,20 +38,18 @@ public:
   }
 
   void runOnOperation() override {
-    FuncOp func = getOperation();
-
     // SSA values for the transformation are created out of thin air by
     // unregistered "new_processor_id_and_range" operations. This is enough to
     // emulate mapping conditions.
     SmallVector<Value, 8> processorIds, numProcessors;
-    func.walk([&processorIds, &numProcessors](Operation *op) {
+    getOperation()->walk([&processorIds, &numProcessors](Operation *op) {
       if (op->getName().getStringRef() != "new_processor_id_and_range")
         return;
       processorIds.push_back(op->getResult(0));
       numProcessors.push_back(op->getResult(1));
     });
 
-    func.walk([&processorIds, &numProcessors](scf::ForOp op) {
+    getOperation()->walk([&processorIds, &numProcessors](scf::ForOp op) {
       // Ignore nested loops.
       if (op->getParentRegion()->getParentOfType<scf::ForOp>())
         return;

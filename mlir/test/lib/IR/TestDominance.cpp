@@ -91,7 +91,7 @@ private:
 };
 
 struct TestDominancePass
-    : public PassWrapper<TestDominancePass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestDominancePass, InterfacePass<SymbolOpInterface>> {
   StringRef getArgument() const final { return "test-print-dominance"; }
   StringRef getDescription() const final {
     return "Print the dominance information for multiple regions.";

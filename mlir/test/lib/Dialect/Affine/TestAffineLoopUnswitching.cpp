@@ -24,7 +24,7 @@ namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestAffineLoopUnswitching
-    : public PassWrapper<TestAffineLoopUnswitching, OperationPass<FuncOp>> {
+    : public PassWrapper<TestAffineLoopUnswitching, OperationPass<>> {
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "Tests affine loop unswitching / if/else hoisting";
@@ -44,14 +44,14 @@ void TestAffineLoopUnswitching::runOnOperation() {
   // Each hoisting invalidates a lot of IR around. Just stop the walk after the
   // first if/else hoisting, and repeat until no more hoisting can be done, or
   // the maximum number of iterations have been run.
-  auto func = getOperation();
+  Operation *op = getOperation();
   unsigned i = 0;
   do {
     auto walkFn = [](AffineIfOp op) {
       return succeeded(hoistAffineIfOp(op)) ? WalkResult::interrupt()
                                             : WalkResult::advance();
     };
-    if (func.walk(walkFn).wasInterrupted())
+    if (op->walk(walkFn).wasInterrupted())
       break;
   } while (++i < kMaxIterations);
 }
