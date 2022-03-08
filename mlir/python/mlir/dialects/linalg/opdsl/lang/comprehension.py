@@ -686,6 +686,7 @@ class OpInterfaceDef:
 
 ContractionOpInterface = OpInterfaceDef("LinalgContractionOpInterface")
 ConvolutionOpInterface = OpInterfaceDef("LinalgConvolutionOpInterface")
+FillOpInterface = OpInterfaceDef("LinalgFillOpInterface")
 
 
 class OpMetadataDef(YAMLObject):
