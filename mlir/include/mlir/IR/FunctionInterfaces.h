@@ -208,7 +208,7 @@ template <typename ConcreteOp>
 LogicalResult verifyTrait(ConcreteOp op) {
   if (!op.getTypeAttr())
     return op.emitOpError("requires a type attribute '")
-           << ConcreteOp::getTypeAttrName() << '\'';
+           << function_interface_impl::getTypeAttrName() << '\'';
 
   if (failed(op.verifyType()))
     return failure();
