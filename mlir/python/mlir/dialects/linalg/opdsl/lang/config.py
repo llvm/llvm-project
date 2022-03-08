@@ -265,8 +265,8 @@ class LinalgStructuredOpConfig(YAMLObject):
     for index in collected_indices:
       if index.dim_def.dimname not in self.affine_state.all_dims:
         raise ValueError(
-            f"The dimension {index.dim.dimname} is not part of the iteration "
-            f"domain {self.affine_state.all_dims}")
+            f"The dimension {index.dim_def.dimname} is not part of the "
+            f"iteration domain {self.affine_state.all_dims}")
       index.resolve_dimension_name(self.affine_state)
 
     # Generate the scalar assignments (used to build a body).
