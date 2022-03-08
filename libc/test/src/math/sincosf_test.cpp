@@ -32,29 +32,27 @@ TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
   __llvm_libc::sincosf(aNaN, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
-  EXPECT_EQ(errno, 0);
+  EXPECT_MATH_ERRNO(0);
 
   __llvm_libc::sincosf(0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(0.0f, sin);
-  EXPECT_EQ(errno, 0);
+  EXPECT_MATH_ERRNO(0);
 
   __llvm_libc::sincosf(-0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(-0.0f, sin);
-  EXPECT_EQ(errno, 0);
+  EXPECT_MATH_ERRNO(0);
 
-  errno = 0;
   __llvm_libc::sincosf(inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
-  EXPECT_EQ(errno, EDOM);
+  EXPECT_MATH_ERRNO(EDOM);
 
-  errno = 0;
   __llvm_libc::sincosf(neg_inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
-  EXPECT_EQ(errno, EDOM);
+  EXPECT_MATH_ERRNO(EDOM);
 }
 
 TEST(LlvmLibcSinCosfTest, InFloatRange) {
