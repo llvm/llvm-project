@@ -10610,13 +10610,6 @@ static bool CheckTargetCausesMultiVersioning(
     return false;
 
   // Otherwise, this decl causes MultiVersioning.
-  if (!S.getASTContext().getTargetInfo().supportsMultiVersioning()) {
-    S.Diag(NewFD->getLocation(), diag::err_multiversion_not_supported);
-    S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
-    NewFD->setInvalidDecl();
-    return true;
-  }
-
   if (CheckMultiVersionAdditionalRules(S, OldFD, NewFD, true,
                                        MultiVersionKind::Target)) {
     NewFD->setInvalidDecl();
