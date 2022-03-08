@@ -74,7 +74,7 @@ TEST(CanonicalizerTest, TestDisablePatterns) {
     %1 = "test.foo"() {sym_name = "B"} : () -> (f32)
   )mlir";
 
-  OwningOpRef<ModuleOp> module = mlir::parseSourceString(code, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(code, &context);
   ASSERT_TRUE(succeeded(mgr.run(*module)));
 
   EXPECT_TRUE(module->lookupSymbol("B"));

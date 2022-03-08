@@ -63,7 +63,8 @@ TEST(MLIRExecutionEngine, AddInteger) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -88,7 +89,8 @@ TEST(MLIRExecutionEngine, SubtractFloat) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -118,7 +120,7 @@ TEST(NativeMemRefJit, ZeroRankMemref) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  auto module = parseSourceString(moduleStr, &context);
+  auto module = parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -153,7 +155,7 @@ TEST(NativeMemRefJit, RankOneMemref) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  auto module = parseSourceString(moduleStr, &context);
+  auto module = parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -207,7 +209,8 @@ TEST(NativeMemRefJit, BasicMemref) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -249,7 +252,7 @@ TEST(NativeMemRefJit, JITCallback) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  auto module = parseSourceString(moduleStr, &context);
+  auto module = parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
