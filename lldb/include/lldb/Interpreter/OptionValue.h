@@ -311,7 +311,6 @@ public:
   lldb::OptionValueSP GetParent() const { return m_parent_wp.lock(); }
 
   void SetValueChangedCallback(std::function<void()> callback) {
-    assert(!m_callback);
     m_callback = std::move(callback);
   }
 
