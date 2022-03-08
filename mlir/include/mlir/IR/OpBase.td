@@ -1268,6 +1268,11 @@ def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
 
+class TypeAttrOf<Type ty>
+   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.description> {
+  let constBuilderCall = "::mlir::TypeAttr::get($0)";
+}
+
 // The mere presence of unit attributes has a meaning.  Therefore, unit
 // attributes are always treated as optional and accessors to them return
 // "true" if the attribute is present and "false" otherwise.

@@ -149,7 +149,7 @@ getFuncOpAnalysisState(const BufferizationState &state, FuncOp funcOp) {
 /// Return nullptr if there is no such unique ReturnOp.
 static func::ReturnOp getAssumedUniqueReturnOp(FuncOp funcOp) {
   func::ReturnOp returnOp;
-  for (Block &b : funcOp.body()) {
+  for (Block &b : funcOp.getBody()) {
     if (auto candidateOp = dyn_cast<func::ReturnOp>(b.getTerminator())) {
       if (returnOp)
         return nullptr;
@@ -460,7 +460,7 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
   // 3. Rewrite the bbArgs.
   // Iterate on the original `numArgs` and replace them in order.
   // This guarantees the argument order still matches after the rewrite.
-  Block &frontBlock = funcOp.body().front();
+  Block &frontBlock = funcOp.getBody().front();
   unsigned numArgs = frontBlock.getNumArguments();
   for (unsigned idx = 0; idx < numArgs; ++idx) {
     auto bbArg = frontBlock.getArgument(0);
@@ -527,7 +527,7 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   // For each FuncOp, the number of CallOpInterface it contains.
   DenseMap<FuncOp, unsigned> numberCallOpsContainedInFuncOp;
   WalkResult res = moduleOp.walk([&](FuncOp funcOp) -> WalkResult {
-    if (!funcOp.body().empty()) {
+    if (!funcOp.getBody().empty()) {
       func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
       if (!returnOp)
         return funcOp->emitError()
@@ -624,7 +624,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
       argumentTypes.push_back(desiredMemrefType);
 
       // If funcOp's body is not empty, change the bbArg type and propagate.
-      if (!funcOp.body().empty()) {
+      if (!funcOp.getBody().empty()) {
         BlockArgument bbArg = funcOp.getArgument(argNumber);
         bbArg.setType(desiredMemrefType);
         OpBuilder b(bbArg.getContext());
@@ -886,7 +886,7 @@ struct CallOpInterface
 
     // 4. Create the new CallOp.
     Operation *newCallOp = rewriter.create<func::CallOp>(
-        callOp.getLoc(), funcOp.sym_name(), resultTypes, newOperands);
+        callOp.getLoc(), funcOp.getSymName(), resultTypes, newOperands);
     newCallOp->setAttrs(callOp->getAttrs());
     // Get replacement values for non-tensor / non-equivalent results.
     for (unsigned i = 0; i < replacementValues.size(); ++i) {
@@ -1009,7 +1009,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
   // Analyze ops.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
-    if (funcOp.body().empty())
+    if (funcOp.getBody().empty())
       continue;
 
     // Now analyzing function.
@@ -1037,7 +1037,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
   // Bufferize function bodies.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
-    if (funcOp.body().empty())
+    if (funcOp.getBody().empty())
       continue;
 
     if (failed(bufferizeOp(funcOp, state)))

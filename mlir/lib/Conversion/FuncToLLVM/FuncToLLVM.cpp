@@ -492,18 +492,18 @@ struct UnrealizedConversionCastOpLowering
   matchAndRewrite(UnrealizedConversionCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Type> convertedTypes;
-    if (succeeded(typeConverter->convertTypes(op.outputs().getTypes(),
+    if (succeeded(typeConverter->convertTypes(op.getOutputs().getTypes(),
                                               convertedTypes)) &&
-        convertedTypes == adaptor.inputs().getTypes()) {
-      rewriter.replaceOp(op, adaptor.inputs());
+        convertedTypes == adaptor.getInputs().getTypes()) {
+      rewriter.replaceOp(op, adaptor.getInputs());
       return success();
     }
 
     convertedTypes.clear();
-    if (succeeded(typeConverter->convertTypes(adaptor.inputs().getTypes(),
+    if (succeeded(typeConverter->convertTypes(adaptor.getInputs().getTypes(),
                                               convertedTypes)) &&
-        convertedTypes == op.outputs().getType()) {
-      rewriter.replaceOp(op, adaptor.inputs());
+        convertedTypes == op.getOutputs().getType()) {
+      rewriter.replaceOp(op, adaptor.getInputs());
       return success();
     }
     return failure();

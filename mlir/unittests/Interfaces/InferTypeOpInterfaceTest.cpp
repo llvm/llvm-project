@@ -41,7 +41,7 @@ protected:
 
   // Create ValueShapeRange on the arith.addi operation.
   ValueShapeRange addiRange() {
-    auto &fnBody = mapFn.body();
+    auto &fnBody = mapFn.getBody();
     return std::next(fnBody.front().begin())->getOperands();
   }
 
