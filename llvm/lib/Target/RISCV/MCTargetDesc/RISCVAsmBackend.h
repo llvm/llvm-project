@@ -27,15 +27,12 @@ class RISCVAsmBackend : public MCAsmBackend {
   bool Is64Bit;
   bool ForceRelocs = false;
   const MCTargetOptions &TargetOptions;
-  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options)
       : MCAsmBackend(support::little), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
         TargetOptions(Options) {
-    TargetABI = RISCVABI::computeTargetABI(
-        STI.getTargetTriple(), STI.getFeatureBits(), Options.getABIName());
     RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
   }
   ~RISCVAsmBackend() override = default;
@@ -103,7 +100,6 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
-  RISCVABI::ABI getTargetABI() const { return TargetABI; }
 };
 }
 
