@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRBufferization
 
   LINK_LIBS PUBLIC
   MLIRDialect
+  MLIRFunc
   MLIRIR
   MLIRTensor
   MLIRMemRef

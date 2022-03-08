@@ -34,7 +34,7 @@ below[^wip_form1]:
 ```mlir
 shape.function_library @shplib {
 
-builtin.func @matmul(%lhs: !shape.value_shape, %rhs: !shape.value_shape) -> !shape.shape {
+func.func @matmul(%lhs: !shape.value_shape, %rhs: !shape.value_shape) -> !shape.shape {
   %c1 = shape.const_size 1
   %c2 = shape.const_size 2
   // We could also allow rank etc operations directly on value_shape too, that

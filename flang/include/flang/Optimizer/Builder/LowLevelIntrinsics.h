@@ -14,8 +14,10 @@
 #define FLANG_OPTIMIZER_BUILDER_LOWLEVELINTRINSICS_H
 
 namespace mlir {
+namespace func {
 class FuncOp;
-}
+} // namespace func
+} // namespace mlir
 namespace fir {
 class FirOpBuilder;
 }
@@ -23,10 +25,10 @@ class FirOpBuilder;
 namespace fir::factory {
 
 /// Get the `llvm.stacksave` intrinsic.
-mlir::FuncOp getLlvmStackSave(FirOpBuilder &builder);
+mlir::func::FuncOp getLlvmStackSave(FirOpBuilder &builder);
 
 /// Get the `llvm.stackrestore` intrinsic.
-mlir::FuncOp getLlvmStackRestore(FirOpBuilder &builder);
+mlir::func::FuncOp getLlvmStackRestore(FirOpBuilder &builder);
 
 } // namespace fir::factory
 

@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(canonicalize{top-down=true})' | FileCheck %s --check-prefix=TD
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(canonicalize)' | FileCheck %s --check-prefix=BU
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(canonicalize{top-down=true})' | FileCheck %s --check-prefix=TD
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(canonicalize)' | FileCheck %s --check-prefix=BU
 
 
 // BU-LABEL: func @default_insertion_position

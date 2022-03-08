@@ -10,6 +10,7 @@
 #define DIALECT_LINALG_TRANSFORMS_PASSDETAIL_H_
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 

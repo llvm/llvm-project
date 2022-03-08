@@ -7,7 +7,7 @@
 // CONV-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<10x10xf32>
 // CONV-SAME:    %[[ARG3:[0-9a-zA-Z]*]]: tensor<9x9xf32>
 // CONV-SAME:    %[[ARG4:[0-9a-zA-Z]*]]: tensor<8x8xf32>
-builtin.func @fuse_conv_chain(%arg0: tensor<2x2xf32>,
+func.func @fuse_conv_chain(%arg0: tensor<2x2xf32>,
                               %arg1: tensor<11x11xf32>,
                               %arg2: tensor<10x10xf32>,
                               %arg3: tensor<9x9xf32>,
@@ -52,7 +52,7 @@ builtin.func @fuse_conv_chain(%arg0: tensor<2x2xf32>,
 
 //      MATMUL:  fuse_matmul_chain
 // MATMUL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<8x8xf32>
-builtin.func @fuse_matmul_chain(%arg0: tensor<8x8xf32>) -> tensor<8x8xf32> {
+func.func @fuse_matmul_chain(%arg0: tensor<8x8xf32>) -> tensor<8x8xf32> {
   %c0 = arith.constant 0 : index
   %c12 = arith.constant 12 : index
   %c25 = arith.constant 25 : index

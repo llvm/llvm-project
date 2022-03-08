@@ -31,7 +31,7 @@ defines a [`SymbolTable`](#symbol-table). The name of a symbol *must* be unique
 within the parent `SymbolTable`. This name is semantically similarly to an SSA
 result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
-[`builtin.func`](Dialects/Builtin.md/#func-mlirfuncop). `builtin.func` defines a
+[`func.func`](Dialects/Builtin.md/#func-mlirfuncop). `func.func` defines a
 symbol name, which is [referred to](#referencing-a-symbol) by operations like
 [`func.call`](Dialects/Func.md/#funccall-callop).
 
@@ -77,7 +77,7 @@ operation that is also a [symbol table](#symbol-table).
 Below is an example of how an operation can reference a symbol operation:
 
 ```mlir
-// This `builtin.func` operation defines a symbol named `symbol`.
+// This `func.func` operation defines a symbol named `symbol`.
 func @symbol()
 
 // Our `foo.user` operation contains a SymbolRefAttr with the name of the
@@ -106,7 +106,7 @@ module {
 // Here we define another nested symbol table, except this time it also defines
 // a symbol.
 module @module_symbol {
-  // This `builtin.func` operation defines a symbol named `nested_symbol`.
+  // This `func.func` operation defines a symbol named `nested_symbol`.
   func @nested_symbol()
 }
 

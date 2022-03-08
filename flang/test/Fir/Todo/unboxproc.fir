@@ -4,7 +4,7 @@
 // Not implemented yet.
 // Currently fails since coversion for boxproc type is not implemented.
 
-// CHECK: failed to legalize operation 'builtin.func'
+// CHECK: failed to legalize operation 'func.func'
 func @boxing_match(%bproc: !fir.boxproc<(i32) -> ()>) {
   %ubproc:2 = fir.unboxproc %bproc : (!fir.boxproc<(i32) -> ()>) -> ((i32) -> (), !fir.ref<tuple<i32,f64>>)
   return

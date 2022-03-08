@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.func(test-alias-analysis-modref)' -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='func.func(test-alias-analysis-modref)' -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "no_side_effects"
 // CHECK: alloc -> func.region0#0: NoModRef

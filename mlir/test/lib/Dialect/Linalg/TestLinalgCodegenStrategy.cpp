@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/CodegenStrategy.h"
@@ -217,7 +218,7 @@ void TestLinalgCodegenStrategy::runStrategy(
               .enableTransferToSCFConversion());
   // Created a nested OpPassManager and run.
   FuncOp funcOp = getOperation();
-  OpPassManager dynamicPM("builtin.func");
+  OpPassManager dynamicPM("func.func");
   strategy.configurePassPipeline(dynamicPM, funcOp.getContext(), runEnablePass);
   if (failed(runPipeline(dynamicPM, funcOp)))
     return signalPassFailure();

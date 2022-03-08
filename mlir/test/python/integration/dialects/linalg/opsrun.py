@@ -196,7 +196,7 @@ def transform(module, boilerplate):
   mod = Module.parse("\n".join([str(op) for op in ops]) + boilerplate)
 
   pm = PassManager.parse(
-      "builtin.func(convert-linalg-to-loops, lower-affine, " +
+      "func.func(convert-linalg-to-loops, lower-affine, " +
       "convert-math-to-llvm, convert-scf-to-cf, arith-expand, memref-expand), "
       + "convert-vector-to-llvm, convert-memref-to-llvm, convert-func-to-llvm," +
       "reconcile-unrealized-casts")
@@ -211,14 +211,14 @@ def test_elemwise_builtin():
     i8 = IntegerType.get_signless(8)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_exp_add_on_buffers(lhs, rhs, out):
         linalg.elemwise_unary(lhs, outs=[out])
         linalg.elemwise_binary(out, rhs, outs=[out])
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_log_mul_on_buffers(lhs, rhs, out):
@@ -250,14 +250,14 @@ def test_elemwise_generic():
     i8 = IntegerType.get_signless(8)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_exp_add_on_buffers(lhs, rhs, out):
         linalg.elemwise_unary(lhs, outs=[out], emit_generic=True)
         linalg.elemwise_binary(out, rhs, outs=[out], emit_generic=True)
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_log_mul_on_buffers(lhs, rhs, out):
@@ -291,13 +291,13 @@ def test_matmul_builtin():
     i8 = IntegerType.get_signless(8)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
           MemRefType.get((4, 8), f32))
       def matmul_signed_on_buffers(lhs, rhs, out):
         linalg.matmul(lhs, rhs, outs=[out])
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
           MemRefType.get((4, 8), f32))
       def matmul_unsigned_on_buffers(lhs, rhs, out):
@@ -328,13 +328,13 @@ def test_matmul_generic():
     i8 = IntegerType.get_signless(8)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
           MemRefType.get((4, 8), f32))
       def matmul_signed_on_buffers(lhs, rhs, out):
         linalg.matmul(lhs, rhs, outs=[out], emit_generic=True)
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
           MemRefType.get((4, 8), f32))
       def matmul_unsigned_on_buffers(lhs, rhs, out):
@@ -366,15 +366,15 @@ def test_fill_builtin():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+      @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
       def fill_0d_on_buffers(value, out):
         linalg.fill(value, outs=[out])
 
-      @builtin.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+      @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
       def fill_1d_on_buffers(value, out):
         linalg.fill(value, outs=[out])
 
-      @builtin.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+      @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
       def fill_2d_on_buffers(value, out):
         linalg.fill(value, outs=[out])
 
@@ -401,15 +401,15 @@ def test_fill_generic():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+      @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
       def fill_0d_on_buffers(value, out):
         linalg.fill(value, outs=[out], emit_generic=True)
 
-      @builtin.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+      @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
       def fill_1d_on_buffers(value, out):
         linalg.fill(value, outs=[out], emit_generic=True)
 
-      @builtin.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+      @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
       def fill_2d_on_buffers(value, out):
         linalg.fill(value, outs=[out], emit_generic=True)
 
@@ -436,7 +436,7 @@ def test_fill_rng_builtin():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
+      @func.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
       def fill_rng_on_buffers(min, max, seed, out):
         linalg.fill_rng_2d(min, max, seed, outs=[out])
 
@@ -463,7 +463,7 @@ def test_fill_rng_generic():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
+      @func.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
       def fill_rng_on_buffers(min, max, seed, out):
         linalg.fill_rng_2d(min, max, seed, outs=[out], emit_generic=True)
 
@@ -490,7 +490,7 @@ def test_max_pooling_builtin():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
@@ -521,7 +521,7 @@ def test_max_pooling_generic():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
@@ -557,7 +557,7 @@ def test_min_pooling_builtin():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       # Set the strides and use the default dilations.
@@ -587,7 +587,7 @@ def test_min_pooling_generic():
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       # Set the strides and use the default dilations.

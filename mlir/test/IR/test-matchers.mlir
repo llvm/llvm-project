@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline="builtin.func(test-matchers)" -o /dev/null 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline="func.func(test-matchers)" -o /dev/null 2>&1 | FileCheck %s
 
 func @test1(%a: f32, %b: f32, %c: f32) {
   %0 = arith.addf %a, %b: f32

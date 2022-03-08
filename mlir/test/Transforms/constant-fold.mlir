@@ -758,7 +758,7 @@ func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
 func @nested_isolated_region() {
   // CHECK-NEXT: func @isolated_op
   // CHECK-NEXT: arith.constant 2
-  builtin.func @isolated_op() {
+  func.func @isolated_op() {
     %0 = arith.constant 1 : i32
     %2 = arith.addi %0, %0 : i32
     "foo.yield"(%2) : (i32) -> ()

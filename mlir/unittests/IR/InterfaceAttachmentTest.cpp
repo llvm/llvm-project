@@ -278,7 +278,7 @@ struct TestExternalOpOverridingModel
   }
 
   static unsigned getNameLengthPlusArgTwice(unsigned arg) {
-    return FuncOp::getOperationName().size() + 2 * arg;
+    return UnrealizedConversionCastOp::getOperationName().size() + 2 * arg;
   }
 
   unsigned getNameLengthTimesArg(Operation *op, unsigned arg) const {
@@ -290,9 +290,11 @@ struct TestExternalOpOverridingModel
 
 TEST(InterfaceAttachment, Operation) {
   MLIRContext context;
+  OpBuilder builder(&context);
 
   // Initially, the operation doesn't have the interface.
-  OwningOpRef<ModuleOp> moduleOp = ModuleOp::create(UnknownLoc::get(&context));
+  OwningOpRef<ModuleOp> moduleOp =
+      builder.create<ModuleOp>(UnknownLoc::get(&context));
   ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp->getOperation()));
 
   // We can attach an external interface and now the operaiton has it.
@@ -305,16 +307,17 @@ TEST(InterfaceAttachment, Operation) {
   EXPECT_EQ(iface.getNameLengthMinusArg(5), 9u);
 
   // Default implementation can be overridden.
-  OwningOpRef<FuncOp> funcOp =
-      FuncOp::create(UnknownLoc::get(&context), "function",
-                     FunctionType::get(&context, {}, {}));
-  ASSERT_FALSE(isa<TestExternalOpInterface>(funcOp->getOperation()));
-  FuncOp::attachInterface<TestExternalOpOverridingModel>(context);
-  iface = dyn_cast<TestExternalOpInterface>(funcOp->getOperation());
+  OwningOpRef<UnrealizedConversionCastOp> castOp =
+      builder.create<UnrealizedConversionCastOp>(UnknownLoc::get(&context),
+                                                 TypeRange(), ValueRange());
+  ASSERT_FALSE(isa<TestExternalOpInterface>(castOp->getOperation()));
+  UnrealizedConversionCastOp::attachInterface<TestExternalOpOverridingModel>(
+      context);
+  iface = dyn_cast<TestExternalOpInterface>(castOp->getOperation());
   ASSERT_TRUE(iface != nullptr);
-  EXPECT_EQ(iface.getNameLengthPlusArg(10), 22u);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 44u);
   EXPECT_EQ(iface.getNameLengthTimesArg(0), 42u);
-  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 28u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 50u);
   EXPECT_EQ(iface.getNameLengthMinusArg(1000), 21u);
 
   // Another context doesn't have the interfaces registered.

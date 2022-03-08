@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(test-match-reduction)" -verify-diagnostics -split-input-file
+// RUN: mlir-opt %s -pass-pipeline="func.func(test-match-reduction)" -verify-diagnostics -split-input-file
 
 // Verify that the generic reduction detection utility works on different
 // dialects.

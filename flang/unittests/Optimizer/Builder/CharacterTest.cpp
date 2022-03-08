@@ -16,6 +16,8 @@
 struct CharacterTest : public testing::Test {
 public:
   void SetUp() override {
+    fir::support::loadDialects(context);
+
     kindMap = std::make_unique<fir::KindMapping>(&context,
         "i10:80,l3:24,a1:8,r54:Double,c20:X86_FP80,r11:PPC_FP128,"
         "r12:FP128,r13:X86_FP80,r14:Double,r15:Float,r16:Half,r23:BFloat");
@@ -31,7 +33,6 @@ public:
     mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    fir::support::loadDialects(context);
     firBuilder = std::make_unique<fir::FirOpBuilder>(mod, *kindMap);
   }
 

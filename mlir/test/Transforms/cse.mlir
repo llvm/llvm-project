@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(cse)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(cse)' | FileCheck %s
 
 // CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0) -> (d0 mod 2)>
 #map0 = affine_map<(d0) -> (d0 mod 2)>
@@ -229,7 +229,7 @@ func @nested_isolated() -> i32 {
   %0 = arith.constant 1 : i32
 
   // CHECK-NEXT: @nested_func
-  builtin.func @nested_func() {
+  func.func @nested_func() {
     // CHECK-NEXT: arith.constant 1
     %foo = arith.constant 1 : i32
     "foo.yield"(%foo) : (i32) -> ()

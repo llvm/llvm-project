@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(scf-parallel-loop-collapsing{collapsed-indices-0=0,1}, canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(scf-parallel-loop-collapsing{collapsed-indices-0=0,1}, canonicalize)' | FileCheck %s
 
 func @collapse_to_single() {
   %c0 = arith.constant 3 : index

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(scf-parallel-loop-fusion)' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(scf-parallel-loop-fusion)' -split-input-file | FileCheck %s
 
 func @fuse_empty_loops() {
   %c2 = arith.constant 2 : index

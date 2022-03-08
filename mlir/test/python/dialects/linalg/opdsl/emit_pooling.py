@@ -46,7 +46,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[MAX:.+]] = arith.maxsi %[[OUT]], %[[IN_CAST:.+]] : i32
     # CHECK-NEXT:   linalg.yield %[[MAX]] : i32
     # CHECK-NEXT: -> tensor<1x2x4x1xi32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
@@ -57,7 +57,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: @test_f32i32_max_unsigned_pooling
     # CHECK:   = arith.fptoui
     # CHECK:   = arith.maxui
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
@@ -79,7 +79,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[MAX:.+]] = arith.maxf %[[OUT]], %[[IN:.+]] : f32
     # CHECK-NEXT:   linalg.yield %[[MAX]] : f32
     # CHECK-NEXT: -> tensor<1x2x4x1xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), f32))
@@ -90,7 +90,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: @test_f32i32_min_pooling
     # CHECK:   = arith.fptosi
     # CHECK:   = arith.minsi
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
@@ -106,7 +106,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: @test_f32i32_min_unsigned_pooling
     # CHECK:   = arith.fptoui
     # CHECK:   = arith.minui
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))
@@ -122,7 +122,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32f32_min_pooling
     # CHECK:   = arith.minf
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((1, 2, 4, 1), f32))

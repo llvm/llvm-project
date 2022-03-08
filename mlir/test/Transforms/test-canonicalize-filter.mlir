@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.func(canonicalize)' | FileCheck %s --check-prefix=NO_FILTER
-// RUN: mlir-opt %s -pass-pipeline='builtin.func(canonicalize{enable-patterns=TestRemoveOpWithInnerOps})' | FileCheck %s --check-prefix=FILTER_ENABLE
-// RUN: mlir-opt %s -pass-pipeline='builtin.func(canonicalize{disable-patterns=TestRemoveOpWithInnerOps})' | FileCheck %s --check-prefix=FILTER_DISABLE
+// RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize)' | FileCheck %s --check-prefix=NO_FILTER
+// RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize{enable-patterns=TestRemoveOpWithInnerOps})' | FileCheck %s --check-prefix=FILTER_ENABLE
+// RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize{disable-patterns=TestRemoveOpWithInnerOps})' | FileCheck %s --check-prefix=FILTER_DISABLE
 
 // NO_FILTER-LABEL: func @remove_op_with_inner_ops_pattern
 // NO_FILTER-NEXT: return

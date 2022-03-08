@@ -8,7 +8,7 @@ func @main(%arg0: f32) -> f32 {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 walk was interrupted
 
 // -----
@@ -21,7 +21,7 @@ func @main(%arg0: f32) -> f32 {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'foo' before all regions
 // CHECK: step 3 op 'bar' before all regions
 // CHECK: step 4 walk was interrupted
@@ -40,7 +40,7 @@ func @main(%arg0: f32) -> f32 {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'foo' before all regions
 // CHECK: step 3 op 'bar0' before all regions
 // CHECK: step 4 walk was interrupted
@@ -59,7 +59,7 @@ func @main() {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'foo' before all regions
 // CHECK: step 3 op 'test.two_region_op' before all regions
 // CHECK: step 4 op 'work' before all regions
@@ -83,7 +83,7 @@ func @main() {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'foo' before all regions
 // CHECK: step 3 op 'test.two_region_op' before all regions
 // CHECK: step 4 op 'work' before all regions
@@ -106,10 +106,10 @@ func @main(%arg0: f32) -> f32 {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'arith.addf' before all regions
 // CHECK: step 3 op 'func.return' before all regions
-// CHECK: step 4 op 'builtin.func' after all regions
+// CHECK: step 4 op 'func.func' after all regions
 // CHECK: step 5 op 'builtin.module' after all regions
 
 // -----
@@ -125,14 +125,14 @@ func @main(%arg0: f32) -> f32 {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'foo' before all regions
 // CHECK: step 3 op 'bar0' before all regions
 // CHECK: step 4 op 'foo' before region #1
 // CHECK: step 5 op 'bar1' before all regions
 // CHECK: step 6 op 'arith.addf' before all regions
 // CHECK: step 7 op 'func.return' before all regions
-// CHECK: step 8 op 'builtin.func' after all regions
+// CHECK: step 8 op 'func.func' after all regions
 // CHECK: step 9 op 'builtin.module' after all regions
 
 // -----
@@ -148,10 +148,10 @@ func @main(%arg0: f32) -> f32 {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'foo' before all regions
 // CHECK: step 3 op 'bar0' before all regions
 // CHECK: step 4 op 'arith.addf' before all regions
 // CHECK: step 5 op 'func.return' before all regions
-// CHECK: step 6 op 'builtin.func' after all regions
+// CHECK: step 6 op 'func.func' after all regions
 // CHECK: step 7 op 'builtin.module' after all regions

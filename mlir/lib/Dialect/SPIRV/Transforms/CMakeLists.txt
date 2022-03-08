@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRSPIRVConversion
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   LINK_LIBS PUBLIC
+  MLIRFunc
   MLIRSPIRV
   MLIRTransformUtils
 )

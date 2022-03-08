@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(convert-vector-to-scf{lower-permutation-maps=true})" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf{lower-permutation-maps=true})" -split-input-file | FileCheck %s
 
 // Ensure that the permutation map is lowered (by inserting a transpose op)
 // before lowering the vector.transfer_read.

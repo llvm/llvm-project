@@ -21,9 +21,12 @@ class AffineForOp;
 class AffineIfOp;
 class AffineParallelOp;
 class DominanceInfo;
-class FuncOp;
 class Operation;
 class PostDominanceInfo;
+
+namespace func {
+class FuncOp;
+} // namespace func
 
 namespace memref {
 class AllocOp;
@@ -96,7 +99,7 @@ struct VectorizationStrategy {
 /// Replace affine store and load accesses by scalars by forwarding stores to
 /// loads and eliminate invariant affine loads; consequently, eliminate dead
 /// allocs.
-void affineScalarReplace(FuncOp f, DominanceInfo &domInfo,
+void affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
                          PostDominanceInfo &postDomInfo);
 
 /// Vectorizes affine loops in 'loops' using the n-D vectorization factors in

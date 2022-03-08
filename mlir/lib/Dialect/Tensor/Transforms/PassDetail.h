@@ -9,6 +9,7 @@
 #ifndef DIALECT_TENSOR_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_TENSOR_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

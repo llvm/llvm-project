@@ -32,7 +32,7 @@ def testBlockCreation():
       f_type = FunctionType.get(
           [IntegerType.get_signless(32),
            IntegerType.get_signless(16)], [])
-      f_op = builtin.FuncOp("test", f_type)
+      f_op = func.FuncOp("test", f_type)
       entry_block = f_op.add_entry_block()
       i32_arg, i16_arg = entry_block.arguments
       successor_block = entry_block.create_after(i32_arg.type)
@@ -62,7 +62,7 @@ def testFirstBlockCreation():
     module = Module.create()
     f32 = F32Type.get()
     with InsertionPoint(module.body):
-      f = builtin.FuncOp("test", ([f32], []))
+      f = func.FuncOp("test", ([f32], []))
       entry_block = Block.create_at_start(f.operation.regions[0], [f32])
       with InsertionPoint(entry_block):
         func.ReturnOp([])

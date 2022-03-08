@@ -670,7 +670,7 @@ class IndexExpr(abc.ABC):
     # Build the kernel for the operations.
     with ir.InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(*input_types, name=_ENTRY_NAME)
+      @func.FuncOp.from_py_func(*input_types, name=_ENTRY_NAME)
       def linalg_funcop(*args):
         # Set up the mapping from the Access nodes to their MLIR values.
         for e, mlir in zip(input_accesses, args):

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Pass/AnalysisManager.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -51,6 +52,7 @@ TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
 
 TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
   Builder builder(&context);
 
   // Create a function and a module.
@@ -81,6 +83,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
 
 TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
   MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
   Builder builder(&context);
 
   // Create a function and a module.

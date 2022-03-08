@@ -4,7 +4,7 @@
 # python package's math module (coming in from random.py).
 
 from mlir.ir import *
-import mlir.dialects.builtin as builtin
+import mlir.dialects.func as func
 import mlir.dialects.math as mlir_math
 
 def run(f):
@@ -17,7 +17,7 @@ def testMathOps():
   with Context() as ctx, Location.unknown():
     module = Module.create()
     with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(F32Type.get())
+      @func.FuncOp.from_py_func(F32Type.get())
       def emit_sqrt(arg):
         return mlir_math.SqrtOp(arg)
 

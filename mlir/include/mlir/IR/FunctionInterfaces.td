@@ -158,7 +158,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// Block argument iterator types.
     using BlockArgListType = Region::BlockArgListType;
     using args_iterator = BlockArgListType::iterator;
-
+    
     //===------------------------------------------------------------------===//
     // Body Handling
     //===------------------------------------------------------------------===//

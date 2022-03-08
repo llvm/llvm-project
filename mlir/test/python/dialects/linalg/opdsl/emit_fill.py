@@ -35,7 +35,7 @@ with Context() as ctx, Location.unknown():
     # CHECK: linalg.generic
     # CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP0]]
     # CHECK-SAME: iterator_types = []
-    @builtin.FuncOp.from_py_func(f32, RankedTensorType.get([], f32))
+    @func.FuncOp.from_py_func(f32, RankedTensorType.get([], f32))
     def test_fill_0d(value, init_result):
       return fill_poly(value, outs=[init_result])
 
@@ -43,7 +43,7 @@ with Context() as ctx, Location.unknown():
     # CHECK: linalg.generic
     # CHECK-SAME: indexing_maps = [#[[$MAP1]], #[[$MAP2]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel"]
-    @builtin.FuncOp.from_py_func(f32, RankedTensorType.get([4, 16], f32))
+    @func.FuncOp.from_py_func(f32, RankedTensorType.get([4, 16], f32))
     def test_fill_2d(value, init_result):
       return fill_poly(value, outs=[init_result])
 
@@ -51,7 +51,7 @@ with Context() as ctx, Location.unknown():
     # CHECK: linalg.generic
     # CHECK-SAME: indexing_maps = [#[[$MAP3]], #[[$MAP4]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get([], f32), RankedTensorType.get([4, 8, 16], f32))
     def test_fill_rank_zero_3d(input, init_result):
       return fill_rank_zero_poly(input, outs=[init_result])

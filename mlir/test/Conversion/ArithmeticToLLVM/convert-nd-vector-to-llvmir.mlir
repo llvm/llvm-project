@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="builtin.func(convert-arith-to-llvm)" %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="func.func(convert-arith-to-llvm)" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @vec_bin
 func @vec_bin(%arg0: vector<2x2x2xf32>) -> vector<2x2x2xf32> {

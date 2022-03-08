@@ -98,7 +98,7 @@ func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 
 func @return_not_in_function() {
   "foo.region"() ({
-    // expected-error@+1 {{'func.return' op expects parent op 'builtin.func'}}
+    // expected-error@+1 {{'func.return' op expects parent op 'func.func'}}
     return
   }): () -> ()
   return

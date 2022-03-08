@@ -4,7 +4,7 @@
 // DFG-LABEL: digraph G {
 //       DFG:   subgraph {{.*}} {
 //       DFG:     subgraph {{.*}}
-//       DFG:       label = "builtin.func{{.*}}merge_blocks
+//       DFG:       label = "func.func{{.*}}merge_blocks
 //       DFG:       subgraph {{.*}} {
 //       DFG:         v[[ARG0:.*]] [label = "arg0"
 //       DFG:         v[[CONST10:.*]] [label ={{.*}}10 : i32
@@ -26,7 +26,7 @@
 // CFG-LABEL: digraph G {
 //       CFG:   subgraph {{.*}} {
 //       CFG:     subgraph {{.*}}
-//       CFG:       label = "builtin.func{{.*}}merge_blocks
+//       CFG:       label = "func.func{{.*}}merge_blocks
 //       CFG:       subgraph {{.*}} {
 //       CFG:         v[[C1:.*]] [label = "arith.constant
 //       CFG:         v[[C2:.*]] [label = "arith.constant

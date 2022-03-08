@@ -17,6 +17,8 @@ using namespace mlir;
 struct FIRBuilderTest : public testing::Test {
 public:
   void SetUp() override {
+    fir::support::loadDialects(context);
+
     llvm::ArrayRef<fir::KindTy> defs;
     fir::KindMapping kindMap(&context, defs);
     mlir::OpBuilder builder(&context);
@@ -31,7 +33,6 @@ public:
     mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    fir::support::loadDialects(context);
     firBuilder = std::make_unique<fir::FirOpBuilder>(mod, kindMap);
   }
 

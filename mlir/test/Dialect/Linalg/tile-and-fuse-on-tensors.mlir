@@ -8,7 +8,7 @@
 
 //      MATMUL:  fuse_input
 // MATMUL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<24x12xf32>
-builtin.func @fuse_input(%arg0: tensor<24x12xf32>,
+func.func @fuse_input(%arg0: tensor<24x12xf32>,
                          %arg1: tensor<12x25xf32>,
                          %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
   %c0 = arith.constant 0 : index
@@ -44,7 +44,7 @@ builtin.func @fuse_input(%arg0: tensor<24x12xf32>,
 
 //      MATMUL:  fuse_output
 // MATMUL-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<24x25xf32>
-builtin.func @fuse_output(%arg0: tensor<24x12xf32>,
+func.func @fuse_output(%arg0: tensor<24x12xf32>,
                           %arg1: tensor<12x25xf32>,
                           %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
   //  MATMUL-DAG:  %[[C0:.*]] = arith.constant 0 : index
@@ -96,7 +96,7 @@ builtin.func @fuse_output(%arg0: tensor<24x12xf32>,
 //      MATMUL:  fuse_reduction
 // MATMUL-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<12x25xf32>
 // MATMUL-SAME:    %[[ARG3:[0-9a-zA-Z]*]]: tensor<12x7x25xf32>
-builtin.func @fuse_reduction(%arg0: tensor<24x12xf32>,
+func.func @fuse_reduction(%arg0: tensor<24x12xf32>,
                              %arg1: tensor<12x25xf32>,
                              %arg2: tensor<24x25xf32>,
                              %arg3: tensor<12x7x25xf32>) -> tensor<24x25xf32> {
@@ -140,7 +140,7 @@ builtin.func @fuse_reduction(%arg0: tensor<24x12xf32>,
 //      MATMUL:  fuse_transposed
 // MATMUL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<24x12xf32>
 // MATMUL-SAME:    %[[ARG3:[0-9a-zA-Z]*]]: tensor<12x24xf32>
-builtin.func @fuse_transposed(%arg0: tensor<24x12xf32>,
+func.func @fuse_transposed(%arg0: tensor<24x12xf32>,
                               %arg1: tensor<12x25xf32>,
                               %arg2: tensor<24x25xf32>,
                               %arg3: tensor<12x24xf32>) -> tensor<24x25xf32> {
@@ -175,7 +175,7 @@ builtin.func @fuse_transposed(%arg0: tensor<24x12xf32>,
 //      MATMUL:  fuse_input_and_output
 // MATMUL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<24x12xf32>
 // MATMUL-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<24x25xf32>
-builtin.func @fuse_input_and_output(%arg0: tensor<24x12xf32>,
+func.func @fuse_input_and_output(%arg0: tensor<24x12xf32>,
                                     %arg1: tensor<12x25xf32>,
                                     %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
   %c0 = arith.constant 0 : index
@@ -210,7 +210,7 @@ builtin.func @fuse_input_and_output(%arg0: tensor<24x12xf32>,
 
 //      MATMUL:  fuse_indexed
 // MATMUL-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<12x25xi32>
-builtin.func @fuse_indexed(%arg0: tensor<24x12xi32>,
+func.func @fuse_indexed(%arg0: tensor<24x12xi32>,
                            %arg1: tensor<12x25xi32>,
                            %arg2: tensor<24x25xi32>) -> tensor<24x25xi32> {
   %c0 = arith.constant 0 : index

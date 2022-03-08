@@ -92,7 +92,7 @@ Pattern {
 
 Pattern {
   // CHECK: expected `>` after operation name
-  let foo: Op<builtin.func<;
+  let foo: Op<func.func<;
 }
 
 // -----

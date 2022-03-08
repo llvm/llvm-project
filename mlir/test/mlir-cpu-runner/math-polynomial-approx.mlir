@@ -1,4 +1,4 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.func(test-math-polynomial-approximation,convert-arith-to-llvm),convert-vector-to-llvm,builtin.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" \
+// RUN:   mlir-opt %s -pass-pipeline="func.func(test-math-polynomial-approximation,convert-arith-to-llvm),convert-vector-to-llvm,func.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \

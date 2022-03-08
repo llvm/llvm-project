@@ -37,7 +37,7 @@ func @recursively_legal_invalid_op() {
   }
   /// Operation that is dynamically legal, i.e. the function has a pattern
   /// applied to legalize the argument type before it becomes recursively legal.
-  builtin.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
+  func.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
     %ignored = "test.illegal_op_f"() : () -> (i32)
     "test.return"() : () -> ()
   }

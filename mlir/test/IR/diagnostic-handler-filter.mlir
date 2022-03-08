@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(test-diagnostic-filter{filters=mysource1})" -split-input-file -o - 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(test-diagnostic-filter{filters=mysource1})" -split-input-file -o - 2>&1 | FileCheck %s
 // This test verifies that diagnostic handler can emit the call stack successfully.
 
 // CHECK-LABEL: Test 'test1'

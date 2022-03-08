@@ -348,7 +348,7 @@ individual scalar arguments.
 
 Examples:
 
-This convention is implemented in the conversion of `builtin.func` and `func.call` to
+This convention is implemented in the conversion of `func.func` and `func.call` to
 the LLVM dialect, with the former unpacking the descriptor into a set of
 individual values and the latter packing those values back into a descriptor so
 as to make it transparently usable by other operations. Conversions from other

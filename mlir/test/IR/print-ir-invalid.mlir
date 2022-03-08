@@ -8,7 +8,7 @@ module {}
 // The operation is invalid because the body does not have a terminator, print
 // the generic form.
 // CHECK:      Invalid operation:
-// CHECK-NEXT: "builtin.func"() ({
+// CHECK-NEXT: "func.func"() ({
 // CHECK-NEXT: ^bb0:
 // CHECK-NEXT: })
 // CHECK-SAME: sym_name = "test"
