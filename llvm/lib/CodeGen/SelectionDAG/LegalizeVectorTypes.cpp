@@ -1060,7 +1060,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ROTR:
     SplitVecRes_BinOp(N, Lo, Hi);
     break;
-  case ISD::FMA:
+  case ISD::FMA: case ISD::VP_FMA:
   case ISD::FSHL:
   case ISD::FSHR:
     SplitVecRes_TernaryOp(N, Lo, Hi);
@@ -1182,10 +1182,28 @@ void DAGTypeLegalizer::SplitVecRes_TernaryOp(SDNode *N, SDValue &Lo,
   GetSplitVector(N->getOperand(2), Op2Lo, Op2Hi);
   SDLoc dl(N);
 
-  Lo = DAG.getNode(N->getOpcode(), dl, Op0Lo.getValueType(), Op0Lo, Op1Lo,
-                   Op2Lo, N->getFlags());
-  Hi = DAG.getNode(N->getOpcode(), dl, Op0Hi.getValueType(), Op0Hi, Op1Hi,
-                   Op2Hi, N->getFlags());
+  const SDNodeFlags Flags = N->getFlags();
+  unsigned Opcode = N->getOpcode();
+  if (N->getNumOperands() == 3) {
+    Lo = DAG.getNode(Opcode, dl, Op0Lo.getValueType(), Op0Lo, Op1Lo, Op2Lo, Flags);
+    Hi = DAG.getNode(Opcode, dl, Op0Hi.getValueType(), Op0Hi, Op1Hi, Op2Hi, Flags);
+    return;
+  }
+
+  assert(N->getNumOperands() == 5 && "Unexpected number of operands!");
+  assert(N->isVPOpcode() && "Expected VP opcode");
+
+  SDValue MaskLo, MaskHi;
+  std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
+
+  SDValue EVLLo, EVLHi;
+  std::tie(EVLLo, EVLHi) =
+      DAG.SplitEVL(N->getOperand(4), N->getValueType(0), dl);
+
+  Lo = DAG.getNode(Opcode, dl, Op0Lo.getValueType(),
+                   {Op0Lo, Op1Lo, Op2Lo, MaskLo, EVLLo}, Flags);
+  Hi = DAG.getNode(Opcode, dl, Op0Hi.getValueType(),
+                   {Op0Hi, Op1Hi, Op2Hi, MaskHi, EVLHi}, Flags);
 }
 
 void DAGTypeLegalizer::SplitVecRes_FIX(SDNode *N, SDValue &Lo, SDValue &Hi) {
@@ -3441,7 +3459,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FCANONICALIZE:
     Res = WidenVecRes_Unary(N);
     break;
-  case ISD::FMA:
+  case ISD::FMA: case ISD::VP_FMA:
   case ISD::FSHL:
   case ISD::FSHR:
     Res = WidenVecRes_Ternary(N);
@@ -3460,7 +3478,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_Ternary(SDNode *N) {
   SDValue InOp1 = GetWidenedVector(N->getOperand(0));
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
   SDValue InOp3 = GetWidenedVector(N->getOperand(2));
-  return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, InOp3);
+  if (N->getNumOperands() == 3)
+    return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, InOp3);
+
+  assert(N->getNumOperands() == 5 && "Unexpected number of operands!");
+  assert(N->isVPOpcode() && "Expected VP opcode");
+
+  SDValue Mask =
+      GetWidenedMask(N->getOperand(3), WidenVT.getVectorElementCount());
+  return DAG.getNode(N->getOpcode(), dl, WidenVT,
+                     {InOp1, InOp2, InOp3, Mask, N->getOperand(4)});
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Binary(SDNode *N) {
