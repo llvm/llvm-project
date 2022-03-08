@@ -581,6 +581,19 @@ def run_break_set_by_file_colon_line(
 
     return get_bpno_from_match(break_results)
 
+def run_break_set_by_exception(
+        test,
+        language,
+        exception_typename=None):
+    command = 'breakpoint set -E ' + language
+    if exception_typename:
+        command += ' --exception-typename ' + exception_typename
+
+    break_results = run_break_set_command(test, command)
+    # No call to check_breakpoint_result as there's nothing to check. In
+    # particular, the exception breakpoint isn't yet guaranteed to be resolved.
+    return get_bpno_from_match(break_results)
+
 def run_break_set_command(test, command):
     """Run the command passed in - it must be some break set variant - and analyze the result.
     Returns a dictionary of information gleaned from the command-line results.

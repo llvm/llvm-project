@@ -418,7 +418,7 @@ public:
       } break;
 
       case 'O':
-        m_exception_extra_args.AppendArgument("-O");
+        m_exception_extra_args.AppendArgument("exception-typename");
         m_exception_extra_args.AppendArgument(option_arg);
         break;
 

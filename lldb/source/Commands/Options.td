@@ -218,12 +218,6 @@ let Command = "breakpoint set" in {
   def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
     Required, Completion<"SourceFile">,
     Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;
-  /* Don't add this option till it actually does something useful...
-  def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
-    Arg<"TypeName">, Desc<"The breakpoint will only stop if an "
-    "exception Object of this type is thrown.  Can be repeated multiple times "
-    "to stop for multiple object types">;
-   */
 }
 
 let Command = "breakpoint clear" in {

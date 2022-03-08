@@ -26,81 +26,70 @@ class TestSwiftErrorBreakpoint(TestBase):
 
     @decorators.skipIfLinux  # <rdar://problem/30909618>
     @swiftTest
-    def test_swift_error_no_pattern(self):
+    def test_swift_error_no_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
-        self.build()
-        self.do_test(lldb.SBStringList(), True)
+        self.do_tests(None, True)
 
     @swiftTest
-    def test_swift_error_matching_base_pattern(self):
+    def test_swift_error_matching_base_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
-        self.build()
-        pattern = lldb.SBStringList()
-        pattern.AppendString("exception-typename")
-        pattern.AppendString("EnumError")
-        self.do_test(pattern, True)
+        self.do_tests("EnumError", True)
 
     @swiftTest
-    def test_swift_error_matching_full_pattern(self):
+    def test_swift_error_matching_full_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
-        self.build()
-        pattern = lldb.SBStringList()
-        pattern.AppendString("exception-typename")
-        pattern.AppendString("a.EnumError")
-        self.do_test(pattern, True)
+        self.do_tests("a.EnumError", True)
 
     @swiftTest
-    def test_swift_error_bogus_pattern(self):
+    def test_swift_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
-        self.build()
-        pattern = lldb.SBStringList()
-        pattern.AppendString("exception-typename")
-        pattern.AppendString("NoSuchErrorHere")
-        self.do_test(pattern, False)
+        self.do_tests("NoSuchErrorHere", False)
 
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.build()
 
-    def do_test(self, patterns, should_stop):
-        """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
+    def do_tests(self, typename, should_stop):
+        self.do_test(typename, should_stop, self.create_breakpoint_with_api)
+        self.do_test(typename, should_stop, self.create_breakpoint_with_command)
 
+    def create_breakpoint_with_api(self, target, typename):
+        types = lldb.SBStringList()
+        if typename:
+            types.AppendString("exception-typename")
+            types.AppendString(typename)
+        return target.BreakpointCreateForException(
+            lldb.eLanguageTypeSwift, False, True, types).GetID()
+
+    def create_breakpoint_with_command(self, target, typename):
+        return lldbutil.run_break_set_by_exception(
+            self, "swift", exception_typename=typename)
+
+    def do_test(self, typename, should_stop, make_breakpoint):
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
-        self.target = target
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        swift_error_bkpt = target.BreakpointCreateForException(
-            lldb.eLanguageTypeSwift, False, True, patterns)
+        swift_error_bkpt_id = make_breakpoint(target, typename)
         # Note, I'm not checking locations here because we never know them
         # before launch.
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
-        self.process = process
 
         if should_stop:
             self.assertTrue(process, PROCESS_IS_VALID)
-            breakpoint_threads = lldbutil.get_threads_stopped_at_breakpoint(
-                process, swift_error_bkpt)
-            self.assertTrue(
-                len(breakpoint_threads) == 1,
+            breakpoint_threads = lldbutil.get_threads_stopped_at_breakpoint_id(
+                process, swift_error_bkpt_id)
+            self.assertEqual(len(breakpoint_threads), 1,
                 "We didn't stop at the error breakpoint")
         else:
             exit_state = process.GetState()
-            self.assertTrue(
-                exit_state == lldb.eStateExited,
+            self.assertEqual(exit_state, lldb.eStateExited,
                 "We stopped at the error breakpoint when we shouldn't have.")
 
-        target.BreakpointDelete(swift_error_bkpt.GetID())
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
+        target.BreakpointDelete(swift_error_bkpt_id)
