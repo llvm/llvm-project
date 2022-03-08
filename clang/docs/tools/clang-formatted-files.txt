@@ -7541,7 +7541,7 @@ mlir/examples/toy/Ch7/mlir/ToyCombine.cpp
 mlir/include/mlir/InitAllDialects.h
 mlir/include/mlir/InitAllPasses.h
 mlir/include/mlir/InitAllTranslations.h
-mlir/include/mlir/Parser.h
+mlir/include/mlir/Parser/Parser.h
 mlir/include/mlir/Translation.h
 mlir/include/mlir/Analysis/BufferViewFlowAnalysis.h
 mlir/include/mlir/Analysis/DataFlowAnalysis.h
