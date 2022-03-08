@@ -16,7 +16,7 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Optional.h"
@@ -471,6 +471,7 @@ std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
   case ScalarFnKind::Type:
     return std::string("TypeFn");
   }
+  llvm_unreachable("unsupported function kind");
 }
 
 //===----------------------------------------------------------------------===//

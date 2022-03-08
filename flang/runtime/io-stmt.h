@@ -169,6 +169,10 @@ public:
   std::optional<char32_t> NextInField(
       std::optional<int> &remaining, const DataEdit &);
 
+  // Detect and signal any end-of-record condition after input.
+  // Returns true if at EOR and remaining input should be padded with blanks.
+  bool CheckForEndOfRecord();
+
   // Skips spaces, advances records, and ignores NAMELIST comments
   std::optional<char32_t> GetNextNonBlank() {
     auto ch{GetCurrentChar()};

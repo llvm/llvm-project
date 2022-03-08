@@ -1,20 +1,26 @@
-// RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
+// RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
+// RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -DFILE_IS_STRUCT \
 // RUN:   -analyzer-checker=alpha.security.taint \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast -verify %s \
+// RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast \
+// RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
@@ -24,8 +30,10 @@
 // CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
 // CHECK-INVALID-FILE-SAME:        'justguessit'
 
-// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
+// RUN:   -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
 // RUN:   2>&1 | FileCheck -DMSG=%errc_EINVAL %s -check-prefix=CHECK-ILL-FORMED
@@ -34,8 +42,10 @@
 // CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
 // CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: [[MSG]]
 
-// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
+// RUN:   -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
@@ -46,6 +56,9 @@
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
 typedef long long rsize_t;
+void clang_analyzer_isTainted_char(char);
+void clang_analyzer_isTainted_charp(char*);
+void clang_analyzer_isTainted_int(int);
 
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
@@ -60,13 +73,18 @@ extern FILE *stdin;
 #endif
 
 #define bool _Bool
+#define NULL (void*)0
 
 char *getenv(const char *name);
+
+FILE *fopen(const char *name, const char *mode);
+
 int fscanf(FILE *restrict stream, const char *restrict format, ...);
 int sprintf(char *str, const char *format, ...);
 void setproctitle(const char *fmt, ...);
 void setproctitle_init(int argc, char *argv[], char *envp[]);
 typedef __typeof(sizeof(int)) size_t;
+typedef signed long long ssize_t;
 
 // Define string functions. Use builtin for some of them. They all default to
 // the processing in the taint checker.
@@ -86,6 +104,13 @@ char *strncat(char *restrict s1, const char *restrict s2, size_t n);
 void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
 void bcopy(void *s1, void *s2, size_t n);
+
+typedef size_t socklen_t;
+
+struct sockaddr {
+  unsigned short sa_family;
+  char sa_data[14];
+};
 
 #define BUFSIZE 10
 
@@ -388,7 +413,6 @@ int testGetwd(char *buf) {
   return system(c); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-typedef signed long long ssize_t;
 ssize_t readlink(const char *path, char *buf, size_t bufsiz);
 int testReadlink(char *path, char *buf, size_t bufsiz) {
   ssize_t s = readlink(path, buf, bufsiz);
@@ -420,8 +444,6 @@ int testGethostname(char *name, size_t len) {
   return system(name); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
-struct sockaddr;
-typedef size_t socklen_t;
 int getnameinfo(const struct sockaddr *restrict addr, socklen_t addrlen,
                 char *restrict host, socklen_t hostlen,
                 char *restrict serv, socklen_t servlen, int flags);
@@ -461,6 +483,503 @@ int getlogin_r(char *buf, size_t bufsize);
 int testGetlogin_r(char *buf, size_t bufsize) {
   getlogin_r(buf, bufsize);
   return system(buf); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+int fscanf_s(FILE *stream, const char *format, ...);
+void testFscanf_s(const char *fname, int *d) {
+  FILE *f = fopen(fname, "r");
+  fscanf_s(f, "%d", d);
+  clang_analyzer_isTainted_int(*d); // expected-warning {{YES}}
+}
+
+int fread(void *buffer, size_t size, size_t count, FILE *stream);
+void testFread(const char *fname, int *buffer, size_t size, size_t count) {
+  FILE *f = fopen(fname, "r");
+  size_t read = fread(buffer, size, count, f);
+
+  clang_analyzer_isTainted_int(*buffer); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(read); // expected-warning {{YES}}
+}
+
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+void testRecv(int *buf, size_t len, int flags) {
+  int fd;
+  scanf("%d", &fd); // fake a tainted a file descriptor
+
+  size_t read = recv(fd, buf, len, flags);
+  clang_analyzer_isTainted_int(*buf); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(read); // expected-warning {{YES}}
+}
+
+ssize_t recvfrom(int sockfd, void *restrict buf, size_t len, int flags,
+                 struct sockaddr *restrict src_addr,
+                 socklen_t *restrict addrlen);
+void testRecvfrom(int *restrict buf, size_t len, int flags,
+                 struct sockaddr *restrict src_addr,
+                 socklen_t *restrict addrlen) {
+  int fd;
+  scanf("%d", &fd); // fake a tainted a file descriptor
+
+  size_t read = recvfrom(fd, buf, len, flags, src_addr, addrlen);
+  clang_analyzer_isTainted_int(*buf); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(read); // expected-warning {{YES}}
+}
+
+char *ttyname(int fd);
+void testTtyname() {
+  int fd;
+  scanf("%d", &fd); // fake a tainted a file descriptor
+
+  char *name = ttyname(fd);
+  clang_analyzer_isTainted_charp(name); // expected-warning {{YES}}
+}
+
+int ttyname_r(int fd, char *buf, size_t buflen);
+void testTtyname_r(char *buf, size_t buflen) {
+  int fd;
+  scanf("%d", &fd); // fake a tainted a file descriptor
+
+  int result = ttyname_r(fd, buf, buflen);
+  clang_analyzer_isTainted_char(*buf); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+char *dirname(char *path);
+void testDirname() {
+  char buf[10];
+  scanf("%9s", buf);
+
+  char *name = dirname(buf);
+  clang_analyzer_isTainted_charp(name); // expected-warning {{YES}}
+}
+
+char *basename(char *path);
+void testBasename() {
+  char buf[10];
+  scanf("%9s", buf);
+
+  char *name = basename(buf);
+  clang_analyzer_isTainted_charp(name); // expected-warning {{YES}}
+}
+
+int fnmatch(const char *pattern, const char *string, int flags);
+void testFnmatch(const char *pattern, int flags) {
+  char string[10];
+  scanf("%9s", string);
+
+  int result = fnmatch(pattern, string, flags);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+void *memchr(const void *s, int c, size_t n);
+void testMemchr(int c, size_t n) {
+  char buf[10];
+  scanf("%9s", buf);
+
+  char *result = memchr(buf, c, n);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+void *memrchr(const void *s, int c, size_t n);
+void testMemrchr(int c, size_t n) {
+  char buf[10];
+  scanf("%9s", buf);
+
+  char *result = memrchr(buf, c, n);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+void *rawmemchr(const void *s, int c);
+void testRawmemchr(int c) {
+  char buf[10];
+  scanf("%9s", buf);
+
+  char *result = rawmemchr(buf, c);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+typedef char wchar_t;
+int mbtowc(wchar_t *pwc, const char *s, size_t n);
+void testMbtowc(wchar_t *pwc, size_t n) {
+  char buf[10];
+  scanf("%9s", buf);
+
+  int result = mbtowc(pwc, buf, n);
+  clang_analyzer_isTainted_char(*pwc); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+int wctomb(char *s, wchar_t wc);
+void testWctomb(char *buf) {
+  wchar_t wc;
+  scanf("%c", &wc);
+
+  int result = wctomb(buf, wc);
+  clang_analyzer_isTainted_char(*buf); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+int wcwidth(wchar_t c);
+void testWcwidth() {
+  wchar_t wc;
+  scanf("%c", &wc);
+
+  int width = wcwidth(wc);
+  clang_analyzer_isTainted_int(width); // expected-warning {{YES}}
+}
+
+int memcmp(const void *s1, const void *s2, size_t n);
+void testMemcmpWithLHSTainted(size_t n, char *rhs) {
+  char lhs[10];
+  scanf("%9s", lhs);
+
+  int cmp_result = memcmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testMemcmpWithRHSTainted(size_t n, char *lhs) {
+  char rhs[10];
+  scanf("%9s", rhs);
+
+  int cmp_result = memcmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void *memcpy(void *restrict dest, const void *restrict src, size_t n);
+void testMemcpy(char *dst, size_t n) {
+  char src[10];
+  scanf("%9s", src);
+
+  char *result = memcpy(dst, src, n);
+
+  clang_analyzer_isTainted_char(*dst); // expected-warning {{YES}}
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+void *memmove(void *dest, const void *src, size_t n);
+void testMemmove(char *dst, size_t n) {
+  char src[10];
+  scanf("%9s", src);
+
+  char *result = memmove(dst, src, n);
+
+  clang_analyzer_isTainted_char(*dst); // expected-warning {{YES}}
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+void *memmem(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
+void testMemmem(const void *needle, size_t needlelen) {
+  char haystack[10];
+  scanf("%9s", haystack);
+
+  char *result = memmem(haystack, 9, needle, needlelen);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *strstr(const char *haystack, const char *needle);
+void testStrstr(const char *needle) {
+  char haystack[10];
+  scanf("%9s", haystack);
+
+  char *result = strstr(haystack, needle);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *strcasestr(const char *haystack, const char *needle);
+void testStrcasestr(const char *needle) {
+  char haystack[10];
+  scanf("%9s", haystack);
+
+  char *result = strcasestr(haystack, needle);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *strchrnul(const char *s, int c);
+void testStrchrnul() {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = strchrnul(s, 9);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *index(const char *s, int c);
+void testIndex() {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = index(s, 9);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *rindex(const char *s, int c);
+void testRindex() {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = rindex(s, 9);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+int strcmp(const char *s1, const char *s2);
+void testStrcmpWithLHSTainted(char *rhs) {
+  char lhs[10];
+  scanf("%9s", lhs);
+
+  int cmp_result = strcmp(lhs, rhs);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testStrcmpWithRHSTainted(char *lhs) {
+  char rhs[10];
+  scanf("%9s", rhs);
+
+  int cmp_result = strcmp(lhs, rhs);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+int strcasecmp(const char *s1, const char *s2);
+void testStrcasecmpWithLHSTainted(char *rhs) {
+  char lhs[10];
+  scanf("%9s", lhs);
+
+  int cmp_result = strcasecmp(lhs, rhs);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testStrcasecmpWithRHSTainted(char *lhs) {
+  char rhs[10];
+  scanf("%9s", rhs);
+
+  int cmp_result = strcasecmp(lhs, rhs);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+int strncmp(const char *s1, const char *s2, size_t n);
+void testStrncmpWithLHSTainted(char *rhs, size_t n) {
+  char lhs[10];
+  scanf("%9s", lhs);
+
+  int cmp_result = strncmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testStrncmpWithRHSTainted(char *lhs, size_t n) {
+  char rhs[10];
+  scanf("%9s", rhs);
+
+  int cmp_result = strncmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testStrncmpWithNTainted(char *lhs, char *rhs) {
+  int n;
+  scanf("%d", &n);
+
+  int cmp_result = strncmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+int strncasecmp(const char *s1, const char *s2, size_t n);
+void testStrncasecmpWithLHSTainted(char *rhs, size_t n) {
+  char lhs[10];
+  scanf("%9s", lhs);
+
+  int cmp_result = strncmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testStrncasecmpWithRHSTainted(char *lhs, size_t n) {
+  char rhs[10];
+  scanf("%9s", rhs);
+
+  int cmp_result = strncmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+void testStrncasecmpWithNTainted(char *lhs, char *rhs) {
+  int n;
+  scanf("%d", &n);
+
+  int cmp_result = strncmp(lhs, rhs, n);
+  clang_analyzer_isTainted_int(cmp_result); // expected-warning {{YES}}
+}
+
+size_t strspn(const char *s, const char *accept);
+void testStrspnFirstArgTainted(const char *accept) {
+  char s[10];
+  scanf("%9s", s);
+
+  size_t result = strspn(s, accept);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+void testStrspnSecondArgTainted(const char *s) {
+  char accept[10];
+  scanf("%9s", accept);
+
+  size_t result = strspn(s, accept);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+size_t strcspn(const char *s, const char *reject);
+void testStrcspnFirstArgTainted(const char *reject) {
+  char s[10];
+  scanf("%9s", s);
+
+  size_t result = strcspn(s, reject);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+void testStrcspnSecondArgTainted(const char *s) {
+  char reject[10];
+  scanf("%9s", reject);
+
+  size_t result = strcspn(s, reject);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+char *strpbrk(const char *s, const char *accept);
+void testStrpbrk(const char *accept) {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = strpbrk(s, accept);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *strndup(const char *s, size_t n);
+void testStrndup(size_t n) {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = strndup(s, n);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *strdupa(const char *s);
+void testStrdupa() {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = strdupa(s);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+char *strndupa(const char *s, size_t n);
+void testStrndupa(size_t n) {
+  char s[10];
+  scanf("%9s", s);
+
+  char *result = strndupa(s, n);
+  clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
+}
+
+size_t strlen(const char *s);
+void testStrlen() {
+  char s[10];
+  scanf("%9s", s);
+
+  size_t result = strlen(s);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+size_t strnlen(const char *s, size_t maxlen);
+void testStrnlen(size_t maxlen) {
+  char s[10];
+  scanf("%9s", s);
+
+  size_t result = strnlen(s, maxlen);
+  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+}
+
+long strtol(const char *restrict nptr, char **restrict endptr, int base);
+long long strtoll(const char *restrict nptr, char **restrict endptr, int base);
+unsigned long int strtoul(const char *nptr, char **endptr, int base);
+unsigned long long int strtoull(const char *nptr, char **endptr, int base);
+void testStrtolVariants(char **restrict endptr, int base) {
+  char s[10];
+  scanf("%9s", s);
+
+  long result_l = strtol(s, endptr, base);
+  clang_analyzer_isTainted_int(result_l); // expected-warning {{YES}}
+
+  long long result_ll = strtoll(s, endptr, base);
+  clang_analyzer_isTainted_int(result_ll); // expected-warning {{YES}}
+
+  unsigned long result_ul = strtoul(s, endptr, base);
+  clang_analyzer_isTainted_int(result_ul); // expected-warning {{YES}}
+
+  unsigned long long result_ull = strtoull(s, endptr, base);
+  clang_analyzer_isTainted_int(result_ull); // expected-warning {{YES}}
+}
+
+int isalnum(int c);
+int isalpha(int c);
+int isascii(int c);
+int isblank(int c);
+int iscntrl(int c);
+int isdigit(int c);
+int isgraph(int c);
+int islower(int c);
+int isprint(int c);
+int ispunct(int c);
+int isspace(int c);
+int isupper(int c);
+int isxdigit(int c);
+
+void testIsFunctions() {
+  char c;
+  scanf("%c", &c);
+
+  int alnum = isalnum(c);
+  clang_analyzer_isTainted_int(alnum); // expected-warning {{YES}}
+
+  int alpha = isalpha(c);
+  clang_analyzer_isTainted_int(alpha); // expected-warning {{YES}}
+
+  int ascii = isascii(c);
+  clang_analyzer_isTainted_int(ascii); // expected-warning {{YES}}
+
+  int blank = isblank(c);
+  clang_analyzer_isTainted_int(blank); // expected-warning {{YES}}
+
+  int cntrl = iscntrl(c);
+  clang_analyzer_isTainted_int(cntrl); // expected-warning {{YES}}
+
+  int digit = isdigit(c);
+  clang_analyzer_isTainted_int(digit); // expected-warning {{YES}}
+
+  int graph = isgraph(c);
+  clang_analyzer_isTainted_int(graph); // expected-warning {{YES}}
+
+  int lower = islower(c);
+  clang_analyzer_isTainted_int(lower); // expected-warning {{YES}}
+
+  int print = isprint(c);
+  clang_analyzer_isTainted_int(print); // expected-warning {{YES}}
+
+  int punct = ispunct(c);
+  clang_analyzer_isTainted_int(punct); // expected-warning {{YES}}
+
+  int space = isspace(c);
+  clang_analyzer_isTainted_int(space); // expected-warning {{YES}}
+
+  int upper = isupper(c);
+  clang_analyzer_isTainted_int(upper); // expected-warning {{YES}}
+
+  int xdigit = isxdigit(c);
+  clang_analyzer_isTainted_int(xdigit); // expected-warning {{YES}}
+}
+
+void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
+void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg);
+void testQsort() {
+  int data[1];
+  scanf("%d", data);
+
+  qsort(data, sizeof(data), sizeof(data[0]), NULL);
+  clang_analyzer_isTainted_int(data[0]); // expected-warning {{YES}}
+  qsort_r(data, sizeof(data), sizeof(data[0]), NULL, NULL);
+  clang_analyzer_isTainted_int(data[0]); // expected-warning {{YES}}
 }
 
 // Test configuration

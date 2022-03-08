@@ -5,13 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// XFAIL: *
 
-// Skip this test on windows. If built on top of the MSVC runtime, the
-// <cuchar> header actually does exist (although not provided by us).
-// This should be removed once D97870 has landed.
-// UNSUPPORTED: windows
+// UNSUPPORTED: c++03
+
+// The system-provided <uchar.h> seems to be broken on AIX
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <cuchar>
 

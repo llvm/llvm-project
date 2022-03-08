@@ -56,6 +56,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("multivalue", HasMultivalue)
       .Case("tail-call", HasTailCall)
       .Case("reference-types", HasReferenceTypes)
+      .Case("extended-const", HasExtendedConst)
       .Default(false);
 }
 
@@ -93,6 +94,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
+  if (HasExtendedConst)
+    Builder.defineMacro("__wasm_extended_const__");
 }
 
 void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
@@ -238,6 +241,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-reference-types") {
       HasReferenceTypes = false;
+      continue;
+    }
+    if (Feature == "+extended-const") {
+      HasExtendedConst = true;
+      continue;
+    }
+    if (Feature == "-extended-const") {
+      HasExtendedConst = false;
       continue;
     }
 

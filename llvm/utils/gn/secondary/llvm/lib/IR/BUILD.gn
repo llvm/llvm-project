@@ -76,6 +76,7 @@ static_library("IR") {
     "User.cpp",
     "Value.cpp",
     "ValueSymbolTable.cpp",
+    "VectorBuilder.cpp",
     "Verifier.cpp",
   ]
 }

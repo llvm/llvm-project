@@ -14,7 +14,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include <gtest/gtest.h>
 
@@ -236,7 +236,7 @@ module {}
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   DataLayout layout(module.get());
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 6u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 2u);
@@ -257,7 +257,7 @@ TEST(DataLayout, NullSpec) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
@@ -280,7 +280,7 @@ TEST(DataLayout, EmptySpec) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
@@ -306,7 +306,7 @@ TEST(DataLayout, SpecWithEntries) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
@@ -338,7 +338,7 @@ TEST(DataLayout, Caching) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
@@ -369,7 +369,7 @@ TEST(DataLayout, CacheInvalidation) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
@@ -395,7 +395,7 @@ TEST(DataLayout, UnimplementedTypeInterface) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
@@ -414,7 +414,7 @@ TEST(DataLayout, SevenBitByte) {
   registry.insert<DLTIDialect, DLTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);

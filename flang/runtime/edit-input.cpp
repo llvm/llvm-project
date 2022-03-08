@@ -567,24 +567,60 @@ bool EditDefaultCharacterInput(
   if (io.GetConnectionState().IsAtEOF()) {
     return false;
   }
-  std::optional<int> remaining{length};
+  std::size_t remaining{length};
   if (edit.width && *edit.width > 0) {
     remaining = *edit.width;
   }
   // When the field is wider than the variable, we drop the leading
   // characters.  When the variable is wider than the field, there's
   // trailing padding.
-  std::int64_t skip{*remaining - static_cast<std::int64_t>(length)};
-  while (std::optional<char32_t> next{io.NextInField(remaining, edit)}) {
-    if (skip > 0) {
-      --skip;
-      io.GotChar(-1);
-    } else {
-      *x++ = *next;
-      --length;
-    }
+  const char *input{nullptr};
+  std::size_t ready{0};
+  bool hitEnd{false};
+  if (remaining > length) {
+    // Discard leading bytes.
+    // These bytes don't count towards INQUIRE(IOLENGTH=).
+    std::size_t skip{remaining - length};
+    do {
+      if (ready == 0) {
+        ready = io.GetNextInputBytes(input);
+        if (ready == 0) {
+          hitEnd = true;
+          break;
+        }
+      }
+      std::size_t chunk{std::min<std::size_t>(skip, ready)};
+      io.HandleRelativePosition(chunk);
+      ready -= chunk;
+      input += chunk;
+      skip -= chunk;
+    } while (skip > 0);
+    remaining = length;
   }
-  std::fill_n(x, length, ' ');
+  // Transfer payload bytes; these do count.
+  while (remaining > 0) {
+    if (ready == 0) {
+      ready = io.GetNextInputBytes(input);
+      if (ready == 0) {
+        hitEnd = true;
+        break;
+      }
+    }
+    std::size_t chunk{std::min<std::size_t>(remaining, ready)};
+    std::memcpy(x, input, chunk);
+    x += chunk;
+    input += chunk;
+    io.GotChar(chunk);
+    io.HandleRelativePosition(chunk);
+    ready -= chunk;
+    remaining -= chunk;
+    length -= chunk;
+  }
+  // Pad the remainder of the input variable, if any.
+  std::memset(x, ' ', length);
+  if (hitEnd) {
+    io.CheckForEndOfRecord(); // signal any needed error
+  }
   return true;
 }
 

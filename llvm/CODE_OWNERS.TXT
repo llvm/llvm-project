@@ -19,17 +19,13 @@ E: arsenm2@gmail.com
 I: arsenm
 D: InferAddressSpaces
 
-N: Simon Atanasyan
-E: simon@atanasyan.com
-D: MIPS Backend (lib/Target/Mips/*)
-
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
 D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 
 N: Alex Bradbury
-E: asb@lowrisc.org
+E: asb@asbradbury.org
 D: RISC-V backend (lib/Target/RISCV/*)
 
 N: Matthias Braun

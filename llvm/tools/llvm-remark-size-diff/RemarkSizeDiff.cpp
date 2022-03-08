@@ -12,8 +12,6 @@
 /// This is intended for use by compiler developers who want to see how their
 /// changes impact program code size.
 ///
-/// TODO: Add structured output (JSON, or YAML, or something...)
-///
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Remarks.h"
@@ -24,10 +22,12 @@
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
@@ -36,6 +36,7 @@
 using namespace llvm;
 
 enum ParserFormatOptions { yaml, bitstream };
+enum ReportStyleOptions { human_output, json_output };
 static cl::OptionCategory SizeDiffCategory("llvm-remark-size-diff options");
 static cl::opt<std::string> InputFileNameA(cl::Positional, cl::Required,
                                            cl::cat(SizeDiffCategory),
@@ -52,6 +53,15 @@ static cl::opt<ParserFormatOptions>
                  cl::desc("Set the remark parser format:"),
                  cl::values(clEnumVal(yaml, "YAML format"),
                             clEnumVal(bitstream, "Bitstream format")));
+static cl::opt<ReportStyleOptions> ReportStyle(
+    "report_style", cl::cat(SizeDiffCategory),
+    cl::init(ReportStyleOptions::human_output),
+    cl::desc("Choose the report output format:"),
+    cl::values(clEnumValN(human_output, "human", "Human-readable format"),
+               clEnumValN(json_output, "json", "JSON format")));
+static cl::opt<bool> PrettyPrint("pretty", cl::cat(SizeDiffCategory),
+                                 cl::init(false),
+                                 cl::desc("Pretty-print JSON"));
 
 /// Contains information from size remarks.
 // This is a little nicer to read than a std::pair.
@@ -382,23 +392,109 @@ static ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
   return EC;
 }
 
-/// Output all diffs in \p DiffsByFilesPresent.
+/// \return a json::Array representing all FunctionDiffs in \p FunctionDiffs.
+/// \p WhichFiles represents which files the functions in \p FunctionDiffs
+/// appeared in (A, B, or both).
+json::Array
+getFunctionDiffListAsJSON(const SmallVector<FunctionDiff> &FunctionDiffs,
+                          const FilesPresent &WhichFiles) {
+  json::Array FunctionDiffsAsJSON;
+  int64_t InstCountA, InstCountB, StackSizeA, StackSizeB;
+  for (auto &Diff : FunctionDiffs) {
+    InstCountA = InstCountB = StackSizeA = StackSizeB = 0;
+    switch (WhichFiles) {
+    case BOTH:
+      LLVM_FALLTHROUGH;
+    case A:
+      InstCountA = Diff.getInstCountA();
+      StackSizeA = Diff.getStackSizeA();
+      if (WhichFiles != BOTH)
+        break;
+      LLVM_FALLTHROUGH;
+    case B:
+      InstCountB = Diff.getInstCountB();
+      StackSizeB = Diff.getStackSizeB();
+      break;
+    }
+    // Each metric we care about is represented like:
+    //   "Val": [A, B]
+    // This allows any consumer of the JSON to calculate the diff using B - A.
+    // This is somewhat wasteful for OnlyInA and OnlyInB (we only need A or B).
+    // However, this should make writing consuming tools easier, since the tool
+    // writer doesn't need to think about slightly different formats in each
+    // section.
+    json::Object FunctionObject({{"FunctionName", Diff.FuncName},
+                                 {"InstCount", {InstCountA, InstCountB}},
+                                 {"StackSize", {StackSizeA, StackSizeB}}});
+    FunctionDiffsAsJSON.push_back(std::move(FunctionObject));
+  }
+  return FunctionDiffsAsJSON;
+}
+
+/// Output all diffs in \p DiffsByFilesPresent as a JSON report. This is
+/// intended for consumption by external tools.
+///
+/// \p InputFileNameA - File A used to produce the report.
+/// \p InputFileNameB - File B used ot produce the report.
+/// \p OS - Output stream.
+///
+/// JSON output includes:
+///  - \p InputFileNameA and \p InputFileNameB under "Files".
+///  - Functions present in both files under "InBoth".
+///  - Functions present only in A in "OnlyInA".
+///  - Functions present only in B in "OnlyInB".
+///  - Instruction count and stack size differences for each function.
+///
+/// Differences are represented using [count_a, count_b]. The actual difference
+/// can be computed via count_b - count_a.
+static void
+outputJSONForAllDiffs(StringRef InputFileNameA, StringRef InputFileNameB,
+                      const DiffsCategorizedByFilesPresent &DiffsByFilesPresent,
+                      llvm::raw_ostream &OS) {
+  json::Object Output;
+  // Include file names in the report.
+  json::Object Files(
+      {{"A", InputFileNameA.str()}, {"B", InputFileNameB.str()}});
+  Output["Files"] = std::move(Files);
+  Output["OnlyInA"] = getFunctionDiffListAsJSON(DiffsByFilesPresent.OnlyInA, A);
+  Output["OnlyInB"] = getFunctionDiffListAsJSON(DiffsByFilesPresent.OnlyInB, B);
+  Output["InBoth"] =
+      getFunctionDiffListAsJSON(DiffsByFilesPresent.InBoth, BOTH);
+  json::OStream JOS(OS, PrettyPrint ? 2 : 0);
+  JOS.value(std::move(Output));
+  OS << '\n';
+}
+
+/// Output all diffs in \p DiffsByFilesPresent using the desired output style.
 /// \returns Error::success() on success, and an Error otherwise.
+/// \p InputFileNameA - Name of input file A; may be used in the report.
+/// \p InputFileNameB - Name of input file B; may be used in the report.
 static Error
-outputAllDiffs(DiffsCategorizedByFilesPresent &DiffsByFilesPresent) {
+outputAllDiffs(StringRef InputFileNameA, StringRef InputFileNameB,
+               DiffsCategorizedByFilesPresent &DiffsByFilesPresent) {
   auto MaybeOF = getOutputStream();
   if (std::error_code EC = MaybeOF.getError())
     return errorCodeToError(EC);
   std::unique_ptr<ToolOutputFile> OF = std::move(*MaybeOF);
-  printDiffsCategorizedByFilesPresent(DiffsByFilesPresent, OF->os());
+  switch (ReportStyle) {
+  case human_output:
+    printDiffsCategorizedByFilesPresent(DiffsByFilesPresent, OF->os());
+    break;
+  case json_output:
+    outputJSONForAllDiffs(InputFileNameA, InputFileNameB, DiffsByFilesPresent,
+                          OF->os());
+    break;
+  }
   OF->keep();
   return Error::success();
 }
 
 /// Boolean wrapper for outputDiff which handles errors.
 static bool
-tryOutputAllDiffs(DiffsCategorizedByFilesPresent &DiffsByFilesPresent) {
-  if (Error E = outputAllDiffs(DiffsByFilesPresent)) {
+tryOutputAllDiffs(StringRef InputFileNameA, StringRef InputFileNameB,
+                  DiffsCategorizedByFilesPresent &DiffsByFilesPresent) {
+  if (Error E =
+          outputAllDiffs(InputFileNameA, InputFileNameB, DiffsByFilesPresent)) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &PE) {
       PE.log(WithColor::error());
       errs() << '\n';
@@ -421,6 +517,6 @@ int main(int argc, const char **argv) {
     return 1;
   DiffsCategorizedByFilesPresent DiffsByFilesPresent;
   computeDiff(FuncNameToSizeInfoA, FuncNameToSizeInfoB, DiffsByFilesPresent);
-  if (!tryOutputAllDiffs(DiffsByFilesPresent))
+  if (!tryOutputAllDiffs(InputFileNameA, InputFileNameB, DiffsByFilesPresent))
     return 1;
 }

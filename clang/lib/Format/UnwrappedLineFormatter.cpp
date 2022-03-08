@@ -310,6 +310,8 @@ private:
           for (; J != AnnotatedLines.begin(); --J)
             if ((*J)->Level < TheLine->Level)
               break;
+          if ((*J)->Level >= TheLine->Level)
+            return false;
 
           // Check if the found line starts a record.
           const FormatToken *LastNonComment = (*J)->Last;

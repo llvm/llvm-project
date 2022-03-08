@@ -248,6 +248,10 @@ def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
 
+def tailcall      : SDNode<"SPISD::TAIL_CALL", SDT_SPCall,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
+
 def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def retflag       : SDNode<"SPISD::RET_FLAG", SDT_SPRet,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -1366,6 +1370,31 @@ let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
   let op = 1;
   let Inst{29-0} = disp;
 }
+}
+
+//===----------------------------------------------------------------------===//
+// Instructions for tail calls.
+//===----------------------------------------------------------------------===//
+let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
+    isTerminator = 1, isBarrier = 1 in {
+  def TAIL_CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
+                         "call $disp",
+                         [(tailcall tglobaladdr:$disp)]> {
+  bits<30> disp;
+  let op = 1;
+  let Inst{29-0} = disp;
+  }
+}
+
+def : Pat<(tailcall (iPTR texternalsym:$dst)),
+          (TAIL_CALL texternalsym:$dst)>;
+
+let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,  isTerminator = 1,
+    isBarrier = 1, rd = 0 in {
+  def TAIL_CALLri : F3_2<2, 0b111000,
+                         (outs), (ins MEMri:$ptr, variable_ops),
+                         "jmp $ptr",
+                         [(tailcall ADDRri:$ptr)]>;
 }
 
 //===----------------------------------------------------------------------===//

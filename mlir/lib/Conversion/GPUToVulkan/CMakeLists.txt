@@ -15,5 +15,5 @@ add_mlir_conversion_library(MLIRGPUToVulkanTransforms
   MLIRSPIRVSerialization
   MLIRSupport
   MLIRTransforms
-  MLIRTranslation
+  MLIRTranslateLib
   )
