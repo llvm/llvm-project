@@ -4,7 +4,7 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER-OFFSET
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0 --use-offset=1 --use-first-loadable-segment-as-base=1
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER-OFFSET2
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
 
 ; CHECK:     [main:2 @ foo]:74:0
