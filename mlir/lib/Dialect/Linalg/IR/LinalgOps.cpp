@@ -509,6 +509,10 @@ void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
            FoldInsertPadIntoFill>(context);
 }
 
+// TODO: Add the FillOp patterns when transitioning to the OpDSL FillOp.
+void FillTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {}
+
 //===----------------------------------------------------------------------===//
 // GenericOps
 //===----------------------------------------------------------------------===//
