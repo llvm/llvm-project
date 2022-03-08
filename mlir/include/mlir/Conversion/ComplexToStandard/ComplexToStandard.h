@@ -10,19 +10,15 @@
 
 #include <memory>
 
-#include "mlir/Transforms/DialectConversion.h"
-
 namespace mlir {
-class FuncOp;
 class RewritePatternSet;
-template <typename T>
-class OperationPass;
+class Pass;
 
 /// Populate the given list with patterns that convert from Complex to Standard.
 void populateComplexToStandardConversionPatterns(RewritePatternSet &patterns);
 
 /// Create a pass to convert Complex operations to the Standard dialect.
-std::unique_ptr<OperationPass<FuncOp>> createConvertComplexToStandardPass();
+std::unique_ptr<Pass> createConvertComplexToStandardPass();
 
 } // namespace mlir
 

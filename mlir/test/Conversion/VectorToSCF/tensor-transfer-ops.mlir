@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf='lower-tensors=true' -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.func(convert-vector-to-scf{lower-tensors=true})" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: func @transfer_read_2d(
 //       CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<vector<4x9xf32>>
