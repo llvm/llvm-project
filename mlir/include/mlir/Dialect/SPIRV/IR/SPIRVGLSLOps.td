@@ -979,7 +979,7 @@ def SPV_GLSLFClampOp : SPV_GLSLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
 
 // -----
 
-def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_SignlessOrUnsignedInt> {
+def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -1008,7 +1008,7 @@ def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_SignlessOrU
 
 // -----
 
-def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_SignedInt> {
+def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
