@@ -661,6 +661,46 @@ fir::ExtendedValue fir::factory::readBoxValue(fir::FirOpBuilder &builder,
                             box.getLBounds());
 }
 
+llvm::SmallVector<mlir::Value>
+fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       const fir::ExtendedValue &exv) {
+  return exv.match(
+      [&](const fir::ArrayBoxValue &array) -> llvm::SmallVector<mlir::Value> {
+        return {array.getLBounds().begin(), array.getLBounds().end()};
+      },
+      [&](const fir::CharArrayBoxValue &array)
+          -> llvm::SmallVector<mlir::Value> {
+        return {array.getLBounds().begin(), array.getLBounds().end()};
+      },
+      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        return {box.getLBounds().begin(), box.getLBounds().end()};
+      },
+      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        auto load = fir::factory::genMutableBoxRead(builder, loc, box);
+        return fir::factory::getNonDefaultLowerBounds(builder, loc, load);
+      },
+      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::getNonDeferredLengthParams(const fir::ExtendedValue &exv) {
+  return exv.match(
+      [&](const fir::CharArrayBoxValue &character)
+          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
+      [&](const fir::CharBoxValue &character)
+          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
+      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        return {box.nonDeferredLenParams().begin(),
+                box.nonDeferredLenParams().end()};
+      },
+      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        return {box.getExplicitParameters().begin(),
+                box.getExplicitParameters().end()};
+      },
+      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
+}
+
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
                                         llvm::StringRef name) {
   // For "long" identifiers use a hash value

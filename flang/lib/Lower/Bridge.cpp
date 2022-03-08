@@ -177,6 +177,13 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
+  mlir::Value impliedDoBinding(llvm::StringRef name) override final {
+    mlir::Value val = localSymbols.lookupImpliedDo(name);
+    if (!val)
+      fir::emitFatalError(toLocation(), "ac-do-variable has no binding");
+    return val;
+  }
+
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
                       Fortran::lower::pft::LabelSet &labelSet) override final {
     Fortran::lower::pft::FunctionLikeUnit &owningProc =
@@ -818,6 +825,13 @@ private:
     return cond;
   }
 
+  static bool
+  isArraySectionWithoutVectorSubscript(const Fortran::lower::SomeExpr &expr) {
+    return expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr) &&
+           !Fortran::evaluate::UnwrapWholeSymbolDataRef(expr) &&
+           !Fortran::evaluate::HasVectorSubscript(expr);
+  }
+
   [[maybe_unused]] static bool
   isFuncResultDesignator(const Fortran::lower::SomeExpr &expr) {
     const Fortran::semantics::Symbol *sym =
@@ -1084,6 +1098,15 @@ private:
 
   void genFIR(const Fortran::parser::SelectCaseStmt &) {
     TODO(toLocation(), "SelectCaseStmt lowering");
+  }
+
+  fir::ExtendedValue
+  genAssociateSelector(const Fortran::lower::SomeExpr &selector,
+                       Fortran::lower::StatementContext &stmtCtx) {
+    return isArraySectionWithoutVectorSubscript(selector)
+               ? Fortran::lower::createSomeArrayBox(*this, selector,
+                                                    localSymbols, stmtCtx)
+               : genExprAddr(selector, stmtCtx);
   }
 
   void genFIR(const Fortran::parser::AssociateConstruct &) {
@@ -1457,10 +1480,6 @@ private:
     TODO(toLocation(), "EndDoStmt lowering");
   }
 
-  void genFIR(const Fortran::parser::EndIfStmt &) {
-    TODO(toLocation(), "EndIfStmt lowering");
-  }
-
   void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {
     TODO(toLocation(), "EndMpSubprogramStmt lowering");
   }
@@ -1472,6 +1491,7 @@ private:
   // Nop statements - No code, or code is generated at the construct level.
   void genFIR(const Fortran::parser::ContinueStmt &) {}      // nop
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}   // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}         // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
 
   void genFIR(const Fortran::parser::EntryStmt &) {
