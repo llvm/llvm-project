@@ -420,6 +420,18 @@ llvm::SmallVector<mlir::Value> getExtents(fir::FirOpBuilder &builder,
 fir::ExtendedValue readBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::BoxValue &box);
 
+/// Get non default (not all ones) lower bounds of \p exv. Returns empty
+/// vector if the lower bounds are all ones.
+llvm::SmallVector<mlir::Value>
+getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
+                         const fir::ExtendedValue &exv);
+
+/// Return length parameters associated to \p exv that are not deferred (that
+/// are available without having to read any fir.box values).
+/// Empty if \p exv has no length parameters or if they are all deferred.
+llvm::SmallVector<mlir::Value>
+getNonDeferredLengthParams(const fir::ExtendedValue &exv);
+
 //===----------------------------------------------------------------------===//
 // String literal helper helpers
 //===----------------------------------------------------------------------===//

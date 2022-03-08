@@ -140,6 +140,13 @@ void createAllocatableArrayAssignment(AbstractConverter &converter,
                                       SymMap &symMap,
                                       StatementContext &stmtCtx);
 
+/// Lower an array expression with "parallel" semantics. Such a rhs expression
+/// is fully evaluated prior to being assigned back to a temporary array.
+fir::ExtendedValue createSomeArrayTempValue(AbstractConverter &converter,
+                                            const SomeExpr &expr,
+                                            SymMap &symMap,
+                                            StatementContext &stmtCtx);
+
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
 // eliminate these.

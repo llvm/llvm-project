@@ -18,6 +18,8 @@ class ExtendedValue;
 
 namespace Fortran::lower {
 
+class StatementContext;
+
 // TODO: Error handling interface ?
 // TODO: Implementation is incomplete. Many intrinsics to tbd.
 
@@ -27,7 +29,8 @@ namespace Fortran::lower {
 fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                                     llvm::StringRef name,
                                     llvm::Optional<mlir::Type> resultType,
-                                    llvm::ArrayRef<fir::ExtendedValue> args);
+                                    llvm::ArrayRef<fir::ExtendedValue> args,
+                                    StatementContext &);
 
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
