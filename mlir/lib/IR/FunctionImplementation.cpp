@@ -344,9 +344,9 @@ void mlir::function_interface_impl::printFunctionAttributes(
   p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
 }
 
-void mlir::function_interface_impl::printFunctionOp(
-    OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes, bool isVariadic,
-    ArrayRef<Type> resultTypes) {
+void mlir::function_interface_impl::printFunctionOp(OpAsmPrinter &p,
+                                                    FunctionOpInterface op,
+                                                    bool isVariadic) {
   // Print the operation and the function name.
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
@@ -358,6 +358,8 @@ void mlir::function_interface_impl::printFunctionOp(
     p << visibility.getValue() << ' ';
   p.printSymbolName(funcName);
 
+  ArrayRef<Type> argTypes = op.getArgumentTypes();
+  ArrayRef<Type> resultTypes = op.getResultTypes();
   printFunctionSignature(p, op, argTypes, isVariadic, resultTypes);
   printFunctionAttributes(p, op, argTypes.size(), resultTypes.size(),
                           {visibilityAttrName});

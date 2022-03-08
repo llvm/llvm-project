@@ -133,16 +133,6 @@ def FuncOp : Builtin_Op<"func", [
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getType().getResults(); }
 
-    /// Verify the type attribute of this function. Returns failure and emits
-    /// an error if the attribute is invalid.
-    LogicalResult verifyType() {
-      auto type = getTypeAttr().getValue();
-      if (!type.isa<FunctionType>())
-        return emitOpError("requires '" + FunctionOpInterface::getTypeAttrName() +
-                           "' attribute of function type");
-      return success();
-    }
-
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//
@@ -150,7 +140,6 @@ def FuncOp : Builtin_Op<"func", [
     bool isDeclaration() { return isExternal(); }
   }];
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

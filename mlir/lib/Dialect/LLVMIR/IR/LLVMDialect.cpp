@@ -1997,8 +1997,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 // Returns a null type if any of the types provided are non-LLVM types, or if
 // there is more than one output type.
 static Type
-buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc,
-                      ArrayRef<Type> inputs, ArrayRef<Type> outputs,
+buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc, ArrayRef<Type> inputs,
+                      ArrayRef<Type> outputs,
                       function_interface_impl::VariadicFlag variadicFlag) {
   Builder &b = parser.getBuilder();
   if (outputs.size() > 1) {
@@ -2159,7 +2159,7 @@ LogicalResult LLVMFuncOp::verify() {
 }
 
 /// Verifies LLVM- and implementation-specific properties of the LLVM func Op:
-/// - entry block arguments are of LLVM types and match the function signature.
+/// - entry block arguments are of LLVM types.
 LogicalResult LLVMFuncOp::verifyRegions() {
   if (isExternal())
     return success();
@@ -2171,9 +2171,6 @@ LogicalResult LLVMFuncOp::verifyRegions() {
     if (!isCompatibleType(argType))
       return emitOpError("entry block argument #")
              << i << " is not of LLVM type";
-    if (getType().getParamType(i) != argType)
-      return emitOpError("the type of entry block argument #")
-             << i << " does not match the function signature";
   }
 
   return success();

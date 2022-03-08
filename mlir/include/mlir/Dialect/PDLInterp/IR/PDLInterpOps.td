@@ -14,6 +14,8 @@
 #define MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS
 
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
+include "mlir/IR/FunctionInterfaces.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -625,6 +627,64 @@ def PDLInterp_ForEachOp
   }];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::FuncOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_FuncOp : PDLInterp_Op<"func", [
+    FunctionOpInterface, IsolatedFromAbove, Symbol
+  ]> {
+  let summary = "PDL Interpreter Function Operation";
+  let description = [{
+    `pdl_interp.func` operations act as interpreter functions. These are
+    callable SSA-region operations that contain other interpreter operations.
+    Interpreter functions are used for both the matching and the rewriting
+    portion of the interpreter.
+
+    Example:
+
+    ```mlir
+    pdl_interp.func @rewriter(%root: !pdl.operation) {
+      %op = pdl_interp.create_operation "foo.new_operation"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttrOf<FunctionType>:$type
+  );
+  let regions = (region MinSizedRegion<1>:$body);
+
+  // Create the function with the given name and type. This also automatically
+  // inserts the entry block for the function.
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)
+  >];
+  let extraClassDeclaration = [{
+    /// Returns the type of this function.
+    /// FIXME: We should drive this via the ODS `type` param.
+    FunctionType getType() { 
+      return getTypeAttr().getValue().cast<FunctionType>();
+    }
+
+    //===------------------------------------------------------------------===//
+    // FunctionOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return type().getInputs(); }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return type().getResults(); }
+  }];
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -32,7 +32,7 @@ namespace {
 /// given module containing PDL pattern operations.
 struct PatternLowering {
 public:
-  PatternLowering(FuncOp matcherFunc, ModuleOp rewriterModule);
+  PatternLowering(pdl_interp::FuncOp matcherFunc, ModuleOp rewriterModule);
 
   /// Generate code for matching and rewriting based on the pattern operations
   /// within the module.
@@ -110,7 +110,7 @@ private:
   OpBuilder builder;
 
   /// The matcher function used for all match related logic within PDL patterns.
-  FuncOp matcherFunc;
+  pdl_interp::FuncOp matcherFunc;
 
   /// The rewriter module containing the all rewrite related logic within PDL
   /// patterns.
@@ -137,7 +137,8 @@ private:
 };
 } // namespace
 
-PatternLowering::PatternLowering(FuncOp matcherFunc, ModuleOp rewriterModule)
+PatternLowering::PatternLowering(pdl_interp::FuncOp matcherFunc,
+                                 ModuleOp rewriterModule)
     : builder(matcherFunc.getContext()), matcherFunc(matcherFunc),
       rewriterModule(rewriterModule), rewriterSymbolTable(rewriterModule) {}
 
@@ -150,7 +151,7 @@ void PatternLowering::lower(ModuleOp module) {
 
   // Insert the root operation, i.e. argument to the matcher, at the root
   // position.
-  Block *matcherEntryBlock = matcherFunc.addEntryBlock();
+  Block *matcherEntryBlock = &matcherFunc.front();
   values.insert(predicateBuilder.getRoot(), matcherEntryBlock->getArgument(0));
 
   // Generate a root matcher node from the provided PDL module.
@@ -590,13 +591,14 @@ void PatternLowering::generate(SuccessNode *successNode, Block *&currentBlock) {
 
 SymbolRefAttr PatternLowering::generateRewriter(
     pdl::PatternOp pattern, SmallVectorImpl<Position *> &usedMatchValues) {
-  FuncOp rewriterFunc =
-      FuncOp::create(pattern.getLoc(), "pdl_generated_rewriter",
-                     builder.getFunctionType(llvm::None, llvm::None));
+  builder.setInsertionPointToEnd(rewriterModule.getBody());
+  auto rewriterFunc = builder.create<pdl_interp::FuncOp>(
+      pattern.getLoc(), "pdl_generated_rewriter",
+      builder.getFunctionType(llvm::None, llvm::None));
   rewriterSymbolTable.insert(rewriterFunc);
 
   // Generate the rewriter function body.
-  builder.setInsertionPointToEnd(rewriterFunc.addEntryBlock());
+  builder.setInsertionPointToEnd(&rewriterFunc.front());
 
   // Map an input operand of the pattern to a generated interpreter value.
   DenseMap<Value, Value> rewriteValues;
@@ -902,7 +904,7 @@ void PDLToPDLInterpPass::runOnOperation() {
   // Create the main matcher function This function contains all of the match
   // related functionality from patterns in the module.
   OpBuilder builder = OpBuilder::atBlockBegin(module.getBody());
-  FuncOp matcherFunc = builder.create<FuncOp>(
+  auto matcherFunc = builder.create<pdl_interp::FuncOp>(
       module.getLoc(), pdl_interp::PDLInterpDialect::getMatcherFunctionName(),
       builder.getFunctionType(builder.getType<pdl::OperationType>(),
                               /*results=*/llvm::None),

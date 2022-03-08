@@ -14,6 +14,7 @@
 #ifndef MLIR_IR_FUNCTIONINTERFACES_H
 #define MLIR_IR_FUNCTIONINTERFACES_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
