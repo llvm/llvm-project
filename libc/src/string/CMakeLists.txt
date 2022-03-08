@@ -5,7 +5,7 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.bitset
 )
 
 add_entrypoint_object(
@@ -210,7 +210,7 @@ add_entrypoint_object(
   HDRS
     strspn.h
   DEPENDS
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.bitset
 )
 
 add_entrypoint_object(
