@@ -282,13 +282,15 @@ template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace
     : __shared_weak_count
 {
+    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, typename remove_cv<_Tp>::type>::type;
+    using _ControlBlockAlloc = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
+
     template<class ..._Args>
     _LIBCPP_HIDE_FROM_ABI
     explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
         : __storage_(_VSTD::move(__a))
     {
 #if _LIBCPP_STD_VER > 17
-        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
         _TpAlloc __tmp(*__get_alloc());
         allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
 #else
@@ -305,7 +307,6 @@ struct __shared_ptr_emplace
 private:
     virtual void __on_zero_shared() _NOEXCEPT {
 #if _LIBCPP_STD_VER > 17
-        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
         _TpAlloc __tmp(*__get_alloc());
         allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
 #else
@@ -314,7 +315,6 @@ private:
     }
 
     virtual void __on_zero_shared_weak() _NOEXCEPT {
-        using _ControlBlockAlloc = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
         using _ControlBlockPointer = typename allocator_traits<_ControlBlockAlloc>::pointer;
         _ControlBlockAlloc __tmp(*__get_alloc());
         __storage_.~_Storage();
@@ -643,8 +643,9 @@ public:
     shared_ptr(auto_ptr<_Yp>&& __r)
         : __ptr_(__r.get())
     {
-        typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, allocator<_Yp> > _CntrlBlk;
-        __cntrl_ = new _CntrlBlk(__r.get(), default_delete<_Yp>(), allocator<_Yp>());
+        typedef allocator<typename remove_cv<_Yp>::type> _YpAlloc;
+        typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, _YpAlloc> _CntrlBlk;
+        __cntrl_ = new _CntrlBlk(__r.get(), default_delete<_Yp>(), _YpAlloc());
         __enable_weak_this(__r.get(), __r.get());
         __r.release();
     }
@@ -890,7 +891,7 @@ private:
     template <class _Yp, bool = is_function<_Yp>::value>
     struct __shared_ptr_default_allocator
     {
-        typedef allocator<_Yp> type;
+        typedef allocator<typename remove_cv<_Yp>::type> type;
     };
 
     template <class _Yp>
@@ -960,7 +961,7 @@ template<class _Tp, class ..._Args, class = __enable_if_t<!is_array<_Tp>::value>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared(_Args&& ...__args)
 {
-    return _VSTD::allocate_shared<_Tp>(allocator<_Tp>(), _VSTD::forward<_Args>(__args)...);
+    return _VSTD::allocate_shared<_Tp>(allocator<typename remove_cv<_Tp>::type>(), _VSTD::forward<_Args>(__args)...);
 }
 
 template<class _Tp, class _Up>

@@ -4773,6 +4773,8 @@ def fdebug_dump_parse_tree : Flag<["-"], "fdebug-dump-parse-tree">, Group<Action
   HelpText<"Dump the parse tree">,
   DocBrief<[{Run the Parser and the semantic checks, and then output the
 parse tree.}]>;
+def fdebug_dump_pft : Flag<["-"], "fdebug-dump-pft">, Group<Action_Group>,
+  HelpText<"Dump the pre-fir parse tree">;
 def fdebug_dump_parse_tree_no_sema : Flag<["-"], "fdebug-dump-parse-tree-no-sema">, Group<Action_Group>,
   HelpText<"Dump the parse tree (skips the semantic checks)">,
   DocBrief<[{Run the Parser and then output the parse tree. Semantic

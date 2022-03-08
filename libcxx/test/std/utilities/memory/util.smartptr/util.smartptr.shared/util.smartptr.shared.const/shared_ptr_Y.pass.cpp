@@ -152,5 +152,11 @@ int main(int, char**)
     assert(A::count == 0);
 #endif
 
+    {
+        std::shared_ptr<A const> pA(new A);
+        std::shared_ptr<B const> pB(pA);
+        assert(pB.get() == pA.get());
+    }
+
     return 0;
 }

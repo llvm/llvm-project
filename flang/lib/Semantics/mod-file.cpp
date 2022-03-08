@@ -946,7 +946,8 @@ Scope *ModFileReader::Read(const SourceName &name,
       for (auto &msg : parsing.messages().messages()) {
         std::string str{msg.ToString()};
         Say(name, ancestorName,
-            parser::MessageFixedText{str.c_str(), str.size()}, path);
+            parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
+            path);
       }
     }
     return nullptr;

@@ -895,19 +895,17 @@ void __construct_range_forward(_Alloc& __a, _Iter __begin1, _Iter __end1, _Ptr& 
 }
 
 template <class _Alloc, class _Source, class _Dest,
-          class _RawSource = typename remove_const<_Source>::type,
-          class _RawDest = typename remove_const<_Dest>::type,
           class =
     typename enable_if<
         is_trivially_copy_constructible<_Dest>::value &&
-        is_same<_RawSource, _RawDest>::value &&
+        is_same<typename remove_const<_Source>::type, _Dest>::value &&
         (__is_default_allocator<_Alloc>::value || !__has_construct<_Alloc, _Dest*, _Source&>::value)
     >::type>
 _LIBCPP_INLINE_VISIBILITY
 void __construct_range_forward(_Alloc&, _Source* __begin1, _Source* __end1, _Dest*& __begin2) {
     ptrdiff_t _Np = __end1 - __begin1;
     if (_Np > 0) {
-        _VSTD::memcpy(const_cast<_RawDest*>(__begin2), __begin1, _Np * sizeof(_Dest));
+        _VSTD::memcpy(__begin2, __begin1, _Np * sizeof(_Dest));
         __begin2 += _Np;
     }
 }

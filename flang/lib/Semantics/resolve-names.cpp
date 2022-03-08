@@ -6654,9 +6654,9 @@ Symbol &ModuleVisitor::SetAccess(
     // PUBLIC/PRIVATE already set: make it a fatal error if it changed
     Attr prev = attrs.test(Attr::PUBLIC) ? Attr::PUBLIC : Attr::PRIVATE;
     Say(name,
-        WithIsFatal(
+        WithSeverity(
             "The accessibility of '%s' has already been specified as %s"_en_US,
-            attr != prev),
+            attr != prev ? parser::Severity::Error : parser::Severity::Warning),
         MakeOpName(name), EnumToString(prev));
   } else {
     attrs.set(attr);

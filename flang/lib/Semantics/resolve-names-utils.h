@@ -44,9 +44,9 @@ class SemanticsContext;
 Symbol &Resolve(const parser::Name &, Symbol &);
 Symbol *Resolve(const parser::Name &, Symbol *);
 
-// Create a copy of msg with a new isFatal value.
-parser::MessageFixedText WithIsFatal(
-    const parser::MessageFixedText &msg, bool isFatal);
+// Create a copy of msg with a new severity.
+parser::MessageFixedText WithSeverity(
+    const parser::MessageFixedText &msg, parser::Severity);
 
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);

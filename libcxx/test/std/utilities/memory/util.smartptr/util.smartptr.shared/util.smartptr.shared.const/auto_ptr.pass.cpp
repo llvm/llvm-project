@@ -46,19 +46,34 @@ int A::count = 0;
 
 int main(int, char**)
 {
-  globalMemCounter.reset();
-  {
-    std::auto_ptr<A> ptr(new A);
-    A* raw_ptr = ptr.get();
-    std::shared_ptr<B> p(std::move(ptr));
-    assert(A::count == 1);
-    assert(B::count == 1);
-    assert(p.use_count() == 1);
-    assert(p.get() == raw_ptr);
-    assert(ptr.get() == 0);
-  }
+    globalMemCounter.reset();
+    {
+        std::auto_ptr<A> ptr(new A);
+        A* raw_ptr = ptr.get();
+        std::shared_ptr<B> p(std::move(ptr));
+        assert(A::count == 1);
+        assert(B::count == 1);
+        assert(p.use_count() == 1);
+        assert(p.get() == raw_ptr);
+        assert(ptr.get() == 0);
+    }
     assert(A::count == 0);
     assert(globalMemCounter.checkOutstandingNewEq(0));
+
+    globalMemCounter.reset();
+    {
+        std::auto_ptr<A const> ptr(new A);
+        A const* raw_ptr = ptr.get();
+        std::shared_ptr<B const> p(std::move(ptr));
+        assert(A::count == 1);
+        assert(B::count == 1);
+        assert(p.use_count() == 1);
+        assert(p.get() == raw_ptr);
+        assert(ptr.get() == 0);
+    }
+    assert(A::count == 0);
+    assert(globalMemCounter.checkOutstandingNewEq(0));
+
 #if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(DISABLE_NEW_COUNT)
     {
         std::auto_ptr<A> ptr(new A);

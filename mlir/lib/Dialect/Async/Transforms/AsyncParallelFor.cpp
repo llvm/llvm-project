@@ -463,8 +463,7 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
 
   ModuleOp module = computeFunc.func->getParentOfType<ModuleOp>();
 
-  ArrayRef<Type> computeFuncInputTypes =
-      computeFunc.func.type().cast<FunctionType>().getInputs();
+  ArrayRef<Type> computeFuncInputTypes = computeFunc.func.getType().getInputs();
 
   // Compared to the parallel compute function async dispatch function takes
   // additional !async.group argument. Also instead of a single `blockIndex` it
@@ -541,7 +540,7 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
       operands[1] = midIndex;
       operands[2] = end;
 
-      executeBuilder.create<func::CallOp>(executeLoc, func.sym_name(),
+      executeBuilder.create<func::CallOp>(executeLoc, func.getSymName(),
                                           func.getCallableResults(), operands);
       executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
     };
@@ -562,7 +561,7 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   SmallVector<Value> computeFuncOperands = {blockStart};
   computeFuncOperands.append(forwardedInputs.begin(), forwardedInputs.end());
 
-  b.create<func::CallOp>(computeFunc.func.sym_name(),
+  b.create<func::CallOp>(computeFunc.func.getSymName(),
                          computeFunc.func.getCallableResults(),
                          computeFuncOperands);
   b.create<func::ReturnOp>(ValueRange());
@@ -609,7 +608,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     SmallVector<Value> operands = {c0, blockSize};
     appendBlockComputeOperands(operands);
 
-    b.create<func::CallOp>(parallelComputeFunction.func.sym_name(),
+    b.create<func::CallOp>(parallelComputeFunction.func.getSymName(),
                            parallelComputeFunction.func.getCallableResults(),
                            operands);
     b.create<scf::YieldOp>();
@@ -628,7 +627,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     SmallVector<Value> operands = {group, c0, blockCount, blockSize};
     appendBlockComputeOperands(operands);
 
-    b.create<func::CallOp>(asyncDispatchFunction.sym_name(),
+    b.create<func::CallOp>(asyncDispatchFunction.getSymName(),
                            asyncDispatchFunction.getCallableResults(),
                            operands);
 
@@ -687,7 +686,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     // Call parallel compute function inside the async.execute region.
     auto executeBodyBuilder = [&](OpBuilder &executeBuilder,
                                   Location executeLoc, ValueRange executeArgs) {
-      executeBuilder.create<func::CallOp>(executeLoc, compute.sym_name(),
+      executeBuilder.create<func::CallOp>(executeLoc, compute.getSymName(),
                                           compute.getCallableResults(),
                                           computeFuncOperands(iv));
       executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
@@ -704,7 +703,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   b.create<scf::ForOp>(c1, blockCount, c1, ValueRange(), loopBuilder);
 
   // Call parallel compute function for the first block in the caller thread.
-  b.create<func::CallOp>(compute.sym_name(), compute.getCallableResults(),
+  b.create<func::CallOp>(compute.getSymName(), compute.getCallableResults(),
                          computeFuncOperands(c0));
 
   // Wait for the completion of all async compute operations.
