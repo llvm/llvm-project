@@ -1658,6 +1658,78 @@ void CIRGenModule::verifyModule() {
   if (failed(mlir::verify(theModule)))
     theModule.emitError("module verification error");
 }
+
 mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
   return symbolTable.lookup(D);
+}
+
+/// GetOrCreateCIRFunction - If the specified mangled name is not in the module,
+/// create and return a CIR Function with the specified type. If there is
+/// something in the module with the specified name, return it potentially
+/// bitcasted to the right type.
+///
+/// If D is non-null, it specifies a decl that corresponded to this. This is
+/// used to set the attributes on the function when it is first created.
+mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
+    StringRef MangledName, mlir::Type Ty, GlobalDecl GD, bool ForVTable,
+    bool DontDefer, bool IsThunk, ForDefinition_t IsForDefinition) {
+  assert(!ForVTable && "NYI");
+  assert(!IsThunk && "NYI");
+
+  const auto *D = GD.getDecl();
+
+  // Any attempts to use a MultiVersion function should result in retrieving the
+  // iFunc instead. Name mangling will handle the rest of the changes.
+  auto const *FD = cast_or_null<FunctionDecl>(D);
+  assert(FD && "Only FD supported so far");
+
+  if (getLangOpts().OpenMP)
+    llvm_unreachable("NYI");
+  if (FD->isMultiVersion())
+    llvm_unreachable("NYI");
+
+  mlir::Value Entry = GetGlobalValue(GD.getDecl());
+
+  if (Entry)
+    assert(false && "Code path NYI since we're not yet using this for "
+                    "generating fucntion decls");
+
+  // This function doesn't have a complete type (for example, the return type is
+  // an incompmlete struct). Use a fake type instead, and make sure not to try
+  // to set attributes.
+  bool IsIncompleteFunction = false;
+
+  mlir::FunctionType FTy;
+  if (Ty.isa<mlir::FunctionType>()) {
+    FTy = Ty.cast<mlir::FunctionType>();
+  } else {
+    assert(false && "NYI");
+    // FTy = mlir::FunctionType::get(VoidTy, false);
+    IsIncompleteFunction = true;
+  }
+
+  auto fnLoc = getLoc(FD->getSourceRange());
+  // TODO: CodeGen includeds the linkage (ExternalLinkage) and only passes the
+  // mangledname if Entry is nullptr
+  mlir::FuncOp F = mlir::FuncOp::create(fnLoc, MangledName, FTy);
+
+  assert(!Entry && "NYI");
+
+  // TODO: This might not be valid, seems the uniqueing system doesn't make
+  // sense for MLIR
+  // assert(F->getName().getStringRef() == MangledName && "name was uniqued!");
+
+  // TODO: set function attributes from the declaration
+  // TODO: set function attributes from the missing attributes param
+
+  // TODO: Handle extra attributes
+
+  assert(!DontDefer && "Only not DontDefer supported so far");
+
+  if (!IsIncompleteFunction) {
+    assert(F.getFunctionType() == Ty);
+    return F;
+  }
+
+  assert(false && "Incompmlete functions NYI");
 }
