@@ -52,3 +52,17 @@ define <vscale x 4 x i1> @not_fcmp_uge_nxv4f32(<vscale x 4 x float> %a, <vscale 
   %not = xor <vscale x 4 x i1> %icmp, %ones
   ret <vscale x 4 x i1> %not
 }
+
+define i1 @foo(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: foo:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, mi
+; CHECK-NEXT:    ret
+  %vcond = fcmp oeq <vscale x 4 x float> %a, %b
+  %bit = extractelement <vscale x 4 x i1> %vcond, i64 0
+  ret i1 %bit
+}
+

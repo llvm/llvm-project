@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf \
 // RUN:   -memref-expand -arith-expand -convert-vector-to-llvm \
-// RUN:   -convert-memref-to-llvm -convert-std-to-llvm \
+// RUN:   -convert-memref-to-llvm -convert-func-to-llvm \
 // RUN:   -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \

@@ -249,12 +249,6 @@ def : InstAlias<"fge.d $rd, $rs, $rt",
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-class PatFpr64Fpr64<SDPatternOperator OpNode, RVInstR Inst>
-    : Pat<(OpNode FPR64:$rs1, FPR64:$rs2), (Inst $rs1, $rs2)>;
-
-class PatFpr64Fpr64DynFrm<SDPatternOperator OpNode, RVInstRFrm Inst>
-    : Pat<(OpNode FPR64:$rs1, FPR64:$rs2), (Inst $rs1, $rs2, 0b111)>;
-
 let Predicates = [HasStdExtD] in {
 
 /// Float conversion operations
@@ -268,17 +262,17 @@ def : Pat<(any_fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
 
 /// Float arithmetic operations
 
-def : PatFpr64Fpr64DynFrm<any_fadd, FADD_D>;
-def : PatFpr64Fpr64DynFrm<any_fsub, FSUB_D>;
-def : PatFpr64Fpr64DynFrm<any_fmul, FMUL_D>;
-def : PatFpr64Fpr64DynFrm<any_fdiv, FDIV_D>;
+def : PatFprFprDynFrm<any_fadd, FADD_D, FPR64>;
+def : PatFprFprDynFrm<any_fsub, FSUB_D, FPR64>;
+def : PatFprFprDynFrm<any_fmul, FMUL_D, FPR64>;
+def : PatFprFprDynFrm<any_fdiv, FDIV_D, FPR64>;
 
 def : Pat<(any_fsqrt FPR64:$rs1), (FSQRT_D FPR64:$rs1, 0b111)>;
 
 def : Pat<(fneg FPR64:$rs1), (FSGNJN_D $rs1, $rs1)>;
 def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
 
-def : PatFpr64Fpr64<fcopysign, FSGNJ_D>;
+def : PatFprFpr<fcopysign, FSGNJ_D, FPR64>;
 def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2))>;
 def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
@@ -303,8 +297,8 @@ def : Pat<(any_fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
 // LLVM's fminnum and fmaxnum.
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
-def : PatFpr64Fpr64<fminnum, FMIN_D>;
-def : PatFpr64Fpr64<fmaxnum, FMAX_D>;
+def : PatFprFpr<fminnum, FMIN_D, FPR64>;
+def : PatFprFpr<fmaxnum, FMAX_D, FPR64>;
 
 /// Setcc
 // FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for

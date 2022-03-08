@@ -23,23 +23,34 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
+static constexpr bool verboseDiagnostics = false;
+
 class ICF {
 public:
   ICF(std::vector<ConcatInputSection *> &inputs);
-
   void run();
-  void segregate(size_t begin, size_t end,
-                 std::function<bool(const ConcatInputSection *,
-                                    const ConcatInputSection *)>
-                     equals);
+
+  using EqualsFn = bool (ICF::*)(const ConcatInputSection *,
+                                 const ConcatInputSection *);
+  void segregate(size_t begin, size_t end, EqualsFn);
   size_t findBoundary(size_t begin, size_t end);
   void forEachClassRange(size_t begin, size_t end,
-                         std::function<void(size_t, size_t)> func);
-  void forEachClass(std::function<void(size_t, size_t)> func);
+                         llvm::function_ref<void(size_t, size_t)> func);
+  void forEachClass(llvm::function_ref<void(size_t, size_t)> func);
+
+  bool equalsConstant(const ConcatInputSection *ia,
+                      const ConcatInputSection *ib);
+  bool equalsVariable(const ConcatInputSection *ia,
+                      const ConcatInputSection *ib);
 
   // ICF needs a copy of the inputs vector because its equivalence-class
   // segregation algorithm destroys the proper sequence.
   std::vector<ConcatInputSection *> icfInputs;
+
+  unsigned icfPass = 0;
+  std::atomic<bool> icfRepeat{false};
+  std::atomic<uint64_t> equalsConstantCount{0};
+  std::atomic<uint64_t> equalsVariableCount{0};
 };
 
 ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
@@ -76,13 +87,12 @@ ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
 // FIXME(gkm): implement keep-unique attributes
 // FIXME(gkm): implement address-significance tables for MachO object files
 
-static unsigned icfPass = 0;
-static std::atomic<bool> icfRepeat{false};
-
 // Compare "non-moving" parts of two ConcatInputSections, namely everything
 // except references to other ConcatInputSections.
-static bool equalsConstant(const ConcatInputSection *ia,
-                           const ConcatInputSection *ib) {
+bool ICF::equalsConstant(const ConcatInputSection *ia,
+                         const ConcatInputSection *ib) {
+  if (verboseDiagnostics)
+    ++equalsConstantCount;
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
@@ -153,10 +163,12 @@ static bool equalsConstant(const ConcatInputSection *ia,
 
 // Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
 // handled by equalsConstant().
-static bool equalsVariable(const ConcatInputSection *ia,
-                           const ConcatInputSection *ib) {
+bool ICF::equalsVariable(const ConcatInputSection *ia,
+                         const ConcatInputSection *ib) {
+  if (verboseDiagnostics)
+    ++equalsVariableCount;
   assert(ia->relocs.size() == ib->relocs.size());
-  auto f = [](const Reloc &ra, const Reloc &rb) {
+  auto f = [this](const Reloc &ra, const Reloc &rb) {
     // We already filtered out mismatching values/addends in equalsConstant.
     if (ra.referent == rb.referent)
       return true;
@@ -221,7 +233,7 @@ size_t ICF::findBoundary(size_t begin, size_t end) {
 
 // Invoke FUNC on subranges with matching equivalence class
 void ICF::forEachClassRange(size_t begin, size_t end,
-                            std::function<void(size_t, size_t)> func) {
+                            llvm::function_ref<void(size_t, size_t)> func) {
   while (begin < end) {
     size_t mid = findBoundary(begin, end);
     func(begin, mid);
@@ -231,7 +243,7 @@ void ICF::forEachClassRange(size_t begin, size_t end,
 
 // Split icfInputs into shards, then parallelize invocation of FUNC on subranges
 // with matching equivalence class
-void ICF::forEachClass(std::function<void(size_t, size_t)> func) {
+void ICF::forEachClass(llvm::function_ref<void(size_t, size_t)> func) {
   // Only use threads when the benefits outweigh the overhead.
   const size_t threadingThreshold = 1024;
   if (icfInputs.size() < threadingThreshold) {
@@ -263,27 +275,28 @@ void ICF::run() {
   // Into each origin-section hash, combine all reloc referent section hashes.
   for (icfPass = 0; icfPass < 2; ++icfPass) {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
-      uint64_t hash = isec->icfEqClass[icfPass % 2];
+      uint32_t hash = isec->icfEqClass[icfPass % 2];
       for (const Reloc &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
-          if (auto *dylibSym = dyn_cast<DylibSymbol>(sym))
-            hash += dylibSym->stubsHelperIndex;
-          else if (auto *defined = dyn_cast<Defined>(sym)) {
+          if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec) {
-              if (auto isec = dyn_cast<ConcatInputSection>(defined->isec))
-                hash += defined->value + isec->icfEqClass[icfPass % 2];
+              if (auto referentIsec =
+                      dyn_cast<ConcatInputSection>(defined->isec))
+                hash += defined->value + referentIsec->icfEqClass[icfPass % 2];
               else
                 hash += defined->isec->kind() +
                         defined->isec->getOffset(defined->value);
             } else {
               hash += defined->value;
             }
-          } else if (!isa<Undefined>(sym)) // ICF runs before Undefined diags.
-            llvm_unreachable("foldIdenticalSections symbol kind");
+          } else {
+            // ICF runs before Undefined diags
+            assert(isa<Undefined>(sym) || isa<DylibSymbol>(sym));
+          }
         }
       }
       // Set MSB to 1 to avoid collisions with non-hashed classes.
-      isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 63);
+      isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 31);
     });
   }
 
@@ -291,17 +304,22 @@ void ICF::run() {
       icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
-  forEachClass(
-      [&](size_t begin, size_t end) { segregate(begin, end, equalsConstant); });
+  forEachClass([&](size_t begin, size_t end) {
+    segregate(begin, end, &ICF::equalsConstant);
+  });
 
   // Split equivalence groups by comparing relocations until convergence
   do {
     icfRepeat = false;
     forEachClass([&](size_t begin, size_t end) {
-      segregate(begin, end, equalsVariable);
+      segregate(begin, end, &ICF::equalsVariable);
     });
   } while (icfRepeat);
   log("ICF needed " + Twine(icfPass) + " iterations");
+  if (verboseDiagnostics) {
+    log("equalsConstant() called " + Twine(equalsConstantCount) + " times");
+    log("equalsVariable() called " + Twine(equalsVariableCount) + " times");
+  }
 
   // Fold sections within equivalence classes
   forEachClass([&](size_t begin, size_t end) {
@@ -314,18 +332,15 @@ void ICF::run() {
 }
 
 // Split an equivalence class into smaller classes.
-void ICF::segregate(
-    size_t begin, size_t end,
-    std::function<bool(const ConcatInputSection *, const ConcatInputSection *)>
-        equals) {
+void ICF::segregate(size_t begin, size_t end, EqualsFn equals) {
   while (begin < end) {
     // Divide [begin, end) into two. Let mid be the start index of the
     // second group.
-    auto bound = std::stable_partition(icfInputs.begin() + begin + 1,
-                                       icfInputs.begin() + end,
-                                       [&](ConcatInputSection *isec) {
-                                         return equals(icfInputs[begin], isec);
-                                       });
+    auto bound = std::stable_partition(
+        icfInputs.begin() + begin + 1, icfInputs.begin() + end,
+        [&](ConcatInputSection *isec) {
+          return (this->*equals)(icfInputs[begin], isec);
+        });
     size_t mid = bound - icfInputs.begin();
 
     // Split [begin, end) into [begin, mid) and [mid, end). We use mid as an
@@ -377,7 +392,7 @@ void macho::foldIdenticalSections() {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
-    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 63);
+    isec->icfEqClass[0] = xxHash64(isec->data) | (1ull << 31);
   });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.

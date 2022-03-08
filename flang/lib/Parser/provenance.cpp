@@ -435,11 +435,15 @@ std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
     return std::nullopt;
   }
   ProvenanceRange first{provenanceMap_.Map(cookedRange.begin() - &data_[0])};
-  if (cookedRange.size() <= first.size()) {
+  if (cookedRange.size() <= first.size()) { // always true when empty
     return first.Prefix(cookedRange.size());
   }
-  ProvenanceRange last{provenanceMap_.Map(cookedRange.end() - &data_[0])};
-  return {ProvenanceRange{first.start(), last.start() - first.start()}};
+  ProvenanceRange last{provenanceMap_.Map(cookedRange.end() - 1 - &data_[0])};
+  if (first.start() <= last.start()) {
+    return {ProvenanceRange{first.start(), last.start() - first.start() + 1}};
+  } else {
+    return std::nullopt;
+  }
 }
 
 std::optional<CharBlock> CookedSource::GetCharBlock(

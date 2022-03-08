@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -255,9 +256,6 @@ void memref::populateFoldSubViewOpPatterns(RewritePatternSet &patterns) {
 
 namespace {
 
-#define GEN_PASS_CLASSES
-#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
-
 struct FoldSubViewOpsPass final
     : public FoldSubViewOpsBase<FoldSubViewOpsPass> {
   void runOnOperation() override;
@@ -268,8 +266,7 @@ struct FoldSubViewOpsPass final
 void FoldSubViewOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateFoldSubViewOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
-                                     std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> memref::createFoldSubViewOpsPass() {

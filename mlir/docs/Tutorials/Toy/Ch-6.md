@@ -97,7 +97,7 @@ multiple stages by relying on
   mlir::cf::populateSCFToControlFlowConversionPatterns(patterns, &getContext());
   mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                           patterns);
-  mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(patterns, &getContext());
 
   // The only remaining operation, to lower from the `toy` dialect, is the

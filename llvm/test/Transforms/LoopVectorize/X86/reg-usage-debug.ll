@@ -21,7 +21,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: LV: Checking a loop in "test_g"
+; CHECK: LV: Checking a loop in 'test_g'
 ; CHECK: LV(REG): Found max usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
@@ -63,7 +63,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret i32 %r.0.lcssa, !dbg !38
 }
 
-; CHECK: LV: Checking a loop in "test"
+; CHECK: LV: Checking a loop in 'test'
 ; CHECK: LV(REG): Found max usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers

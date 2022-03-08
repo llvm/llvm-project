@@ -612,7 +612,7 @@ template <typename T> Expr<T> Folder<T>::CSHIFT(FunctionRef<T> &&funcRef) {
             zbDimIndex = 0;
           }
         }
-        arrayAt[zbDim] = dimLB + dimExtent - 1;
+        arrayAt[zbDim] = dimLB + std::max<ConstantSubscript>(dimExtent, 1) - 1;
         array->IncrementSubscripts(arrayAt);
         shift->IncrementSubscripts(shiftAt);
       }
@@ -726,7 +726,7 @@ template <typename T> Expr<T> Folder<T>::EOSHIFT(FunctionRef<T> &&funcRef) {
             DIE("no derived type boundary");
           }
         }
-        arrayAt[zbDim] = dimLB + dimExtent - 1;
+        arrayAt[zbDim] = dimLB + std::max<ConstantSubscript>(dimExtent, 1) - 1;
         array->IncrementSubscripts(arrayAt);
         shift->IncrementSubscripts(shiftAt);
         if (boundary) {

@@ -39,7 +39,7 @@ New Features
 ------------
 
  - Implemented P0627R6 (Function to mark unreachable code)
- - Implemented P1165R1 (Make stateful allocator propagation more consistent for operator+(basic_string))
+ - Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
 
 API Changes
 -----------
@@ -66,6 +66,9 @@ API Changes
   (as an extension) ``__int128_t``, and the unsigned versions thereof.
   In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
 
+- The C++14 function ``std::quoted(const char*)`` is no longer supported in
+  C++03 or C++11 modes.
+
 ABI Changes
 -----------
 
@@ -85,3 +88,8 @@ Build System Changes
   ``{LIBCXX,LIBCXXABI,LIBUNWIND}_GCC_TOOLCHAIN`` CMake variables have been removed. Instead, please
   use the ``CMAKE_CXX_COMPILER_TARGET``, ``CMAKE_SYSROOT`` and ``CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN``
   variables provided by CMake.
+
+- When building for Windows, vendors who want to avoid dll-exporting symbols from the static libc++abi
+  library should set ``LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON`` when configuring CMake. The current
+  behavior, which tries to guess the correct dll-export semantics based on whether we're building
+  the libc++ shared library, will be removed in LLVM 16.

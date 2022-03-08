@@ -3,9 +3,9 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(ClangPseudoTests
+  DirectiveMapTest.cpp
   GrammarTest.cpp
   LRTableTest.cpp
-  PreprocessTest.cpp
   TokenTest.cpp
 )
 

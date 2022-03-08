@@ -210,6 +210,14 @@ public:
     m_fix_indentation_callback_chars = indent_chars;
   }
 
+  void SetSuggestionAnsiPrefix(std::string prefix) {
+    m_suggestion_ansi_prefix = std::move(prefix);
+  }
+
+  void SetSuggestionAnsiSuffix(std::string suffix) {
+    m_suggestion_ansi_suffix = std::move(suffix);
+  }
+
   /// Prompts for and reads a single line of user input.
   bool GetLine(std::string &line, bool &interrupted);
 
@@ -388,8 +396,10 @@ private:
   const char *m_fix_indentation_callback_chars = nullptr;
 
   CompleteCallbackType m_completion_callback;
-
   SuggestionCallbackType m_suggestion_callback;
+
+  std::string m_suggestion_ansi_prefix;
+  std::string m_suggestion_ansi_suffix;
 
   std::size_t m_previous_autosuggestion_size = 0;
   std::mutex m_output_mutex;
