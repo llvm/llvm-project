@@ -28,10 +28,10 @@ namespace {
 
 /// Checks for out of bound memref access subscripts..
 struct TestMemRefBoundCheck
-    : public PassWrapper<TestMemRefBoundCheck, OperationPass<FuncOp>> {
+    : public PassWrapper<TestMemRefBoundCheck, OperationPass<>> {
   StringRef getArgument() const final { return "test-memref-bound-check"; }
   StringRef getDescription() const final {
-    return "Check memref access bounds in a Function";
+    return "Check memref access bounds";
   }
   void runOnOperation() override;
 };
@@ -39,7 +39,7 @@ struct TestMemRefBoundCheck
 } // namespace
 
 void TestMemRefBoundCheck::runOnOperation() {
-  getOperation().walk([](Operation *opInst) {
+  getOperation()->walk([](Operation *opInst) {
     TypeSwitch<Operation *>(opInst)
         .Case<AffineReadOpInterface, AffineWriteOpInterface>(
             [](auto op) { (void)boundCheckLoadOrStoreOp(op); });
