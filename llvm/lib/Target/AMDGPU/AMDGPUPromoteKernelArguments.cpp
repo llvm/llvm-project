@@ -131,31 +131,7 @@ bool AMDGPUPromoteKernelArguments::promoteLoad(LoadInst *LI) {
   if (!LI->isSimple())
     return false;
 
-  Value *Ptr = LI->getPointerOperand();
-
-  // Strip casts we have created earlier.
-  Value *OrigPtr = Ptr;
-  PointerType *PT;
-  for ( ; ; ) {
-    PT = cast<PointerType>(OrigPtr->getType());
-    if (PT->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS)
-      return false;
-    auto *P = dyn_cast<AddrSpaceCastInst>(OrigPtr);
-    if (!P)
-      break;
-    auto *NewPtr = P->getPointerOperand();
-    if (!cast<PointerType>(NewPtr->getType())->hasSameElementTypeAs(PT))
-      break;
-    OrigPtr = NewPtr;
-  }
-
-  IRBuilder<> B(LI);
-
-  PointerType *NewPT =
-      PointerType::getWithSamePointeeType(PT, AMDGPUAS::CONSTANT_ADDRESS);
-  Value *Cast = B.CreateAddrSpaceCast(OrigPtr, NewPT,
-                                      Twine(OrigPtr->getName(), ".const"));
-  LI->replaceUsesOfWith(Ptr, Cast);
+  LI->setMetadata("amdgpu.noclobber", MDNode::get(LI->getContext(), {}));
   return true;
 }
 
