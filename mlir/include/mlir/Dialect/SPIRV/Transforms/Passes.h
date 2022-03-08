@@ -24,6 +24,11 @@ class ModuleOp;
 // Passes
 //===----------------------------------------------------------------------===//
 
+/// Creates a pass to run canoncalization patterns that involve GLSL ops.
+/// These patterns cannot be run in default canonicalization because GLSL ops
+/// aren't always available. So they should be involed specifically when needed.
+std::unique_ptr<OperationPass<>> createCanonicalizeGLSLPass();
+
 /// Creates a module pass that converts composite types used by objects in the
 /// StorageBuffer, PhysicalStorageBuffer, Uniform, and PushConstant storage
 /// classes with layout information.

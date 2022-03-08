@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-spirv-glsl-canonicalization -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -spirv-canonicalize-glsl %s | FileCheck %s
 
 // CHECK: func @clamp_fordlessthan(%[[INPUT:.*]]: f32)
 func @clamp_fordlessthan(%input: f32) -> f32 {
