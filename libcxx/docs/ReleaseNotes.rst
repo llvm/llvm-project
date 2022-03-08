@@ -69,11 +69,6 @@ API Changes
 - The C++14 function ``std::quoted(const char*)`` is no longer supported in
   C++03 or C++11 modes.
 
-- libc++ no longer supports containers of ``const``-qualified element type,
-  such as ``vector<const T>`` and ``list<const T>``. This used to be supported
-  as an extension. Likewise, ``std::allocator<const T>`` is no longer supported.
-  If you were using ``vector<const T>``, replace it with ``vector<T>`` instead.
-
 ABI Changes
 -----------
 
