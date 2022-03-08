@@ -96,7 +96,7 @@ private:
 
   /// Read info from special sections. E.g. eh_frame and .gcc_except_table
   /// for exception and stack unwinding information.
-  void readSpecialSections();
+  Error readSpecialSections();
 
   /// Adjust supplied command-line options based on input data.
   void adjustCommandLineOptions();
