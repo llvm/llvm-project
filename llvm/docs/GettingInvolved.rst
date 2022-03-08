@@ -18,6 +18,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    HowToSubmitABug
    BugLifeCycle
    CodingStandards
+   GitHub
    GitBisecting
    GitRepositoryPolicy
 
@@ -51,6 +52,9 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 :doc:`CodingStandards`
   Details the LLVM coding standards and provides useful information on writing
   efficient C++ code.
+
+:doc:`GitHub`
+  Describes how to use the llvm-project repository on GitHub.
 
 :doc:`GitBisecting`
   Describes how to use ``git bisect`` on LLVM's repository.
