@@ -8,8 +8,8 @@ int *p0() {
 }
 
 // CHECK: func @p0() -> !cir.ptr<i32> {
-// CHECK: %1 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK: cir.store %1, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
+// CHECK: cir.store %2, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 
 int *p1() {
   int *p;
@@ -19,8 +19,8 @@ int *p1() {
 
 // CHECK: func @p1() -> !cir.ptr<i32> {
 // CHECK: %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", uninitialized]
-// CHECK: %1 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK: cir.store %1, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
+// CHECK: cir.store %2, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 
 int *p2() {
   int *p = nullptr;
@@ -34,24 +34,26 @@ int *p2() {
 }
 
 // CHECK: func @p2() -> !cir.ptr<i32> {
-// CHECK-NEXT:    %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit] {alignment = 8 : i64}
-// CHECK-NEXT:    %1 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK-NEXT:    cir.store %1, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK-NEXT:    cir.scope {
-// CHECK-NEXT:      %5 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
-// CHECK-NEXT:      %6 = cir.cst(0 : i32) : i32
-// CHECK-NEXT:      cir.store %6, %5 : i32, cir.ptr <i32>
-// CHECK-NEXT:      cir.store %5, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK-NEXT:      %7 = cir.cst(42 : i32) : i32
-// CHECK-NEXT:      %8 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:      cir.store %7, %8 : i32, cir.ptr <i32>
-// CHECK-NEXT:    } loc(#[[loc15:loc[0-9]+]])
-// CHECK-NEXT:    %2 = cir.cst(42 : i32) : i32
-// CHECK-NEXT:    %3 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:    cir.store %2, %3 : i32, cir.ptr <i32>
-// CHECK-NEXT:    %4 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:    cir.return %4 : !cir.ptr<i32>
-// CHECK-NEXT:  }
+// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit] {alignment = 8 : i64} loc(#loc15)
+// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64} loc(#loc16)
+// CHECK-NEXT:  %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32> loc(#loc17)
+// CHECK-NEXT:  cir.store %2, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>> loc(#loc15)
+// CHECK-NEXT:  cir.scope {
+// CHECK-NEXT:    %7 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64} loc(#loc19)
+// CHECK-NEXT:    %8 = cir.cst(0 : i32) : i32 loc(#loc20)
+// CHECK-NEXT:    cir.store %8, %7 : i32, cir.ptr <i32> loc(#loc19)
+// CHECK-NEXT:    cir.store %7, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>> loc(#loc21)
+// CHECK-NEXT:    %9 = cir.cst(42 : i32) : i32 loc(#loc22)
+// CHECK-NEXT:    %10 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc23)
+// CHECK-NEXT:    cir.store %9, %10 : i32, cir.ptr <i32> loc(#loc24)
+// CHECK-NEXT:  } loc(#[[locScope:loc[0-9]+]])
+// CHECK-NEXT:  %3 = cir.cst(42 : i32) : i32 loc(#loc25)
+// CHECK-NEXT:  %4 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc26)
+// CHECK-NEXT:  cir.store %3, %4 : i32, cir.ptr <i32> loc(#loc27)
+// CHECK-NEXT:  %5 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc28)
+// CHECK-NEXT:  cir.store %5, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>> loc(#loc29)
+// CHECK-NEXT:  %6 = cir.load %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc29)
+// CHECK-NEXT:  cir.return %6 : !cir.ptr<i32> loc(#loc29)
 
 void b0() { bool x = true, y = false; }
 
@@ -66,30 +68,29 @@ void b1(int a) { bool b = a; }
 // CHECK: %3 = cir.cast(int_to_bool, %2 : i32), !cir.bool
 // CHECK: cir.store %3, %1 : !cir.bool, cir.ptr <!cir.bool>
 
-int if0(int a) {
+void if0(int a) {
   int x = 0;
   if (a) {
     x = 3;
   } else {
     x = 4;
   }
-  return x;
 }
 
-// CHECK: func @if0(%arg0: i32 loc({{.*}})) -> i32 {
+// CHECK: func @if0(%arg0: i32 loc({{.*}}))
 // CHECK: cir.scope {
-// CHECK:   %4 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:   %5 = cir.cast(int_to_bool, %4 : i32), !cir.bool
-// CHECK-NEXT:   cir.if %5 {
-// CHECK-NEXT:     %6 = cir.cst(3 : i32) : i32
-// CHECK-NEXT:     cir.store %6, %1 : i32, cir.ptr <i32>
+// CHECK:   %3 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK:   %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+// CHECK-NEXT:   cir.if %4 {
+// CHECK-NEXT:     %5 = cir.cst(3 : i32) : i32
+// CHECK-NEXT:     cir.store %5, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:   } else {
-// CHECK-NEXT:     %6 = cir.cst(4 : i32) : i32
-// CHECK-NEXT:     cir.store %6, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %5 = cir.cst(4 : i32) : i32
+// CHECK-NEXT:     cir.store %5, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:   }
 // CHECK: }
 
-int if1(int a, bool b, bool c) {
+void if1(int a, bool b, bool c) {
   int x = 0;
   if (a) {
     x = 3;
@@ -102,34 +103,33 @@ int if1(int a, bool b, bool c) {
     }
     x = 4;
   }
-  return x;
 }
 
-// CHECK: func @if1(%arg0: i32 loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}})) -> i32 {
+// CHECK: func @if1(%arg0: i32 loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
 // CHECK: cir.scope {
-// CHECK:   %6 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:   %7 = cir.cast(int_to_bool, %6 : i32), !cir.bool
-// CHECK:   cir.if %7 {
-// CHECK:     %8 = cir.cst(3 : i32) : i32
-// CHECK:     cir.store %8, %3 : i32, cir.ptr <i32>
+// CHECK:   %5 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK:   %6 = cir.cast(int_to_bool, %5 : i32), !cir.bool
+// CHECK:   cir.if %6 {
+// CHECK:     %7 = cir.cst(3 : i32) : i32
+// CHECK:     cir.store %7, %3 : i32, cir.ptr <i32>
 // CHECK:     cir.scope {
-// CHECK:       %9 = cir.load %1 : cir.ptr <!cir.bool>, !cir.bool
-// CHECK-NEXT:       cir.if %9 {
-// CHECK-NEXT:         %10 = cir.cst(8 : i32) : i32
-// CHECK-NEXT:         cir.store %10, %3 : i32, cir.ptr <i32>
+// CHECK:       %8 = cir.load %1 : cir.ptr <!cir.bool>, !cir.bool
+// CHECK-NEXT:       cir.if %8 {
+// CHECK-NEXT:         %9 = cir.cst(8 : i32) : i32
+// CHECK-NEXT:         cir.store %9, %3 : i32, cir.ptr <i32>
 // CHECK-NEXT:       }
 // CHECK:     }
 // CHECK:   } else {
 // CHECK:     cir.scope {
-// CHECK:       %9 = cir.load %2 : cir.ptr <!cir.bool>, !cir.bool
-// CHECK-NEXT:       cir.if %9 {
-// CHECK-NEXT:         %10 = cir.cst(14 : i32) : i32
-// CHECK-NEXT:         cir.store %10, %3 : i32, cir.ptr <i32>
+// CHECK:       %8 = cir.load %2 : cir.ptr <!cir.bool>, !cir.bool
+// CHECK-NEXT:       cir.if %8 {
+// CHECK-NEXT:         %9 = cir.cst(14 : i32) : i32
+// CHECK-NEXT:         cir.store %9, %3 : i32, cir.ptr <i32>
 // CHECK-NEXT:       }
 // CHECK:     }
-// CHECK:     %8 = cir.cst(4 : i32) : i32
-// CHECK:     cir.store %8, %3 : i32, cir.ptr <i32>
+// CHECK:     %7 = cir.cst(4 : i32) : i32
+// CHECK:     cir.store %7, %3 : i32, cir.ptr <i32>
 // CHECK:   }
 // CHECK: }
 
-// CHECK: #loc15 = loc(fused["{{.*}}basic.cpp":26:3, "{{.*}}basic.cpp":30:3])
+// CHECK: #[[locScope]] = loc(fused["{{.*}}basic.cpp":26:3, "{{.*}}basic.cpp":30:3])

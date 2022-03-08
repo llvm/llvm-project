@@ -86,10 +86,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &CGO)
     : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
-                            builder.getUnknownLoc())},
-      target(astCtx.getTargetInfo()),
-      ABI(createCXXABI(*this)), genTypes{*this} {}
+      codeGenOpts(CGO),
+      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())},
+      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
+      genTypes{*this} {}
 
 CIRGenModule::~CIRGenModule() {}
 
@@ -115,6 +115,36 @@ mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, builder.getContext());
 }
 
+// Allocas are expected to be in the beginning of the entry block
+// in whatever region they show up.
+static void updateAllocaInEntryBlock(AllocaOp localVarAddr) {
+  auto *parentBlock = localVarAddr->getBlock();
+  auto lastAlloca = std::find_if_not(
+      parentBlock->begin(), parentBlock->end(),
+      [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
+  if (lastAlloca != std::end(*parentBlock))
+    localVarAddr->moveBefore(&*lastAlloca);
+  else
+    localVarAddr->moveBefore(&parentBlock->front());
+}
+
+void CIRGenModule::buildAndUpdateRetAlloca(QualType T, mlir::Location loc,
+                                           CharUnits alignment) {
+  auto localVarTy = getCIRType(T);
+  auto localVarPtrTy =
+      mlir::cir::PointerType::get(builder.getContext(), localVarTy);
+
+  auto alignIntAttr =
+      mlir::IntegerAttr::get(mlir::IntegerType::get(builder.getContext(), 64),
+                             alignment.getQuantity());
+  auto addr = builder.create<mlir::cir::AllocaOp>(
+      loc, /*addr type*/ localVarPtrTy,
+      /*var type*/ localVarTy, "__retval", InitStyle::uninitialized,
+      alignIntAttr);
+  updateAllocaInEntryBlock(addr);
+  CurCGF->FnRetAlloca = addr;
+}
+
 mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType T,
                                           mlir::Location loc,
                                           CharUnits alignment,
@@ -137,17 +167,7 @@ mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType T,
       loc, /*addr type*/ localVarPtrTy, /*var type*/ localVarTy,
       namedVar->getName(),
       IsParam ? InitStyle::paraminit : InitStyle::uninitialized, alignIntAttr);
-
-  // Allocas are expected to be in the beginning of the entry block
-  // in whatever region they show up.
-  auto *parentBlock = localVarAddr->getBlock();
-  auto lastAlloca = std::find_if_not(
-      parentBlock->begin(), parentBlock->end(),
-      [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
-  if (lastAlloca != std::end(*parentBlock))
-    localVarAddr->moveBefore(&*lastAlloca);
-  else
-    localVarAddr->moveBefore(&parentBlock->front());
+  updateAllocaInEntryBlock(localVarAddr);
 
   // Insert into the symbol table, allocate some stack space in the
   // function entry block.
@@ -600,40 +620,42 @@ mlir::LogicalResult CIRGenModule::buildReturnStmt(const ReturnStmt &S) {
            S.getNRVOCandidate()->isNRVOVariable()) &&
          "unimplemented");
   assert(!CurCGF->FnRetQualTy->isReferenceType() && "unimplemented");
+  auto loc = getLoc(S.getSourceRange());
 
   // Emit the result value, even if unused, to evaluate the side effects.
   const Expr *RV = S.getRetValue();
-  if (!RV) // Do nothing (return value is left uninitialized)
-    return mlir::success();
-  assert(!isa<ExprWithCleanups>(RV) && "unimplemented");
+  if (RV) {
+    assert(!isa<ExprWithCleanups>(RV) && "unimplemented");
 
-  mlir::Value V = nullptr;
-  switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
-  case TEK_Scalar:
-    V = buildScalarExpr(RV);
-    // Builder.CreateStore(EmitScalarExpr(RV), ReturnValue);
-    break;
-  case TEK_Complex:
-  case TEK_Aggregate:
-    llvm::errs() << "ReturnStmt EvaluationKind not implemented\n";
-    return mlir::failure();
+    mlir::Value V = nullptr;
+    switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
+    case TEK_Scalar:
+      V = buildScalarExpr(RV);
+      builder.create<mlir::cir::StoreOp>(loc, V, *CurCGF->FnRetAlloca);
+      break;
+    case TEK_Complex:
+    case TEK_Aggregate:
+      llvm::errs() << "ReturnStmt EvaluationKind not implemented\n";
+      return mlir::failure();
+    }
+
+    // Otherwise, this return operation has zero operands.
+    if (!V || (RV && RV->getType()->isVoidType())) {
+      // FIXME: evaluate for side effects.
+    }
+  } else {
+    // Do nothing (return value is left uninitialized), this is also
+    // the path when returning from void functions.
   }
 
-  // FIXME: there might be multiple return values in a function, fix this
-  // once we add support for arbitraty returns.
-  CurCGF->RetValue = V;
-  CurCGF->RetLoc = getLoc(S.getSourceRange());
+  // Create a new return block (if not existent) and add a branch to
+  // it. The actual return instruction is only inserted during current
+  // scope cleanup handling.
+  auto *retBlock = currLexScope->getOrCreateRetBlock(*this, loc);
+  builder.create<BrOp>(loc, retBlock);
 
-  // Otherwise, this return operation has zero operands.
-  if (!V || (RV && RV->getType()->isVoidType())) {
-    // FIXME: evaluate for side effects.
-  }
-
-  // FIXME: this currently assumes only a return stmt as the last
-  // on in a function, make this generic.
-  if (!builder.getInsertionBlock()->isEntryBlock())
-    builder.create<BrOp>(getLoc(S.getSourceRange()),
-                         currLexScope->CleanupBlock);
+  // Insert the new block to continue codegen after branch to ret block.
+  builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }
 
@@ -666,7 +688,8 @@ CIRGenModule::buildBranchThroughCleanup(JumpDest &Dest, LabelDecl *L,
   // materialized label. Keep track of unsolved goto's.
   mlir::Block *DstBlock = Dest.getBlock();
   auto G = builder.create<BrOp>(
-      Loc, Dest.isValid() ? DstBlock : currLexScope->CleanupBlock);
+      Loc, Dest.isValid() ? DstBlock
+                          : currLexScope->getOrCreateCleanupBlock(builder));
   if (!Dest.isValid())
     currLexScope->PendingGotos.push_back(std::make_pair(G, L));
 
@@ -675,7 +698,9 @@ CIRGenModule::buildBranchThroughCleanup(JumpDest &Dest, LabelDecl *L,
 
 /// All scope related cleanup needed:
 /// - Patching up unsolved goto's.
+/// - Build all cleanup code and insert yield/returns.
 void CIRGenModule::LexicalScopeGuard::cleanup() {
+  auto &builder = CGM.builder;
   auto *localScope = CGM.currLexScope;
 
   // Handle pending gotos and the solved labels in this scope.
@@ -694,40 +719,69 @@ void CIRGenModule::LexicalScopeGuard::cleanup() {
   }
   localScope->SolvedLabels.clear();
 
-  // Do not insert the cleanup block unecessarily, this doesn't really need
-  // to be here (should be a separate pass), but it helps keeping small
-  // testcases minimal for now.
-  auto &builder = CGM.builder;
-  if (!builder.getInsertionBlock()->isEntryBlock()) {
-    // If the current block doesn't have a terminator, add a branch to the
-    // cleanup block, where the actual cir.return/yield happens (cleanup block).
-    if (!builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>())
-      builder.create<BrOp>(builder.getBlock()->back().getLoc(),
-                           localScope->CleanupBlock);
+  // Cleanup are done right before codegen resume a scope. This is where
+  // objects are destroyed.
+  if (localScope->RetBlock) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(localScope->RetBlock);
 
-    // Set the insertion point to the end of the cleanup block and insert
-    // the return instruction.
-    builder.setInsertionPointToEnd(localScope->CleanupBlock);
-  } else {
-    assert(localScope->CleanupBlock->empty() && "not empty");
-    assert(
-        (builder.getBlock()->empty() ||
-         !builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>()) &&
-        "entry basic block already has a terminator?");
-    // Do not even emit cleanup blocks.
-    localScope->CleanupBlock->erase();
+    // TODO: insert actual scope cleanup HERE (dtors and etc)
+
+    // If there's anything to return, load it first.
+    if (CGM.CurCGF->FnRetTy.has_value()) {
+      auto val = builder.create<LoadOp>(
+          *localScope->RetLoc, *CGM.CurCGF->FnRetTy, *CGM.CurCGF->FnRetAlloca);
+      builder.create<ReturnOp>(*localScope->RetLoc, ArrayRef(val.getResult()));
+    } else {
+      builder.create<ReturnOp>(*localScope->RetLoc);
+    }
   }
 
-  auto *CurFn = CGM.CurCGF;
-  if (localScope->Depth == 0) { // end of function
-    // FIXME: this currently assumes only one cir.return in the function.
-    builder.create<ReturnOp>(CurFn->RetLoc ? *(CurFn->RetLoc)
-                                           : localScope->EndLoc,
-                             CurFn->RetValue ? ArrayRef(CurFn->RetValue)
-                                             : ArrayRef<mlir::Value>());
-  } else { // end of other local scope
-    builder.create<YieldOp>(localScope->EndLoc);
+  auto insertCleanupAndLeave = [&](mlir::Block *InsPt) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(InsPt);
+    // TODO: insert actual scope cleanup (dtors and etc)
+    if (localScope->Depth != 0) // end of any local scope != function
+      builder.create<YieldOp>(localScope->EndLoc);
+    else
+      builder.create<ReturnOp>(localScope->EndLoc);
+  };
+
+  // If a cleanup block has been created at some point, branch to it
+  // and set the insertion point to continue at the cleanup block.
+  // Terminators are then inserted either in the cleanup block or
+  // inline in this current block.
+  auto *cleanupBlock = localScope->getCleanupBlock(builder);
+  if (cleanupBlock)
+    insertCleanupAndLeave(cleanupBlock);
+
+  // Now deal with any pending block wrap up like implicit end of
+  // scope.
+
+  // If a terminator is already present in the current block, nothing
+  // else to do here.
+  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
+  auto *currBlock = builder.getBlock();
+  bool hasTerminator =
+      !currBlock->empty() &&
+      currBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
+  if (hasTerminator)
+    return;
+
+  // An empty non-entry block has nothing to offer.
+  if (!entryBlock && currBlock->empty()) {
+    currBlock->erase();
+    return;
   }
+
+  // If there's a cleanup block, branch to it, nothing else to do.
+  if (cleanupBlock) {
+    builder.create<BrOp>(currBlock->back().getLoc(), cleanupBlock);
+    return;
+  }
+
+  // No pre-existent cleanup block, emit cleanup code and yield/return.
+  insertCleanupAndLeave(currBlock);
 }
 
 mlir::LogicalResult CIRGenModule::buildGotoStmt(const GotoStmt &S) {
@@ -747,7 +801,7 @@ mlir::LogicalResult CIRGenModule::buildGotoStmt(const GotoStmt &S) {
     return mlir::failure();
 
   // Insert the new block to continue codegen after goto.
-  builder.createBlock(currLexScope->CleanupBlock);
+  builder.createBlock(builder.getBlock()->getParent());
 
   // What here...
   return mlir::success();
@@ -757,23 +811,23 @@ mlir::LogicalResult CIRGenModule::buildLabel(const LabelDecl *D) {
   JumpDest &Dest = LabelMap[D];
 
   // Create a new block to tag with a label and add a branch from
-  // the current one to it.
+  // the current one to it. If the block is empty just call attach it
+  // to this label.
   mlir::Block *currBlock = builder.getBlock();
+  mlir::Block *labelBlock = currBlock;
   if (!currBlock->empty()) {
-    mlir::Operation *lastOp = nullptr;
-    if (!currBlock->back().hasTrait<mlir::OpTrait::IsTerminator>())
-      lastOp = builder.create<BrOp>(getLoc(D->getSourceRange()),
-                                    currLexScope->CleanupBlock);
 
-    currBlock = builder.createBlock(currLexScope->CleanupBlock);
-    if (lastOp) {
-      auto g = cast<mlir::cir::BrOp>(lastOp);
-      g.setSuccessor(currBlock);
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      labelBlock = builder.createBlock(builder.getBlock()->getParent());
     }
+
+    builder.create<BrOp>(getLoc(D->getSourceRange()), labelBlock);
+    builder.setInsertionPointToEnd(labelBlock);
   }
 
   if (!Dest.isValid()) {
-    Dest.Block = currBlock;
+    Dest.Block = labelBlock;
     currLexScope->SolvedLabels.insert(D);
     // FIXME: add a label attribute to block...
   } else {
@@ -1203,10 +1257,17 @@ mlir::LogicalResult CIRGenModule::buildIfOnBoolExpr(const Expr *cond,
       loc, condV, elseS,
       /*thenBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto fusedLoc = loc.cast<mlir::FusedLoc>();
-        auto locBegin = fusedLoc.getLocations()[0];
-        auto locEnd = fusedLoc.getLocations()[1];
-        LexicalScopeContext lexScope{builder, locBegin, locEnd};
+        // FIXME: abstract all this massive location handling elsewhere.
+        SmallVector<mlir::Location, 2> locs;
+        if (loc.isa<mlir::FileLineColLoc>()) {
+          locs.push_back(loc);
+          locs.push_back(loc);
+        } else if (loc.isa<mlir::FusedLoc>()) {
+          auto fusedLoc = loc.cast<mlir::FusedLoc>();
+          locs.push_back(fusedLoc.getLocations()[0]);
+          locs.push_back(fusedLoc.getLocations()[1]);
+        }
+        LexicalScopeContext lexScope{locs[0], locs[1]};
         LexicalScopeGuard lexThenGuard{*this, &lexScope};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
       },
@@ -1215,13 +1276,33 @@ mlir::LogicalResult CIRGenModule::buildIfOnBoolExpr(const Expr *cond,
         auto fusedLoc = loc.cast<mlir::FusedLoc>();
         auto locBegin = fusedLoc.getLocations()[2];
         auto locEnd = fusedLoc.getLocations()[3];
-        LexicalScopeContext lexScope{builder, locBegin, locEnd};
+        LexicalScopeContext lexScope{locBegin, locEnd};
         LexicalScopeGuard lexElseGuard{*this, &lexScope};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
       });
 
   return mlir::LogicalResult::success(resThen.succeeded() &&
                                       resElse.succeeded());
+}
+
+static mlir::Location getIfLocs(CIRGenModule &CGM, const clang::Stmt *thenS,
+                                const clang::Stmt *elseS) {
+  // Attempt to be more accurate as possible with IfOp location, generate
+  // one fused location that has either 2 or 4 total locations, depending
+  // on else's availability.
+  SmallVector<mlir::Location, 4> ifLocs;
+  mlir::Attribute metadata;
+
+  clang::SourceRange t = thenS->getSourceRange();
+  ifLocs.push_back(CGM.getLoc(t.getBegin()));
+  ifLocs.push_back(CGM.getLoc(t.getEnd()));
+  if (elseS) {
+    clang::SourceRange e = elseS->getSourceRange();
+    ifLocs.push_back(CGM.getLoc(e.getBegin()));
+    ifLocs.push_back(CGM.getLoc(e.getEnd()));
+  }
+
+  return mlir::FusedLoc::get(ifLocs, metadata, CGM.getBuilder().getContext());
 }
 
 mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
@@ -1250,19 +1331,7 @@ mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
     }
 
     // TODO: PGO and likelihood.
-    // Attempt to be more accurate as possible with IfOp location, generate
-    // one fused location that has either 2 or 4 total locations, depending
-    // on else's availability.
-    SmallVector<mlir::Location, 4> ifLocs;
-    mlir::Attribute metadata;
-    ifLocs.push_back(getLoc(S.getThen()->getSourceRange().getBegin()));
-    ifLocs.push_back(getLoc(S.getThen()->getSourceRange().getEnd()));
-    if (S.getElse()) {
-      ifLocs.push_back(getLoc(S.getElse()->getSourceRange().getBegin()));
-      ifLocs.push_back(getLoc(S.getElse()->getSourceRange().getEnd()));
-    }
-
-    auto ifLoc = mlir::FusedLoc::get(ifLocs, metadata, builder.getContext());
+    auto ifLoc = getIfLocs(*this, S.getThen(), S.getElse());
     return buildIfOnBoolExpr(S.getCond(), ifLoc, S.getThen(), S.getElse());
   };
 
@@ -1276,7 +1345,7 @@ mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
         auto fusedLoc = loc.cast<mlir::FusedLoc>();
         auto scopeLocBegin = fusedLoc.getLocations()[0];
         auto scopeLocEnd = fusedLoc.getLocations()[1];
-        LexicalScopeContext lexScope{builder, scopeLocBegin, scopeLocEnd};
+        LexicalScopeContext lexScope{scopeLocBegin, scopeLocEnd};
         LexicalScopeGuard lexIfScopeGuard{*this, &lexScope};
         res = ifStmtBuilder();
       });
@@ -1489,7 +1558,7 @@ mlir::LogicalResult CIRGenModule::buildCompoundStmt(const CompoundStmt &S) {
         auto fusedLoc = loc.cast<mlir::FusedLoc>();
         auto locBegin = fusedLoc.getLocations()[0];
         auto locEnd = fusedLoc.getLocations()[1];
-        LexicalScopeContext lexScope{builder, locBegin, locEnd};
+        LexicalScopeContext lexScope{locBegin, locEnd};
         LexicalScopeGuard lexScopeGuard{*this, &lexScope};
         res = compoundStmtBuilder();
       });
@@ -1587,10 +1656,13 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
     argTypes.push_back(getCIRType(Param->getType()));
 
   CurCGF->FnRetQualTy = FD->getReturnType();
-  auto funcType =
-      builder.getFunctionType(argTypes, CurCGF->FnRetQualTy->isVoidType()
-                                            ? mlir::TypeRange()
-                                            : getCIRType(CurCGF->FnRetQualTy));
+  mlir::TypeRange FnTyRange = {};
+  if (!CurCGF->FnRetQualTy->isVoidType()) {
+    CurCGF->FnRetTy = getCIRType(CurCGF->FnRetQualTy);
+    FnTyRange = mlir::TypeRange{*CurCGF->FnRetTy};
+  }
+
+  auto funcType = builder.getFunctionType(argTypes, FnTyRange);
   mlir::FuncOp function = mlir::FuncOp::create(fnLoc, FD->getName(), funcType);
   if (!function)
     return nullptr;
@@ -1608,7 +1680,7 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
 
   // Initialize lexical scope information.
   {
-    LexicalScopeContext lexScope{builder, FnBeginLoc, FnEndLoc};
+    LexicalScopeContext lexScope{FnBeginLoc, FnEndLoc};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
 
     // Declare all the function arguments in the symbol table.
@@ -1630,6 +1702,12 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
       builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
     }
     assert(builder.getInsertionBlock() && "Should be valid");
+
+    // When the current function is not void, create an address to store the
+    // result value.
+    if (CurCGF->FnRetTy.has_value())
+      buildAndUpdateRetAlloca(CurCGF->FnRetQualTy, FnEndLoc,
+                              getNaturalTypeAlignment(CurCGF->FnRetQualTy));
 
     // Emit the body of the function.
     if (mlir::failed(buildFunctionBody(FD->getBody()))) {

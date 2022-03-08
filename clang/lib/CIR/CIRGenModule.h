@@ -121,23 +121,41 @@ private:
   // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
   // scopes that require cleanups.
   struct LexicalScopeContext {
+  private:
+    // Block containing cleanup code for things initialized in this
+    // lexical context (scope).
+    mlir::Block *CleanupBlock = nullptr;
+
+  public:
     unsigned Depth = 0;
-    LexicalScopeContext(mlir::OpBuilder &builder, mlir::Location b,
-                        mlir::Location e)
-        : BeginLoc(b), EndLoc(e) {
+    bool HasReturn = false;
+    LexicalScopeContext(mlir::Location b, mlir::Location e)
+        : BeginLoc(b), EndLoc(e) {}
+    ~LexicalScopeContext() = default;
+
+    // ---
+    // Goto handling
+    // ---
+
+    // Lazy create cleanup block or return what's available.
+    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
+      if (CleanupBlock)
+        return getCleanupBlock(builder);
+      return createCleanupBlock(builder);
+    }
+
+    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
+      return CleanupBlock;
+    }
+    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
       {
-        // Create the cleanup block but dont hook it up around just
-        // yet.
+        // Create the cleanup block but dont hook it up around just yet.
         mlir::OpBuilder::InsertionGuard guard(builder);
         CleanupBlock = builder.createBlock(builder.getBlock()->getParent());
       }
       assert(builder.getInsertionBlock() && "Should be valid");
+      return CleanupBlock;
     }
-    ~LexicalScopeContext() = default;
-
-    // Block containing cleanup code for things initialized in this
-    // lexical context (scope).
-    mlir::Block *CleanupBlock = nullptr;
 
     // Goto's introduced in this scope but didn't get fixed.
     llvm::SmallVector<std::pair<mlir::Operation *, const clang::LabelDecl *>, 4>
@@ -145,6 +163,30 @@ private:
 
     // Labels solved inside this scope.
     llvm::SmallPtrSet<const clang::LabelDecl *, 4> SolvedLabels;
+
+    // ---
+    // Return handling
+    // ---
+
+    // Return block info for this scope.
+    mlir::Block *RetBlock = nullptr;
+    std::optional<mlir::Location> RetLoc;
+
+    // There's usually only one ret block per scope, but this needs to be
+    // get or create because of potential unreachable return statements, note
+    // that for those, all source location maps to the first one found.
+    mlir::Block *getOrCreateRetBlock(CIRGenModule &CGM, mlir::Location loc) {
+      if (RetBlock)
+        return RetBlock;
+      RetLoc = loc;
+      {
+        // Create the cleanup block but dont hook it up around just yet.
+        mlir::OpBuilder::InsertionGuard guard(CGM.builder);
+        RetBlock = CGM.builder.createBlock(CGM.builder.getBlock()->getParent());
+      }
+      assert(CGM.builder.getInsertionBlock() && "Should be valid");
+      return RetBlock;
+    }
 
     mlir::Location BeginLoc, EndLoc;
   };
@@ -209,6 +251,8 @@ private:
   mlir::LogicalResult declare(const clang::Decl *var, clang::QualType T,
                               mlir::Location loc, clang::CharUnits alignment,
                               mlir::Value &addr, bool IsParam = false);
+  void buildAndUpdateRetAlloca(clang::QualType T, mlir::Location loc,
+                               clang::CharUnits alignment);
 
 public:
   mlir::ModuleOp getModule() { return theModule; }
@@ -369,8 +413,8 @@ public:
   /// with codegen.
   /// TODO: Add TBAAAccessInfo
   clang::CharUnits getNaturalTypeAlignment(clang::QualType T,
-                                           LValueBaseInfo *BaseInfo,
-                                           bool forPointeeType);
+                                           LValueBaseInfo *BaseInfo = nullptr,
+                                           bool forPointeeType = false);
 
   /// Given an expression of pointer type, try to
   /// derive a more accurate bound on the alignment of the pointer.
