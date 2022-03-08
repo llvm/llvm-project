@@ -38,7 +38,8 @@ bool FormatErrorReporter::Say(const common::FormatMessage &msg) {
     return false;
   }
   parser::MessageFormattedText text{
-      parser::MessageFixedText(msg.text, strlen(msg.text), msg.isError),
+      parser::MessageFixedText{msg.text, strlen(msg.text),
+          msg.isError ? parser::Severity::Error : parser::Severity::Warning},
       msg.arg};
   if (formatCharBlock_.size()) {
     // The input format is a folded expression.  Error markers span the full

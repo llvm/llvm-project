@@ -44,10 +44,10 @@ Symbol &Resolve(const parser::Name &name, Symbol &symbol) {
   return *Resolve(name, &symbol);
 }
 
-parser::MessageFixedText WithIsFatal(
-    const parser::MessageFixedText &msg, bool isFatal) {
+parser::MessageFixedText WithSeverity(
+    const parser::MessageFixedText &msg, parser::Severity severity) {
   return parser::MessageFixedText{
-      msg.text().begin(), msg.text().size(), isFatal};
+      msg.text().begin(), msg.text().size(), severity};
 }
 
 bool IsIntrinsicOperator(
@@ -576,7 +576,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
     return false; // an error has already occurred
   }
   currObject_.symbol = name.symbol;
-  parser::MessageFixedText msg{"", 0};
+  parser::MessageFixedText msg;
   const Symbol &symbol{*name.symbol};
   if (symbol.owner().IsDerivedType()) { // C8107
     msg = "Derived type component '%s'"
