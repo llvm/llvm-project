@@ -6,7 +6,8 @@ void function();
 
 #pragma clang attribute pop
 
-#pragma clang attribute push(__declspec(dllexport, dllimport), apply_to = function) // expected-error {{more than one attribute specified in '#pragma clang attribute push'}}
+#pragma clang attribute push(__declspec(dllexport, dllimport), apply_to = function)
+#pragma clang attribute pop
 
 #pragma clang attribute push(__declspec(align), apply_to = variable) // expected-error {{attribute 'align' is not supported by '#pragma clang attribute'}}
 

@@ -106,6 +106,8 @@ Attribute Changes in Clang
 - Statement attributes ``[[clang::noinline]]`` and  ``[[clang::always_inline]]``
   can be used to control inlining decisions at callsites.
 
+- ``#pragma clang attribute push`` now supports multiple attributes within a single directive.
+
 Windows Support
 ---------------
 
