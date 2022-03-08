@@ -57,6 +57,8 @@ public:
       llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
 
 private:
+  mutable std::unique_ptr<TargetCIRGenInfo> TheTargetCIRGenInfo;
+
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
@@ -89,8 +91,6 @@ private:
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *CurCGF = nullptr;
-
-  mutable std::unique_ptr<TargetCIRGenInfo> TheTargetCIRGenInfo;
 
   /// -------
   /// Goto
