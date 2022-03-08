@@ -273,6 +273,14 @@ bool SBType::IsScopedEnumerationType() {
   return m_opaque_sp->GetCompilerType(true).IsScopedEnumerationType();
 }
 
+bool SBType::IsAggregateType() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return false;
+  return m_opaque_sp->GetCompilerType(true).IsAggregateType();
+}
+
 lldb::SBType SBType::GetFunctionReturnType() {
   LLDB_INSTRUMENT_VA(this);
 
