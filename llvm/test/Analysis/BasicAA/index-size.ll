@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -aa-eval -print-all-alias-modref-info -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "p:64:64:64:32"
 

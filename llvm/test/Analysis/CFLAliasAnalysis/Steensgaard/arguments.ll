@@ -1,7 +1,7 @@
 ; This testcase ensures that CFL AA gives conservative answers on variables
 ; that involve arguments.
 
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 ; CHECK:     Function: test
 
