@@ -960,9 +960,11 @@ TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
   verifyFormat("int Value { get; } = 0", Style);
   verifyFormat("int Value { set }", Style);
   verifyFormat("int Value { set; }", Style);
+  verifyFormat("int Value { init; }", Style);
   verifyFormat("int Value { internal set; }", Style);
   verifyFormat("int Value { set; } = 0", Style);
   verifyFormat("int Value { get; set }", Style);
+  verifyFormat("int Value { get; init; }", Style);
   verifyFormat("int Value { set; get }", Style);
   verifyFormat("int Value { get; private set; }", Style);
   verifyFormat("int Value { get; set; }", Style);
@@ -974,6 +976,18 @@ TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
 public string Name {
   get => _name;
   set => _name = value;
+})",
+               Style);
+  verifyFormat(R"(//
+public string Name {
+  init => _name = value;
+  get => _name;
+})",
+               Style);
+  verifyFormat(R"(//
+public string Name {
+  set => _name = value;
+  get => _name;
 })",
                Style);
 
