@@ -158,3 +158,63 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
 
 } // namespace
 
+mlir::FunctionType CIRGenTypes::GetFunctionType(clang::GlobalDecl GD) {
+  const CIRGenFunctionInfo &FI = arrangeGlobalDeclaration(GD);
+  return GetFunctionType(FI);
+}
+
+mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
+  bool Inserted = FunctionsBeingProcessed.insert(&FI).second;
+  (void)Inserted;
+  assert(Inserted && "Recursively being processed?");
+
+  mlir::Type resultType = nullptr;
+  const ABIArgInfo &retAI = FI.getReturnInfo();
+  switch (retAI.getKind()) {
+  case ABIArgInfo::Ignore:
+    // TODO: where to get VoidTy?
+    resultType = nullptr;
+    break;
+  default:
+    assert(false && "NYI");
+  }
+
+  ClangToCIRArgMapping CIRFunctionArgs(getContext(), FI, true);
+  SmallVector<mlir::Type, 8> ArgTypes(CIRFunctionArgs.totalCIRArgs());
+
+  assert(!CIRFunctionArgs.hasSRetArg() && "NYI");
+  assert(!CIRFunctionArgs.hasInallocaArg() && "NYI");
+
+  // Add in all of the required arguments.
+  unsigned ArgNo = 0;
+  CIRGenFunctionInfo::const_arg_iterator it = FI.arg_begin(),
+                                         ie = it + FI.getNumRequiredArgs();
+
+  for (; it != ie; ++it, ++ArgNo) {
+    const auto &ArgInfo = it->info;
+
+    assert(!CIRFunctionArgs.hasPaddingArg(ArgNo) && "NYI");
+
+    unsigned FirstCIRArg, NumCIRArgs;
+    std::tie(FirstCIRArg, NumCIRArgs) = CIRFunctionArgs.getCIRArgs(ArgNo);
+
+    switch (ArgInfo.getKind()) {
+    default:
+      assert(false && "NYI");
+    case ABIArgInfo::Direct: {
+      mlir::Type argType = ArgInfo.getCoerceToType();
+      // TODO: handle the test against llvm::StructType from codegen
+      assert(NumCIRArgs == 1);
+      ArgTypes[FirstCIRArg] = argType;
+      break;
+    }
+    }
+  }
+
+  bool Erased = FunctionsBeingProcessed.erase(&FI);
+  (void)Erased;
+  assert(Erased && "Not in set?");
+
+  return Builder.getFunctionType(ArgTypes,
+                                 resultType ? resultType : mlir::TypeRange());
+}
