@@ -127,7 +127,7 @@ public:
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (outputStream && mlirMod) {
-        // runCIRToCIRPasses(mlirMod, mlirCtx.get());
+        runCIRToCIRPasses(mlirMod, mlirCtx.get());
         mlir::OpPrintingFlags flags;
         // FIXME: we cannot roundtrip prettyForm=true right now.
         flags.enableDebugInfo(/*prettyForm=*/false);

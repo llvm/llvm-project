@@ -113,41 +113,86 @@ OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult ReturnOp::verify() {
-  // We know that the parent operation is a function, because of the 'HasParent'
-  // trait attached to the operation definition.
-  auto function = cast<FuncOp>(getOperation()->getParentOp());
-
-  /// ReturnOps can only have a single optional operand.
-  if (getNumOperands() > 1)
-    return emitOpError() << "expects at most 1 return operand";
+static mlir::LogicalResult checkReturnAndFunction(ReturnOp op,
+                                                  FuncOp function) {
+  // ReturnOps currently only have a single optional operand.
+  if (op.getNumOperands() > 1)
+    return op.emitOpError() << "expects at most 1 return operand";
 
   // The operand number and types must match the function signature.
   const auto &results = function.getFunctionType().getResults();
-  if (getNumOperands() != results.size())
-    return emitOpError() << "does not return the same number of values ("
-                         << getNumOperands() << ") as the enclosing function ("
-                         << results.size() << ")";
+  if (op.getNumOperands() != results.size())
+    return op.emitOpError()
+           << "does not return the same number of values ("
+           << op.getNumOperands() << ") as the enclosing function ("
+           << results.size() << ")";
 
   // If the operation does not have an input, we are done.
-  if (!hasOperand())
+  if (!op.hasOperand())
     return mlir::success();
 
-  auto inputType = *operand_type_begin();
+  auto inputType = *op.operand_type_begin();
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
   if (inputType == resultType)
     return mlir::success();
 
-  return emitError() << "type of return operand (" << inputType
-                     << ") doesn't match function result type (" << resultType
-                     << ")";
+  return op.emitError() << "type of return operand (" << inputType
+                        << ") doesn't match function result type ("
+                        << resultType << ")";
+}
+
+mlir::LogicalResult ReturnOp::verify() {
+  // Returns can be present in multiple different scopes, get the
+  // wrapping function and start from there.
+  auto *fnOp = getOperation()->getParentOp();
+  while (!isa<FuncOp>(fnOp))
+    fnOp = fnOp->getParentOp();
+
+  // Make sure return types match function return type.
+  if (checkReturnAndFunction(*this, cast<FuncOp>(fnOp)).failed())
+    return failure();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // IfOp
 //===----------------------------------------------------------------------===//
+
+static LogicalResult checkScopeTerminator(OpAsmParser &parser,
+                                          OperationState &result, Region *r) {
+  if (r->hasOneBlock()) {
+    ::mlir::impl::ensureRegionTerminator(
+        *r, parser.getBuilder(), result.location,
+        [](OpBuilder &builder, Location loc) {
+          OperationState state(loc, YieldOp::getOperationName());
+          YieldOp::build(builder, state);
+          return Operation::create(state);
+        });
+    return success();
+  }
+
+  // Empty regions don't need any handling.
+  auto &blocks = r->getBlocks();
+  if (blocks.size() == 0)
+    return success();
+
+  // Test that at least one block has a yield/return terminator. We can
+  // probably make this a bit more strict.
+  for (Block &block : blocks) {
+    if (block.empty())
+      continue;
+    auto &op = block.back();
+    if (op.hasTrait<mlir::OpTrait::IsTerminator>() &&
+        isa<YieldOp, ReturnOp>(op)) {
+      return success();
+    }
+  }
+
+  return failure();
+}
 
 ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create the regions for 'then'.
@@ -164,49 +209,27 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(cond, boolType, result.operands))
     return failure();
 
-  auto checkYieldTerminator = [&](Region *r) {
-    if (r->hasOneBlock()) {
-      ::mlir::impl::ensureRegionTerminator(
-          *r, parser.getBuilder(), result.location,
-          [](OpBuilder &builder, Location loc) {
-            OperationState state(loc, YieldOp::getOperationName());
-            YieldOp::build(builder, state);
-            return Operation::create(state);
-          });
-      return success();
-    }
-
-    // Soft verification: test that at least one block has a yield terminator.
-    bool foundYield = false;
-    for (Block &block : r->getBlocks()) {
-      if (block.empty())
-        continue;
-      auto &op = block.back();
-      if (op.hasTrait<mlir::OpTrait::IsTerminator>() && isa<YieldOp>(op)) {
-        foundYield = true;
-        break;
-      }
-    }
-    if (!foundYield) {
-      parser.emitError(loc, "expected at least one block with cir.yield");
-      return failure();
-    }
-    return success();
-  };
-
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{},
                          /*argTypes=*/{}))
     return failure();
-  if (checkYieldTerminator(thenRegion).failed())
+  if (checkScopeTerminator(parser, result, thenRegion).failed()) {
+    parser.emitError(
+        loc,
+        "if.then expected at least one block with cir.yield or cir.return");
     return failure();
+  }
 
-  // If we find an 'else' keyword then parse the 'else' region.
+  // If we find an 'else' keyword, parse the 'else' region.
   if (!parser.parseOptionalKeyword("else")) {
     if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-    if (checkYieldTerminator(elseRegion).failed())
+    if (checkScopeTerminator(parser, result, elseRegion).failed()) {
+      parser.emitError(
+          loc,
+          "if.else expected at least one block with cir.yield or cir.return");
       return failure();
+    }
   }
 
   // Parse the optional attribute list.
@@ -215,12 +238,23 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
+bool shouldPrintTerm(mlir::Region &r) {
+  if (!r.hasOneBlock())
+    return true;
+  auto *entryBlock = &r.front();
+  if (entryBlock->empty())
+    return false;
+  if (isa<ReturnOp>(entryBlock->back()))
+    return true;
+  return false;
+}
+
 void IfOp::print(OpAsmPrinter &p) {
   p << " " << getCondition() << " ";
   auto &thenRegion = this->getThenRegion();
   p.printRegion(thenRegion,
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/!thenRegion.hasOneBlock());
+                /*printBlockTerminators=*/shouldPrintTerm(thenRegion));
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = this->getElseRegion();
@@ -228,18 +262,10 @@ void IfOp::print(OpAsmPrinter &p) {
     p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/!thenRegion.hasOneBlock());
+                  /*printBlockTerminators=*/shouldPrintTerm(elseRegion));
   }
 
   p.printOptionalAttrDict(getOperation()->getAttrs());
-}
-
-Block *IfOp::thenBlock() { return &getThenRegion().back(); }
-Block *IfOp::elseBlock() {
-  Region &r = getElseRegion();
-  if (r.empty())
-    return nullptr;
-  return &r.back();
 }
 
 /// Default callback for IfOp builders. Inserts nothing for now.
@@ -319,38 +345,11 @@ ParseResult ScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseRegion(*scopeRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
 
-  auto checkYieldTerminator = [&](Region *r) {
-    if (r->hasOneBlock()) {
-      ::mlir::impl::ensureRegionTerminator(
-          *r, parser.getBuilder(), result.location,
-          [](OpBuilder &builder, Location loc) {
-            OperationState state(loc, YieldOp::getOperationName());
-            YieldOp::build(builder, state);
-            return Operation::create(state);
-          });
-      return success();
-    }
-
-    // Soft verification: test that at least one block has a yield terminator.
-    bool foundYield = false;
-    for (Block &block : r->getBlocks()) {
-      if (block.empty())
-        continue;
-      auto &op = block.back();
-      if (op.hasTrait<mlir::OpTrait::IsTerminator>() && isa<YieldOp>(op)) {
-        foundYield = true;
-        break;
-      }
-    }
-    if (!foundYield) {
-      parser.emitError(loc, "expected at least one block with cir.yield");
-      return failure();
-    }
-    return success();
-  };
-
-  if (checkYieldTerminator(scopeRegion).failed())
+  if (checkScopeTerminator(parser, result, scopeRegion).failed()) {
+    parser.emitError(
+        loc, "expected at least one block with cir.yield or cir.return");
     return failure();
+  }
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -363,12 +362,10 @@ void ScopeOp::print(OpAsmPrinter &p) {
   auto &scopeRegion = this->getScopeRegion();
   p.printRegion(scopeRegion,
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/!scopeRegion.hasOneBlock());
+                /*printBlockTerminators=*/shouldPrintTerm(scopeRegion));
 
   p.printOptionalAttrDict(getOperation()->getAttrs());
 }
-
-Block *ScopeOp::scopeBlock() { return &getScopeRegion().back(); }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
