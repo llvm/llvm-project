@@ -17,6 +17,7 @@
 #include "CIRGenFunctionInfo.h"
 
 #include "clang/Basic/ABI.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
@@ -122,6 +123,8 @@ public:
   /// memory representation is usually i8 or i32, depending on the target.
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
+
+  const CIRGenFunctionInfo &arrangeGlobalDeclaration(clang::GlobalDecl GD);
 
   /// Free functions are functions that are compatible with an ordinary C
   /// function pointer type.
