@@ -346,6 +346,9 @@ public:
     setOperand(0, DMA);
   }
 
+  /// The defining access of a MemoryUses are always optimized if queried from
+  /// outside MSSA construction itself.  This result is only useful inside
+  /// the MSSA implementation.
   bool isOptimized() const {
     return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
   }
