@@ -39,7 +39,12 @@ New Features
 ------------
 
  - Implemented P0627R6 (Function to mark unreachable code)
+
  - Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
+
+ - `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
+   "heapsort with bounce" to reduce the number of comparisons, and rearranges
+   elements using move-assignment instead of `swap`.
 
 API Changes
 -----------
