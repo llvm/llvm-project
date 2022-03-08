@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/LRTable.h"
-#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
+#include "clang-pseudo/LRTable.h"
+#include "clang-pseudo/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -15,7 +15,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
@@ -122,5 +121,4 @@ llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
 }
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang

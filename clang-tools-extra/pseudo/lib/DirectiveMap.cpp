@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/DirectiveMap.h"
+#include "clang-pseudo/DirectiveMap.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 namespace {
 
@@ -151,8 +150,8 @@ DirectiveMap DirectiveMap::parse(const TokenStream &Code) {
 }
 
 static void dump(llvm::raw_ostream &OS, const DirectiveMap &, unsigned Indent);
-static void dump(llvm::raw_ostream &OS, const DirectiveMap::Directive &Directive,
-                 unsigned Indent) {
+static void dump(llvm::raw_ostream &OS,
+                 const DirectiveMap::Directive &Directive, unsigned Indent) {
   OS.indent(Indent) << llvm::formatv("#{0} ({1} tokens)\n",
                                      tok::getPPKeywordSpelling(Directive.Kind),
                                      Directive.Tokens.size());
@@ -205,5 +204,4 @@ OSTREAM_DUMP(DirectiveMap::Code)
 #undef OSTREAM_DUMP
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang
