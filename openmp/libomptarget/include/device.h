@@ -408,6 +408,9 @@ struct DeviceTy {
 private:
   // Call to RTL
   void init(); // To be called only via DeviceTy::initOnce()
+
+  /// Deinitialize the device (and plugin).
+  void deinit();
 };
 
 extern bool device_is_ready(int device_num);
