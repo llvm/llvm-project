@@ -374,7 +374,8 @@ void macho::foldIdenticalSections() {
   uint64_t icfUniqueID = inputSections.size();
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
-    bool isHashable = (isCodeSection(isec) || isCfStringSection(isec)) &&
+    bool isHashable = (isCodeSection(isec) || isCfStringSection(isec) ||
+                       isClassRefsSection(isec)) &&
                       !isec->shouldOmitFromOutput() &&
                       sectionType(isec->getFlags()) == MachO::S_REGULAR;
     if (isHashable) {
@@ -392,7 +393,7 @@ void macho::foldIdenticalSections() {
     // information gets recorded in our Reloc structs.) We therefore create a
     // mutable copy of the CFString and zero out the embedded addends before
     // performing any hashing / equality checks.
-    if (isCfStringSection(isec)) {
+    if (isCfStringSection(isec) || isClassRefsSection(isec)) {
       MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
       for (const Reloc &r : isec->relocs)
         target->relocateOne(copy.data() + r.offset, r, /*va=*/0, /*relocVA=*/0);
