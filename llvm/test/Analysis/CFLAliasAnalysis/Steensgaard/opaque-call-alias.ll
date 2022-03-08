@@ -2,7 +2,7 @@
 ; its own stratified set. This would make cases like the one in @test say that
 ; nothing (except %Escapes and %Arg) can alias
 
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 ; CHECK:     Function: test
 ; CHECK:     NoAlias: i8* %Arg, i8* %Escapes

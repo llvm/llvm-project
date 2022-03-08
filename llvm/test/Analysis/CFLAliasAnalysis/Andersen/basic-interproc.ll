@@ -1,7 +1,6 @@
 ; This testcase ensures that CFL AA won't be too conservative when trying to do
 ; interprocedural analysis on simple callee
 
-; RUN: opt < %s -disable-basic-aa -cfl-anders-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-anders-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: noop_callee

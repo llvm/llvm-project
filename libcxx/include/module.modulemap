@@ -296,6 +296,7 @@ module std [system] {
       module push_heap                { private header "__algorithm/push_heap.h" }
       module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
       module ranges_min_element       { private header "__algorithm/ranges_min_element.h" }
+      module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }
       module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module remove                   { private header "__algorithm/remove.h" }
       module remove_copy              { private header "__algorithm/remove_copy.h" }
