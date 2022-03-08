@@ -37,6 +37,8 @@ namespace cir {
 class CIRGenCXXABI;
 class TargetCIRGenInfo;
 
+enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
+
 /// Implementation of a CIR/MLIR emission from Clang AST.
 ///
 /// This will emit operations that are specific to C(++)/ObjC(++) language,
@@ -455,6 +457,15 @@ public:
   void verifyModule();
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
+
+private:
+  // TODO: CodeGen also passes an AttributeList here. We'll have to match that
+  // in CIR
+  mlir::FuncOp
+  GetOrCreateCIRFunction(llvm::StringRef MangledName, mlir::Type Ty,
+                         clang::GlobalDecl D, bool ForVTable,
+                         bool DontDefer = false, bool IsThunk = false,
+                         ForDefinition_t IsForDefinition = NotForDefinition);
 };
 } // namespace cir
 
