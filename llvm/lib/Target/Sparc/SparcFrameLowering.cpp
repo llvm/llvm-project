@@ -218,8 +218,9 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
   const SparcInstrInfo &TII =
       *static_cast<const SparcInstrInfo *>(MF.getSubtarget().getInstrInfo());
   DebugLoc dl = MBBI->getDebugLoc();
-  assert(MBBI->getOpcode() == SP::RETL &&
-         "Can only put epilog before 'retl' instruction!");
+  assert((MBBI->getOpcode() == SP::RETL || MBBI->getOpcode() == SP::TAIL_CALL ||
+          MBBI->getOpcode() == SP::TAIL_CALLri) &&
+         "Can only put epilog before 'retl' or 'tail_call' instruction!");
   if (!FuncInfo->isLeafProc()) {
     BuildMI(MBB, MBBI, dl, TII.get(SP::RESTORErr), SP::G0).addReg(SP::G0)
       .addReg(SP::G0);
@@ -228,10 +229,19 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   int NumBytes = (int) MFI.getStackSize();
-  if (NumBytes == 0)
-    return;
+  if (NumBytes != 0)
+    emitSPAdjustment(MF, MBB, MBBI, NumBytes, SP::ADDrr, SP::ADDri);
 
-  emitSPAdjustment(MF, MBB, MBBI, NumBytes, SP::ADDrr, SP::ADDri);
+  // Preserve return address in %o7
+  if (MBBI->getOpcode() == SP::TAIL_CALL) {
+    MBB.addLiveIn(SP::O7);
+    BuildMI(MBB, MBBI, dl, TII.get(SP::ORrr), SP::G1)
+        .addReg(SP::G0)
+        .addReg(SP::O7);
+    BuildMI(MBB, MBBI, dl, TII.get(SP::ORrr), SP::O7)
+        .addReg(SP::G0)
+        .addReg(SP::G1);
+  }
 }
 
 bool SparcFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {

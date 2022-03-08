@@ -710,6 +710,36 @@ static bool hasReturnsTwiceAttr(SelectionDAG &DAG, SDValue Callee,
   return CalleeFn->hasFnAttribute(Attribute::ReturnsTwice);
 }
 
+/// IsEligibleForTailCallOptimization - Check whether the call is eligible
+/// for tail call optimization.
+bool SparcTargetLowering::IsEligibleForTailCallOptimization(
+    CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF) const {
+
+  auto &Outs = CLI.Outs;
+  auto &Caller = MF.getFunction();
+
+  // Do not tail call opt functions with "disable-tail-calls" attribute.
+  if (Caller.getFnAttribute("disable-tail-calls").getValueAsString() == "true")
+    return false;
+
+  // Do not tail call opt if the stack is used to pass parameters.
+  if (CCInfo.getNextStackOffset() != 0)
+    return false;
+
+  // Do not tail call opt if either the callee or caller returns
+  // a struct and the other does not.
+  if (!Outs.empty() && Caller.hasStructRetAttr() != Outs[0].Flags.isSRet())
+    return false;
+
+  // Byval parameters hand the function a pointer directly into the stack area
+  // we want to reuse during a tail call.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
+      return false;
+
+  return true;
+}
+
 // Lower a call for the 32-bit ABI.
 SDValue
 SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
@@ -725,14 +755,14 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
 
-  // Sparc target does not yet support tail call optimization.
-  isTailCall = false;
-
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeCallOperands(Outs, CC_Sparc32);
+
+  isTailCall = isTailCall && IsEligibleForTailCallOptimization(
+                                 CCInfo, CLI, DAG.getMachineFunction());
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -771,7 +801,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, dl);
+  assert(!isTailCall || ArgsSize == 0);
+
+  if (!isTailCall)
+    Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, dl);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
@@ -816,6 +849,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
     if (Flags.isSRet()) {
       assert(VA.needsCustom());
+
+      if (isTailCall)
+        continue;
+
       // store SRet argument in %sp+64
       SDValue StackPtr = DAG.getRegister(SP::O6, MVT::i32);
       SDValue PtrOff = DAG.getIntPtrConstant(64, dl);
@@ -928,7 +965,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // stuck together.
   SDValue InFlag;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Register Reg = toCallerWindow(RegsToPass[i].first);
+    Register Reg = RegsToPass[i].first;
+    if (!isTailCall)
+      Reg = toCallerWindow(Reg);
     Chain = DAG.getCopyToReg(Chain, dl, Reg, RegsToPass[i].second, InFlag);
     InFlag = Chain.getValue(1);
   }
@@ -952,9 +991,12 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
   if (hasStructRetAttr)
     Ops.push_back(DAG.getTargetConstant(SRetArgSize, dl, MVT::i32));
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(toCallerWindow(RegsToPass[i].first),
-                                  RegsToPass[i].second.getValueType()));
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
+    Register Reg = RegsToPass[i].first;
+    if (!isTailCall)
+      Reg = toCallerWindow(Reg);
+    Ops.push_back(DAG.getRegister(Reg, RegsToPass[i].second.getValueType()));
+  }
 
   // Add a register mask operand representing the call-preserved registers.
   const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -967,6 +1009,11 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
   if (InFlag.getNode())
     Ops.push_back(InFlag);
+
+  if (isTailCall) {
+    DAG.getMachineFunction().getFrameInfo().setHasTailCall();
+    return DAG.getNode(SPISD::TAIL_CALL, dl, MVT::Other, Ops);
+  }
 
   Chain = DAG.getNode(SPISD::CALL, dl, NodeTys, Ops);
   InFlag = Chain.getValue(1);
@@ -1852,6 +1899,7 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::TLS_ADD:         return "SPISD::TLS_ADD";
   case SPISD::TLS_LD:          return "SPISD::TLS_LD";
   case SPISD::TLS_CALL:        return "SPISD::TLS_CALL";
+  case SPISD::TAIL_CALL:       return "SPISD::TAIL_CALL";
   }
   return nullptr;
 }
