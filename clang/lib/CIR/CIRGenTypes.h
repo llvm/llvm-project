@@ -129,6 +129,25 @@ public:
 
   mlir::FunctionType GetFunctionType(clang::GlobalDecl GD);
 
+  // The arrangement methods are split into three families:
+  //   - those meant to drive the signature and prologue/epilogue
+  //     of a function declaration or definition,
+  //   - those meant for the computation fo the CIR type for an abstract
+  //     appearance of a function, and
+  //   - those meant for performing the CIR-generation of a call.
+  // They differ mainly in how they deal with optional (i.e. variadic)
+  // arguments, as well as unprototyped functions.
+  //
+  // Key points:
+  // - The CIRGenFunctionInfo for emitting a specific call site must include
+  //   entries for the optional arguments.
+  // - The function type used at the call site must reflect the formal signature
+  //   of the declaration being called, or else the call will go away.
+  // - For the most part, unprototyped functions are called by casting to a
+  //   formal signature inferred from the specific argument types used at the
+  //   call-site. However, some targets (e.g. x86-64) screw with this for
+  //   compatability reasons.
+
   const CIRGenFunctionInfo &arrangeGlobalDeclaration(clang::GlobalDecl GD);
 
   /// Free functions are functions that are compatible with an ordinary C
