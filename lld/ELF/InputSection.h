@@ -348,7 +348,9 @@ public:
   // beginning of the output section.
   template <class ELFT> void writeTo(uint8_t *buf);
 
-  OutputSection *getParent() const;
+  OutputSection *getParent() const {
+    return reinterpret_cast<OutputSection *>(parent);
+  }
 
   // This variable has two usages. Initially, it represents an index in the
   // OutputSection's InputSection list, and is used when ordering SHF_LINK_ORDER
