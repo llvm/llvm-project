@@ -40,7 +40,7 @@ namespace {
 
 class TransferOptimization {
 public:
-  TransferOptimization(FuncOp func) : dominators(func), postDominators(func) {}
+  TransferOptimization(Operation *op) : dominators(op), postDominators(op) {}
   void deadStoreOp(vector::TransferWriteOp);
   void storeToLoadForwarding(vector::TransferReadOp);
   void removeDeadOp() {
@@ -462,16 +462,16 @@ class FlattenContiguousRowMajorTransferWritePattern
 
 } // namespace
 
-void mlir::vector::transferOpflowOpt(FuncOp func) {
-  TransferOptimization opt(func);
+void mlir::vector::transferOpflowOpt(Operation *rootOp) {
+  TransferOptimization opt(rootOp);
   // Run store to load forwarding first since it can expose more dead store
   // opportunity.
-  func.walk([&](vector::TransferReadOp read) {
+  rootOp->walk([&](vector::TransferReadOp read) {
     if (read.getShapedType().isa<MemRefType>())
       opt.storeToLoadForwarding(read);
   });
   opt.removeDeadOp();
-  func.walk([&](vector::TransferWriteOp write) {
+  rootOp->walk([&](vector::TransferWriteOp write) {
     if (write.getShapedType().isa<MemRefType>())
       opt.deadStoreOp(write);
   });
