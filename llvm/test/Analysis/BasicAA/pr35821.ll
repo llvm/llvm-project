@@ -1,4 +1,4 @@
-; RUN: opt %s -aa-eval -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -passes=aa-eval -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: 6 Total Alias Queries Performed
 ; CHECK-NEXT: 6 no alias responses

@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck  %s
+; RUN: opt -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck  %s
 
 declare void @callee(double* %callee_arg)
 declare void @nocap_callee(double* nocapture %nocap_callee_arg)

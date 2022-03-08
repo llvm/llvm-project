@@ -1,6 +1,5 @@
 ; This testcase ensures that gep result does not alias gep indices
 
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-no-aliases -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-no-aliases -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Function: foo

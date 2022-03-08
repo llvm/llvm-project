@@ -1,4 +1,3 @@
-; RUN: opt < %s -tbaa -basic-aa -aa-eval -evaluate-aa-metadata -print-no-aliases -print-may-aliases -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=tbaa,basic-aa -passes=aa-eval -evaluate-aa-metadata -print-no-aliases -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 ; Generated with "clang -cc1 -disable-llvm-optzns -O1 -emit-llvm"

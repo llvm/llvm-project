@@ -2,7 +2,7 @@
 ; whether two values that didn't belong to a function (i.e. two globals, etc)
 ; aliased.
 
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 @G = private unnamed_addr constant [1 x i8] c"\00", align 1
 

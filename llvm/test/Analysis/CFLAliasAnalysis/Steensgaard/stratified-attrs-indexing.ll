@@ -5,7 +5,7 @@
 ; Because the result on failure is effectively crashing the compiler, output
 ; checking is minimal.
 
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Function: test
 define void @test(i1 %cond,
