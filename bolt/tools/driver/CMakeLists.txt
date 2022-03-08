@@ -35,7 +35,7 @@ install(PROGRAMS
   ${CMAKE_BINARY_DIR}/bin/llvm-bolt
   ${CMAKE_BINARY_DIR}/bin/perf2bolt
   ${CMAKE_BINARY_DIR}/bin/llvm-boltdiff
-  TYPE BIN
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
   COMPONENT bolt
   )
 add_llvm_install_targets(install-bolt DEPENDS bolt COMPONENT bolt)

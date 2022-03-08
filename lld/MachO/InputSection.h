@@ -117,7 +117,7 @@ public:
   // Points to the surviving section after this one is folded by ICF
   ConcatInputSection *replacement = nullptr;
   // Equivalence-class ID for ICF
-  uint64_t icfEqClass[2] = {0, 0};
+  uint32_t icfEqClass[2] = {0, 0};
 
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the
@@ -268,8 +268,8 @@ inline bool isWordLiteralSection(uint32_t flags) {
 }
 
 bool isCodeSection(const InputSection *);
-
 bool isCfStringSection(const InputSection *);
+bool isClassRefsSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 
@@ -306,6 +306,7 @@ constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
 constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
+constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
 constexpr const char objcImageInfo[] = "__objc_imageinfo";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";

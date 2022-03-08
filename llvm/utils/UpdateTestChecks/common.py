@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import shlex
 
 ##### Common utilities for update_*test_checks.py
 
@@ -916,12 +917,12 @@ def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict,
              check_label_format, False, preserve_names, global_vars_seen_dict,
              is_filtered)
 
-def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, is_filtered):
   check_label_format = '{} %s-LABEL: \'%s%s\''.format(comment_marker)
   global_vars_seen_dict = {}
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
              check_label_format, False, True, global_vars_seen_dict,
-             is_filtered = False)
+             is_filtered)
 
 def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
   for nameless_value in nameless_values:
@@ -1072,7 +1073,7 @@ def get_autogennote_suffix(parser, args):
 def check_for_command(line, parser, args, argv, argparse_callback):
     cmd_m = UTC_ARGS_CMD.match(line)
     if cmd_m:
-        for option in cmd_m.group('cmd').strip().split(' '):
+        for option in shlex.split(cmd_m.group('cmd').strip()):
             if option:
                 argv.append(option)
         args = parser.parse_args(filter(lambda arg: arg not in args.tests, argv))

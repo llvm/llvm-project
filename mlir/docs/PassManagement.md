@@ -670,13 +670,13 @@ options           ::= '{' (key ('=' value)?)+ '}'
 For example, the following pipeline:
 
 ```shell
-$ mlir-opt foo.mlir -cse -canonicalize -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1'
+$ mlir-opt foo.mlir -cse -canonicalize -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1'
 ```
 
 Can also be specified as (via the `-pass-pipeline` flag):
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse,canonicalize),convert-std-to-llvm{use-bare-ptr-memref-call-conv=1}'
+$ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse,canonicalize),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}'
 ```
 
 In order to support round-tripping a pass to the textual representation using
@@ -997,7 +997,7 @@ pipeline. This display mode is available in mlir-opt via
 `-mlir-timing-display=list`.
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing -mlir-timing-display=list
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.func(cse,canonicalize)' -convert-func-to-llvm -mlir-timing -mlir-timing-display=list
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1022,7 +1022,7 @@ the most time, and can also be used to identify when analyses are being
 invalidated and recomputed. This is the default display mode.
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.func(cse,canonicalize)' -convert-func-to-llvm -mlir-timing
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1053,7 +1053,7 @@ perceived time, or clock time, whereas the `User Time` will display the total
 cpu time.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing
+$ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse,canonicalize)' -convert-func-to-llvm -mlir-timing
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...

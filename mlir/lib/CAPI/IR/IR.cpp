@@ -20,7 +20,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include "llvm/Support/Debug.h"
 #include <cstddef>
@@ -195,7 +195,7 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 
 MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
   OwningOpRef<ModuleOp> owning =
-      parseSourceString(unwrap(module), unwrap(context));
+      parseSourceString<ModuleOp>(unwrap(module), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};

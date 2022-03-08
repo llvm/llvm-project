@@ -1530,6 +1530,10 @@ bool isGFX90A(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
 }
 
+bool isGFX940(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts];
+}
+
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
 }

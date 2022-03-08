@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind readonly uwtable
 define i32 @vect() {
-; CHECK: LV: Checking a loop in "vect"
+; CHECK: LV: Checking a loop in 'vect'
 entry:
   br label %for.body
 

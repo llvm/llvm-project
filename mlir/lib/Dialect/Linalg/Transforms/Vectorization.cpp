@@ -1355,8 +1355,8 @@ namespace {
 struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   Conv1DNwcGenerator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
                      int dilationW)
-      : StructuredGenerator<LinalgOp>(builder, linalgOp), valid(false),
-        strideW(strideW), dilationW(dilationW) {
+      : StructuredGenerator<LinalgOp>(builder, linalgOp), strideW(strideW),
+        dilationW(dilationW) {
     // Determine whether `linalgOp` can be generated with this generator
     if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
       return;
@@ -1665,7 +1665,7 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   }
 
 private:
-  bool valid;
+  bool valid = false;
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;

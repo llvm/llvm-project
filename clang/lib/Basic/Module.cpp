@@ -267,7 +267,7 @@ ArrayRef<const FileEntry *> Module::getTopHeaders(FileManager &FileMgr) {
   return llvm::makeArrayRef(TopHeaders.begin(), TopHeaders.end());
 }
 
-bool Module::directlyUses(const Module *Requested) const {
+bool Module::directlyUses(const Module *Requested) {
   auto *Top = getTopLevelModule();
 
   // A top-level module implicitly uses itself.
@@ -281,6 +281,9 @@ bool Module::directlyUses(const Module *Requested) const {
   // Anyone is allowed to use our builtin stddef.h and its accompanying module.
   if (!Requested->Parent && Requested->Name == "_Builtin_stddef_max_align_t")
     return true;
+
+  if (NoUndeclaredIncludes)
+    UndeclaredUses.insert(Requested);
 
   return false;
 }

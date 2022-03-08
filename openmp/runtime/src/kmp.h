@@ -1334,7 +1334,10 @@ static inline int __kmp_tpause(uint32_t hint, uint64_t counter) {
   char flag;
   __asm__ volatile("#tpause\n.byte 0x66, 0x0F, 0xAE, 0xF1\n"
                    "setb   %0"
-                   : "=r"(flag)
+                   // The "=q" restraint means any register accessible as rl
+                   //   in 32-bit mode: a, b, c, and d;
+                   //   in 64-bit mode: any integer register
+                   : "=q"(flag)
                    : "a"(timeLo), "d"(timeHi), "c"(hint)
                    :);
   return flag;
@@ -1361,7 +1364,10 @@ static inline int __kmp_umwait(uint32_t hint, uint64_t counter) {
   char flag;
   __asm__ volatile("#umwait\n.byte 0xF2, 0x0F, 0xAE, 0xF1\n"
                    "setb   %0"
-                   : "=r"(flag)
+                   // The "=q" restraint means any register accessible as rl
+                   //   in 32-bit mode: a, b, c, and d;
+                   //   in 64-bit mode: any integer register
+                   : "=q"(flag)
                    : "a"(timeLo), "d"(timeHi), "c"(hint)
                    :);
   return flag;
@@ -2548,11 +2554,22 @@ typedef union KMP_ALIGN_CACHE kmp_thread_data {
   char td_pad[KMP_PAD(kmp_base_thread_data_t, CACHE_LINE)];
 } kmp_thread_data_t;
 
+typedef struct kmp_task_pri {
+  kmp_thread_data_t td;
+  kmp_int32 priority;
+  kmp_task_pri *next;
+} kmp_task_pri_t;
+
 // Data for task teams which are used when tasking is enabled for the team
 typedef struct kmp_base_task_team {
   kmp_bootstrap_lock_t
       tt_threads_lock; /* Lock used to allocate per-thread part of task team */
   /* must be bootstrap lock since used at library shutdown*/
+
+  // TODO: check performance vs kmp_tas_lock_t
+  kmp_bootstrap_lock_t tt_task_pri_lock; /* Lock to access priority tasks */
+  kmp_task_pri_t *tt_task_pri_list;
+
   kmp_task_team_t *tt_next; /* For linking the task team free list */
   kmp_thread_data_t
       *tt_threads_data; /* Array of per-thread structures for task team */
@@ -2564,6 +2581,7 @@ typedef struct kmp_base_task_team {
   kmp_int32 tt_max_threads; // # entries allocated for threads_data array
   kmp_int32 tt_found_proxy_tasks; // found proxy tasks since last barrier
   kmp_int32 tt_untied_task_encountered;
+  std::atomic<kmp_int32> tt_num_task_pri; // number of priority tasks enqueued
   // There is hidden helper thread encountered in this task team so that we must
   // wait when waiting on task team
   kmp_int32 tt_hidden_helper_task_encountered;

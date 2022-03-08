@@ -39,7 +39,7 @@ TOKEN-NEXT: hash             5:0 "#" flags=1
 TOKEN-NEXT: raw_identifier   5:0 "endif"
 TOKEN-NEXT: r_brace          6:0 "}" flags=1
 
-RUN: clang-pseudo -source %s -print-pp-structure | FileCheck %s -check-prefix=PPS --strict-whitespace
+RUN: clang-pseudo -source %s -print-directive-map | FileCheck %s -check-prefix=PPS --strict-whitespace
      PPS: code (5 tokens)
 PPS-NEXT: #ifndef (3 tokens)
 PPS-NEXT:   code (4 tokens)

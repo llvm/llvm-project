@@ -1,0 +1,38 @@
+RUN: llvm-remark-size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-2-instr-2-stack.yaml --parser=yaml  --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=INCREASE
+RUN: llvm-remark-size-diff %p/Inputs/1-func-2-instr-2-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml  --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=DECREASE
+
+; Test a size increase/decrease of one instruction + 1 stack byte.
+
+; INCREASE-LABEL: "Files":
+; INCREASE: "A":{{.*}}1-func-1-instr-1-stack.yaml
+; INCREASE-NEXT: "B":{{.*}}1-func-2-instr-2-stack.yaml
+
+; INCREASE-LABEL: "InBoth": [
+; INCREASE: "FunctionName": "func0"
+; INCREASE-NEXT: "InstCount":
+; INCREASE-NEXT: 1,
+; INCREASE-NEXT: 2
+; INCREASE-NEXT: ],
+; INCREASE-NEXT: "StackSize":
+; INCREASE-NEXT: 1,
+; INCREASE-NEXT: 2
+
+; INCREASE: "OnlyInA": [],
+; INCREASE: "OnlyInB": []
+
+; DECREASE-LABEL: "Files":
+; DECREASE: "A":{{.*}}1-func-2-instr-2-stack.yaml
+; DECREASE-NEXT: "B":{{.*}}1-func-1-instr-1-stack.yaml
+
+; DECREASE-LABEL: "InBoth": [
+; DECREASE: "FunctionName": "func0"
+; DECREASE-NEXT: "InstCount":
+; DECREASE-NEXT: 2,
+; DECREASE-NEXT: 1
+; DECREASE-NEXT: ],
+; DECREASE-NEXT: "StackSize":
+; DECREASE-NEXT: 2,
+; DECREASE-NEXT: 1
+
+; DECREASE: "OnlyInA": [],
+; DECREASE: "OnlyInB": []

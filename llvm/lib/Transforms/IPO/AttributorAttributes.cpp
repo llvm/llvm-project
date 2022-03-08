@@ -4521,13 +4521,7 @@ struct AAAlignImpl : AAAlign {
       takeKnownMaximum(Attr.getValueAsInt());
 
     Value &V = getAssociatedValue();
-    // TODO: This is a HACK to avoid getPointerAlignment to introduce a ptr2int
-    //       use of the function pointer. This was caused by D73131. We want to
-    //       avoid this for function pointers especially because we iterate
-    //       their uses and int2ptr is not handled. It is not a correctness
-    //       problem though!
-    if (!V.getType()->getPointerElementType()->isFunctionTy())
-      takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
+    takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
 
     if (getIRPosition().isFnInterfaceKind() &&
         (!getAnchorScope() ||
@@ -5506,15 +5500,6 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     if (hasAttr({Attribute::InAlloca, Attribute::Preallocated,
                  Attribute::StructRet, Attribute::Nest, Attribute::ByVal},
                 /* IgnoreSubsumingPositions */ true))
-      indicatePessimisticFixpoint();
-
-    // FIXME: This is a hack to prevent us from propagating function poiner in
-    // the new pass manager CGSCC pass as it creates call edges the
-    // CallGraphUpdater cannot handle yet.
-    Value &V = getAssociatedValue();
-    if (V.getType()->isPointerTy() &&
-        V.getType()->getPointerElementType()->isFunctionTy() &&
-        !A.isModulePass())
       indicatePessimisticFixpoint();
   }
 

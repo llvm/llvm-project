@@ -618,6 +618,7 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
       AffineMap::get(origLbMap.getNumDims() + origUbMap.getNumDims(),
                      origLbMap.getNumSymbols() + origUbMap.getNumSymbols(),
                      newUbExprs, opBuilder.getContext());
+  canonicalizeMapAndOperands(&newUbMap, &ubOperands);
 
   // Normalize the loop.
   op.setUpperBound(ubOperands, newUbMap);
@@ -640,6 +641,7 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
   AffineExpr newIVExpr = origIVExpr * origLoopStep + origLbMap.getResult(0);
   AffineMap ivMap = AffineMap::get(origLbMap.getNumDims() + 1,
                                    origLbMap.getNumSymbols(), newIVExpr);
+  canonicalizeMapAndOperands(&ivMap, &lbOperands);
   Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
   return success();

@@ -440,19 +440,11 @@ const Module *getModuleForComparison(Any IR) {
   return nullptr;
 }
 
-} // namespace
-
-template <typename T> ChangeReporter<T>::~ChangeReporter() {
-  assert(BeforeStack.empty() && "Problem with Change Printer stack.");
-}
-
-template <typename T>
-bool ChangeReporter<T>::isInterestingFunction(const Function &F) {
+bool isInterestingFunction(const Function &F) {
   return isFunctionInPrintList(F.getName());
 }
 
-template <typename T>
-bool ChangeReporter<T>::isInterestingPass(StringRef PassID) {
+bool isInterestingPass(StringRef PassID) {
   if (isIgnored(PassID))
     return false;
 
@@ -463,13 +455,18 @@ bool ChangeReporter<T>::isInterestingPass(StringRef PassID) {
 
 // Return true when this is a pass on IR for which printing
 // of changes is desired.
-template <typename T>
-bool ChangeReporter<T>::isInteresting(Any IR, StringRef PassID) {
+bool isInteresting(Any IR, StringRef PassID) {
   if (!isInterestingPass(PassID))
     return false;
   if (any_isa<const Function *>(IR))
     return isInterestingFunction(*any_cast<const Function *>(IR));
   return true;
+}
+
+} // namespace
+
+template <typename T> ChangeReporter<T>::~ChangeReporter<T>() {
+  assert(BeforeStack.empty() && "Problem with Change Printer stack.");
 }
 
 template <typename T>

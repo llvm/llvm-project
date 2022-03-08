@@ -29,6 +29,7 @@ struct RTLInfoTy {
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef int32_t(init_device_ty)(int32_t);
+  typedef int32_t(deinit_device_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
   typedef void *(data_alloc_ty)(int32_t, int64_t, void *, int32_t);
   typedef int32_t(data_submit_ty)(int32_t, void *, void *, int64_t);
@@ -84,6 +85,7 @@ struct RTLInfoTy {
   is_data_exchangable_ty *is_data_exchangable = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   init_device_ty *init_device = nullptr;
+  deinit_device_ty *deinit_device = nullptr;
   load_binary_ty *load_binary = nullptr;
   data_alloc_ty *data_alloc = nullptr;
   data_submit_ty *data_submit = nullptr;

@@ -1155,19 +1155,6 @@ size_t __do_string_hash(_Ptr __p, _Ptr __e)
     return __murmur2_or_cityhash<size_t>()(__p, (__e-__p)*sizeof(value_type));
 }
 
-template <class _CharT, class _Iter, class _Traits = char_traits<_CharT> >
-struct __quoted_output_proxy
-{
-    _Iter  __first_;
-    _Iter  __last_;
-    _CharT  __delim_;
-    _CharT  __escape_;
-
-    _LIBCPP_HIDE_FROM_ABI
-    explicit __quoted_output_proxy(_Iter __f, _Iter __l, _CharT __d, _CharT __e)
-        : __first_(__f), __last_(__l), __delim_(__d), __escape_(__e) {}
-};
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

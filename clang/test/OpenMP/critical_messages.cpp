@@ -67,9 +67,13 @@ int tmain(int argc, char **argv) { // expected-note {{declared here}}
   foo();
   #pragma omp critical (name2) hint(argc) // expected-error {{integral constant expression}} expected-note 0+{{constant expression}}
   foo();
-  #pragma omp critical (name) hint(N) // expected-error {{argument to 'hint' clause must be a strictly positive integer value}} expected-error {{constructs with the same name must have a 'hint' clause with the same value}} expected-note {{'hint' clause with value '4'}}
+  #pragma omp critical (name) hint(N) // expected-error {{argument to 'hint' clause must be a non-negative integer value}} expected-error {{constructs with the same name must have a 'hint' clause with the same value}} expected-note {{'hint' clause with value '4'}}
   foo();
   #pragma omp critical hint(N) // expected-error {{the name of the construct must be specified in presence of 'hint' clause}}
+  foo();
+
+  const int omp_lock_hint_none = 0;
+  #pragma omp critical (name3) hint(omp_lock_hint_none)
   foo();
   return 0;
 }
@@ -132,7 +136,7 @@ int main(int argc, char **argv) { // expected-note {{declared here}}
   foo();
   #pragma omp critical (name) hint(23) // expected-note {{previous 'hint' clause with value '23'}}
   foo();
-  #pragma omp critical hint(-5) // expected-error {{argument to 'hint' clause must be a strictly positive integer value}}
+  #pragma omp critical hint(-5) // expected-error {{argument to 'hint' clause must be a non-negative integer value}}
   foo();
   #pragma omp critical hint(1) // expected-error {{the name of the construct must be specified in presence of 'hint' clause}}
   foo();

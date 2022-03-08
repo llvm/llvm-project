@@ -544,25 +544,30 @@ std::optional<char32_t> IoStatementState::NextInField(
       GotChar();
       return next;
     }
-    const ConnectionState &connection{GetConnectionState()};
-    if (!connection.IsAtEOF()) {
-      if (auto length{connection.EffectiveRecordLength()}) {
-        if (connection.positionInRecord >= *length) {
-          IoErrorHandler &handler{GetIoErrorHandler()};
-          if (mutableModes().nonAdvancing) {
-            handler.SignalEor();
-          } else if (connection.openRecl && !connection.modes.pad) {
-            handler.SignalError(IostatRecordReadOverrun);
-          }
-          if (connection.modes.pad) { // PAD='YES'
-            --*remaining;
-            return std::optional<char32_t>{' '};
-          }
-        }
-      }
+    if (CheckForEndOfRecord()) { // do padding
+      --*remaining;
+      return std::optional<char32_t>{' '};
     }
   }
   return std::nullopt;
+}
+
+bool IoStatementState::CheckForEndOfRecord() {
+  const ConnectionState &connection{GetConnectionState()};
+  if (!connection.IsAtEOF()) {
+    if (auto length{connection.EffectiveRecordLength()}) {
+      if (connection.positionInRecord >= *length) {
+        IoErrorHandler &handler{GetIoErrorHandler()};
+        if (mutableModes().nonAdvancing) {
+          handler.SignalEor();
+        } else if (connection.openRecl && !connection.modes.pad) {
+          handler.SignalError(IostatRecordReadOverrun);
+        }
+        return connection.modes.pad; // PAD='YES'
+      }
+    }
+  }
+  return false;
 }
 
 bool IoStatementState::Inquire(

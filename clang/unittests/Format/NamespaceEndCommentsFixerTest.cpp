@@ -416,6 +416,19 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "// unrelated"));
 }
 
+TEST_F(NamespaceEndCommentsFixerTest, WorksForObjCpp) {
+  FormatStyle ObjCppStyle = getLLVMStyle();
+  ObjCppStyle.Language = FormatStyle::LK_ObjC;
+  EXPECT_EQ("namespace {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace",
+            fixNamespaceEndComments("namespace {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}", ObjCppStyle));
+}
+
 TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   FormatStyle Style = getLLVMStyle();
   Style.NamespaceMacros.push_back("TESTSUITE");

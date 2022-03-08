@@ -209,18 +209,6 @@ public:
     return States->MayContainAttachedPointers;
   }
 
-  /// Helper to make sure the entry is locked in a scope.
-  /// TODO: We should generalize this and use it for all our objects that use
-  /// lock/unlock methods.
-  struct LockGuard {
-    const HostDataToTargetTy &Entry;
-
-  public:
-    LockGuard(const HostDataToTargetTy &Entry) : Entry(Entry) { Entry.lock(); }
-    ~LockGuard() { Entry.unlock(); }
-  };
-
-private:
   void lock() const { States->UpdateMtx.lock(); }
 
   void unlock() const { States->UpdateMtx.unlock(); }
@@ -420,6 +408,9 @@ struct DeviceTy {
 private:
   // Call to RTL
   void init(); // To be called only via DeviceTy::initOnce()
+
+  /// Deinitialize the device (and plugin).
+  void deinit();
 };
 
 extern bool device_is_ready(int device_num);

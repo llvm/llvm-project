@@ -16,7 +16,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include <gtest/gtest.h>
 
@@ -35,7 +35,7 @@ protected:
 
     registry.insert<func::FuncDialect, arith::ArithmeticDialect>();
     ctx.appendDialectRegistry(registry);
-    module = parseSourceString(ir, &ctx);
+    module = parseSourceString<ModuleOp>(ir, &ctx);
     mapFn = cast<FuncOp>(module->front());
   }
 

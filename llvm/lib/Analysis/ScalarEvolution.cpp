@@ -142,6 +142,12 @@ STATISTIC(NumTripCountsNotComputed,
 STATISTIC(NumBruteForceTripCountsComputed,
           "Number of loops with trip counts computed by force");
 
+#ifdef EXPENSIVE_CHECKS
+bool llvm::VerifySCEV = true;
+#else
+bool llvm::VerifySCEV = false;
+#endif
+
 static cl::opt<unsigned>
 MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
                         cl::ZeroOrMore,
@@ -150,9 +156,8 @@ MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
                                  "derived loop"),
                         cl::init(100));
 
-// FIXME: Enable this with EXPENSIVE_CHECKS when the test suite is clean.
-static cl::opt<bool> VerifySCEV(
-    "verify-scev", cl::Hidden,
+static cl::opt<bool, true> VerifySCEVOpt(
+    "verify-scev", cl::Hidden, cl::location(VerifySCEV),
     cl::desc("Verify ScalarEvolution's backedge taken counts (slow)"));
 static cl::opt<bool> VerifySCEVStrict(
     "verify-scev-strict", cl::Hidden,
@@ -526,12 +531,13 @@ void SCEVUnknown::deleted() {
 }
 
 void SCEVUnknown::allUsesReplacedWith(Value *New) {
+  // Clear this SCEVUnknown from various maps.
+  SE->forgetMemoizedResults(this);
+
   // Remove this SCEVUnknown from the uniquing map.
   SE->UniqueSCEVs.RemoveNode(this);
 
-  // Update this SCEVUnknown to point to the new value. This is needed
-  // because there may still be outstanding SCEVs which still point to
-  // this SCEVUnknown.
+  // Replace the value pointer in case someone is still using this SCEVUnknown.
   setValPtr(New);
 }
 
@@ -13358,8 +13364,14 @@ void ScalarEvolution::verify() const {
     if (!ReachableBlocks.contains(L->getHeader()))
       continue;
 
-    auto *CurBECount = SCM.visit(
-        const_cast<ScalarEvolution *>(this)->getBackedgeTakenCount(L));
+    // Only verify cached BECounts. Computing new BECounts may change the
+    // results of subsequent SCEV uses.
+    auto It = BackedgeTakenCounts.find(L);
+    if (It == BackedgeTakenCounts.end())
+      continue;
+
+    auto *CurBECount =
+        SCM.visit(It->second.getExact(L, const_cast<ScalarEvolution *>(this)));
     auto *NewBECount = SE2.getBackedgeTakenCount(L);
 
     if (CurBECount == SE2.getCouldNotCompute() ||
