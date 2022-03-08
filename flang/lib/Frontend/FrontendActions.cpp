@@ -506,3 +506,17 @@ void InitOnlyAction::ExecuteAction() {
 }
 
 void PluginParseTreeAction::ExecuteAction() {}
+
+void DebugDumpPFTAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
+  if (auto ast = Fortran::lower::createPFT(
+          *ci.parsing().parseTree(), ci.semantics().context())) {
+    Fortran::lower::dumpPFT(llvm::outs(), *ast);
+    return;
+  }
+
+  unsigned DiagID = ci.diagnostics().getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
+  ci.diagnostics().Report(DiagID);
+}
