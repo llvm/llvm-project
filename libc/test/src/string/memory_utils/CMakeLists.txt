@@ -8,7 +8,8 @@ add_libc_unittest(
     utils_test.cpp
   DEPENDS
     libc.src.string.memory_utils.memory_utils
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.array_ref
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
     -ffreestanding
