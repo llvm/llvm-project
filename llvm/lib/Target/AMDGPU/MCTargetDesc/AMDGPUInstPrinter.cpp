@@ -206,13 +206,15 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm();
   if (Imm & CPol::GLC)
-    O << " glc";
+    O << ((AMDGPU::isGFX940(STI) &&
+           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
+                                                                     : " glc");
   if (Imm & CPol::SLC)
-    O << " slc";
+    O << (AMDGPU::isGFX940(STI) ? " nt" : " slc");
   if ((Imm & CPol::DLC) && AMDGPU::isGFX10Plus(STI))
     O << " dlc";
   if ((Imm & CPol::SCC) && AMDGPU::isGFX90A(STI))
-    O << " scc";
+    O << (AMDGPU::isGFX940(STI) ? " sc1" : " scc");
   if (Imm & ~CPol::ALL)
     O << " /* unexpected cache policy bit */";
 }

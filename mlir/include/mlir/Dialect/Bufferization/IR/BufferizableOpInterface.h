@@ -23,7 +23,6 @@
 namespace mlir {
 class BlockAndValueMapping;
 class DominanceInfo;
-class FuncOp;
 
 namespace bufferization {
 
@@ -239,7 +238,7 @@ struct BufferizationOptions {
 
   /// Add a bufferization state initializer that initializes the specified
   /// dialect-specific bufferization state.
-  void addDialectStateInitializer(StringRef name, DialectStateInitFn fn);
+  void addDialectStateInitializer(StringRef name, const DialectStateInitFn &fn);
 
 private:
   /// Allow a dialect.

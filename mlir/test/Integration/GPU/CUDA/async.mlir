@@ -3,7 +3,7 @@
 // RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin)' \
 // RUN:   -gpu-async-region -gpu-to-llvm \
 // RUN:   -async-to-async-runtime -async-runtime-ref-counting \
-// RUN:   -convert-async-to-llvm -convert-std-to-llvm \
+// RUN:   -convert-async-to-llvm -convert-func-to-llvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext \

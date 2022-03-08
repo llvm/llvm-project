@@ -36,10 +36,10 @@ entry:
 define i64 @test3(i64 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    adds r0, r0, r1, asr #31
-; CHECK-NEXT:    adc r2, r1, r1, asr #31
 ; CHECK-NEXT:    eor r0, r0, r1, asr #31
-; CHECK-NEXT:    eor r1, r2, r1, asr #31
+; CHECK-NEXT:    eor r2, r1, r1, asr #31
+; CHECK-NEXT:    subs r0, r0, r1, asr #31
+; CHECK-NEXT:    sbc r1, r2, r1, asr #31
 ; CHECK-NEXT:    bx lr
   %tmp1neg = sub i64 0, %a
   %b = icmp sgt i64 %a, -1

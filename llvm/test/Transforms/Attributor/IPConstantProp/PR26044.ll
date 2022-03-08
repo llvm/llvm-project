@@ -8,67 +8,35 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @fn2(i32* %P, i1 %C) {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fn2
-; IS__TUNIT_OPM-SAME: (i32* nocapture nofree [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[IF_END:%.*]]
-; IS__TUNIT_OPM:       for.cond1:
-; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__TUNIT_OPM:       if.end:
-; IS__TUNIT_OPM-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]]) #[[ATTR3:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND1]]
-; IS__TUNIT_OPM:       exit:
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: argmemonly nofree norecurse nosync nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2
+; IS__TUNIT____-SAME: (i32* nocapture nofree [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    br label [[IF_END:%.*]]
+; IS__TUNIT____:       for.cond1:
+; IS__TUNIT____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
+; IS__TUNIT____:       if.end:
+; IS__TUNIT____-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
+; IS__TUNIT____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
+; IS__TUNIT____-NEXT:    br label [[FOR_COND1]]
+; IS__TUNIT____:       exit:
+; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@fn2
-; IS__TUNIT_NPM-SAME: (i32* nocapture nofree [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[IF_END:%.*]]
-; IS__TUNIT_NPM:       for.cond1:
-; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__TUNIT_NPM:       if.end:
-; IS__TUNIT_NPM-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND1]]
-; IS__TUNIT_NPM:       exit:
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fn2
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[IF_END:%.*]]
-; IS__CGSCC_OPM:       for.cond1:
-; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__CGSCC_OPM:       if.end:
-; IS__CGSCC_OPM-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
-; IS__CGSCC_OPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND1]]
-; IS__CGSCC_OPM:       exit:
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn2
-; IS__CGSCC_NPM-SAME: (i32* nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[IF_END:%.*]]
-; IS__CGSCC_NPM:       for.cond1:
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__CGSCC_NPM:       if.end:
-; IS__CGSCC_NPM-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND1]]
-; IS__CGSCC_NPM:       exit:
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind
+; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2
+; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    br label [[IF_END:%.*]]
+; IS__CGSCC____:       for.cond1:
+; IS__CGSCC____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
+; IS__CGSCC____:       if.end:
+; IS__CGSCC____-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
+; IS__CGSCC____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    br label [[FOR_COND1]]
+; IS__CGSCC____:       exit:
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   br label %if.end
@@ -87,17 +55,11 @@ exit:
 }
 
 define internal i32 @fn1(i32 %p1) {
-; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS________OPM-LABEL: define {{[^@]+}}@fn1
-; IS________OPM-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    ret i32 [[P1]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn1
-; IS__CGSCC_NPM-SAME: (i32 [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret i32 undef
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@fn1
+; IS__CGSCC____-SAME: (i32 [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
 entry:
   %tobool = icmp ne i32 %p1, 0
@@ -107,67 +69,35 @@ entry:
 
 define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ;
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fn_no_null_opt
-; IS__TUNIT_OPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[IF_END:%.*]]
-; IS__TUNIT_OPM:       for.cond1:
-; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__TUNIT_OPM:       if.end:
-; IS__TUNIT_OPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]]) #[[ATTR3]]
-; IS__TUNIT_OPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND1]]
-; IS__TUNIT_OPM:       exit:
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
+; IS__TUNIT____-LABEL: define {{[^@]+}}@fn_no_null_opt
+; IS__TUNIT____-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    br label [[IF_END:%.*]]
+; IS__TUNIT____:       for.cond1:
+; IS__TUNIT____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
+; IS__TUNIT____:       if.end:
+; IS__TUNIT____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
+; IS__TUNIT____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
+; IS__TUNIT____-NEXT:    br label [[FOR_COND1]]
+; IS__TUNIT____:       exit:
+; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@fn_no_null_opt
-; IS__TUNIT_NPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[IF_END:%.*]]
-; IS__TUNIT_NPM:       for.cond1:
-; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__TUNIT_NPM:       if.end:
-; IS__TUNIT_NPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND1]]
-; IS__TUNIT_NPM:       exit:
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fn_no_null_opt
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[IF_END:%.*]]
-; IS__CGSCC_OPM:       for.cond1:
-; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__CGSCC_OPM:       if.end:
-; IS__CGSCC_OPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
-; IS__CGSCC_OPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND1]]
-; IS__CGSCC_OPM:       exit:
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn_no_null_opt
-; IS__CGSCC_NPM-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[IF_END:%.*]]
-; IS__CGSCC_NPM:       for.cond1:
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__CGSCC_NPM:       if.end:
-; IS__CGSCC_NPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND1]]
-; IS__CGSCC_NPM:       exit:
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
+; IS__CGSCC____-LABEL: define {{[^@]+}}@fn_no_null_opt
+; IS__CGSCC____-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    br label [[IF_END:%.*]]
+; IS__CGSCC____:       for.cond1:
+; IS__CGSCC____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
+; IS__CGSCC____:       if.end:
+; IS__CGSCC____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
+; IS__CGSCC____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    br label [[FOR_COND1]]
+; IS__CGSCC____:       exit:
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   br label %if.end
@@ -186,17 +116,11 @@ exit:
 }
 
 define internal i32 @fn0(i32 %p1) {
-; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS________OPM-LABEL: define {{[^@]+}}@fn0
-; IS________OPM-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1]] {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    ret i32 [[P1]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn0
-; IS__CGSCC_NPM-SAME: (i32 [[P1:%.*]]) #[[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret i32 undef
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@fn0
+; IS__CGSCC____-SAME: (i32 [[P1:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
 entry:
   %tobool = icmp ne i32 %p1, 0
@@ -204,15 +128,10 @@ entry:
   ret i32 %cond
 }
 ;.
-; IS__TUNIT_OPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
-; IS__TUNIT_OPM: attributes #[[ATTR3]] = { nofree nosync nounwind readnone }
+; IS__TUNIT____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
+; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
 ;.
-; IS__TUNIT_NPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
-; IS__TUNIT_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
-;.
-; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind }
-; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
+; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
 ;.

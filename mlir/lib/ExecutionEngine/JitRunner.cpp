@@ -21,7 +21,7 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -122,7 +122,7 @@ static OwningOpRef<ModuleOp> parseMLIRInput(StringRef inputFilename,
 
   llvm::SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-  return OwningOpRef<ModuleOp>(parseSourceFile(sourceMgr, context));
+  return parseSourceFile<ModuleOp>(sourceMgr, context);
 }
 
 static inline Error makeStringError(const Twine &message) {

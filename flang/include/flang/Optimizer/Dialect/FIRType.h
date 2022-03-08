@@ -191,6 +191,9 @@ inline bool isRecordWithTypeParameters(mlir::Type ty) {
   return false;
 }
 
+/// Is this tuple type holding a character function and its result length ?
+bool isCharacterProcedureTuple(mlir::Type type, bool acceptRawFunc = true);
+
 /// Apply the components specified by `path` to `rootTy` to determine the type
 /// of the resulting component element. `rootTy` should be an aggregate type.
 /// Returns null on error.

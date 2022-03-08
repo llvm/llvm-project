@@ -2897,7 +2897,6 @@ def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 199)),
 
 // XL Compat builtins.
 def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (XSMSUBMDP $A, $B, $C)>;
-def : Pat<(int_ppc_fnmsub f64:$A, f64:$B, f64:$C), (XSNMSUBMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (XSNMADDMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fre f64:$A), (XSREDP $A)>;
 def : Pat<(int_ppc_frsqrte vsfrc:$XB), (XSRSQRTEDP $XB)>;
@@ -3311,7 +3310,6 @@ def : Pat<(v16i8 (bitconvert (v16i8 immAllOnesV))),
 
 // XL Compat builtins.
 def : Pat<(int_ppc_fmsubs f32:$A, f32:$B, f32:$C), (XSMSUBMSP $A, $B, $C)>;
-def : Pat<(int_ppc_fnmsubs f32:$A, f32:$B, f32:$C), (XSNMSUBMSP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadds f32:$A, f32:$B, f32:$C), (XSNMADDMSP $A, $B, $C)>;
 def : Pat<(int_ppc_fres f32:$A), (XSRESP $A)>;
 def : Pat<(i32 (int_ppc_extract_exp f64:$A)),

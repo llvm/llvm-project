@@ -15,7 +15,7 @@
 
 #include "mlir/Tools/mlir-reduce/MlirReduceMain.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Reducer/Passes.h"
@@ -31,7 +31,7 @@ using namespace mlir;
 static LogicalResult loadModule(MLIRContext &context,
                                 OwningOpRef<ModuleOp> &module,
                                 StringRef inputFilename) {
-  module = parseSourceFile(inputFilename, &context);
+  module = parseSourceFile<ModuleOp>(inputFilename, &context);
   if (!module)
     return failure();
 

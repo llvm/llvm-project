@@ -326,11 +326,11 @@ private:
   /// the name is the name of a pass, the InnerPipeline is empty, since passes
   /// cannot contain inner pipelines.
   struct PipelineElement {
-    PipelineElement(StringRef name) : name(name), registryEntry(nullptr) {}
+    PipelineElement(StringRef name) : name(name) {}
 
     StringRef name;
     StringRef options;
-    const PassRegistryEntry *registryEntry;
+    const PassRegistryEntry *registryEntry = nullptr;
     std::vector<PipelineElement> innerPipeline;
   };
 

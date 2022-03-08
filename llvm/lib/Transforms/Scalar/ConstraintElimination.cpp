@@ -74,6 +74,9 @@ public:
   }
 
   void popLastConstraint(bool Signed) { getCS(Signed).popLastConstraint(); }
+  void popLastNVariables(bool Signed, unsigned N) {
+    getCS(Signed).popLastNVariables(N);
+  }
 };
 
 /// Struct to express a pre-condition of the form %Op0 Pred %Op1.
@@ -150,9 +153,9 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
-    if (CI->isNegative() || CI->uge(MaxConstraintValue))
+    if (CI->uge(MaxConstraintValue))
       return {};
-    return {{CI->getSExtValue(), nullptr}};
+    return {{CI->getZExtValue(), nullptr}};
   }
   auto *GEP = dyn_cast<GetElementPtrInst>(V);
   if (GEP && GEP->getNumOperands() == 2 && GEP->isInBounds()) {
@@ -205,8 +208,9 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
 
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))))
-    return {{CI->getSExtValue(), nullptr}, {1, Op0}};
+  if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
+      !CI->uge(MaxConstraintValue))
+    return {{CI->getZExtValue(), nullptr}, {1, Op0}};
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative()) {
     Preconditions.emplace_back(
         CmpInst::ICMP_UGE, Op0,
@@ -371,11 +375,14 @@ struct StackEntry {
   Instruction *Condition;
   bool IsNot;
   bool IsSigned = false;
+  /// Variables that can be removed from the system once the stack entry gets
+  /// removed.
+  SmallVector<Value *, 2> ValuesToRelease;
 
-  StackEntry(unsigned NumIn, unsigned NumOut, Instruction *Condition,
-             bool IsNot, bool IsSigned)
+  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot,
+             bool IsSigned, SmallVector<Value *, 2> ValuesToRelease)
       : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
-        IsSigned(IsSigned) {}
+        IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
 };
 } // namespace
 
@@ -407,6 +414,19 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     WorkList.emplace_back(DT.getNode(&BB));
 
+    // Returns true if we can add a known condition from BB to its successor
+    // block Succ. Each predecessor of Succ can either be BB or be dominated by
+    // Succ (e.g. the case when adding a condition from a pre-header to a loop
+    // header).
+    auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
+      assert(isa<BranchInst>(BB.getTerminator()));
+      return any_of(successors(&BB),
+                    [Succ](const BasicBlock *S) { return S != Succ; }) &&
+             all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
+               return Pred == &BB || DT.dominates(Succ, Pred);
+             });
+    };
+
     // True as long as long as the current instruction is guaranteed to execute.
     bool GuaranteedToExecute = true;
     // Scan BB for assume calls.
@@ -425,9 +445,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           WorkList.emplace_back(DT.getNode(&BB), cast<ICmpInst>(Cond), false);
         } else {
           // Otherwise the condition only holds in the successors.
-          for (BasicBlock *Succ : successors(&BB))
+          for (BasicBlock *Succ : successors(&BB)) {
+            if (!CanAdd(Succ))
+              continue;
             WorkList.emplace_back(DT.getNode(Succ), cast<ICmpInst>(Cond),
                                   false);
+          }
         }
       }
       GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
@@ -437,18 +460,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (!Br || !Br->isConditional())
       continue;
 
-    // Returns true if we can add a known condition from BB to its successor
-    // block Succ. Each predecessor of Succ can either be BB or be dominated by
-    // Succ (e.g. the case when adding a condition from a pre-header to a loop
-    // header).
-    auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
-      assert(isa<BranchInst>(BB.getTerminator()));
-      return any_of(successors(&BB),
-                    [Succ](const BasicBlock *S) { return S != Succ; }) &&
-             all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
-               return Pred == &BB || DT.dominates(Succ, Pred);
-             });
-    };
     // If the condition is an OR of 2 compares and the false successor only has
     // the current block as predecessor, queue both negated conditions for the
     // false successor.
@@ -512,8 +523,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         break;
       LLVM_DEBUG(dbgs() << "Removing " << *E.Condition << " " << E.IsNot
                         << "\n");
-      DFSInStack.pop_back();
       Info.popLastConstraint(E.IsSigned);
+      // Remove variables in the system that went out of scope.
+      auto &Mapping = Info.getValue2Index(E.IsSigned);
+      for (Value *V : E.ValuesToRelease)
+        Mapping.erase(V);
+      Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
+      DFSInStack.pop_back();
     }
 
     LLVM_DEBUG({
@@ -603,10 +619,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (!R.isValid(Info))
       continue;
 
-    for (auto &KV : NewIndices)
-      Info.getValue2Index(CmpInst::isSigned(CB.Condition->getPredicate()))
-          .insert(KV);
-
     LLVM_DEBUG(dbgs() << "Adding " << *CB.Condition << " " << CB.Not << "\n");
     bool Added = false;
     assert(CmpInst::isSigned(CB.Condition->getPredicate()) == R.IsSigned &&
@@ -620,8 +632,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // If R has been added to the system, queue it for removal once it goes
     // out-of-scope.
     if (Added) {
-      for (auto &KV : NewIndices)
+      SmallVector<Value *, 2> ValuesToRelease;
+      for (auto &KV : NewIndices) {
         Info.getValue2Index(R.IsSigned).insert(KV);
+        ValuesToRelease.push_back(KV.first);
+      }
 
       LLVM_DEBUG({
         dbgs() << "  constraint: ";
@@ -629,7 +644,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       });
 
       DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not,
-                              R.IsSigned);
+                              R.IsSigned, ValuesToRelease);
 
       if (R.IsEq) {
         // Also add the inverted constraint for equality constraints.
@@ -638,7 +653,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         CSToUse.addVariableRowFill(R.Coefficients);
 
         DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not,
-                                R.IsSigned);
+                                R.IsSigned, SmallVector<Value *, 2>());
       }
     }
   }

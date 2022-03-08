@@ -1,14 +1,16 @@
-## Test bitcode section removal.
+## Test bitcode section and segment removal.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-bitcode-strip -r %t -o %t2
-# RUN: llvm-readobj --sections %t2 | FileCheck --implicit-check-not=Name: %s
+# RUN: llvm-readobj --macho-segment --sections %t2 | FileCheck --implicit-check-not=Name: %s
 
 # CHECK:      Name: __text
 # CHECK-NEXT: Segment: __TEXT
 # CHECK:      Name: __bundle
 # CHECK-NEXT: Segment: __DATA
-# CHECK:      Name: __notbundle
-# CHECK-NEXT: Segment: __LLVM
+# CHECK:      Cmd: LC_SEGMENT_64
+# CHECK-NEXT: Name: __TEXT
+# CHECK:      Cmd: LC_SEGMENT_64
+# CHECK-NEXT: Name: __DATA
 
 --- !mach-o
 FileHeader:
@@ -16,21 +18,21 @@ FileHeader:
   cputype:         0x01000007
   cpusubtype:      0x00000003
   filetype:        0x00000001
-  ncmds:           1
-  sizeofcmds:      392
+  ncmds:           3
+  sizeofcmds:      456
   flags:           0x00002000
   reserved:        0x00000000
 LoadCommands:
   - cmd:             LC_SEGMENT_64
-    cmdsize:         392
-    segname:         ''
+    cmdsize:         152
+    segname:         __TEXT
     vmaddr:          0
-    vmsize:          16
-    fileoff:         424
-    filesize:        16
+    vmsize:          4
+    fileoff:         488
+    filesize:        4
     maxprot:         7
     initprot:        7
-    nsects:          4
+    nsects:          1
     flags:           0
     Sections:
       - sectname:        __text
@@ -38,7 +40,7 @@ LoadCommands:
         addr:            0x0000000000000000
         content:         'AABBCCDD'
         size:            4
-        offset:          424
+        offset:          488
         align:           0
         reloff:          0x00000000
         nreloc:          0
@@ -46,12 +48,24 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4
+    vmsize:          4
+    fileoff:         492
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
       - sectname:        __bundle
         segname:         __DATA
         addr:            0x0000000000000004
         content:         'DDAADDAA'
         size:            4
-        offset:          428
+        offset:          492
         align:           0
         reloff:          0x00000000
         nreloc:          0
@@ -59,25 +73,24 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __LLVM
+    vmaddr:          8
+    vmsize:          4
+    fileoff:         496
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
       - sectname:        __bundle
         segname:         __LLVM
         addr:            0x0000000000000008
         content:         'EEFFEEFF'
         size:            4
-        offset:          432
-        align:           0
-        reloff:          0x00000000
-        nreloc:          0
-        flags:           0x00000000
-        reserved1:       0x00000000
-        reserved2:       0x00000000
-        reserved3:       0x00000000
-      - sectname:        __notbundle
-        segname:         __LLVM
-        addr:            0x0000000000000008
-        content:         'EEFFEEFF'
-        size:            4
-        offset:          436
+        offset:          496
         align:           0
         reloff:          0x00000000
         nreloc:          0

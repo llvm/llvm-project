@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 
 ; Currently we cannot handle scalable vectorization factors.
-; CHECK: LV: Checking a loop in "f1"
+; CHECK: LV: Checking a loop in 'f1'
 ; CHECK: LEV: Epilogue vectorization factor is forced.
 ; CHECK: Epilogue Loop VF:2, Epilogue Loop UF:1
 

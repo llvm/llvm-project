@@ -490,6 +490,8 @@ static bool isUseSafeToFold(const SIInstrInfo *TII,
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
+  case AMDGPU::V_MOV_B64_e32:
+  case AMDGPU::V_MOV_B64_e64:
     // Do not fold into an indirect mov.
     return !MI.hasRegisterImplicitUseOperand(AMDGPU::M0);
   }

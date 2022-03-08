@@ -27,8 +27,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
-class FuncOp;
-
 namespace gpu {
 
 /// Utility class for the GPU dialect to represent triples of `Value`s

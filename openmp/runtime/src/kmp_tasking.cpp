@@ -319,6 +319,144 @@ static void __kmp_realloc_task_deque(kmp_info_t *thread,
   thread_data->td.td_deque_size = new_size;
 }
 
+static kmp_task_pri_t *__kmp_alloc_task_pri_list() {
+  kmp_task_pri_t *l = (kmp_task_pri_t *)__kmp_allocate(sizeof(kmp_task_pri_t));
+  kmp_thread_data_t *thread_data = &l->td;
+  __kmp_init_bootstrap_lock(&thread_data->td.td_deque_lock);
+  thread_data->td.td_deque_last_stolen = -1;
+  KE_TRACE(20, ("__kmp_alloc_task_pri_list: T#%d allocating deque[%d] "
+                "for thread_data %p\n",
+                __kmp_get_gtid(), INITIAL_TASK_DEQUE_SIZE, thread_data));
+  thread_data->td.td_deque = (kmp_taskdata_t **)__kmp_allocate(
+      INITIAL_TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
+  thread_data->td.td_deque_size = INITIAL_TASK_DEQUE_SIZE;
+  return l;
+}
+
+// The function finds the deque of priority tasks with given priority, or
+// allocates a new deque and put it into sorted (high -> low) list of deques.
+// Deques of non-default priority tasks are shared between all threads in team,
+// as opposed to per-thread deques of tasks with default priority.
+// The function is called under the lock task_team->tt.tt_task_pri_lock.
+static kmp_thread_data_t *
+__kmp_get_priority_deque_data(kmp_task_team_t *task_team, kmp_int32 pri) {
+  kmp_thread_data_t *thread_data;
+  kmp_task_pri_t *lst = task_team->tt.tt_task_pri_list;
+  if (lst->priority == pri) {
+    // Found queue of tasks with given priority.
+    thread_data = &lst->td;
+  } else if (lst->priority < pri) {
+    // All current priority queues contain tasks with lower priority.
+    // Allocate new one for given priority tasks.
+    kmp_task_pri_t *list = __kmp_alloc_task_pri_list();
+    thread_data = &list->td;
+    list->priority = pri;
+    list->next = lst;
+    task_team->tt.tt_task_pri_list = list;
+  } else { // task_team->tt.tt_task_pri_list->priority > pri
+    kmp_task_pri_t *next_queue = lst->next;
+    while (next_queue && next_queue->priority > pri) {
+      lst = next_queue;
+      next_queue = lst->next;
+    }
+    // lst->priority > pri && (next == NULL || pri >= next->priority)
+    if (next_queue == NULL) {
+      // No queue with pri priority, need to allocate new one.
+      kmp_task_pri_t *list = __kmp_alloc_task_pri_list();
+      thread_data = &list->td;
+      list->priority = pri;
+      list->next = NULL;
+      lst->next = list;
+    } else if (next_queue->priority == pri) {
+      // Found queue of tasks with given priority.
+      thread_data = &next_queue->td;
+    } else { // lst->priority > pri > next->priority
+      // insert newly allocated between existed queues
+      kmp_task_pri_t *list = __kmp_alloc_task_pri_list();
+      thread_data = &list->td;
+      list->priority = pri;
+      list->next = next_queue;
+      lst->next = list;
+    }
+  }
+  return thread_data;
+}
+
+//  __kmp_push_priority_task: Add a task to the team's priority task deque
+static kmp_int32 __kmp_push_priority_task(kmp_int32 gtid, kmp_info_t *thread,
+                                          kmp_taskdata_t *taskdata,
+                                          kmp_task_team_t *task_team,
+                                          kmp_int32 pri) {
+  kmp_thread_data_t *thread_data = NULL;
+  KA_TRACE(20,
+           ("__kmp_push_priority_task: T#%d trying to push task %p, pri %d.\n",
+            gtid, taskdata, pri));
+
+  // Find task queue specific to priority value
+  kmp_task_pri_t *lst = task_team->tt.tt_task_pri_list;
+  if (UNLIKELY(lst == NULL)) {
+    __kmp_acquire_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
+    if (task_team->tt.tt_task_pri_list == NULL) {
+      // List of queues is still empty, allocate one.
+      kmp_task_pri_t *list = __kmp_alloc_task_pri_list();
+      thread_data = &list->td;
+      list->priority = pri;
+      list->next = NULL;
+      task_team->tt.tt_task_pri_list = list;
+    } else {
+      // Other thread initialized a queue. Check if it fits and get thread_data.
+      thread_data = __kmp_get_priority_deque_data(task_team, pri);
+    }
+    __kmp_release_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
+  } else {
+    if (lst->priority == pri) {
+      // Found queue of tasks with given priority.
+      thread_data = &lst->td;
+    } else {
+      __kmp_acquire_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
+      thread_data = __kmp_get_priority_deque_data(task_team, pri);
+      __kmp_release_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
+    }
+  }
+  KMP_DEBUG_ASSERT(thread_data);
+
+  __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
+  // Check if deque is full
+  if (TCR_4(thread_data->td.td_deque_ntasks) >=
+      TASK_DEQUE_SIZE(thread_data->td)) {
+    if (__kmp_enable_task_throttling &&
+        __kmp_task_is_allowed(gtid, __kmp_task_stealing_constraint, taskdata,
+                              thread->th.th_current_task)) {
+      __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+      KA_TRACE(20, ("__kmp_push_priority_task: T#%d deque is full; returning "
+                    "TASK_NOT_PUSHED for task %p\n",
+                    gtid, taskdata));
+      return TASK_NOT_PUSHED;
+    } else {
+      // expand deque to push the task which is not allowed to execute
+      __kmp_realloc_task_deque(thread, thread_data);
+    }
+  }
+  KMP_DEBUG_ASSERT(TCR_4(thread_data->td.td_deque_ntasks) <
+                   TASK_DEQUE_SIZE(thread_data->td));
+  // Push taskdata.
+  thread_data->td.td_deque[thread_data->td.td_deque_tail] = taskdata;
+  // Wrap index.
+  thread_data->td.td_deque_tail =
+      (thread_data->td.td_deque_tail + 1) & TASK_DEQUE_MASK(thread_data->td);
+  TCW_4(thread_data->td.td_deque_ntasks,
+        TCR_4(thread_data->td.td_deque_ntasks) + 1); // Adjust task count
+  KMP_FSYNC_RELEASING(thread->th.th_current_task); // releasing self
+  KMP_FSYNC_RELEASING(taskdata); // releasing child
+  KA_TRACE(20, ("__kmp_push_priority_task: T#%d returning "
+                "TASK_SUCCESSFULLY_PUSHED: task=%p ntasks=%d head=%u tail=%u\n",
+                gtid, taskdata, thread_data->td.td_deque_ntasks,
+                thread_data->td.td_deque_head, thread_data->td.td_deque_tail));
+  __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+  task_team->tt.tt_num_task_pri++; // atomic inc
+  return TASK_SUCCESSFULLY_PUSHED;
+}
+
 //  __kmp_push_task: Add a task to the thread's deque
 static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
@@ -370,6 +508,12 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   }
   KMP_DEBUG_ASSERT(TCR_4(task_team->tt.tt_found_tasks) == TRUE);
   KMP_DEBUG_ASSERT(TCR_PTR(task_team->tt.tt_threads_data) != NULL);
+
+  if (taskdata->td_flags.priority_specified && task->data2.priority > 0 &&
+      __kmp_max_task_priority > 0) {
+    int pri = KMP_MIN(task->data2.priority, __kmp_max_task_priority);
+    return __kmp_push_priority_task(gtid, thread, taskdata, task_team, pri);
+  }
 
   // Find tasking deque specific to encountering thread
   thread_data = &task_team->tt.tt_threads_data[tid];
@@ -728,6 +872,10 @@ static void __kmp_free_task(kmp_int32 gtid, kmp_taskdata_t *taskdata,
   KMP_DEBUG_ASSERT(taskdata->td_allocated_child_tasks == 0 ||
                    taskdata->td_flags.task_serial == 1);
   KMP_DEBUG_ASSERT(taskdata->td_incomplete_child_tasks == 0);
+  kmp_task_t *task = KMP_TASKDATA_TO_TASK(taskdata);
+  // Clear data to not be re-used later by mistake.
+  task->data1.destructors = NULL;
+  task->data2.priority = 0;
 
   taskdata->td_flags.freed = 1;
 // deallocate the taskdata and shared variable blocks associated with this task
@@ -2667,6 +2815,105 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #endif
 }
 
+static kmp_task_t *__kmp_get_priority_task(kmp_int32 gtid,
+                                           kmp_task_team_t *task_team,
+                                           kmp_int32 is_constrained) {
+  kmp_task_t *task = NULL;
+  kmp_taskdata_t *taskdata;
+  kmp_taskdata_t *current;
+  kmp_thread_data_t *thread_data;
+  int ntasks = task_team->tt.tt_num_task_pri;
+  if (ntasks == 0) {
+    KA_TRACE(
+        20, ("__kmp_get_priority_task(exit #1): T#%d No tasks to get\n", gtid));
+    return NULL;
+  }
+  do {
+    // decrement num_tasks to "reserve" one task to get for execution
+    if (__kmp_atomic_compare_store(&task_team->tt.tt_num_task_pri, ntasks,
+                                   ntasks - 1))
+      break;
+  } while (ntasks > 0);
+  if (ntasks == 0) {
+    KA_TRACE(20, ("__kmp_get_priority_task(exit #2): T#%d No tasks to get\n",
+                  __kmp_get_gtid()));
+    return NULL;
+  }
+  // We got a "ticket" to get a "reserved" priority task
+  int deque_ntasks;
+  kmp_task_pri_t *list = task_team->tt.tt_task_pri_list;
+  do {
+    KMP_ASSERT(list != NULL);
+    thread_data = &list->td;
+    __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
+    deque_ntasks = thread_data->td.td_deque_ntasks;
+    if (deque_ntasks == 0) {
+      __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+      KA_TRACE(20, ("__kmp_get_priority_task: T#%d No tasks to get from %p\n",
+                    __kmp_get_gtid(), thread_data));
+      list = list->next;
+    }
+  } while (deque_ntasks == 0);
+  KMP_DEBUG_ASSERT(deque_ntasks);
+  int target = thread_data->td.td_deque_head;
+  current = __kmp_threads[gtid]->th.th_current_task;
+  taskdata = thread_data->td.td_deque[target];
+  if (__kmp_task_is_allowed(gtid, is_constrained, taskdata, current)) {
+    // Bump head pointer and Wrap.
+    thread_data->td.td_deque_head =
+        (target + 1) & TASK_DEQUE_MASK(thread_data->td);
+  } else {
+    if (!task_team->tt.tt_untied_task_encountered) {
+      // The TSC does not allow to steal victim task
+      __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+      KA_TRACE(20, ("__kmp_get_priority_task(exit #3): T#%d could not get task "
+                    "from %p: task_team=%p ntasks=%d head=%u tail=%u\n",
+                    gtid, thread_data, task_team, deque_ntasks, target,
+                    thread_data->td.td_deque_tail));
+      task_team->tt.tt_num_task_pri++; // atomic inc, restore value
+      return NULL;
+    }
+    int i;
+    // walk through the deque trying to steal any task
+    taskdata = NULL;
+    for (i = 1; i < deque_ntasks; ++i) {
+      target = (target + 1) & TASK_DEQUE_MASK(thread_data->td);
+      taskdata = thread_data->td.td_deque[target];
+      if (__kmp_task_is_allowed(gtid, is_constrained, taskdata, current)) {
+        break; // found task to execute
+      } else {
+        taskdata = NULL;
+      }
+    }
+    if (taskdata == NULL) {
+      // No appropriate candidate found to execute
+      __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+      KA_TRACE(
+          10, ("__kmp_get_priority_task(exit #4): T#%d could not get task from "
+               "%p: task_team=%p ntasks=%d head=%u tail=%u\n",
+               gtid, thread_data, task_team, deque_ntasks,
+               thread_data->td.td_deque_head, thread_data->td.td_deque_tail));
+      task_team->tt.tt_num_task_pri++; // atomic inc, restore value
+      return NULL;
+    }
+    int prev = target;
+    for (i = i + 1; i < deque_ntasks; ++i) {
+      // shift remaining tasks in the deque left by 1
+      target = (target + 1) & TASK_DEQUE_MASK(thread_data->td);
+      thread_data->td.td_deque[prev] = thread_data->td.td_deque[target];
+      prev = target;
+    }
+    KMP_DEBUG_ASSERT(
+        thread_data->td.td_deque_tail ==
+        (kmp_uint32)((target + 1) & TASK_DEQUE_MASK(thread_data->td)));
+    thread_data->td.td_deque_tail = target; // tail -= 1 (wrapped))
+  }
+  thread_data->td.td_deque_ntasks = deque_ntasks - 1;
+  __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+  task = KMP_TASKDATA_TO_TASK(taskdata);
+  return task;
+}
+
 // __kmp_remove_my_task: remove a task from my own deque
 static kmp_task_t *__kmp_remove_my_task(kmp_info_t *thread, kmp_int32 gtid,
                                         kmp_task_team_t *task_team,
@@ -2916,10 +3163,13 @@ static inline int __kmp_execute_tasks_template(
     // getting tasks from target constructs
     while (1) { // Inner loop to find a task and execute it
       task = NULL;
-      if (use_own_tasks) { // check on own queue first
+      if (task_team->tt.tt_num_task_pri) { // get priority task first
+        task = __kmp_get_priority_task(gtid, task_team, is_constrained);
+      }
+      if (task == NULL && use_own_tasks) { // check own queue next
         task = __kmp_remove_my_task(thread, gtid, task_team, is_constrained);
       }
-      if ((task == NULL) && (nthreads > 1)) { // Steal a task
+      if ((task == NULL) && (nthreads > 1)) { // Steal a task finally
         int asleep = 1;
         use_own_tasks = 0;
         // Try to steal from the last place I stole from successfully.
@@ -3440,6 +3690,24 @@ static void __kmp_free_task_threads_data(kmp_task_team_t *task_team) {
   __kmp_release_bootstrap_lock(&task_team->tt.tt_threads_lock);
 }
 
+// __kmp_free_task_pri_list:
+// Deallocates tasking deques used for priority tasks.
+// Only occurs at library shutdown.
+static void __kmp_free_task_pri_list(kmp_task_team_t *task_team) {
+  __kmp_acquire_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
+  if (task_team->tt.tt_task_pri_list != NULL) {
+    kmp_task_pri_t *list = task_team->tt.tt_task_pri_list;
+    while (list != NULL) {
+      kmp_task_pri_t *next = list->next;
+      __kmp_free_task_deque(&list->td);
+      __kmp_free(list);
+      list = next;
+    }
+    task_team->tt.tt_task_pri_list = NULL;
+  }
+  __kmp_release_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
+}
+
 // __kmp_allocate_task_team:
 // Allocates a task team associated with a specific team, taking it from
 // the global task team free list if possible.  Also initializes data
@@ -3471,6 +3739,7 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
     // __kmp_thread_malloc because threads not around for kmp_reap_task_team.
     task_team = (kmp_task_team_t *)__kmp_allocate(sizeof(kmp_task_team_t));
     __kmp_init_bootstrap_lock(&task_team->tt.tt_threads_lock);
+    __kmp_init_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
 #if USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG
     // suppress race conditions detection on synchronization flags in debug mode
     // this helps to analyze library internals eliminating false positives
@@ -3539,6 +3808,9 @@ void __kmp_reap_task_teams(void) {
       // Free threads_data if necessary
       if (task_team->tt.tt_threads_data != NULL) {
         __kmp_free_task_threads_data(task_team);
+      }
+      if (task_team->tt.tt_task_pri_list != NULL) {
+        __kmp_free_task_pri_list(task_team);
       }
       __kmp_free(task_team);
     }

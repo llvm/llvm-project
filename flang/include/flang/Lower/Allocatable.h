@@ -26,12 +26,25 @@ namespace fir {
 class MutableBoxValue;
 } // namespace fir
 
+namespace Fortran::parser {
+struct AllocateStmt;
+struct DeallocateStmt;
+} // namespace Fortran::parser
+
 namespace Fortran::lower {
 class AbstractConverter;
 
 namespace pft {
 struct Variable;
 }
+
+/// Lower an allocate statement to fir.
+void genAllocateStmt(Fortran::lower::AbstractConverter &,
+                     const Fortran::parser::AllocateStmt &, mlir::Location);
+
+/// Lower a deallocate statement to fir.
+void genDeallocateStmt(Fortran::lower::AbstractConverter &,
+                       const Fortran::parser::DeallocateStmt &, mlir::Location);
 
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be

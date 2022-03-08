@@ -57,19 +57,19 @@ add_loader_test(
 #     GERMANY=Berlin
 # )
 
+if(NOT (${LIBC_TARGET_ARCHITECTURE} STREQUAL "x86_64"))
+  return()
+endif()
 
-# TODO: Disableing this test temporarily to investigate why gold fails to link
-# and produce an executable for this test. Test works all fine with ld.bfd.
-#add_loader_test(
-#  loader_tls_test
-#  SRC
-#    tls_test.cpp
-#  DEPENDS
-#    libc.config.linux.app_h
-#    libc.include.errno
-#    libc.include.sys_mman
-#    libc.loader.linux.crt1
-#    libc.src.assert.__assert_fail
-#    libc.src.errno.errno
-#    libc.src.sys.mman.mmap
-#)
+add_loader_test(
+  loader_tls_test
+  SRC
+    tls_test.cpp
+  DEPENDS
+    .loader_test
+    libc.include.errno
+    libc.include.sys_mman
+    libc.loader.linux.crt1
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+)

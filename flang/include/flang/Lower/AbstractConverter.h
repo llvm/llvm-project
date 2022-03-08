@@ -126,6 +126,10 @@ public:
   /// which is itself a reference. Use bindTuple() to set this value.
   virtual mlir::Value hostAssocTupleValue() = 0;
 
+  /// Record a binding for the ssa-value of the host assoications tuple for this
+  /// function.
+  virtual void bindHostAssocTuple(mlir::Value val) = 0;
+
   //===--------------------------------------------------------------------===//
   // Types
   //===--------------------------------------------------------------------===//

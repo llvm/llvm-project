@@ -67,6 +67,8 @@ class Type;
 class Value;
 enum SCEVTypes : unsigned short;
 
+extern bool VerifySCEV;
+
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
 ///

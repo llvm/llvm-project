@@ -456,6 +456,11 @@ void RTNAME(Spread)(Descriptor &result, const Descriptor &source, int dim,
   Terminator terminator{sourceFile, line};
   int rank{source.rank() + 1};
   RUNTIME_CHECK(terminator, rank <= maxRank);
+  if (dim < 1 || dim > rank) {
+    terminator.Crash("SPREAD: DIM=%d argument for rank-%d source array "
+                     "must be greater than 1 and less than or equal to %d",
+        dim, rank - 1, rank);
+  }
   ncopies = std::max<std::int64_t>(ncopies, 0);
   SubscriptValue extent[maxRank];
   int k{0};

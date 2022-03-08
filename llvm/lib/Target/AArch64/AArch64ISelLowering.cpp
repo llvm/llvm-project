@@ -9252,6 +9252,56 @@ static bool isSingletonEXTMask(ArrayRef<int> M, EVT VT, unsigned &Imm) {
   return true;
 }
 
+// Detect patterns of a0,a1,a2,a3,b0,b1,b2,b3,c0,c1,c2,c3,d0,d1,d2,d3 from
+// v4i32s. This is really a truncate, which we can construct out of (legal)
+// concats and truncate nodes.
+static SDValue ReconstructTruncateFromBuildVector(SDValue V, SelectionDAG &DAG) {
+  if (V.getValueType() != MVT::v16i8)
+    return SDValue();
+  assert(V.getNumOperands() == 16 && "Expected 16 operands on the BUILDVECTOR");
+
+  for (unsigned X = 0; X < 4; X++) {
+    // Check the first item in each group is an extract from lane 0 of a v4i32
+    // or v4i16.
+    SDValue BaseExt = V.getOperand(X * 4);
+    if (BaseExt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+        (BaseExt.getOperand(0).getValueType() != MVT::v4i16 &&
+         BaseExt.getOperand(0).getValueType() != MVT::v4i32) ||
+        !isa<ConstantSDNode>(BaseExt.getOperand(1)) ||
+        BaseExt.getConstantOperandVal(1) != 0)
+      return SDValue();
+    SDValue Base = BaseExt.getOperand(0);
+    // And check the other items are extracts from the same vector.
+    for (unsigned Y = 1; Y < 4; Y++) {
+      SDValue Ext = V.getOperand(X * 4 + Y);
+      if (Ext.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+          Ext.getOperand(0) != Base ||
+          !isa<ConstantSDNode>(Ext.getOperand(1)) ||
+          Ext.getConstantOperandVal(1) != Y)
+        return SDValue();
+    }
+  }
+
+  // Turn the buildvector into a series of truncates and concates, which will
+  // become uzip1's. Any v4i32s we found get truncated to v4i16, which are
+  // concat together to produce 2 v8i16. These are both truncated and concat
+  // together.
+  SDLoc DL(V);
+  SDValue Trunc[4] = {
+      V.getOperand(0).getOperand(0), V.getOperand(4).getOperand(0),
+      V.getOperand(8).getOperand(0), V.getOperand(12).getOperand(0)};
+  for (int I = 0; I < 4; I++)
+    if (Trunc[I].getValueType() == MVT::v4i32)
+      Trunc[I] = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Trunc[I]);
+  SDValue Concat0 =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16, Trunc[0], Trunc[1]);
+  SDValue Concat1 =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16, Trunc[2], Trunc[3]);
+  SDValue Trunc0 = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i8, Concat0);
+  SDValue Trunc1 = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i8, Concat1);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Trunc0, Trunc1);
+}
+
 /// Check if a vector shuffle corresponds to a DUP instructions with a larger
 /// element width than the vector lane type. If that is the case the function
 /// returns true and writes the value of the DUP instruction lane operand into
@@ -10870,6 +10920,12 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                   "expansion\n");
     return SDValue();
   }
+
+  // Detect patterns of a0,a1,a2,a3,b0,b1,b2,b3,c0,c1,c2,c3,d0,d1,d2,d3 from
+  // v4i32s. This is really a truncate, which we can construct out of (legal)
+  // concats and truncate nodes.
+  if (SDValue M = ReconstructTruncateFromBuildVector(Op, DAG))
+    return M;
 
   // Empirical tests suggest this is rarely worth it for vectors of length <= 2.
   if (NumElts >= 4) {
@@ -14308,7 +14364,46 @@ static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
   }
 }
 
-static SDValue performExtractVectorEltCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
+                        AArch64CC::CondCode Cond);
+
+// Materialize : i1 = extract_vector_elt t37, Constant:i64<0>
+// ... into: "ptrue p, all" + PTEST
+static SDValue
+performFirstTrueTestVectorCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const AArch64Subtarget *Subtarget) {
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  // Make sure PTEST can be legalised with illegal types.
+  if (!Subtarget->hasSVE() || DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue SetCC = N->getOperand(0);
+  EVT VT = SetCC.getValueType();
+
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  // Restricted the DAG combine to only cases where we're extracting from a
+  // flag-setting operation
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!Idx || !Idx->isZero() || SetCC.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // Extracts of lane 0 for SVE can be expressed as PTEST(Op, FIRST) ? 1 : 0
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Pg = getPTrue(DAG, SDLoc(N), VT, AArch64SVEPredPattern::all);
+  return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::FIRST_ACTIVE);
+}
+
+static SDValue
+performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               const AArch64Subtarget *Subtarget) {
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  if (SDValue Res = performFirstTrueTestVectorCombine(N, DCI, Subtarget))
+    return Res;
+
+  SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   ConstantSDNode *ConstantN1 = dyn_cast<ConstantSDNode>(N1);
 
@@ -18300,7 +18395,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INSERT_VECTOR_ELT:
     return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
-    return performExtractVectorEltCombine(N, DAG);
+    return performExtractVectorEltCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
   case AArch64ISD::UADDV:

@@ -93,6 +93,17 @@ void TokenStream::print(llvm::raw_ostream &OS) const {
     OS << '\n';
 }
 
+TokenStream stripComments(const TokenStream &Input) {
+  TokenStream Out;
+  for (const Token &T : Input.tokens()) {
+    if (T.Kind == tok::comment)
+      continue;
+    Out.push(T);
+  }
+  Out.finalize();
+  return Out;
+}
+
 } // namespace pseudo
 } // namespace syntax
 } // namespace clang

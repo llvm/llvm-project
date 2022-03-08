@@ -3004,55 +3004,22 @@ define <16 x i8> @test_signed_v16f32_v16i8(<16 x float> %f) {
 ; CHECK-LABEL: test_signed_v16f32_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v4.4s, #127
+; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NEXT:    mvni v5.4s, #127
-; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-NEXT:    smin v0.4s, v0.4s, v4.4s
+; CHECK-NEXT:    smin v3.4s, v3.4s, v4.4s
+; CHECK-NEXT:    smin v2.4s, v2.4s, v4.4s
 ; CHECK-NEXT:    smin v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    smin v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    smax v0.4s, v0.4s, v5.4s
+; CHECK-NEXT:    smin v0.4s, v0.4s, v4.4s
+; CHECK-NEXT:    smax v3.4s, v3.4s, v5.4s
+; CHECK-NEXT:    smax v2.4s, v2.4s, v5.4s
 ; CHECK-NEXT:    smax v1.4s, v1.4s, v5.4s
-; CHECK-NEXT:    smax v2.4s, v2.4s, v5.4s
-; CHECK-NEXT:    xtn v6.4h, v0.4s
-; CHECK-NEXT:    umov w8, v6.h[0]
-; CHECK-NEXT:    umov w9, v6.h[1]
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    umov w8, v6.h[2]
-; CHECK-NEXT:    mov v0.b[1], w9
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    umov w8, v6.h[3]
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    umov w8, v1.h[2]
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    xtn v1.4h, v2.4s
-; CHECK-NEXT:    fcvtzs v2.4s, v3.4s
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    smin v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    mov v0.b[8], w8
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    smax v2.4s, v2.4s, v5.4s
-; CHECK-NEXT:    mov v0.b[9], w8
-; CHECK-NEXT:    umov w8, v1.h[2]
-; CHECK-NEXT:    mov v0.b[10], w8
-; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    xtn v1.4h, v2.4s
-; CHECK-NEXT:    mov v0.b[11], w8
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    mov v0.b[12], w8
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    mov v0.b[13], w8
-; CHECK-NEXT:    umov w8, v1.h[2]
-; CHECK-NEXT:    mov v0.b[14], w8
-; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    smax v0.4s, v0.4s, v5.4s
+; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
     %x = call <16 x i8> @llvm.fptosi.sat.v16f32.v16i8(<16 x float> %f)
     ret <16 x i8> %x

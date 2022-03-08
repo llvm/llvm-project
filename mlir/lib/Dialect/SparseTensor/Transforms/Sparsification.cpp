@@ -52,10 +52,9 @@ struct CodeGen {
         indices(numTensors, std::vector<Value>(numLoops)),
         highs(numTensors, std::vector<Value>(numLoops)),
         pidxs(numTensors, std::vector<Value>(numLoops)),
-        idxs(numTensors, std::vector<Value>(numLoops)), redExp(-1u), redVal(),
-        redKind(kNoReduc), sparseOut(op), outerParNest(nest), lexIdx(),
-        expValues(), expFilled(), expAdded(), expCount(), curVecLength(1),
-        curVecMask() {}
+        idxs(numTensors, std::vector<Value>(numLoops)), redVal(), sparseOut(op),
+        outerParNest(nest), lexIdx(), expValues(), expFilled(), expAdded(),
+        expCount(), curVecMask() {}
   /// Sparsification options.
   SparsificationOptions options;
   /// Universal dense indices and upper bounds (by index). The loops array
@@ -77,9 +76,9 @@ struct CodeGen {
   std::vector<std::vector<Value>> idxs;
   /// Current reduction, updated during code generation. When indices of a
   /// reduction are exhausted, all inner loops can use a scalarized reduction.
-  unsigned redExp;
+  unsigned redExp = -1u;
   Value redVal;
-  Reduction redKind;
+  Reduction redKind = kNoReduc;
   // Sparse tensor as output. Implemented either through direct injective
   // insertion in lexicographic index order (where indices are updated
   // in the temporary array `lexIdx`) or through access pattern expansion
@@ -92,7 +91,7 @@ struct CodeGen {
   Value expAdded;
   Value expCount;
   // Current vector length and mask.
-  unsigned curVecLength;
+  unsigned curVecLength = 1;
   Value curVecMask;
 };
 

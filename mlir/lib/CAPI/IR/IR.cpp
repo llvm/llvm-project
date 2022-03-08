@@ -20,7 +20,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include "llvm/Support/Debug.h"
 #include <cstddef>

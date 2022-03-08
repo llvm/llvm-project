@@ -195,6 +195,9 @@ enum class LexFlags : uint8_t {
 /// (And having cooked token kinds in PP-disabled sections is useful for us).
 TokenStream cook(const TokenStream &, const clang::LangOptions &);
 
+/// Drops comment tokens.
+TokenStream stripComments(const TokenStream &);
+
 } // namespace pseudo
 } // namespace syntax
 } // namespace clang

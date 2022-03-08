@@ -120,8 +120,8 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP0]] to i32
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP1]]
+; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP7]]
 ;
 entry:

@@ -43,6 +43,8 @@ class Location;
 
 namespace Fortran::lower {
 class AbstractConverter;
+class SymMap;
+class HostAssociations;
 namespace pft {
 struct FunctionLikeUnit;
 }
@@ -83,8 +85,8 @@ class CallInterfaceImpl;
 /// can be either a Symbol or an ActualArgument.
 /// It works in two passes: a first pass over the characteristics that decides
 /// how the interface must be. Then, the funcOp is created for it. Then a simple
-/// pass over fir arguments finalizes the interface information that must be
-/// passed back to the user (and may require having the funcOp). All these
+/// pass over fir arguments finalize the interface information that must be
+/// passed back to the user (and may require having the funcOp). All this
 /// passes are driven from the CallInterface constructor.
 template <typename T>
 class CallInterface {
@@ -110,7 +112,6 @@ public:
     // tuple.
     CharProcTuple
   };
-
   /// Different properties of an entity that can be passed/returned.
   /// One-to-One mapping with PassEntityBy but for
   /// PassEntityBy::AddressAndLength that has two properties.
@@ -138,7 +139,7 @@ public:
     /// Type for this input/output
     mlir::Type type;
     /// Position of related passedEntity in passedArguments.
-    /// (passedEntity is the passedResult this value is resultEntityPosition).
+    /// (passedEntity is the passedResult this value is resultEntityPosition.
     int passedEntityPosition;
     static constexpr int resultEntityPosition = -1;
     /// Indicate property of the entity passedEntityPosition that must be passed
@@ -370,9 +371,43 @@ public:
   /// argument symbols.
   mlir::FuncOp addEntryBlockAndMapArguments();
 
+  bool hasHostAssociated() const;
+  mlir::Type getHostAssociatedTy() const;
+  mlir::Value getHostAssociatedTuple() const;
+
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;
 };
+
+/// Translate a procedure characteristics to an mlir::FunctionType signature.
+mlir::FunctionType
+translateSignature(const Fortran::evaluate::ProcedureDesignator &,
+                   Fortran::lower::AbstractConverter &);
+
+/// Declare or find the mlir::FuncOp named \p name. If the mlir::FuncOp does
+/// not exist yet, declare it with the signature translated from the
+/// ProcedureDesignator argument.
+/// Due to Fortran implicit function typing rules, the returned FuncOp is not
+/// guaranteed to have the signature from ProcedureDesignator if the FuncOp was
+/// already declared.
+mlir::FuncOp
+getOrDeclareFunction(llvm::StringRef name,
+                     const Fortran::evaluate::ProcedureDesignator &,
+                     Fortran::lower::AbstractConverter &);
+
+/// Return the type of an argument that is a dummy procedure. This may be an
+/// mlir::FunctionType, but it can also be a more elaborate type based on the
+/// function type (like a tuple<function type, length type> for character
+/// functions).
+mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
+                                 Fortran::lower::AbstractConverter &);
+
+/// Is it required to pass \p proc as a tuple<function address, result length> ?
+// This is required to convey  the length of character functions passed as dummy
+// procedures.
+bool mustPassLengthWithDummyProcedure(
+    const Fortran::evaluate::ProcedureDesignator &proc,
+    Fortran::lower::AbstractConverter &);
 
 } // namespace Fortran::lower
 

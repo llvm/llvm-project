@@ -4513,19 +4513,17 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
 ///
 /// attribute-specifier-seq:
 ///       attribute-specifier-seq[opt] attribute-specifier
-void Parser::ParseCXX11Attributes(ParsedAttributesWithRange &attrs,
-                                  SourceLocation *endLoc) {
+void Parser::ParseCXX11Attributes(ParsedAttributesWithRange &attrs) {
   assert(standardAttributesAllowed());
 
-  SourceLocation StartLoc = Tok.getLocation(), Loc;
-  if (!endLoc)
-    endLoc = &Loc;
+  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation EndLoc = StartLoc;
 
   do {
-    ParseCXX11AttributeSpecifier(attrs, endLoc);
+    ParseCXX11AttributeSpecifier(attrs, &EndLoc);
   } while (isCXX11AttributeSpecifier());
 
-  attrs.Range = SourceRange(StartLoc, *endLoc);
+  attrs.Range = SourceRange(StartLoc, EndLoc);
 }
 
 void Parser::DiagnoseAndSkipCXX11Attributes() {
@@ -4658,10 +4656,11 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
 /// [MS] ms-attribute-seq:
 ///             ms-attribute[opt]
 ///             ms-attribute ms-attribute-seq
-void Parser::ParseMicrosoftAttributes(ParsedAttributes &attrs,
-                                      SourceLocation *endLoc) {
+void Parser::ParseMicrosoftAttributes(ParsedAttributesWithRange &Attrs) {
   assert(Tok.is(tok::l_square) && "Not a Microsoft attribute list");
 
+  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation EndLoc = StartLoc;
   do {
     // FIXME: If this is actually a C++11 attribute, parse it as one.
     BalancedDelimiterTracker T(*this, tok::l_square);
@@ -4681,15 +4680,16 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &attrs,
       if (Tok.isNot(tok::identifier)) // ']', but also eof
         break;
       if (Tok.getIdentifierInfo()->getName() == "uuid")
-        ParseMicrosoftUuidAttributeArgs(attrs);
+        ParseMicrosoftUuidAttributeArgs(Attrs);
       else
         ConsumeToken();
     }
 
     T.consumeClose();
-    if (endLoc)
-      *endLoc = T.getCloseLocation();
+    EndLoc = T.getCloseLocation();
   } while (Tok.is(tok::l_square));
+
+  Attrs.Range = SourceRange(StartLoc, EndLoc);
 }
 
 void Parser::ParseMicrosoftIfExistsClassDeclaration(
