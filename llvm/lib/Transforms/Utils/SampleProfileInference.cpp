@@ -173,7 +173,7 @@ public:
   /// A cost of taking an unlikely jump.
   static constexpr int64_t AuxCostUnlikely = ((int64_t)1) << 30;
   /// Minimum BaseDistance for the jump distance values in island joining.
-  static constexpr uint64_t MinBaseDistance = 10000;
+  static constexpr uint64_t MinBaseDistance = 10000ull;
 
 private:
   /// Iteratively find an augmentation path/dag in the network and send the
@@ -741,7 +741,7 @@ private:
   /// parts to a multiple of 1 / BaseDistance.
   int64_t jumpDistance(FlowJump *Jump) const {
     uint64_t BaseDistance =
-        std::max(static_cast<uint64_t>(MinCostMaxFlow::MinBaseDistance),
+        std::max(MinCostMaxFlow::MinBaseDistance,
                  std::min(Func.Blocks[Func.Entry].Flow,
                           MinCostMaxFlow::AuxCostUnlikely / NumBlocks()));
     if (Jump->IsUnlikely)
