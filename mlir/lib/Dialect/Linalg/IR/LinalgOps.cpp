@@ -1072,6 +1072,21 @@ Type InitTensorOp::inferResultType(ArrayRef<int64_t> staticSizes,
   return RankedTensorType::get(staticSizes, elementType, encoding);
 }
 
+SmallVector<OpFoldResult> InitTensorOp::getMixedSizes() {
+  SmallVector<OpFoldResult> mixedSizes;
+  mixedSizes.reserve(getType().getRank());
+  unsigned dynamicValIndex = 0;
+  for (Attribute attr : static_sizes()) {
+    auto intAttr = attr.cast<IntegerAttr>();
+    if (!ShapedType::isDynamic(intAttr.getInt())) {
+      mixedSizes.push_back(intAttr);
+      continue;
+    }
+    mixedSizes.push_back(sizes()[dynamicValIndex++]);
+  }
+  return mixedSizes;
+}
+
 namespace {
 /// Change the type of the result of a `linalg.init_tensor` by making the result
 /// type statically sized along dimension that in the original operation where
@@ -1193,11 +1208,86 @@ struct FoldInitTensorWithDimOp : public OpRewritePattern<tensor::DimOp> {
     return success();
   }
 };
+
+/// Canonicalize
+///
+/// ```mlir
+///   %0 = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+///   %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<4x?xf32>
+/// ```
+///
+/// into
+///
+/// ```mlir
+///   %0 = linalg.init_tensor [4, %d1] : tensor<4x?xf32>
+/// ```
+///
+/// This assumes the input program is correct in terms of its shape. So it
+/// is safe to assume that `%d0` is in fact 4. If that was not the case, the
+/// input program is wrong to begin with, so its undefined behavior anyway (i.e.
+/// this optimization can still triggering without violating program semantics).
+struct FoldInitTensorWithTensorCastOp
+    : public OpRewritePattern<tensor::CastOp> {
+  using OpRewritePattern<tensor::CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    if (!canFoldIntoProducerOp(castOp))
+      return failure();
+    auto producer = castOp.source().getDefiningOp<InitTensorOp>();
+    if (!producer)
+      return failure();
+
+    auto resultType = castOp->getResult(0).getType().cast<RankedTensorType>();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    SmallVector<OpFoldResult> currMixedSizes = producer.getMixedSizes();
+    SmallVector<OpFoldResult> newMixedSizes;
+    newMixedSizes.reserve(currMixedSizes.size());
+    assert(resultShape.size() == currMixedSizes.size() &&
+           "mismatch in result shape and sizes of init_tensor op");
+    for (auto it : llvm::zip(resultShape, currMixedSizes)) {
+      int64_t newDim = std::get<0>(it);
+      OpFoldResult currDim = std::get<1>(it);
+      // Case 1: The init tensor dim is static. Check that the tensor cast
+      // result dim matches.
+      if (auto attr = currDim.dyn_cast<Attribute>()) {
+        if (ShapedType::isDynamic(newDim) ||
+            newDim != attr.cast<IntegerAttr>().getInt()) {
+          // Something is off, the cast result shape cannot be more dynamic than
+          // the init tensor result shape (enforced by `canFoldIntoProducer`).
+          // Abort for now.
+          return rewriter.notifyMatchFailure(
+              producer, "mismatch in static value of shape of init "
+                        "tensor result and cast result");
+        }
+        newMixedSizes.push_back(attr);
+        continue;
+      }
+
+      // Case 2 : The tensor cast shape is static, but init tensor result shape
+      // is dynamic.
+      if (!ShapedType::isDynamic(newDim)) {
+        newMixedSizes.push_back(rewriter.getIndexAttr(newDim));
+        continue;
+      }
+
+      // Case 3 : The tensor cast shape is dynamic and init tensor result shape
+      // is dynamic. Use the dynamic value from the init tensor op.
+      newMixedSizes.push_back(currDim);
+    }
+
+    rewriter.replaceOpWithNewOp<InitTensorOp>(castOp, newMixedSizes,
+                                              resultType.getElementType());
+    return success();
+  }
+};
+
 } // namespace
 
 void InitTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<FoldInitTensorWithDimOp, FoldInitTensorWithExtractSliceOp,
+  results.add<FoldInitTensorWithTensorCastOp, FoldInitTensorWithDimOp,
+              FoldInitTensorWithExtractSliceOp,
               FoldInitTensorWithTensorReshapeOp<tensor::ExpandShapeOp>,
               FoldInitTensorWithTensorReshapeOp<tensor::CollapseShapeOp>,
               ReplaceStaticShapeDims>(context);
@@ -1608,7 +1698,7 @@ struct EraseDeadLinalgOp : public OpInterfaceRewritePattern<LinalgOp> {
   }
 };
 
-struct FoldTensorCastOp : public OpInterfaceRewritePattern<LinalgOp> {
+struct FoldTensorCastProducerOp : public OpInterfaceRewritePattern<LinalgOp> {
   using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
   LogicalResult matchAndRewrite(LinalgOp op,
@@ -1664,6 +1754,63 @@ struct FoldTensorCastOp : public OpInterfaceRewritePattern<LinalgOp> {
   }
 };
 
+/// Fold LinalgOps with `tensor.cast` consumer if the `tensor.cast` has
+/// result that is more static than the linalg op.
+struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
+  using OpRewritePattern<tensor::CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    if (!tensor::canFoldIntoProducerOp(castOp))
+      return failure();
+    auto linalgOp = castOp.source().getDefiningOp<LinalgOp>();
+    if (!linalgOp)
+      return failure();
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(linalgOp);
+
+    Location loc = linalgOp.getLoc();
+    OpResult resultValue = castOp.source().cast<OpResult>();
+    unsigned resultNumber = resultValue.getResultNumber();
+    auto resultType = castOp->getResult(0).getType().cast<RankedTensorType>();
+    // Replace the `outs` for the result with a `tensor.cast`. This cast is now
+    // going from a more dynamic shape to a less dynamic shape. If the producer
+    // for this cast, i.e. producer of the out operand, is also an operation
+    // that folds with tensor.cast consumer (like this pattern), the cast will
+    // continue to propagate as far up the stack as it can go.
+    OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
+    Value newOperand =
+        rewriter.create<tensor::CastOp>(loc, resultType, outOperand->get());
+    SmallVector<Value> newOperands = linalgOp.getInputOperands();
+    SmallVector<Value> outputOperands = linalgOp.getOutputOperands();
+    outputOperands[resultNumber] = newOperand;
+    newOperands.append(outputOperands.begin(), outputOperands.end());
+
+    SmallVector<Type> resultTypes(linalgOp->result_type_begin(),
+                                  linalgOp->result_type_end());
+    resultTypes[resultNumber] = resultType;
+    Operation *newOp = linalgOp.clone(rewriter, loc, resultTypes, newOperands);
+
+    if (!resultValue.hasOneUse()) {
+      SmallVector<Value> results(newOp->result_begin(), newOp->result_end());
+      // Create a tensor.cast operation back to the original type.
+      Value castBack = rewriter.create<tensor::CastOp>(
+          loc, resultValue.getType(), newOp->getResult(resultNumber));
+      results[resultNumber] = castBack;
+      // Replace all uses except the use in the cast op that is matched by the
+      // pattern. Note that this cast is from a more static shape to a more
+      // dynamic shape. These are expected to be pulled into their consumers.
+      rewriter.replaceOpWithIf(linalgOp, results,
+                               [&castOp](OpOperand &use) -> bool {
+                                 return use.getOwner() != castOp.getOperation();
+                               });
+    }
+    rewriter.replaceOp(castOp, newOp->getResult(resultNumber));
+    return success();
+  }
+};
+
 } // namespace
 
 #define LINALGOP_FOLDERS(XXX)                                                  \
@@ -1684,7 +1831,8 @@ LINALGOP_FOLDERS(GenericOp)
 
 void LinalgDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<EraseDeadLinalgOp, FoldTensorCastOp>(getContext());
+  results.add<EraseDeadLinalgOp, FoldTensorCastConsumerOp,
+              FoldTensorCastProducerOp>(getContext());
 }
 
 Operation *LinalgDialect::materializeConstant(OpBuilder &builder,
