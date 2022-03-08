@@ -320,3 +320,18 @@ func @generalize_elemwise_mul(%lhs : tensor<4x8xf32>, %rhs : tensor<4x8xf32>, %o
 
 // CHECK-LABEL: @generalize_elemwise_mul
 // CHECK:        = arith.mulf
+
+// -----
+
+// Verifies pointwise ops support rank zero input tensors
+func @generalize_elemwise_rank_zero(%lhs : tensor<f32>, %rhs : tensor<f32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<sub>}
+                              ins(%lhs, %rhs: tensor<f32>, tensor<f32>)
+                              outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_rank_zero
+// CHECK:       linalg.generic
+// CHECK-SAME:  iterator_types = ["parallel", "parallel"]
+// CHECK:        = arith.subf
