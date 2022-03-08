@@ -471,6 +471,7 @@ std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
   case ScalarFnKind::Type:
     return std::string("TypeFn");
   }
+  llvm_unreachable("unsupported function kind");
 }
 
 //===----------------------------------------------------------------------===//
