@@ -57,6 +57,7 @@ class StructType;
 } // namespace mlir
 
 namespace cir {
+class CIRGenCXXABI;
 class CIRGenModule;
 
 /// This class organizes the cross-module state that is used while lowering
@@ -65,6 +66,7 @@ class CIRGenTypes {
   clang::ASTContext &Context;
   mlir::OpBuilder &Builder;
   CIRGenModule &CGM;
+  CIRGenCXXABI &TheCXXABI;
 
   llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
 
@@ -80,6 +82,7 @@ public:
   clang::ASTContext &getContext() const { return Context; }
   mlir::MLIRContext &getMLIRContext() const;
 
+  CIRGenCXXABI &getCXXABI() const { return TheCXXABI; }
   /// ConvertType - Convert type T into a mlir::Type.
   mlir::Type ConvertType(clang::QualType T);
 

@@ -15,7 +15,8 @@ using namespace clang;
 using namespace cir;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &cgm)
-    : Context(cgm.getASTContext()), Builder(cgm.getBuilder()), CGM{cgm} {}
+    : Context(cgm.getASTContext()), Builder(cgm.getBuilder()), CGM{cgm},
+      TheCXXABI(cgm.getCXXABI()) {}
 CIRGenTypes::~CIRGenTypes() = default;
 
 std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
