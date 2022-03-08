@@ -11,7 +11,6 @@ if (MLIR_ENABLE_ROCM_CONVERSIONS)
     IRReader
     linker
     MCParser
-    MLIRExecutionEngine
     AMDGPUAsmParser
     AMDGPUCodeGen
     AMDGPUDesc
