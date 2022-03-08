@@ -865,8 +865,16 @@ struct LinalgTileAndFuseTensorOpsPattern : public RewritePattern {
       LinalgTilingAndFusionOptions options,
       LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1);
+
+  /// `matchAndRewrite` implementation that returns the significant transformed
+  /// pieces of IR.
+  FailureOr<TileLoopNest>
+  returningMatchAndRewrite(Operation *op, PatternRewriter &rewriter) const;
+
   LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override;
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(op, rewriter);
+  }
 
 private:
   /// LinalgTransformMarker handles special attribute manipulations.

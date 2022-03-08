@@ -549,7 +549,8 @@ mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
     : RewritePattern(opName, benefit, context), filter(std::move(f)),
       options(std::move(options)) {}
 
-LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
+FailureOr<mlir::linalg::TileLoopNest>
+mlir::linalg::LinalgTileAndFuseTensorOpsPattern::returningMatchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp rootOp = dyn_cast<LinalgOp>(op);
   if (!rootOp)
@@ -604,7 +605,7 @@ LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
   // Apply the filter if specified.
   for (LinalgOp linalgOp : tileLoopNest->getAllTiledAndFusedOps())
     filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
-  return success();
+  return tileLoopNest;
 }
 
 /// Linalg generic interchange pattern.
