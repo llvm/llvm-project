@@ -19,6 +19,7 @@ add_clang_library(clangCIR
   CIRRecordLayoutBuilder.cpp
   ItaniumCXXABI.cpp
   LowerToLLVM.cpp
+  TargetInfo.cpp
 
   DEPENDS
   MLIRCIROpsIncGen

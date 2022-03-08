@@ -14,10 +14,11 @@
 #ifndef LLVM_CLANG_LIB_CIR_TARGETINFO_H
 #define LLVM_CLANG_LIB_CIR_TARGETINFO_H
 
+#include "ABIInfo.h"
+
 #include <memory>
 
 namespace cir {
-class ABIInfo;
 
 /// TargetCIRGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so on.
