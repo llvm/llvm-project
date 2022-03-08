@@ -765,7 +765,8 @@ Error RewriteInstance::run() {
 
   if (Error E = discoverStorage())
     return E;
-  readSpecialSections();
+  if (Error E = readSpecialSections())
+    return E;
   adjustCommandLineOptions();
   discoverFileObjects();
 
@@ -1540,7 +1541,7 @@ ArrayRef<uint8_t> RewriteInstance::getLSDAData() {
 
 uint64_t RewriteInstance::getLSDAAddress() { return LSDASection->getAddress(); }
 
-void RewriteInstance::readSpecialSections() {
+Error RewriteInstance::readSpecialSections() {
   NamedRegionTimer T("readSpecialSections", "read special sections",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
 
@@ -1555,6 +1556,8 @@ void RewriteInstance::readSpecialSections() {
 
     // Only register sections with names.
     if (!SectionName.empty()) {
+      if (Error E = Section.getContents().takeError())
+        return E;
       BC->registerSection(Section);
       LLVM_DEBUG(
           dbgs() << "BOLT-DEBUG: registering section " << SectionName << " @ 0x"
@@ -1633,6 +1636,7 @@ void RewriteInstance::readSpecialSections() {
 
   // Read .dynamic/PT_DYNAMIC.
   readELFDynamic();
+  return Error::success();
 }
 
 void RewriteInstance::adjustCommandLineOptions() {
