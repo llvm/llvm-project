@@ -124,6 +124,11 @@ public:
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
+  /// GetFunctionType - Get the LLVM function type for \arg Info.
+  mlir::FunctionType GetFunctionType(const CIRGenFunctionInfo &Info);
+
+  mlir::FunctionType GetFunctionType(clang::GlobalDecl GD);
+
   const CIRGenFunctionInfo &arrangeGlobalDeclaration(clang::GlobalDecl GD);
 
   /// Free functions are functions that are compatible with an ordinary C
