@@ -311,6 +311,12 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
             SpillFIs[MI.getOperand(0).getIndex()]) {
           MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
         }
+        // FIXME: Need to update expression to locate lane of VGPR to which the
+        // SGPR was spilled.
+        if (MI.isDebugDef() && MI.getDebugOperand(0).isFI() &&
+            SpillFIs[MI.getDebugOperand(0).getIndex()]) {
+          MI.getDebugOperand(0).ChangeToRegister(Register(), false /*isDef*/);
+        }
       }
     }
 
