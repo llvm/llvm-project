@@ -1635,8 +1635,7 @@ Error RewriteInstance::readSpecialSections() {
   parseSDTNotes();
 
   // Read .dynamic/PT_DYNAMIC.
-  readELFDynamic();
-  return Error::success();
+  return readELFDynamic();
 }
 
 void RewriteInstance::adjustCommandLineOptions() {
@@ -5098,7 +5097,7 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
 }
 
 template <typename ELFT>
-void RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
+Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
   const ELFFile<ELFT> &Obj = File->getELFFile();
 
   using Elf_Phdr = typename ELFFile<ELFT>::Elf_Phdr;
@@ -5117,11 +5116,12 @@ void RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
     outs() << "BOLT-INFO: static input executable detected\n";
     // TODO: static PIE executable might have dynamic header
     BC->IsStaticExecutable = true;
-    return;
+    return Error::success();
   }
 
-  assert(DynamicPhdr->p_memsz == DynamicPhdr->p_filesz &&
-         "dynamic section sizes should match");
+  if (DynamicPhdr->p_memsz != DynamicPhdr->p_filesz)
+    return createStringError(errc::executable_format_error,
+                             "dynamic section sizes should match");
 
   // Go through all dynamic entries to locate entries of interest.
   typename ELFT::DynRange DynamicEntries =
@@ -5165,6 +5165,7 @@ void RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
     PLTRelocationsAddress.reset();
     PLTRelocationsSize = 0;
   }
+  return Error::success();
 }
 
 uint64_t RewriteInstance::getNewFunctionAddress(uint64_t OldAddress) {
