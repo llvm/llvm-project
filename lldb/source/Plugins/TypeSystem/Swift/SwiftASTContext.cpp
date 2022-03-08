@@ -8099,10 +8099,14 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
     // checked that DWARF debug info for this module actually exists
     // and there is no good mechanism to do so ahead of time.
     // We do know that we never load the stdlib from DWARF though.
-    LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
-               "\"Imported\" module %s via SwiftDWARFImporterDelegate "
-               "(no Swift AST or Clang module found)",
-               toplevel.AsCString());
+    HEALTH_LOG_PRINTF(
+        "Missing Swift module or Clang module found for \"%s\""
+            ", \"imported\" via SwiftDWARFImporterDelegate. Hint: %s",
+        toplevel.AsCString(),
+        swift_ast_context.GetTriple().isOSDarwin()
+            ? "Register Swift modules with the linker using -add_ast_path."
+            : "Swift modules can be wrapped in object containers using "
+              "-module-wrap and linked.");
 
     if (toplevel.GetStringRef() == swift::STDLIB_NAME)
       swift_module = nullptr;
