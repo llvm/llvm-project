@@ -273,9 +273,9 @@ void elf::addReservedSymbols() {
 
 static OutputSection *findSection(StringRef name, unsigned partition = 1) {
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *sec = dyn_cast<OutputSection>(cmd))
-      if (sec->name == name && sec->partition == partition)
-        return sec;
+    if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      if (osd->osec.name == name && osd->osec.partition == partition)
+        return &osd->osec;
   return nullptr;
 }
 
@@ -708,9 +708,10 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
 // don't create a section symbol for that section.
 template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   for (SectionCommand *cmd : script->sectionCommands) {
-    auto *sec = dyn_cast<OutputSection>(cmd);
-    if (!sec)
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    if (!osd)
       continue;
+    OutputSection *sec = &osd->osec;
     auto i = llvm::find_if(sec->commands, [](SectionCommand *cmd) {
       if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
         return !isd->sections.empty();
@@ -974,8 +975,8 @@ static unsigned getSectionRank(const OutputSection &osec) {
 
 static bool compareSections(const SectionCommand *aCmd,
                             const SectionCommand *bCmd) {
-  const OutputSection *a = cast<OutputSection>(aCmd);
-  const OutputSection *b = cast<OutputSection>(bCmd);
+  const OutputSection *a = &cast<OutputDesc>(aCmd)->osec;
+  const OutputSection *b = &cast<OutputDesc>(bCmd)->osec;
 
   if (a->sortRank != b->sortRank)
     return a->sortRank < b->sortRank;
@@ -1106,13 +1107,15 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 // The more branches in getSectionRank that match, the more similar they are.
 // Since each branch corresponds to a bit flag, we can just use
 // countLeadingZeros.
-static int getRankProximityAux(OutputSection *a, OutputSection *b) {
-  return countLeadingZeros(a->sortRank ^ b->sortRank);
+static int getRankProximityAux(const OutputSection &a, const OutputSection &b) {
+  return countLeadingZeros(a.sortRank ^ b.sortRank);
 }
 
 static int getRankProximity(OutputSection *a, SectionCommand *b) {
-  auto *sec = dyn_cast<OutputSection>(b);
-  return (sec && sec->hasInputSections) ? getRankProximityAux(a, sec) : -1;
+  auto *osd = dyn_cast<OutputDesc>(b);
+  return (osd && osd->osec.hasInputSections)
+             ? getRankProximityAux(*a, osd->osec)
+             : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -1141,7 +1144,7 @@ static bool shouldSkip(SectionCommand *cmd) {
 static SmallVectorImpl<SectionCommand *>::iterator
 findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
               SmallVectorImpl<SectionCommand *>::iterator e) {
-  OutputSection *sec = cast<OutputSection>(*e);
+  OutputSection *sec = &cast<OutputDesc>(*e)->osec;
 
   // Find the first element that has as close a rank as possible.
   auto i = std::max_element(b, e, [=](SectionCommand *a, SectionCommand *b) {
@@ -1149,9 +1152,9 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   });
   if (i == e)
     return e;
-  auto foundSec = dyn_cast<OutputSection>(*i);
-  if (!foundSec)
+  if (!isa<OutputDesc>(*i))
     return e;
+  auto foundSec = &cast<OutputDesc>(*i)->osec;
 
   // Consider all existing sections with the same proximity.
   int proximity = getRankProximity(sec, *i);
@@ -1165,17 +1168,17 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     // resemble the behavior of GNU ld.
     sortRank = std::max(sortRank, foundSec->sortRank);
   for (; i != e; ++i) {
-    auto *curSec = dyn_cast<OutputSection>(*i);
-    if (!curSec || !curSec->hasInputSections)
+    auto *curSecDesc = dyn_cast<OutputDesc>(*i);
+    if (!curSecDesc || !curSecDesc->osec.hasInputSections)
       continue;
-    if (getRankProximity(sec, curSec) != proximity ||
-        sortRank < curSec->sortRank)
+    if (getRankProximity(sec, curSecDesc) != proximity ||
+        sortRank < curSecDesc->osec.sortRank)
       break;
   }
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
-    auto *os = dyn_cast<OutputSection>(cmd);
-    return os && os->hasInputSections;
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    return osd && osd->osec.hasInputSections;
   };
   auto j =
       std::find_if(std::make_reverse_iterator(i), std::make_reverse_iterator(b),
@@ -1412,8 +1415,8 @@ template <class ELFT> void Writer<ELFT>::sortInputSections() {
   DenseMap<const InputSectionBase *, int> order = buildSectionOrder();
   maybeShuffle(order);
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *sec = dyn_cast<OutputSection>(cmd))
-      sortSection(*sec, order);
+    if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      sortSection(osd->osec, order);
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
@@ -1429,13 +1432,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   sortInputSections();
 
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *osec = dyn_cast<OutputSection>(cmd))
-      osec->sortRank = getSectionRank(*osec);
+    if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      osd->osec.sortRank = getSectionRank(osd->osec);
   if (!script->hasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.
-    auto isSection = [](SectionCommand *cmd) {
-      return isa<OutputSection>(cmd);
-    };
+    auto isSection = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
     std::stable_sort(
         llvm::find_if(script->sectionCommands, isSection),
         llvm::find_if(llvm::reverse(script->sectionCommands), isSection).base(),
@@ -1492,8 +1493,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto i = script->sectionCommands.begin();
   auto e = script->sectionCommands.end();
   auto nonScriptI = std::find_if(i, e, [](SectionCommand *cmd) {
-    if (auto *sec = dyn_cast<OutputSection>(cmd))
-      return sec->sectionIndex == UINT32_MAX;
+    if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      return osd->osec.sectionIndex == UINT32_MAX;
     return false;
   });
 
@@ -1513,13 +1514,13 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 
   while (nonScriptI != e) {
     auto pos = findOrphanPos(i, nonScriptI);
-    OutputSection *orphan = cast<OutputSection>(*nonScriptI);
+    OutputSection *orphan = &cast<OutputDesc>(*nonScriptI)->osec;
 
     // As an optimization, find all sections with the same sort rank
     // and insert them with one rotate.
     unsigned rank = orphan->sortRank;
     auto end = std::find_if(nonScriptI + 1, e, [=](SectionCommand *cmd) {
-      return cast<OutputSection>(cmd)->sortRank != rank;
+      return cast<OutputDesc>(cmd)->osec.sortRank != rank;
     });
     std::rotate(pos, nonScriptI, end);
     nonScriptI = end;
@@ -1668,11 +1669,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // If addrExpr is set, the address may not be a multiple of the alignment.
   // Warn because this is error-prone.
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *os = dyn_cast<OutputSection>(cmd))
-      if (os->addr % os->alignment != 0)
-        warn("address (0x" + Twine::utohexstr(os->addr) + ") of section " +
-             os->name + " is not a multiple of alignment (" +
-             Twine(os->alignment) + ")");
+    if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
+      OutputSection *osec = &osd->osec;
+      if (osec->addr % osec->alignment != 0)
+        warn("address (0x" + Twine::utohexstr(osec->addr) + ") of section " +
+             osec->name + " is not a multiple of alignment (" +
+             Twine(osec->alignment) + ")");
+    }
 }
 
 // If Input Sections have been shrunk (basic block sections) then
@@ -1819,8 +1822,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!config->relocatable) {
     addStartEndSymbols();
     for (SectionCommand *cmd : script->sectionCommands)
-      if (auto *sec = dyn_cast<OutputSection>(cmd))
-        addStartStopSymbols(*sec);
+      if (auto *osd = dyn_cast<OutputDesc>(cmd))
+        addStartStopSymbols(osd->osec);
   }
 
   // Add _DYNAMIC symbol. Unlike GNU gold, our _DYNAMIC symbol has no type.
@@ -1988,7 +1991,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Create a list of OutputSections, assign sectionIndex, and populate
   // in.shStrTab.
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *osec = dyn_cast<OutputSection>(cmd)) {
+    if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
+      OutputSection *osec = &osd->osec;
       outputSections.push_back(osec);
       osec->sectionIndex = outputSections.size();
       osec->shName = in.shStrTab->addString(osec->name);

@@ -2690,8 +2690,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
     for (SectionCommand *cmd : script->sectionCommands)
-      if (auto *sec = dyn_cast<OutputSection>(cmd))
-        sec->finalizeInputSections();
+      if (auto *osd = dyn_cast<OutputDesc>(cmd))
+        osd->osec.finalizeInputSections();
     llvm::erase_if(inputSections, [](InputSectionBase *s) {
       return isa<MergeInputSection>(s);
     });
