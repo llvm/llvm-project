@@ -4424,6 +4424,19 @@ LogicalResult spirv::PtrAccessChainOp::verify() {
   return verifyAccessChain(*this, indices());
 }
 
+//===----------------------------------------------------------------------===//
+// spv.VectorTimesScalarOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::VectorTimesScalarOp::verify() {
+  if (vector().getType() != getType())
+    return emitOpError("vector operand and result type mismatch");
+  auto scalarType = getType().cast<VectorType>().getElementType();
+  if (scalar().getType() != scalarType)
+    return emitOpError("scalar operand and result element type match");
+  return success();
+}
+
 // TableGen'erated operation interfaces for querying versions, extensions, and
 // capabilities.
 #include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.cpp.inc"
