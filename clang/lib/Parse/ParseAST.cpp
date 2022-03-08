@@ -155,6 +155,9 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     P.Initialize();
     Parser::DeclGroupPtrTy ADecl;
     Sema::ModuleImportState ImportState;
+    EnterExpressionEvaluationContext PotentiallyEvaluated(
+        S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
     for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
          AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
       // If we got a null return and something *was* parsed, ignore it.  This
