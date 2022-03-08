@@ -12,6 +12,7 @@
 
 #include "CIRGenModule.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
@@ -71,13 +72,25 @@ using llvm::ScopedHashTableScope;
 using llvm::SmallVector;
 using llvm::StringRef;
 
+static CIRGenCXXABI *createCXXABI(CIRGenModule &CGM) {
+  switch (CGM.getASTContext().getCXXABIKind()) {
+  case TargetCXXABI::GenericItanium:
+    return CreateItaniumCXXABI(CGM);
+  default:
+    llvm_unreachable("invalid C++ ABI kind");
+  }
+}
+
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &CGO)
     : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
       codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
                             builder.getUnknownLoc())},
-      target(astCtx.getTargetInfo()), genTypes{*this} {}
+      target(astCtx.getTargetInfo()),
+      ABI(createCXXABI(*this)), genTypes{*this} {}
+
+CIRGenModule::~CIRGenModule() {}
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
   const SourceManager &SM = astCtx.getSourceManager();
