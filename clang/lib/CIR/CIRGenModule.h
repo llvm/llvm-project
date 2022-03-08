@@ -35,6 +35,7 @@
 namespace cir {
 
 class CIRGenCXXABI;
+class TargetCIRGenInfo;
 
 /// Implementation of a CIR/MLIR emission from Clang AST.
 ///
@@ -74,6 +75,7 @@ private:
   const clang::TargetInfo &target;
 
   std::unique_ptr<CIRGenCXXABI> ABI;
+
   /// Per-module type mapping from clang AST to CIR.
   CIRGenTypes genTypes;
 
@@ -87,6 +89,8 @@ private:
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *CurCGF = nullptr;
+
+  mutable std::unique_ptr<TargetCIRGenInfo> TheTargetCIRGenInfo;
 
   /// -------
   /// Goto
@@ -214,6 +218,9 @@ public:
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
   CIRGenCXXABI &getCXXABI() const { return *ABI; }
+
+  // TODO: this obviously overlaps with
+  const TargetCIRGenInfo &getTargetCIRGenInfo();
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation SLoc);
