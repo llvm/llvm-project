@@ -453,6 +453,8 @@ public:
   bool MayBeEmittedEagerly(const clang::ValueDecl *D);
 
   void verifyModule();
+
+  mlir::Value GetGlobalValue(const clang::Decl *D);
 };
 } // namespace cir
 

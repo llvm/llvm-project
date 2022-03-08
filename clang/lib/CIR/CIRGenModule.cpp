@@ -1658,3 +1658,6 @@ void CIRGenModule::verifyModule() {
   if (failed(mlir::verify(theModule)))
     theModule.emitError("module verification error");
 }
+mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
+  return symbolTable.lookup(D);
+}
