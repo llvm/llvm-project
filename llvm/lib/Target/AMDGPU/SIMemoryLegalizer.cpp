@@ -1360,7 +1360,9 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       // to initiate writeback of any dirty cache lines of earlier writes by the
       // same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
       // writeback has completed.
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2));
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
+        // Set SC bits to indicate system scope.
+        .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
       // Followed by same as GFX7, which will ensure the necessary "S_WAITCNT
       // vmcnt(0)" needed by the "BUFFER_WBL2".
       Changed = true;

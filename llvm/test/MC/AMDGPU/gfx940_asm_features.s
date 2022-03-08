@@ -149,6 +149,33 @@ v_mov_b64 v[2:3], 1
 // GFX940: v_mov_b64_e32 v[2:3], 0x64              ; encoding: [0xff,0x70,0x04,0x7e,0x64,0x00,0x00,0x00]
 v_mov_b64 v[2:3], 0x64
 
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_wbl2 sc1                         ; encoding: [0x00,0x80,0xa0,0xe0,0x00,0x00,0x00,0x00]
+buffer_wbl2 sc1
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_wbl2 sc0                         ; encoding: [0x00,0x40,0xa0,0xe0,0x00,0x00,0x00,0x00]
+buffer_wbl2 sc0
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_wbl2 sc0 sc1                     ; encoding: [0x00,0xc0,0xa0,0xe0,0x00,0x00,0x00,0x00]
+buffer_wbl2 sc0 sc1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: buffer_inv sc0                          ; encoding: [0x00,0x40,0xa4,0xe0,0x00,0x00,0x00,0x00]
+buffer_inv sc0
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: buffer_inv sc1                          ; encoding: [0x00,0x80,0xa4,0xe0,0x00,0x00,0x00,0x00]
+buffer_inv sc1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: buffer_inv sc0 sc1                      ; encoding: [0x00,0xc0,0xa4,0xe0,0x00,0x00,0x00,0x00]
+buffer_inv sc0 sc1
+
 // NOT-GFX940: error: invalid operand for instruction
 // GFX940: buffer_atomic_swap v5, off, s[8:11], s3 sc0 ; encoding: [0x00,0x40,0x00,0xe1,0x00,0x05,0x02,0x03]
 buffer_atomic_swap v5, off, s[8:11], s3 sc0
@@ -224,3 +251,28 @@ global_atomic_min_f64 v[0:1], v[2:3], off sc1
 // GFX10:  error: instruction not supported on this GPU
 // GFX940: global_atomic_max_f64 v[0:1], v[2:3], off sc1 ; encoding: [0x00,0x80,0x44,0xdf,0x00,0x02,0x7f,0x00]
 global_atomic_max_f64 v[0:1], v[2:3], off sc1
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_atomic_add_f32 v4, off, s[8:11], s3 sc1 ; encoding: [0x00,0x80,0x34,0xe1,0x00,0x04,0x02,0x03]
+buffer_atomic_add_f32 v4, off, s[8:11], s3 sc1
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_atomic_pk_add_f16 v4, off, s[8:11], s3 sc1 ; encoding: [0x00,0x80,0x38,0xe1,0x00,0x04,0x02,0x03]
+buffer_atomic_pk_add_f16 v4, off, s[8:11], s3 sc1
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_atomic_add_f64 v[4:5], off, s[8:11], s3 sc1 ; encoding: [0x00,0x80,0x3c,0xe1,0x00,0x04,0x02,0x03]
+buffer_atomic_add_f64 v[4:5], off, s[8:11], s3 sc1
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_atomic_max_f64 v[4:5], off, s[8:11], s3 sc1 ; encoding: [0x00,0x80,0x44,0xe1,0x00,0x04,0x02,0x03]
+buffer_atomic_max_f64 v[4:5], off, s[8:11], s3 sc1
+
+// GFX90A: error: invalid operand for instruction
+// GFX10:  error: instruction not supported on this GPU
+// GFX940: buffer_atomic_min_f64 v[4:5], off, s[8:11], s3 sc1 ; encoding: [0x00,0x80,0x40,0xe1,0x00,0x04,0x02,0x03]
+buffer_atomic_min_f64 v[4:5], off, s[8:11], s3 sc1
