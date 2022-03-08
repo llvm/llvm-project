@@ -219,3 +219,29 @@ func @umod_scalar(%arg: i32) -> i32 {
   return %0 : i32
 }
 
+// -----
+//===----------------------------------------------------------------------===//
+// spv.VectorTimesScalar
+//===----------------------------------------------------------------------===//
+
+func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) -> vector<4xf32> {
+  // CHECK: spv.VectorTimesScalar %{{.+}}, %{{.+}} : (vector<4xf32>, f32) -> vector<4xf32>
+  %0 = spv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f32) -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f16) -> vector<4xf32> {
+  // expected-error @+1 {{scalar operand and result element type match}}
+  %0 = spv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f16) -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) -> vector<3xf32> {
+  // expected-error @+1 {{vector operand and result type mismatch}}
+  %0 = spv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f32) -> vector<3xf32>
+  return %0 : vector<3xf32>
+}

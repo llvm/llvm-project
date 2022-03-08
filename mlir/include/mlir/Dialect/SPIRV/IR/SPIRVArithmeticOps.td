@@ -564,6 +564,40 @@ def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv",
 
 // -----
 
+def SPV_VectorTimesScalarOp : SPV_Op<"VectorTimesScalar", [NoSideEffect]> {
+  let summary = "Scale a floating-point vector.";
+
+  let description = [{
+    Result Type must be a vector of floating-point type.
+
+     The type of Vector must be the same as Result Type. Each component of
+    Vector is multiplied by Scalar.
+
+    Scalar must have the same type as the Component Type in Result Type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.VectorTimesScalar %vector, %scalar : vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    VectorOfLengthAndType<[2, 3, 4], [SPV_Float]>:$vector,
+    SPV_Float:$scalar
+  );
+
+  let results = (outs
+    VectorOfLengthAndType<[2, 3, 4], [SPV_Float]>:$result
+  );
+
+  let assemblyFormat = "operands attr-dict `:` `(` type(operands) `)` `->` type($result)";
+}
+
+// -----
+
 def SPV_UModOp : SPV_ArithmeticBinaryOp<"UMod",
                                         SPV_Integer,
                                         [UnsignedOp, UsableInSpecConstantOp]> {
