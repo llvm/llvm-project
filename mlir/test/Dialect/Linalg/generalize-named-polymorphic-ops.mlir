@@ -335,3 +335,16 @@ func @generalize_elemwise_rank_zero(%lhs : tensor<f32>, %rhs : tensor<f32>, %out
 // CHECK:       linalg.generic
 // CHECK-SAME:  iterator_types = ["parallel", "parallel"]
 // CHECK:        = arith.subf
+
+// -----
+
+// Verifies the fun attribute controls the binary function used.
+func @generalize_copy(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.copy ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_copy
+//       CHECK:   linalg.generic
+//  CHECK-NEXT:   ^bb0(%[[I:[0-9a-zA-Z]*]]: f32
+//  CHECK-NEXT:   linalg.yield %[[I]]
