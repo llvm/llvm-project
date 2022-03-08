@@ -122,6 +122,10 @@ public:
   /// memory representation is usually i8 or i32, depending on the target.
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
+
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionType(clang::CanQual<clang::FunctionProtoType> Ty);
+
   /// "Arrange" the LLVM information for a call or type with the given
   /// signature. This is largely an internal method; other clients should use
   /// one of the above routines, which ultimatley defer to this.
