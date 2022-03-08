@@ -184,6 +184,10 @@ public:
   /// Removes identifiers in the column range [idStart, idLimit).
   void removeIdRange(unsigned idStart, unsigned idLimit) override;
 
+  /// Returns true if both the spaces are equal i.e. if both spaces have the
+  /// same number of identifiers of each kind.
+  bool isEqual(const PresburgerLocalSpace &other) const;
+
   void print(llvm::raw_ostream &os) const;
   void dump() const;
 
@@ -197,10 +201,6 @@ protected:
   PresburgerLocalSpace(unsigned numDims, unsigned numSymbols,
                        unsigned numLocals)
       : PresburgerSpace(Set, /*numDomain=*/0, numDims, numSymbols, numLocals) {}
-
-  /// Returns true if both the spaces are equal i.e. if both spaces have the
-  /// same number of identifiers of each kind.
-  bool isEqual(const PresburgerLocalSpace &other) const;
 };
 
 } // namespace presburger
