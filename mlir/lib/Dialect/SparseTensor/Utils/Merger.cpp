@@ -29,6 +29,10 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case kInvariant:
     assert(x == -1u && y == -1u && v);
     break;
+  case kIndex:
+    assert(x != -1u && y == -1u && !v);
+    index = x;
+    break;
   case kAbsF:
   case kCeilF:
   case kFloorF:
@@ -46,6 +50,7 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     assert(x != -1u && y == -1u && v);
@@ -230,6 +235,7 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     return isSingleCondition(t, tensorExps[e].children.e0);
@@ -273,6 +279,8 @@ static const char *kindToOpSymbol(Kind kind) {
     return "tensor";
   case kInvariant:
     return "invariant";
+  case kIndex:
+    return "index";
   case kAbsF:
     return "abs";
   case kCeilF:
@@ -291,6 +299,7 @@ static const char *kindToOpSymbol(Kind kind) {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     return "cast";
@@ -340,6 +349,9 @@ void Merger::dumpExp(unsigned e) const {
   case kInvariant:
     llvm::dbgs() << "invariant";
     break;
+  case kIndex:
+    llvm::dbgs() << "index_" << tensorExps[e].index;
+    break;
   case kAbsF:
   case kCeilF:
   case kFloorF:
@@ -353,6 +365,7 @@ void Merger::dumpExp(unsigned e) const {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     llvm::dbgs() << kindToOpSymbol(tensorExps[e].kind) << " ";
@@ -420,16 +433,20 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   Kind kind = tensorExps[e].kind;
   switch (kind) {
   case kTensor:
-  case kInvariant: {
+  case kInvariant:
+  case kIndex: {
     // Either the index is really used in the tensor expression, or it is
-    // set to the undefined index in that dimension. An invariant expression
-    // and a truly dynamic sparse output tensor are set to a synthetic tensor
-    // with undefined indices only to ensure the iteration space is not
-    // skipped as a result of their contents.
+    // set to the undefined index in that dimension. An invariant expression,
+    // a proper index value, and a truly dynamic sparse output tensor are set
+    // to a synthetic tensor with undefined indices only to ensure the
+    // iteration space is not skipped as a result of their contents.
     unsigned s = addSet();
-    unsigned t = kind == kTensor ? tensorExps[e].tensor : syntheticTensor;
-    if (hasSparseOut && t == outTensor)
-      t = syntheticTensor;
+    unsigned t = syntheticTensor;
+    if (kind == kTensor) {
+      t = tensorExps[e].tensor;
+      if (hasSparseOut && t == outTensor)
+        t = syntheticTensor;
+    }
     latSets[s].push_back(addLat(t, i, e));
     return s;
   }
@@ -446,6 +463,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     // A zero preserving operation (viz. f(0) = 0, [Bik96,Ch5]) maps the
@@ -569,6 +587,11 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   Operation *def = v.getDefiningOp();
   if (def->getBlock() != &op.region().front())
     return addExp(kInvariant, v);
+  // Construct index operations.
+  if (def->getNumOperands() == 0) {
+    if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
+      return addExp(kIndex, indexOp.dim());
+  }
   // Construct unary operations if subexpression can be built.
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
@@ -598,6 +621,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kCastS, e, v);
       if (isa<arith::ExtUIOp>(def))
         return addExp(kCastU, e, v);
+      if (isa<arith::IndexCastOp>(def))
+        return addExp(kCastIdx, e, v);
       if (isa<arith::TruncIOp>(def))
         return addExp(kTruncI, e, v);
       if (isa<arith::BitcastOp>(def))
@@ -654,6 +679,7 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
   switch (tensorExps[e].kind) {
   case kTensor:
   case kInvariant:
+  case kIndex:
     llvm_unreachable("unexpected non-op");
   // Unary ops.
   case kAbsF:
@@ -686,6 +712,8 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     return rewriter.create<arith::ExtSIOp>(loc, inferType(e, v0), v0);
   case kCastU:
     return rewriter.create<arith::ExtUIOp>(loc, inferType(e, v0), v0);
+  case kCastIdx:
+    return rewriter.create<arith::IndexCastOp>(loc, inferType(e, v0), v0);
   case kTruncI:
     return rewriter.create<arith::TruncIOp>(loc, inferType(e, v0), v0);
   case kBitCast:
