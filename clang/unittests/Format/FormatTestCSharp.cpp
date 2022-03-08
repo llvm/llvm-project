@@ -1078,6 +1078,26 @@ public class SaleItem
                MicrosoftStyle);
 }
 
+TEST_F(FormatTestCSharp, DefaultLiteral) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(
+      "T[] InitializeArray<T>(int length, T initialValue = default) {}", Style);
+  verifyFormat("System.Numerics.Complex fillValue = default;", Style);
+  verifyFormat("int Value { get } = default;", Style);
+  verifyFormat("int Value { get } = default!;", Style);
+  verifyFormat(R"(//
+public record Person {
+  public string GetInit { get; init; } = default!;
+};)",
+               Style);
+  verifyFormat(R"(//
+public record Person {
+  public string GetSet { get; set; } = default!;
+};)",
+               Style);
+}
+
 TEST_F(FormatTestCSharp, CSharpSpaces) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
   Style.SpaceBeforeSquareBrackets = false;
