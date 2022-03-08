@@ -123,6 +123,11 @@ public:
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
+  /// Free functions are functions that are compatible with an ordinary C
+  /// function pointer type.
+  const CIRGenFunctionInfo &
+  arrangeFunctionDeclaration(const clang::FunctionDecl *FD);
+
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(clang::CanQual<clang::FunctionProtoType> Ty);
 

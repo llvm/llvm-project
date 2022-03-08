@@ -1,6 +1,6 @@
+#include "CIRGenTypes.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
-#include "CIRGenTypes.h"
 #include "CallingConv.h"
 #include "TargetInfo.h"
 
@@ -139,7 +139,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     case BuiltinType::SveBoolx2:
     case BuiltinType::SveBoolx4:
     case BuiltinType::SveCount:
-        llvm_unreachable("NYI");
+      llvm_unreachable("NYI");
     case BuiltinType::Void:
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
@@ -472,6 +472,29 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   assert(erased && "Not in set?");
 
   return *FI;
+}
+
+/// Arrange the argument and result information for the declaration or
+/// definition of the given function.
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
+  assert(!dyn_cast<CXXMethodDecl>(FD) && "NYI");
+
+  auto FTy = FD->getType()->getCanonicalTypeUnqualified();
+
+  assert(isa<FunctionType>(FTy));
+  // TODO: setCUDAKernelCallingConvention
+
+  // When declaring a function without a prototype, always use a non-variadic
+  // type.
+  if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
+    return arrangeCIRFunctionInfo(noProto->getReturnType(),
+                                  /*instanceMethod=*/false,
+                                  /*chainCall=*/false, std::nullopt,
+                                  noProto->getExtInfo(), {}, RequiredArgs::All);
+  }
+
+  return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
 }
 
 /// Adds the formal parameters in FPT to the given prefix. If any parameter in
