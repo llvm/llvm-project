@@ -17,6 +17,7 @@ add_clang_library(clangCIR
   CIRGenModule.cpp
   CIRGenTypes.cpp
   CIRRecordLayoutBuilder.cpp
+  ItaniumCXXABI.cpp
   LowerToLLVM.cpp
 
   DEPENDS
