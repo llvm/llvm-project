@@ -286,11 +286,11 @@ FileID headerResponsible(FileID ID, const SourceManager &SM,
 
 } // namespace
 
-ReferencedLocations findReferencedLocations(const SourceManager &SM,
-                                            ASTContext &Ctx, Preprocessor &PP,
+ReferencedLocations findReferencedLocations(ASTContext &Ctx, Preprocessor &PP,
                                             const syntax::TokenBuffer *Tokens) {
   trace::Span Tracer("IncludeCleaner::findReferencedLocations");
   ReferencedLocations Result;
+  const auto &SM = Ctx.getSourceManager();
   ReferencedLocationCrawler Crawler(Result, SM);
   Crawler.TraverseAST(Ctx);
   if (Tokens)
@@ -299,8 +299,8 @@ ReferencedLocations findReferencedLocations(const SourceManager &SM,
 }
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
-  return findReferencedLocations(AST.getSourceManager(), AST.getASTContext(),
-                                 AST.getPreprocessor(), &AST.getTokens());
+  return findReferencedLocations(AST.getASTContext(), AST.getPreprocessor(),
+                                 &AST.getTokens());
 }
 
 ReferencedFiles
