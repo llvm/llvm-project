@@ -244,6 +244,17 @@ func @fold_init_tensor_with_slice
 
 // -----
 
+func @fold_init_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
+  %0 = linalg.init_tensor [%arg0, 12] : tensor<?x12xf32>
+  %1 = tensor.cast %0 : tensor<?x12xf32> to tensor<1x12xf32>
+  return %1 : tensor<1x12xf32>
+}
+//      CHECK: func @fold_init_tensor_with_cast(%[[ARG0:.+]]: index)
+//      CHECK:   %[[T0:.+]] = linalg.init_tensor [1, 12] : tensor<1x12xf32>
+//      CHECK:   return %[[T0]] : tensor<1x12xf32>
+
+// -----
+
 #accesses = [
   affine_map<(i, j) -> (i, j)>
 ]
@@ -747,3 +758,23 @@ func @multi_insert_pad_into_fill_mismatch(%input: tensor<7x123x124xf32>, %a: ten
   %2 = tensor.insert_slice %pad into %1   [0, 0, 256]      [8, 128, 128] [1, 1, 1] : tensor<8x128x128xf32> into tensor<8x384x384xf32>
   return %2: tensor<8x384x384xf32>
 }
+
+// -----
+
+func @fold_linalgop_with_cast_consumer(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
+    %arg2 : tensor<?x?xf32>) -> (tensor<4x8xf32>, tensor<?x?xf32>) {
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<4x8xf32>
+  return %1, %0 : tensor<4x8xf32>, tensor<?x?xf32>
+}
+//       CHECK: func @fold_linalgop_with_cast_consumer(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+//       CHECK:  %[[OUT_CAST:.+]] = tensor.cast %[[ARG2]] : tensor<?x?xf32> to tensor<4x8xf32>
+//       CHECK:  %[[MATMUL:.+]] = linalg.matmul
+//  CHECK-SAME:      ins(%[[ARG0]], %[[ARG1]] :
+//  CHECK-SAME:      outs(%[[OUT_CAST]] :
+//       CHECK:  %[[RESULT_CAST:.+]] = tensor.cast %[[MATMUL]]
+//       CHECK:  return %[[MATMUL]], %[[RESULT_CAST]]

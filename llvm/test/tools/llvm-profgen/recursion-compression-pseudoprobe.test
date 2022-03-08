@@ -1,15 +1,15 @@
 ; Firstly test uncompression(--compress-recursion=0)
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-UNCOMPRESS
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-hot-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --profile-summary-hot-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe-nommap.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-hot-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe-nommap.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --profile-summary-hot-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe-nommap.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-context-depth=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-context-depth=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-CTX-DEPTH
 
 

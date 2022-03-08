@@ -187,7 +187,11 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
       if arg_def.operand_def.kind == OperandKind.SCALAR:
         indexing_maps.append(scalar_map)
       if arg_def.operand_def.is_tensor():
-        indexing_maps.append(tensor_map)
+        idx = arg_def.operand_def.registered_index
+        if idx < len(ins) and ShapedType(ins[idx].type).rank == 0:
+          indexing_maps.append(scalar_map)
+        else:
+          indexing_maps.append(tensor_map)
     indexing_maps_attr = ArrayAttr.get(
         [AffineMapAttr.get(am) for am in indexing_maps])
 

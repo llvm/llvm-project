@@ -1215,8 +1215,11 @@ public:
   /// Make the given symbol an absolute with the given address (must not already
   /// be absolute).
   ///
-  /// Symbol size, linkage, scope, and callability, and liveness will be left
-  /// unchanged. Symbol offset will be reset to 0.
+  /// The symbol's size, linkage, and callability, and liveness will be left
+  /// unchanged, and its offset will be reset to 0.
+  ///
+  /// If the symbol was external then its scope will be set to local, otherwise
+  /// it will be left unchanged.
   void makeAbsolute(Symbol &Sym, orc::ExecutorAddr Address) {
     assert(!Sym.isAbsolute() && "Symbol is already absolute");
     if (Sym.isExternal()) {
@@ -1225,6 +1228,7 @@ public:
       assert(Sym.getOffset() == 0 && "External is not at offset 0");
       ExternalSymbols.erase(&Sym);
       Sym.getAddressable().setAbsolute(true);
+      Sym.setScope(Scope::Local);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
       Section &Sec = Sym.getBlock().getSection();
