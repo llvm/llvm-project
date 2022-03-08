@@ -235,6 +235,15 @@ typedef basic_string_view<char32_t> u32string_view;
 typedef basic_string_view<wchar_t>  wstring_view;
 #endif
 
+// TODO: This is a workaround for some vendors to carry a downstream diff to accept `nullptr` in
+//       string_view constructors. This can be refactored when this exact form isn't needed anymore.
+template <class _Traits>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline size_t __char_traits_length_checked(const typename _Traits::char_type* __s) _NOEXCEPT {
+  // This needs to be a single statement for C++11 constexpr
+  return _LIBCPP_ASSERT(__s != nullptr, "null pointer passed to non-null argument of char_traits<...>::length"), _Traits::length(__s);
+}
+
 template<class _CharT, class _Traits>
 class
     _LIBCPP_PREFERRED_NAME(string_view)
