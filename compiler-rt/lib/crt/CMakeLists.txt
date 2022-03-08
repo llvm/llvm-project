@@ -1,35 +1,3 @@
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.13.4)
-
-  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  project(CompilerRTCRT C)
-  set(COMPILER_RT_STANDALONE_BUILD TRUE)
-  set(COMPILER_RT_CRT_STANDALONE_BUILD TRUE)
-
-  set(COMPILER_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
-
-  set(LLVM_COMMON_CMAKE_UTILS "${COMPILER_RT_SOURCE_DIR}/../cmake")
-
-  # Add path for custom modules
-  list(INSERT CMAKE_MODULE_PATH 0
-    "${COMPILER_RT_SOURCE_DIR}/cmake"
-    "${COMPILER_RT_SOURCE_DIR}/cmake/Modules"
-    "${LLVM_COMMON_CMAKE_UTILS}"
-    "${LLVM_COMMON_CMAKE_UTILS}/Modules"
-    )
-
-  include(base-config-ix)
-  include(CompilerRTUtils)
-
-  load_llvm_config()
-  construct_compiler_rt_default_triple()
-
-  include(SetPlatformToolchainTools)
-  include(AddCompilerRT)
-endif()
-
-include(crt-config-ix)
-
 add_compiler_rt_component(crt)
 
 function(check_cxx_section_exists section output)
