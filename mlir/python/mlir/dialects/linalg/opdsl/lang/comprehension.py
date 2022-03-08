@@ -686,6 +686,17 @@ class OpInterfaceDef:
 
 ContractionOpInterface = OpInterfaceDef("LinalgContractionOpInterface")
 ConvolutionOpInterface = OpInterfaceDef("LinalgConvolutionOpInterface")
+FillOpInterface = OpInterfaceDef("LinalgFillOpInterface")
+
+
+class OpDefinitionDef:
+  """A method that an op implements."""
+
+  def __init__(self, def_name: str):
+    self.def_name = def_name
+
+
+Canonicalizer = OpDefinitionDef("hasCanonicalizer")
 
 
 class OpMetadataDef(YAMLObject):
@@ -698,6 +709,7 @@ class OpMetadataDef(YAMLObject):
     self.cpp_class_name = cpp_class_name if cpp_class_name is not None else name
     self.doc = doc
     self.implements = []  # type: List[OpInterfaceDef]
+    self.defines = []  # type: List[OpDefinitionsDef]
 
   def to_yaml_custom_dict(self):
     d = dict(
@@ -707,6 +719,8 @@ class OpMetadataDef(YAMLObject):
     )
     if self.implements:
       d["implements"] = [intr.cpp_name for intr in self.implements]
+    if self.defines:
+      d["defines"] = [defi.def_name for defi in self.defines]
     return d
 
 
