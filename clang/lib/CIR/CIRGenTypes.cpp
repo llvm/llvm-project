@@ -474,6 +474,17 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   return *FI;
 }
 
+const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
+  assert(!dyn_cast<ObjCMethodDecl>(GD.getDecl()) &&
+         "This is reported as a FIXME in codegen");
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
+
+  assert(!isa<CXXConstructorDecl>(GD.getDecl()) &&
+         !isa<CXXDestructorDecl>(GD.getDecl()) && "NYI");
+
+  return arrangeFunctionDeclaration(FD);
+}
+
 /// Arrange the argument and result information for the declaration or
 /// definition of the given function.
 const CIRGenFunctionInfo &
