@@ -46813,15 +46813,18 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
     return DAG.getBitcast(VT, FPLogic);
   }
 
-  // The vector ISA for FP predicates is incomplete before AVX, so converting
-  // COMIS* to CMPS* may not be a win before AVX.
-  // TODO: Check types/predicates to see if they are available with SSE/SSE2.
-  if (!Subtarget.hasAVX() || VT != MVT::i1 || N0.getOpcode() != ISD::SETCC ||
-      !N0.hasOneUse() || !N1.hasOneUse())
+  if (VT != MVT::i1 || N0.getOpcode() != ISD::SETCC || !N0.hasOneUse() ||
+      !N1.hasOneUse())
     return SDValue();
 
   ISD::CondCode CC0 = cast<CondCodeSDNode>(N0.getOperand(2))->get();
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+
+  // The vector ISA for FP predicates is incomplete before AVX, so converting
+  // COMIS* to CMPS* may not be a win before AVX.
+  if (!Subtarget.hasAVX() &&
+      !(cheapX86FSETCC_SSE(CC0) && cheapX86FSETCC_SSE(CC1)))
+    return SDValue();
 
   // Convert scalar FP compares and logic to vector compares (COMIS* to CMPS*)
   // and vector logic:
