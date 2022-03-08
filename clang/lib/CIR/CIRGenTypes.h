@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "ABIInfo.h"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -68,6 +69,11 @@ class CIRGenTypes {
   CIRGenModule &CGM;
   CIRGenCXXABI &TheCXXABI;
 
+  // This should not be moved earlier, since its initialization depends on some
+  // of the previous reference members being already initialized
+  const ABIInfo &TheABIInfo;
+
+  /// Contains the CIR type for any converted RecordDecl
   llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
 
 public:
@@ -82,7 +88,9 @@ public:
   clang::ASTContext &getContext() const { return Context; }
   mlir::MLIRContext &getMLIRContext() const;
 
+  const ABIInfo &getABIInfo() const { return TheABIInfo; }
   CIRGenCXXABI &getCXXABI() const { return TheCXXABI; }
+
   /// ConvertType - Convert type T into a mlir::Type.
   mlir::Type ConvertType(clang::QualType T);
 
