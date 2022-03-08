@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/iostat.h"
@@ -977,15 +978,124 @@ private:
   }
 
   void genFIR(const Fortran::parser::ComputedGotoStmt &stmt) {
-    TODO(toLocation(), "ComputedGotoStmt lowering");
+    Fortran::lower::StatementContext stmtCtx;
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    mlir::Value selectExpr =
+        createFIRExpr(toLocation(),
+                      Fortran::semantics::GetExpr(
+                          std::get<Fortran::parser::ScalarIntExpr>(stmt.t)),
+                      stmtCtx);
+    stmtCtx.finalize();
+    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<mlir::Block *> blockList;
+    int64_t index = 0;
+    for (Fortran::parser::Label label :
+         std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
+      indexList.push_back(++index);
+      blockList.push_back(blockOfLabel(eval, label));
+    }
+    blockList.push_back(eval.nonNopSuccessor().block); // default
+    builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
+                                   blockList);
   }
 
   void genFIR(const Fortran::parser::ArithmeticIfStmt &stmt) {
-    TODO(toLocation(), "ArithmeticIfStmt lowering");
+    Fortran::lower::StatementContext stmtCtx;
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    mlir::Value expr = createFIRExpr(
+        toLocation(),
+        Fortran::semantics::GetExpr(std::get<Fortran::parser::Expr>(stmt.t)),
+        stmtCtx);
+    stmtCtx.finalize();
+    mlir::Type exprType = expr.getType();
+    mlir::Location loc = toLocation();
+    if (exprType.isSignlessInteger()) {
+      // Arithmetic expression has Integer type.  Generate a SelectCaseOp
+      // with ranges {(-inf:-1], 0=default, [1:inf)}.
+      MLIRContext *context = builder->getContext();
+      llvm::SmallVector<mlir::Attribute> attrList;
+      llvm::SmallVector<mlir::Value> valueList;
+      llvm::SmallVector<mlir::Block *> blockList;
+      attrList.push_back(fir::UpperBoundAttr::get(context));
+      valueList.push_back(builder->createIntegerConstant(loc, exprType, -1));
+      blockList.push_back(blockOfLabel(eval, std::get<1>(stmt.t)));
+      attrList.push_back(fir::LowerBoundAttr::get(context));
+      valueList.push_back(builder->createIntegerConstant(loc, exprType, 1));
+      blockList.push_back(blockOfLabel(eval, std::get<3>(stmt.t)));
+      attrList.push_back(mlir::UnitAttr::get(context)); // 0 is the "default"
+      blockList.push_back(blockOfLabel(eval, std::get<2>(stmt.t)));
+      builder->create<fir::SelectCaseOp>(loc, expr, attrList, valueList,
+                                         blockList);
+      return;
+    }
+    // Arithmetic expression has Real type.  Generate
+    //   sum = expr + expr  [ raise an exception if expr is a NaN ]
+    //   if (sum < 0.0) goto L1 else if (sum > 0.0) goto L3 else goto L2
+    auto sum = builder->create<mlir::arith::AddFOp>(loc, expr, expr);
+    auto zero = builder->create<mlir::arith::ConstantOp>(
+        loc, exprType, builder->getFloatAttr(exprType, 0.0));
+    auto cond1 = builder->create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::OLT, sum, zero);
+    mlir::Block *elseIfBlock =
+        builder->getBlock()->splitBlock(builder->getInsertionPoint());
+    genFIRConditionalBranch(cond1, blockOfLabel(eval, std::get<1>(stmt.t)),
+                            elseIfBlock);
+    startBlock(elseIfBlock);
+    auto cond2 = builder->create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::OGT, sum, zero);
+    genFIRConditionalBranch(cond2, blockOfLabel(eval, std::get<3>(stmt.t)),
+                            blockOfLabel(eval, std::get<2>(stmt.t)));
   }
 
   void genFIR(const Fortran::parser::AssignedGotoStmt &stmt) {
-    TODO(toLocation(), "AssignedGotoStmt lowering");
+    // Program requirement 1990 8.2.4 -
+    //
+    //   At the time of execution of an assigned GOTO statement, the integer
+    //   variable must be defined with the value of a statement label of a
+    //   branch target statement that appears in the same scoping unit.
+    //   Note that the variable may be defined with a statement label value
+    //   only by an ASSIGN statement in the same scoping unit as the assigned
+    //   GOTO statement.
+
+    mlir::Location loc = toLocation();
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    const Fortran::lower::pft::SymbolLabelMap &symbolLabelMap =
+        eval.getOwningProcedure()->assignSymbolLabelMap;
+    const Fortran::semantics::Symbol &symbol =
+        *std::get<Fortran::parser::Name>(stmt.t).symbol;
+    auto selectExpr =
+        builder->create<fir::LoadOp>(loc, getSymbolAddress(symbol));
+    auto iter = symbolLabelMap.find(symbol);
+    if (iter == symbolLabelMap.end()) {
+      // Fail for a nonconforming program unit that does not have any ASSIGN
+      // statements.  The front end should check for this.
+      mlir::emitError(loc, "(semantics issue) no assigned goto targets");
+      exit(1);
+    }
+    auto labelSet = iter->second;
+    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<mlir::Block *> blockList;
+    auto addLabel = [&](Fortran::parser::Label label) {
+      indexList.push_back(label);
+      blockList.push_back(blockOfLabel(eval, label));
+    };
+    // Add labels from an explicit list.  The list may have duplicates.
+    for (Fortran::parser::Label label :
+         std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
+      if (labelSet.count(label) &&
+          std::find(indexList.begin(), indexList.end(), label) ==
+              indexList.end()) { // ignore duplicates
+        addLabel(label);
+      }
+    }
+    // Absent an explicit list, add all possible label targets.
+    if (indexList.empty())
+      for (auto &label : labelSet)
+        addLabel(label);
+    // Add a nop/fallthrough branch to the switch for a nonconforming program
+    // unit that violates the program requirement above.
+    blockList.push_back(eval.nonNopSuccessor().block); // default
+    builder->create<fir::SelectOp>(loc, selectExpr, indexList, blockList);
   }
 
   void genFIR(const Fortran::parser::DoConstruct &doConstruct) {
@@ -1403,7 +1513,12 @@ private:
   }
 
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
-    TODO(toLocation(), "AssignStmt lowering");
+    const Fortran::semantics::Symbol &symbol =
+        *std::get<Fortran::parser::Name>(stmt.t).symbol;
+    mlir::Location loc = toLocation();
+    mlir::Value labelValue = builder->createIntegerConstant(
+        loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
+    builder->create<fir::StoreOp>(loc, labelValue, getSymbolAddress(symbol));
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
