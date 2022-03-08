@@ -3221,9 +3221,9 @@ __money_put<_CharT>::__format(char_type* __mb, char_type*& __mi, char_type*& __m
                               int __fd)
 {
     __me = __mb;
-    for (unsigned __p = 0; __p < 4; ++__p)
+    for (char __p : __pat.field)
     {
-        switch (__pat.field[__p])
+        switch (__p)
         {
         case money_base::none:
             __mi = __me;
