@@ -1220,7 +1220,30 @@ private:
   }
 
   void genFIR(const Fortran::parser::AssociateConstruct &) {
-    TODO(toLocation(), "AssociateConstruct lowering");
+    Fortran::lower::StatementContext stmtCtx;
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
+      if (auto *stmt = e.getIf<Fortran::parser::AssociateStmt>()) {
+        if (eval.lowerAsUnstructured())
+          maybeStartBlock(e.block);
+        localSymbols.pushScope();
+        for (const Fortran::parser::Association &assoc :
+             std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
+          Fortran::semantics::Symbol &sym =
+              *std::get<Fortran::parser::Name>(assoc.t).symbol;
+          const Fortran::lower::SomeExpr &selector =
+              *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
+          localSymbols.addSymbol(sym, genAssociateSelector(selector, stmtCtx));
+        }
+      } else if (e.getIf<Fortran::parser::EndAssociateStmt>()) {
+        if (eval.lowerAsUnstructured())
+          maybeStartBlock(e.block);
+        stmtCtx.finalize();
+        localSymbols.popScope();
+      } else {
+        genFIR(e);
+      }
+    }
   }
 
   void genFIR(const Fortran::parser::BlockConstruct &blockConstruct) {
@@ -1571,10 +1594,6 @@ private:
     genFIRBranch(getEval().controlSuccessor->block);
   }
 
-  void genFIR(const Fortran::parser::AssociateStmt &) {
-    TODO(toLocation(), "AssociateStmt lowering");
-  }
-
   void genFIR(const Fortran::parser::CaseStmt &) {
     TODO(toLocation(), "CaseStmt lowering");
   }
@@ -1585,10 +1604,6 @@ private:
 
   void genFIR(const Fortran::parser::ElseStmt &) {
     TODO(toLocation(), "ElseStmt lowering");
-  }
-
-  void genFIR(const Fortran::parser::EndAssociateStmt &) {
-    TODO(toLocation(), "EndAssociateStmt lowering");
   }
 
   void genFIR(const Fortran::parser::EndDoStmt &) {
@@ -1604,7 +1619,9 @@ private:
   }
 
   // Nop statements - No code, or code is generated at the construct level.
+  void genFIR(const Fortran::parser::AssociateStmt &) {}     // nop
   void genFIR(const Fortran::parser::ContinueStmt &) {}      // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}  // nop
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}   // nop
   void genFIR(const Fortran::parser::EndIfStmt &) {}         // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
