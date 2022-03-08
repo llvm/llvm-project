@@ -85,6 +85,9 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
           });
     }
 
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
+
     // Return the Value of the dynamic size of the tensor at dimension
     // `idx`. Asserts that the shape is dynamic at that `idx.
     Value getDynamicSize(unsigned idx) {
