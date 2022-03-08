@@ -4915,143 +4915,69 @@ struct AANoCaptureImpl : public AANoCapture {
       return "assumed not-captured-maybe-returned";
     return "assumed-captured";
   }
-};
 
-/// Attributor-aware capture tracker.
-struct AACaptureUseTracker final : public CaptureTracker {
-
-  /// Create a capture tracker that can lookup in-flight abstract attributes
-  /// through the Attributor \p A.
-  ///
-  /// If a use leads to a potential capture, \p CapturedInMemory is set and the
-  /// search is stopped. If a use leads to a return instruction,
-  /// \p CommunicatedBack is set to true and \p CapturedInMemory is not changed.
-  /// If a use leads to a ptr2int which may capture the value,
-  /// \p CapturedInInteger is set. If a use is found that is currently assumed
-  /// "no-capture-maybe-returned", the user is added to the \p PotentialCopies
-  /// set. All values in \p PotentialCopies are later tracked as well. For every
-  /// explored use we decrement \p RemainingUsesToExplore. Once it reaches 0,
-  /// the search is stopped with \p CapturedInMemory and \p CapturedInInteger
-  /// conservatively set to true.
-  AACaptureUseTracker(Attributor &A, AANoCapture &NoCaptureAA,
-                      const AAIsDead &IsDeadAA, AANoCapture::StateType &State,
-                      SmallSetVector<Value *, 4> &PotentialCopies,
-                      unsigned &RemainingUsesToExplore)
-      : A(A), NoCaptureAA(NoCaptureAA), IsDeadAA(IsDeadAA), State(State),
-        PotentialCopies(PotentialCopies),
-        RemainingUsesToExplore(RemainingUsesToExplore) {}
-
-  /// Determine if \p V maybe captured. *Also updates the state!*
-  bool valueMayBeCaptured(const Value *V) {
-    if (V->getType()->isPointerTy()) {
-      PointerMayBeCaptured(V, this);
-    } else {
-      State.indicatePessimisticFixpoint();
-    }
-    return State.isAssumed(AANoCapture::NO_CAPTURE_MAYBE_RETURNED);
-  }
-
-  /// See CaptureTracker::tooManyUses().
-  void tooManyUses() override {
-    State.removeAssumedBits(AANoCapture::NO_CAPTURE);
-  }
-
-  bool isDereferenceableOrNull(Value *O, const DataLayout &DL) override {
-    if (CaptureTracker::isDereferenceableOrNull(O, DL))
-      return true;
-    const auto &DerefAA = A.getAAFor<AADereferenceable>(
-        NoCaptureAA, IRPosition::value(*O), DepClassTy::OPTIONAL);
-    return DerefAA.getAssumedDereferenceableBytes();
-  }
-
-  /// See CaptureTracker::captured(...).
-  bool captured(const Use *U) override {
-    Instruction *UInst = cast<Instruction>(U->getUser());
-    LLVM_DEBUG(dbgs() << "Check use: " << *U->get() << " in " << *UInst
-                      << "\n");
-
-    // Because we may reuse the tracker multiple times we keep track of the
-    // number of explored uses ourselves as well.
-    if (RemainingUsesToExplore-- == 0) {
-      LLVM_DEBUG(dbgs() << " - too many uses to explore!\n");
-      return isCapturedIn(/* Memory */ true, /* Integer */ true,
-                          /* Return */ true);
-    }
+  /// Check the use \p U and update \p State accordingly. Return true if we
+  /// should continue to update the state.
+  bool checkUse(Attributor &A, AANoCapture::StateType &State, const Use &U,
+                bool &Follow) {
+    Instruction *UInst = cast<Instruction>(U.getUser());
+    LLVM_DEBUG(dbgs() << "[AANoCapture] Check use: " << *U.get() << " in "
+                      << *UInst << "\n");
 
     // Deal with ptr2int by following uses.
     if (isa<PtrToIntInst>(UInst)) {
       LLVM_DEBUG(dbgs() << " - ptr2int assume the worst!\n");
-      return valueMayBeCaptured(UInst);
+      return isCapturedIn(State, /* Memory */ true, /* Integer */ true,
+                          /* Return */ true);
     }
 
-    // For stores we check if we can follow the value through memory or not.
-    if (auto *SI = dyn_cast<StoreInst>(UInst)) {
-      if (SI->isVolatile())
-        return isCapturedIn(/* Memory */ true, /* Integer */ false,
-                            /* Return */ false);
-      bool UsedAssumedInformation = false;
-      if (!AA::getPotentialCopiesOfStoredValue(
-              A, *SI, PotentialCopies, NoCaptureAA, UsedAssumedInformation))
-        return isCapturedIn(/* Memory */ true, /* Integer */ false,
-                            /* Return */ false);
-      // Not captured directly, potential copies will be checked.
-      return isCapturedIn(/* Memory */ false, /* Integer */ false,
+    // For stores we already checked if we can follow them, if they make it
+    // here we give up.
+    if (isa<StoreInst>(UInst))
+      return isCapturedIn(State, /* Memory */ true, /* Integer */ false,
                           /* Return */ false);
-    }
 
     // Explicitly catch return instructions.
     if (isa<ReturnInst>(UInst)) {
-      if (UInst->getFunction() == NoCaptureAA.getAnchorScope())
-        return isCapturedIn(/* Memory */ false, /* Integer */ false,
+      if (UInst->getFunction() == getAnchorScope())
+        return isCapturedIn(State, /* Memory */ false, /* Integer */ false,
                             /* Return */ true);
-      return isCapturedIn(/* Memory */ true, /* Integer */ true,
+      return isCapturedIn(State, /* Memory */ true, /* Integer */ true,
                           /* Return */ true);
     }
 
     // For now we only use special logic for call sites. However, the tracker
     // itself knows about a lot of other non-capturing cases already.
     auto *CB = dyn_cast<CallBase>(UInst);
-    if (!CB || !CB->isArgOperand(U))
-      return isCapturedIn(/* Memory */ true, /* Integer */ true,
+    if (!CB || !CB->isArgOperand(&U))
+      return isCapturedIn(State, /* Memory */ true, /* Integer */ true,
                           /* Return */ true);
 
-    unsigned ArgNo = CB->getArgOperandNo(U);
+    unsigned ArgNo = CB->getArgOperandNo(&U);
     const IRPosition &CSArgPos = IRPosition::callsite_argument(*CB, ArgNo);
     // If we have a abstract no-capture attribute for the argument we can use
     // it to justify a non-capture attribute here. This allows recursion!
     auto &ArgNoCaptureAA =
-        A.getAAFor<AANoCapture>(NoCaptureAA, CSArgPos, DepClassTy::REQUIRED);
+        A.getAAFor<AANoCapture>(*this, CSArgPos, DepClassTy::REQUIRED);
     if (ArgNoCaptureAA.isAssumedNoCapture())
-      return isCapturedIn(/* Memory */ false, /* Integer */ false,
+      return isCapturedIn(State, /* Memory */ false, /* Integer */ false,
                           /* Return */ false);
     if (ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
-      addPotentialCopy(*CB);
-      return isCapturedIn(/* Memory */ false, /* Integer */ false,
+      Follow = true;
+      return isCapturedIn(State, /* Memory */ false, /* Integer */ false,
                           /* Return */ false);
     }
 
     // Lastly, we could not find a reason no-capture can be assumed so we don't.
-    return isCapturedIn(/* Memory */ true, /* Integer */ true,
+    return isCapturedIn(State, /* Memory */ true, /* Integer */ true,
                         /* Return */ true);
   }
 
-  /// Register \p CS as potential copy of the value we are checking.
-  void addPotentialCopy(CallBase &CB) { PotentialCopies.insert(&CB); }
-
-  /// See CaptureTracker::shouldExplore(...).
-  bool shouldExplore(const Use *U) override {
-    // Check liveness and ignore droppable users.
-    bool UsedAssumedInformation = false;
-    return !U->getUser()->isDroppable() &&
-           !A.isAssumedDead(*U, &NoCaptureAA, &IsDeadAA,
-                            UsedAssumedInformation);
-  }
-
-  /// Update the state according to \p CapturedInMem, \p CapturedInInt, and
-  /// \p CapturedInRet, then return the appropriate value for use in the
-  /// CaptureTracker::captured() interface.
-  bool isCapturedIn(bool CapturedInMem, bool CapturedInInt,
-                    bool CapturedInRet) {
+  /// Update \p State according to \p CapturedInMem, \p CapturedInInt, and
+  /// \p CapturedInRet, then return true if we should continue updating the
+  /// state.
+  static bool isCapturedIn(AANoCapture::StateType &State, bool CapturedInMem,
+                           bool CapturedInInt, bool CapturedInRet) {
     LLVM_DEBUG(dbgs() << " - captures [Mem " << CapturedInMem << "|Int "
                       << CapturedInInt << "|Ret " << CapturedInRet << "]\n");
     if (CapturedInMem)
@@ -5060,27 +4986,8 @@ struct AACaptureUseTracker final : public CaptureTracker {
       State.removeAssumedBits(AANoCapture::NOT_CAPTURED_IN_INT);
     if (CapturedInRet)
       State.removeAssumedBits(AANoCapture::NOT_CAPTURED_IN_RET);
-    return !State.isAssumed(AANoCapture::NO_CAPTURE_MAYBE_RETURNED);
+    return State.isAssumed(AANoCapture::NO_CAPTURE_MAYBE_RETURNED);
   }
-
-private:
-  /// The attributor providing in-flight abstract attributes.
-  Attributor &A;
-
-  /// The abstract attribute currently updated.
-  AANoCapture &NoCaptureAA;
-
-  /// The abstract liveness state.
-  const AAIsDead &IsDeadAA;
-
-  /// The state currently updated.
-  AANoCapture::StateType &State;
-
-  /// Set of potential copies of the tracked value.
-  SmallSetVector<Value *, 4> &PotentialCopies;
-
-  /// Global counter to limit the number of explored uses.
-  unsigned &RemainingUsesToExplore;
 };
 
 ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
@@ -5094,7 +5001,6 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
       isArgumentPosition() ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
   assert(F && "Expected a function!");
   const IRPosition &FnPos = IRPosition::function(*F);
-  const auto &IsDeadAA = A.getAAFor<AAIsDead>(*this, FnPos, DepClassTy::NONE);
 
   AANoCapture::StateType T;
 
@@ -5146,21 +5052,27 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     }
   }
 
-  // Use the CaptureTracker interface and logic with the specialized tracker,
-  // defined in AACaptureUseTracker, that can look at in-flight abstract
-  // attributes and directly updates the assumed state.
-  SmallSetVector<Value *, 4> PotentialCopies;
-  unsigned RemainingUsesToExplore =
-      getDefaultMaxUsesToExploreForCaptureTracking();
-  AACaptureUseTracker Tracker(A, *this, IsDeadAA, T, PotentialCopies,
-                              RemainingUsesToExplore);
+  auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
+    const auto &DerefAA = A.getAAFor<AADereferenceable>(
+        *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
+    return DerefAA.getAssumedDereferenceableBytes();
+  };
 
-  // Check all potential copies of the associated value until we can assume
-  // none will be captured or we have to assume at least one might be.
-  unsigned Idx = 0;
-  PotentialCopies.insert(V);
-  while (T.isAssumed(NO_CAPTURE_MAYBE_RETURNED) && Idx < PotentialCopies.size())
-    Tracker.valueMayBeCaptured(PotentialCopies[Idx++]);
+  auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
+    switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
+    case UseCaptureKind::NO_CAPTURE:
+      return true;
+    case UseCaptureKind::MAY_CAPTURE:
+      return checkUse(A, T, U, Follow);
+    case UseCaptureKind::PASSTHROUGH:
+      Follow = true;
+      return true;
+    }
+    llvm_unreachable("Unexpected use capture kind!");
+  };
+
+  if (!A.checkForAllUses(UseCheck, *this, *V))
+    return indicatePessimisticFixpoint();
 
   AANoCapture::StateType &S = getState();
   auto Assumed = S.getAssumed();
