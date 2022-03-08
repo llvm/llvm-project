@@ -38,7 +38,7 @@ install(PROGRAMS
   ${CMAKE_BINARY_DIR}/bin/perf2bolt
   ${CMAKE_BINARY_DIR}/bin/llvm-boltdiff
   ${CMAKE_BINARY_DIR}/bin/llvm-bolt-heatmap
-  TYPE BIN
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
   COMPONENT bolt
   )
 add_llvm_install_targets(install-bolt DEPENDS bolt COMPONENT bolt)
