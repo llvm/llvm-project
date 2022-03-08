@@ -78,6 +78,19 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 
+def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
+                                     MIPSP8700Model,
+                                     [Feature64Bit,
+                                      FeatureStdExtI,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC,
+                                      FeatureStdExtZba,
+                                      FeatureStdExtZbb],
+                                     [TuneMIPSP8700]>;
+
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
                                       [Feature32Bit,
@@ -278,7 +291,6 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                        FeatureUnalignedVectorMem]),
                                       !listconcat(SiFiveP400TuneFeatures,
                                                   [TuneNoSinkSplatOperands])>;
-
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       !listconcat(RVA22U64Features,
