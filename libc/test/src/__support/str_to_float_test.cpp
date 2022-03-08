@@ -259,18 +259,6 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
   EXPECT_EQ(double_output_mantissa, uint64_t(0x1AC53A7E04BCDA));
   EXPECT_EQ(output_exp2, uint32_t(1089));
   EXPECT_EQ(errno, 0);
-
-  // TODO(michaelrj): Get long double support working.
-
-  // __uint128_t longDoubleOutputMantissa = 0;
-  // outputExp2 = 0;
-
-  // errno = 0;
-  // __llvm_libc::internal::simple_decimal_conversion<long double>(
-  //     "123456789012345678900", &longDoubleOutputMantissa, &outputExp2);
-  // EXPECT_EQ(longDoubleOutputMantissa, __uint128_t(0x1AC53A7E04BCDA));
-  // EXPECT_EQ(outputExp2, uint32_t(1089));
-  // EXPECT_EQ(errno, 0);
 }
 
 #if defined(LONG_DOUBLE_IS_DOUBLE)

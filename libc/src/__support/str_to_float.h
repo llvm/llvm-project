@@ -21,8 +21,6 @@ namespace __llvm_libc {
 namespace internal {
 
 template <class T> uint32_t inline leading_zeroes(T inputNumber) {
-  // TODO(michaelrj): investigate the portability of using something like
-  // __builtin_clz for specific types.
   constexpr uint32_t BITS_IN_T = sizeof(T) * 8;
   if (inputNumber == 0) {
     return BITS_IN_T;
