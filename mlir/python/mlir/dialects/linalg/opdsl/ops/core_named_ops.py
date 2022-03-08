@@ -671,6 +671,7 @@ def fill_tensor(value=ScalarDef(T1), O=TensorDef(U, output=True)):
   accesses only and is thus rank polymorphic. Numeric casting is performed on
   the value operand, promoting it to the same data type as the output.
   """
+  implements(FillOpInterface)
   O[None] = TypeFn.cast_signed(U, value)
 
 

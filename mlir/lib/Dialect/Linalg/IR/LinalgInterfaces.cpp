@@ -408,6 +408,44 @@ LogicalResult mlir::linalg::detail::verifyConvolutionInterface(Operation *op) {
   }
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// FillOpInterface implementation
+//===----------------------------------------------------------------------===//
+
+enum class MatchFillResult {
+  Success = 0,
+  NotLinalgOp,
+  WrongNumOperands,
+  NotScalarInput
+};
+
+static MatchFillResult isFillInterfaceImpl(Operation *op) {
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
+    return MatchFillResult::NotLinalgOp;
+  if (linalgOp.getNumInputs() != 1 || linalgOp.getNumOutputs() != 1)
+    return MatchFillResult::WrongNumOperands;
+
+  OpOperand *value = linalgOp.getInputOperand(0);
+  if (!linalgOp.isScalar(value))
+    return MatchFillResult::NotScalarInput;
+
+  return MatchFillResult::Success;
+}
+
+LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
+  auto res = isFillInterfaceImpl(op);
+  if (res == MatchFillResult::NotLinalgOp)
+    return op->emitError("expected a LinalgOp");
+  if (res == MatchFillResult::WrongNumOperands)
+    return op->emitError("expected op with 1 input and 1 output");
+  if (res == MatchFillResult::NotScalarInput)
+    return op->emitError("expected op with scalar input");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // StructuredOpInterface implementation
 //===----------------------------------------------------------------------===//

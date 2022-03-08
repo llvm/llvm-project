@@ -2875,6 +2875,8 @@ metadata: !LinalgOpMetadata
     Works for arbitrary ranked output tensors since the operation performs scalar
     accesses only and is thus rank polymorphic. Numeric casting is performed on
     the value operand, promoting it to the same data type as the output.
+  implements:
+  - LinalgFillOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
