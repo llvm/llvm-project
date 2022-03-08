@@ -2877,6 +2877,8 @@ metadata: !LinalgOpMetadata
     the value operand, promoting it to the same data type as the output.
   implements:
   - LinalgFillOpInterface
+  defines:
+  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig

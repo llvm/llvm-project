@@ -333,3 +333,58 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.buildUnaryFn(unary_funVal, block.getArgument(0))
 #  IMPL-NEXT:  Value [[VAL1:[a-z0-9]+]] = helper.buildBinaryFn(binary_funVal, [[VAL0]], block.getArgument(0))
 #  IMPL-NEXT:  yields.push_back([[VAL1]])
+
+# @linalg_structured_op
+# def test5(value=ScalarDef(T1), O=TensorDef(U, output=True)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   implements(FillOpInterface)
+#   defines(Canonicalizer)
+#   O[None] = TypeFn.cast(U, value)
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test5
+  cpp_class_name: Test5Op
+  doc: |-
+    Title.
+
+    Detailed description.
+  implements:
+  - LinalgFillOpInterface
+  defines:
+  - hasCanonicalizer
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: value
+    kind: scalar
+    type_var: T1
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: type
+        fn_name: cast
+        type_var: U
+        operands:
+        - !ScalarExpression
+          scalar_arg: value
+
+# ODS-LABEL:  def Test5Op : LinalgStructuredBase_Op<"test5"
+#  ODS-NEXT:  /*extraInterfaces=*/[LinalgFillOpInterface])>
+
+#       ODS:  let hasCanonicalizer = 1;

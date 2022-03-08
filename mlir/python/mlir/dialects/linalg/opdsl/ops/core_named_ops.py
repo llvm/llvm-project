@@ -672,6 +672,7 @@ def fill_tensor(value=ScalarDef(T1), O=TensorDef(U, output=True)):
   the value operand, promoting it to the same data type as the output.
   """
   implements(FillOpInterface)
+  defines(Canonicalizer)
   O[None] = TypeFn.cast_signed(U, value)
 
 
