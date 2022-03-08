@@ -2440,7 +2440,7 @@ bool Attributor::shouldSeedAttribute(AbstractAttribute &AA) {
 }
 
 ChangeStatus Attributor::rewriteFunctionSignatures(
-    SmallPtrSetImpl<Function *> &ModifiedFns) {
+    SmallSetVector<Function *, 8> &ModifiedFns) {
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
   for (auto &It : ArgumentReplacementMap) {
@@ -2624,7 +2624,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
 
     // If the old function was modified and needed to be reanalyzed, the new one
     // does now.
-    if (ModifiedFns.erase(OldFn))
+    if (ModifiedFns.remove(OldFn))
       ModifiedFns.insert(NewFn);
 
     Changed = ChangeStatus::CHANGED;
