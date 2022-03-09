@@ -278,9 +278,7 @@ add_entrypoint_object(
     atexit.h
   DEPENDS
     libc.src.__support.CPP.vector
-    libc.src.threads.mtx_init
-    libc.src.threads.mtx_lock
-    libc.src.threads.mtx_unlock
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
