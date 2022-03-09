@@ -60,6 +60,9 @@ unsigned getHostcallImplicitArgPosition();
 /// \returns The offset of the heap ptr argument from implicitarg_ptr
 unsigned getHeapPtrImplicitArgPosition();
 
+/// \returns The offset of the queue ptr argument from implicitarg_ptr
+unsigned getQueuePtrImplicitArgPosition();
+
 /// \returns Code object version.
 unsigned getAmdhsaCodeObjectVersion();
 

@@ -1043,8 +1043,9 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
 
   Offset += 72; // Reserved.
 
-  // hidden_private_base and hidden_shared_base are only used by GFX8.
-  if (ST.getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+  // hidden_private_base and hidden_shared_base are only when the subtarget has
+  // ApertureRegs.
+  if (!ST.hasApertureRegs()) {
     emitKernelArg(DL, Int32Ty, Align(4), "hidden_private_base", Offset, Args);
     emitKernelArg(DL, Int32Ty, Align(4), "hidden_shared_base", Offset, Args);
   } else
