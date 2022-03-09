@@ -10211,51 +10211,6 @@ INTERCEPTOR(int, __xuname, int size, void *utsname) {
 #define INIT___XUNAME
 #endif
 
-#if SANITIZER_INTERCEPT_TIMER
-INTERCEPTOR(int, timer_create, __sanitizer_clockid_t clockid,
-            struct sigevent *sevp, __sanitizer_timer_t *timerid) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, timer_create, clockid, sevp, timerid);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(timer_create)(clockid, sevp, timerid);
-  if (!res)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, timerid, sizeof(*timerid));
-  return res;
-}
-INTERCEPTOR(int, timer_settime, __sanitizer_timer_t timerid, int flags,
-            const void *new_value, void *old_value) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, timer_settime, timerid, flags, new_value,
-                           old_value);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(timer_settime)(timerid, flags, new_value, old_value);
-  if (!res && old_value)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, old_value, struct_itimerval_sz);
-  return res;
-}
-INTERCEPTOR(int, timer_gettime, __sanitizer_timer_t timerid, void *curr_value) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, timer_gettime, timerid, curr_value);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(timer_gettime)(timerid, curr_value);
-  if (!res)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, curr_value, struct_itimerval_sz);
-  return res;
-}
-#define INIT_TIMER \
-        COMMON_INTERCEPT_FUNCTION(timer_create); \
-        COMMON_INTERCEPT_FUNCTION(timer_settime); \
-        COMMON_INTERCEPT_FUNCTION(timer_gettime);
-#else
-#define INIT_TIMER
-#endif
-
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
@@ -10574,7 +10529,6 @@ static void InitializeCommonInterceptors() {
   INIT_SIGALTSTACK;
   INIT_UNAME;
   INIT___XUNAME;
-  INIT_TIMER;
 
   INIT___PRINTF_CHK;
 }
