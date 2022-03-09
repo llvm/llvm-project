@@ -46,6 +46,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
@@ -53,6 +54,7 @@
 #include <iterator>
 #include <list>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -451,6 +453,50 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 // header.
 class PassInstrumentationAnalysis;
 
+class MachineFunction;
+class Loop;
+
+/// Add stack entry with the pass name and the IR unit it runs on.
+class NewPassManagerPrettyStackEntry : public PrettyStackTraceEntry {
+  enum class EntryTy {
+    Module,
+    CGSCC,
+    MachineFunction,
+    Loop,
+    Value,
+  };
+
+  union {
+    Module *M;
+    MachineFunction *MF;
+    Value *V;
+    StringRef LoopName;
+    std::string CGSCCName;
+  };
+  StringRef PassName;
+  EntryTy E;
+
+public:
+  NewPassManagerPrettyStackEntry(StringRef PassName, Module &M)
+      : M(&M), PassName(PassName), E(EntryTy::Module) {}
+  NewPassManagerPrettyStackEntry(StringRef PassName, MachineFunction &MF)
+      : MF(&MF), PassName(PassName), E(EntryTy::MachineFunction) {}
+  NewPassManagerPrettyStackEntry(StringRef PassName, Value &V)
+      : V(&V), PassName(PassName), E(EntryTy::Value) {}
+  NewPassManagerPrettyStackEntry(StringRef PassName, StringRef LoopName)
+      : LoopName(LoopName), PassName(PassName), E(EntryTy::Loop) {}
+  NewPassManagerPrettyStackEntry(StringRef PassName, std::string CGSCCName)
+      : CGSCCName(CGSCCName), PassName(PassName), E(EntryTy::CGSCC) {}
+
+  ~NewPassManagerPrettyStackEntry() override {
+    if (E == EntryTy::CGSCC)
+      CGSCCName.~basic_string();
+  }
+
+  /// print - Emit information about this stack frame to OS.
+  void print(raw_ostream &OS) const override;
+};
+
 /// Manages a sequence of passes over a particular unit of IR.
 ///
 /// A pass manager contains a sequence of passes to run over a particular unit
@@ -519,6 +565,7 @@ public:
       PreservedAnalyses PassPA;
       {
         TimeTraceScope TimeScope(P->name(), IR.getName());
+        NewPassManagerPrettyStackEntry StackEntry(P->name(), IR);
         PassPA = P->run(IR, AM, ExtraArgs...);
       }
 
