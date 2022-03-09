@@ -268,19 +268,82 @@ TEST_F(TestSwiftASTContext, ApplyWorkingDir) {
   EXPECT_EQ(
       single_arg_rel_path,
       llvm::SmallString<128>("-fmodule-map-file=rel/dir/module.modulemap"));
+
+  // fmodule-file needs to handle different cases:
+  //  -fmodule-file=path/to/pcm
+  //  -fmodule-file=name=path/to/pcm
+  llvm::SmallString<128> module_file_abs_path(
+      "-fmodule-file=/some/dir/module.pcm");
+  SwiftASTContext::ApplyWorkingDir(module_file_abs_path, abs_working_dir);
+  EXPECT_EQ(module_file_abs_path,
+            llvm::SmallString<128>("-fmodule-file=/some/dir/module.pcm"));
+
+  llvm::SmallString<128> module_file_rel_path(
+      "-fmodule-file=relpath/module.pcm");
+  SwiftASTContext::ApplyWorkingDir(module_file_rel_path, abs_working_dir);
+  EXPECT_EQ(
+      module_file_rel_path,
+      llvm::SmallString<128>("-fmodule-file=/abs/dir/relpath/module.pcm"));
+
+  llvm::SmallString<128> module_file_with_name_abs_path(
+      "-fmodule-file=modulename=/some/dir/module.pcm");
+  SwiftASTContext::ApplyWorkingDir(module_file_with_name_abs_path,
+                                   abs_working_dir);
+  EXPECT_EQ(
+      module_file_with_name_abs_path,
+      llvm::SmallString<128>("-fmodule-file=modulename=/some/dir/module.pcm"));
+
+  llvm::SmallString<128> module_file_with_name_rel_path(
+      "-fmodule-file=modulename=relpath/module.pcm");
+  SwiftASTContext::ApplyWorkingDir(module_file_with_name_rel_path,
+                                   abs_working_dir);
+  EXPECT_EQ(module_file_with_name_rel_path,
+            llvm::SmallString<128>(
+                "-fmodule-file=modulename=/abs/dir/relpath/module.pcm"));
 }
 
 namespace {
-  const std::vector<std::string> duplicated_flags = {
-    "-DMACRO1", "-D", "MACRO1", "-UMACRO2", "-U", "MACRO2",
-    "-I/path1", "-I", "/path1", "-F/path2", "-F", "/path2",
-    "-fmodule-map-file=/path3", "-fmodule-map-file=/path3",
-    "-F/path2", "-F", "/path2", "-I/path1", "-I", "/path1",
-    "-UMACRO2", "-U", "MACRO2", "-DMACRO1", "-D", "MACRO1",
-  };
-  const std::vector<std::string> uniqued_flags = {
-    "-DMACRO1", "-UMACRO2", "-I/path1", "-F/path2", "-fmodule-map-file=/path3"
-  };
+const std::vector<std::string> duplicated_flags = {
+    "-DMACRO1",
+    "-D",
+    "MACRO1",
+    "-UMACRO2",
+    "-U",
+    "MACRO2",
+    "-I/path1",
+    "-I",
+    "/path1",
+    "-F/path2",
+    "-F",
+    "/path2",
+    "-fmodule-map-file=/path3",
+    "-fmodule-map-file=/path3",
+    "-F/path2",
+    "-F",
+    "/path2",
+    "-I/path1",
+    "-I",
+    "/path1",
+    "-UMACRO2",
+    "-U",
+    "MACRO2",
+    "-DMACRO1",
+    "-D",
+    "MACRO1",
+    "-fmodule-file=/path/to/pcm",
+    "-fmodule-file=/path/to/pcm",
+    "-fmodule-file=modulename=/path/to/pcm",
+    "-fmodule-file=modulename=/path/to/pcm",
+};
+const std::vector<std::string> uniqued_flags = {
+    "-DMACRO1",
+    "-UMACRO2",
+    "-I/path1",
+    "-F/path2",
+    "-fmodule-map-file=/path3",
+    "-fmodule-file=/path/to/pcm",
+    "-fmodule-file=modulename=/path/to/pcm",
+};
 } // namespace
 
 TEST(ClangArgs, UniquingCollisionWithExistingFlags) {

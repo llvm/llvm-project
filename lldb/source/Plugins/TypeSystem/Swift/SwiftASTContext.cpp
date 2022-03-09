@@ -1416,19 +1416,29 @@ bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
                                 "-isystem",
                                 "-isysroot",
                                 "-ivfsoverlay"};
+
   for (StringRef &option : options)
     if (arg.consume_front(option)) {
       prefix = option;
       return true;
     }
+
+  // We need special handling for -fmodule-file as we need to
+  // split on the final = after the module name.
+  if (arg.startswith("-fmodule-file=")) {
+    prefix = arg.substr(0, arg.rfind("=") + 1);
+    arg.consume_front(prefix);
+    return true;
+  }
+
   return false;
 }
 
 std::array<StringRef, 2> macro_flags = { "-D", "-U" };
 std::array<StringRef, 5> multi_arg_flags =
     { "-D", "-U", "-I", "-F", "-working-directory" };
-std::array<StringRef, 5> args_to_unique =
-    { "-D", "-U", "-I", "-F", "-fmodule-map-file=" };
+std::array<StringRef, 6> args_to_unique = {
+    "-D", "-U", "-I", "-F", "-fmodule-file=", "-fmodule-map-file="};
 
 bool IsMultiArgClangFlag(StringRef arg) {
   for (auto &flag : multi_arg_flags)
@@ -7366,8 +7376,8 @@ CompilerType SwiftASTContext::GetUnboundGenericType(opaque_compiler_type_t type,
     auto *nominal_type_decl = unbound_generic_type->getDecl();
     swift::GenericSignature generic_sig =
         nominal_type_decl->getGenericSignature();
-    swift::TypeArrayView<swift::GenericTypeParamType> depView 
-        = generic_sig.getGenericParams();
+    swift::TypeArrayView<swift::GenericTypeParamType> depView =
+        generic_sig.getGenericParams();
     swift::Type depTy = depView[idx];
     return ToCompilerType({nominal_type_decl->mapTypeIntoContext(depTy)
                                ->castTo<swift::ArchetypeType>()});
