@@ -21,6 +21,8 @@
 
 #define DEBUG_TYPE "fir-memref-dataflow-opt"
 
+using namespace mlir;
+
 namespace {
 
 template <typename OpT>

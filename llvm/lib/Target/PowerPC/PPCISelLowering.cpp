@@ -17773,6 +17773,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   TargetLowering::CallLoweringInfo CLI(DAG);
   EVT RetVT = Op.getValueType();
+  Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   SDValue Callee =
       DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
   bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, false);
@@ -17787,11 +17788,19 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
+
+  SDValue InChain = DAG.getEntryNode();
+  SDValue TCChain = InChain;
+  const Function &F = DAG.getMachineFunction().getFunction();
+  bool isTailCall =
+      TLI.isInTailCallPosition(DAG, Op.getNode(), TCChain) &&
+      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy());
+  if (isTailCall)
+    InChain = TCChain;
   CLI.setDebugLoc(SDLoc(Op))
-      .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, RetVT.getTypeForEVT(*DAG.getContext()),
-                    Callee, std::move(Args))
-      .setTailCall(true)
+      .setChain(InChain)
+      .setLibCallee(CallingConv::C, RetTy, Callee, std::move(Args))
+      .setTailCall(isTailCall)
       .setSExtResult(SignExtend)
       .setZExtResult(!SignExtend)
       .setIsPostTypeLegalization(true);

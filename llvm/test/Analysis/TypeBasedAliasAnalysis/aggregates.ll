@@ -1,7 +1,7 @@
-; RUN: opt < %s -tbaa -basic-aa -aa-eval -evaluate-aa-metadata \
+; RUN: opt < %s -aa-pipeline=tbaa,basic-aa -passes=aa-eval -evaluate-aa-metadata \
 ; RUN:     -print-no-aliases -print-may-aliases -disable-output 2>&1 | \
 ; RUN:     FileCheck %s
-; RUN: opt < %s -tbaa -basic-aa -gvn -S | FileCheck %s --check-prefix=OPT
+; RUN: opt < %s -aa-pipeline=tbaa,basic-aa -passes=gvn -S | FileCheck %s --check-prefix=OPT
 ;
 ; Check that TBAA handles access tags with aggregate final access types
 ; correctly.

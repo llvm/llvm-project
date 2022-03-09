@@ -42,7 +42,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   /// return.
   void handleTerminator(mlir::Operation *op,
                         llvm::ArrayRef<mlir::Value> valuesToRepl) const final {
-    auto returnOp = cast<mlir::func::ReturnOp>(op);
+    auto returnOp = llvm::cast<mlir::func::ReturnOp>(op);
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());

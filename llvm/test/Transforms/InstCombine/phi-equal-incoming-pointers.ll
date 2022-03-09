@@ -573,3 +573,69 @@ exit:
   %res = select i1 %cond2, i8 %res.phi, i8 %res.load
   ret i8 %res
 }
+
+; `swifterror` addresses are restricted to load and stores and call arguments.
+declare void @takeAddress(i8** swifterror)
+
+define i8* @test_dont_optimize_swifterror(i1 %cond, i1 %cond2, i8* %ptr) {
+; INSTCOMBINE-LABEL: @test_dont_optimize_swifterror(
+; INSTCOMBINE-NEXT:  entry:
+; INSTCOMBINE-NEXT:    [[OBJ:%.*]] = alloca swifterror i8*, align 8
+; INSTCOMBINE-NEXT:    [[OBJ2:%.*]] = alloca swifterror i8*, align 8
+; INSTCOMBINE-NEXT:    call void @takeAddress(i8** nonnull swifterror [[OBJ]])
+; INSTCOMBINE-NEXT:    call void @takeAddress(i8** nonnull swifterror [[OBJ2]])
+; INSTCOMBINE-NEXT:    store i8* [[PTR:%.*]], i8** [[OBJ]], align 8
+; INSTCOMBINE-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; INSTCOMBINE:       bb1:
+; INSTCOMBINE-NEXT:    [[RES1:%.*]] = load i8*, i8** [[OBJ]], align 8
+; INSTCOMBINE-NEXT:    br label [[EXIT:%.*]]
+; INSTCOMBINE:       bb2:
+; INSTCOMBINE-NEXT:    [[RES2:%.*]] = load i8*, i8** [[OBJ2]], align 8
+; INSTCOMBINE-NEXT:    br label [[EXIT]]
+; INSTCOMBINE:       exit:
+; INSTCOMBINE-NEXT:    [[RES_PHI:%.*]] = phi i8* [ [[RES1]], [[BB1]] ], [ [[RES2]], [[BB2]] ]
+; INSTCOMBINE-NEXT:    store i8* null, i8** [[OBJ]], align 8
+; INSTCOMBINE-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i8* [[RES_PHI]], i8* null
+; INSTCOMBINE-NEXT:    ret i8* [[RES]]
+;
+; INSTCOMBINEGVN-LABEL: @test_dont_optimize_swifterror(
+; INSTCOMBINEGVN-NEXT:  entry:
+; INSTCOMBINEGVN-NEXT:    [[OBJ:%.*]] = alloca swifterror i8*, align 8
+; INSTCOMBINEGVN-NEXT:    [[OBJ2:%.*]] = alloca swifterror i8*, align 8
+; INSTCOMBINEGVN-NEXT:    call void @takeAddress(i8** nonnull swifterror [[OBJ]])
+; INSTCOMBINEGVN-NEXT:    call void @takeAddress(i8** nonnull swifterror [[OBJ2]])
+; INSTCOMBINEGVN-NEXT:    store i8* [[PTR:%.*]], i8** [[OBJ]], align 8
+; INSTCOMBINEGVN-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; INSTCOMBINEGVN:       bb1:
+; INSTCOMBINEGVN-NEXT:    br label [[EXIT:%.*]]
+; INSTCOMBINEGVN:       bb2:
+; INSTCOMBINEGVN-NEXT:    [[RES2:%.*]] = load i8*, i8** [[OBJ2]], align 8
+; INSTCOMBINEGVN-NEXT:    br label [[EXIT]]
+; INSTCOMBINEGVN:       exit:
+; INSTCOMBINEGVN-NEXT:    [[RES_PHI:%.*]] = phi i8* [ [[PTR]], [[BB1]] ], [ [[RES2]], [[BB2]] ]
+; INSTCOMBINEGVN-NEXT:    store i8* null, i8** [[OBJ]], align 8
+; INSTCOMBINEGVN-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i8* [[RES_PHI]], i8* null
+; INSTCOMBINEGVN-NEXT:    ret i8* [[RES]]
+;
+entry:
+  %obj = alloca swifterror i8*, align 8
+  %obj2 = alloca swifterror i8*, align 8
+  call void @takeAddress(i8** swifterror %obj)
+  call void @takeAddress(i8** swifterror %obj2)
+  store i8* %ptr, i8** %obj, align 8
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:                                              ; preds = %entry
+  %res1 = load i8*, i8** %obj, align 8
+  br label %exit
+
+bb2:                                              ; preds = %entry
+  %res2 = load i8*, i8** %obj2, align 8
+  br label %exit
+
+exit:                                             ; preds = %bb2, %bb1
+  %res.phi = phi i8* [ %res1, %bb1 ], [ %res2, %bb2 ]
+  store i8* null, i8** %obj, align 8
+  %res = select i1 %cond2, i8* %res.phi, i8* null
+  ret i8* %res
+}

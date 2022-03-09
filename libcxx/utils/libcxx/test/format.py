@@ -194,23 +194,10 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 if any([re.search(ext, filename) for ext in SUPPORTED_SUFFIXES]):
                     yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
 
-    def _disableWithModules(self, test):
-        with open(test.getSourcePath(), 'rb') as f:
-            contents = f.read()
-        return b'#define _LIBCPP_ASSERT' in contents
-
     def execute(self, test, litConfig):
         VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
         supportsVerify = 'verify-support' in test.config.available_features
         filename = test.path_in_suite[-1]
-
-        # TODO(ldionne): We currently disable tests that re-define _LIBCPP_ASSERT
-        #                when we run with modules enabled. Instead, we should
-        #                split the part that does a death test outside of the
-        #                test, and only disable that part when modules are
-        #                enabled.
-        if 'modules-build' in test.config.available_features and self._disableWithModules(test):
-            return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
 
         if re.search('[.]sh[.][^.]+$', filename):
             steps = [ ] # The steps are already in the script

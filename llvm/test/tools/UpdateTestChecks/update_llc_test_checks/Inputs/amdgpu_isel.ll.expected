@@ -3,14 +3,12 @@
 
 define i64 @i64_test(i64 %i) nounwind readnone {
 ; CHECK-LABEL: i64_test:
-; CHECK:       SelectionDAG has 13 nodes:
+; CHECK:       SelectionDAG has 9 nodes:
 ; CHECK-NEXT:    t0: ch = EntryToken
-; CHECK-NEXT:    t11: i64,ch = CopyFromReg t0, Register:i64 %2
-; CHECK-NEXT:    t13: ch,glue = CopyToReg t0, Register:i64 %3, t11
-; CHECK-NEXT:    t15: ch,glue = CopyToReg t13, Register:i32 $vgpr0, IMPLICIT_DEF:i32, t13:1
-; CHECK-NEXT:    t21: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t17: ch,glue = CopyToReg t15, Register:i32 $vgpr1, t21, t15:1
-; CHECK-NEXT:    t18: ch = S_SETPC_B64_return Register:i64 %3, Register:i32 $vgpr0, Register:i32 $vgpr1, t17, t17:1
+; CHECK-NEXT:    t11: ch,glue = CopyToReg t0, Register:i32 $vgpr0, IMPLICIT_DEF:i32
+; CHECK-NEXT:    t17: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
+; CHECK-NEXT:    t13: ch,glue = CopyToReg t11, Register:i32 $vgpr1, t17, t11:1
+; CHECK-NEXT:    t14: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t13, t13:1
 ; CHECK-EMPTY:
   %loc = alloca i64
   %j = load i64, i64 * %loc
@@ -20,14 +18,12 @@ define i64 @i64_test(i64 %i) nounwind readnone {
 
 define i64 @i32_test(i32 %i) nounwind readnone {
 ; CHECK-LABEL: i32_test:
-; CHECK:       SelectionDAG has 12 nodes:
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK:       SelectionDAG has 8 nodes:
 ; CHECK-NEXT:    t5: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t7: i64,ch = CopyFromReg t0, Register:i64 %1
-; CHECK-NEXT:    t9: ch,glue = CopyToReg t0, Register:i64 %2, t7
-; CHECK-NEXT:    t11: ch,glue = CopyToReg t9, Register:i32 $vgpr0, t5, t9:1
-; CHECK-NEXT:    t13: ch,glue = CopyToReg t11, Register:i32 $vgpr1, t5, t11:1
-; CHECK-NEXT:    t14: ch = S_SETPC_B64_return Register:i64 %2, Register:i32 $vgpr0, Register:i32 $vgpr1, t13, t13:1
+; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t7: ch,glue = CopyToReg t0, Register:i32 $vgpr0, t5
+; CHECK-NEXT:    t9: ch,glue = CopyToReg t7, Register:i32 $vgpr1, t5, t7:1
+; CHECK-NEXT:    t10: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t9, t9:1
 ; CHECK-EMPTY:
   %loc = alloca i32
   %j = load i32, i32 * %loc
@@ -38,14 +34,12 @@ define i64 @i32_test(i32 %i) nounwind readnone {
 
 define i64 @i16_test(i16 %i) nounwind readnone {
 ; CHECK-LABEL: i16_test:
-; CHECK:       SelectionDAG has 12 nodes:
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK:       SelectionDAG has 8 nodes:
 ; CHECK-NEXT:    t5: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t7: i64,ch = CopyFromReg t0, Register:i64 %1
-; CHECK-NEXT:    t9: ch,glue = CopyToReg t0, Register:i64 %2, t7
-; CHECK-NEXT:    t11: ch,glue = CopyToReg t9, Register:i32 $vgpr0, t5, t9:1
-; CHECK-NEXT:    t13: ch,glue = CopyToReg t11, Register:i32 $vgpr1, t5, t11:1
-; CHECK-NEXT:    t14: ch = S_SETPC_B64_return Register:i64 %2, Register:i32 $vgpr0, Register:i32 $vgpr1, t13, t13:1
+; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t7: ch,glue = CopyToReg t0, Register:i32 $vgpr0, t5
+; CHECK-NEXT:    t9: ch,glue = CopyToReg t7, Register:i32 $vgpr1, t5, t7:1
+; CHECK-NEXT:    t10: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t9, t9:1
 ; CHECK-EMPTY:
   %loc = alloca i16
   %j = load i16, i16 * %loc
@@ -56,14 +50,12 @@ define i64 @i16_test(i16 %i) nounwind readnone {
 
 define i64 @i8_test(i8 %i) nounwind readnone {
 ; CHECK-LABEL: i8_test:
-; CHECK:       SelectionDAG has 12 nodes:
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK:       SelectionDAG has 8 nodes:
 ; CHECK-NEXT:    t5: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t7: i64,ch = CopyFromReg t0, Register:i64 %1
-; CHECK-NEXT:    t9: ch,glue = CopyToReg t0, Register:i64 %2, t7
-; CHECK-NEXT:    t11: ch,glue = CopyToReg t9, Register:i32 $vgpr0, t5, t9:1
-; CHECK-NEXT:    t13: ch,glue = CopyToReg t11, Register:i32 $vgpr1, t5, t11:1
-; CHECK-NEXT:    t14: ch = S_SETPC_B64_return Register:i64 %2, Register:i32 $vgpr0, Register:i32 $vgpr1, t13, t13:1
+; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t7: ch,glue = CopyToReg t0, Register:i32 $vgpr0, t5
+; CHECK-NEXT:    t9: ch,glue = CopyToReg t7, Register:i32 $vgpr1, t5, t7:1
+; CHECK-NEXT:    t10: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t9, t9:1
 ; CHECK-EMPTY:
   %loc = alloca i8
   %j = load i8, i8 * %loc

@@ -15,6 +15,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/SmallString.h"
 
 #include "llvm/ADT/APSInt.h"
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,CI,FUNC %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI,GFX8_9,GFX8PLUS,FUNC %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8_9,GFX9PLUS,GFX8PLUS,FUNC %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX8PLUS,FUNC %s
@@ -81,10 +81,10 @@ define amdgpu_kernel void @s_test_imin_sle_i8(i8 addrspace(1)* %out, [8 x i32], 
 ; GCN-DAG: s_load_{{dword|b32}} s
 ; GCN-NOT: _load_
 
-; SI: s_min_i32
-; SI: s_min_i32
-; SI: s_min_i32
-; SI: s_min_i32
+; CI: s_min_i32
+; CI: s_min_i32
+; CI: s_min_i32
+; CI: s_min_i32
 
 ; VI-DAG: s_min_i32
 ; VI-DAG: s_min_i32
@@ -111,12 +111,12 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(<4 x i8> addrspace(1)* %out, [8 
 ; GCN: s_load_{{dwordx2|b64}} s
 ; GCN: s_load_{{dwordx2|b64}} s
 
-; SI: s_ashr_i32
-; SI: s_sext_i32_i16
-; SI: s_ashr_i32
-; SI: s_sext_i32_i16
-; SI: s_min_i32
-; SI: s_min_i32
+; CI: s_ashr_i32
+; CI: s_sext_i32_i16
+; CI: s_ashr_i32
+; CI: s_sext_i32_i16
+; CI: s_min_i32
+; CI: s_min_i32
 
 ; VI: s_sext_i32_i16
 ; VI: s_sext_i32_i16
@@ -135,11 +135,11 @@ define amdgpu_kernel void @s_test_imin_sle_v2i16(<2 x i16> addrspace(1)* %out, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v4i16:
-; SI-NOT: buffer_load
-; SI: s_min_i32
-; SI: s_min_i32
-; SI: s_min_i32
-; SI: s_min_i32
+; CI-NOT: buffer_load
+; CI: s_min_i32
+; CI: s_min_i32
+; CI: s_min_i32
+; CI: s_min_i32
 
 ; VI: s_min_i32
 ; VI: s_min_i32
@@ -178,7 +178,7 @@ define amdgpu_kernel void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrs
 }
 
 ; FUNC-LABEL: @v_test_imin_slt_i16
-; SI: v_min_i32_e32
+; CI: v_min_i32_e32
 
 ; GFX8_9:    v_min_i16_e32
 ; GFX10PLUS: v_min_i16
@@ -287,10 +287,10 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(<3 x i32> addrspace(1)* %out, <
 
 ; FIXME: Reduce unused packed component to scalar
 ; FUNC-LABEL: @v_test_umin_ule_v3i16{{$}}
-; SI: v_min_u32_e32
-; SI: v_min_u32_e32
-; SI: v_min_u32_e32
-; SI-NOT: v_min_u32_e32
+; CI: v_min_u32_e32
+; CI: v_min_u32_e32
+; CI: v_min_u32_e32
+; CI-NOT: v_min_u32_e32
 
 ; VI: v_min_u16_e32
 ; VI: v_min_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -348,9 +348,9 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 }
 
 ; FUNC-LABEL: {{^}}v_test_umin_ult_i8:
-; SI: {{buffer|flat|global}}_load_ubyte
-; SI: {{buffer|flat|global}}_load_ubyte
-; SI: v_min_u32_e32
+; CI: {{buffer|flat|global}}_load_ubyte
+; CI: {{buffer|flat|global}}_load_ubyte
+; CI: v_min_u32_e32
 
 ; GFX8PLUS: {{flat|global}}_load_{{ubyte|u8}}
 ; GFX8PLUS: {{flat|global}}_load_{{ubyte|u8}}
@@ -384,11 +384,11 @@ define amdgpu_kernel void @s_test_umin_ult_i32(i32 addrspace(1)* %out, i32 %a, i
 }
 
 ; FUNC-LABEL: @v_test_umin_ult_i32_multi_use
-; SI-NOT: v_min
+; CI-NOT: v_min
 ; GCN: s_cmp_lt_u32
-; SI-NOT: v_min
-; SI: v_cndmask_b32
-; SI-NOT: v_min
+; CI-NOT: v_min
+; CI: v_cndmask_b32
+; CI-NOT: v_min
 ; GCN: s_endpgm
 
 ; EG-NOT: MIN_UINT
@@ -459,14 +459,14 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(<8 x i32> addrspace(1)* %out, <
 
 ; FUNC-LABEL: {{^}}s_test_umin_ult_v8i16:
 ; GCN-NOT: {{buffer|flat|global}}_load
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
+; CI: s_min_u32
 
 ; VI: s_min_u32
 ; VI: s_min_u32
@@ -596,8 +596,8 @@ define amdgpu_kernel void @test_imin_sle_i64(i64 addrspace(1)* %out, i64 %a, i64
 }
 
 ; FUNC-LABEL: {{^}}v_test_imin_sle_v2i16:
-; SI: v_min_i32
-; SI: v_min_i32
+; CI: v_min_i32
+; CI: v_min_i32
 
 ; VI: v_min_i16
 ; VI: v_min_i16
@@ -621,8 +621,8 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(<2 x i16> addrspace(1)* %out, <
 
 ; FIXME: i16 min
 ; FUNC-LABEL: {{^}}v_test_imin_ule_v2i16:
-; SI: v_min_u32
-; SI: v_min_u32
+; CI: v_min_u32
+; CI: v_min_u32
 
 ; VI: v_min_u16
 ; VI: v_min_u16

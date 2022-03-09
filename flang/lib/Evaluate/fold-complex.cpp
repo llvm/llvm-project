@@ -30,7 +30,8 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
           context, std::move(funcRef), *callable);
     } else {
       context.messages().Say(
-          "%s(complex(kind=%d)) cannot be folded on host"_en_US, name, KIND);
+          "%s(complex(kind=%d)) cannot be folded on host"_warn_en_US, name,
+          KIND);
     }
   } else if (name == "conjg") {
     return FoldElementalIntrinsic<T, T>(

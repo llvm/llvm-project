@@ -1254,9 +1254,7 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
 } // namespace lowering_1_d
 } // namespace
 
-namespace mlir {
-
-void populateVectorToSCFConversionPatterns(
+void mlir::populateVectorToSCFConversionPatterns(
     RewritePatternSet &patterns, const VectorTransferToSCFOptions &options) {
   if (options.unroll) {
     patterns.add<lowering_n_d_unrolled::UnrollTransferReadConversion,
@@ -1276,8 +1274,6 @@ void populateVectorToSCFConversionPatterns(
         patterns.getContext(), options);
   }
 }
-
-} // namespace mlir
 
 namespace {
 
@@ -1300,14 +1296,14 @@ struct ConvertVectorToSCFPass
 
     // Lower permutation maps first.
     if (lowerPermutationMaps) {
-      RewritePatternSet lowerTransferPatterns(getOperation().getContext());
+      RewritePatternSet lowerTransferPatterns(&getContext());
       mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
           lowerTransferPatterns);
       (void)applyPatternsAndFoldGreedily(getOperation(),
                                          std::move(lowerTransferPatterns));
     }
 
-    RewritePatternSet patterns(getOperation().getContext());
+    RewritePatternSet patterns(&getContext());
     populateVectorToSCFConversionPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }

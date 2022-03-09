@@ -1,15 +1,56 @@
-# TODO(michaelrj): separate the standalone_cpp library into individual targets.
 add_header_library(
-  standalone_cpp
+  array
   HDRS
     Array.h
+)
+
+add_header_library(
+  array_ref
+  HDRS
     ArrayRef.h
+)
+
+
+add_header_library(
+  bit
+  HDRS
     Bit.h
+)
+
+
+add_header_library(
+  bitset
+  HDRS
     Bitset.h
+)
+
+add_header_library(
+  functional
+  HDRS
     Functional.h
+)
+
+add_header_library(
+  limits
+  HDRS
     Limits.h
+)
+
+add_header_library(
+  string_view
+  HDRS
     StringView.h
+)
+
+add_header_library(
+  type_traits
+  HDRS
     TypeTraits.h
+)
+
+add_header_library(
+  utility
+  HDRS
     Utility.h
 )
 

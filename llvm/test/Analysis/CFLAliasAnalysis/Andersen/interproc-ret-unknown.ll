@@ -1,7 +1,6 @@
 ; This testcase ensures that CFL AA answers queries soundly when callee tries 
 ; to return an unknown pointer
 
-; RUN: opt < %s -disable-basic-aa -cfl-anders-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-anders-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 @g = external global i32

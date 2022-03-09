@@ -314,7 +314,7 @@ func @fclamp(%arg0 : vector<3xf32>, %min : vector<3xf32>, %max : vector<3xf32>) 
 // spv.GLSL.UClamp
 //===----------------------------------------------------------------------===//
 
-func @fclamp(%arg0 : ui32, %min : ui32, %max : ui32) -> () {
+func @uclamp(%arg0 : ui32, %min : ui32, %max : ui32) -> () {
   // CHECK: spv.GLSL.UClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : ui32
   %2 = spv.GLSL.UClamp %arg0, %min, %max : ui32
   return
@@ -322,7 +322,7 @@ func @fclamp(%arg0 : ui32, %min : ui32, %max : ui32) -> () {
 
 // -----
 
-func @fclamp(%arg0 : vector<4xi32>, %min : vector<4xi32>, %max : vector<4xi32>) -> () {
+func @uclamp(%arg0 : vector<4xi32>, %min : vector<4xi32>, %max : vector<4xi32>) -> () {
   // CHECK: spv.GLSL.UClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<4xi32>
   %2 = spv.GLSL.UClamp %arg0, %min, %max : vector<4xi32>
   return
@@ -330,8 +330,8 @@ func @fclamp(%arg0 : vector<4xi32>, %min : vector<4xi32>, %max : vector<4xi32>) 
 
 // -----
 
-func @fclamp(%arg0 : si32, %min : si32, %max : si32) -> () {
-  // expected-error @+1 {{must be 8/16/32/64-bit signless/unsigned integer or vector}}
+func @uclamp(%arg0 : si32, %min : si32, %max : si32) -> () {
+  // CHECK: spv.GLSL.UClamp
   %2 = spv.GLSL.UClamp %arg0, %min, %max : si32
   return
 }
@@ -342,7 +342,7 @@ func @fclamp(%arg0 : si32, %min : si32, %max : si32) -> () {
 // spv.GLSL.SClamp
 //===----------------------------------------------------------------------===//
 
-func @fclamp(%arg0 : si32, %min : si32, %max : si32) -> () {
+func @sclamp(%arg0 : si32, %min : si32, %max : si32) -> () {
   // CHECK: spv.GLSL.SClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : si32
   %2 = spv.GLSL.SClamp %arg0, %min, %max : si32
   return
@@ -350,7 +350,7 @@ func @fclamp(%arg0 : si32, %min : si32, %max : si32) -> () {
 
 // -----
 
-func @fclamp(%arg0 : vector<4xsi32>, %min : vector<4xsi32>, %max : vector<4xsi32>) -> () {
+func @sclamp(%arg0 : vector<4xsi32>, %min : vector<4xsi32>, %max : vector<4xsi32>) -> () {
   // CHECK: spv.GLSL.SClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<4xsi32>
   %2 = spv.GLSL.SClamp %arg0, %min, %max : vector<4xsi32>
   return
@@ -358,8 +358,8 @@ func @fclamp(%arg0 : vector<4xsi32>, %min : vector<4xsi32>, %max : vector<4xsi32
 
 // -----
 
-func @fclamp(%arg0 : i32, %min : i32, %max : i32) -> () {
-  // expected-error @+1 {{must be 8/16/32/64-bit signed integer or vector}}
+func @sclamp(%arg0 : i32, %min : i32, %max : i32) -> () {
+  // CHECK: spv.GLSL.SClamp
   %2 = spv.GLSL.SClamp %arg0, %min, %max : i32
   return
 }

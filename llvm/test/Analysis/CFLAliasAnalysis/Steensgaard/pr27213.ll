@@ -1,4 +1,3 @@
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL:     Function: foo

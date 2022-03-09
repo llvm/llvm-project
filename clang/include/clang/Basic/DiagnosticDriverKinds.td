@@ -638,6 +638,10 @@ def warn_drv_jmc_requires_debuginfo : Warning<
   "stepping function; option ignored">,
   InGroup<OptionIgnored>;
 
+def warn_drv_fjmc_for_elf_only : Warning<
+  "-fjmc works only for ELF; option ignored">,
+  InGroup<OptionIgnored>;
+
 def err_drv_target_variant_invalid : Error<
   "unsupported '%0' value '%1'; use 'ios-macabi' instead">;
 

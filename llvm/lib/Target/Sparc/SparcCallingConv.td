@@ -134,7 +134,7 @@ def RetCC_Sparc64 : CallingConv<[
 // Callee-saved registers are handled by the register window mechanism.
 def CSR : CalleeSavedRegs<(add)> {
   let OtherPreserved = (add (sequence "I%u", 0, 7),
-                            (sequence "L%u", 0, 7));
+                            (sequence "L%u", 0, 7), O6);
 }
 
 // Callee-saved registers for calls with ReturnsTwice attribute.

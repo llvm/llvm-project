@@ -68,9 +68,9 @@ static void testPureCallbacks(Operation *op) {
 /// Tests erasure callbacks that skip the walk.
 static void testSkipErasureCallbacks(Operation *op) {
   auto skipOpErasure = [](Operation *op) {
-    // Do not erase module and function op. Otherwise there wouldn't be too
-    // much to test in pre-order.
-    if (isa<ModuleOp>(op) || isa<FuncOp>(op))
+    // Do not erase module and module children operations. Otherwise, there
+    // wouldn't be too much to test in pre-order.
+    if (isa<ModuleOp>(op) || isa<ModuleOp>(op->getParentOp()))
       return WalkResult::advance();
 
     llvm::outs() << "Erasing ";
@@ -81,10 +81,10 @@ static void testSkipErasureCallbacks(Operation *op) {
     return WalkResult::skip();
   };
   auto skipBlockErasure = [](Block *block) {
-    // Do not erase module and function blocks. Otherwise there wouldn't be
-    // too much to test in pre-order.
+    // Do not erase module and module children blocks. Otherwise there wouldn't
+    // be too much to test in pre-order.
     Operation *parentOp = block->getParentOp();
-    if (isa<ModuleOp>(parentOp) || isa<FuncOp>(parentOp))
+    if (isa<ModuleOp>(parentOp) || isa<ModuleOp>(parentOp->getParentOp()))
       return WalkResult::advance();
 
     llvm::outs() << "Erasing ";

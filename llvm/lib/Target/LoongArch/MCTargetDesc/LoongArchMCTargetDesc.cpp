@@ -17,6 +17,7 @@
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -73,6 +74,31 @@ static MCInstPrinter *createLoongArchMCInstPrinter(const Triple &T,
   return new LoongArchInstPrinter(MAI, MII, MRI);
 }
 
+namespace {
+
+class LoongArchMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  explicit LoongArchMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    unsigned NumOps = Inst.getNumOperands();
+    if (isBranch(Inst) || Inst.getOpcode() == LoongArch::BL) {
+      Target = Addr + Inst.getOperand(NumOps - 1).getImm();
+      return true;
+    }
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static MCInstrAnalysis *createLoongArchInstrAnalysis(const MCInstrInfo *Info) {
+  return new LoongArchMCInstrAnalysis(Info);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
   for (Target *T : {&getTheLoongArch32Target(), &getTheLoongArch64Target()}) {
     TargetRegistry::RegisterMCRegInfo(*T, createLoongArchMCRegisterInfo);
@@ -82,5 +108,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
     TargetRegistry::RegisterMCCodeEmitter(*T, createLoongArchMCCodeEmitter);
     TargetRegistry::RegisterMCAsmBackend(*T, createLoongArchAsmBackend);
     TargetRegistry::RegisterMCInstPrinter(*T, createLoongArchMCInstPrinter);
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createLoongArchInstrAnalysis);
   }
 }

@@ -367,41 +367,6 @@ static Error addSymbolsFromFile(NameMatcher &Symbols, BumpPtrAllocator &Alloc,
   return Error::success();
 }
 
-Expected<NameOrPattern>
-NameOrPattern::create(StringRef Pattern, MatchStyle MS,
-                      function_ref<Error(Error)> ErrorCallback) {
-  switch (MS) {
-  case MatchStyle::Literal:
-    return NameOrPattern(Pattern);
-  case MatchStyle::Wildcard: {
-    SmallVector<char, 32> Data;
-    bool IsPositiveMatch = true;
-    if (Pattern[0] == '!') {
-      IsPositiveMatch = false;
-      Pattern = Pattern.drop_front();
-    }
-    Expected<GlobPattern> GlobOrErr = GlobPattern::create(Pattern);
-
-    // If we couldn't create it as a glob, report the error, but try again with
-    // a literal if the error reporting is non-fatal.
-    if (!GlobOrErr) {
-      if (Error E = ErrorCallback(GlobOrErr.takeError()))
-        return std::move(E);
-      return create(Pattern, MatchStyle::Literal, ErrorCallback);
-    }
-
-    return NameOrPattern(std::make_shared<GlobPattern>(*GlobOrErr),
-                         IsPositiveMatch);
-  }
-  case MatchStyle::Regex: {
-    SmallVector<char, 32> Data;
-    return NameOrPattern(std::make_shared<Regex>(
-        ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data)));
-  }
-  }
-  llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
-}
-
 static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
                                         BumpPtrAllocator &Alloc,
                                         StringRef Filename) {

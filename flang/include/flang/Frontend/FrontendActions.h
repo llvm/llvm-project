@@ -109,6 +109,10 @@ class DebugDumpParseTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 
+class DebugDumpPFTAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
 class DebugPreFIRTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
@@ -188,8 +192,19 @@ class EmitLLVMAction : public CodeGenAction {
   void ExecuteAction() override;
 };
 
-class EmitObjAction : public CodeGenAction {
+class BackendAction : public CodeGenAction {
+public:
+  enum class BackendActionTy {
+    Backend_EmitAssembly, ///< Emit native assembly files
+    Backend_EmitObj ///< Emit native object files
+  };
+
+  BackendAction(BackendActionTy act) : action{act} {};
+
+private:
   void ExecuteAction() override;
+
+  BackendActionTy action;
 };
 
 } // namespace Fortran::frontend

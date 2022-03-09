@@ -1334,7 +1334,10 @@ static inline int __kmp_tpause(uint32_t hint, uint64_t counter) {
   char flag;
   __asm__ volatile("#tpause\n.byte 0x66, 0x0F, 0xAE, 0xF1\n"
                    "setb   %0"
-                   : "=r"(flag)
+                   // The "=q" restraint means any register accessible as rl
+                   //   in 32-bit mode: a, b, c, and d;
+                   //   in 64-bit mode: any integer register
+                   : "=q"(flag)
                    : "a"(timeLo), "d"(timeHi), "c"(hint)
                    :);
   return flag;
@@ -1361,7 +1364,10 @@ static inline int __kmp_umwait(uint32_t hint, uint64_t counter) {
   char flag;
   __asm__ volatile("#umwait\n.byte 0xF2, 0x0F, 0xAE, 0xF1\n"
                    "setb   %0"
-                   : "=r"(flag)
+                   // The "=q" restraint means any register accessible as rl
+                   //   in 32-bit mode: a, b, c, and d;
+                   //   in 64-bit mode: any integer register
+                   : "=q"(flag)
                    : "a"(timeLo), "d"(timeHi), "c"(hint)
                    :);
   return flag;

@@ -32,6 +32,7 @@ namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
 using namespace fir;
+using namespace mlir;
 
 /// Return true if a sequence type is of some incomplete size or a record type
 /// is malformed or contains an incomplete sequence type. An incomplete sequence

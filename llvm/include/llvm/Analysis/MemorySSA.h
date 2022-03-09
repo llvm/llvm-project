@@ -66,6 +66,19 @@
 /// MemoryDefs are not disambiguated because it would require multiple reaching
 /// definitions, which would require multiple phis, and multiple memoryaccesses
 /// per instruction.
+///
+/// In addition to the def/use graph described above, MemoryDefs also contain
+/// an "optimized" definition use.  The "optimized" use points to some def
+/// reachable through the memory def chain.  The optimized def *may* (but is
+/// not required to) alias the original MemoryDef, but no def *closer* to the
+/// source def may alias it.  As the name implies, the purpose of the optimized
+/// use is to allow caching of clobber searches for memory defs.  The optimized
+/// def may be nullptr, in which case clients must walk the defining access
+/// chain.
+///
+/// When iterating the uses of a MemoryDef, both defining uses and optimized
+/// uses will be encountered.  If only one type is needed, the client must
+/// filter the use walk.
 //
 //===----------------------------------------------------------------------===//
 
@@ -252,10 +265,11 @@ public:
     return MA->getValueID() == MemoryUseVal || MA->getValueID() == MemoryDefVal;
   }
 
-  // Sadly, these have to be public because they are needed in some of the
-  // iterators.
+  /// Do we have an optimized use?
   inline bool isOptimized() const;
+  /// Return the MemoryAccess associated with the optimized use, or nullptr.
   inline MemoryAccess *getOptimized() const;
+  /// Sets the optimized use for a MemoryDef.
   inline void setOptimized(MemoryAccess *);
 
   // Retrieve AliasResult type of the optimized access. Ideally this would be
@@ -332,6 +346,9 @@ public:
     setOperand(0, DMA);
   }
 
+  /// The defining access of a MemoryUses are always optimized if queried from
+  /// outside MSSA construction itself.  This result is only useful inside
+  /// the MSSA implementation.
   bool isOptimized() const {
     return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
   }

@@ -2,7 +2,7 @@
 
 ; This test needs to be target specific due to the cost estimate in the output.
 
-; RUN: opt -lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: remark: test.h:40:20: Lowered with 6 stores, 6 loads, 24 compute ops
 ; CHECK-NEXT: store(

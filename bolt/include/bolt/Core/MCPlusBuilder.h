@@ -1292,6 +1292,16 @@ public:
     return false;
   }
 
+  /// Convert a move instruction into a conditional move instruction, given a
+  /// condition code.
+  virtual bool
+  convertMoveToConditionalMove(MCInst &Inst, unsigned CC,
+                               bool AllowStackMemOp = false,
+                               bool AllowBasePtrStackMemOp = false) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Lower a tail call instruction \p Inst if required by target.
   virtual bool lowerTailCall(MCInst &Inst) {
     llvm_unreachable("not implemented");

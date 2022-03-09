@@ -295,8 +295,7 @@ public:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(bool ShouldDetectUseAfterScope, memtag::StackInfo &Info,
-                       Value *StackTag,
+  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag,
                        llvm::function_ref<const DominatorTree &()> GetDT,
                        llvm::function_ref<const PostDominatorTree &()> GetPDT);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
@@ -1307,7 +1306,7 @@ bool HWAddressSanitizer::instrumentLandingPads(
 }
 
 bool HWAddressSanitizer::instrumentStack(
-    bool ShouldDetectUseAfterScope, memtag::StackInfo &SInfo, Value *StackTag,
+    memtag::StackInfo &SInfo, Value *StackTag,
     llvm::function_ref<const DominatorTree &()> GetDT,
     llvm::function_ref<const PostDominatorTree &()> GetPDT) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
@@ -1353,11 +1352,16 @@ bool HWAddressSanitizer::instrumentStack(
       Value *UARTag = getUARTag(IRB, StackTag);
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
     bool StandardLifetime =
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd,
-                                   &GetDT(), ClMaxLifetimes);
-    if (ShouldDetectUseAfterScope && StandardLifetime) {
+                                   &GetDT(), ClMaxLifetimes) &&
+        !SInfo.CallsReturnTwice;
+    if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
       tagAlloca(IRB, AI, Tag, Size);
@@ -1468,12 +1472,7 @@ bool HWAddressSanitizer::sanitizeFunction(
   if (!SInfo.AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    // Calls to functions that may return twice (e.g. setjmp) confuse the
-    // postdominator analysis, and will leave us to keep memory tagged after
-    // function return. Work around this by always untagging at every return
-    // statement if return_twice functions are called.
-    instrumentStack(DetectUseAfterScope && !SInfo.CallsReturnTwice, SIB.get(),
-                    StackTag, GetDT, GetPDT);
+    instrumentStack(SInfo, StackTag, GetDT, GetPDT);
   }
 
   // If we split the entry block, move any allocas that were originally in the

@@ -1490,6 +1490,11 @@ def isGFX940Plus :
   Predicate<"Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX940Insts)>;
 
+def isGFX940GFX11Plus :
+  Predicate<"Subtarget->hasGFX940Insts() ||"
+            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
+
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"

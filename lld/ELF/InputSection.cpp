@@ -323,10 +323,6 @@ InputSection::InputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                            StringRef name)
     : InputSectionBase(f, header, name, InputSectionBase::Regular) {}
 
-OutputSection *InputSection::getParent() const {
-  return cast_or_null<OutputSection>(parent);
-}
-
 // Copy SHT_GROUP section contents. Used only for the -r option.
 template <class ELFT> void InputSection::copyShtGroup(uint8_t *buf) {
   // ELFT::Word is the 32-bit integral type in the target endianness.

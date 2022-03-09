@@ -5393,13 +5393,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      DwarfFission);
 
   // This controls whether or not we perform JustMyCode instrumentation.
-  if (TC.getTriple().isOSBinFormatELF() &&
-      Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
-    if (DebugInfoKind >= codegenoptions::DebugInfoConstructor)
-      CmdArgs.push_back("-fjmc");
-    else
-      D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "-fjmc"
-                                                           << "-g";
+  if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
+    if (TC.getTriple().isOSBinFormatELF()) {
+      if (DebugInfoKind >= codegenoptions::DebugInfoConstructor)
+        CmdArgs.push_back("-fjmc");
+      else
+        D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "-fjmc"
+                                                             << "-g";
+    } else {
+      D.Diag(clang::diag::warn_drv_fjmc_for_elf_only);
+    }
   }
 
   // Add the split debug info name to the command lines here so we

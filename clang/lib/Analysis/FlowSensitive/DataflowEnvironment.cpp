@@ -366,7 +366,8 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
       assert(Field != nullptr);
       StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
       MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
-      setValue(FieldLoc, StructVal->getChild(*Field));
+      if (auto *FieldVal = StructVal->getChild(*Field))
+        setValue(FieldLoc, *FieldVal);
     }
   }
 
@@ -438,7 +439,7 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isReferenceType()) {
     CreatedValuesCount++;
-    QualType PointeeType = Type->getAs<ReferenceType>()->getPointeeType();
+    QualType PointeeType = Type->castAs<ReferenceType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
@@ -456,7 +457,7 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isPointerType()) {
     CreatedValuesCount++;
-    QualType PointeeType = Type->getAs<PointerType>()->getPointeeType();
+    QualType PointeeType = Type->castAs<PointerType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
@@ -485,9 +486,9 @@ Value *Environment::createValueUnlessSelfReferential(
         continue;
 
       Visited.insert(FieldType.getCanonicalType());
-      FieldValues.insert(
-          {Field, createValueUnlessSelfReferential(
-                      FieldType, Visited, Depth + 1, CreatedValuesCount)});
+      if (auto *FieldValue = createValueUnlessSelfReferential(
+              FieldType, Visited, Depth + 1, CreatedValuesCount))
+        FieldValues.insert({Field, FieldValue});
       Visited.erase(FieldType.getCanonicalType());
     }
 

@@ -187,17 +187,6 @@ protected:
   // Register required callbacks.
   void registerRequiredCallbacks(PassInstrumentationCallbacks &PIC);
 
-  // Return true when this is a defined function for which printing
-  // of changes is desired.
-  bool isInterestingFunction(const Function &F);
-
-  // Return true when this is a pass for which printing of changes is desired.
-  bool isInterestingPass(StringRef PassID);
-
-  // Return true when this is a pass on IR for which printing
-  // of changes is desired.
-  bool isInteresting(Any IR, StringRef PassID);
-
   // Called on the first IR processed.
   virtual void handleInitialIR(Any IR) = 0;
   // Called before and after a pass to get the representation of the IR.

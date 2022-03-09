@@ -21,31 +21,36 @@
 
 // recursively build the vector of module scopes
 static void moduleNames(const Fortran::semantics::Scope &scope,
-                        llvm::SmallVector<llvm::StringRef, 2> &result) {
-  if (scope.IsTopLevel()) {
+                        llvm::SmallVector<llvm::StringRef> &result) {
+  if (scope.IsTopLevel())
     return;
-  }
   moduleNames(scope.parent(), result);
   if (scope.kind() == Fortran::semantics::Scope::Kind::Module)
-    if (auto *symbol = scope.symbol())
+    if (const Fortran::semantics::Symbol *symbol = scope.symbol())
       result.emplace_back(toStringRef(symbol->name()));
 }
 
-static llvm::SmallVector<llvm::StringRef, 2>
+static llvm::SmallVector<llvm::StringRef>
 moduleNames(const Fortran::semantics::Symbol &symbol) {
-  const auto &scope = symbol.owner();
-  llvm::SmallVector<llvm::StringRef, 2> result;
+  const Fortran::semantics::Scope &scope = symbol.owner();
+  llvm::SmallVector<llvm::StringRef> result;
   moduleNames(scope, result);
   return result;
 }
 
 static llvm::Optional<llvm::StringRef>
 hostName(const Fortran::semantics::Symbol &symbol) {
-  const auto &scope = symbol.owner();
+  const Fortran::semantics::Scope &scope = symbol.owner();
   if (scope.kind() == Fortran::semantics::Scope::Kind::Subprogram) {
     assert(scope.symbol() && "subprogram scope must have a symbol");
-    return {toStringRef(scope.symbol()->name())};
+    return toStringRef(scope.symbol()->name());
   }
+  if (scope.kind() == Fortran::semantics::Scope::Kind::MainProgram)
+    // Do not use the main program name, if any, because it may lead to name
+    // collision with procedures with the same name in other compilation units
+    // (technically illegal, but all compilers are able to compile and link
+    // properly these programs).
+    return llvm::StringRef("");
   return {};
 }
 

@@ -27,18 +27,13 @@ No debugging checks (``_LIBCPP_DEBUG`` not defined)
 When ``_LIBCPP_DEBUG`` is not defined, there are no debugging checks performed by
 the library. This is the default.
 
-Basic checks (``_LIBCPP_DEBUG == 0``)
--------------------------------------
-When ``_LIBCPP_DEBUG`` is defined to ``0`` (to be understood as level ``0``), some
-debugging checks are enabled. The non-exhaustive list of things is:
-
-- Many algorithms, such as ``binary_search``, ``merge``, ``next_permutation``, and ``sort``,
-  wrap the user-provided comparator to assert that `!comp(y, x)` whenever
-  `comp(x, y)`. This can cause the user-provided comparator to be evaluated
-  up to twice as many times as it would be without ``_LIBCPP_DEBUG``, and
-  causes the library to violate some of the Standard's complexity clauses.
-
-- FIXME: Update this list
+Comparator consistency checks (``_LIBCPP_DEBUG == 1``)
+------------------------------------------------------
+Libc++ provides some checks for the consistency of comparators passed to algorithms. Specifically,
+many algorithms such as ``binary_search``, ``merge``, ``next_permutation``, and ``sort``, wrap the
+user-provided comparator to assert that `!comp(y, x)` whenever `comp(x, y)`. This can cause the
+user-provided comparator to be evaluated up to twice as many times as it would be without the
+debug mode, and causes the library to violate some of the Standard's complexity clauses.
 
 Iterator debugging checks (``_LIBCPP_DEBUG == 1``)
 --------------------------------------------------

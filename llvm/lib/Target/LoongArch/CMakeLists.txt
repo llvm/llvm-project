@@ -4,11 +4,11 @@ set(LLVM_TARGET_DEFINITIONS LoongArch.td)
 
 tablegen(LLVM LoongArchGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM LoongArchGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM LoongArchGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM LoongArchGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LoongArchGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM LoongArchGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LoongArchGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM LoongArchGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM LoongArchGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM LoongArchGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(LoongArchCommonTableGen)
@@ -41,5 +41,6 @@ add_llvm_target(LoongArchCodeGen
   LoongArch
   )
 
+add_subdirectory(AsmParser)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

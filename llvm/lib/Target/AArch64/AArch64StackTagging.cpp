@@ -549,16 +549,16 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     Info.AI->replaceAllUsesWith(TagPCall);
     TagPCall->setOperand(0, Info.AI);
 
-    bool StandardLifetime =
-        SInfo.UnrecognizedLifetimes.empty() &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
-                                   ClMaxLifetimes);
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
-    if (SInfo.UnrecognizedLifetimes.empty() && StandardLifetime &&
-        !SInfo.CallsReturnTwice) {
+    bool StandardLifetime =
+        SInfo.UnrecognizedLifetimes.empty() &&
+        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
+                                   ClMaxLifetimes) &&
+        !SInfo.CallsReturnTwice;
+    if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();

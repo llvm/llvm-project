@@ -1134,8 +1134,8 @@ declare void @external_void_func_void() #1
 ; GCN-DAG: v_writelane_b32 v40, s30, 0
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN-DAG: v_readlane_b32 s4, v40, 0
-; GCN-DAG: v_readlane_b32 s5, v40, 1
+; GCN-DAG: v_readlane_b32 s30, v40, 0
+; GCN-DAG: v_readlane_b32 s31, v40, 1
 
 
 ; GFX1064: s_addk_i32 s32, 0xfc00

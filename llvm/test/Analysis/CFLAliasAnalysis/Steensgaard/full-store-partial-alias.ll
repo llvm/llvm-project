@@ -1,5 +1,5 @@
-; RUN: opt -S -disable-basic-aa -tbaa -cfl-steens-aa -gvn < %s | FileCheck -check-prefix=CFLSteensAA %s
-; RUN: opt -S -disable-basic-aa -tbaa -gvn < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=tbaa,cfl-steens-aa -passes=gvn < %s | FileCheck -check-prefix=CFLSteensAA %s
+; RUN: opt -S -aa-pipeline=tbaa -passes=gvn < %s | FileCheck %s
 ; Adapted from the BasicAA full-store-partial-alias.ll test.
 
 ; CFL AA could notice that the store stores to the entire %u object,

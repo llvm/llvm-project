@@ -1,4 +1,4 @@
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; Derived from (a subset of) BasicAA/phi-and-select.ll 
 
 ; CHECK: Function: qux

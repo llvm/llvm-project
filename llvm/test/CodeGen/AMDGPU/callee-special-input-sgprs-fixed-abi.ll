@@ -317,7 +317,7 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
 ; GCN-NOT: s12
 ; GCN-NOT: s13
 ; GCN-NOT: s14
-; GCN: v_readlane_b32 s4, v40, 0
+; GCN: v_readlane_b32 s30, v40, 0
 define hidden void @func_indirect_use_workgroup_id_x() #1 {
   call void @use_workgroup_id_x()
   ret void

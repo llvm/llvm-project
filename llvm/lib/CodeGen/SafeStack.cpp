@@ -97,10 +97,9 @@ static cl::opt<bool>
     SafeStackUsePointerAddress("safestack-use-pointer-address",
                                   cl::init(false), cl::Hidden);
 
-// Disabled by default due to PR32143.
 static cl::opt<bool> ClColoring("safe-stack-coloring",
                                 cl::desc("enable safe stack coloring"),
-                                cl::Hidden, cl::init(false));
+                                cl::Hidden, cl::init(true));
 
 namespace {
 

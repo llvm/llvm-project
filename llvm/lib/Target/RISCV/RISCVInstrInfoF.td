@@ -464,11 +464,13 @@ def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
 class PatSetCC<RegisterClass Ty, SDPatternOperator OpNode, CondCode Cond, RVInst Inst>
     : Pat<(OpNode Ty:$rs1, Ty:$rs2, Cond), (Inst $rs1, $rs2)>;
 
-class PatFpr32Fpr32<SDPatternOperator OpNode, RVInstR Inst>
-    : Pat<(OpNode FPR32:$rs1, FPR32:$rs2), (Inst $rs1, $rs2)>;
+class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
+                RegisterClass RegTy>
+    : Pat<(OpNode RegTy:$rs1, RegTy:$rs2), (Inst $rs1, $rs2)>;
 
-class PatFpr32Fpr32DynFrm<SDPatternOperator OpNode, RVInstRFrm Inst>
-    : Pat<(OpNode FPR32:$rs1, FPR32:$rs2), (Inst $rs1, $rs2, 0b111)>;
+class PatFprFprDynFrm<SDPatternOperator OpNode, RVInstRFrm Inst,
+                      RegisterClass RegTy>
+    : Pat<(OpNode RegTy:$rs1, RegTy:$rs2), (Inst $rs1, $rs2, 0b111)>;
 
 let Predicates = [HasStdExtF] in {
 
@@ -483,17 +485,17 @@ def : Pat<(f32 (fpimmneg0)), (FSGNJN_S (FMV_W_X X0), (FMV_W_X X0))>;
 
 /// Float arithmetic operations
 
-def : PatFpr32Fpr32DynFrm<any_fadd, FADD_S>;
-def : PatFpr32Fpr32DynFrm<any_fsub, FSUB_S>;
-def : PatFpr32Fpr32DynFrm<any_fmul, FMUL_S>;
-def : PatFpr32Fpr32DynFrm<any_fdiv, FDIV_S>;
+def : PatFprFprDynFrm<any_fadd, FADD_S, FPR32>;
+def : PatFprFprDynFrm<any_fsub, FSUB_S, FPR32>;
+def : PatFprFprDynFrm<any_fmul, FMUL_S, FPR32>;
+def : PatFprFprDynFrm<any_fdiv, FDIV_S, FPR32>;
 
 def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, 0b111)>;
 
 def : Pat<(fneg FPR32:$rs1), (FSGNJN_S $rs1, $rs1)>;
 def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
 
-def : PatFpr32Fpr32<fcopysign, FSGNJ_S>;
+def : PatFprFpr<fcopysign, FSGNJ_S, FPR32>;
 def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
 
 // fmadd: rs1 * rs2 + rs3
@@ -515,8 +517,8 @@ def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
 // LLVM's fminnum and fmaxnum
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
-def : PatFpr32Fpr32<fminnum, FMIN_S>;
-def : PatFpr32Fpr32<fmaxnum, FMAX_S>;
+def : PatFprFpr<fminnum, FMIN_S, FPR32>;
+def : PatFprFpr<fmaxnum, FMAX_S, FPR32>;
 
 /// Setcc
 // FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for
