@@ -1,16 +1,4 @@
-//===-- DataflowAnalysis.cpp ------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-//  This file defines utilities to simplify testing of dataflow analyses.
-//
-//===----------------------------------------------------------------------===//
-
-#include "clang/Analysis/FlowSensitive/Testing/DataflowAnalysis.h"
+#include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
