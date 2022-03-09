@@ -5,11 +5,10 @@ define i32 @divergent_lshr_and_cmp(i32 %x) {
   ; GCN-LABEL: name: divergent_lshr_and_cmp
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr30_sgpr31
+  ; GCN-NEXT:   liveins: $vgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 2, [[COPY1]], implicit $exec
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 2, [[COPY]], implicit $exec
   ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 killed [[V_AND_B32_e64_]], 0, implicit $exec
   ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_NE_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
@@ -18,16 +17,14 @@ define i32 @divergent_lshr_and_cmp(i32 %x) {
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2
-  ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_]], [[COPY]], implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.UnifiedReturnBlock:
-  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY1]], %bb.0, [[V_LSHLREV_B32_e64_]], %bb.1
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[V_LSHLREV_B32_e64_]], %bb.1
   ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-  ; GCN-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
+  ; GCN-NEXT:   SI_RETURN implicit $vgpr0
 entry:
   %0 = and i32 %x, 2
   %1 = icmp ne i32 %0, 0

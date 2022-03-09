@@ -355,11 +355,7 @@ def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
-  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
->;
-
-def AMDGPUret_gfx_flag : SDNode<"AMDGPUISD::RET_GFX_FLAG", SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTNone,
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 

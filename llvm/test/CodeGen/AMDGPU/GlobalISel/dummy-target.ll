@@ -6,16 +6,14 @@
 define i16 @vop3p_add_i16(i16 %arg0) #0 {
   ; CHECK-LABEL: name: vop3p_add_i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr30_sgpr31
+  ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s16) = G_ADD [[TRUNC]], [[TRUNC]]
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD]](s16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY2]], implicit $vgpr0
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %add = add i16 %arg0, %arg0
   ret i16 %add
 }
@@ -23,10 +21,9 @@ define i16 @vop3p_add_i16(i16 %arg0) #0 {
 define <2 x i16> @vop3p_add_v2i16(<2 x i16> %arg0) #0 {
   ; CHECK-LABEL: name: vop3p_add_v2i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr30_sgpr31
+  ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -44,8 +41,7 @@ define <2 x i16> @vop3p_add_v2i16(<2 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY2]], implicit $vgpr0
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add
 }
@@ -53,14 +49,12 @@ define <2 x i16> @vop3p_add_v2i16(<2 x i16> %arg0) #0 {
 define i16 @halfinsts_add_i16(i16 %arg0) #1 {
   ; CHECK-LABEL: name: halfinsts_add_i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr30_sgpr31
+  ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
   ; CHECK-NEXT:   $vgpr0 = COPY [[ADD]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY2]], implicit $vgpr0
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %add = add i16 %arg0, %arg0
   ret i16 %add
 }
@@ -68,17 +62,15 @@ define i16 @halfinsts_add_i16(i16 %arg0) #1 {
 define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK-LABEL: name: halfinsts_add_v2i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
   ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY1]]
   ; CHECK-NEXT:   $vgpr0 = COPY [[ADD]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[ADD1]](s32)
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0, implicit $vgpr1
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add
 }

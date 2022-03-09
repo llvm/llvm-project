@@ -8,8 +8,8 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-LABEL: no_free_vgprs_at_agpr_copy:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v33, v0
-; GFX908-NEXT:    v_mov_b32_e32 v34, v1
+; GFX908-NEXT:    v_mov_b32_e32 v33, v1
+; GFX908-NEXT:    v_mov_b32_e32 v34, v0
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def v[0:31] a[0:15]
 ; GFX908-NEXT:    ;;#ASMEND
@@ -62,7 +62,7 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_write_b32 a16, v32
 ; GFX908-NEXT:    s_nop 0
-; GFX908-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v34, a[16:31]
+; GFX908-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v34, v33, a[16:31]
 ; GFX908-NEXT:    s_nop 7
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v32, a0 ; Reload Reuse
@@ -159,8 +159,8 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-LABEL: no_free_vgprs_at_agpr_copy:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v32, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v33, v1
+; GFX90A-NEXT:    v_mov_b32_e32 v33, v0
+; GFX90A-NEXT:    v_mov_b32_e32 v32, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31] a[0:15]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -181,7 +181,7 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a17, a1
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a16, a0
 ; GFX90A-NEXT:    s_nop 1
-; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v32, v33, a[16:31]
+; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v32, a[16:31]
 ; GFX90A-NEXT:    s_nop 7
 ; GFX90A-NEXT:    s_nop 2
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[0:3], s32 ; 4-byte Folded Spill

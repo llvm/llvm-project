@@ -269,16 +269,16 @@ define void @store_lds_v4i32_align1(<4 x i32> addrspace(3)* %out, <4 x i32> %x) 
 ; GFX10-NEXT:    v_lshrrev_b16 v6, 8, v1
 ; GFX10-NEXT:    ds_write_b8 v0, v1
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v1 offset:2
+; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX10-NEXT:    v_lshrrev_b16 v7, 8, v2
-; GFX10-NEXT:    v_lshrrev_b16 v1, 8, v5
-; GFX10-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; GFX10-NEXT:    v_lshrrev_b16 v5, 8, v5
 ; GFX10-NEXT:    ds_write_b8 v0, v2 offset:4
 ; GFX10-NEXT:    ds_write_b8 v0, v6 offset:1
-; GFX10-NEXT:    ds_write_b8 v0, v1 offset:3
+; GFX10-NEXT:    ds_write_b8 v0, v5 offset:3
 ; GFX10-NEXT:    ds_write_b8 v0, v7 offset:5
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v2 offset:6
+; GFX10-NEXT:    v_lshrrev_b16 v1, 8, v1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
-; GFX10-NEXT:    v_lshrrev_b16 v1, 8, v5
 ; GFX10-NEXT:    v_lshrrev_b16 v5, 8, v3
 ; GFX10-NEXT:    ds_write_b8 v0, v1 offset:7
 ; GFX10-NEXT:    ds_write_b8 v0, v3 offset:8
@@ -344,17 +344,17 @@ define void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, <3 x i32> %x) 
 ; GFX10-NEXT:    ds_write_b8 v0, v1
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v1 offset:2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GFX10-NEXT:    v_lshrrev_b16 v4, 8, v4
 ; GFX10-NEXT:    v_lshrrev_b16 v6, 8, v2
+; GFX10-NEXT:    v_lshrrev_b16 v4, 8, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GFX10-NEXT:    ds_write_b8 v0, v2 offset:4
 ; GFX10-NEXT:    v_lshrrev_b16 v1, 8, v1
 ; GFX10-NEXT:    ds_write_b8 v0, v5 offset:1
 ; GFX10-NEXT:    ds_write_b8 v0, v4 offset:3
+; GFX10-NEXT:    ds_write_b8 v0, v6 offset:5
 ; GFX10-NEXT:    v_lshrrev_b16 v4, 8, v3
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v2 offset:6
 ; GFX10-NEXT:    v_lshrrev_b16 v2, 8, v7
-; GFX10-NEXT:    ds_write_b8 v0, v6 offset:5
 ; GFX10-NEXT:    ds_write_b8 v0, v1 offset:7
 ; GFX10-NEXT:    ds_write_b8 v0, v3 offset:8
 ; GFX10-NEXT:    ds_write_b8 v0, v4 offset:9

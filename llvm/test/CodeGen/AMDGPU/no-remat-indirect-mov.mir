@@ -30,8 +30,7 @@ body:             |
   ; GFX9-LABEL: name: index_vgpr_waterfall_loop
   ; GFX9: bb.0:
   ; GFX9:   successors: %bb.1(0x80000000)
-  ; GFX9:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_sgpr31
-  ; GFX9:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+  ; GFX9:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16
   ; GFX9:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr16
   ; GFX9:   undef %18.sub15:vreg_512 = COPY $vgpr15
   ; GFX9:   %18.sub14:vreg_512 = COPY $vgpr14
@@ -63,7 +62,6 @@ body:             |
   ; GFX9:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GFX9: bb.2:
   ; GFX9:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX9:   $sgpr30_sgpr31 = COPY [[COPY]]
   ; GFX9:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
   ; GFX9:   S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
   bb.0:
