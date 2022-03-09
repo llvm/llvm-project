@@ -2039,12 +2039,12 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
 
     if (CGF.SanOpts.has(SanitizerKind::CFIUnrelatedCast)) {
-      if (auto PT = DestTy->getAs<PointerType>()) {
+      if (auto *PT = DestTy->getAs<PointerType>()) {
         CGF.EmitVTablePtrCheckForCast(
             PT->getPointeeType(),
             Address(Src,
                     CGF.ConvertTypeForMem(
-                        E->getType()->getAs<PointerType>()->getPointeeType()),
+                        E->getType()->castAs<PointerType>()->getPointeeType()),
                     CGF.getPointerAlign()),
             /*MayBeNull=*/true, CodeGenFunction::CFITCK_UnrelatedCast,
             CE->getBeginLoc());
@@ -2948,8 +2948,8 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       CurrentType = ON.getBase()->getType();
 
       // Compute the offset to the base.
-      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
-      CXXRecordDecl *BaseRD = cast<CXXRecordDecl>(BaseRT->getDecl());
+      auto *BaseRT = CurrentType->castAs<RecordType>();
+      auto *BaseRD = cast<CXXRecordDecl>(BaseRT->getDecl());
       CharUnits OffsetInt = RL.getBaseClassOffset(BaseRD);
       Offset = llvm::ConstantInt::get(ResultType, OffsetInt.getQuantity());
       break;
