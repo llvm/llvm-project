@@ -59,4 +59,21 @@ TEST(CodeGenTest, TestNullCodeGen) {
   EXPECT_TRUE(Success);
 }
 
+TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  std::unique_ptr<MemoryBuffer> MemBuffer =
+      MemoryBuffer::getMemBuffer("", "test.ll");
+  Invocation->getFrontendOpts().Inputs.push_back(
+      FrontendInputFile(*MemBuffer, Language::LLVM_IR));
+  Invocation->getFrontendOpts().ProgramAction = frontend::EmitLLVMOnly;
+  Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
+  CompilerInstance Compiler;
+  Compiler.setInvocation(std::move(Invocation));
+  Compiler.createDiagnostics();
+  EXPECT_TRUE(Compiler.hasDiagnostics());
+
+  EmitLLVMOnlyAction Action;
+  bool Success = Compiler.ExecuteAction(Action);
+  EXPECT_TRUE(Success);
+}
 }
