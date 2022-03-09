@@ -129,5 +129,12 @@ int main(int, char**)
     assert(A::count == 0);
 #endif
 
+    {
+        std::shared_ptr<A const> pA(new A);
+        B const* p = pA.get();
+        std::shared_ptr<B const> pB(std::move(pA));
+        assert(pB.get() == p);
+    }
+
   return 0;
 }
