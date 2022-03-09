@@ -1352,6 +1352,10 @@ bool HWAddressSanitizer::instrumentStack(
       Value *UARTag = getUARTag(IRB, StackTag);
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
     bool StandardLifetime =
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd,
@@ -1468,10 +1472,6 @@ bool HWAddressSanitizer::sanitizeFunction(
   if (!SInfo.AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    // Calls to functions that may return twice (e.g. setjmp) confuse the
-    // postdominator analysis, and will leave us to keep memory tagged after
-    // function return. Work around this by always untagging at every return
-    // statement if return_twice functions are called.
     instrumentStack(SInfo, StackTag, GetDT, GetPDT);
   }
 
