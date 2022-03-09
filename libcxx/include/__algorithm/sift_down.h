@@ -98,7 +98,7 @@ __floyd_sift_down(_RandomAccessIterator __first, _Compare __comp,
 
         // swap __hole with its largest child
         *__hole = std::move(*__child_i);
-        __hole = std::move(__child_i);
+        __hole = __child_i;
 
         // if __hole is now a leaf, we're done
         if (__child > (__len - 2) / 2)
