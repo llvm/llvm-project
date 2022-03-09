@@ -289,14 +289,12 @@ void IRInstructionMapper::convertToUnsignedVec(
     }
   }
 
-  if (HaveLegalRange) {
-    if (AddedIllegalLastTime)
-      mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
-    for (IRInstructionData *ID : InstrListForBB)
-      this->IDL->push_back(*ID);
-    llvm::append_range(InstrList, InstrListForBB);
-    llvm::append_range(IntegerMapping, IntegerMappingForBB);
-  }
+  if (AddedIllegalLastTime)
+    mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
+  for (IRInstructionData *ID : InstrListForBB)
+    this->IDL->push_back(*ID);
+  llvm::append_range(InstrList, InstrListForBB);
+  llvm::append_range(IntegerMapping, IntegerMappingForBB);
 }
 
 // TODO: This is the same as the MachineOutliner, and should be consolidated
