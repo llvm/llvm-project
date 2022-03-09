@@ -6,9 +6,9 @@
 ; CHECK:      Stack dump:
 ; CHECK-NEXT: 0.  Program arguments:
 ; CHECK-NEXT: 1.  Running pass 'ModuleToFunctionPassAdaptor' on module
-; CHECK-NEXT: 2.  Running pass 'PassManager<llvm::Function>' on function '@foo'
+; CHECK-NEXT: 2.  Running pass 'PassManager<{{.*}}llvm::Function{{.*}}>' on function '@foo'
 ; CHECK-NEXT: 3.  Running pass 'FunctionToLoopPassAdaptor' on function '@foo'
-; CHECK-NEXT: 4.  Running pass 'PassManager<llvm::Loop,{{.+}}>' on loop 'loop.header'.
+; CHECK-NEXT: 4.  Running pass 'PassManager<{{.*}}llvm::Loop,{{.+}}>' on loop 'loop.header'.
 ; CHECK-NEXT: 5.  Running pass 'CrashingLoopPass' on loop 'loop.header'.
 
 define void @foo() {
