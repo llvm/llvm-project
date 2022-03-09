@@ -1344,6 +1344,20 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
   // FP will be specially managed like SP.
   if (WillHaveFP || hasFP(MF))
     SavedRegs.reset(MFI->getFrameOffsetReg());
+
+  // Return address use with return instruction is hidden through the SI_RETURN
+  // pseudo. Given that and since the IPRA computes actual register usage and
+  // does not use CSR list, the clobbering of return address by function calls
+  // (D117243) or otherwise (D120922) is ignored/not seen by the IPRA's register
+  // usage collection. This will ensure save/restore of return address happens
+  // in those scenarios.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register RetAddrReg = TRI->getReturnAddressReg(MF);
+  if (!MFI->isEntryFunction() &&
+      (FrameInfo.hasCalls() || MRI.isPhysRegModified(RetAddrReg))) {
+    SavedRegs.set(TRI->getSubReg(RetAddrReg, AMDGPU::sub0));
+    SavedRegs.set(TRI->getSubReg(RetAddrReg, AMDGPU::sub1));
+  }
 }
 
 bool SIFrameLowering::assignCalleeSavedSpillSlots(

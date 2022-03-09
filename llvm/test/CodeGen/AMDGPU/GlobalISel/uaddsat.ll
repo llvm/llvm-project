@@ -469,25 +469,25 @@ define i32 @v_uaddsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 24, v0
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
 ; GFX10-NEXT:    s_mov_b32 s4, 8
-; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX10-NEXT:    v_lshrrev_b32_sdwa v2, s4, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX10-NEXT:    v_lshrrev_b32_sdwa v6, s4, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX10-NEXT:    v_mov_b32_e32 v7, 0xffff
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX10-NEXT:    v_lshrrev_b32_sdwa v3, s4, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; GFX10-NEXT:    v_lshrrev_b32_sdwa v7, s4, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GFX10-NEXT:    v_and_or_b32 v0, v0, v2, v3
+; GFX10-NEXT:    v_and_or_b32 v1, v1, v2, v7
 ; GFX10-NEXT:    s_movk_i32 s4, 0xff
-; GFX10-NEXT:    v_and_or_b32 v0, v0, v7, v2
-; GFX10-NEXT:    v_and_or_b32 v1, v1, v7, v6
-; GFX10-NEXT:    v_and_or_b32 v2, v3, v7, v4
-; GFX10-NEXT:    v_and_or_b32 v3, v8, v7, v5
-; GFX10-NEXT:    v_mov_b32_e32 v4, 24
+; GFX10-NEXT:    v_and_or_b32 v3, v6, v2, v4
+; GFX10-NEXT:    v_and_or_b32 v2, v8, v2, v5
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, 8, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
-; GFX10-NEXT:    v_pk_lshlrev_b16 v2, 8, v2 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_mov_b32_e32 v4, 24
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v3, 8, v3 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_lshlrev_b16 v2, 8, v2 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 clamp
-; GFX10-NEXT:    v_pk_add_u16 v1, v2, v3 clamp
+; GFX10-NEXT:    v_pk_add_u16 v1, v3, v2 clamp
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 8
 ; GFX10-NEXT:    v_pk_lshrrev_b16 v0, 8, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_lshrrev_b16 v1, 8, v1 op_sel_hi:[0,1]

@@ -3258,8 +3258,8 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    s_addk_i32 s32, 0x400
 ; PRE-GFX10-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s6, v1
-; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[30:31], s6, v1
-; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[8:9], s[30:31]
+; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[34:35], s6, v1
+; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[8:9], s[34:35]
 ; PRE-GFX10-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; PRE-GFX10-NEXT:    v_mov_b32_e32 v2, v0
 ; PRE-GFX10-NEXT:    ; implicit-def: $vgpr1
@@ -3268,9 +3268,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    s_cbranch_execnz .LBB18_1
 ; PRE-GFX10-NEXT:  ; %bb.2:
 ; PRE-GFX10-NEXT:    s_mov_b64 exec, s[4:5]
-; PRE-GFX10-NEXT:    v_readlane_b32 s30, v40, 6
 ; PRE-GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; PRE-GFX10-NEXT:    v_readlane_b32 s31, v40, 7
+; PRE-GFX10-NEXT:    v_readlane_b32 s30, v40, 6
 ; PRE-GFX10-NEXT:    v_readlane_b32 s9, v40, 5
 ; PRE-GFX10-NEXT:    v_readlane_b32 s8, v40, 4
 ; PRE-GFX10-NEXT:    v_readlane_b32 s7, v40, 3
@@ -3306,8 +3306,8 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s31, 5
 ; GFX10-32-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s30, s4, v1
-; GFX10-32-NEXT:    s_and_saveexec_b32 s7, s30
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s34, s4, v1
+; GFX10-32-NEXT:    s_and_saveexec_b32 s7, s34
 ; GFX10-32-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX10-32-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-32-NEXT:    ; implicit-def: $vgpr1
@@ -3316,9 +3316,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-32-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX10-32-NEXT:  ; %bb.2:
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, s6
-; GFX10-32-NEXT:    v_readlane_b32 s30, v40, 4
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-32-NEXT:    v_readlane_b32 s31, v40, 5
+; GFX10-32-NEXT:    v_readlane_b32 s30, v40, 4
 ; GFX10-32-NEXT:    v_readlane_b32 s7, v40, 3
 ; GFX10-32-NEXT:    v_readlane_b32 s6, v40, 2
 ; GFX10-32-NEXT:    v_readlane_b32 s5, v40, 1
@@ -3355,8 +3355,8 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s31, 7
 ; GFX10-64-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[30:31], s6, v1
-; GFX10-64-NEXT:    s_and_saveexec_b64 s[8:9], s[30:31]
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[34:35], s6, v1
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[8:9], s[34:35]
 ; GFX10-64-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GFX10-64-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-64-NEXT:    ; implicit-def: $vgpr1
@@ -3365,9 +3365,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-64-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX10-64-NEXT:  ; %bb.2:
 ; GFX10-64-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX10-64-NEXT:    v_readlane_b32 s30, v40, 6
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-64-NEXT:    v_readlane_b32 s31, v40, 7
+; GFX10-64-NEXT:    v_readlane_b32 s30, v40, 6
 ; GFX10-64-NEXT:    v_readlane_b32 s9, v40, 5
 ; GFX10-64-NEXT:    v_readlane_b32 s8, v40, 4
 ; GFX10-64-NEXT:    v_readlane_b32 s7, v40, 3
