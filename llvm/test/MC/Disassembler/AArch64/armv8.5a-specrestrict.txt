@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=aarch64 -mattr=+specrestrict -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=aarch64 -mattr=+v8.5a        -disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple=aarch64 -mattr=+v8r -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8r -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=aarch64 -mattr=-specrestrict -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
 
 [0x81 0x03 0x38 0xd5]

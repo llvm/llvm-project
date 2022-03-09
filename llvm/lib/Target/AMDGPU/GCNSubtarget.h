@@ -72,6 +72,7 @@ protected:
   // Dynamically set bits that enable features.
   bool FlatForGlobal;
   bool AutoWaitcntBeforeBarrier;
+  bool BackOffBarrier;
   bool UnalignedScratchAccess;
   bool UnalignedAccessMode;
   bool HasApertureRegs;
@@ -497,6 +498,12 @@ public:
 
   bool hasAutoWaitcntBeforeBarrier() const {
     return AutoWaitcntBeforeBarrier;
+  }
+
+  /// \returns true if the target supports backing off of s_barrier instructions
+  /// when an exception is raised.
+  bool supportsBackOffBarrier() const {
+    return BackOffBarrier;
   }
 
   bool hasUnalignedBufferAccess() const {

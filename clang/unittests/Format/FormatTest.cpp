@@ -12669,6 +12669,13 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "};",
                MergeInlineOnly);
   verifyFormat("int f() {}", MergeInlineOnly);
+  // https://llvm.org/PR54147
+  verifyFormat("auto lambda = []() {\n"
+               "  // comment\n"
+               "  f();\n"
+               "  g();\n"
+               "};",
+               MergeInlineOnly);
 
   // Also verify behavior when BraceWrapping.AfterFunction = true
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
