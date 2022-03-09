@@ -472,16 +472,16 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; X64-BMI1-NEXT:    movq %rsi, %rcx
 ; X64-BMI1-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-BMI1-NEXT:    shlq %cl, %rdi
-; X64-BMI1-NEXT:    movabsq $281474976645120, %rax # imm = 0xFFFFFFFF0000
-; X64-BMI1-NEXT:    testq %rax, %rdi
+; X64-BMI1-NEXT:    shrq $16, %rdi
+; X64-BMI1-NEXT:    testl %edi, %edi
 ; X64-BMI1-NEXT:    sete %al
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: scalar_i64_bitsinmiddle_eq:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    movabsq $281474976645120, %rcx # imm = 0xFFFFFFFF0000
-; X64-BMI2-NEXT:    testq %rcx, %rax
+; X64-BMI2-NEXT:    shrq $16, %rax
+; X64-BMI2-NEXT:    testl %eax, %eax
 ; X64-BMI2-NEXT:    sete %al
 ; X64-BMI2-NEXT:    retq
   %t0 = lshr i64 281474976645120, %y

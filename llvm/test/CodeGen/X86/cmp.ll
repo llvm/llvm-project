@@ -598,9 +598,8 @@ define i32 @lowmask_i32_mask8(i32 %val) {
 define i1 @shifted_mask64_testb(i64 %a) {
 ; CHECK-LABEL: shifted_mask64_testb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $287104476244869120, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
-; CHECK-NEXT:    # imm = 0x3FC000000000000
-; CHECK-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; CHECK-NEXT:    shrq $50, %rdi # encoding: [0x48,0xc1,0xef,0x32]
+; CHECK-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
 ; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
@@ -611,9 +610,8 @@ define i1 @shifted_mask64_testb(i64 %a) {
 define i1 @shifted_mask64_testw(i64 %a) {
 ; CHECK-LABEL: shifted_mask64_testw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $562941363486720, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0xfe,0xff,0x01,0x00]
-; CHECK-NEXT:    # imm = 0x1FFFE00000000
-; CHECK-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; CHECK-NEXT:    shrq $33, %rdi # encoding: [0x48,0xc1,0xef,0x21]
+; CHECK-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
 ; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 562941363486720  ; 0xffff << 33
@@ -624,9 +622,8 @@ define i1 @shifted_mask64_testw(i64 %a) {
 define i1 @shifted_mask64_testl(i64 %a) {
 ; CHECK-LABEL: shifted_mask64_testl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $549755813760, %rax # encoding: [0x48,0xb8,0x80,0xff,0xff,0xff,0x7f,0x00,0x00,0x00]
-; CHECK-NEXT:    # imm = 0x7FFFFFFF80
-; CHECK-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; CHECK-NEXT:    shrq $7, %rdi # encoding: [0x48,0xc1,0xef,0x07]
+; CHECK-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 549755813760  ; 0xffffffff << 7
