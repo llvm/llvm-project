@@ -5601,6 +5601,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
            "equal",
            *VPCast);
   }
+  if (VPI.getIntrinsicID() == Intrinsic::vp_fcmp) {
+    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
+    Assert(CmpInst::isFPPredicate(Pred),
+           "invalid predicate for VP FP comparison intrinsic", &VPI);
+  }
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {

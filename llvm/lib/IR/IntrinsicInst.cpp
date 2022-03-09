@@ -236,8 +236,8 @@ bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
   return true;
 }
 
-FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
-  Metadata *MD = cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
+static FCmpInst::Predicate getFPPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return FCmpInst::BAD_FCMP_PREDICATE;
   return StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
@@ -256,6 +256,10 @@ FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
       .Case("ule", FCmpInst::FCMP_ULE)
       .Case("une", FCmpInst::FCMP_UNE)
       .Default(FCmpInst::BAD_FCMP_PREDICATE);
+}
+
+FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
+  return getFPPredicateFromMD(getArgOperand(2));
 }
 
 bool ConstrainedFPIntrinsic::isUnaryOp() const {
@@ -558,6 +562,37 @@ bool VPCastIntrinsic::isVPCast(Intrinsic::ID ID) {
 #include "llvm/IR/VPIntrinsics.def"
   }
   return false;
+}
+
+bool VPCmpIntrinsic::isVPCmp(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#define VP_PROPERTY_CMP(CCPOS, ...) return true;
+#define END_REGISTER_VP_INTRINSIC(VPID) break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return false;
+}
+
+CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
+  bool IsFP = true;
+  Optional<unsigned> CCArgIdx;
+  switch (getIntrinsicID()) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#define VP_PROPERTY_CMP(CCPOS, ISFP)                                           \
+  CCArgIdx = CCPOS;                                                            \
+  IsFP = ISFP;                                                                 \
+  break;
+#define END_REGISTER_VP_INTRINSIC(VPID) break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  assert(CCArgIdx.hasValue() && IsFP &&
+         "Unexpected vector-predicated comparison");
+  return getFPPredicateFromMD(getArgOperand(*CCArgIdx));
 }
 
 unsigned VPReductionIntrinsic::getVectorParamPos() const {

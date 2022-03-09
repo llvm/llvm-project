@@ -20283,6 +20283,64 @@ Examples:
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
 
 
+.. _int_vp_fcmp:
+
+'``llvm.vp.fcmp.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> <left_op>, <16 x float> <right_op>, metadata <condition code>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, metadata <condition code>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i1> @llvm.vp.fcmp.v256f64(<256 x double> <left_op>, <256 x double> <right_op>, metadata <condition code>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.fcmp``' intrinsic returns a vector of boolean values based on
+the comparison of its operands. The operation has a mask and an explicit vector
+length parameter.
+
+
+Arguments:
+""""""""""
+
+The '``llvm.vp.fcmp``' intrinsic takes the two values to compare as its first
+and second operands. These two values must be vectors of :ref:`floating-point
+<t_floating>` types.
+The return type is the result of the comparison. The return type must be a
+vector of :ref:`i1 <t_integer>` type. The fourth operand is the vector mask.
+The return type, the values to compare, and the vector mask have the same
+number of elements. The third operand is the condition code indicating the kind
+of comparison to perform. It must be a metadata string with :ref:`one of the
+supported floating-point condition code values <fcmp_md_cc>`. The fifth operand
+is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.fcmp``' compares its first two operands according to the
+condition code given as the third operand. The operands are compared element by
+element on each enabled lane, where the the semantics of the comparison are
+defined :ref:`according to the condition code <fcmp_md_cc_sem>`. Masked-off
+lanes are undefined.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> %a, <4 x float> %b, metadata !"oeq", <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = fcmp oeq <4 x float> %a, %b
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+
+
 .. _int_mload_mstore:
 
 Masked Vector Load and Store Intrinsics
@@ -21423,6 +21481,8 @@ of floating-point values. Both arguments must have identical types.
 The third argument is the condition code indicating the kind of comparison
 to perform. It must be a metadata string with one of the following values:
 
+.. _fcmp_md_cc:
+
 - "``oeq``": ordered and equal
 - "``ogt``": ordered and greater than
 - "``oge``": ordered and greater than or equal
@@ -21450,6 +21510,8 @@ Semantics:
 as the third argument. If the operands are vectors, then the
 vectors are compared element by element. Each comparison performed
 always yields an :ref:`i1 <t_integer>` result, as follows:
+
+.. _fcmp_md_cc_sem:
 
 - "``oeq``": yields ``true`` if both operands are not a NAN and ``op1``
   is equal to ``op2``.

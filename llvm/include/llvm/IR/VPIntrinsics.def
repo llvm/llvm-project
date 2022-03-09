@@ -126,6 +126,13 @@
 #define VP_PROPERTY_CASTOP
 #endif
 
+// This VP Intrinsic is a comparison operation
+// The condition code arg is at CCPOS and accepts floating-point condition
+// codes if ISFP is set, else it accepts integer condition codes.
+#ifndef VP_PROPERTY_CMP
+#define VP_PROPERTY_CMP(CCPOS, ISFP)
+#endif
+
 /// } Property Macros
 
 ///// Integer Arithmetic {
@@ -251,6 +258,16 @@ HELPER_REGISTER_CAST_VP(sitofp, VP_SITOFP, SIToFP, 1)
 #undef HELPER_REGISTER_CAST_VP
 
 ///// } Type Casts
+
+///// Comparisons {
+// llvm.vp.fcmp(x,y,cc,mask,vlen)
+BEGIN_REGISTER_VP(vp_fcmp, 3, 4, VP_FCMP, -1)
+VP_PROPERTY_FUNCTIONAL_OPC(FCmp)
+VP_PROPERTY_CMP(2, true)
+VP_PROPERTY_CONSTRAINEDFP(0, 1, experimental_constrained_fcmp)
+END_REGISTER_VP(vp_fcmp, VP_FCMP)
+
+///// } Comparisons
 
 ///// Memory Operations {
 // llvm.vp.store(val,ptr,mask,vlen)
@@ -424,6 +441,7 @@ END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 #undef END_REGISTER_VP_SDNODE
 #undef VP_PROPERTY_BINARYOP
 #undef VP_PROPERTY_CASTOP
+#undef VP_PROPERTY_CMP
 #undef VP_PROPERTY_CONSTRAINEDFP
 #undef VP_PROPERTY_FUNCTIONAL_INTRINSIC
 #undef VP_PROPERTY_FUNCTIONAL_OPC
