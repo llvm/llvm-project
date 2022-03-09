@@ -15,7 +15,7 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCEXTERNALSYMBOLIZER_H
 #define LLVM_MC_MCDISASSEMBLER_MCEXTERNALSYMBOLIZER_H
 
-#include "llvm-c/Disassembler.h"
+#include "llvm-c/DisassemblerTypes.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include <memory>
 
