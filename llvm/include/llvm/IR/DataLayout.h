@@ -26,10 +26,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/TypeSize.h"
 #include <cassert>

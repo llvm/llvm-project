@@ -17,11 +17,13 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/Endian.h"
 #include <string>
 #include <tuple>
 
 namespace llvm {
+template <typename HasherT, support::endianness Endianness>
+class HashBuilderImpl;
 class raw_ostream;
 class StringRef;
 

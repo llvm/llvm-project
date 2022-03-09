@@ -16,6 +16,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Valgrind.h"
 
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>

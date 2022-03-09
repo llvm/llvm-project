@@ -24,7 +24,6 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cctype>
 #include <map>
 #include <memory>
 #include <new>

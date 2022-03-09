@@ -50,9 +50,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "VarLenCodeEmitterGen.h"
+#include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "SubtargetFeatureInfo.h"
+#include "InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"

@@ -24,7 +24,6 @@
 
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
-#include <cstring>
 
 namespace llvm {
 namespace COFF {

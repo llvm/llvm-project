@@ -14,14 +14,14 @@
 #ifndef LLVM_SUPPORT_TARGETPARSER_H
 #define LLVM_SUPPORT_TARGETPARSER_H
 
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
-#include "llvm/Support/RISCVISAInfo.h"
 #include <vector>
 
 namespace llvm {
 
-class StringRef;
 template <typename T> class SmallVectorImpl;
 class Triple;
 

@@ -14,7 +14,6 @@
 
 #include "llvm/Support/CSKYTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
-#include <cctype>
 
 using namespace llvm;
 
