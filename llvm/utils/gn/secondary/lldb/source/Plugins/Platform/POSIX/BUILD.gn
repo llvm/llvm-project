@@ -9,6 +9,7 @@ static_library("POSIX") {
     "//lldb/source/Expression",
     "//lldb/source/Host",
     "//lldb/source/Interpreter",
+    "//lldb/source/Plugins/Platform/gdb-server",
     "//lldb/source/Plugins/TypeSystem/Clang",
     "//lldb/source/Target",
   ]
