@@ -220,6 +220,13 @@ function(runtime_default_target)
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
+    include(${LLVM_BINARY_DIR}/runtimes/Tests.cmake OPTIONAL RESULT_VARIABLE have_tests)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
+    if(have_tests)
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_TESTSUITES ${RUNTIMES_LIT_TESTSUITES})
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_PARAMS ${RUNTIMES_LIT_PARAMS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_EXTRA_ARGS ${RUNTIMES_LIT_EXTRA_ARGS})
+    endif()
     list(APPEND test_targets runtimes-test-depends check-runtimes)
   endif()
 
@@ -296,6 +303,13 @@ function(runtime_register_target name target)
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
+    include(${LLVM_BINARY_DIR}/runtimes/${name}/Tests.cmake OPTIONAL RESULT_VARIABLE have_tests)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/${name}/Tests.cmake)
+    if(have_tests)
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_TESTSUITES ${RUNTIMES_LIT_TESTSUITES})
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_PARAMS ${RUNTIMES_LIT_PARAMS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_EXTRA_ARGS ${RUNTIMES_LIT_EXTRA_ARGS})
+    endif()
     set(runtimes-test-depends-${name} runtimes-test-depends)
     set(check-runtimes-${name} check-runtimes)
     list(APPEND ${name}_test_targets runtimes-test-depends-${name} check-runtimes-${name})
@@ -468,7 +482,6 @@ if(runtimes)
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
-    set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-runtimes)
 
     set(RUNTIMES_TEST_DEPENDS
         FileCheck
