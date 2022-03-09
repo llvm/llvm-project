@@ -83,6 +83,10 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
   return "fir.host_assoc";
 }
 
+/// Does the function, \p func, have a host-associations tuple argument?
+/// Some internal procedures may have access to host procedure variables.
+bool hasHostAssociationArgument(mlir::FuncOp func);
+
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
 ///   - or, the result of fir.alloca/fir.allocamem op that has attribute \p
