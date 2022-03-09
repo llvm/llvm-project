@@ -370,7 +370,8 @@ struct __sanitizer_group {
   char **gr_mem;
 };
 
-#  if (defined(__x86_64__) && !defined(_LP64)) || defined(__hexagon__)
+#  if (SANITIZER_LINUX && !SANITIZER_GLIBC && !SANITIZER_ANDROID) || \
+      (defined(__x86_64__) && !defined(_LP64)) || defined(__hexagon__)
 typedef long long __sanitizer_time_t;
 #else
 typedef long __sanitizer_time_t;
@@ -478,7 +479,8 @@ struct __sanitizer_dirent {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#  elif SANITIZER_ANDROID || defined(__x86_64__) || defined(__hexagon__)
+#  elif (SANITIZER_LINUX && !SANITIZER_GLIBC) || defined(__x86_64__) || \
+      defined(__hexagon__)
 struct __sanitizer_dirent {
   unsigned long long d_ino;
   unsigned long long d_off;
