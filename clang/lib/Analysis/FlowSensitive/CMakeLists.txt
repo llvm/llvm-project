@@ -3,6 +3,7 @@ add_clang_library(clangAnalysisFlowSensitive
   DataflowAnalysisContext.cpp
   DataflowEnvironment.cpp
   SourceLocationsLattice.cpp
+  TestingSupport.cpp
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
   WatchedLiteralsSolver.cpp
@@ -12,3 +13,5 @@ add_clang_library(clangAnalysisFlowSensitive
   clangAST
   clangBasic
   )
+
+add_subdirectory(Models)

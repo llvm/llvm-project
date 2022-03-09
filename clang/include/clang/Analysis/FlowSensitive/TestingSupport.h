@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
-#define LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
+#ifndef CLANG_ANALYSIS_FLOWSENSITIVE_TESTING_SUPPORT_H
+#define CLANG_ANALYSIS_FLOWSENSITIVE_TESTING_SUPPORT_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -179,4 +179,4 @@ const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
 } // namespace dataflow
 } // namespace clang
 
-#endif // LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
+#endif // CLANG_ANALYSIS_FLOWSENSITIVE_TESTING_SUPPORT_H
