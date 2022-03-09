@@ -1813,7 +1813,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
         "%s", ansi::FormatAnsiTerminalCodes(ansi_suffix, use_color).c_str());
 
   // Clear until the end of the line.
-  output.Printf("\x1B[K");
+  output.Printf("\x1B[K\r");
 
   // Flush the output.
   output.Flush();
