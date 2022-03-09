@@ -223,14 +223,14 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   if (!result) { // error cases
     if (*lbi < 1) {
       context.messages().Say(
-          "Lower bound (%jd) on substring is less than one"_en_US,
+          "Lower bound (%jd) on substring is less than one"_warn_en_US,
           static_cast<std::intmax_t>(*lbi));
       *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
     }
     if (length && *ubi > *length) {
       context.messages().Say(
-          "Upper bound (%jd) on substring is greater than character length (%jd)"_en_US,
+          "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
           static_cast<std::intmax_t>(*ubi),
           static_cast<std::intmax_t>(*length));
       *ubi = *length;

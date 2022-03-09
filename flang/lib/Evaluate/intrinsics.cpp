@@ -2476,7 +2476,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             context.messages().Say(
                 "argument types do not match specific intrinsic '%s' "
                 "requirements; using '%s' generic instead and converting the "
-                "result to %s if needed"_en_US,
+                "result to %s if needed"_port_en_US,
                 call.name, genericName, newType.AsFortran());
             specificCall->specificIntrinsic.name = call.name;
             specificCall->specificIntrinsic.characteristics.value()

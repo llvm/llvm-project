@@ -1534,7 +1534,7 @@ Expr<TO> FoldOperation(
               auto converted{Scalar<TO>::ConvertSigned(*value)};
               if (converted.overflow) {
                 ctx.messages().Say(
-                    "INTEGER(%d) to INTEGER(%d) conversion overflowed"_en_US,
+                    "INTEGER(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
                     Operand::kind, TO::kind);
               }
               return ScalarConstantToExpr(std::move(converted.value));
@@ -1542,11 +1542,11 @@ Expr<TO> FoldOperation(
               auto converted{value->template ToInteger<Scalar<TO>>()};
               if (converted.flags.test(RealFlag::InvalidArgument)) {
                 ctx.messages().Say(
-                    "REAL(%d) to INTEGER(%d) conversion: invalid argument"_en_US,
+                    "REAL(%d) to INTEGER(%d) conversion: invalid argument"_warn_en_US,
                     Operand::kind, TO::kind);
               } else if (converted.flags.test(RealFlag::Overflow)) {
                 ctx.messages().Say(
-                    "REAL(%d) to INTEGER(%d) conversion overflowed"_en_US,
+                    "REAL(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
                     Operand::kind, TO::kind);
               }
               return ScalarConstantToExpr(std::move(converted.value));
@@ -1651,7 +1651,7 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
       auto negated{value->Negate()};
       if (negated.overflow) {
         context.messages().Say(
-            "INTEGER(%d) negation overflowed"_en_US, T::kind);
+            "INTEGER(%d) negation overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{std::move(negated.value)}};
     } else {
@@ -1691,7 +1691,7 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
       auto sum{folded->first.AddSigned(folded->second)};
       if (sum.overflow) {
         context.messages().Say(
-            "INTEGER(%d) addition overflowed"_en_US, T::kind);
+            "INTEGER(%d) addition overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{sum.value}};
     } else {
@@ -1716,7 +1716,7 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
       auto difference{folded->first.SubtractSigned(folded->second)};
       if (difference.overflow) {
         context.messages().Say(
-            "INTEGER(%d) subtraction overflowed"_en_US, T::kind);
+            "INTEGER(%d) subtraction overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{difference.value}};
     } else {
@@ -1742,7 +1742,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       auto product{folded->first.MultiplySigned(folded->second)};
       if (product.SignedMultiplicationOverflowed()) {
         context.messages().Say(
-            "INTEGER(%d) multiplication overflowed"_en_US, T::kind);
+            "INTEGER(%d) multiplication overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{product.lower}};
     } else {
@@ -1780,12 +1780,13 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto quotAndRem{folded->first.DivideSigned(folded->second)};
       if (quotAndRem.divisionByZero) {
-        context.messages().Say("INTEGER(%d) division by zero"_en_US, T::kind);
+        context.messages().Say(
+            "INTEGER(%d) division by zero"_warn_en_US, T::kind);
         return Expr<T>{std::move(x)};
       }
       if (quotAndRem.overflow) {
         context.messages().Say(
-            "INTEGER(%d) division overflowed"_en_US, T::kind);
+            "INTEGER(%d) division overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
     } else {
@@ -1810,12 +1811,13 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       auto power{folded->first.Power(folded->second)};
       if (power.divisionByZero) {
         context.messages().Say(
-            "INTEGER(%d) zero to negative power"_en_US, T::kind);
+            "INTEGER(%d) zero to negative power"_warn_en_US, T::kind);
       } else if (power.overflow) {
-        context.messages().Say("INTEGER(%d) power overflowed"_en_US, T::kind);
+        context.messages().Say(
+            "INTEGER(%d) power overflowed"_warn_en_US, T::kind);
       } else if (power.zeroToZero) {
         context.messages().Say(
-            "INTEGER(%d) 0**0 is not defined"_en_US, T::kind);
+            "INTEGER(%d) 0**0 is not defined"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
@@ -1824,7 +1826,8 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
       } else {
         context.messages().Say(
-            "Power for %s cannot be folded on host"_en_US, T{}.AsFortran());
+            "Power for %s cannot be folded on host"_warn_en_US,
+            T{}.AsFortran());
       }
     }
   }
@@ -1907,7 +1910,7 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
           From converted{From::ConvertUnsigned(real.RawBits()).value};
           if (original != converted) { // C1601
             context.messages().Say(
-                "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_en_US);
+                "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
           }
         } else if constexpr (IsNumericCategoryExpr<From>()) {
           result = Fold(context, ConvertToType<Result>(std::move(x)));

@@ -420,7 +420,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
           if (j.overflow) {
             context.messages().Say(
-                "abs(integer(kind=%d)) folding overflowed"_en_US, KIND);
+                "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return j.value;
         }));
@@ -440,7 +440,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   auto y{x.template ToInteger<Scalar<T>>(mode)};
                   if (y.flags.test(RealFlag::Overflow)) {
                     context.messages().Say(
-                        "%s intrinsic folding overflow"_en_US, name);
+                        "%s intrinsic folding overflow"_warn_en_US, name);
                   }
                   return y.value;
                 }));
@@ -506,7 +506,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       if (len.value() != 1) {
         // Do not die, this was not checked before
         context.messages().Say(
-            "Character in intrinsic function %s must have length one"_en_US,
+            "Character in intrinsic function %s must have length one"_warn_en_US,
             name);
       } else {
         return std::visit(
@@ -761,9 +761,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
               if (quotRem.divisionByZero) {
-                context.messages().Say("mod() by zero"_en_US);
+                context.messages().Say("mod() by zero"_warn_en_US);
               } else if (quotRem.overflow) {
-                context.messages().Say("mod() folding overflowed"_en_US);
+                context.messages().Say("mod() folding overflowed"_warn_en_US);
               }
               return quotRem.remainder;
             }));
@@ -774,7 +774,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 const Scalar<T> &y) -> Scalar<T> {
               auto result{x.MODULO(y)};
               if (result.overflow) {
-                context.messages().Say("modulo() folding overflowed"_en_US);
+                context.messages().Say(
+                    "modulo() folding overflowed"_warn_en_US);
               }
               return result.value;
             }));
@@ -894,7 +895,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               typename Scalar<T>::ValueWithOverflow result{j.SIGN(k)};
               if (result.overflow) {
                 context.messages().Say(
-                    "sign(integer(kind=%d)) folding overflowed"_en_US, KIND);
+                    "sign(integer(kind=%d)) folding overflowed"_warn_en_US,
+                    KIND);
               }
               return result.value;
             }));
@@ -915,7 +917,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             }
           } else {
             context.messages().Say(
-                "size(array,dim=%jd) dimension is out of range for rank-%d array"_en_US,
+                "size(array,dim=%jd) dimension is out of range for rank-%d array"_warn_en_US,
                 *dim, rank);
           }
         }
