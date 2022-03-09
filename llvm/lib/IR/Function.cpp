@@ -1803,7 +1803,7 @@ bool Function::hasAddressTaken(const User **PutOffender,
         *PutOffender = FU;
       return true;
     }
-    if (!Call->isCallee(&U)) {
+    if (!Call->isCallee(&U) || Call->getFunctionType() != getFunctionType()) {
       if (IgnoreARCAttachedCall &&
           Call->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
                                       U.getOperandNo()))
