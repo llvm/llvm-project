@@ -7,7 +7,7 @@ def main() {
   print(c);
 }
 
-# CHECK-LABEL: func @main()
+# CHECK-LABEL: toy.func @main()
 # CHECK-NEXT:    [[VAL_0:%.*]] = toy.constant
 # CHECK-SAME: 		dense<[
 # CHECK-SAME: 	 	[1.000000e+00], [2.000000e+00]

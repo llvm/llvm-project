@@ -4,6 +4,6 @@
 // - toy.print should not return a value.
 // - toy.print should take an argument.
 // - There should be a block terminator.
-func @main() {
+toy.func @main() {
   %0 = "toy.print"()  : () -> tensor<2x3xf64>
 }

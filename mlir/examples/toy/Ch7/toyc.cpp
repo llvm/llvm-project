@@ -146,7 +146,7 @@ int loadAndProcessMLIR(mlir::MLIRContext &context,
 
     // Now that there is only one function, we can infer the shapes of each of
     // the operations.
-    mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+    mlir::OpPassManager &optPM = pm.nest<mlir::toy::FuncOp>();
     optPM.addPass(mlir::createCanonicalizerPass());
     optPM.addPass(mlir::toy::createShapeInferencePass());
     optPM.addPass(mlir::createCanonicalizerPass());
@@ -154,10 +154,11 @@ int loadAndProcessMLIR(mlir::MLIRContext &context,
   }
 
   if (isLoweringToAffine) {
-    mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+    // Partially lower the toy dialect.
+    pm.addPass(mlir::toy::createLowerToAffinePass());
 
-    // Partially lower the toy dialect with a few cleanups afterwards.
-    optPM.addPass(mlir::toy::createLowerToAffinePass());
+    // Add a few cleanups post lowering.
+    mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
     optPM.addPass(mlir::createCanonicalizerPass());
     optPM.addPass(mlir::createCSEPass());
 
