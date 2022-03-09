@@ -5,7 +5,7 @@
 
 @a = common dso_local global i64 0, align 4
 @b = common dso_local global i64 0, align 4
-@c = common dso_local global [10 x [1 x i32 ]] zeroinitializer, align 16
+@c = common dso_local global [10 x [10 x i32 ]] zeroinitializer, align 16
 
 
 define void @test_lcssa_indvars1()  {
@@ -34,7 +34,7 @@ outer.header:                                     ; preds = %outer.latch, %entry
 
 inner.body:                                       ; preds = %inner.body, %outer.header
   %iv.inner = phi i64 [ 5, %outer.header ], [ %iv.inner.next, %inner.body ]
-  %v7 = getelementptr inbounds [10 x [1 x i32]], [10 x [1 x i32]]* @c, i64 0, i64 %iv.inner, i64 %iv.outer
+  %v7 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 %iv.inner, i64 %iv.outer
   store i32 0, i32* %v7, align 4
   %iv.inner.next = add nsw i64 %iv.inner, -1
   %v9 = icmp eq i64 %iv.inner, 0
@@ -81,7 +81,7 @@ outer.header:                                     ; preds = %outer.latch, %entry
 
 inner.body:                                       ; preds = %inner.body, %outer.header
   %iv.inner = phi i64 [ 5, %outer.header ], [ %iv.inner.next, %inner.body ]
-  %v7 = getelementptr inbounds [10 x [1 x i32]], [10 x [1 x i32]]* @c, i64 0, i64 %iv.inner, i64 %iv.outer
+  %v7 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 %iv.inner, i64 %iv.outer
   store i32 0, i32* %v7, align 4
   %iv.inner.next = add nsw i64 %iv.inner, -1
   %v9 = icmp eq i64 %iv.inner.next, 0
@@ -130,7 +130,7 @@ outer.header:                                     ; preds = %outer.latch, %entry
 
 inner.body:                                       ; preds = %inner.body, %outer.header
   %iv.inner = phi i64 [ 5, %outer.header ], [ %iv.inner.next, %inner.body ]
-  %v7 = getelementptr inbounds [10 x [1 x i32]], [10 x [1 x i32]]* @c, i64 0, i64 %iv.inner, i64 %iv.outer
+  %v7 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 %iv.inner, i64 %iv.outer
   store i32 0, i32* %v7, align 4
   %iv.inner.next = add nsw i64 %iv.inner, -1
   %v9 = icmp eq i64 %iv.inner, 0
