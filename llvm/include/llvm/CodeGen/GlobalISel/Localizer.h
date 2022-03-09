@@ -22,11 +22,14 @@
 #define LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 // Forward declarations.
+class AnalysisUsage;
+class MachineBasicBlock;
+class MachineInstr;
+class MachineOperand;
 class MachineRegisterInfo;
 class TargetTransformInfo;
 

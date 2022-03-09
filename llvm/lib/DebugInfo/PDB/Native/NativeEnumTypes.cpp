@@ -18,7 +18,6 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

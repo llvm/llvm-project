@@ -24,15 +24,15 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/MachineValueType.h"
-#include <algorithm>
 #include <cstdint>
 #include <utility>
 
 namespace llvm {
 
 class AllocaInst;
+class Instruction;
+class IntrinsicInst;
 class BasicBlock;
 class CallInst;
 class Constant;

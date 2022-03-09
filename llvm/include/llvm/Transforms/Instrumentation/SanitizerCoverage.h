@@ -16,13 +16,14 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation.h"
 
 namespace llvm {
+class Module;
+class ModulePass;
 
 /// This is the ModuleSanitizerCoverage pass used in the new pass manager. The
 /// pass instruments functions for coverage, adds initialization calls to the

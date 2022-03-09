@@ -17,12 +17,7 @@
 #ifndef LLVM_CODEGEN_MIRFSDISCRIMINATOR_H
 #define LLVM_CODEGEN_MIRFSDISCRIMINATOR_H
 
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"

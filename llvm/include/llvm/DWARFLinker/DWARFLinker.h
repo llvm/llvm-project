@@ -11,15 +11,20 @@
 
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
-#include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
-#include "llvm/MC/MCDwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include <map>
 
 namespace llvm {
+class DWARFContext;
+class DWARFExpression;
+class DWARFUnit;
+class DataExtractor;
+class DeclContextTree;
+struct MCDwarfLineTableParams;
+template <typename T> class SmallVectorImpl;
 
 enum class DwarfLinkerClient { Dsymutil, LLD, General };
 

@@ -16,13 +16,13 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+class SMLoc;
 template <typename T> class ArrayRef;
   class Record;
   class DagInit;

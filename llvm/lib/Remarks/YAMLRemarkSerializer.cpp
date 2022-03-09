@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
+#include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FileSystem.h"
 
 using namespace llvm;

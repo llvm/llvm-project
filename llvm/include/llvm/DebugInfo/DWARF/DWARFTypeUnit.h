@@ -10,12 +10,12 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFTYPEUNIT_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include <cstdint>
 
 namespace llvm {
 
+struct DIDumpOptions;
 class DWARFContext;
 class DWARFDebugAbbrev;
 struct DWARFSection;

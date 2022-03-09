@@ -75,9 +75,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <memory>
-#include <queue>
-#include <tuple>
 #include <utility>
 
 using namespace llvm;

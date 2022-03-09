@@ -11,11 +11,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/Support/Error.h"
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
 namespace codeview {
+class TypeIndex;
 enum class TiRefKind { TypeRef, IndexRef };
 struct TiReference {
   TiRefKind Kind;

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 
 using namespace llvm;

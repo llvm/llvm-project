@@ -13,13 +13,17 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZER_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZER_H
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 
 namespace llvm {
+class Function;
+class FunctionPass;
+class GlobalVariable;
+class MDNode;
+class Module;
+class ModulePass;
+class raw_ostream;
 
 /// Frontend-provided metadata for source location.
 struct LocationMetadata {

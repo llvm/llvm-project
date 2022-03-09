@@ -13,7 +13,6 @@
 #include "llvm/Support/Error.h"
 
 #include "llvm/DebugInfo/CodeView/GUID.h"
-#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
 namespace llvm {
@@ -21,6 +20,7 @@ class WritableBinaryStreamRef;
 
 namespace msf {
 class MSFBuilder;
+struct MSFLayout;
 }
 namespace pdb {
 class NamedStreamMap;

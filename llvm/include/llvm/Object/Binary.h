@@ -18,12 +18,13 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 #include <utility>
 
 namespace llvm {
 
+class MemoryBuffer;
 class LLVMContext;
 class StringRef;
 

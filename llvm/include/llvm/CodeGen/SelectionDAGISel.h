@@ -16,12 +16,13 @@
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include <memory>
 
 namespace llvm {
 class AAResults;
+class TargetInstrInfo;
+class TargetMachine;
 class SelectionDAGBuilder;
 class SDValue;
 class MachineRegisterInfo;

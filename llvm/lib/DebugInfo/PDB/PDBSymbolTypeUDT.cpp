@@ -10,7 +10,6 @@
 
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

@@ -22,7 +22,6 @@
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
-#include <list>
 #include <map>
 #include <memory>
 #include <string>
