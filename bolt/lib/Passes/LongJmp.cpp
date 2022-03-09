@@ -21,8 +21,6 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> UseOldText;
-extern cl::opt<unsigned> AlignFunctions;
-extern cl::opt<unsigned> AlignFunctionsMaxBytes;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool>
@@ -302,8 +300,8 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
       continue;
     DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
     uint64_t Pad =
-        offsetToAlignment(DotAddress, llvm::Align(opts::AlignFunctions));
-    if (Pad <= opts::AlignFunctionsMaxBytes)
+        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
+    if (Pad <= Func->getMaxColdAlignmentBytes())
       DotAddress += Pad;
     ColdAddresses[Func] = DotAddress;
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
@@ -349,8 +347,8 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
 
     DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
     uint64_t Pad =
-        offsetToAlignment(DotAddress, llvm::Align(opts::AlignFunctions));
-    if (Pad <= opts::AlignFunctionsMaxBytes)
+        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
+    if (Pad <= Func->getMaxAlignmentBytes())
       DotAddress += Pad;
     HotAddresses[Func] = DotAddress;
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " tentative: "
