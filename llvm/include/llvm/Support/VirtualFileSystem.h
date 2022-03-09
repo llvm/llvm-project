@@ -306,6 +306,28 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  enum class PrintType { Summary, Contents, RecursiveContents };
+  void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
+             unsigned IndentLevel = 0) const {
+    printImpl(OS, Type, IndentLevel);
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
+protected:
+  virtual void printImpl(raw_ostream &OS, PrintType Type,
+                         unsigned IndentLevel) const {
+    printIndent(OS, IndentLevel);
+    OS << "FileSystem\n";
+  }
+
+  void printIndent(raw_ostream &OS, unsigned IndentLevel) const {
+    for (unsigned i = 0; i < IndentLevel; ++i)
+      OS << "  ";
+  }
 };
 
 /// Gets an \p vfs::FileSystem for the 'real' file system, as seen by
@@ -357,6 +379,8 @@ public:
   using const_iterator = FileSystemList::const_reverse_iterator;
   using reverse_iterator = FileSystemList::iterator;
   using const_reverse_iterator = FileSystemList::const_iterator;
+  using range = iterator_range<iterator>;
+  using const_range = iterator_range<const_iterator>;
 
   /// Get an iterator pointing to the most recently added file system.
   iterator overlays_begin() { return FSList.rbegin(); }
@@ -373,6 +397,13 @@ public:
   /// Get an iterator pointing one-past the most recently added file system.
   reverse_iterator overlays_rend() { return FSList.end(); }
   const_reverse_iterator overlays_rend() const { return FSList.end(); }
+
+  range overlays_range() { return llvm::reverse(FSList); }
+  const_range overlays_range() const { return llvm::reverse(FSList); }
+
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 /// By default, this delegates all calls to the underlying file system. This
@@ -520,6 +551,10 @@ public:
                               SmallVectorImpl<char> &Output) const override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 /// Get a globally unique ID for a virtual file or directory.
@@ -910,12 +945,11 @@ public:
 
   std::vector<llvm::StringRef> getRoots() const;
 
-  void print(raw_ostream &OS) const;
-  void printEntry(raw_ostream &OS, Entry *E, int NumSpaces = 0) const;
+  void printEntry(raw_ostream &OS, Entry *E, unsigned IndentLevel = 0) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
-#endif
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the
