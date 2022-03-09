@@ -1737,6 +1737,9 @@ Error markAllSymbolsLive(LinkGraph &G);
 Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
                                 const Edge &E);
 
+Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
+                         const Edge &E);
+
 /// Base case for edge-visitors where the visitor-list is empty.
 inline void visitEdge(LinkGraph &G, Block *B, Edge &E) {}
 
