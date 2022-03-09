@@ -1176,6 +1176,15 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
       dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
 }
 
+MCSection *TargetLoweringObjectFileMachO::getStaticDtorSection(
+    unsigned Priority, const MCSymbol *KeySym) const {
+  // TODO(yln): Remove -lower-global-dtors-via-cxa-atexit fallback flag
+  // (LowerGlobalDtorsViaCxaAtExit) and always issue a fatal error here.
+  if (TM->Options.LowerGlobalDtorsViaCxaAtExit)
+    report_fatal_error("@llvm.global_dtors should have been lowered already");
+  return StaticDtorSection;
+}
+
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
                                                        Module &M) const {
   // Emit the linker options if present.
@@ -2175,8 +2184,7 @@ MCSection *TargetLoweringObjectFileWasm::getStaticCtorSection(
 
 MCSection *TargetLoweringObjectFileWasm::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  llvm_unreachable("@llvm.global_dtors should have been lowered already");
-  return nullptr;
+  report_fatal_error("@llvm.global_dtors should have been lowered already");
 }
 
 //===----------------------------------------------------------------------===//
