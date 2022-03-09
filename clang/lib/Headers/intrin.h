@@ -164,7 +164,7 @@ void _Store_HLERelease(long volatile *, long);
 void _Store64_HLERelease(__int64 volatile *, __int64);
 void _StorePointer_HLERelease(void *volatile *, void *);
 void _WriteBarrier(void);
-unsigned __int32 xbegin(void);
+unsigned int _xbegin(void);
 void _xend(void);
 
 /* These additional intrinsics are turned on in x64/amd64/x86_64 mode. */
