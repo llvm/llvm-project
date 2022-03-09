@@ -663,7 +663,8 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   // Open the file.
   FILE *file = fopen(filename, "r");
   if (!file) {
-    fprintf(stderr, "Cannot find %s\n", filename);
+    assert(filename && "Received nullptr for filename");
+    fprintf(stderr, "Cannot find file %s\n", filename);
     exit(1);
   }
   // Perform some file format dependent set up.
@@ -1180,6 +1181,10 @@ char *getTensorFilename(index_type id) {
   char var[80];
   sprintf(var, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
+  if (!env) {
+    fprintf(stderr, "Environment variable %s is not set\n", var);
+    exit(1);
+  }
   return env;
 }
 
