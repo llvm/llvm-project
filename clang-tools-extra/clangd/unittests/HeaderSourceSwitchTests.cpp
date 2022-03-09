@@ -12,7 +12,9 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "support/Path.h"
 #include "llvm/ADT/None.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -269,6 +271,43 @@ TEST(HeaderSourceSwitchTest, ClangdServerIntegration) {
   runAddDocument(Server, CppPath, FileContent);
   EXPECT_EQ(HeaderPath,
             *llvm::cantFail(runSwitchHeaderSource(Server, CppPath)));
+}
+
+TEST(HeaderSourceSwitchTest, CaseSensitivity) {
+  TestTU TU = TestTU::withCode("void foo() {}");
+  // Define more symbols in the header than the source file to trick heuristics
+  // into picking the header as source file, if the matching for header file
+  // path fails.
+  TU.HeaderCode = R"cpp(
+  inline void bar1() {}
+  inline void bar2() {}
+  void foo();)cpp";
+  // Give main file and header different base names to make sure file system
+  // heuristics don't work.
+  TU.Filename = "Source.cpp";
+  TU.HeaderFilename = "Header.h";
+
+  auto Index = TU.index();
+  TU.Code = std::move(TU.HeaderCode);
+  TU.HeaderCode.clear();
+  auto AST = TU.build();
+
+  // Provide a different-cased filename in the query than what we have in the
+  // index, check if we can still find the source file, which defines less
+  // symbols than the header.
+  auto HeaderAbsPath = testPath("HEADER.H");
+  // We expect the heuristics to pick:
+  // - header on case sensitive file systems, because the HeaderAbsPath doesn't
+  //   match what we've seen through index.
+  // - source on case insensitive file systems, as the HeaderAbsPath would match
+  //   the filename in index.
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
+              llvm::ValueIs(testing::StrCaseEq(testPath(TU.Filename))));
+#else
+  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
+              llvm::ValueIs(testing::StrCaseEq(testPath(TU.HeaderFilename))));
+#endif
 }
 
 } // namespace

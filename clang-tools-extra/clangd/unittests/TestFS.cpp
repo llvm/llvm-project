@@ -18,6 +18,18 @@
 namespace clang {
 namespace clangd {
 
+namespace {
+
+// Tries to strip \p Prefix from beginning of \p Path. Returns true on success.
+// If \p Prefix doesn't match, leaves \p Path untouched and returns false.
+bool pathConsumeFront(PathRef &Path, PathRef Prefix) {
+  if (!pathStartsWith(Prefix, Path))
+    return false;
+  Path = Path.drop_front(Prefix.size());
+  return true;
+}
+} // namespace
+
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 buildTestFS(llvm::StringMap<std::string> const &Files,
             llvm::StringMap<time_t> const &Timestamps) {
@@ -99,7 +111,7 @@ public:
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef HintPath) const override {
-    if (!HintPath.empty() && !HintPath.startswith(testRoot()))
+    if (!HintPath.empty() && !pathStartsWith(testRoot(), HintPath))
       return error("Hint path is not empty and doesn't start with {0}: {1}",
                    testRoot(), HintPath);
     if (!Body.consume_front("/"))
@@ -111,12 +123,11 @@ public:
 
   llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
-    llvm::StringRef Body = AbsolutePath;
-    if (!Body.consume_front(testRoot()))
+    if (!pathConsumeFront(AbsolutePath, testRoot()))
       return error("{0} does not start with {1}", AbsolutePath, testRoot());
 
     return URI(Scheme, /*Authority=*/"",
-               llvm::sys::path::convert_to_slash(Body));
+               llvm::sys::path::convert_to_slash(AbsolutePath));
   }
 };
 
