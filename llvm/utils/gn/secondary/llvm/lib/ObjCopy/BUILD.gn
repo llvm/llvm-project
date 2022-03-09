@@ -12,6 +12,7 @@ static_library("ObjCopy") {
     "COFF/COFFObject.cpp",
     "COFF/COFFReader.cpp",
     "COFF/COFFWriter.cpp",
+    "CommonConfig.cpp",
     "ConfigManager.cpp",
     "ELF/ELFObjcopy.cpp",
     "ELF/ELFObject.cpp",
