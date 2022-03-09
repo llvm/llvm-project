@@ -98,19 +98,19 @@ let Definition = "debugger" in {
   def StopShowColumnAnsiPrefix: Property<"stop-show-column-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.underline}">,
-    Desc<"When displaying the column marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format at the immediately before the column to be marked.">;
+    Desc<"When displaying the column marker in a color-enabled terminal, use the ANSI terminal code specified in this format at the immediately before the column to be marked.">;
   def StopShowColumnAnsiSuffix: Property<"stop-show-column-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
-    Desc<"When displaying the column marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the column to be marked.">;
+    Desc<"When displaying the column marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the column to be marked.">;
   def StopShowLineMarkerAnsiPrefix: Property<"stop-show-line-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.fg.yellow}">,
-    Desc<"When displaying the line marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format at the immediately before the line to be marked.">;
+    Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format at the immediately before the line to be marked.">;
   def StopShowLineMarkerAnsiSuffix: Property<"stop-show-line-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
-    Desc<"When displaying the line marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
+    Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
   def TerminalWidth: Property<"term-width", "SInt64">,
     Global,
     DefaultUnsignedValue<80>,
@@ -166,9 +166,9 @@ let Definition = "debugger" in {
   def ShowAutosuggestionAnsiPrefix: Property<"show-autosuggestion-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.faint}">,
-    Desc<"When displaying suggestion in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately before the suggestion.">;
+    Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the suggestion.">;
   def ShowAutosuggestionAnsiSuffix: Property<"show-autosuggestion-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
-    Desc<"When displaying suggestion in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
+    Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
 }
