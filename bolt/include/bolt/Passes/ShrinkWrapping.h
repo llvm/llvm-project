@@ -303,9 +303,8 @@ class ShrinkWrapping {
   std::vector<int64_t> PopOffsetByReg;
   std::vector<MCPhysReg> DomOrder;
   CalleeSavedAnalysis CSA;
-  std::vector<SmallSetVector<MCInst *, 4>> SavePos;
-  std::vector<uint64_t> BestSaveCount;
-  std::vector<MCInst *> BestSavePos;
+  std::vector<std::vector<uint64_t>> BestSaveCount;
+  std::vector<std::vector<MCInst *>> BestSavePos;
 
   /// Pass stats
   static std::atomic_uint64_t SpillsMovedRegularMode;
