@@ -4679,6 +4679,40 @@ TEST(MemorySanitizer, LargeAllocatorUnpoisonsOnFree) {
   munmap(q, 4096);
 }
 
+TEST(MemorySanitizer, timer_create) {
+  struct sigevent sev {};
+  sev.sigev_notify = SIGEV_NONE;
+  timer_t timerid;
+  EXPECT_POISONED(timerid);
+  ASSERT_EQ(0, timer_create(CLOCK_REALTIME, &sev, &timerid));
+  EXPECT_NOT_POISONED(timerid);
+}
+
+TEST(MemorySanitizer, timer_settime) {
+  struct sigevent sev {};
+  sev.sigev_notify = SIGEV_NONE;
+  timer_t timerid;
+  ASSERT_EQ(0, timer_create(CLOCK_REALTIME, &sev, &timerid));
+  struct itimerspec new_value {};
+  new_value.it_interval.tv_sec = 10;
+  new_value.it_value.tv_sec = 10;
+  struct itimerspec old_value;
+  EXPECT_POISONED(old_value);
+  ASSERT_EQ(0, timer_settime(timerid, 0, &new_value, &old_value));
+  EXPECT_NOT_POISONED(old_value);
+}
+
+TEST(MemorySanitizer, timer_gettime) {
+  struct sigevent sev {};
+  sev.sigev_notify = SIGEV_NONE;
+  timer_t timerid;
+  ASSERT_EQ(0, timer_create(CLOCK_REALTIME, &sev, &timerid));
+  struct itimerspec curr_value;
+  EXPECT_POISONED(curr_value);
+  ASSERT_EQ(0, timer_gettime(timerid, &curr_value));
+  EXPECT_NOT_POISONED(curr_value);
+}
+
 #if SANITIZER_TEST_HAS_MALLOC_USABLE_SIZE
 TEST(MemorySanitizer, MallocUsableSizeTest) {
   const size_t kArraySize = 100;
