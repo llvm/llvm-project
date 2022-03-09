@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 %s | FileCheck %s
 
 declare void @llvm.memset.element.unordered.atomic.p0i8.i32(i8*, i8, i64, i32)
 

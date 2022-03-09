@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 declare void @readonly_attr(i8* readonly nocapture)
 declare void @writeonly_attr(i8* writeonly nocapture)

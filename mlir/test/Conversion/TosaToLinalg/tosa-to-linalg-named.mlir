@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --tosa-to-linalg-named %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.func(tosa-to-linalg-named)" %s -verify-diagnostics -o -| FileCheck %s
 
 // CHECK-LABEL: @matmul
 func @matmul(%arg0: tensor<1x5x3xf32>, %arg1: tensor<1x3x6xf32>) -> (tensor<1x5x6xf32>) {

@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ExpandOps : Pass<"memref-expand", "FuncOp"> {
+def ExpandOps : Pass<"memref-expand"> {
   let summary = "Legalize memref operations to be convertible to LLVM.";
   let constructor = "mlir::memref::createExpandOpsPass()";
 }

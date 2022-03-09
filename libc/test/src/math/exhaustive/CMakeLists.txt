@@ -6,8 +6,6 @@ add_object_library(
     exhaustive_test.h
   SRCS
     exhaustive_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.standalone_cpp
 )
 
 add_fp_unittest(

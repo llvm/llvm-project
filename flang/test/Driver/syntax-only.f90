@@ -13,14 +13,15 @@
 ! RUN: %flang -fsyntax-only %s 2>&1 | FileCheck %s --allow-empty
 ! RUN: %flang_fc1 %s 2>&1 | FileCheck %s --allow-empty
 
-! RUN: not %flang  %s 2>&1 | FileCheck %s --check-prefix=NO_FSYNTAX_ONLY
-! RUN: not %flang_fc1 -emit-obj %s 2>&1 | FileCheck %s --check-prefix=NO_FSYNTAX_ONLY
+! RUN: rm -rf %t/non-existent-dir/
+! RUN: not %flang -c %s -o %t/non-existent-dir/syntax-only.o 2>&1 | FileCheck %s --check-prefix=NO_FSYNTAX_ONLY
+! RUN: not %flang_fc1 -emit-obj %s -o %t/non-existent-dir/syntax-only.o 2>&1 | FileCheck %s --check-prefix=NO_FSYNTAX_ONLY
 
 !-----------------
 ! EXPECTED OUTPUT
 !-----------------
 ! CHECK-NOT: error
-! NO_FSYNTAX_ONLY: error: code-generation is not available yet
+! NO_FSYNTAX_ONLY: error: failed to create the output file
 
 !-------
 ! INPUT

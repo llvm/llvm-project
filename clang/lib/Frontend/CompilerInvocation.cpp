@@ -3249,8 +3249,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
 
   Opts.RenderScript = IK.getLanguage() == Language::RenderScript;
 
-  // OpenCL and C++ both have bool, true, false keywords.
-  Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;
+  // OpenCL, C++ and C2x have bool, true, false keywords.
+  Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C2x;
 
   // OpenCL has half keyword
   Opts.Half = Opts.OpenCL;

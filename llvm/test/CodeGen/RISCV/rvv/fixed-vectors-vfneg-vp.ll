@@ -268,6 +268,30 @@ define <8 x double> @vfneg_vv_v8f64_unmasked(<8 x double> %va, i32 zeroext %evl)
   ret <8 x double> %v
 }
 
+declare <15 x double> @llvm.vp.fneg.v15f64(<15 x double>, <15 x i1>, i32)
+
+define <15 x double> @vfneg_vv_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfneg_vv_v15f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    ret
+  %v = call <15 x double> @llvm.vp.fneg.v15f64(<15 x double> %va, <15 x i1> %m, i32 %evl)
+  ret <15 x double> %v
+}
+
+define <15 x double> @vfneg_vv_v15f64_unmasked(<15 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vfneg_vv_v15f64_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vfsgnjn.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %head = insertelement <15 x i1> poison, i1 true, i32 0
+  %m = shufflevector <15 x i1> %head, <15 x i1> poison, <15 x i32> zeroinitializer
+  %v = call <15 x double> @llvm.vp.fneg.v15f64(<15 x double> %va, <15 x i1> %m, i32 %evl)
+  ret <15 x double> %v
+}
+
 declare <16 x double> @llvm.vp.fneg.v16f64(<16 x double>, <16 x i1>, i32)
 
 define <16 x double> @vfneg_vv_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroext %evl) {
@@ -290,4 +314,58 @@ define <16 x double> @vfneg_vv_v16f64_unmasked(<16 x double> %va, i32 zeroext %e
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
   %v = call <16 x double> @llvm.vp.fneg.v16f64(<16 x double> %va, <16 x i1> %m, i32 %evl)
   ret <16 x double> %v
+}
+
+declare <32 x double> @llvm.vp.fneg.v32f64(<32 x double>, <32 x i1>, i32)
+
+define <32 x double> @vfneg_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfneg_vv_v32f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    addi a2, a0, -16
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
+; CHECK-NEXT:    bltu a0, a2, .LBB26_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB26_2:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vfneg.v v16, v16, v0.t
+; CHECK-NEXT:    bltu a0, a1, .LBB26_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:  .LBB26_4:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    ret
+  %v = call <32 x double> @llvm.vp.fneg.v32f64(<32 x double> %va, <32 x i1> %m, i32 %evl)
+  ret <32 x double> %v
+}
+
+define <32 x double> @vfneg_vv_v32f64_unmasked(<32 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vfneg_vv_v32f64_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    bltu a0, a1, .LBB27_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vfsgnjn.vv v16, v16, v16
+; CHECK-NEXT:    bltu a0, a1, .LBB27_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:  .LBB27_4:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vfsgnjn.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %head = insertelement <32 x i1> poison, i1 true, i32 0
+  %m = shufflevector <32 x i1> %head, <32 x i1> poison, <32 x i32> zeroinitializer
+  %v = call <32 x double> @llvm.vp.fneg.v32f64(<32 x double> %va, <32 x i1> %m, i32 %evl)
+  ret <32 x double> %v
 }

@@ -560,6 +560,7 @@ protected:
   /// address in the module.
   lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
   lldb_private::StatsDuration m_parse_time;
+  std::atomic_flag m_dwo_warning_issued = ATOMIC_FLAG_INIT;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

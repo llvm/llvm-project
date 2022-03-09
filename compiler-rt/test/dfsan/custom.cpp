@@ -1,5 +1,4 @@
 // RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
-// RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
@@ -828,8 +827,8 @@ void write_callback(int fd, const void *buf, size_t count) {
 }
 
 void test_dfsan_set_write_callback() {
-  char buf[] = "Sample chars";
-  int buf_len = strlen(buf);
+  char a_buf[] = "Sample chars";
+  int a_buf_len = strlen(a_buf);
 
   int fd = open("/dev/null", O_WRONLY);
 
@@ -837,59 +836,74 @@ void test_dfsan_set_write_callback() {
 
   write_callback_count = 0;
 
-  DEFINE_AND_SAVE_ORIGINS(buf)
+  DEFINE_AND_SAVE_ORIGINS(a_buf)
 
   // Callback should be invoked on every call to write().
-  int res = write(fd, buf, buf_len);
+  int res = write(fd, a_buf, a_buf_len);
   assert(write_callback_count == 1);
   ASSERT_READ_ZERO_LABEL(&res, sizeof(res));
   ASSERT_READ_ZERO_LABEL(&last_fd, sizeof(last_fd));
   ASSERT_READ_ZERO_LABEL(last_buf, sizeof(last_buf));
-  ASSERT_READ_ZERO_LABEL(&last_count, sizeof(last_count));
 
-  for (int i = 0; i < buf_len; ++i)
-    ASSERT_ORIGIN(last_buf[i], buf_o[i]);
+  for (int i = 0; i < a_buf_len; ++i)
+    ASSERT_ORIGIN(last_buf[i], a_buf_o[i]);
 
   ASSERT_ZERO_ORIGINS(&last_count, sizeof(last_count));
+  last_fd = 0;
+  last_buf = 0;
+  last_count = 0;
+
+  char b_buf[] = "Other chars";
+  int b_buf_len = strlen(b_buf);
+  // Create a separate variable so we can taint the pointer.
+  // We would always get a shadow of 0 for b_buf because it is a constant.
+  const unsigned char *buf = (const unsigned char *)b_buf;
 
   // Add a label to write() arguments.  Check that the labels are readable from
   // the values passed to the callback.
   dfsan_set_label(i_label, &fd, sizeof(fd));
-  dfsan_set_label(j_label, &(buf[3]), 1);
-  dfsan_set_label(k_label, &buf_len, sizeof(buf_len));
+  dfsan_set_label(j_label, &buf, sizeof(buf)); // ptr
+  dfsan_set_label(k_label, &(b_buf[3]), 1);    // content
+  dfsan_set_label(m_label, &b_buf_len, sizeof(b_buf_len));
 
   dfsan_origin fd_o = dfsan_get_origin((long)fd);
-  dfsan_origin buf3_o = dfsan_get_origin((long)(buf[3]));
-  dfsan_origin buf_len_o = dfsan_get_origin((long)buf_len);
+  dfsan_origin b_buf3_o = dfsan_get_origin((long)(b_buf[3]));
+  dfsan_origin b_buf_len_o = dfsan_get_origin((long)b_buf_len);
 #ifndef ORIGIN_TRACKING
   (void)fd_o;
-  (void)buf3_o;
-  (void)buf_len_o;
+  (void)b_buf3_o;
+  (void)b_buf_len_o;
 #endif
+  DEFINE_AND_SAVE_ORIGINS(b_buf)
 
-  res = write(fd, buf, buf_len);
+  res = write(fd, buf, b_buf_len);
   assert(write_callback_count == 2);
+  assert(last_fd == fd);
+  assert(last_buf == (const unsigned char *)b_buf);
+  assert(last_count == b_buf_len);
+
   ASSERT_READ_ZERO_LABEL(&res, sizeof(res));
   ASSERT_READ_LABEL(&last_fd, sizeof(last_fd), i_label);
-  ASSERT_READ_LABEL(&last_buf[3], sizeof(last_buf[3]), j_label);
-  ASSERT_READ_LABEL(last_buf, sizeof(last_buf), j_label);
-  ASSERT_READ_LABEL(&last_count, sizeof(last_count), k_label);
+  ASSERT_READ_LABEL(&last_buf, sizeof(&last_buf), j_label);      // ptr
+  ASSERT_READ_LABEL(last_buf, last_count, k_label);              // content
+  ASSERT_READ_LABEL(&last_buf[3], sizeof(last_buf[3]), k_label); // content
+  ASSERT_READ_LABEL(&last_count, sizeof(last_count), m_label);
   ASSERT_ZERO_ORIGINS(&res, sizeof(res));
   ASSERT_INIT_ORIGINS(&last_fd, sizeof(last_fd), fd_o);
-  ASSERT_INIT_ORIGINS(&last_buf[3], sizeof(last_buf[3]), buf3_o);
+  ASSERT_INIT_ORIGINS(&last_buf[3], sizeof(last_buf[3]), b_buf3_o);
 
   // Origins are assigned for every 4 contiguous 4-aligned bytes. After
   // appending src to dst, origins of src can overwrite origins of dst if their
   // application adddresses are within an aligned range. Other origins are not
   // changed.
-  for (int i = 0; i < buf_len; ++i) {
+  for (int i = 0; i < b_buf_len; ++i) {
     size_t i_addr = size_t(&last_buf[i]);
     if (((size_t(&last_buf[3]) & ~3UL) > i_addr) ||
         (((size_t(&last_buf[3]) + 4) & ~3UL) <= i_addr))
-      ASSERT_ORIGIN(last_buf[i], buf_o[i]);
+      ASSERT_ORIGIN(last_buf[i], b_buf_o[i]);
   }
 
-  ASSERT_INIT_ORIGINS(&last_count, sizeof(last_count), buf_len_o);
+  ASSERT_INIT_ORIGINS(&last_count, sizeof(last_count), b_buf_len_o);
 
   dfsan_set_write_callback(NULL);
 }
@@ -1793,7 +1807,7 @@ void test_write() {
   // Label all arguments to write().
   dfsan_set_label(i_label, &(buf[3]), 1);
   dfsan_set_label(j_label, &fd, sizeof(fd));
-  dfsan_set_label(i_label, &len, sizeof(len));
+  dfsan_set_label(k_label, &len, sizeof(len));
 
   // The value returned by write() should have no label.
   res = write(fd, buf, len);

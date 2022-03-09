@@ -1,4 +1,4 @@
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
 
 ; CFL AA currently returns PartialAlias, BasicAA returns MayAlias, both seem
 ; acceptable (although we might decide that we don't want PartialAlias, and if

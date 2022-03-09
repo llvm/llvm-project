@@ -689,3 +689,23 @@ struct A {
   }
 };
 } // PR48235
+
+namespace NamespaceScopeConsteval {
+struct S {
+  int Val; // expected-note {{subobject declared here}}
+  consteval S() {}
+};
+
+S s1; // expected-error {{call to consteval function 'NamespaceScopeConsteval::S::S' is not a constant expression}} \
+         expected-note {{subobject of type 'int' is not initialized}}
+
+template <typename Ty>
+struct T {
+  Ty Val; // expected-note {{subobject declared here}}
+  consteval T() {}
+};
+
+T<int> t; // expected-error {{call to consteval function 'NamespaceScopeConsteval::T<int>::T' is not a constant expression}} \
+             expected-note {{subobject of type 'int' is not initialized}}
+
+} // namespace NamespaceScopeConsteval

@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_MANGLER_H
 #define FORTRAN_LOWER_MANGLER_H
 
+#include "flang/Evaluate/expression.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
@@ -57,6 +58,38 @@ std::string mangleName(const semantics::DerivedTypeSpec &);
 
 /// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);
+
+std::string
+mangleArrayLiteral(const uint8_t *addr, size_t size,
+                   const Fortran::evaluate::ConstantSubscripts &shape,
+                   Fortran::common::TypeCategory cat, int kind = 0,
+                   Fortran::common::ConstantSubscript charLen = -1);
+
+template <Fortran::common::TypeCategory TC, int KIND>
+std::string mangleArrayLiteral(
+    const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>> &x) {
+  return mangleArrayLiteral(
+      reinterpret_cast<const uint8_t *>(x.values().data()),
+      x.values().size() * sizeof(x.values()[0]), x.shape(), TC, KIND);
+}
+
+template <int KIND>
+std::string
+mangleArrayLiteral(const Fortran::evaluate::Constant<Fortran::evaluate::Type<
+                       Fortran::common::TypeCategory::Character, KIND>> &x) {
+  return mangleArrayLiteral(
+      reinterpret_cast<const uint8_t *>(x.values().data()),
+      x.values().size() * sizeof(x.values()[0]), x.shape(),
+      Fortran::common::TypeCategory::Character, KIND, x.LEN());
+}
+
+inline std::string mangleArrayLiteral(
+    const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &x) {
+  return mangleArrayLiteral(
+      reinterpret_cast<const uint8_t *>(x.values().data()),
+      x.values().size() * sizeof(x.values()[0]), x.shape(),
+      Fortran::common::TypeCategory::Derived);
+}
 
 } // namespace lower::mangle
 } // namespace Fortran

@@ -946,14 +946,15 @@ Scope *ModFileReader::Read(const SourceName &name,
       for (auto &msg : parsing.messages().messages()) {
         std::string str{msg.ToString()};
         Say(name, ancestorName,
-            parser::MessageFixedText{str.c_str(), str.size()}, path);
+            parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
+            path);
       }
     }
     return nullptr;
   }
   CHECK(sourceFile);
   if (!VerifyHeader(sourceFile->content())) {
-    Say(name, ancestorName, "File has invalid checksum: %s"_en_US,
+    Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
         sourceFile->path());
     return nullptr;
   }

@@ -57,6 +57,7 @@ int main(int, char**)
         assert(A::count == 1);
 #endif
     }
+
     assert(A::count == 0);
     {
         std::shared_ptr<A> pA;
@@ -73,6 +74,13 @@ int main(int, char**)
         assert(A::count == 0);
     }
     assert(A::count == 0);
+
+    {
+        std::shared_ptr<A const> pA(new A);
+        A const* p = pA.get();
+        std::shared_ptr<A const> pA2(std::move(pA));
+        assert(pA2.get() == p);
+    }
 
   return 0;
 }

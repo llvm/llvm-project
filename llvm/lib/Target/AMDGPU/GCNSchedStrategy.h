@@ -77,7 +77,8 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
     InitialSchedule,
     UnclusteredReschedule,
     ClusteredLowOccupancyReschedule,
-    LastStage = ClusteredLowOccupancyReschedule
+    PreRARematerialize,
+    LastStage = PreRARematerialize
   };
 
   const GCNSubtarget &ST;
@@ -110,11 +111,19 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Record regions with high register pressure.
   BitVector RegionsWithHighRP;
 
+  // Regions that has the same occupancy as the latest MinOccupancy
+  BitVector RegionsWithMinOcc;
+
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;
 
   // Region pressure cache.
   SmallVector<GCNRegPressure, 32> Pressure;
+
+  // List of trivially rematerializable instructions we can remat to reduce RP.
+  // First MI is the MI to remat and second MI is the position we should remat
+  // before, usually the MI using the rematerializable instruction.
+  SmallVector<std::pair<MachineInstr *, MachineInstr *>> RematerializableInsts;
 
   // Temporary basic block live-in cache.
   DenseMap<const MachineBasicBlock*, GCNRPTracker::LiveRegSet> MBBLiveIns;
@@ -122,12 +131,27 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
 
+  // Collect all trivially rematerializable VGPR instructions with a single def
+  // and single use outside the defining block into RematerializableInsts.
+  void collectRematerializableInstructions(unsigned HighRPIdx);
+
+  bool isTriviallyReMaterializable(const MachineInstr &MI, AAResults *AA);
+
+  // TODO: Should also attempt to reduce RP of SGPRs and AGPRs
+  // Attempt to reduce RP of VGPR by sinking trivially rematerializable
+  // instructions. Returns true if we were able to sink instruction(s).
+  bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
+                               const TargetInstrInfo *TII, unsigned HighRPIdx);
+
   // Return current region pressure.
   GCNRegPressure getRealRegPressure() const;
 
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(const MachineBasicBlock *MBB);
 
+  // Update region boundaries when removing MI or inserting NewMI before MI.
+  void updateRegionBoundaries(MachineBasicBlock::iterator MI,
+                              MachineInstr *NewMI, bool Removing = false);
 
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,

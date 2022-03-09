@@ -1,4 +1,4 @@
-; RUN: llvm-profgen --perfscript=%S/Inputs/multi-load-segs.perfscript --binary=%S/Inputs/multi-load-segs.perfbin --output=%t --format=text --csspgo-preinliner=0
+; RUN: llvm-profgen --perfscript=%S/Inputs/multi-load-segs.perfscript --binary=%S/Inputs/multi-load-segs.perfbin --output=%t --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
 
 ;;  %S/Inputs/multi-load-segs.perfbin is an ELF image with two executable load segments.

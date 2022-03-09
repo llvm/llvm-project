@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-apple-macosx10.7 -inferattrs -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-apple-macosx10.7 -aa-pipeline=basic-aa -passes=inferattrs,aa-eval -print-all-alias-modref-info -disable-output 2>&1 %s | FileCheck %s
 
 declare void @memset_pattern4(i8*, i8*, i64)
 declare void @memset_pattern8(i8*, i8*, i64)

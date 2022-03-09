@@ -674,7 +674,6 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
 
   // Add schedule parameters
   if (done[scheduleClause] && !schedule.empty()) {
-    schedule[0] = llvm::toUpper(schedule[0]);
     if (Optional<ClauseScheduleKind> sched =
             symbolizeClauseScheduleKind(schedule)) {
       auto attr = ClauseScheduleKindAttr::get(parser.getContext(), *sched);
@@ -999,8 +998,8 @@ LogicalResult OrderedRegionOp::verify() {
 
 LogicalResult AtomicReadOp::verify() {
   if (auto mo = memory_order_val()) {
-    if (*mo == ClauseMemoryOrderKind::acq_rel ||
-        *mo == ClauseMemoryOrderKind::release) {
+    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
+        *mo == ClauseMemoryOrderKind::Release) {
       return emitError(
           "memory-order must not be acq_rel or release for atomic reads");
     }
@@ -1017,8 +1016,8 @@ LogicalResult AtomicReadOp::verify() {
 
 LogicalResult AtomicWriteOp::verify() {
   if (auto mo = memory_order_val()) {
-    if (*mo == ClauseMemoryOrderKind::acq_rel ||
-        *mo == ClauseMemoryOrderKind::acquire) {
+    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
+        *mo == ClauseMemoryOrderKind::Acquire) {
       return emitError(
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
@@ -1032,8 +1031,8 @@ LogicalResult AtomicWriteOp::verify() {
 
 LogicalResult AtomicUpdateOp::verify() {
   if (auto mo = memory_order_val()) {
-    if (*mo == ClauseMemoryOrderKind::acq_rel ||
-        *mo == ClauseMemoryOrderKind::acquire) {
+    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
+        *mo == ClauseMemoryOrderKind::Acquire) {
       return emitError(
           "memory-order must not be acq_rel or acquire for atomic updates");
     }

@@ -2,13 +2,13 @@
 ; REQUIRES: x86_64-linux
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
-; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t1
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-AGG-UNWINDER
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-AGG
 
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0

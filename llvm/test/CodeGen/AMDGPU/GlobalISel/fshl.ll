@@ -2094,18 +2094,18 @@ define <2 x i24> @v_fshl_v2i24(<2 x i24> %lhs, <2 x i24> %rhs, <2 x i24> %amt) {
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v6, v6
 ; GFX9-NEXT:    v_and_b32_e32 v4, 0xffffff, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v9, 0x4f7ffffe, v9
-; GFX9-NEXT:    v_bfe_u32 v2, v2, 1, 23
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v9, v9
 ; GFX9-NEXT:    v_mul_lo_u32 v8, v7, v6
+; GFX9-NEXT:    v_bfe_u32 v2, v2, 1, 23
 ; GFX9-NEXT:    v_bfe_u32 v3, v3, 1, 23
+; GFX9-NEXT:    v_mul_lo_u32 v7, v7, v9
 ; GFX9-NEXT:    v_mul_hi_u32 v8, v6, v8
+; GFX9-NEXT:    v_mul_hi_u32 v7, v9, v7
 ; GFX9-NEXT:    v_add_u32_e32 v6, v6, v8
-; GFX9-NEXT:    v_cvt_u32_f32_e32 v8, v9
 ; GFX9-NEXT:    v_mul_hi_u32 v6, v4, v6
-; GFX9-NEXT:    v_mov_b32_e32 v9, 0xffffff
-; GFX9-NEXT:    v_and_b32_e32 v5, v5, v9
-; GFX9-NEXT:    v_mul_lo_u32 v7, v7, v8
+; GFX9-NEXT:    v_mov_b32_e32 v8, 0xffffff
+; GFX9-NEXT:    v_and_b32_e32 v5, v5, v8
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v6, 24
-; GFX9-NEXT:    v_mul_hi_u32 v7, v8, v7
 ; GFX9-NEXT:    v_sub_u32_e32 v4, v4, v6
 ; GFX9-NEXT:    v_subrev_u32_e32 v6, 24, v4
 ; GFX9-NEXT:    v_cmp_le_u32_e32 vcc, 24, v4
@@ -2113,11 +2113,11 @@ define <2 x i24> @v_fshl_v2i24(<2 x i24> %lhs, <2 x i24> %rhs, <2 x i24> %amt) {
 ; GFX9-NEXT:    v_subrev_u32_e32 v6, 24, v4
 ; GFX9-NEXT:    v_cmp_le_u32_e32 vcc, 24, v4
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
-; GFX9-NEXT:    v_add_u32_e32 v6, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v6, v9, v7
 ; GFX9-NEXT:    v_mul_hi_u32 v6, v5, v6
 ; GFX9-NEXT:    v_sub_u32_e32 v7, 23, v4
-; GFX9-NEXT:    v_and_b32_e32 v7, v7, v9
-; GFX9-NEXT:    v_and_b32_e32 v4, v4, v9
+; GFX9-NEXT:    v_and_b32_e32 v7, v7, v8
+; GFX9-NEXT:    v_and_b32_e32 v4, v4, v8
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v6, 24
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, v7, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v0, v4, v2
@@ -2129,8 +2129,8 @@ define <2 x i24> @v_fshl_v2i24(<2 x i24> %lhs, <2 x i24> %rhs, <2 x i24> %amt) {
 ; GFX9-NEXT:    v_cmp_le_u32_e32 vcc, 24, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GFX9-NEXT:    v_sub_u32_e32 v4, 23, v2
-; GFX9-NEXT:    v_and_b32_e32 v4, v4, v9
-; GFX9-NEXT:    v_and_b32_e32 v2, v2, v9
+; GFX9-NEXT:    v_and_b32_e32 v4, v4, v8
+; GFX9-NEXT:    v_and_b32_e32 v2, v2, v8
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, v4, v3
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v1, v2, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

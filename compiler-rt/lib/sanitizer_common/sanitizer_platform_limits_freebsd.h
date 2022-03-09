@@ -255,6 +255,7 @@ struct __sanitizer_dirent {
 // 'clock_t' is 32 bits wide on x64 FreeBSD
 typedef int __sanitizer_clock_t;
 typedef int __sanitizer_clockid_t;
+typedef void *__sanitizer_timer_t;
 
 #  if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
       defined(__mips__)

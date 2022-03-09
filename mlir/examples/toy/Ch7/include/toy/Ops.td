@@ -51,6 +51,10 @@ def Toy_Type : AnyTypeOf<[F64Tensor, Toy_StructType]>;
 // Toy Operations
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
 // We define a toy operation by inheriting from our base 'Toy_Op' class above.
 // Here we provide the mnemonic and a list of traits for the operation. The
 // constant operation is marked as 'NoSideEffect' as it is a pure operation
@@ -100,6 +104,10 @@ def ConstantOp : Toy_Op<"constant",
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// AddOp
+//===----------------------------------------------------------------------===//
+
 def AddOp : Toy_Op<"add",
     [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "element-wise addition operation";
@@ -119,6 +127,10 @@ def AddOp : Toy_Op<"add",
     OpBuilder<(ins "Value":$lhs, "Value":$rhs)>
   ];
 }
+
+//===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
 
 def CastOp : Toy_Op<"cast", [
      DeclareOpInterfaceMethods<CastOpInterface>,
@@ -140,6 +152,10 @@ def CastOp : Toy_Op<"cast", [
 
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
 }
+
+//===----------------------------------------------------------------------===//
+// GenericCallOp
+//===----------------------------------------------------------------------===//
 
 def GenericCallOp : Toy_Op<"generic_call",
     [DeclareOpInterfaceMethods<CallOpInterface>]> {
@@ -178,6 +194,10 @@ def GenericCallOp : Toy_Op<"generic_call",
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// MulOp
+//===----------------------------------------------------------------------===//
+
 def MulOp : Toy_Op<"mul",
     [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "element-wise multiplication operation";
@@ -198,6 +218,10 @@ def MulOp : Toy_Op<"mul",
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// PrintOp
+//===----------------------------------------------------------------------===//
+
 def PrintOp : Toy_Op<"print"> {
   let summary = "print operation";
   let description = [{
@@ -211,6 +235,10 @@ def PrintOp : Toy_Op<"print"> {
 
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }
+
+//===----------------------------------------------------------------------===//
+// ReshapeOp
+//===----------------------------------------------------------------------===//
 
 def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
   let summary = "tensor reshape operation";
@@ -235,6 +263,10 @@ def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
   // We expect that the reshape operation returns a statically shaped tensor.
   let results = (outs StaticShapeTensorOf<[F64]>);
 }
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
+//===----------------------------------------------------------------------===//
 
 def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
                                  Terminator]> {
@@ -274,6 +306,10 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// StructAccessOp
+//===----------------------------------------------------------------------===//
+
 def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
   let summary = "struct access";
   let description = [{
@@ -299,6 +335,10 @@ def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// StructConstantOp
+//===----------------------------------------------------------------------===//
+
 def StructConstantOp : Toy_Op<"struct_constant", [ConstantLike, NoSideEffect]> {
   let summary = "struct constant";
   let description = [{
@@ -322,6 +362,10 @@ def StructConstantOp : Toy_Op<"struct_constant", [ConstantLike, NoSideEffect]> {
   let hasVerifier = 1;
   let hasFolder = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// TransposeOp
+//===----------------------------------------------------------------------===//
 
 def TransposeOp : Toy_Op<"transpose",
     [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {

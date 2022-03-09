@@ -24,9 +24,16 @@ define amdgpu_kernel void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %p
 }
 
 ; CHECK: - .args:
-; CHECK:             .offset:         208
-; CHECK-NEXT:        .size:           8
-; CHECK-NEXT:        .value_kind:     hidden_queue_ptr
+; CHECK:             .value_kind:     hidden_multigrid_sync_arg
+; PRE-GFX9:          .offset:         200
+; PRE-GFX9-NEXT:     .size:           4
+; PRE-GFX9-NEXT:     .value_kind:     hidden_private_base
+; PRE-GFX9-NEXT:     .offset:         204
+; PRE-GFX9-NEXT:     .size:           4
+; PRE-GFX9-NEXT:     .value_kind:     hidden_shared_base
+; GFX9-NOT:          .value_kind:     hidden_multigrid_sync_arg
+; GFX9-NOT:          .value_kind:     hidden_private_base
+; CKECK-NOT:         .value_kind:     hidden_queue_ptr
 ; CHECK:             .name:           is_shared_requires_queue_ptr
 ; CHECK:             .symbol:         is_shared_requires_queue_ptr.kd
 define amdgpu_kernel void @is_shared_requires_queue_ptr(i8* %ptr) {
@@ -37,9 +44,16 @@ define amdgpu_kernel void @is_shared_requires_queue_ptr(i8* %ptr) {
 }
 
 ; CHECK: - .args:
-; CHECK:             .offset:         208
-; CHECK-NEXT:        .size:           8
-; CHECK-NEXT:        .value_kind:     hidden_queue_ptr
+; CHECK:             .value_kind:     hidden_multigrid_sync_arg
+; PRE-GFX9:          .offset:         200
+; PRE-GFX9-NEXT:     .size:           4
+; PRE-GFX9-NEXT:     .value_kind:     hidden_private_base
+; PRE-GFX9-NEXT:     .offset:         204
+; PRE-GFX9-NEXT:     .size:           4
+; PRE-GFX9-NEXT:     .value_kind:     hidden_shared_base
+; GFX9-NOT:          .value_kind:     hidden_private_base
+; GFX9-NOT:          .value_kind:     hidden_shared_base
+; CKECK-NOT:         .value_kind:     hidden_queue_ptr
 ; CHECK:             .name:           is_private_requires_queue_ptr
 ; CHECK:             .symbol:         is_private_requires_queue_ptr.kd
 define amdgpu_kernel void @is_private_requires_queue_ptr(i8* %ptr) {
@@ -50,24 +64,24 @@ define amdgpu_kernel void @is_private_requires_queue_ptr(i8* %ptr) {
 }
 
 ; CHECK: - .args:
-; CHECK:             .offset:         200
-; CHECK-NEXT:        .size:           8
-; CHECK-NEXT:        .value_kind:     hidden_queue_ptr
+; CHECK:             .value_kind:     hidden_multigrid_sync_arg
+; PRE-GFX9:          .offset:         192
+; PRE-GFX9-NEXT:     .size:           4
+; PRE-GFX9-NEXT:     .value_kind:     hidden_private_base
+; PRE-GFX9-NEXT:     .offset:         196
+; PRE-GFX9-NEXT:     .size:           4
+; PRE-GFX9-NEXT:     .value_kind:     hidden_shared_base
+; PRE-GFX9-NEXT:     .address_space:  global
+; PRE-GFX9-NEXT:     .offset:         200
+; PRE-GFX9-NEXT:     .size:           8
+; PRE-GFX9-NEXT:     .value_kind:     hidden_queue_ptr
+; GFX9-NOT:          .value_kind:     hidden_private_base
+; GFX9-NOT:          .value_kind:     hidden_shared_base
+; GFX9-NOT:          .value_kind:     hidden_queue_ptr
 ; CHECK:             .name:           trap_requires_queue_ptr
 ; CHECK:             .symbol:         trap_requires_queue_ptr.kd
 define amdgpu_kernel void @trap_requires_queue_ptr() {
   call void @llvm.trap()
-  unreachable
-}
-
-; CHECK: - .args:
-; CHECK:             .offset:         200
-; CHECK-NEXT:        .size:           8
-; CHECK-NEXT:        .value_kind:     hidden_queue_ptr
-; CHECK:             .name:           debugtrap_requires_queue_ptr
-; CHECK:             .symbol:         debugtrap_requires_queue_ptr.kd
-define amdgpu_kernel void @debugtrap_requires_queue_ptr() {
-  call void @llvm.debugtrap()
   unreachable
 }
 

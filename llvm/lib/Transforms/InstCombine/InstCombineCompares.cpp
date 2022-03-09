@@ -6652,7 +6652,6 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     if (match(Op1, m_FPExt(m_Value(Y))) && X->getType() == Y->getType())
       return new FCmpInst(Pred, X, Y, "", &I);
 
-    // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
     const APFloat *C;
     if (match(Op1, m_APFloat(C))) {
       const fltSemantics &FPSem =
@@ -6661,6 +6660,31 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       APFloat TruncC = *C;
       TruncC.convert(FPSem, APFloat::rmNearestTiesToEven, &Lossy);
 
+      if (Lossy) {
+        // X can't possibly equal the higher-precision constant, so reduce any
+        // equality comparison.
+        // TODO: Other predicates can be handled via getFCmpCode().
+        switch (Pred) {
+        case FCmpInst::FCMP_OEQ:
+          // X is ordered and equal to an impossible constant --> false
+          return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+        case FCmpInst::FCMP_ONE:
+          // X is ordered and not equal to an impossible constant --> ordered
+          return new FCmpInst(FCmpInst::FCMP_ORD, X,
+                              ConstantFP::getNullValue(X->getType()));
+        case FCmpInst::FCMP_UEQ:
+          // X is unordered or equal to an impossible constant --> unordered
+          return new FCmpInst(FCmpInst::FCMP_UNO, X,
+                              ConstantFP::getNullValue(X->getType()));
+        case FCmpInst::FCMP_UNE:
+          // X is unordered or not equal to an impossible constant --> true
+          return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+        default:
+          break;
+        }
+      }
+
+      // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
       // Avoid lossy conversions and denormals.
       // Zero is a special case that's OK to convert.
       APFloat Fabs = TruncC;

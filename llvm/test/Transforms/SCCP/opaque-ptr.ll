@@ -21,3 +21,19 @@ define void @test2() {
   store i8 2, ptr @g2
   ret void
 }
+
+define internal i32 @test4() {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    ret i32 42
+;
+  ret i32 42
+}
+
+define i64 @test3() {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[CALL:%.*]] = call i64 @test4()
+; CHECK-NEXT:    ret i64 [[CALL]]
+;
+  %call = call i64 @test4()
+  ret i64 %call
+}

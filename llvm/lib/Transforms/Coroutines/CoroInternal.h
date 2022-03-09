@@ -210,10 +210,9 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 
   FunctionType *getResumeFunctionType() const {
     switch (ABI) {
-    case coro::ABI::Switch: {
-      auto *FnPtrTy = getSwitchResumePointerType();
-      return cast<FunctionType>(FnPtrTy->getPointerElementType());
-    }
+    case coro::ABI::Switch:
+      return FunctionType::get(Type::getVoidTy(FrameTy->getContext()),
+                               FrameTy->getPointerTo(), /*IsVarArg*/false);
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();

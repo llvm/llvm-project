@@ -324,21 +324,18 @@ struct ConvertComplexToLLVMPass
 } // namespace
 
 void ConvertComplexToLLVMPass::runOnOperation() {
-  auto module = getOperation();
-
   // Convert to the LLVM IR dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateComplexToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp, FuncOp>();
   target.addIllegalDialect<complex::ComplexDialect>();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertComplexToLLVMPass() {
+std::unique_ptr<Pass> mlir::createConvertComplexToLLVMPass() {
   return std::make_unique<ConvertComplexToLLVMPass>();
 }

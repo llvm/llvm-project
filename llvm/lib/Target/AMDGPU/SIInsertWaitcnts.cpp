@@ -955,8 +955,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+      MI.getOpcode() == AMDGPU::SI_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
-      MI.getOpcode() == AMDGPU::S_SETPC_B64_return_gfx ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
   }

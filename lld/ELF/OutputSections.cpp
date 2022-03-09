@@ -68,8 +68,7 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 }
 
 OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
-    : SectionCommand(OutputSectionKind),
-      SectionBase(Output, name, flags, /*Entsize*/ 0, /*Alignment*/ 1, type,
+    : SectionBase(Output, name, flags, /*Entsize*/ 0, /*Alignment*/ 1, type,
                   /*Info*/ 0, /*Link*/ 0) {}
 
 // We allow sections of types listed below to merged into a
@@ -249,10 +248,6 @@ uint64_t elf::getHeaderSize() {
   if (config->oFormatBinary)
     return 0;
   return Out::elfHeader->size + Out::programHeaders->size;
-}
-
-bool OutputSection::classof(const SectionCommand *c) {
-  return c->kind == OutputSectionKind;
 }
 
 void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
