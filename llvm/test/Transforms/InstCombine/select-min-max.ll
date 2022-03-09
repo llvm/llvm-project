@@ -252,9 +252,10 @@ define i8 @umin_umax(i8 %x) {
 
 define i8 @not_smax(i8 %i41, i8 %i43) {
 ; CHECK-LABEL: @not_smax(
-; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41:%.*]], [[I43:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[I46]], i8 0)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[I44:%.*]] = icmp slt i8 [[I41:%.*]], [[I43:%.*]]
+; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41]], [[I43]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[I44]], i8 0, i8 [[I46]]
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
 ;
   %i44 = icmp slt i8 %i41, %i43
   %i46 = sub nsw i8 %i41, %i43
@@ -264,9 +265,10 @@ define i8 @not_smax(i8 %i41, i8 %i43) {
 
 define i8 @not_smax_swap(i8 %i41, i8 %i43) {
 ; CHECK-LABEL: @not_smax_swap(
-; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41:%.*]], [[I43:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[I46]], i8 0)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[I44:%.*]] = icmp sgt i8 [[I41:%.*]], [[I43:%.*]]
+; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41]], [[I43]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[I44]], i8 [[I46]], i8 0
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
 ;
   %i44 = icmp sgt i8 %i41, %i43
   %i46 = sub nsw i8 %i41, %i43
@@ -276,9 +278,10 @@ define i8 @not_smax_swap(i8 %i41, i8 %i43) {
 
 define i8 @not_smin(i8 %i41, i8 %i43) {
 ; CHECK-LABEL: @not_smin(
-; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41:%.*]], [[I43:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[I46]], i8 0)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[I44:%.*]] = icmp sgt i8 [[I41:%.*]], [[I43:%.*]]
+; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41]], [[I43]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[I44]], i8 0, i8 [[I46]]
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
 ;
   %i44 = icmp sgt i8 %i41, %i43
   %i46 = sub nsw i8 %i41, %i43
@@ -288,9 +291,10 @@ define i8 @not_smin(i8 %i41, i8 %i43) {
 
 define i8 @not_smin_swap(i8 %i41, i8 %i43) {
 ; CHECK-LABEL: @not_smin_swap(
-; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41:%.*]], [[I43:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[I46]], i8 0)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[I44:%.*]] = icmp slt i8 [[I41:%.*]], [[I43:%.*]]
+; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41]], [[I43]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[I44]], i8 [[I46]], i8 0
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
 ;
   %i44 = icmp slt i8 %i41, %i43
   %i46 = sub nsw i8 %i41, %i43

@@ -9,7 +9,12 @@
 
 define i8 @smax_nsw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smax_nsw(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], [[B]]
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 0, i8 [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[SUB]], i8 0)
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[TMP1]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub nsw i8 %a, %b
   %cmp1 = icmp slt i8 %a, %b
