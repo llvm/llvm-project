@@ -17,7 +17,6 @@ enum class AsanDtorKind {
   None,    ///< Do not emit any destructors for ASan
   Global,  ///< Append to llvm.global_dtors
   Invalid, ///< Not a valid destructor Kind.
-  // TODO(dliew): Add more more kinds.
 };
 
 /// Mode of ASan detect stack use after return
