@@ -439,7 +439,7 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isReferenceType()) {
     CreatedValuesCount++;
-    QualType PointeeType = Type->getAs<ReferenceType>()->getPointeeType();
+    QualType PointeeType = Type->castAs<ReferenceType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
@@ -457,7 +457,7 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isPointerType()) {
     CreatedValuesCount++;
-    QualType PointeeType = Type->getAs<PointerType>()->getPointeeType();
+    QualType PointeeType = Type->castAs<PointerType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
