@@ -90,7 +90,7 @@
 // SPACK: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
 // SPACK: "-triple" "amdgcn-amd-amdhsa"
 // SPACK-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
-// SPACK-SAME: "-internal-isystem" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
+// SPACK-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
 
 // SPACK-MULT: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
 // SPACK-MULT-DAG: Cannot use SPACK package hip-4.0.0 at [[DIR]] due to multiple installations for the same version
@@ -101,12 +101,12 @@
 // SPACK-SET: Found HIP installation: [[DIR]]/hip-4.0.0-abcd, version 4.0.20214-a2917cd
 // SPACK-SET: "-triple" "amdgcn-amd-amdhsa"
 // SPACK-SET-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
-// SPACK-SET-SAME: "-internal-isystem" "[[DIR]]/hip-4.0.0-abcd/include"
+// SPACK-SET-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-abcd/include"
 
 // SPACK-MISS: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
 // SPACK-MISS-DAG: SPACK package hip-4.0.0 not found at [[DIR]]
 // SPACK-MISS-NOT: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
-// SPACK-MISS-NOT: "-internal-isystem" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
+// SPACK-MISS-NOT: "-idirafter" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
 
 // SPACK-MISS-SILENT-NOT: SPACK package hip-{{.*}} not found at
 // SPACK-MISS-SILENT-NOT: Found HIP installation
