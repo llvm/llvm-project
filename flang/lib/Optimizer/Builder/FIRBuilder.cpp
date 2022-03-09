@@ -71,7 +71,7 @@ mlir::Type fir::FirOpBuilder::getRealType(int kind) {
   case llvm::Type::TypeID::FP128TyID:
     return mlir::FloatType::getF128(getContext());
   default:
-    fir::emitFatalError(UnknownLoc::get(getContext()),
+    fir::emitFatalError(mlir::UnknownLoc::get(getContext()),
                         "unsupported type !fir.real<kind>");
   }
 }

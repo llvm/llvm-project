@@ -18,6 +18,7 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace fir;
+using namespace mlir;
 
 namespace {
 

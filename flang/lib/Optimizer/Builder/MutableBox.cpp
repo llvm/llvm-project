@@ -586,9 +586,9 @@ void fir::factory::associateMutableBoxWithRemap(
     for (auto [lb, ub] : llvm::zip(lbounds, ubounds)) {
       auto lbi = builder.createConvert(loc, idxTy, lb);
       auto ubi = builder.createConvert(loc, idxTy, ub);
-      auto diff = builder.create<arith::SubIOp>(loc, idxTy, ubi, lbi);
+      auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ubi, lbi);
       extents.emplace_back(
-          builder.create<arith::AddIOp>(loc, idxTy, diff, one));
+          builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one));
     }
   } else {
     // lbounds are default. Upper bounds and extents are the same.

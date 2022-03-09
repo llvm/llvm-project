@@ -41,6 +41,8 @@
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
+using namespace mlir;
+
 static llvm::cl::opt<bool> dumpBeforeFir(
     "fdebug-dump-pre-fir", llvm::cl::init(false),
     llvm::cl::desc("dump the Pre-FIR tree prior to FIR generation"));

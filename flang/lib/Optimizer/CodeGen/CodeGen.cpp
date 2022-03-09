@@ -31,6 +31,8 @@
 
 #define DEBUG_TYPE "flang-codegen"
 
+using namespace mlir;
+
 // fir::LLVMTypeConverter for converting to LLVM IR dialect types.
 #include "TypeConverter.h"
 
