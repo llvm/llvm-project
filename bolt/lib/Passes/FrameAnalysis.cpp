@@ -527,16 +527,12 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
   }
 
   for (auto &I : BC.getBinaryFunctions()) {
-    uint64_t Count = I.second.getExecutionCount();
-    if (Count != BinaryFunction::COUNT_NO_PROFILE)
-      CountDenominator += Count;
+    CountDenominator += I.second.getFunctionScore();
 
     // "shouldOptimize" for passes that run after finalize
     if (!(I.second.isSimple() && I.second.hasCFG() && !I.second.isIgnored()) ||
         !opts::shouldFrameOptimize(I.second)) {
       ++NumFunctionsNotOptimized;
-      if (Count != BinaryFunction::COUNT_NO_PROFILE)
-        CountFunctionsNotOptimized += Count;
       continue;
     }
 
@@ -545,9 +541,7 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
                           "FA breakdown", opts::TimeFA);
       if (!restoreFrameIndex(I.second)) {
         ++NumFunctionsFailedRestoreFI;
-        uint64_t Count = I.second.getExecutionCount();
-        if (Count != BinaryFunction::COUNT_NO_PROFILE)
-          CountFunctionsFailedRestoreFI += Count;
+        CountFunctionsFailedRestoreFI += I.second.getFunctionScore();
         continue;
       }
     }
@@ -568,10 +562,7 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
 
 void FrameAnalysis::printStats() {
   outs() << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsNotOptimized
-         << " function(s) "
-         << format("(%.1lf%% dyn cov)",
-                   (100.0 * CountFunctionsNotOptimized / CountDenominator))
-         << " were not optimized.\n"
+         << " function(s) were not optimized.\n"
          << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsFailedRestoreFI
          << " function(s) "
          << format("(%.1lf%% dyn cov)",
