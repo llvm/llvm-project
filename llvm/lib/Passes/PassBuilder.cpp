@@ -374,31 +374,6 @@ bool shouldPopulateClassToPassNames() {
 
 } // namespace
 
-/// Passes to test crash handling.
-/// DO NOT USE THIS EXCEPT FOR TESTING!
-struct CrashingFunctionPass : public PassInfoMixin<CrashingFunctionPass> {
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
-    llvm_unreachable("");
-  }
-};
-struct CrashingModulePass : public PassInfoMixin<CrashingModulePass> {
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
-    llvm_unreachable("");
-  }
-};
-struct CrashingLoopPass : public PassInfoMixin<CrashingLoopPass> {
-  PreservedAnalyses run(Loop &, LoopAnalysisManager &,
-                        LoopStandardAnalysisResults &, LPMUpdater &) {
-    llvm_unreachable("");
-  }
-};
-struct CrashingCGSCCPass : public PassInfoMixin<CrashingCGSCCPass> {
-  PreservedAnalyses run(LazyCallGraph::SCC &, CGSCCAnalysisManager &,
-                        LazyCallGraph &, CGSCCUpdateResult &) {
-    llvm_unreachable("");
-  }
-};
-
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          Optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)

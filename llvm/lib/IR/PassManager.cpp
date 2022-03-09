@@ -124,7 +124,6 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
     PreservedAnalyses PassPA;
     {
       TimeTraceScope TimeScope(Pass->name(), F.getName());
-      NewPassManagerPrettyStackEntry StackEntry(Pass->name(), F);
       PassPA = Pass->run(F, FAM);
     }
 
@@ -153,43 +152,3 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
 AnalysisSetKey CFGAnalyses::SetKey;
 
 AnalysisSetKey PreservedAnalyses::AllAnalysesKey;
-
-void NewPassManagerPrettyStackEntry::print(raw_ostream &OS) const {
-  OS << "Running pass '" << PassName << "'";
-
-  if (E == EntryTy::Module) {
-    OS << " on module '" << M->getModuleIdentifier() << "'.\n";
-    return;
-  }
-
-  if (E == EntryTy::MachineFunction) {
-    // Printing the machine function's name would require pulling in
-    // llvm/Codegen/MachineFunction.h
-    OS << " on machine function \n";
-    return;
-  }
-
-  if (E == EntryTy::Loop) {
-    OS << " on loop '" << LoopName << "'.\n";
-    return;
-  }
-
-  if (E == EntryTy::CGSCC) {
-    OS << " on CGSCC '" << CGSCCName << "'.\n";
-    return;
-  }
-
-  assert(E == EntryTy::Value && "unexpected stack entry type");
-
-  OS << " on ";
-  if (isa<Function>(V))
-    OS << "function";
-  else if (isa<BasicBlock>(V))
-    OS << "basic block";
-  else
-    OS << "value";
-
-  OS << " '";
-  V->printAsOperand(OS, /*PrintType=*/false);
-  OS << "'\n";
-}
