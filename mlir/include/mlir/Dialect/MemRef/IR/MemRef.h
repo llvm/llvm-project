@@ -43,6 +43,11 @@ LogicalResult foldMemRefCast(Operation *op, Value inner = nullptr);
 /// type.
 Type getTensorTypeFromMemRefType(Type type);
 
+/// Finds a single dealloc operation for the given allocated value. If there
+/// are > 1 deallocates for `allocValue`, returns None, else returns the single
+/// deallocate if it exists or nullptr.
+Optional<Operation *> findDealloc(Value allocValue);
+
 } // namespace memref
 } // namespace mlir
 

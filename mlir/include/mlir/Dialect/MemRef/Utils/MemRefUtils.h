@@ -16,14 +16,4 @@
 #ifndef MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
 #define MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-
-namespace mlir {
-
-/// Finds a single dealloc operation for the given allocated value. If there
-/// are > 1 deallocates for `allocValue`, returns None, else returns the single
-/// deallocate if it exists or nullptr.
-llvm::Optional<Operation *> findDealloc(Value allocValue);
-} // namespace mlir
-
 #endif // MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
