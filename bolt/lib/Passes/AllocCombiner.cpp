@@ -101,6 +101,7 @@ void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
 
       BB.eraseInstruction(BB.findInstruction(Prev));
       ++NumCombined;
+      DynamicCountCombined += BB.getKnownExecutionCount();
       FuncsChanged.insert(&BF);
       Prev = &Inst;
     }
@@ -116,7 +117,8 @@ void AllocCombinerPass::runOnFunctions(BinaryContext &BC) {
   });
 
   outs() << "BOLT-INFO: Allocation combiner: " << NumCombined
-         << " empty spaces coalesced.\n";
+         << " empty spaces coalesced (dyn count: " << DynamicCountCombined
+         << ").\n";
 }
 
 } // end namespace bolt

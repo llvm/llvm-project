@@ -2299,7 +2299,7 @@ uint64_t BinaryFunction::getFunctionScore() const {
     uint64_t BBExecCount = BB->getExecutionCount();
     if (BBExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
       continue;
-    TotalScore += BBExecCount;
+    TotalScore += BBExecCount * BB->getNumNonPseudos();
   }
   FunctionScore = TotalScore;
   return FunctionScore;
