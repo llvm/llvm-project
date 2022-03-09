@@ -94,11 +94,20 @@ public:
   /// attaching to processes unless another platform is specified.
   static lldb::PlatformSP GetHostPlatform();
 
+  static lldb::PlatformSP
+  GetPlatformForArchitecture(const ArchSpec &arch, ArchSpec *platform_arch_ptr);
+
   static const char *GetHostPlatformName();
 
   static void SetHostPlatform(const lldb::PlatformSP &platform_sp);
 
-  static lldb::PlatformSP Create(llvm::StringRef name);
+  // Find an existing platform plug-in by name
+  static lldb::PlatformSP Find(ConstString name);
+
+  static lldb::PlatformSP Create(ConstString name, Status &error);
+
+  static lldb::PlatformSP Create(const ArchSpec &arch,
+                                 ArchSpec *platform_arch_ptr, Status &error);
 
   /// Augments the triple either with information from platform or the host
   /// system (if platform is null).
@@ -1005,14 +1014,6 @@ public:
       m_selected_platform_sp = m_platforms.back();
     }
   }
-
-  lldb::PlatformSP GetOrCreate(llvm::StringRef name);
-  lldb::PlatformSP GetOrCreate(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
-                          Status &error);
-  lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
-                               ArchSpec *platform_arch_ptr);
-
-  lldb::PlatformSP Create(llvm::StringRef name);
 
 protected:
   typedef std::vector<lldb::PlatformSP> collection;

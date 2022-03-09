@@ -18,17 +18,10 @@ using namespace lldb_private;
 PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
     CommandInterpreter &interpreter, const ArchSpec &arch, bool make_selected,
     Status &error, ArchSpec &platform_arch) const {
-  PlatformList &platforms = interpreter.GetDebugger().GetPlatformList();
-
   PlatformSP platform_sp;
 
   if (!m_platform_name.empty()) {
-    platform_sp = platforms.Create(m_platform_name);
-    if (!platform_sp) {
-      error.SetErrorStringWithFormatv(
-          "unable to find a plug-in for the platform named \"{0}\"",
-          m_platform_name);
-    }
+    platform_sp = Platform::Create(ConstString(m_platform_name.c_str()), error);
     if (platform_sp) {
       if (platform_arch.IsValid() &&
           !platform_sp->IsCompatibleArchitecture(arch, false, &platform_arch)) {
@@ -40,14 +33,12 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
       }
     }
   } else if (arch.IsValid()) {
-    platform_sp = platforms.GetOrCreate(arch, &platform_arch, error);
-    if (platform_sp)
-      platforms.Append(platform_sp, make_selected);
+    platform_sp = Platform::Create(arch, &platform_arch, error);
   }
 
   if (platform_sp) {
-    if (make_selected)
-      platforms.SetSelectedPlatform(platform_sp);
+    interpreter.GetDebugger().GetPlatformList().Append(platform_sp,
+                                                       make_selected);
     if (!m_os_version.empty())
       platform_sp->SetOSVersion(m_os_version);
 

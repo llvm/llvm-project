@@ -7,5 +7,4 @@ add_lldb_library(lldbPluginPlatformGDB PLUGIN
     lldbHost
     lldbTarget
     lldbPluginProcessUtility
-    lldbPluginProcessGDBRemote
   )
