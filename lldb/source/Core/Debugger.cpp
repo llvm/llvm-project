@@ -1835,9 +1835,13 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   if (!output.GetIsInteractive() || !output.GetIsTerminalWithColors())
     return;
 
+  // Print over previous line, if any.
+  output.Printf("\r");
+
   if (data->GetCompleted()) {
     // Clear the current line.
-    output.Printf("\33[2K\r");
+    output.Printf("\x1B[2K");
+    output.Flush();
     return;
   }
 
@@ -1846,9 +1850,6 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   if (!ansi_prefix.empty())
     output.Printf(
         "%s", ansi::FormatAnsiTerminalCodes(ansi_prefix, use_color).c_str());
-
-  // Print over previous line, if any.
-  output.Printf("\r");
 
   // Print the progress message.
   std::string message = data->GetMessage();
