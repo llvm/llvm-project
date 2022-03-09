@@ -25,6 +25,11 @@ ConstantBounds::~ConstantBounds() = default;
 void ConstantBounds::set_lbounds(ConstantSubscripts &&lb) {
   CHECK(lb.size() == shape_.size());
   lbounds_ = std::move(lb);
+  for (std::size_t j{0}; j < shape_.size(); ++j) {
+    if (shape_[j] == 0) {
+      lbounds_[j] = 1;
+    }
+  }
 }
 
 void ConstantBounds::SetLowerBoundsToOne() {

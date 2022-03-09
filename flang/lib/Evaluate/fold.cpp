@@ -36,12 +36,13 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
             auto lower{triplet.lower()}, upper{triplet.upper()};
             std::optional<ConstantSubscript> stride{ToInt64(triplet.stride())};
             if (!lower) {
-              lower = GetLowerBound(context, base, dim);
+              lower = GetLBOUND(context, base, dim);
             }
             if (!upper) {
-              upper =
-                  ComputeUpperBound(context, GetLowerBound(context, base, dim),
-                      GetExtent(context, base, dim));
+              if (auto lb{GetLBOUND(context, base, dim)}) {
+                upper = ComputeUpperBound(
+                    context, std::move(*lb), GetExtent(context, base, dim));
+              }
             }
             auto lbi{ToInt64(lower)}, ubi{ToInt64(upper)};
             if (lbi && ubi && stride && *stride != 0) {

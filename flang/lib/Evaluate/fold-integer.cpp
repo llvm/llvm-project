@@ -76,10 +76,11 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           lowerBoundsAreOne = false;
           if (dim) {
-            return Fold(context,
-                ConvertToType<T>(GetLowerBound(context, *named, *dim)));
+            if (auto lb{GetLBOUND(context, *named, *dim)}) {
+              return Fold(context, ConvertToType<T>(std::move(*lb)));
+            }
           } else if (auto extents{
-                         AsExtentArrayExpr(GetLowerBounds(context, *named))}) {
+                         AsExtentArrayExpr(GetLBOUNDs(context, *named))}) {
             return Fold(context,
                 ConvertToType<T>(Expr<ExtentType>{std::move(*extents)}));
           }

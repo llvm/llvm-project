@@ -62,16 +62,27 @@ template <typename A> std::optional<Shape> GetShape(const A &);
 
 // The dimension argument to these inquiries is zero-based,
 // unlike the DIM= arguments to many intrinsics.
-ExtentExpr GetLowerBound(const NamedEntity &, int dimension);
-ExtentExpr GetLowerBound(FoldingContext &, const NamedEntity &, int dimension);
+//
+// GetRawLowerBound() returns a lower bound expression, which may
+// not be suitable for all purposes; specifically, it might not be invariant
+// in its scope, and it will not have been forced to 1 on an empty dimension.
+// GetLBOUND()'s result is safer, but it is optional because it does fail
+// in those circumstances.
+ExtentExpr GetRawLowerBound(const NamedEntity &, int dimension);
+ExtentExpr GetRawLowerBound(
+    FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr GetLBOUND(const NamedEntity &, int dimension);
+MaybeExtentExpr GetLBOUND(FoldingContext &, const NamedEntity &, int dimension);
 MaybeExtentExpr GetUpperBound(const NamedEntity &, int dimension);
 MaybeExtentExpr GetUpperBound(
     FoldingContext &, const NamedEntity &, int dimension);
 MaybeExtentExpr ComputeUpperBound(ExtentExpr &&lower, MaybeExtentExpr &&extent);
 MaybeExtentExpr ComputeUpperBound(
     FoldingContext &, ExtentExpr &&lower, MaybeExtentExpr &&extent);
-Shape GetLowerBounds(const NamedEntity &);
-Shape GetLowerBounds(FoldingContext &, const NamedEntity &);
+Shape GetRawLowerBounds(const NamedEntity &);
+Shape GetRawLowerBounds(FoldingContext &, const NamedEntity &);
+Shape GetLBOUNDs(const NamedEntity &);
+Shape GetLBOUNDs(FoldingContext &, const NamedEntity &);
 Shape GetUpperBounds(const NamedEntity &);
 Shape GetUpperBounds(FoldingContext &, const NamedEntity &);
 MaybeExtentExpr GetExtent(const NamedEntity &, int dimension);

@@ -76,9 +76,11 @@ void RTNAME(PointerAssociateLowerBounds)(Descriptor &pointer,
   Terminator terminator{__FILE__, __LINE__};
   std::size_t boundElementBytes{lowerBounds.ElementBytes()};
   for (int j{0}; j < rank; ++j) {
-    pointer.GetDimension(j).SetLowerBound(
-        GetInt64(lowerBounds.ZeroBasedIndexedElement<const char>(j),
-            boundElementBytes, terminator));
+    Dimension &dim{pointer.GetDimension(j)};
+    dim.SetLowerBound(dim.Extent() == 0
+            ? 1
+            : GetInt64(lowerBounds.ZeroBasedIndexedElement<const char>(j),
+                  boundElementBytes, terminator));
   }
 }
 

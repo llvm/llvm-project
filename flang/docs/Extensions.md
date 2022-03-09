@@ -71,6 +71,10 @@ end
   In common with some other compilers, the clock is in milliseconds
   for kinds <= 4 and nanoseconds otherwise where the target system
   supports these rates.
+* If a dimension of a descriptor has zero extent in a call to
+  `CFI_section`, `CFI_setpointer` or `CFI_allocate`, the lower
+  bound on that dimension will be set to 1 for consistency with
+  the `LBOUND()` intrinsic function.
 
 ## Extensions, deletions, and legacy features supported by default
 
