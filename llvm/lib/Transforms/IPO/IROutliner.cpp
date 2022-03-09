@@ -1559,11 +1559,14 @@ findCanonNumsForPHI(PHINode *PN, OutlinableRegion &Region,
 /// \p PN in.
 /// \param OutputMappings [in] - The mapping of output values from outlined
 /// region to their original values.
+/// \param UsedPhis [in, out] - The PHINodes in the block that have already been
+/// matched.
 /// \return the newly found or created PHINode in \p OverallPhiBlock.
 static PHINode*
 findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
                        BasicBlock *OverallPhiBlock,
-                       const DenseMap<Value *, Value *> &OutputMappings) {
+                       const DenseMap<Value *, Value *> &OutputMappings,
+                       DenseSet<PHINode *> &UsedPHIs) {
   OutlinableGroup &Group = *Region.Parent;
   
   DenseSet<unsigned> PNCanonNums;
@@ -1579,14 +1582,20 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
   // Find the Canonical Numbering for each PHINode, if it matches, we replace
   // the uses of the PHINode we are searching for, with the found PHINode.
   for (PHINode &CurrPN : OverallPhiBlock->phis()) {
+    // If this PHINode has already been matched to another PHINode to be merged,
+    // we skip it.
+    if (UsedPHIs.find(&CurrPN) != UsedPHIs.end())
+      continue;
+
     CurrentCanonNums.clear();
     findCanonNumsForPHI(&CurrPN, *FirstRegion, OutputMappings, CurrentCanonNums,
                         /* ReplacedWithOutlinedCall = */ true);
-
     if (all_of(PNCanonNums, [&CurrentCanonNums](unsigned CanonNum) {
           return CurrentCanonNums.contains(CanonNum);
-        }))
+        })) {
+      UsedPHIs.insert(&CurrPN);
       return &CurrPN;
+    }
   }
 
   // If we've made it here, it means we weren't able to replace the PHINode, so
@@ -1646,6 +1655,7 @@ replaceArgumentUses(OutlinableRegion &Region,
   if (FirstFunction)
     DominatingFunction = Group.OutlinedFunction;
   DominatorTree DT(*DominatingFunction);
+  DenseSet<PHINode *> UsedPHIs;
 
   for (unsigned ArgIdx = 0; ArgIdx < Region.ExtractedFunction->arg_size();
        ArgIdx++) {
@@ -1745,8 +1755,8 @@ replaceArgumentUses(OutlinableRegion &Region,
       // For our PHINode, we find the combined canonical numbering, and
       // attempt to find a matching PHINode in the overall PHIBlock.  If we
       // cannot, we copy the PHINode and move it into this new block.
-      PHINode *NewPN =
-          findOrCreatePHIInBlock(*PN, Region, OverallPhiBlock, OutputMappings);
+      PHINode *NewPN = findOrCreatePHIInBlock(*PN, Region, OverallPhiBlock,
+                                              OutputMappings, UsedPHIs);
       NewI->setOperand(0, NewPN);
     }
 
