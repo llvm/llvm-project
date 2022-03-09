@@ -10,13 +10,16 @@
 #define LLVM_SUPPORT_MSVCPATHS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 
 namespace llvm {
+
+namespace vfs {
+class FileSystem;
+}
 
 enum class SubDirectoryType {
   Bin,
