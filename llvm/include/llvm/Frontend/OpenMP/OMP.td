@@ -122,13 +122,12 @@ def OMPC_ProcBind : Clause<"proc_bind"> {
   ];
 }
 
-// static and auto are C++ keywords so need a capital to disambiguate.
-def OMP_SCHEDULE_Static : ClauseVal<"Static", 2, 1> {}
-def OMP_SCHEDULE_Dynamic : ClauseVal<"Dynamic", 3, 1> {}
-def OMP_SCHEDULE_Guided : ClauseVal<"Guided", 4, 1> {}
-def OMP_SCHEDULE_Auto : ClauseVal<"Auto", 5, 1> {}
-def OMP_SCHEDULE_Runtime : ClauseVal<"Runtime", 6, 1> {}
-def OMP_SCHEDULE_Default : ClauseVal<"Default", 7, 0> { let isDefault = 1; }
+def OMP_SCHEDULE_Static : ClauseVal<"static", 2, 1> {}
+def OMP_SCHEDULE_Dynamic : ClauseVal<"dynamic", 3, 1> {}
+def OMP_SCHEDULE_Guided : ClauseVal<"guided", 4, 1> {}
+def OMP_SCHEDULE_Auto : ClauseVal<"auto", 5, 1> {}
+def OMP_SCHEDULE_Runtime : ClauseVal<"runtime", 6, 1> {}
+def OMP_SCHEDULE_Default : ClauseVal<"default", 7, 0> { let isDefault = 1; }
 
 def OMPC_Schedule : Clause<"schedule"> {
   let clangClass = "OMPScheduleClause";

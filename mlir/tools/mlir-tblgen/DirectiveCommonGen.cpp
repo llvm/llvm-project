@@ -70,10 +70,14 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
       if (!cval.isUserVisible())
         continue;
 
-      const auto name = cval.getFormattedName();
+      std::string name = cval.getFormattedName();
+      std::string enumValName(name.length(), ' ');
+      std::transform(name.begin(), name.end(), enumValName.begin(),
+                     llvm::toLower);
+      enumValName[0] = llvm::toUpper(enumValName[0]);
       std::string cvDef{(enumName + llvm::Twine(name)).str()};
-      os << "def " << cvDef << " : I32EnumAttrCase<\"" << name << "\", "
-         << it.index() << ">;\n";
+      os << "def " << cvDef << " : I32EnumAttrCase<\"" << enumValName << "\", "
+         << it.index() << ", \"" << name << "\">;\n";
       cvDefs.push_back(cvDef);
     }
 

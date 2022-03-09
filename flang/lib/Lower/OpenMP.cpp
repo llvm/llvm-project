@@ -181,13 +181,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         omp::ClauseProcBindKind pbKind;
         switch (ompProcBindClause.v) {
         case Fortran::parser::OmpProcBindClause::Type::Master:
-          pbKind = omp::ClauseProcBindKind::master;
+          pbKind = omp::ClauseProcBindKind::Master;
           break;
         case Fortran::parser::OmpProcBindClause::Type::Close:
-          pbKind = omp::ClauseProcBindKind::close;
+          pbKind = omp::ClauseProcBindKind::Close;
           break;
         case Fortran::parser::OmpProcBindClause::Type::Spread:
-          pbKind = omp::ClauseProcBindKind::spread;
+          pbKind = omp::ClauseProcBindKind::Spread;
           break;
         }
         parallelOp.proc_bind_valAttr(omp::ClauseProcBindKindAttr::get(
