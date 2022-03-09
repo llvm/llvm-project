@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm %s | FileCheck %s
 
 // CHECK-LABEL: func @check_attributes
 // When expanding the memref to multiple arguments, argument attributes are replicated.

@@ -39,6 +39,23 @@ concept __unqualified_iter_move =
     iter_move(std::forward<_Tp>(__t));
   };
 
+template<class _Tp>
+concept __move_deref =
+  !__unqualified_iter_move<_Tp> &&
+  requires (_Tp&& __t) {
+    *__t;
+    requires is_lvalue_reference_v<decltype(*__t)>;
+  };
+
+template<class _Tp>
+concept __just_deref =
+  !__unqualified_iter_move<_Tp> &&
+  !__move_deref<_Tp> &&
+  requires (_Tp&& __t) {
+    *__t;
+    requires (!is_lvalue_reference_v<decltype(*__t)>);
+  };
+
 // [iterator.cust.move]
 
 struct __fn {
@@ -51,17 +68,18 @@ struct __fn {
   }
 
   template<class _Ip>
-    requires (!__unqualified_iter_move<_Ip>) &&
-             requires { *declval<_Ip>(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Ip&& __i) const
+    requires __move_deref<_Ip>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ip&& __i) const
+    noexcept(noexcept(std::move(*std::forward<_Ip>(__i))))
+    -> decltype(      std::move(*std::forward<_Ip>(__i)))
+    { return          std::move(*std::forward<_Ip>(__i)); }
+
+  template<class _Ip>
+    requires __just_deref<_Ip>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ip&& __i) const
     noexcept(noexcept(*std::forward<_Ip>(__i)))
-  {
-    if constexpr (is_lvalue_reference_v<decltype(*declval<_Ip>())>) {
-      return std::move(*std::forward<_Ip>(__i));
-    } else {
-      return *std::forward<_Ip>(__i);
-    }
-  }
+    -> decltype(      *std::forward<_Ip>(__i))
+    { return          *std::forward<_Ip>(__i); }
 };
 } // namespace __iter_move
 

@@ -258,6 +258,21 @@ static Error processLoadCommands(const MachOConfig &MachOConfig, Object &Obj) {
   if (!MachOConfig.RPathToPrepend.empty())
     Obj.updateLoadCommandIndexes();
 
+  // Remove any empty segments if required.
+  if (!MachOConfig.EmptySegmentsToRemove.empty()) {
+    auto RemovePred = [&MachOConfig](const LoadCommand &LC) {
+      if (LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_SEGMENT_64 ||
+          LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_SEGMENT) {
+        return LC.Sections.empty() &&
+               MachOConfig.EmptySegmentsToRemove.contains(
+                   LC.getSegmentName().getValue());
+      }
+      return false;
+    };
+    if (Error E = Obj.removeLoadCommands(RemovePred))
+      return E;
+  }
+
   return Error::success();
 }
 

@@ -1,4 +1,4 @@
-//===- StandardToLLVM.cpp - Standard to LLVM dialect conversion -----------===//
+//===- FuncToLLVM.cpp - Func to LLVM dialect conversion -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to convert MLIR standard and builtin dialects
+// This file implements a pass to convert MLIR Func and builtin dialects
 // into the LLVM IR dialect.
 //
 //===----------------------------------------------------------------------===//
@@ -15,11 +15,11 @@
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -44,7 +44,7 @@
 
 using namespace mlir;
 
-#define PASS_NAME "convert-std-to-llvm"
+#define PASS_NAME "convert-func-to-llvm"
 
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
@@ -579,7 +579,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
 };
 } // namespace
 
-void mlir::populateStdToLLVMFuncOpConversionPattern(
+void mlir::populateFuncToLLVMFuncOpConversionPattern(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   if (converter.getOptions().useBarePtrCallConv)
     patterns.add<BarePtrFuncOpConversion>(converter);
@@ -587,9 +587,9 @@ void mlir::populateStdToLLVMFuncOpConversionPattern(
     patterns.add<FuncOpConversion>(converter);
 }
 
-void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                               RewritePatternSet &patterns) {
-  populateStdToLLVMFuncOpConversionPattern(converter, patterns);
+void mlir::populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                RewritePatternSet &patterns) {
+  populateFuncToLLVMFuncOpConversionPattern(converter, patterns);
   // clang-format off
   patterns.add<
       CallIndirectOpLowering,
@@ -600,12 +600,13 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
 }
 
 namespace {
-/// A pass converting MLIR operations into the LLVM IR dialect.
-struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
-  LLVMLoweringPass() = default;
-  LLVMLoweringPass(bool useBarePtrCallConv, bool emitCWrappers,
-                   unsigned indexBitwidth, bool useAlignedAlloc,
-                   const llvm::DataLayout &dataLayout) {
+/// A pass converting Func operations into the LLVM IR dialect.
+struct ConvertFuncToLLVMPass
+    : public ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
+  ConvertFuncToLLVMPass() = default;
+  ConvertFuncToLLVMPass(bool useBarePtrCallConv, bool emitCWrappers,
+                        unsigned indexBitwidth, bool useAlignedAlloc,
+                        const llvm::DataLayout &dataLayout) {
     this->useBarePtrCallConv = useBarePtrCallConv;
     this->emitCWrappers = emitCWrappers;
     this->indexBitwidth = indexBitwidth;
@@ -644,7 +645,9 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
                                     &dataLayoutAnalysis);
 
     RewritePatternSet patterns(&getContext());
-    populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+
+    // TODO: Remove these in favor of their dedicated conversion passes.
     arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
@@ -658,20 +661,20 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
 };
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createLowerToLLVMPass() {
-  return std::make_unique<LLVMLoweringPass>();
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertFuncToLLVMPass() {
+  return std::make_unique<ConvertFuncToLLVMPass>();
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createLowerToLLVMPass(const LowerToLLVMOptions &options) {
+mlir::createConvertFuncToLLVMPass(const LowerToLLVMOptions &options) {
   auto allocLowering = options.allocLowering;
   // There is no way to provide additional patterns for pass, so
   // AllocLowering::None will always fail.
   assert(allocLowering != LowerToLLVMOptions::AllocLowering::None &&
-         "LLVMLoweringPass doesn't support AllocLowering::None");
+         "ConvertFuncToLLVMPass doesn't support AllocLowering::None");
   bool useAlignedAlloc =
       (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc);
-  return std::make_unique<LLVMLoweringPass>(
+  return std::make_unique<ConvertFuncToLLVMPass>(
       options.useBarePtrCallConv, options.emitCWrappers,
       options.getIndexBitwidth(), useAlignedAlloc, options.dataLayout);
 }

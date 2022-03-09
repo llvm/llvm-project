@@ -5392,6 +5392,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      types::isLLVMIR(InputType), CmdArgs, DebugInfoKind,
                      DwarfFission);
 
+  // This controls whether or not we perform JustMyCode instrumentation.
+  if (TC.getTriple().isOSBinFormatELF() &&
+      Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
+    if (DebugInfoKind >= codegenoptions::DebugInfoConstructor)
+      CmdArgs.push_back("-fjmc");
+    else
+      D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "-fjmc"
+                                                           << "-g";
+  }
+
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
   bool SplitDWARF = (DwarfFission != DwarfFissionKind::None) &&
@@ -7533,7 +7543,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     if (*EmitCodeView && *DebugInfoKind >= codegenoptions::DebugInfoConstructor)
       CmdArgs.push_back("-fjmc");
     else
-      D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo);
+      D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "/JMC"
+                                                           << "'/Zi', '/Z7'";
   }
 
   EHFlags EH = parseClangCLEHFlags(D, Args);

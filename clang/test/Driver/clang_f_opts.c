@@ -597,3 +597,10 @@
 // RUN: %clang -### -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DISABLE_DIRECT %s
 // CHECK_DISABLE_DIRECT: -fobjc-disable-direct-methods-for-testing
 // CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing
+
+// RUN: %clang -### -S -fjmc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -g %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
+// RUN: %clang -### -S -fjmc -g -fno-jmc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
+// CHECK_JMC_WARN: -fjmc requires debug info. Use -g or debug options that enable debugger's stepping function; option ignored
+// CHECK_NOJMC-NOT: -fjmc
+// CHECK_JMC: -fjmc

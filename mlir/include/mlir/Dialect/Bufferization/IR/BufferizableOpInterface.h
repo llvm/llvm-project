@@ -23,7 +23,6 @@
 namespace mlir {
 class BlockAndValueMapping;
 class DominanceInfo;
-class FuncOp;
 
 namespace bufferization {
 

@@ -4,7 +4,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; CHECK-COST: Checking a loop in "fixed_width"
+; CHECK-COST: Checking a loop in 'fixed_width'
 ; CHECK-COST: Found an estimated cost of 11 for VF 2 For instruction:   store i32 2, i32* %arrayidx1, align 4
 ; CHECK-COST: Found an estimated cost of 25 for VF 4 For instruction:   store i32 2, i32* %arrayidx1, align 4
 ; CHECK-COST: Selecting VF: 1.
@@ -45,7 +45,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 }
 
 
-; CHECK-COST: Checking a loop in "scalable"
+; CHECK-COST: Checking a loop in 'scalable'
 ; CHECK-COST: Found an estimated cost of 2 for VF vscale x 4 For instruction:   store i32 2, i32* %arrayidx1, align 4
 
 define void @scalable(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i64 %n) #0 {

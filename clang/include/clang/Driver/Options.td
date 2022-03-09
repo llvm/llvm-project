@@ -1462,6 +1462,7 @@ def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbo
 def fjmc : Flag<["-"], "fjmc">, Group<f_Group>,Flags<[CC1Option]>,
     HelpText<"Enable just-my-code debugging">,
     MarshallingInfoFlag<CodeGenOpts<"JMCInstrument">>;
+def fno_jmc : Flag<["-"], "fno-jmc">, Group<f_Group>, Flags<[CC1Option]>;
 defm eliminate_unused_debug_types : OptOutCC1FFlag<"eliminate-unused-debug-types",
   "Do not emit ", "Emit ", " debug info for defined but unused types">;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>, Flags<[CC1Option]>,

@@ -7,11 +7,11 @@
 
 target triple = "aarch64-linux-gnu"
 
-; DEBUG: LV: Checking a loop in "main_vf_vscale_x_16"
+; DEBUG: LV: Checking a loop in 'main_vf_vscale_x_16'
 ; DEBUG: Create Skeleton for epilogue vectorized loop (first pass)
 ; DEBUG: Main Loop VF:vscale x 16, Main Loop UF:2, Epilogue Loop VF:vscale x 8, Epilogue Loop UF:1
 
-; DEBUG-FORCED: LV: Checking a loop in "main_vf_vscale_x_16"
+; DEBUG-FORCED: LV: Checking a loop in 'main_vf_vscale_x_16'
 ; DEBUG-FORCED: LEV: Epilogue vectorization factor is forced.
 ; DEBUG-FORCED: Create Skeleton for epilogue vectorized loop (first pass)
 ; DEBUG-FORCED: Main Loop VF:vscale x 16, Main Loop UF:2, Epilogue Loop VF:8, Epilogue Loop UF:1
@@ -194,11 +194,11 @@ exit:
 }
 
 
-; DEBUG: LV: Checking a loop in "main_vf_vscale_x_2"
+; DEBUG: LV: Checking a loop in 'main_vf_vscale_x_2'
 ; DEBUG: Create Skeleton for epilogue vectorized loop (first pass)
 ; DEBUG: Main Loop VF:vscale x 2, Main Loop UF:2, Epilogue Loop VF:8, Epilogue Loop UF:1
 
-; DEBUG-FORCED: LV: Checking a loop in "main_vf_vscale_x_2"
+; DEBUG-FORCED: LV: Checking a loop in 'main_vf_vscale_x_2'
 ; DEBUG-FORCED: LEV: Epilogue vectorization factor is forced.
 ; DEBUG-FORCED: Create Skeleton for epilogue vectorized loop (first pass)
 ; DEBUG-FORCED: Main Loop VF:vscale x 2, Main Loop UF:2, Epilogue Loop VF:8, Epilogue Loop UF:1

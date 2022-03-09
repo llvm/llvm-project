@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 
 ; Make sure LV legal bails out when there is a non-int, non-ptr phi
-; CHECK-LABEL: "invalid_phi_types"
+; CHECK-LABEL: 'invalid_phi_types'
 ; CHECK: LV: Not vectorizing: Found a non-int non-pointer PHI.
 define i32 @invalid_phi_types() {
 entry:
@@ -21,7 +21,7 @@ for.end:
 
 ; D40973
 ; Make sure LV legal bails out when the loop doesn't have a legal pre-header.
-; CHECK-LABEL: "inc"
+; CHECK-LABEL: 'inc'
 ; CHECK: LV: Not vectorizing: Loop doesn't have a legal pre-header.
 define void @inc(i32 %n, i8* %P) {
   %1 = icmp sgt i32 %n, 0

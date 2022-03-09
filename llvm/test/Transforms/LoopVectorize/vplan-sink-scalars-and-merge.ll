@@ -9,7 +9,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @c = common global [2048 x i32] zeroinitializer, align 16
 
 
-; CHECK-LABEL: LV: Checking a loop in "sink1"
+; CHECK-LABEL: LV: Checking a loop in 'sink1'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -75,7 +75,7 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: LV: Checking a loop in "sink2"
+; CHECK-LABEL: LV: Checking a loop in 'sink2'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -154,7 +154,7 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: LV: Checking a loop in "sink3"
+; CHECK-LABEL: LV: Checking a loop in 'sink3'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -235,7 +235,7 @@ exit:
 
 ; Make sure we do not sink uniform instructions.
 define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
-; CHECK-LABEL: LV: Checking a loop in "uniform_gep"
+; CHECK-LABEL: LV: Checking a loop in 'uniform_gep'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -325,7 +325,7 @@ exit:
 
 ; Loop with predicated load.
 define void @pred_cfg1(i32 %k, i32 %j) {
-; CHECK-LABEL: LV: Checking a loop in "pred_cfg1"
+; CHECK-LABEL: LV: Checking a loop in 'pred_cfg1'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -426,7 +426,7 @@ exit:
 ; Loop with predicated load and store in separate blocks, store depends on
 ; loaded value.
 define void @pred_cfg2(i32 %k, i32 %j) {
-; CHECK-LABEL: LV: Checking a loop in "pred_cfg2"
+; CHECK-LABEL: LV: Checking a loop in 'pred_cfg2'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -542,7 +542,7 @@ exit:
 ; Loop with predicated load and store in separate blocks, store does not depend
 ; on loaded value.
 define void @pred_cfg3(i32 %k, i32 %j) {
-; CHECK-LABEL: LV: Checking a loop in "pred_cfg3"
+; CHECK-LABEL: LV: Checking a loop in 'pred_cfg3'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -652,7 +652,7 @@ exit:
 }
 
 define void @merge_3_replicate_region(i32 %k, i32 %j) {
-; CHECK-LABEL: LV: Checking a loop in "merge_3_replicate_region"
+; CHECK-LABEL: LV: Checking a loop in 'merge_3_replicate_region'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -767,7 +767,7 @@ exit:
 
 
 define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
-; CHECK-LABEL: LV: Checking a loop in "update_2_uses_in_same_recipe_in_merged_block"
+; CHECK-LABEL: LV: Checking a loop in 'update_2_uses_in_same_recipe_in_merged_block'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -834,7 +834,7 @@ exit:
 }
 
 define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
-; CHECK-LABEL: LV: Checking a loop in "recipe_in_merge_candidate_used_by_first_order_recurrence"
+; CHECK-LABEL: LV: Checking a loop in 'recipe_in_merge_candidate_used_by_first_order_recurrence'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -918,7 +918,7 @@ exit:
 }
 
 define void @update_multiple_users(i16* noalias %src, i8* noalias %dst, i1 %c) {
-; CHECK-LABEL: LV: Checking a loop in "update_multiple_users"
+; CHECK-LABEL: LV: Checking a loop in 'update_multiple_users'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
@@ -989,7 +989,7 @@ exit:
 }
 
 define void @sinking_requires_duplication(float* %addr) {
-; CHECK-LABEL: LV: Checking a loop in "sinking_requires_duplication"
+; CHECK-LABEL: LV: Checking a loop in 'sinking_requires_duplication'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
