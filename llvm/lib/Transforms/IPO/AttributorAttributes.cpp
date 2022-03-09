@@ -6543,10 +6543,12 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // If this is a byval argument and we know all the call sites (so we can
     // rewrite them), there is no need to check them explicitly.
     bool UsedAssumedInformation = false;
-    if (getIRPosition().hasAttr(Attribute::ByVal) &&
+    SmallVector<Attribute, 1> Attrs;
+    getAttrs({Attribute::ByVal}, Attrs, /* IgnoreSubsumingPositions */ true);
+    if (!Attrs.empty() &&
         A.checkForAllCallSites([](AbstractCallSite ACS) { return true; }, *this,
                                true, UsedAssumedInformation))
-      return getAssociatedValue().getType()->getPointerElementType();
+      return Attrs[0].getValueAsType();
 
     Optional<Type *> Ty;
     unsigned ArgNo = getIRPosition().getCallSiteArgNo();
@@ -6997,7 +6999,7 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
       auto &PrivArgAA = A.getAAFor<AAPrivatizablePtr>(
           *this, IRPosition::argument(*Arg), DepClassTy::REQUIRED);
       if (PrivArgAA.isAssumedPrivatizablePtr())
-        return Obj->getType()->getPointerElementType();
+        return PrivArgAA.getPrivatizableType();
     }
 
     LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Underlying object neither valid "
