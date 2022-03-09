@@ -1933,6 +1933,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 const LoopInfo &LI) {
   bool MadeChange = false;
 
+  MSSA.ensureOptimizedUses();
   DSEState State(F, AA, MSSA, DT, PDT, TLI, LI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {

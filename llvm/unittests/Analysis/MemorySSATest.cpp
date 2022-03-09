@@ -1026,6 +1026,7 @@ TEST_F(MemorySSATest, TestLoadMustAlias) {
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
+  MSSA.ensureOptimizedUses();
 
   unsigned I = 0;
   for (LoadInst *V : {LA1, LA2}) {
@@ -1119,6 +1120,7 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
+  MSSA.ensureOptimizedUses();
 
   unsigned I = 0;
   for (LoadInst *V : {LA1, LB1}) {
