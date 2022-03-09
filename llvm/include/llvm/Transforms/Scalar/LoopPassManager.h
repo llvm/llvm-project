@@ -395,6 +395,7 @@ Optional<PreservedAnalyses> LoopPassManager::runSinglePass(
   PreservedAnalyses PA;
   {
     TimeTraceScope TimeScope(Pass->name(), IR.getName());
+    NewPassManagerPrettyStackEntry StackEntry(Pass->name(), L.getName());
     PA = Pass->run(IR, AM, AR, U);
   }
 
