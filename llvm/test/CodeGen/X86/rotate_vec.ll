@@ -230,13 +230,19 @@ define <4 x i32> @or_fshl_v4i32(<4 x i32> %x, <4 x i32> %y) {
 }
 
 define <2 x i64> @or_fshr_v2i64(<2 x i64> %x, <2 x i64> %y) {
-; CHECK-LABEL: or_fshr_v2i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vpsllq $42, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrlq $22, %xmm1, %xmm1
-; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    retq
+; XOP-LABEL: or_fshr_v2i64:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpsrlq $22, %xmm1, %xmm1
+; XOP-NEXT:    vprotq $42, %xmm0, %xmm0
+; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: or_fshr_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlq $22, %xmm1, %xmm1
+; AVX512-NEXT:    vprolq $42, %xmm0, %xmm0
+; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %or1 = or <2 x i64> %x, %y
   %sh1 = shl <2 x i64> %x, <i64 42, i64 42>
   %sh2 = lshr <2 x i64> %or1, <i64 22, i64 22>
