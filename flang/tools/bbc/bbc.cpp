@@ -80,6 +80,10 @@ static llvm::cl::opt<bool> pftDumpTest(
     llvm::cl::desc("parse the input, create a PFT, dump it, and exit"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableOpenMP("fopenmp",
+                                        llvm::cl::desc("enable openmp"),
+                                        llvm::cl::init(false));
+
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
 
@@ -240,6 +244,12 @@ int main(int argc, char **argv) {
                                       std::string{FLANG_VERSION_MINOR_STRING});
   options.predefinitions.emplace_back(
       "__flang_patchlevel__"s, std::string{FLANG_VERSION_PATCHLEVEL_STRING});
+
+  // enable parsing of OpenMP
+  if (enableOpenMP) {
+    options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
+    options.predefinitions.emplace_back("_OPENMP", "201511");
+  }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
   Fortran::parser::AllSources allSources;
