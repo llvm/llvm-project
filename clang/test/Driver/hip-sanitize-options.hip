@@ -35,6 +35,20 @@
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=XNACKNEG %s
 
+// Check -fno-gpu-sanitize with supported and unsupported GPU.
+// Sanitizer should be disabled for all GPU's and there should be no warnings about unsupported
+// GPU.
+
+// RUN: %clang -### -target x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fno-gpu-sanitize \
+// RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=NOGPU %s
+
+// RUN: %clang -### -target x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fno-gpu-sanitize \
+// RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=NOGPUNEG %s
+
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-fsanitize=address"}}
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc"}}
 // CHECK-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
@@ -65,3 +79,22 @@
 // XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
 // XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx906"}}
 // XNACKNEG-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
+
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
+// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx900:xnack-'. Use it with an offload arch containing 'xnack+' instead
+// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx906'. Use it with an offload arch containing 'xnack+' instead
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx906"}}
+// NOGPUNEG-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
