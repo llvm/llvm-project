@@ -1263,10 +1263,10 @@ def SVZIP2_B  : SInst<"svzip2_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_
 ////////////////////////////////////////////////////////////////////////////////
 // Predicate creation
 
-def SVPFALSE : SInst<"svpfalse[_b]", "P", "", MergeNone, "", [IsOverloadNone]>;
+def SVPFALSE : SInst<"svpfalse[_b]", "Pv", "", MergeNone, "", [IsOverloadNone]>;
 
 def SVPTRUE_PAT : SInst<"svptrue_pat_{d}", "PI", "PcPsPiPl", MergeNone, "aarch64_sve_ptrue">;
-def SVPTRUE     : SInst<"svptrue_{d}",     "P",  "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsAppendSVALL]>;
+def SVPTRUE     : SInst<"svptrue_{d}",     "Pv",  "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsAppendSVALL]>;
 
 def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeNone>;
 def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone>;
@@ -1309,9 +1309,9 @@ def SVPTEST_LAST  : SInst<"svptest_last",  "sPP", "Pc", MergeNone, "aarch64_sve_
 ////////////////////////////////////////////////////////////////////////////////
 // FFR manipulation
 
-def SVRDFFR   : SInst<"svrdffr",   "P",  "Pc", MergeNone, "", [IsOverloadNone]>;
+def SVRDFFR   : SInst<"svrdffr",   "Pv",  "Pc", MergeNone, "", [IsOverloadNone]>;
 def SVRDFFR_Z : SInst<"svrdffr_z", "PP", "Pc", MergeNone, "", [IsOverloadNone]>;
-def SVSETFFR  : SInst<"svsetffr",  "v",  "",   MergeNone, "", [IsOverloadNone]>;
+def SVSETFFR  : SInst<"svsetffr",  "vv",  "",   MergeNone, "", [IsOverloadNone]>;
 def SVWRFFR   : SInst<"svwrffr",   "vP", "Pc", MergeNone, "", [IsOverloadNone]>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1322,10 +1322,10 @@ def SVCNTH_PAT : SInst<"svcnth_pat", "nI", "", MergeNone, "aarch64_sve_cnth", [I
 def SVCNTW_PAT : SInst<"svcntw_pat", "nI", "", MergeNone, "aarch64_sve_cntw", [IsOverloadNone]>;
 def SVCNTD_PAT : SInst<"svcntd_pat", "nI", "", MergeNone, "aarch64_sve_cntd", [IsOverloadNone]>;
 
-def SVCNTB : SInst<"svcntb", "n", "", MergeNone, "aarch64_sve_cntb", [IsAppendSVALL, IsOverloadNone]>;
-def SVCNTH : SInst<"svcnth", "n", "", MergeNone, "aarch64_sve_cnth", [IsAppendSVALL, IsOverloadNone]>;
-def SVCNTW : SInst<"svcntw", "n", "", MergeNone, "aarch64_sve_cntw", [IsAppendSVALL, IsOverloadNone]>;
-def SVCNTD : SInst<"svcntd", "n", "", MergeNone, "aarch64_sve_cntd", [IsAppendSVALL, IsOverloadNone]>;
+def SVCNTB : SInst<"svcntb", "nv", "", MergeNone, "aarch64_sve_cntb", [IsAppendSVALL, IsOverloadNone]>;
+def SVCNTH : SInst<"svcnth", "nv", "", MergeNone, "aarch64_sve_cnth", [IsAppendSVALL, IsOverloadNone]>;
+def SVCNTW : SInst<"svcntw", "nv", "", MergeNone, "aarch64_sve_cntw", [IsAppendSVALL, IsOverloadNone]>;
+def SVCNTD : SInst<"svcntd", "nv", "", MergeNone, "aarch64_sve_cntd", [IsAppendSVALL, IsOverloadNone]>;
 
 def SVCNTP : SInst<"svcntp_{d}",  "nPP", "PcPsPiPl",        MergeNone, "aarch64_sve_cntp">;
 def SVLEN  : SInst<"svlen[_{d}]", "nd",  "csilUcUsUiUlhfd", MergeNone>;
@@ -1435,20 +1435,20 @@ def SVZIP2Q_BF16      : SInst<"svzip2q[_{d}]",     "ddd",  "b", MergeNone, "aarc
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector creation
-def SVUNDEF_1 : SInst<"svundef_{d}",  "d", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
-def SVUNDEF_2 : SInst<"svundef2_{d}", "2", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
-def SVUNDEF_3 : SInst<"svundef3_{d}", "3", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
-def SVUNDEF_4 : SInst<"svundef4_{d}", "4", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
+def SVUNDEF_1 : SInst<"svundef_{d}",  "dv", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
+def SVUNDEF_2 : SInst<"svundef2_{d}", "2v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
+def SVUNDEF_3 : SInst<"svundef3_{d}", "3v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
+def SVUNDEF_4 : SInst<"svundef4_{d}", "4v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
 
 def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tuple_create2", [IsTupleCreate]>;
 def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tuple_create3", [IsTupleCreate]>;
 def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tuple_create4", [IsTupleCreate]>;
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
-def SVUNDEF_1_BF16 : SInst<"svundef_{d}",  "d", "b", MergeNone, "", [IsUndef]>;
-def SVUNDEF_2_BF16 : SInst<"svundef2_{d}", "2", "b", MergeNone, "", [IsUndef]>;
-def SVUNDEF_3_BF16 : SInst<"svundef3_{d}", "3", "b", MergeNone, "", [IsUndef]>;
-def SVUNDEF_4_BF16 : SInst<"svundef4_{d}", "4", "b", MergeNone, "", [IsUndef]>;
+def SVUNDEF_1_BF16 : SInst<"svundef_{d}",  "dv", "b", MergeNone, "", [IsUndef]>;
+def SVUNDEF_2_BF16 : SInst<"svundef2_{d}", "2v", "b", MergeNone, "", [IsUndef]>;
+def SVUNDEF_3_BF16 : SInst<"svundef3_{d}", "3v", "b", MergeNone, "", [IsUndef]>;
+def SVUNDEF_4_BF16 : SInst<"svundef4_{d}", "4v", "b", MergeNone, "", [IsUndef]>;
 
 def SVCREATE_2_BF16 : SInst<"svcreate2[_{d}]", "2dd",   "b", MergeNone, "aarch64_sve_tuple_create2", [IsTupleCreate]>;
 def SVCREATE_3_BF16 : SInst<"svcreate3[_{d}]", "3ddd",  "b", MergeNone, "aarch64_sve_tuple_create3", [IsTupleCreate]>;
