@@ -763,7 +763,7 @@ with ``CUDA`` information, run the following ``bash`` command.
 
 .. code-block:: console
 
-   $ env LIBOMPTARGET_INFO=$((1 << 0x1 | 1 << 0x10)) ./your-application
+   $ env LIBOMPTARGET_INFO=$((0x1 | 0x10)) ./your-application
 
 Or, to enable every flag run with every bit set.
 
