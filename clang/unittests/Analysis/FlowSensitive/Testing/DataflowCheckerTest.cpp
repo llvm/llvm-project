@@ -1,8 +1,16 @@
-#include "TestingSupport.h"
-#include "NoopAnalysis.h"
+//===- DataflowAnalysisTest.cpp -------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/Testing/DataflowAnalysis.h"
+#include "clang/Analysis/FlowSensitive/Testing/NoopAnalysis.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"

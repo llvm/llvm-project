@@ -11,8 +11,6 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   MultiVarConstantPropagationTest.cpp
   SingleVarConstantPropagationTest.cpp
   SourceLocationsLatticeTest.cpp
-  TestingSupport.cpp
-  TestingSupportTest.cpp
   TransferTest.cpp
   TypeErasedDataflowAnalysisTest.cpp
   SolverTest.cpp
@@ -22,6 +20,7 @@ clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
   PRIVATE
   clangAnalysis
   clangAnalysisFlowSensitive
+  clangAnalysisFlowSensitiveTesting
   clangAST
   clangASTMatchers
   clangBasic
@@ -36,3 +35,5 @@ target_link_libraries(ClangAnalysisFlowSensitiveTests
   PRIVATE
   LLVMTestingSupport
   )
+
+add_subdirectory(Testing)
