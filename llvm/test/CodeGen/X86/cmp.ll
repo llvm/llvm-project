@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -show-mc-encoding | FileCheck %s
 
 @d = dso_local global i8 0, align 1
+@d64 = dso_local global i64 0
 
 define i32 @test1(i32 %X, i32* %y) nounwind {
 ; CHECK-LABEL: test1:
@@ -594,6 +595,120 @@ define i32 @lowmask_i32_mask8(i32 %val) {
   ret i32 %ret
 }
 
+define i1 @shifted_mask64_testb(i64 %a) {
+; CHECK-LABEL: shifted_mask64_testb:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $287104476244869120, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC000000000000
+; CHECK-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
+  %v1 = icmp ne i64 %v0, 0
+  ret i1 %v1
+}
+
+define i1 @shifted_mask64_testw(i64 %a) {
+; CHECK-LABEL: shifted_mask64_testw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $562941363486720, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0xfe,0xff,0x01,0x00]
+; CHECK-NEXT:    # imm = 0x1FFFE00000000
+; CHECK-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 562941363486720  ; 0xffff << 33
+  %v1 = icmp ne i64 %v0, 0
+  ret i1 %v1
+}
+
+define i1 @shifted_mask64_testl(i64 %a) {
+; CHECK-LABEL: shifted_mask64_testl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $549755813760, %rax # encoding: [0x48,0xb8,0x80,0xff,0xff,0xff,0x7f,0x00,0x00,0x00]
+; CHECK-NEXT:    # imm = 0x7FFFFFFF80
+; CHECK-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 549755813760  ; 0xffffffff << 7
+  %v1 = icmp eq i64 %v0, 0
+  ret i1 %v1
+}
+
+define i1 @shifted_mask64_extra_use_const(i64 %a) {
+; CHECK-LABEL: shifted_mask64_extra_use_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $287104476244869120, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC000000000000
+; CHECK-NEXT:    testq %rcx, %rdi # encoding: [0x48,0x85,0xcf]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
+  %v1 = icmp ne i64 %v0, 0
+  store i64 287104476244869120, i64* @d64
+  ret i1 %v1
+}
+
+define i1 @shifted_mask64_extra_use_and(i64 %a) {
+; CHECK-LABEL: shifted_mask64_extra_use_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $287104476244869120, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC000000000000
+; CHECK-NEXT:    andq %rdi, %rcx # encoding: [0x48,0x21,0xf9]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
+  %v1 = icmp ne i64 %v0, 0
+  store i64 %v0, i64* @d64
+  ret i1 %v1
+}
+
+define i1 @shifted_mask32_testl_immediate(i64 %a) {
+; CHECK-LABEL: shifted_mask32_testl_immediate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl $66846720, %edi # encoding: [0xf7,0xc7,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC0000
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 66846720  ; 0xff << 18
+  %v1 = icmp ne i64 %v0, 0
+  ret i1 %v1
+}
+
+define i1 @shifted_mask32_extra_use_const(i64 %a) {
+; CHECK-LABEL: shifted_mask32_extra_use_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl $66846720, %edi # encoding: [0xf7,0xc7,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC0000
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    movq $66846720, d64(%rip) # encoding: [0x48,0xc7,0x05,A,A,A,A,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # fixup A - offset: 3, value: d64-8, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # imm = 0x3FC0000
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 66846720  ; 0xff << 18
+  %v1 = icmp ne i64 %v0, 0
+  store i64 66846720, i64* @d64
+  ret i1 %v1
+}
+
+define i1 @shifted_mask32_extra_use_and(i64 %a) {
+; CHECK-LABEL: shifted_mask32_extra_use_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andq $66846720, %rdi # encoding: [0x48,0x81,0xe7,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC0000
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %v0 = and i64 %a, 66846720  ; 0xff << 50
+  %v1 = icmp ne i64 %v0, 0
+  store i64 %v0, i64* @d64
+  ret i1 %v1
+}
+
 define { i64, i64 } @pr39968(i64, i64, i32) {
 ; CHECK-LABEL: pr39968:
 ; CHECK:       # %bb.0:
@@ -619,13 +734,13 @@ define i32 @pr42189(i16 signext %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x7FFF
-; CHECK-NEXT:    jne .LBB37_2 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB37_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    jne .LBB45_2 # encoding: [0x75,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB45_2-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
-; CHECK-NEXT:  .LBB37_2: # %if.end
+; CHECK-NEXT:  .LBB45_2: # %if.end
 ; CHECK-NEXT:    jmp f@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
