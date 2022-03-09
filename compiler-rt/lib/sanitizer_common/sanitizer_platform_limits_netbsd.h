@@ -259,7 +259,6 @@ struct __sanitizer_dirent {
 
 typedef int __sanitizer_clock_t;
 typedef int __sanitizer_clockid_t;
-typedef void *__sanitizer_timer_t;
 
 typedef u32 __sanitizer___kernel_uid_t;
 typedef u32 __sanitizer___kernel_gid_t;
