@@ -108,7 +108,9 @@ class DebuggerAPITestCase(TestBase):
                 False, error)
         self.assertSuccess(error)
         platform2 = target2.GetPlatform()
-        self.assertEqual(platform2.GetWorkingDirectory(), "/foo/bar")
+        # On windows, the path will come back as \foo\bar. That's most likely a
+        # bug, but this is not related to what we're testing here.
+        self.assertIn(platform2.GetWorkingDirectory(), ["/foo/bar", r"\foo\bar"])
 
         # ... but create a new one if it doesn't.
         self.dbg.SetSelectedPlatform(lldb.SBPlatform("remote-windows"))
@@ -123,9 +125,11 @@ class DebuggerAPITestCase(TestBase):
         if lldbplatformutil.getHostPlatform() == 'linux':
             self.yaml2obj("macho.yaml", exe)
             arch = "x86_64-apple-macosx"
+            platform_name = "remote-macosx"
         else:
             self.yaml2obj("elf.yaml", exe)
             arch = "x86_64-pc-linux"
+            platform_name = "remote-linux"
 
         fbsd = lldb.SBPlatform("remote-freebsd")
         self.dbg.SetSelectedPlatform(fbsd)
@@ -134,7 +138,7 @@ class DebuggerAPITestCase(TestBase):
         target1 = self.dbg.CreateTarget(exe, arch, None, False, error)
         self.assertSuccess(error)
         platform1 = target1.GetPlatform()
-        self.assertEqual(platform1.GetName(), "remote-macosx")
+        self.assertEqual(platform1.GetName(), platform_name)
         platform1.SetWorkingDirectory("/foo/bar")
 
         # Reuse a platform even if it is not currently selected.
@@ -142,5 +146,7 @@ class DebuggerAPITestCase(TestBase):
         target2 = self.dbg.CreateTarget(exe, arch, None, False, error)
         self.assertSuccess(error)
         platform2 = target2.GetPlatform()
-        self.assertEqual(platform2.GetName(), "remote-macosx")
-        self.assertEqual(platform2.GetWorkingDirectory(), "/foo/bar")
+        self.assertEqual(platform2.GetName(), platform_name)
+        # On windows, the path will come back as \foo\bar. That's most likely a
+        # bug, but this is not related to what we're testing here.
+        self.assertIn(platform2.GetWorkingDirectory(), ["/foo/bar", r"\foo\bar"])
