@@ -371,6 +371,10 @@ OpFoldResult MultiDimReductionOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+Optional<SmallVector<int64_t, 4>> MultiDimReductionOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getSourceVectorType().getShape());
+}
+
 //===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//

@@ -207,23 +207,23 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct OffsetMapInfo {
+  static SmallVector<int64_t> getEmptyKey() { return {int64_t(-1)}; }
+
+  static SmallVector<int64_t> getTombstoneKey() { return {int64_t(-2)}; }
+
+  static unsigned getHashValue(const SmallVector<int64_t> &v) {
+    return static_cast<unsigned>(llvm::hash_combine_range(v.begin(), v.end()));
+  }
+
+  static bool isEqual(const SmallVector<int64_t> &lhs,
+                      const SmallVector<int64_t> &rhs) {
+    return lhs == rhs;
+  }
+};
+
 struct UnrollContractionPattern
     : public OpRewritePattern<vector::ContractionOp> {
-  struct OffsetMapInfo {
-    static SmallVector<int64_t> getEmptyKey() { return {int64_t(-1)}; }
-
-    static SmallVector<int64_t> getTombstoneKey() { return {int64_t(-2)}; }
-
-    static unsigned getHashValue(const SmallVector<int64_t> &v) {
-      return static_cast<unsigned>(
-          llvm::hash_combine_range(v.begin(), v.end()));
-    }
-
-    static bool isEqual(const SmallVector<int64_t> &lhs,
-                        const SmallVector<int64_t> &rhs) {
-      return lhs == rhs;
-    }
-  };
   UnrollContractionPattern(MLIRContext *context,
                            const vector::UnrollVectorOptions &options)
       : OpRewritePattern<vector::ContractionOp>(context, /*benefit=*/1),
@@ -313,6 +313,74 @@ struct UnrollContractionPattern
           loc, it.second, result, it.first, dstStrides);
     }
     rewriter.replaceOp(contractOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+struct UnrollMultiReductionPattern
+    : public OpRewritePattern<vector::MultiDimReductionOp> {
+  UnrollMultiReductionPattern(MLIRContext *context,
+                              const vector::UnrollVectorOptions &options)
+      : OpRewritePattern<vector::MultiDimReductionOp>(context, /*benefit=*/1),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    Optional<SmallVector<int64_t, 4>> targetShape =
+        getTargetShape(options, reductionOp);
+    if (!targetShape)
+      return failure();
+    SmallVector<int64_t, 4> originalSize = *reductionOp.getShapeForUnroll();
+    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
+    llvm::MapVector<
+        SmallVector<int64_t>, Value,
+        llvm::DenseMap<SmallVector<int64_t>, unsigned, OffsetMapInfo>>
+        accCache;
+    // Compute shape ratio of 'shape' and 'sizes'.
+    int64_t sliceCount = computeMaxLinearIndex(ratio);
+    Location loc = reductionOp.getLoc();
+    for (int64_t i = 0; i < sliceCount; i++) {
+      SmallVector<int64_t, 4> offsets =
+          getVectorOffset(originalSize, *targetShape, i);
+
+      SmallVector<int64_t, 4> operandStrides(offsets.size(), 1);
+      Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, reductionOp.getOperand(), offsets, *targetShape, operandStrides);
+
+      SmallVector<int64_t> dstShape;
+      SmallVector<int64_t> destOffset;
+      for (size_t i : llvm::seq(size_t(0), targetShape->size())) {
+        if (!reductionOp.isReducedDim(i)) {
+          destOffset.push_back(offsets[i]);
+          dstShape.push_back((*targetShape)[i]);
+        }
+      }
+      auto targetType = VectorType::get(
+          dstShape, reductionOp.getSourceVectorType().getElementType());
+      Operation *newOp = cloneOpWithOperandsAndTypes(rewriter, loc, reductionOp,
+                                                     slicedOperand, targetType);
+      Value result = newOp->getResult(0);
+      // Save the accumulated value until all the loops are unrolled since
+      // reduction loop keeps updating the accumulator.
+      auto accIt = accCache.find(destOffset);
+      if (accIt != accCache.end())
+        result = makeArithReduction(rewriter, loc, reductionOp.kind(), result,
+                                    accIt->second);
+      accCache[destOffset] = result;
+    }
+    // Assemble back the accumulator into a single vector.
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, reductionOp.getDestType(),
+        rewriter.getZeroAttr(reductionOp.getDestType()));
+    for (const auto &it : accCache) {
+      SmallVector<int64_t> dstStrides(it.first.size(), 1);
+      result = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, it.second, result, it.first, dstStrides);
+    }
+    rewriter.replaceOp(reductionOp, result);
     return success();
   }
 
@@ -568,8 +636,8 @@ struct TransferWriteInsertPattern
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options) {
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
-               UnrollContractionPattern, UnrollElementwisePattern>(
-      patterns.getContext(), options);
+               UnrollContractionPattern, UnrollElementwisePattern,
+               UnrollMultiReductionPattern>(patterns.getContext(), options);
 }
 
 void mlir::vector::populatePropagateVectorDistributionPatterns(
