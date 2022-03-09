@@ -533,6 +533,7 @@ public:
     }
 
     DeviceData.resize(NumberOfDevices);
+    Modules.resize(NumberOfDevices);
     StreamPool.resize(NumberOfDevices);
     EventPool.resize(NumberOfDevices);
 
@@ -817,7 +818,7 @@ public:
 
     DP("CUDA module successfully loaded!\n");
 
-    Modules.push_back(Module);
+    Modules[DeviceId] = Module;
 
     // Find the symbols in the module by name.
     const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
