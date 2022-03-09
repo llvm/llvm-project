@@ -35,24 +35,77 @@ cc_library(
 )
 
 cc_library(
-    name = "__support_standalone_cpp",
+    name = "__support_cpp_array",
+    hdrs = ["src/__support/CPP/Array.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_array_ref",
+    hdrs = ["src/__support/CPP/ArrayRef.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_bit",
+    hdrs = ["src/__support/CPP/Bit.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_bitset",
+    hdrs = ["src/__support/CPP/Bitset.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_functional",
+    hdrs = ["src/__support/CPP/Functional.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_limits",
+    hdrs = ["src/__support/CPP/Limits.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_string_view",
+    hdrs = ["src/__support/CPP/StringView.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_type_traits",
     hdrs = [
-        "src/__support/CPP/Array.h",
-        "src/__support/CPP/ArrayRef.h",
-        "src/__support/CPP/Bit.h",
-        "src/__support/CPP/Bitset.h",
-        "src/__support/CPP/Functional.h",
-        "src/__support/CPP/Limits.h",
-        "src/__support/CPP/StringView.h",
         "src/__support/CPP/TypeTraits.h",
     ],
     deps = [":libc_root"],
 )
 
 cc_library(
+    name = "__support_cpp_utility",
+    hdrs = ["src/__support/CPP/Utility.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_vector",
+    hdrs = ["src/__support/CPP/vector.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_atomic",
+    hdrs = ["src/__support/CPP/atomic.h",],
+    deps = [":libc_root"],
+)
+
+cc_library(
     name = "__support_integer_operations",
     hdrs = ["src/__support/integer_operations.h"],
-    deps = [":__support_standalone_cpp"],
+    deps = [":__support_cpp_type_traits"],
 )
 
 cc_library(
@@ -64,8 +117,8 @@ cc_library(
     name = "__support_str_to_integer",
     hdrs = ["src/__support/str_to_integer.h"],
     deps = [
+        ":__support_cpp_limits",
         ":__support_ctype_utils",
-        ":__support_standalone_cpp",
     ],
 )
 
@@ -99,7 +152,8 @@ cc_library(
     hdrs = fputil_hdrs,
     deps = [
         ":__support_common",
-        ":__support_standalone_cpp",
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
         ":libc_root",
     ],
 )
@@ -126,7 +180,6 @@ cc_library(
     deps = [
         ":__support_common",
         ":__support_fputil",
-        ":__support_standalone_cpp",
         ":libc_root",
     ],
 )
@@ -280,8 +333,9 @@ cc_library(
     srcs = ["src/math/generic/math_utils.cpp"],
     hdrs = ["src/math/generic/math_utils.h"],
     deps = [
+        "__support_cpp_bit",
+        "__support_cpp_type_traits",
         ":__support_common",
-        ":__support_standalone_cpp",
         ":libc_root",
     ],
 )
@@ -645,7 +699,7 @@ cc_library(
     hdrs = ["src/string/string_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_standalone_cpp",
+        ":__support_cpp_bitset",
         ":libc_root",
     ],
 )
@@ -666,7 +720,7 @@ cc_library(
     ],
     deps = [
         ":__support_common",
-        ":__support_standalone_cpp",
+        ":__support_cpp_bit",
         ":libc_root",
     ],
 )
@@ -900,7 +954,7 @@ libc_function(
     hdrs = ["src/string/strspn.h"],
     deps = [
         ":__support_common",
-        ":__support_standalone_cpp",
+        ":__support_cpp_bitset",
         ":string_utils",
     ],
 )
