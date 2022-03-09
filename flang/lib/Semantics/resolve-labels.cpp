@@ -868,7 +868,9 @@ void CheckBranchesIntoDoBody(const SourceStmtList &branches,
       const auto &toPosition{branchTarget.parserCharBlock};
       for (const auto &body : loopBodies) {
         if (!InBody(fromPosition, body) && InBody(toPosition, body)) {
-          context.Say(fromPosition, "branch into loop body from outside"_en_US)
+          context
+              .Say(
+                  fromPosition, "branch into loop body from outside"_warn_en_US)
               .Attach(body.first, "the loop branched into"_en_US);
         }
       }
@@ -937,7 +939,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
               common::LanguageFeature::OldLabelDoEndStatements)) {
         context
             .Say(position,
-                "A DO loop should terminate with an END DO or CONTINUE"_en_US)
+                "A DO loop should terminate with an END DO or CONTINUE"_port_en_US)
             .Attach(doTarget.parserCharBlock,
                 "DO loop currently ends at statement:"_en_US);
       }
@@ -1018,7 +1020,7 @@ void CheckBranchTargetConstraints(const SourceStmtList &stmts,
                      TargetStatementEnum::Branch)) { // warning
         context
             .Say(branchTarget.parserCharBlock,
-                "Label '%u' is not a branch target"_en_US, SayLabel(label))
+                "Label '%u' is not a branch target"_warn_en_US, SayLabel(label))
             .Attach(stmt.parserCharBlock, "Control flow use of '%u'"_en_US,
                 SayLabel(label));
       }
@@ -1072,7 +1074,7 @@ void CheckAssignTargetConstraints(const SourceStmtList &stmts,
           .Say(target.parserCharBlock,
               target.labeledStmtClassificationSet.test(
                   TargetStatementEnum::CompatibleBranch)
-                  ? "Label '%u' is not a branch target or FORMAT"_en_US
+                  ? "Label '%u' is not a branch target or FORMAT"_warn_en_US
                   : "Label '%u' is not a branch target or FORMAT"_err_en_US,
               SayLabel(label))
           .Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,

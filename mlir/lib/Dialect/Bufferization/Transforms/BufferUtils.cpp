@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallString.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;

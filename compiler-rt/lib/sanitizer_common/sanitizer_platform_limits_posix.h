@@ -511,6 +511,7 @@ typedef long __sanitizer_clock_t;
 
 #if SANITIZER_LINUX
 typedef int __sanitizer_clockid_t;
+typedef void *__sanitizer_timer_t;
 #endif
 
 #if SANITIZER_LINUX
