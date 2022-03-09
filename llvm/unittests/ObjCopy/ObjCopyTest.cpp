@@ -115,7 +115,7 @@ Expected<std::unique_ptr<ObjectFile>> createObjectFileFromYamlDescription(
   if (!IsValidFormat(*Obj))
     return createError("wrong file format");
 
-  return Obj;
+  return std::move(Obj);
 }
 
 // Call objcopy::executeObjcopyOnBinary for \p Config and \p In. \p DataVector
