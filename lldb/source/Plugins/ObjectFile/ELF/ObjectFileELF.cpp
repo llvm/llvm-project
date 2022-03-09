@@ -1175,26 +1175,28 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // register info
       arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
     } else if (note.n_name == LLDB_NT_OWNER_CORE) {
-      // Parse the NT_FILE to look for stuff in paths to shared libraries As
-      // the contents look like this in a 64 bit ELF core file: count     =
-      // 0x000000000000000a (10) page_size = 0x0000000000001000 (4096) Index
-      // start              end                file_ofs           path =====
-      // 0x0000000000401000 0x0000000000000000 /tmp/a.out [  1]
-      // 0x0000000000600000 0x0000000000601000 0x0000000000000000 /tmp/a.out [
-      // 2] 0x0000000000601000 0x0000000000602000 0x0000000000000001 /tmp/a.out
-      // [  3] 0x00007fa79c9ed000 0x00007fa79cba8000 0x0000000000000000
-      // /lib/x86_64-linux-gnu/libc-2.19.so [  4] 0x00007fa79cba8000
-      // 0x00007fa79cda7000 0x00000000000001bb /lib/x86_64-linux-
-      // gnu/libc-2.19.so [  5] 0x00007fa79cda7000 0x00007fa79cdab000
-      // 0x00000000000001ba /lib/x86_64-linux-gnu/libc-2.19.so [  6]
-      // 0x00007fa79cdab000 0x00007fa79cdad000 0x00000000000001be /lib/x86_64
-      // -linux-gnu/libc-2.19.so [  7] 0x00007fa79cdb2000 0x00007fa79cdd5000
-      // 0x0000000000000000 /lib/x86_64-linux-gnu/ld-2.19.so [  8]
-      // 0x00007fa79cfd4000 0x00007fa79cfd5000 0x0000000000000022 /lib/x86_64
-      // -linux-gnu/ld-2.19.so [  9] 0x00007fa79cfd5000 0x00007fa79cfd6000
-      // 0x0000000000000023 /lib/x86_64-linux-gnu/ld-2.19.so In the 32 bit ELFs
-      // the count, page_size, start, end, file_ofs are uint32_t For reference:
-      // see readelf source code (in binutils).
+      // Parse the NT_FILE to look for stuff in paths to shared libraries
+      // The contents look like this in a 64 bit ELF core file:
+      //
+      // count     = 0x000000000000000a (10)
+      // page_size = 0x0000000000001000 (4096)
+      // Index start              end                file_ofs           path
+      // ===== ------------------ ------------------ ------------------ -------------------------------------
+      // [  0] 0x0000000000401000 0x0000000000000000                    /tmp/a.out
+      // [  1] 0x0000000000600000 0x0000000000601000 0x0000000000000000 /tmp/a.out
+      // [  2] 0x0000000000601000 0x0000000000602000 0x0000000000000001 /tmp/a.out
+      // [  3] 0x00007fa79c9ed000 0x00007fa79cba8000 0x0000000000000000 /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  4] 0x00007fa79cba8000 0x00007fa79cda7000 0x00000000000001bb /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  5] 0x00007fa79cda7000 0x00007fa79cdab000 0x00000000000001ba /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  6] 0x00007fa79cdab000 0x00007fa79cdad000 0x00000000000001be /lib/x86_64-linux-gnu/libc-2.19.so
+      // [  7] 0x00007fa79cdb2000 0x00007fa79cdd5000 0x0000000000000000 /lib/x86_64-linux-gnu/ld-2.19.so
+      // [  8] 0x00007fa79cfd4000 0x00007fa79cfd5000 0x0000000000000022 /lib/x86_64-linux-gnu/ld-2.19.so
+      // [  9] 0x00007fa79cfd5000 0x00007fa79cfd6000 0x0000000000000023 /lib/x86_64-linux-gnu/ld-2.19.so
+      //
+      // In the 32 bit ELFs the count, page_size, start, end, file_ofs are
+      // uint32_t.
+      //
+      // For reference: see readelf source code (in binutils).
       if (note.n_type == NT_FILE) {
         uint64_t count = data.GetAddress(&offset);
         const char *cstr;
