@@ -254,8 +254,8 @@ don't find anyone present, chances are they happen to be off that day.
     - `GoogleMeet <https://meet.google.com/hhk-xpdj-gvx>`__
     - English, Romanian
   * - Aaron Ballman
-    - Clang internals; clang-tidy; clang-query; AST matchers
-    - Monthly, 2nd Monday of the month at 10:00am Eastern/14:00 UTC, for 30 minutes.
+    - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
+    - Monthly, 2nd Monday of the month at 10:00am Eastern, for 30 minutes.
       `ics <https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics>`__
       `gcal <https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com>`__
     - `GoogleMeet <https://meet.google.com/xok-iqne-gmi>`__
