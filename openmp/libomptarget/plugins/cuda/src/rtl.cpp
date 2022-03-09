@@ -1508,7 +1508,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
                                           __tgt_device_image *image) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return nullptr;
 
   return DeviceRTL.loadBinary(device_id, image);
@@ -1518,7 +1518,7 @@ void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *,
                            int32_t kind) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return nullptr;
 
   return DeviceRTL.dataAlloc(device_id, size, (TargetAllocTy)kind);
@@ -1544,7 +1544,7 @@ int32_t __tgt_rtl_data_submit_async(int32_t device_id, void *tgt_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.dataSubmit(device_id, tgt_ptr, hst_ptr, size,
@@ -1571,7 +1571,7 @@ int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.dataRetrieve(device_id, hst_ptr, tgt_ptr, size,
@@ -1610,7 +1610,7 @@ int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
 int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.dataDelete(device_id, tgt_ptr);
@@ -1642,7 +1642,7 @@ int32_t __tgt_rtl_run_target_team_region_async(
     __tgt_async_info *async_info_ptr) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.runTargetTeamRegion(
@@ -1701,7 +1701,7 @@ void __tgt_rtl_print_device_info(int32_t device_id) {
 int32_t __tgt_rtl_create_event(int32_t device_id, void **event) {
   assert(event && "event is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.createEvent(device_id, event);
@@ -1734,7 +1734,7 @@ int32_t __tgt_rtl_sync_event(int32_t device_id, void *event_ptr) {
 int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
   assert(event_ptr && "event is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.destroyEvent(device_id, event_ptr);
@@ -1745,7 +1745,7 @@ int32_t __tgt_rtl_release_async_info(int32_t device_id,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info && "async_info is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.releaseAsyncInfo(device_id, async_info);
@@ -1756,7 +1756,7 @@ int32_t __tgt_rtl_init_async_info(int32_t device_id,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info && "async_info is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.initAsyncInfo(device_id, async_info);
@@ -1768,7 +1768,7 @@ int32_t __tgt_rtl_init_device_info(int32_t device_id,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(device_info_ptr && "device_info_ptr is nullptr");
 
-  if (!DeviceRTL.setContext(device_id))
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   return DeviceRTL.initDeviceInfo(device_id, device_info_ptr, err_str);
