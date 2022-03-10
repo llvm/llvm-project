@@ -3258,6 +3258,15 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
   return result;
 }
 
+bool fir::hasHostAssociationArgument(mlir::FuncOp func) {
+  if (auto allArgAttrs = func.getAllArgAttrs())
+    for (auto attr : allArgAttrs)
+      if (auto dict = attr.template dyn_cast_or_null<mlir::DictionaryAttr>())
+        if (dict.get(fir::getHostAssocAttrName()))
+          return true;
+  return false;
+}
+
 bool fir::valueHasFirAttribute(mlir::Value value,
                                llvm::StringRef attributeName) {
   // If this is a fir.box that was loaded, the fir attributes will be on the
