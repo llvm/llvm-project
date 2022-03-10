@@ -351,10 +351,8 @@ define fp128 @select_fcmp_ogt_zero(fp128 %x) {
 
 define float @select_fcmp_ogt_fneg(float %a) {
 ; CHECK-LABEL: @select_fcmp_ogt_fneg(
-; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[FNEG]], [[A]]
-; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP]], float [[A]], float [[FNEG]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %fneg = fneg float %a
   %cmp = fcmp ogt float %a, %fneg
