@@ -179,6 +179,7 @@ typedef int pid_t;
 
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC ||             \
     (SANITIZER_SOLARIS && (defined(_LP64) || _FILE_OFFSET_BITS == 64)) || \
+    (SANITIZER_LINUX && !SANITIZER_GLIBC && !SANITIZER_ANDROID) ||        \
     (SANITIZER_LINUX && (defined(__x86_64__) || defined(__hexagon__)))
 typedef u64 OFF_T;
 #else

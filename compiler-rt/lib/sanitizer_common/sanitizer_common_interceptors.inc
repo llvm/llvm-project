@@ -132,6 +132,76 @@ extern const short *_toupper_tab_;
 extern const short *_tolower_tab_;
 #endif
 
+#if SANITIZER_MUSL && \
+  (defined(__i386__) || defined(__arm__) || SANITIZER_MIPS32 || SANITIZER_PPC32)
+// musl 1.2.0 on existing 32-bit architectures uses new symbol names for the
+// time-related functions that take 64-bit time_t values.  See
+// https://musl.libc.org/time64.html
+#define adjtime __adjtime64
+#define adjtimex __adjtimex_time64
+#define aio_suspend __aio_suspend_time64
+#define clock_adjtime __clock_adjtime64
+#define clock_getres __clock_getres_time64
+#define clock_gettime __clock_gettime64
+#define clock_nanosleep __clock_nanosleep_time64
+#define clock_settime __clock_settime64
+#define cnd_timedwait __cnd_timedwait_time64
+#define ctime __ctime64
+#define ctime_r __ctime64_r
+#define difftime __difftime64
+#define dlsym __dlsym_time64
+#define fstatat __fstatat_time64
+#define fstat __fstat_time64
+#define ftime __ftime64
+#define futimens __futimens_time64
+#define futimesat __futimesat_time64
+#define futimes __futimes_time64
+#define getitimer __getitimer_time64
+#define getrusage __getrusage_time64
+#define gettimeofday __gettimeofday_time64
+#define gmtime __gmtime64
+#define gmtime_r __gmtime64_r
+#define localtime __localtime64
+#define localtime_r __localtime64_r
+#define lstat __lstat_time64
+#define lutimes __lutimes_time64
+#define mktime __mktime64
+#define mq_timedreceive __mq_timedreceive_time64
+#define mq_timedsend __mq_timedsend_time64
+#define mtx_timedlock __mtx_timedlock_time64
+#define nanosleep __nanosleep_time64
+#define ppoll __ppoll_time64
+#define pselect __pselect_time64
+#define pthread_cond_timedwait __pthread_cond_timedwait_time64
+#define pthread_mutex_timedlock __pthread_mutex_timedlock_time64
+#define pthread_rwlock_timedrdlock __pthread_rwlock_timedrdlock_time64
+#define pthread_rwlock_timedwrlock __pthread_rwlock_timedwrlock_time64
+#define pthread_timedjoin_np __pthread_timedjoin_np_time64
+#define recvmmsg __recvmmsg_time64
+#define sched_rr_get_interval __sched_rr_get_interval_time64
+#define select __select_time64
+#define semtimedop __semtimedop_time64
+#define sem_timedwait __sem_timedwait_time64
+#define setitimer __setitimer_time64
+#define settimeofday __settimeofday_time64
+#define sigtimedwait __sigtimedwait_time64
+#define stat __stat_time64
+#define stime __stime64
+#define thrd_sleep __thrd_sleep_time64
+#define timegm __timegm_time64
+#define timerfd_gettime __timerfd_gettime64
+#define timerfd_settime __timerfd_settime64
+#define timer_gettime __timer_gettime64
+#define timer_settime __timer_settime64
+#define timespec_get __timespec_get_time64
+#define time __time64
+#define utimensat __utimensat_time64
+#define utimes __utimes_time64
+#define utime __utime64
+#define wait3 __wait3_time64
+#define wait4 __wait4_time64
+#endif
+
 // Platform-specific options.
 #if SANITIZER_MAC
 #define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
