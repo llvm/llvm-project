@@ -1436,6 +1436,8 @@ class opt : public Option,
     const OptionValue<DataType> &V = this->getDefault();
     if (V.hasValue())
       this->setValue(V.getValue());
+    else
+      this->setValue(T());
   }
 
   template <class T,
