@@ -1489,7 +1489,8 @@ def err_pragma_fp_invalid_argument : Error<
   "%select{"
   "'fast' or 'on' or 'off'|"
   "'on' or 'off'|"
-  "'ignore', 'maytrap' or 'strict'}2">;
+  "'ignore', 'maytrap' or 'strict'|"
+  "'source', 'double' or 'extended'}2">;
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
