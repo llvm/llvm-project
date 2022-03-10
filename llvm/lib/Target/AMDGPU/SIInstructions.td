@@ -2764,18 +2764,18 @@ def : GCNPat <
 // an inline immediate than -c.
 // TODO: Also do for 64-bit.
 def : GCNPat<
-  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (UniformBinFrag<add> i32:$src0, (i32 NegSubInlineConst32:$src1)),
   (S_SUB_I32 SReg_32:$src0, NegSubInlineConst32:$src1)
 >;
 
 def : GCNPat<
-  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (DivergentBinFrag<add> i32:$src0, (i32 NegSubInlineConst32:$src1)),
   (V_SUB_U32_e64 VS_32:$src0, NegSubInlineConst32:$src1)> {
   let SubtargetPredicate = HasAddNoCarryInsts;
 }
 
 def : GCNPat<
-  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (DivergentBinFrag<add> i32:$src0, (i32 NegSubInlineConst32:$src1)),
   (V_SUB_CO_U32_e64 VS_32:$src0, NegSubInlineConst32:$src1)> {
   let SubtargetPredicate = NotHasAddNoCarryInsts;
 }
