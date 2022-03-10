@@ -1044,11 +1044,23 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
 
 namespace Hwreg {
 
+static const char* getHwregName(int64_t Id, const MCSubtargetInfo &STI) {
+  if (isGFX940(STI) && Id >= ID_SYMBOLIC_FIRST_GFX940_ &&
+      Id < ID_SYMBOLIC_LAST_GFX940_)
+    return IdSymbolicGFX940Specific[Id - ID_SYMBOLIC_FIRST_GFX940_];
+  return (Id < ID_SYMBOLIC_LAST_) ? IdSymbolic[Id] : nullptr;
+}
+
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
   if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
     return ID_HW_ID1;
   for (int Id = ID_SYMBOLIC_FIRST_; Id < ID_SYMBOLIC_LAST_; ++Id) {
     if (IdSymbolic[Id] && Name == IdSymbolic[Id])
+      return Id;
+    // These are all defined, however may be invalid for subtarget and need
+    // further validation.
+    if (Id >= ID_SYMBOLIC_FIRST_GFX940_ && Id < ID_SYMBOLIC_LAST_GFX940_ &&
+        Name == IdSymbolicGFX940Specific[Id - ID_SYMBOLIC_FIRST_GFX940_])
       return Id;
   }
   return ID_UNKNOWN_;
@@ -1057,6 +1069,8 @@ int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
 static unsigned getLastSymbolicHwreg(const MCSubtargetInfo &STI) {
   if (isSI(STI) || isCI(STI) || isVI(STI))
     return ID_SYMBOLIC_FIRST_GFX9_;
+  else if (isGFX940(STI))
+    return ID_SYMBOLIC_LAST_GFX940_;
   else if (isGFX9(STI))
     return ID_SYMBOLIC_FIRST_GFX10_;
   else if (isGFX10(STI) && !isGFX10_BEncoding(STI))
@@ -1065,19 +1079,34 @@ static unsigned getLastSymbolicHwreg(const MCSubtargetInfo &STI) {
     return ID_SYMBOLIC_LAST_;
 }
 
-bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI) {
-  switch (Id) {
-  case ID_HW_ID:
-    return isSI(STI) || isCI(STI) || isVI(STI) || isGFX9(STI);
-  case ID_HW_ID1:
-  case ID_HW_ID2:
-    return isGFX10Plus(STI);
-  case ID_XNACK_MASK:
-    return isGFX10(STI) && !AMDGPU::isGFX10_BEncoding(STI);
-  default:
-    return ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
-           IdSymbolic[Id];
+bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI, StringRef Name) {
+  if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
+    return true;
+
+  const char *HWRegName = getHwregName(Id, STI);
+  if (!HWRegName || !Name.startswith(HWRegName))
+    return false;
+
+  if (isGFX10Plus(STI)) {
+    switch (Id) {
+    case ID_HW_ID1:
+    case ID_HW_ID2:
+      return true;
+    case ID_XNACK_MASK:
+      return !AMDGPU::isGFX10_BEncoding(STI);
+    default:
+      break;
+    }
   }
+
+  if (ID_SYMBOLIC_FIRST_ > Id || Id >= getLastSymbolicHwreg(STI))
+    return false;
+
+  if (isGFX940(STI) && Id >= ID_SYMBOLIC_FIRST_GFX10_ &&
+      Id < ID_SYMBOLIC_FIRST_GFX940_)
+    return false;
+
+  return true;
 }
 
 bool isValidHwreg(int64_t Id) {
@@ -1099,7 +1128,8 @@ uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width) {
 }
 
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI) {
-  return isValidHwreg(Id, STI) ? IdSymbolic[Id] : "";
+  const char *HWRegName = getHwregName(Id, STI);
+  return (HWRegName && isValidHwreg(Id, STI, HWRegName)) ? HWRegName : "";
 }
 
 void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) {
