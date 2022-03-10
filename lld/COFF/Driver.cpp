@@ -257,7 +257,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       // directory.
       std::string nearest;
       if (optTable.findNearest(pathStr, nearest) > 1)
-        warn(msg); //[MSVC Compatibility]
+        message(msg); //[MSVC Compatibility]
       else
         error(msg + "; did you mean '" + nearest + "'");
     } else
@@ -1881,7 +1881,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->mapFile = getMapFile(args, OPT_map, OPT_map_file);
 
   if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
-    warn("/lldmap and /map have the same output file '" + config->mapFile +
+    message("/lldmap and /map have the same output file '" + config->mapFile +
          "'.\n>>> ignoring /lldmap");
     config->lldmapFile.clear();
   }
