@@ -634,4 +634,48 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   let hasVerifier = 1;
 }
 
+def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
+  Results<(outs AnyType:$res)>,
+  Arguments<(ins LLVM_AnyPointer: $ptr, I32Attr:$num, MMALayoutAttr:$layout)> {
+
+  let summary = "cooperative matrix load";
+
+  string llvmBuilder = [{
+      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+      auto intId = getLdMatrixIntrinsicId($layout, $num);
+      $res = createIntrinsicCall(builder, intId, operands, {operands[0]->getType()});
+  }];
+
+  string baseDescription = [{
+    The `nvvm.ldmatrix` operation collectively loads one or more matrices across
+    all threads in a warp from the location indicated by the address operand
+    `ptr` from shared memory.
+
+    The attribute `num` indicates how many 8x8 16-bit matrices are to be loaded.
+
+    All the threads in the warp must execute the same ldmatrix operations.
+
+    Each row of 8 elements needs to be consecutive in memory. Each lane of the
+    warp contains the start address of a row of 8 elements laid out as below:
+
+    ```
+    num | lane 0--7    | Threads 8--15  | Threads 16--31
+    1   | addr0--addr7 |                |
+    2   | addr0--addr7 | addr8--addr15  |
+    4   | addr0--addr7 | addr8--addr15  | addr16--addr31
+    ```
+
+    Example:
+    ```mlir
+    %l1 = nvvm.ldmatrix %ptr {num = 1 : i32, layout = #nvvm.mma_layout<row>} :
+      (!llvm.ptr<i32, 3>) -> i32
+    %l2 = nvvm.ldmatrix %ptr {num = 4 : i32, layout = #nvvm.mma_layout<row>} :
+      (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    ```
+  }];
+
+  let assemblyFormat = "$ptr attr-dict `:` functional-type($ptr, $res)";
+  let hasVerifier = 1;
+}
+
 #endif // NVVMIR_OPS
