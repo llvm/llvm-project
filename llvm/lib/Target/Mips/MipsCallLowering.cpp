@@ -18,7 +18,6 @@
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 

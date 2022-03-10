@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <vector>
 

@@ -16,7 +16,6 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-nullify-dbg-value-lists"

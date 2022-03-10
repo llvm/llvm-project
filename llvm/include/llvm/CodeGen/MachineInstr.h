@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ArrayRecycler.h"
@@ -37,9 +38,6 @@
 
 namespace llvm {
 
-class DILabel;
-class Instruction;
-class MDNode;
 class AAResults;
 template <typename T> class ArrayRef;
 class DIExpression;

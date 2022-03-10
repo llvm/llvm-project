@@ -12,7 +12,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
-#include "llvm/Support/WithColor.h"
 using namespace llvm;
 
 EVT EVT::changeExtendedTypeToInteger() const {

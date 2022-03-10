@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_FAULTMAPS_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Endian.h"
 #include <map>
 #include <vector>
 

@@ -19,6 +19,7 @@
 namespace llvm {
 
 class BasicBlock;
+class MachineBasicBlock;
 /// Encapsulates all of the information needed to generate a stack protector
 /// check, and signals to isel when initialized that one needs to be generated.
 ///
