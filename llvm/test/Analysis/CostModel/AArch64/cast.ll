@@ -440,26 +440,6 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %r247 = sitofp <16 x i16> undef to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r248 = uitofp <16 x i64> undef to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r249 = sitofp <16 x i64> undef to <16 x double>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r250 = uitofp <8 x i1> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r251 = sitofp <8 x i1> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r252 = uitofp <8 x i8> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r253 = sitofp <8 x i8> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r254 = uitofp <8 x i16> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r255 = sitofp <8 x i16> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r256 = uitofp <8 x i32> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r257 = sitofp <8 x i32> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r258 = uitofp <8 x i64> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r259 = sitofp <8 x i64> undef to <8 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r260 = uitofp <16 x i1> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r261 = sitofp <16 x i1> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r262 = uitofp <16 x i8> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r263 = sitofp <16 x i8> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r264 = uitofp <16 x i16> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r265 = sitofp <16 x i16> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r266 = uitofp <16 x i32> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r267 = sitofp <16 x i32> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r268 = uitofp <16 x i64> undef to <16 x half>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r269 = sitofp <16 x i64> undef to <16 x half>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %r30 = fptoui float undef to i1
@@ -686,28 +666,6 @@ define i32 @casts_no_users() {
   %r247 = sitofp <16 x i16> undef to <16 x double>
   %r248 = uitofp <16 x i64> undef to <16 x double>
   %r249 = sitofp <16 x i64> undef to <16 x double>
-
-  %r250 = uitofp <8 x i1> undef to <8 x half>
-  %r251 = sitofp <8 x i1> undef to <8 x half>
-  %r252 = uitofp <8 x i8> undef to <8 x half>
-  %r253 = sitofp <8 x i8> undef to <8 x half>
-  %r254 = uitofp <8 x i16> undef to <8 x half>
-  %r255 = sitofp <8 x i16> undef to <8 x half>
-  %r256 = uitofp <8 x i32> undef to <8 x half>
-  %r257 = sitofp <8 x i32> undef to <8 x half>
-  %r258 = uitofp <8 x i64> undef to <8 x half>
-  %r259 = sitofp <8 x i64> undef to <8 x half>
-
-  %r260 = uitofp <16 x i1> undef to <16 x half>
-  %r261 = sitofp <16 x i1> undef to <16 x half>
-  %r262 = uitofp <16 x i8> undef to <16 x half>
-  %r263 = sitofp <16 x i8> undef to <16 x half>
-  %r264 = uitofp <16 x i16> undef to <16 x half>
-  %r265 = sitofp <16 x i16> undef to <16 x half>
-  %r266 = uitofp <16 x i32> undef to <16 x half>
-  %r267 = sitofp <16 x i32> undef to <16 x half>
-  %r268 = uitofp <16 x i64> undef to <16 x half>
-  %r269 = sitofp <16 x i64> undef to <16 x half>
 
   ret i32 undef
 }
@@ -1074,6 +1032,26 @@ define void @fp16cast() {
 ; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %r157 = fptosi <16 x half> undef to <16 x i32>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %r158 = fptoui <16 x half> undef to <16 x i64>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %r159 = fptosi <16 x half> undef to <16 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r250 = uitofp <8 x i1> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r251 = sitofp <8 x i1> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r252 = uitofp <8 x i8> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r253 = sitofp <8 x i8> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r254 = uitofp <8 x i16> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r255 = sitofp <8 x i16> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r256 = uitofp <8 x i32> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r257 = sitofp <8 x i32> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r258 = uitofp <8 x i64> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r259 = sitofp <8 x i64> undef to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r260 = uitofp <16 x i1> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r261 = sitofp <16 x i1> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r262 = uitofp <16 x i8> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r263 = sitofp <16 x i8> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r264 = uitofp <16 x i16> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r265 = sitofp <16 x i16> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r266 = uitofp <16 x i32> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r267 = sitofp <16 x i32> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r268 = uitofp <16 x i64> undef to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r269 = sitofp <16 x i64> undef to <16 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-FP16-LABEL: 'fp16cast'
@@ -1127,6 +1105,26 @@ define void @fp16cast() {
 ; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r157 = fptosi <16 x half> undef to <16 x i32>
 ; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %r158 = fptoui <16 x half> undef to <16 x i64>
 ; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %r159 = fptosi <16 x half> undef to <16 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r250 = uitofp <8 x i1> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r251 = sitofp <8 x i1> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r252 = uitofp <8 x i8> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r253 = sitofp <8 x i8> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r254 = uitofp <8 x i16> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r255 = sitofp <8 x i16> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r256 = uitofp <8 x i32> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r257 = sitofp <8 x i32> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r258 = uitofp <8 x i64> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r259 = sitofp <8 x i64> undef to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r260 = uitofp <16 x i1> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r261 = sitofp <16 x i1> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r262 = uitofp <16 x i8> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r263 = sitofp <16 x i8> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r264 = uitofp <16 x i16> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r265 = sitofp <16 x i16> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r266 = uitofp <16 x i32> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r267 = sitofp <16 x i32> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r268 = uitofp <16 x i64> undef to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r269 = sitofp <16 x i64> undef to <16 x half>
 ; CHECK-FP16-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %r30 = fptoui half undef to i1
@@ -1183,6 +1181,28 @@ define void @fp16cast() {
   %r157 = fptosi <16 x half> undef to <16 x i32>
   %r158 = fptoui <16 x half> undef to <16 x i64>
   %r159 = fptosi <16 x half> undef to <16 x i64>
+
+  %r250 = uitofp <8 x i1> undef to <8 x half>
+  %r251 = sitofp <8 x i1> undef to <8 x half>
+  %r252 = uitofp <8 x i8> undef to <8 x half>
+  %r253 = sitofp <8 x i8> undef to <8 x half>
+  %r254 = uitofp <8 x i16> undef to <8 x half>
+  %r255 = sitofp <8 x i16> undef to <8 x half>
+  %r256 = uitofp <8 x i32> undef to <8 x half>
+  %r257 = sitofp <8 x i32> undef to <8 x half>
+  %r258 = uitofp <8 x i64> undef to <8 x half>
+  %r259 = sitofp <8 x i64> undef to <8 x half>
+
+  %r260 = uitofp <16 x i1> undef to <16 x half>
+  %r261 = sitofp <16 x i1> undef to <16 x half>
+  %r262 = uitofp <16 x i8> undef to <16 x half>
+  %r263 = sitofp <16 x i8> undef to <16 x half>
+  %r264 = uitofp <16 x i16> undef to <16 x half>
+  %r265 = sitofp <16 x i16> undef to <16 x half>
+  %r266 = uitofp <16 x i32> undef to <16 x half>
+  %r267 = sitofp <16 x i32> undef to <16 x half>
+  %r268 = uitofp <16 x i64> undef to <16 x half>
+  %r269 = sitofp <16 x i64> undef to <16 x half>
   ret void
 }
 
