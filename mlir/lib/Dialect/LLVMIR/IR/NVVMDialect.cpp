@@ -219,6 +219,28 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::LdMatrixOp::verify() {
+  unsigned addressSpace =
+      ptr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+  if (addressSpace != 3)
+    return emitOpError("expected source pointer in memory space 3");
+
+  if (num() != 1 && num() != 2 && num() != 4)
+    return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  Type i32 = IntegerType::get(getContext(), 32);
+  if (num() == 1 && getType() != i32)
+    return emitOpError("expected destination type is i32");
+  if (num() == 2 || num() == 4) {
+    Type dstType = LLVM::LLVMStructType::getLiteral(
+        getContext(), SmallVector<Type>(num(), i32));
+    if (getType() != dstType)
+      return emitOpError("expected destination type is a structure of ")
+             << num() << " elements of type i32";
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
