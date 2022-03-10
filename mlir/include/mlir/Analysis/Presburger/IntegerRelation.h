@@ -171,7 +171,7 @@ public:
   /// within the specified range) from the system. The specified location is
   /// relative to the first identifier of the specified kind.
   void removeId(IdKind kind, unsigned pos);
-  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
 
   /// Removes the specified identifier from the system.
   void removeId(unsigned pos);
@@ -495,7 +495,7 @@ protected:
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
-  void removeIdRange(unsigned idStart, unsigned idLimit) override;
+  void removeIdRange(unsigned idStart, unsigned idLimit);
 
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
