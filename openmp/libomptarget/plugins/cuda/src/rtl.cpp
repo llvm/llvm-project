@@ -354,7 +354,7 @@ class DeviceRTLTy {
   std::vector<std::unique_ptr<EventPoolTy>> EventPool;
 
   std::vector<DeviceDataTy> DeviceData;
-  std::vector<CUmodule> Modules;
+  std::vector<std::vector<CUmodule>> Modules;
 
   /// Vector of flags indicating the initalization status of all associated
   /// devices.
@@ -777,25 +777,30 @@ public:
     if (UseMemoryManager)
       MemoryManagers[DeviceId].release();
 
-    // Close module
-    if (CUmodule &M = Modules[DeviceId])
-      checkResult(cuModuleUnload(M), "Error returned from cuModuleUnload\n");
-
     StreamPool[DeviceId].reset();
     EventPool[DeviceId].reset();
 
-    // Destroy context
     DeviceDataTy &D = DeviceData[DeviceId];
-    if (D.Context) {
-      if (checkResult(cuCtxSetCurrent(D.Context),
-                      "Error returned from cuCtxSetCurrent\n")) {
-        CUdevice Device;
-        if (checkResult(cuCtxGetDevice(&Device),
-                        "Error returned from cuCtxGetDevice\n"))
-          checkResult(cuDevicePrimaryCtxRelease(Device),
-                      "Error returned from cuDevicePrimaryCtxRelease\n");
-      }
-    }
+    if (!checkResult(cuCtxSetCurrent(D.Context),
+                     "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    // Unload all modules.
+    for (auto &M : Modules[DeviceId])
+      if (!checkResult(cuModuleUnload(M),
+                       "Error returned from cuModuleUnload\n"))
+        return OFFLOAD_FAIL;
+
+    // Destroy context.
+    CUdevice Device;
+    if (!checkResult(cuCtxGetDevice(&Device),
+                     "Error returned from cuCtxGetDevice\n"))
+      return OFFLOAD_FAIL;
+
+    if (!checkResult(cuDevicePrimaryCtxRelease(Device),
+                     "Error returned from cuDevicePrimaryCtxRelease\n"))
+      return OFFLOAD_FAIL;
+
     return OFFLOAD_SUCCESS;
   }
 
@@ -818,7 +823,7 @@ public:
 
     DP("CUDA module successfully loaded!\n");
 
-    Modules[DeviceId] = Module;
+    Modules[DeviceId].push_back(Module);
 
     // Find the symbols in the module by name.
     const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
