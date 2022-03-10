@@ -34,6 +34,7 @@ set(ASAN_SOURCES
 
 if (NOT WIN32 AND NOT APPLE)
   list(APPEND ASAN_SOURCES
+    asan_rtl_x86_64.S
     asan_interceptors_vfork.S
     )
 endif()
@@ -48,7 +49,6 @@ set(ASAN_STATIC_SOURCES
 
 if (NOT WIN32 AND NOT APPLE)
   list(APPEND ASAN_STATIC_SOURCES
-    asan_rtl_x86_64.S
   )
 endif()
 
