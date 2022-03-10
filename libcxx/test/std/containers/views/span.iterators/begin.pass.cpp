@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// AppleClang 12.0.0 doesn't fully support ranges/concepts
-// XFAIL: apple-clang-12.0.0
-
 // <span>
 
 // constexpr       iterator  begin() const noexcept;
