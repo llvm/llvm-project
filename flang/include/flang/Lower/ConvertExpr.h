@@ -100,7 +100,10 @@ fir::ExtendedValue createSomeArrayBox(AbstractConverter &converter,
 /// The returned value is null otherwise.
 mlir::Value createSubroutineCall(AbstractConverter &converter,
                                  const evaluate::ProcedureRef &call,
-                                 SymMap &symMap, StatementContext &stmtCtx);
+                                 ExplicitIterSpace &explicitIterSpace,
+                                 ImplicitIterSpace &implicitIterSpace,
+                                 SymMap &symMap, StatementContext &stmtCtx,
+                                 bool isUserDefAssignment);
 
 /// Create the address of the box.
 /// \p expr must be the designator of an allocatable/pointer entity.

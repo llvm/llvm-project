@@ -24,6 +24,8 @@
 #include <utility>
 
 namespace fir {
+class FirOpBuilder;
+
 class CharBoxValue;
 class ArrayBoxValue;
 class CharArrayBoxValue;
@@ -401,6 +403,12 @@ bool isArray(const ExtendedValue &exv);
 
 /// Get the type parameters for `exv`.
 llvm::SmallVector<mlir::Value> getTypeParams(const ExtendedValue &exv);
+
+/// Get exactly one extent for any array-like extended value, \p exv. If \p exv
+/// is not an array or has rank less then \p dim, the result will be a nullptr.
+mlir::Value getExtentAtDimension(const ExtendedValue &exv,
+                                 FirOpBuilder &builder, mlir::Location loc,
+                                 unsigned dim);
 
 /// An extended value is a box of values pertaining to a discrete entity. It is
 /// used in lowering to track all the runtime values related to an entity. For
