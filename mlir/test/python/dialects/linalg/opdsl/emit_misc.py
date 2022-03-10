@@ -11,7 +11,7 @@ from mlir.dialects.linalg.opdsl.lang import *
 # fill, matmul, convolution, or pooling tests. The features include:
 # - constant defined in the body
 # - fix/predefined types
-# - exponential functions
+# - some math/arith functions, including abs, ceil, exp, floor, log, and negf
 # - custom op names.
 
 
@@ -88,6 +88,46 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_log(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.log)
+
+    # CHECK-LABEL: @test_f32_elemwise_abs
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
+    # CHECK-NEXT:   %[[EXP:.+]] = math.abs %[[IN]] : f32
+    # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+    # CHECK-NEXT: -> tensor<4x16xf32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
+    def test_f32_elemwise_abs(input, init_result):
+      return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.abs)
+
+    # CHECK-LABEL: @test_f32_elemwise_ceil
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
+    # CHECK-NEXT:   %[[EXP:.+]] = math.ceil %[[IN]] : f32
+    # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+    # CHECK-NEXT: -> tensor<4x16xf32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
+    def test_f32_elemwise_ceil(input, init_result):
+      return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.ceil)
+
+    # CHECK-LABEL: @test_f32_elemwise_floor
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
+    # CHECK-NEXT:   %[[EXP:.+]] = math.floor %[[IN]] : f32
+    # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+    # CHECK-NEXT: -> tensor<4x16xf32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
+    def test_f32_elemwise_floor(input, init_result):
+      return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.floor)
+
+    # CHECK-LABEL: @test_f32_elemwise_neg
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
+    # CHECK-NEXT:   %[[EXP:.+]] = arith.negf %[[IN]] : f32
+    # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+    # CHECK-NEXT: -> tensor<4x16xf32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
+    def test_f32_elemwise_neg(input, init_result):
+      return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.negf)
 
     # Just check that we don't assert out on name mismatch.
     # CHECK-LABEL: @test_non_default_op_name

@@ -44,6 +44,7 @@ struct SomeType;
 
 namespace semantics {
 class Symbol;
+class DerivedTypeSpec;
 } // namespace semantics
 
 namespace lower {
@@ -61,6 +62,11 @@ using LenParameterTy = std::int64_t;
 /// Get a FIR type based on a category and kind.
 mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
                       int kind, llvm::ArrayRef<LenParameterTy>);
+
+/// Get a FIR type for a derived type
+mlir::Type
+translateDerivedTypeToFIRType(Fortran::lower::AbstractConverter &,
+                              const Fortran::semantics::DerivedTypeSpec &);
 
 /// Translate a SomeExpr to an mlir::Type.
 mlir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,

@@ -1047,6 +1047,10 @@ LogicalResult AtomicUpdateOp::verify() {
                      "element type is the same as that of the region argument");
   }
 
+  if (region().front().getOperations().size() < 2)
+    return emitError() << "the update region must have at least two operations "
+                          "(binop and terminator)";
+
   YieldOp yieldOp = *region().getOps<YieldOp>().begin();
 
   if (yieldOp.results().size() != 1)

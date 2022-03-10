@@ -720,10 +720,12 @@ bool FlatAffineValueConstraints::hasConsistentState() const {
          values.size() == getNumIds();
 }
 
-void FlatAffineValueConstraints::removeIdRange(unsigned idStart,
+void FlatAffineValueConstraints::removeIdRange(IdKind kind, unsigned idStart,
                                                unsigned idLimit) {
-  FlatAffineConstraints::removeIdRange(idStart, idLimit);
-  values.erase(values.begin() + idStart, values.begin() + idLimit);
+  FlatAffineConstraints::removeIdRange(kind, idStart, idLimit);
+  unsigned offset = getIdKindOffset(kind);
+  values.erase(values.begin() + idStart + offset,
+               values.begin() + idLimit + offset);
 }
 
 // Determine whether the identifier at 'pos' (say id_r) can be expressed as
@@ -1723,8 +1725,16 @@ void FlatAffineRelation::appendRangeId(unsigned num) {
   numRangeDims += num;
 }
 
-void FlatAffineRelation::removeIdRange(unsigned idStart, unsigned idLimit) {
+void FlatAffineRelation::removeIdRange(IdKind kind, unsigned idStart,
+                                       unsigned idLimit) {
+  assert(idLimit <= getNumIdKind(kind));
   if (idStart >= idLimit)
+    return;
+
+  FlatAffineValueConstraints::removeIdRange(kind, idStart, idLimit);
+
+  // If kind is not SetDim, domain and range don't need to be updated.
+  if (kind != IdKind::SetDim)
     return;
 
   // Compute number of domain and range identifiers to remove. This is done by
@@ -1733,8 +1743,6 @@ void FlatAffineRelation::removeIdRange(unsigned idStart, unsigned idLimit) {
   unsigned intersectDomainRHS = idStart;
   unsigned intersectRangeLHS = std::min(idLimit, getNumDimIds());
   unsigned intersectRangeRHS = std::max(idStart, getNumDomainDims());
-
-  FlatAffineValueConstraints::removeIdRange(idStart, idLimit);
 
   if (intersectDomainLHS > intersectDomainRHS)
     numDomainDims -= intersectDomainLHS - intersectDomainRHS;

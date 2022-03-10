@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../lib/Lower/RTBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
@@ -25,7 +25,7 @@ TEST(RTBuilderTest, ComplexRuntimeInterface) {
   mlir::MLIRContext ctx(registry);
   fir::support::loadDialects(ctx);
   mlir::Type c99_cacosf_signature{
-      Fortran::lower::RuntimeTableKey<decltype(c99_cacosf)>::getTypeModel()(
+      fir::runtime::RuntimeTableKey<decltype(c99_cacosf)>::getTypeModel()(
           &ctx)};
   auto c99_cacosf_funcTy = c99_cacosf_signature.cast<mlir::FunctionType>();
   EXPECT_EQ(c99_cacosf_funcTy.getNumInputs(), 1u);

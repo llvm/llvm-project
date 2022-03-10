@@ -113,12 +113,17 @@ static void init(ThreadState *thr, uptr pc, int fd, FdSync *s,
   }
   d->creation_tid = thr->tid;
   d->creation_stack = CurrentStackId(thr, pc);
+  // This prevents false positives on fd_close_norace3.cpp test.
+  // The mechanics of the false positive are not completely clear,
+  // but it happens only if global reset is enabled (flush_memory_ms=1)
+  // and may be related to lost writes during asynchronous MADV_DONTNEED.
+  SlotLocker locker(thr);
   if (write) {
     // To catch races between fd usage and open.
     MemoryRangeImitateWrite(thr, pc, (uptr)d, 8);
   } else {
     // See the dup-related comment in FdClose.
-    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
+    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead | kAccessSlotLocked);
   }
 }
 

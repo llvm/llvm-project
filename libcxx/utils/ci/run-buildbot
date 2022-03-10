@@ -276,18 +276,18 @@ generic-static)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-static.cfg.in"
     check-runtimes
 ;;
-generic-clang-12)
-    export CC=clang-12
-    export CXX=clang++-12
+generic-clang-13)
+    export CC=clang-13
+    export CXX=clang++-13
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
     check-abi-list
 ;;
-generic-clang-13)
-    export CC=clang-13
-    export CXX=clang++-13
+generic-clang-14)
+    export CC=clang-14
+    export CXX=clang++-14
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"

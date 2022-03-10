@@ -75,8 +75,9 @@ struct ExecutionEngineOptions {
   llvm::SectionMemoryManager::MemoryMapper *sectionMemoryMapper = nullptr;
 
   /// If `enableObjectCache` is set, the JIT compiler will create one to store
-  /// the object generated for the given module.
-  bool enableObjectCache = true;
+  /// the object generated for the given module. The contents of the cache can
+  /// be dumped to a file via the `dumpToObjectfile` method.
+  bool enableObjectCache = false;
 
   /// If enable `enableGDBNotificationListener` is set, the JIT compiler will
   /// notify the llvm's global GDB notification listener.

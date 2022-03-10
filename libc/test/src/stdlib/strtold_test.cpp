@@ -175,12 +175,12 @@ TEST_F(LlvmLibcStrToLDTest, SmallNormalTests) {
 TEST_F(LlvmLibcStrToLDTest, ComplexHexadecimalTests) {
   run_test("0x1p16383", 9, 0x7ff0000000000000,
            (__uint128_t(0x7ffe800000) << 40),
-           (__uint128_t(0x7ffe000000000000) << 64));
+           (__uint128_t(0x7ffe000000000000) << 64), ERANGE);
   run_test("0x123456789abcdef", 17, 0x43723456789abcdf,
            (__uint128_t(0x403791a2b3) << 40) + __uint128_t(0xc4d5e6f780),
            (__uint128_t(0x403723456789abcd) << 64) +
                __uint128_t(0xef00000000000000));
-  run_test("0x123456789abcdef0123456789ABCDEF", 33, 0x7ff0000000000000,
+  run_test("0x123456789abcdef0123456789ABCDEF", 33, 0x47723456789abcdf,
            (__uint128_t(0x407791a2b3) << 40) + __uint128_t(0xc4d5e6f781),
            (__uint128_t(0x407723456789abcd) << 64) +
                __uint128_t(0xef0123456789abce));

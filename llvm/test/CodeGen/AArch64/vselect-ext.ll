@@ -319,39 +319,38 @@ define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-NEXT:    adrp x11, lCPI9_2@PAGE
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    adrp x12, lCPI9_3@PAGE
-; CHECK-NEXT:    movi.2d v1, #0xffffffffffffffff
+; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    movi.2d v3, #0000000000000000
 ; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI9_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh5:
-; CHECK-NEXT:    ldr q2, [x10, lCPI9_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x10, lCPI9_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh6:
-; CHECK-NEXT:    ldr q5, [x11, lCPI9_2@PAGEOFF]
+; CHECK-NEXT:    ldr q3, [x11, lCPI9_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh7:
-; CHECK-NEXT:    ldr q6, [x12, lCPI9_3@PAGEOFF]
+; CHECK-NEXT:    ldr q4, [x12, lCPI9_3@PAGEOFF]
 ; CHECK-NEXT:  LBB9_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q4, [x0, x8]
+; CHECK-NEXT:    ldr q5, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    cmgt.16b v7, v4, v1
-; CHECK-NEXT:    tbl.16b v16, { v3, v4 }, v0
-; CHECK-NEXT:    tbl.16b v17, { v3, v4 }, v2
-; CHECK-NEXT:    sshll2.8h v20, v7, #0
-; CHECK-NEXT:    tbl.16b v18, { v3, v4 }, v5
-; CHECK-NEXT:    sshll2.4s v21, v20, #0
-; CHECK-NEXT:    sshll.4s v20, v20, #0
-; CHECK-NEXT:    tbl.16b v19, { v3, v4 }, v6
-; CHECK-NEXT:    sshll.8h v7, v7, #0
-; CHECK-NEXT:    and.16b v16, v16, v21
-; CHECK-NEXT:    and.16b v17, v17, v20
-; CHECK-NEXT:    stp q17, q16, [x1, #32]
-; CHECK-NEXT:    sshll2.4s v16, v7, #0
-; CHECK-NEXT:    sshll.4s v7, v7, #0
-; CHECK-NEXT:    and.16b v16, v18, v16
-; CHECK-NEXT:    and.16b v7, v19, v7
-; CHECK-NEXT:    stp q7, q16, [x1], #64
+; CHECK-NEXT:    cmgt.16b v6, v5, v2
+; CHECK-NEXT:    tbl.16b v7, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v16, { v5 }, v1
+; CHECK-NEXT:    sshll2.8h v18, v6, #0
+; CHECK-NEXT:    tbl.16b v17, { v5 }, v3
+; CHECK-NEXT:    sshll2.4s v19, v18, #0
+; CHECK-NEXT:    sshll.4s v18, v18, #0
+; CHECK-NEXT:    tbl.16b v5, { v5 }, v4
+; CHECK-NEXT:    sshll.8h v6, v6, #0
+; CHECK-NEXT:    and.16b v7, v7, v19
+; CHECK-NEXT:    and.16b v16, v16, v18
+; CHECK-NEXT:    stp q16, q7, [x1, #32]
+; CHECK-NEXT:    sshll2.4s v7, v6, #0
+; CHECK-NEXT:    sshll.4s v6, v6, #0
+; CHECK-NEXT:    and.16b v7, v17, v7
+; CHECK-NEXT:    and.16b v5, v5, v6
+; CHECK-NEXT:    stp q5, q7, [x1], #64
 ; CHECK-NEXT:    b.ne LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -393,40 +392,38 @@ define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-NEXT:    adrp x11, lCPI10_2@PAGE
 ; CHECK-NEXT:  Lloh11:
 ; CHECK-NEXT:    adrp x12, lCPI10_3@PAGE
-; CHECK-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    movi.2d v5, #0xffffffffffffffff
 ; CHECK-NEXT:  Lloh12:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI10_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh13:
-; CHECK-NEXT:    ldr q4, [x10, lCPI10_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x10, lCPI10_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh14:
-; CHECK-NEXT:    ldr q6, [x11, lCPI10_2@PAGEOFF]
+; CHECK-NEXT:    ldr q3, [x11, lCPI10_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh15:
-; CHECK-NEXT:    ldr q7, [x12, lCPI10_3@PAGEOFF]
+; CHECK-NEXT:    ldr q4, [x12, lCPI10_3@PAGEOFF]
 ; CHECK-NEXT:  LBB10_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    ldr q5, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    cmgt.16b v16, v1, v5
-; CHECK-NEXT:    mov.16b v3, v1
-; CHECK-NEXT:    sshll2.8h v17, v16, #0
-; CHECK-NEXT:    tbl.16b v18, { v2, v3 }, v0
-; CHECK-NEXT:    tbl.16b v19, { v2, v3 }, v4
-; CHECK-NEXT:    sshll.8h v16, v16, #0
-; CHECK-NEXT:    tbl.16b v20, { v2, v3 }, v6
-; CHECK-NEXT:    tbl.16b v21, { v1, v2 }, v7
-; CHECK-NEXT:    sshll2.4s v22, v17, #0
-; CHECK-NEXT:    sshll.4s v17, v17, #0
-; CHECK-NEXT:    sshll2.4s v23, v16, #0
-; CHECK-NEXT:    sshll.4s v16, v16, #0
-; CHECK-NEXT:    and.16b v18, v18, v22
-; CHECK-NEXT:    and.16b v17, v19, v17
-; CHECK-NEXT:    stp q17, q18, [x1, #32]
-; CHECK-NEXT:    and.16b v17, v20, v23
-; CHECK-NEXT:    and.16b v16, v21, v16
-; CHECK-NEXT:    stp q16, q17, [x1], #64
+; CHECK-NEXT:    cmgt.16b v6, v5, v2
+; CHECK-NEXT:    tbl.16b v7, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v16, { v5 }, v1
+; CHECK-NEXT:    sshll2.8h v18, v6, #0
+; CHECK-NEXT:    tbl.16b v17, { v5 }, v3
+; CHECK-NEXT:    sshll2.4s v19, v18, #0
+; CHECK-NEXT:    sshll.4s v18, v18, #0
+; CHECK-NEXT:    tbl.16b v5, { v5 }, v4
+; CHECK-NEXT:    sshll.8h v6, v6, #0
+; CHECK-NEXT:    and.16b v7, v7, v19
+; CHECK-NEXT:    and.16b v16, v16, v18
+; CHECK-NEXT:    stp q16, q7, [x1, #32]
+; CHECK-NEXT:    sshll2.4s v7, v6, #0
+; CHECK-NEXT:    sshll.4s v6, v6, #0
+; CHECK-NEXT:    and.16b v7, v17, v7
+; CHECK-NEXT:    and.16b v5, v5, v6
+; CHECK-NEXT:    stp q5, q7, [x1], #64
 ; CHECK-NEXT:    b.ne LBB10_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret

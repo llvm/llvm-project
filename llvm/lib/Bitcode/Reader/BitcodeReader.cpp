@@ -4456,18 +4456,20 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       I = GetElementPtrInst::Create(Ty, BasePtr, GEPIdx);
 
       ResTypeID = TyID;
-      auto GTI = std::next(gep_type_begin(I));
-      for (Value *Idx : drop_begin(cast<GEPOperator>(I)->indices())) {
-        unsigned SubType = 0;
-        if (GTI.isStruct()) {
-          ConstantInt *IdxC =
-              Idx->getType()->isVectorTy()
-                  ? cast<ConstantInt>(cast<Constant>(Idx)->getSplatValue())
-                  : cast<ConstantInt>(Idx);
-          SubType = IdxC->getZExtValue();
+      if (cast<GEPOperator>(I)->getNumIndices() != 0) {
+        auto GTI = std::next(gep_type_begin(I));
+        for (Value *Idx : drop_begin(cast<GEPOperator>(I)->indices())) {
+          unsigned SubType = 0;
+          if (GTI.isStruct()) {
+            ConstantInt *IdxC =
+                Idx->getType()->isVectorTy()
+                    ? cast<ConstantInt>(cast<Constant>(Idx)->getSplatValue())
+                    : cast<ConstantInt>(Idx);
+            SubType = IdxC->getZExtValue();
+          }
+          ResTypeID = getContainedTypeID(ResTypeID, SubType);
+          ++GTI;
         }
-        ResTypeID = getContainedTypeID(ResTypeID, SubType);
-        ++GTI;
       }
 
       // At this point ResTypeID is the result element type. We need a pointer

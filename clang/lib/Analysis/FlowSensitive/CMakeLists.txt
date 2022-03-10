@@ -12,3 +12,5 @@ add_clang_library(clangAnalysisFlowSensitive
   clangAST
   clangBasic
   )
+
+add_subdirectory(Models)

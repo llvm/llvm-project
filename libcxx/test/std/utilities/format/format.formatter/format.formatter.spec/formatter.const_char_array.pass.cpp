@@ -10,7 +10,6 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-11 status
 // UNSUPPORTED: gcc-11
-// UNSUPPORTED: apple-clang-12
 
 // <format>
 
