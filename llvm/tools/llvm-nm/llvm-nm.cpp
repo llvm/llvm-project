@@ -1927,7 +1927,7 @@ static void dumpSymbolNamesFromObject(
 // check to make sure this Mach-O file is one of those architectures or all
 // architectures was specificed.  If not then an error is generated and this
 // routine returns false.  Else it returns true.
-static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
+static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
   auto *MachO = dyn_cast<MachOObjectFile>(O);
 
   if (!MachO || ArchAll || ArchFlags.empty())
@@ -1954,7 +1954,7 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
   return true;
 }
 
-static void dumpArchiveMap(Archive *A, std::string &Filename) {
+static void dumpArchiveMap(Archive *A, StringRef Filename) {
   Archive::symbol_iterator I = A->symbol_begin();
   Archive::symbol_iterator E = A->symbol_end();
   if (I != E) {
@@ -1978,7 +1978,7 @@ static void dumpArchiveMap(Archive *A, std::string &Filename) {
 }
 
 static void dumpArchive(Archive *A, std::vector<NMSymbol> &SymbolList,
-                        std::string &Filename, LLVMContext *ContextPtr) {
+                        StringRef Filename, LLVMContext *ContextPtr) {
   if (ArchiveMap)
     dumpArchiveMap(A, Filename);
 
@@ -2010,7 +2010,7 @@ static void dumpArchive(Archive *A, std::vector<NMSymbol> &SymbolList,
 
 static void dumpMachOUniversalBinaryMatchArchFlags(
     MachOUniversalBinary *UB, std::vector<NMSymbol> &SymbolList,
-    std::string &Filename, LLVMContext *ContextPtr) {
+    StringRef Filename, LLVMContext *ContextPtr) {
   // Look for a slice in the universal binary that matches each ArchFlag.
   bool ArchFound;
   for (unsigned i = 0; i < ArchFlags.size(); ++i) {
@@ -2087,7 +2087,7 @@ static void dumpMachOUniversalBinaryMatchArchFlags(
 // architecture, or false otherwise.
 static bool dumpMachOUniversalBinaryMatchHost(MachOUniversalBinary *UB,
                                               std::vector<NMSymbol> &SymbolList,
-                                              std::string &Filename,
+                                              StringRef Filename,
                                               LLVMContext *ContextPtr) {
   Triple HostTriple = MachOObjectFile::getHostArch();
   StringRef HostArchName = HostTriple.getArchName();
@@ -2139,7 +2139,7 @@ static bool dumpMachOUniversalBinaryMatchHost(MachOUniversalBinary *UB,
 
 static void dumpMachOUniversalBinaryArchAll(MachOUniversalBinary *UB,
                                             std::vector<NMSymbol> &SymbolList,
-                                            std::string &Filename,
+                                            StringRef Filename,
                                             LLVMContext *ContextPtr) {
   bool moreThanOneArch = UB->getNumberOfObjects() > 1;
   for (const MachOUniversalBinary::ObjectForArch &O : UB->objects()) {
@@ -2192,7 +2192,7 @@ static void dumpMachOUniversalBinaryArchAll(MachOUniversalBinary *UB,
 
 static void dumpMachOUniversalBinary(MachOUniversalBinary *UB,
                                      std::vector<NMSymbol> &SymbolList,
-                                     std::string &Filename,
+                                     StringRef Filename,
                                      LLVMContext *ContextPtr) {
   // If we have a list of architecture flags specified dump only those.
   if (!ArchAll && !ArchFlags.empty()) {
@@ -2214,7 +2214,7 @@ static void dumpMachOUniversalBinary(MachOUniversalBinary *UB,
 
 static void dumpTapiUniversal(TapiUniversal *TU,
                               std::vector<NMSymbol> &SymbolList,
-                              std::string &Filename) {
+                              StringRef Filename) {
   for (const TapiUniversal::ObjectForArch &I : TU->objects()) {
     StringRef ArchName = I.getArchFlagName();
     const bool ShowArch =
@@ -2235,7 +2235,7 @@ static void dumpTapiUniversal(TapiUniversal *TU,
 }
 
 static void dumpSymbolicFile(SymbolicFile *O, std::vector<NMSymbol> &SymbolList,
-                             std::string &Filename) {
+                             StringRef Filename) {
   if (!MachOPrintSizeWarning && PrintSize && isa<MachOObjectFile>(O)) {
     WithColor::warning(errs(), ToolName)
         << "sizes with --print-size for Mach-O files are always zero.\n";
@@ -2247,12 +2247,12 @@ static void dumpSymbolicFile(SymbolicFile *O, std::vector<NMSymbol> &SymbolList,
                             /*PrintObjectLabel=*/false);
 }
 
-static void dumpSymbolNamesFromFile(std::string &Filename,
-                                    std::vector<NMSymbol> *SymbolList) {
+static std::vector<NMSymbol> dumpSymbolNamesFromFile(StringRef Filename) {
+  std::vector<NMSymbol> SymbolList;
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (error(BufferOrErr.getError(), Filename))
-    return;
+    return SymbolList;
 
   LLVMContext Context;
   LLVMContext *ContextPtr = NoLLVMBitcode ? nullptr : &Context;
@@ -2260,17 +2260,37 @@ static void dumpSymbolNamesFromFile(std::string &Filename,
       createBinary(BufferOrErr.get()->getMemBufferRef(), ContextPtr);
   if (!BinaryOrErr) {
     error(BinaryOrErr.takeError(), Filename);
-    return;
+    return SymbolList;
   }
   Binary &Bin = *BinaryOrErr.get();
   if (Archive *A = dyn_cast<Archive>(&Bin))
-    dumpArchive(A, *SymbolList, Filename, ContextPtr);
+    dumpArchive(A, SymbolList, Filename, ContextPtr);
   else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin))
-    dumpMachOUniversalBinary(UB, *SymbolList, Filename, ContextPtr);
+    dumpMachOUniversalBinary(UB, SymbolList, Filename, ContextPtr);
   else if (TapiUniversal *TU = dyn_cast<TapiUniversal>(&Bin))
-    dumpTapiUniversal(TU, *SymbolList, Filename);
+    dumpTapiUniversal(TU, SymbolList, Filename);
   else if (SymbolicFile *O = dyn_cast<SymbolicFile>(&Bin))
-    dumpSymbolicFile(O, *SymbolList, Filename);
+    dumpSymbolicFile(O, SymbolList, Filename);
+  return SymbolList;
+}
+
+static void
+exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
+  std::vector<NMSymbol> SymbolList;
+  for (const auto &FileName : InputFilenames) {
+    std::vector<NMSymbol> FileSymList = dumpSymbolNamesFromFile(FileName);
+    SymbolList.insert(SymbolList.end(), FileSymList.begin(), FileSymList.end());
+  }
+
+  // Delete symbols which should not be printed from SymolList.
+  SymbolList.erase(
+      llvm::remove_if(SymbolList,
+                      [](const NMSymbol &s) { return !s.shouldPrint(); }),
+      SymbolList.end());
+  sortSymbolList(SymbolList);
+  SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
+                   SymbolList.end());
+  printExportSymbolList(SymbolList);
 }
 
 int main(int argc, char **argv) {
@@ -2428,22 +2448,10 @@ int main(int argc, char **argv) {
   if (NoDyldInfo && (AddDyldInfo || DyldInfoOnly))
     error("--no-dyldinfo can't be used with --add-dyldinfo or --dyldinfo-only");
 
-  std::vector<NMSymbol> SymbolList;
-
-  llvm::for_each(InputFilenames, std::bind(dumpSymbolNamesFromFile,
-                                           std::placeholders::_1, &SymbolList));
-
-  if (ExportSymbols) {
-    // Delete symbols which should not be printed from SymolList.
-    SymbolList.erase(
-        std::remove_if(SymbolList.begin(), SymbolList.end(),
-                       [](const NMSymbol &s) { return !s.shouldPrint(); }),
-        SymbolList.end());
-    sortSymbolList(SymbolList);
-    SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
-                     SymbolList.end());
-    printExportSymbolList(SymbolList);
-  }
+  if (ExportSymbols)
+    exportSymbolNamesFromFiles(InputFilenames);
+  else
+    llvm::for_each(InputFilenames, dumpSymbolNamesFromFile);
 
   if (HadError)
     return 1;
