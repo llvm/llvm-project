@@ -31,6 +31,13 @@ private:
   /// Split function body into fragments.
   void splitFunction(BinaryFunction &Function);
 
+  /// Create trampoline landing pads for exception handling code to guarantee
+  /// that every landing pad is placed in the same function fragment as the
+  /// corresponding thrower block. The trampoline landing pad, when created,
+  /// will redirect the execution to the real landing pad in a different
+  /// fragment.
+  void createEHTrampolines(BinaryFunction &Function) const;
+
   std::atomic<uint64_t> SplitBytesHot{0ull};
   std::atomic<uint64_t> SplitBytesCold{0ull};
 

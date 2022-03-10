@@ -1686,11 +1686,6 @@ void RewriteInstance::adjustCommandLineOptions() {
     opts::SplitEH = false;
   }
 
-  if (opts::SplitEH && !BC->HasFixedLoadAddress) {
-    errs() << "BOLT-WARNING: disabling -split-eh for shared object\n";
-    opts::SplitEH = false;
-  }
-
   if (opts::StrictMode && !BC->HasRelocations) {
     errs() << "BOLT-WARNING: disabling strict mode (-strict) in non-relocation "
               "mode\n";
