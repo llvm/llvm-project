@@ -1,7 +1,5 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 // UNSUPPORTED: darwin
-// FIXME: SEGV - API mismatch?
-// UNSUPPORTED: s390
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>
@@ -19,8 +17,6 @@ int main(int argc, char **argv) {
   new_value.it_value.tv_nsec = 1000000;
   new_value.it_interval.tv_sec = new_value.it_value.tv_sec;
   new_value.it_interval.tv_nsec = new_value.it_value.tv_nsec;
-
-  assert(timer_settime(timerid, 0, &new_value, nullptr) == 0);
 
   struct itimerspec old_value;
   assert(timer_settime(timerid, 0, &new_value, &old_value) == 0);
