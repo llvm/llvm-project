@@ -27,7 +27,7 @@ struct LLVM_LIBRARY_VISIBILITY MCUInfo {
   const int NumFlashBanks; // -1 means the device does not support LPM/ELPM.
 };
 
-// This list should be kept up-to-date with AVRDevices.td in LLVM.
+// NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
 static MCUInfo AVRMcus[] = {
     {"at90s1200", "__AVR_AT90S1200__", 0},
     {"attiny11", "__AVR_ATtiny11__", 0},
@@ -83,6 +83,8 @@ static MCUInfo AVRMcus[] = {
     {"at90usb82", "__AVR_AT90USB82__", 1},
     {"at90usb162", "__AVR_AT90USB162__", 1},
     {"ata5505", "__AVR_ATA5505__", 1},
+    {"ata6617c", "__AVR_ATA6617C__", 1},
+    {"ata664251", "__AVR_ATA664251__", 1},
     {"atmega8u2", "__AVR_ATmega8U2__", 1},
     {"atmega16u2", "__AVR_ATmega16U2__", 1},
     {"atmega32u2", "__AVR_ATmega32U2__", 1},
@@ -92,6 +94,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega8a", "__AVR_ATmega8A__", 1},
     {"ata6285", "__AVR_ATA6285__", 1},
     {"ata6286", "__AVR_ATA6286__", 1},
+    {"ata6612c", "__AVR_ATA6612C__", 1},
     {"atmega48", "__AVR_ATmega48__", 1},
     {"atmega48a", "__AVR_ATmega48A__", 1},
     {"atmega48pa", "__AVR_ATmega48PA__", 1},
@@ -111,8 +114,17 @@ static MCUInfo AVRMcus[] = {
     {"at90pwm3", "__AVR_AT90PWM3__", 1},
     {"at90pwm3b", "__AVR_AT90PWM3B__", 1},
     {"at90pwm81", "__AVR_AT90PWM81__", 1},
+    {"ata5702m322", "__AVR_ATA5702M322__", 1},
+    {"ata5782", "__AVR_ATA5782__", 1},
     {"ata5790", "__AVR_ATA5790__", 1},
+    {"ata5790n", "__AVR_ATA5790N__", 1},
+    {"ata5791", "__AVR_ATA5791__", 1},
     {"ata5795", "__AVR_ATA5795__", 1},
+    {"ata5831", "__AVR_ATA5831__", 1},
+    {"ata6613c", "__AVR_ATA6613C__", 1},
+    {"ata6614q", "__AVR_ATA6614Q__", 1},
+    {"ata8210", "__AVR_ATA8210__", 1},
+    {"ata8510", "__AVR_ATA8510__", 1},
     {"atmega16", "__AVR_ATmega16__", 1},
     {"atmega16a", "__AVR_ATmega16A__", 1},
     {"atmega161", "__AVR_ATmega161__", 1},
@@ -189,6 +201,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega32hvb", "__AVR_ATmega32HVB__", 1},
     {"atmega32hvbrevb", "__AVR_ATmega32HVBREVB__", 1},
     {"atmega64hve", "__AVR_ATmega64HVE__", 1},
+    {"atmega64hve2", "__AVR_ATmega64HVE2__", 1},
     {"at90can32", "__AVR_AT90CAN32__", 1},
     {"at90can64", "__AVR_AT90CAN64__", 1},
     {"at90pwm161", "__AVR_AT90PWM161__", 1},
@@ -229,7 +242,9 @@ static MCUInfo AVRMcus[] = {
     {"atxmega16d4", "__AVR_ATxmega16D4__", 1},
     {"atxmega32a4", "__AVR_ATxmega32A4__", 1},
     {"atxmega32a4u", "__AVR_ATxmega32A4U__", 1},
+    {"atxmega32c3", "__AVR_ATxmega32C3__", 1},
     {"atxmega32c4", "__AVR_ATxmega32C4__", 1},
+    {"atxmega32d3", "__AVR_ATxmega32D3__", 1},
     {"atxmega32d4", "__AVR_ATxmega32D4__", 1},
     {"atxmega32e5", "__AVR_ATxmega32E5__", 1},
     {"atxmega16e5", "__AVR_ATxmega16E5__", 1},
