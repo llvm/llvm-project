@@ -8089,9 +8089,11 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   swift::ModuleDecl *swift_module = nullptr;
   lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
 
+  auto *clangimporter = swift_ast_context.GetClangImporter();
   swift::ModuleDecl *imported_header_module =
-      swift_ast_context.GetClangImporter()->getImportedHeaderModule();
-  if (toplevel.GetStringRef() == imported_header_module->getName().str())
+      clangimporter ? clangimporter->getImportedHeaderModule() : nullptr;
+  if (imported_header_module &&
+      toplevel.GetStringRef() == imported_header_module->getName().str())
     swift_module = imported_header_module;
   else if (this_frame_sp) {
     lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
