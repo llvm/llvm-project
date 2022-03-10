@@ -14,8 +14,6 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-#include <map>
-
 #if LLVM_ENABLE_LIBXML2
 #include <libxml/xmlreader.h>
 #endif
