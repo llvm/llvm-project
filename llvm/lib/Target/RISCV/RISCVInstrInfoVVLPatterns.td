@@ -21,11 +21,6 @@
 // Helpers to define the VL patterns.
 //===----------------------------------------------------------------------===//
 
-def SDT_RISCVVLE_VL : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisPtrTy<1>,
-                                           SDTCisVT<2, XLenVT>]>;
-def SDT_RISCVVSE_VL : SDTypeProfile<0, 3, [SDTCisVec<0>, SDTCisPtrTy<1>,
-                                           SDTCisVT<2, XLenVT>]>;
-
 def SDT_RISCVIntBinOp_VL : SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisVec<0>, SDTCisInt<0>,
@@ -65,11 +60,6 @@ def riscv_vfmv_s_f_vl : SDNode<"RISCVISD::VFMV_S_F_VL",
                                                     SDTCisFP<0>,
                                                     SDTCisEltOfVec<2, 0>,
                                                     SDTCisVT<3, XLenVT>]>>;
-
-def riscv_vle_vl : SDNode<"RISCVISD::VLE_VL", SDT_RISCVVLE_VL,
-                          [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def riscv_vse_vl : SDNode<"RISCVISD::VSE_VL", SDT_RISCVVSE_VL,
-                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def riscv_add_vl   : SDNode<"RISCVISD::ADD_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_sub_vl   : SDNode<"RISCVISD::SUB_VL",   SDT_RISCVIntBinOp_VL>;
@@ -744,29 +734,6 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVInstructions] in {
-
-// 7.4. Vector Unit-Stride Instructions
-foreach vti = AllVectors in {
-  defvar load_instr = !cast<Instruction>("PseudoVLE"#vti.SEW#"_V_"#vti.LMul.MX);
-  defvar store_instr = !cast<Instruction>("PseudoVSE"#vti.SEW#"_V_"#vti.LMul.MX);
-  // Load
-  def : Pat<(vti.Vector (riscv_vle_vl BaseAddr:$rs1, VLOpFrag)),
-            (load_instr BaseAddr:$rs1, GPR:$vl, vti.Log2SEW)>;
-  // Store
-  def : Pat<(riscv_vse_vl (vti.Vector vti.RegClass:$rs2), BaseAddr:$rs1,
-                          VLOpFrag),
-            (store_instr vti.RegClass:$rs2, BaseAddr:$rs1, GPR:$vl, vti.Log2SEW)>;
-}
-
-foreach mti = AllMasks in {
-  defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#mti.BX);
-  defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#mti.BX);
-  def : Pat<(mti.Mask (riscv_vle_vl BaseAddr:$rs1, VLOpFrag)),
-            (load_instr BaseAddr:$rs1, GPR:$vl, mti.Log2SEW)>;
-  def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), BaseAddr:$rs1,
-                          VLOpFrag),
-            (store_instr VR:$rs2, BaseAddr:$rs1, GPR:$vl, mti.Log2SEW)>;
-}
 
 // 12.1. Vector Single-Width Integer Add and Subtract
 defm : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
