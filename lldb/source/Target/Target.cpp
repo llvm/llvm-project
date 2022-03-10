@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Target.h"
-#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
