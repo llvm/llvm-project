@@ -87,6 +87,7 @@ static_library("Scalar") {
     "SpeculativeExecution.cpp",
     "StraightLineStrengthReduce.cpp",
     "StructurizeCFG.cpp",
+    "TLSVariableHoist.cpp",
     "TailRecursionElimination.cpp",
     "WarnMissedTransforms.cpp",
   ]
