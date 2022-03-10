@@ -1800,7 +1800,6 @@ public:
   }
 
 private:
-  // Remove optional braces.
   void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
@@ -3181,17 +3180,17 @@ reformat(const FormatStyle &Style, StringRef Code,
     });
   }
 
-  if (Style.isCpp() && Style.InsertBraces)
-    Passes.emplace_back([&](const Environment &Env) {
-      return BracesInserter(Env, Expanded).process();
-    });
-
-  if (Style.isCpp() && Style.RemoveBracesLLVM)
-    Passes.emplace_back([&](const Environment &Env) {
-      return BracesRemover(Env, Expanded).process();
-    });
-
   if (Style.isCpp()) {
+    if (Style.InsertBraces)
+      Passes.emplace_back([&](const Environment &Env) {
+        return BracesInserter(Env, Expanded).process();
+      });
+
+    if (Style.RemoveBracesLLVM)
+      Passes.emplace_back([&](const Environment &Env) {
+        return BracesRemover(Env, Expanded).process();
+      });
+
     if (Style.FixNamespaceComments)
       Passes.emplace_back([&](const Environment &Env) {
         return NamespaceEndCommentsFixer(Env, Expanded).process();
