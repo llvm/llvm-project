@@ -53,9 +53,9 @@ define i8* @start(i8 %v) {
 ; IS__CGSCC_OPM-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 1
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C2]], label [[C2_TRUE:%.*]], label [[C2_FALSE:%.*]]
 ; IS__CGSCC_OPM:       c2_true:
-; IS__CGSCC_OPM-NEXT:    ret i8* undef
+; IS__CGSCC_OPM-NEXT:    ret i8* null
 ; IS__CGSCC_OPM:       c2_false:
-; IS__CGSCC_OPM-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 undef)
+; IS__CGSCC_OPM-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 [[V]])
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[CA2]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@start
@@ -69,9 +69,9 @@ define i8* @start(i8 %v) {
 ; IS__CGSCC_NPM-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 1
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C2]], label [[C2_TRUE:%.*]], label [[C2_FALSE:%.*]]
 ; IS__CGSCC_NPM:       c2_true:
-; IS__CGSCC_NPM-NEXT:    ret i8* undef
+; IS__CGSCC_NPM-NEXT:    ret i8* null
 ; IS__CGSCC_NPM:       c2_false:
-; IS__CGSCC_NPM-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 undef)
+; IS__CGSCC_NPM-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 [[V]])
 ; IS__CGSCC_NPM-NEXT:    ret i8* [[CA2]]
 ;
   %c1 = icmp eq i8 %v, 0
@@ -120,16 +120,21 @@ define internal i8* @no_side_effects(i8 %v) readonly nounwind {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@no_side_effects
 ; IS__CGSCC____-SAME: (i8 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    ret i8* undef
+; IS__CGSCC____-NEXT:    ret i8* null
 ;
   ret i8* null
 }
 
 define internal i8* @dont_zap_me(i8 %v) {
-; CHECK-LABEL: define {{[^@]+}}@dont_zap_me
-; CHECK-SAME: (i8 [[V:%.*]]) {
-; CHECK-NEXT:    [[I1:%.*]] = call i32 @external()
-; CHECK-NEXT:    ret i8* undef
+; IS__TUNIT____-LABEL: define {{[^@]+}}@dont_zap_me
+; IS__TUNIT____-SAME: (i8 [[V:%.*]]) {
+; IS__TUNIT____-NEXT:    [[I1:%.*]] = call i32 @external()
+; IS__TUNIT____-NEXT:    ret i8* undef
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@dont_zap_me
+; IS__CGSCC____-SAME: (i8 [[V:%.*]]) {
+; IS__CGSCC____-NEXT:    [[I1:%.*]] = call i32 @external()
+; IS__CGSCC____-NEXT:    ret i8* null
 ;
   %i1 = call i32 @external()
   ret i8* null

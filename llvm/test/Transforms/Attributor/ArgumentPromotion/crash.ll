@@ -69,9 +69,8 @@ bb:
 }
 
 define internal i1 @eggs(i8* %arg) {
-; IS__CGSCC____: Function Attrs: norecurse
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@eggs
-; IS__CGSCC____-SAME: (i8* [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: (i8* [[ARG:%.*]]) {
 ; IS__CGSCC____-NEXT:  bb:
 ; IS__CGSCC____-NEXT:    [[TMP:%.*]] = call zeroext i1 @barney()
 ; IS__CGSCC____-NEXT:    unreachable
@@ -84,7 +83,7 @@ bb:
 define internal i1 @barney(i8* %arg) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@barney
-; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  bb:
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;
@@ -101,7 +100,7 @@ define i32 @test_inf_promote_caller(i32 %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inf_promote_caller
-; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
+; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  bb:
 ; IS__CGSCC____-NEXT:    [[TMP:%.*]] = alloca [[S:%.*]], align 8
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = alloca [[S]], align 8
@@ -116,9 +115,9 @@ bb:
 }
 
 define internal i32 @test_inf_promote_callee(%S* %arg, %S* %arg1) {
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inf_promote_callee
-; IS__CGSCC____-SAME: () #[[ATTR2]] {
+; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  bb:
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
@@ -139,7 +138,7 @@ declare i32 @wibble(...)
 ; IS__TUNIT____: attributes #[[ATTR2]] = { noreturn nounwind readnone }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { norecurse }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR3]] = { noreturn nounwind readnone }
 ;.

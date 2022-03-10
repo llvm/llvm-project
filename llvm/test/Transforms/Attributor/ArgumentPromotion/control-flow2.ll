@@ -14,7 +14,7 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ; IS__CGSCC____:       T:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 17
 ;
   br i1 %C, label %T, label %F
 

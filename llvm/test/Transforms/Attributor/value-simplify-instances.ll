@@ -60,14 +60,14 @@ define internal i1 @recursive_inst_generator(i1 %c, i1* %p) {
 ; IS__CGSCC_OPM-NEXT:    ret i1 [[R2]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC_NPM:       t:
 ; IS__CGSCC_NPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[A]])
 ; IS__CGSCC_NPM-NEXT:    ret i1 [[R1]]
 ; IS__CGSCC_NPM:       f:
-; IS__CGSCC_NPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true)
+; IS__CGSCC_NPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
 ; IS__CGSCC_NPM-NEXT:    ret i1 [[R2]]
 ;
   %a = call i1* @geti1Ptr()
@@ -82,15 +82,10 @@ f:
 
 ; FIXME: This should *not* return true.
 define i1 @recursive_inst_generator_caller(i1 %c) {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
-; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
-; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], i1* undef)
-; NOT_CGSCC_NPM-NEXT:    ret i1 [[CALL]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]])
-; IS__CGSCC_NPM-NEXT:    ret i1 [[CALL]]
+; CHECK-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], i1* undef)
+; CHECK-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_inst_generator(i1 %c, i1* undef)
   ret i1 %call

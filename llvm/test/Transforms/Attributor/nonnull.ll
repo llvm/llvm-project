@@ -1014,7 +1014,7 @@ define internal i32* @g2() {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g2
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    ret i32* undef
+; IS__CGSCC____-NEXT:    ret i32* inttoptr (i64 4 to i32*)
 ;
   ret i32* inttoptr (i64 4 to i32*)
 }

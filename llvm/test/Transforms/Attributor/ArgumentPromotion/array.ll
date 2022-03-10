@@ -49,33 +49,19 @@ define internal void @callee(i32* noalias %arg) {
 ; IS________OPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[ARG]])
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_CAST:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[ARG_PRIV_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 1
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[ARG_PRIV_0_1]], align 4
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 2
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP2]], i32* [[ARG_PRIV_0_2]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP3]])
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_CAST:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_CAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 1
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_0_1]], align 4
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 2
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_0_2]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP3]])
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM-LABEL: define {{[^@]+}}@callee
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
+; IS________NPM-NEXT:    [[ARG_PRIV_CAST:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
+; IS________NPM-NEXT:    store i32 [[TMP0]], i32* [[ARG_PRIV_CAST]], align 4
+; IS________NPM-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 1
+; IS________NPM-NEXT:    store i32 [[TMP1]], i32* [[ARG_PRIV_0_1]], align 4
+; IS________NPM-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 2
+; IS________NPM-NEXT:    store i32 [[TMP2]], i32* [[ARG_PRIV_0_2]], align 4
+; IS________NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
+; IS________NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP3]])
+; IS________NPM-NEXT:    ret void
 ;
 entry:
   call void @use(i32* %arg)

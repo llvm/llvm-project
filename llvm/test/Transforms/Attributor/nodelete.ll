@@ -32,7 +32,6 @@ define internal i64 @f2(%"a"* %this) align 2 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
 ; IS__CGSCC____-SAME: () #[[ATTR0]] align 2 {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = bitcast %a* undef to %b*
 ; IS__CGSCC____-NEXT:    ret i64 undef
 ;
 entry:
@@ -49,8 +48,6 @@ define internal void @f3(%"b"* %this) align 2 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f3
 ; IS__CGSCC____-SAME: () #[[ATTR0]] align 2 {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[THIS_ADDR:%.*]] = alloca %b*, align 8
-; IS__CGSCC____-NEXT:    [[THIS1:%.*]] = load %b*, %b** [[THIS_ADDR]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -66,8 +63,6 @@ define internal i1 @f4(%"b"* %this) align 2 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f4
 ; IS__CGSCC____-SAME: () #[[ATTR0]] align 2 {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[THIS_ADDR:%.*]] = alloca %b*, align 8
-; IS__CGSCC____-NEXT:    [[THIS1:%.*]] = load %b*, %b** [[THIS_ADDR]], align 8
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;
 entry:

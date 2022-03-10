@@ -772,5 +772,5 @@ attributes #5 = { argmemonly nounwind }
 ; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
 ; IS__CGSCC____: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR6:[0-9]+]] = { willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR7:[0-9]+]] = { nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR7:[0-9]+]] = { nounwind willreturn }
 ;.

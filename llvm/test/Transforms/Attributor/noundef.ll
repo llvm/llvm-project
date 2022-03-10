@@ -67,20 +67,30 @@ define void @callback_caller() {
 ; try to come up with a different scheme to verify the `noundef` is dropped if
 ; signature rewriting is not happening.
 define internal void @callee_with_dead_noundef_arg(i1 noundef %create, ...) {
-; CHECK-LABEL: define {{[^@]+}}@callee_with_dead_noundef_arg
-; CHECK-SAME: (i1 [[CREATE:%.*]], ...) {
-; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@callee_with_dead_noundef_arg
+; IS__TUNIT____-SAME: (i1 [[CREATE:%.*]], ...) {
+; IS__TUNIT____-NEXT:    call void @unknown()
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@callee_with_dead_noundef_arg
+; IS__CGSCC____-SAME: (i1 noundef [[CREATE:%.*]], ...) {
+; IS__CGSCC____-NEXT:    call void @unknown()
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @unknown()
   ret void
 }
 
 define void @caller_with_unused_arg(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@caller_with_unused_arg
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    call void (i1, ...) @callee_with_dead_noundef_arg(i1 undef)
-; CHECK-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@caller_with_unused_arg
+; IS__TUNIT____-SAME: (i1 [[C:%.*]]) {
+; IS__TUNIT____-NEXT:    call void (i1, ...) @callee_with_dead_noundef_arg(i1 undef)
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@caller_with_unused_arg
+; IS__CGSCC____-SAME: (i1 noundef [[C:%.*]]) {
+; IS__CGSCC____-NEXT:    call void (i1, ...) @callee_with_dead_noundef_arg(i1 noundef [[C]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void (i1, ...) @callee_with_dead_noundef_arg(i1 %c)
   ret void
@@ -115,9 +125,13 @@ if.then3:                                         ; preds = %entry
 ; signature rewriting is not happening.
 define void @caller_with_noundef_arg() {
 ;
-; CHECK-LABEL: define {{[^@]+}}@caller_with_noundef_arg() {
-; CHECK-NEXT:    call void (i1, ...) @callee_with_dead_arg(i1 undef)
-; CHECK-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@caller_with_noundef_arg() {
+; IS__TUNIT____-NEXT:    call void (i1, ...) @callee_with_dead_arg(i1 undef)
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@caller_with_noundef_arg() {
+; IS__CGSCC____-NEXT:    call void (i1, ...) @callee_with_dead_arg(i1 noundef true)
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void (i1, ...) @callee_with_dead_arg(i1 noundef true)
   ret void

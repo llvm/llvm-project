@@ -17,7 +17,7 @@ define internal i32 @test(i32** %x) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 0
 ;
 entry:
   %y = load i32*, i32** %x

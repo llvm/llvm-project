@@ -49,25 +49,15 @@ define internal i32 @foo(i32* %arg) {
 ; IS________OPM-NEXT:    call void @use(i32 [[L]])
 ; IS________OPM-NEXT:    ret i32 [[L]]
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]]) {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca i32, align 4, addrspace(7)
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32 addrspace(7)* [[ARG_PRIV]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = addrspacecast i32 addrspace(7)* [[ARG_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS__TUNIT_NPM-NEXT:    call void @use(i32 [[L]])
-; IS__TUNIT_NPM-NEXT:    ret i32 [[L]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC_NPM-SAME: (i32 returned [[TMP0:%.*]]) {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca i32, align 4, addrspace(7)
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32 addrspace(7)* [[ARG_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = addrspacecast i32 addrspace(7)* [[ARG_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS__CGSCC_NPM-NEXT:    call void @use(i32 [[TMP0]])
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
+; IS________NPM-LABEL: define {{[^@]+}}@foo
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca i32, align 4, addrspace(7)
+; IS________NPM-NEXT:    store i32 [[TMP0]], i32 addrspace(7)* [[ARG_PRIV]], align 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = addrspacecast i32 addrspace(7)* [[ARG_PRIV]] to i32*
+; IS________NPM-NEXT:    [[L:%.*]] = load i32, i32* [[TMP1]], align 4
+; IS________NPM-NEXT:    call void @use(i32 [[L]])
+; IS________NPM-NEXT:    ret i32 [[L]]
 ;
 entry:
   %l = load i32, i32* %arg

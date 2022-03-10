@@ -41,7 +41,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 0
 ;
   %A = alloca i32
   store i32 1, i32* %A

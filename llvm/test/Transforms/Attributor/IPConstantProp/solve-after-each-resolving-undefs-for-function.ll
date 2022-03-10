@@ -15,7 +15,7 @@ define internal i32 @testf(i1 %c) {
 ; IS__CGSCC____:       if.then:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 10
 ;
 entry:
   br i1 %c, label %if.cond, label %if.end
@@ -39,7 +39,7 @@ define internal i32 @test1(i1 %c) {
 ; IS__CGSCC____:       if.then:
 ; IS__CGSCC____-NEXT:    br label [[RET1:%.*]]
 ; IS__CGSCC____:       ret1:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 99
 ; IS__CGSCC____:       ret2:
 ; IS__CGSCC____-NEXT:    unreachable
 ;

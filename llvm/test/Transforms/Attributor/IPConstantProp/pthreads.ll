@@ -53,7 +53,7 @@ define dso_local i32 @main() {
 ; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* noundef nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture noundef align 4294967296 null, i8* (i8*)* noundef nonnull @foo, i8* noalias nocapture nofree noundef readnone align 4294967296 null)
 ; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* noundef nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture noundef align 4294967296 null, i8* (i8*)* noundef nonnull @bar, i8* noalias nocapture nofree noundef nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
 ; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* noundef nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture noundef align 4294967296 null, i8* (i8*)* noundef nonnull @baz, i8* noalias nocapture nofree noundef nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
-; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* noundef nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture noundef align 4294967296 null, i8* (i8*)* noundef nonnull @buz, i8* noalias nofree noundef nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[ALLOC2]])
+; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* noundef nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture noundef align 4294967296 null, i8* (i8*)* noundef nonnull @buz, i8* noalias nofree noundef nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
 ; IS__CGSCC____-NEXT:    ret i32 0
 ;
 entry:
