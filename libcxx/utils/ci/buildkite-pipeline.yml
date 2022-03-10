@@ -678,7 +678,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "aarch64"
       retry:
         automatic:
@@ -692,7 +692,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "aarch64"
       retry:
         automatic:
@@ -706,7 +706,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l"
       retry:
         automatic:
@@ -720,7 +720,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l"
       retry:
         automatic:
@@ -734,7 +734,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l" # Compiling for v7, running on v8 hardware
       retry:
         automatic:
@@ -748,7 +748,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l" # Compiling for v7, running on v8 hardware
       retry:
         automatic:

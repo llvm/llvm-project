@@ -30,6 +30,7 @@
 #include "llvm/Support/Debug.h"
 
 using namespace fir;
+using namespace mlir;
 
 #define DEBUG_TYPE "flang-target-rewrite"
 

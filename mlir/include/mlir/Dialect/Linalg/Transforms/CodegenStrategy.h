@@ -17,8 +17,6 @@
 
 namespace mlir {
 
-class FuncOp;
-
 namespace linalg {
 
 /// Abstract Transformation class applied in a sequence that also handles state

@@ -282,6 +282,7 @@ define internal void @child_function_ipra() #0 {
 }
 
 ; GCN-LABEL: {{^}}spill_sgpr_no_free_vgpr_ipra:
+; GCN: buffer_store_dword v0, off
 ; GCN: v_writelane_b32 v0, s30, 0
 ; GCN: v_writelane_b32 v0, s31, 1
 ; GCN: buffer_store_dword v0, off
@@ -289,6 +290,7 @@ define internal void @child_function_ipra() #0 {
 ; GCN: buffer_load_dword v0, off
 ; GCN: v_readlane_b32 s30, v0, 0
 ; GCN: v_readlane_b32 s31, v0, 1
+; GCN: buffer_load_dword v0, off
 define void @spill_sgpr_no_free_vgpr_ipra() #0 {
   call void @child_function_ipra()
   ret void

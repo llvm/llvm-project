@@ -21,8 +21,8 @@ def TDLC_ClauseA : Clause<"clausea"> {
   ];
 }
 
-// CHECK: def AKindvala : I32EnumAttrCase<"vala", 0>;
-// CHECK: def AKindvalb : I32EnumAttrCase<"valb", 1>;
+// CHECK: def AKindvala : I32EnumAttrCase<"Vala", 0, "vala">;
+// CHECK: def AKindvalb : I32EnumAttrCase<"Valb", 1, "valb">;
 // CHECK: def AKind: I32EnumAttr<
 // CHECK:   "ClauseAKind",
 // CHECK:   "AKind Clause",

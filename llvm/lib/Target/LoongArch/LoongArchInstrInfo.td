@@ -22,6 +22,7 @@
 class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
   let DiagnosticType = !strconcat("Invalid", Name);
+  let RenderMethod = "addImmOperands";
 }
 
 class SImmAsmOperand<int width, string suffix = "">
@@ -32,29 +33,64 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
-def uimm2 : Operand<GRLenVT>;
+def uimm2 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<2>;
+}
+
 def uimm2_plus1 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<2, "plus1">;
   let EncoderMethod = "getImmOpValueSub1";
 }
-def uimm3 : Operand<GRLenVT>;
-def uimm5 : Operand<GRLenVT>;
-def uimm6 : Operand<GRLenVT>;
-def uimm12 : Operand<GRLenVT>;
-def uimm15 : Operand<GRLenVT>;
-def simm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isInt<12>(Imm);}]>;
-def simm14 : Operand<GRLenVT>;
+
+def uimm3 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<3>;
+}
+
+def uimm5 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<5>;
+}
+
+def uimm6 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<6>;
+}
+
+def uimm12 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<12>;
+}
+
+def uimm15 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<15>;
+}
+
+def simm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isInt<12>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<12>;
+}
+
 def simm14_lsl2 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<14, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
 }
-def simm16 : Operand<GRLenVT>;
+
+def simm16 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<16>;
+}
+
 def simm16_lsl2 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
 }
-def simm20 : Operand<GRLenVT>;
+
+def simm20 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<20>;
+}
+
 def simm21_lsl2 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
 }
+
 def simm26_lsl2 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<26, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
 }
 

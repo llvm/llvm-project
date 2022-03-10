@@ -190,13 +190,13 @@ static void convertOmpOpRegions(
 /// Convert ProcBindKind from MLIR-generated enum to LLVM enum.
 static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   switch (kind) {
-  case omp::ClauseProcBindKind::close:
+  case omp::ClauseProcBindKind::Close:
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_close;
-  case omp::ClauseProcBindKind::master:
+  case omp::ClauseProcBindKind::Master:
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_master;
-  case omp::ClauseProcBindKind::primary:
+  case omp::ClauseProcBindKind::Primary:
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_primary;
-  case omp::ClauseProcBindKind::spread:
+  case omp::ClauseProcBindKind::Spread:
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_spread;
   }
   llvm_unreachable("Unknown ClauseProcBindKind kind");
@@ -887,15 +887,15 @@ convertAtomicOrdering(Optional<omp::ClauseMemoryOrderKind> ao) {
     return llvm::AtomicOrdering::Monotonic; // Default Memory Ordering
 
   switch (*ao) {
-  case omp::ClauseMemoryOrderKind::seq_cst:
+  case omp::ClauseMemoryOrderKind::Seq_cst:
     return llvm::AtomicOrdering::SequentiallyConsistent;
-  case omp::ClauseMemoryOrderKind::acq_rel:
+  case omp::ClauseMemoryOrderKind::Acq_rel:
     return llvm::AtomicOrdering::AcquireRelease;
-  case omp::ClauseMemoryOrderKind::acquire:
+  case omp::ClauseMemoryOrderKind::Acquire:
     return llvm::AtomicOrdering::Acquire;
-  case omp::ClauseMemoryOrderKind::release:
+  case omp::ClauseMemoryOrderKind::Release:
     return llvm::AtomicOrdering::Release;
-  case omp::ClauseMemoryOrderKind::relaxed:
+  case omp::ClauseMemoryOrderKind::Relaxed:
     return llvm::AtomicOrdering::Monotonic;
   }
   llvm_unreachable("Unknown ClauseMemoryOrderKind kind");

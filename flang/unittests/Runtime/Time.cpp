@@ -166,3 +166,4 @@ TEST(TimeIntrinsics, DateAndTime) {
     EXPECT_LE(minutes, 59);
   }
 }
+

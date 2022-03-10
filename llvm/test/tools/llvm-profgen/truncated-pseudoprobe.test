@@ -1,4 +1,4 @@
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/truncated-pseudoprobe.perfscript --binary=%S/Inputs/truncated-pseudoprobe.perfbin --csspgo-preinliner=0 --output=%t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/truncated-pseudoprobe.perfscript --binary=%S/Inputs/truncated-pseudoprobe.perfbin --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t
 ; RUN: FileCheck %s --input-file %t
 
 ; CHECK:     [foo]:75:0

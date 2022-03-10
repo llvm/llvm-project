@@ -1,3 +1,4 @@
+#TODO(michaelrj): separate the fputil library into individual targets.
 add_header_library(
   fputil
   HDRS
@@ -19,7 +20,8 @@ add_header_library(
     libc.include.errno
     libc.include.fenv
     libc.src.__support.common
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.bit
     libc.src.errno.errno
 )
 

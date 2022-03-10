@@ -22,6 +22,9 @@ let Command = "settings set" in {
     Desc<"Apply the new value to the global default value.">;
   def setset_force : Option<"force", "f">,
     Desc<"Force an empty value to be accepted as the default.">;
+  def setset_exists : Option<"exists", "e">,
+    Desc<"Set the setting if it exists, but do not cause the command to raise "
+    "an error if it does not exist.">;
 }
 
 let Command = "settings write" in {
@@ -957,7 +960,7 @@ let Command = "target modules lookup" in {
   def target_modules_lookup_type : Option<"type", "t">, Group<6>, Arg<"Name">,
     Required, Desc<"Lookup a type by name in the debug symbols in one or more "
     "target modules.">;
-  def target_modules_lookup_variables_ranges : Option<"show-variable-ranges", 
+  def target_modules_lookup_variables_ranges : Option<"show-variable-ranges",
     "\\x01">, GroupRange<1, 6>, Desc<"Dump valid ranges of variables (must be "
     "used in conjunction with --verbose">;
   def target_modules_lookup_verbose : Option<"verbose", "v">,

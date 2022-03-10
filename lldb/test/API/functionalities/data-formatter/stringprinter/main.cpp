@@ -29,6 +29,7 @@ S<char *> Scharstar;
 
 int main (int argc, char const *argv[])
 {
+    const char manytrailingnuls[] = "F\0OO\0BA\0R\0\0\0\0";
     A a, b, c;
     // Deliberately write past the end of data to test that the formatter stops
     // at the end of array.
@@ -59,6 +60,7 @@ int main (int argc, char const *argv[])
     //% self.expect_var_path("a.data", summary='"FOOB"')
     //% self.expect_var_path("b.data", summary=r'"FO\0B"')
     //% self.expect_var_path("c.data", summary=r'"F\0O"')
+    //% self.expect_var_path("manytrailingnuls", summary=r'"F\0OO\0BA\0R"')
     //%
     //% for c in ["", "const"]:
     //%   for v in ["", "volatile"]:

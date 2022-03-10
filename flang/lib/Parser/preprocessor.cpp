@@ -495,7 +495,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     } else {
       if (dir.IsAnythingLeft(++j)) {
         prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#undef: excess tokens at end of directive"_en_US);
+            "#undef: excess tokens at end of directive"_port_en_US);
       } else {
         definitions_.erase(nameToken);
       }
@@ -509,7 +509,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     } else {
       if (dir.IsAnythingLeft(++j)) {
         prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#%s: excess tokens at end of directive"_en_US, dirName);
+            "#%s: excess tokens at end of directive"_port_en_US, dirName);
       }
       doThen = IsNameDefined(nameToken) == (dirName == "ifdef");
     }
@@ -529,7 +529,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
   } else if (dirName == "else") {
     if (dir.IsAnythingLeft(j)) {
       prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-          "#else: excess tokens at end of directive"_en_US);
+          "#else: excess tokens at end of directive"_port_en_US);
     } else if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
@@ -556,7 +556,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
   } else if (dirName == "endif") {
     if (dir.IsAnythingLeft(j)) {
       prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-          "#endif: excess tokens at end of directive"_en_US);
+          "#endif: excess tokens at end of directive"_port_en_US);
     } else if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#endif: no #if, #ifdef, or #ifndef"_err_en_US);
@@ -567,8 +567,11 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     prescanner.Say(
         dir.GetIntervalProvenanceRange(dirOffset, tokens - dirOffset),
         "%s"_err_en_US, dir.ToString());
-  } else if (dirName == "warning" || dirName == "comment" ||
-      dirName == "note") {
+  } else if (dirName == "warning") {
+    prescanner.Say(
+        dir.GetIntervalProvenanceRange(dirOffset, tokens - dirOffset),
+        "%s"_warn_en_US, dir.ToString());
+  } else if (dirName == "comment" || dirName == "note") {
     prescanner.Say(
         dir.GetIntervalProvenanceRange(dirOffset, tokens - dirOffset),
         "%s"_en_US, dir.ToString());
@@ -593,7 +596,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       }
       if (k >= tokens) {
         prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#include: expected '>' at end of included file"_en_US);
+            "#include: expected '>' at end of included file"_port_en_US);
       }
       TokenSequence braced{dir, j + 1, k - j - 1};
       include = ReplaceMacros(braced, prescanner).ToString();
@@ -620,7 +623,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     j = dir.SkipBlanks(j + 1);
     if (j < tokens && dir.TokenAt(j).ToString() != "!") {
       prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-          "#include: extra stuff ignored after file name"_en_US);
+          "#include: extra stuff ignored after file name"_port_en_US);
     }
     std::string buf;
     llvm::raw_string_ostream error{buf};

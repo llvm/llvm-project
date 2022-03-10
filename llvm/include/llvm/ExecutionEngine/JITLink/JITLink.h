@@ -1215,8 +1215,11 @@ public:
   /// Make the given symbol an absolute with the given address (must not already
   /// be absolute).
   ///
-  /// Symbol size, linkage, scope, and callability, and liveness will be left
-  /// unchanged. Symbol offset will be reset to 0.
+  /// The symbol's size, linkage, and callability, and liveness will be left
+  /// unchanged, and its offset will be reset to 0.
+  ///
+  /// If the symbol was external then its scope will be set to local, otherwise
+  /// it will be left unchanged.
   void makeAbsolute(Symbol &Sym, orc::ExecutorAddr Address) {
     assert(!Sym.isAbsolute() && "Symbol is already absolute");
     if (Sym.isExternal()) {
@@ -1225,6 +1228,7 @@ public:
       assert(Sym.getOffset() == 0 && "External is not at offset 0");
       ExternalSymbols.erase(&Sym);
       Sym.getAddressable().setAbsolute(true);
+      Sym.setScope(Scope::Local);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
       Section &Sec = Sym.getBlock().getSection();
@@ -1732,6 +1736,9 @@ Error markAllSymbolsLive(LinkGraph &G);
 /// Create an out of range error for the given edge in the given block.
 Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
                                 const Edge &E);
+
+Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
+                         const Edge &E);
 
 /// Base case for edge-visitors where the visitor-list is empty.
 inline void visitEdge(LinkGraph &G, Block *B, Edge &E) {}

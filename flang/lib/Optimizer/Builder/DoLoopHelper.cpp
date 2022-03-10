@@ -43,6 +43,6 @@ fir::factory::DoLoopHelper::createLoop(mlir::Value count,
   auto indexType = builder.getIndexType();
   auto zero = builder.createIntegerConstant(loc, indexType, 0);
   auto one = builder.createIntegerConstant(loc, count.getType(), 1);
-  auto up = builder.create<arith::SubIOp>(loc, count, one);
+  auto up = builder.create<mlir::arith::SubIOp>(loc, count, one);
   return createLoop(zero, up, one, bodyGenerator);
 }

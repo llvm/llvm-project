@@ -71,7 +71,7 @@ mlir::Type fir::FirOpBuilder::getRealType(int kind) {
   case llvm::Type::TypeID::FP128TyID:
     return mlir::FloatType::getF128(getContext());
   default:
-    fir::emitFatalError(UnknownLoc::get(getContext()),
+    fir::emitFatalError(mlir::UnknownLoc::get(getContext()),
                         "unsupported type !fir.real<kind>");
   }
 }
@@ -507,6 +507,23 @@ mlir::Value fir::FirOpBuilder::genIsNull(mlir::Location loc, mlir::Value addr) {
                                   mlir::arith::CmpIPredicate::eq);
 }
 
+mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
+                                                    mlir::Value lb,
+                                                    mlir::Value ub,
+                                                    mlir::Value step,
+                                                    mlir::Type type) {
+  auto zero = createIntegerConstant(loc, type, 0);
+  lb = createConvert(loc, type, lb);
+  ub = createConvert(loc, type, ub);
+  step = createConvert(loc, type, step);
+  auto diff = create<mlir::arith::SubIOp>(loc, ub, lb);
+  auto add = create<mlir::arith::AddIOp>(loc, diff, step);
+  auto div = create<mlir::arith::DivSIOp>(loc, add, step);
+  auto cmp = create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sgt,
+                                         div, zero);
+  return create<mlir::arith::SelectOp>(loc, cmp, div, zero);
+}
+
 //===--------------------------------------------------------------------===//
 // ExtendedValue inquiry helper implementation
 //===--------------------------------------------------------------------===//
@@ -659,6 +676,46 @@ fir::ExtendedValue fir::factory::readBoxValue(fir::FirOpBuilder &builder,
     return addr;
   return fir::ArrayBoxValue(addr, fir::factory::readExtents(builder, loc, box),
                             box.getLBounds());
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       const fir::ExtendedValue &exv) {
+  return exv.match(
+      [&](const fir::ArrayBoxValue &array) -> llvm::SmallVector<mlir::Value> {
+        return {array.getLBounds().begin(), array.getLBounds().end()};
+      },
+      [&](const fir::CharArrayBoxValue &array)
+          -> llvm::SmallVector<mlir::Value> {
+        return {array.getLBounds().begin(), array.getLBounds().end()};
+      },
+      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        return {box.getLBounds().begin(), box.getLBounds().end()};
+      },
+      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        auto load = fir::factory::genMutableBoxRead(builder, loc, box);
+        return fir::factory::getNonDefaultLowerBounds(builder, loc, load);
+      },
+      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::getNonDeferredLengthParams(const fir::ExtendedValue &exv) {
+  return exv.match(
+      [&](const fir::CharArrayBoxValue &character)
+          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
+      [&](const fir::CharBoxValue &character)
+          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
+      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        return {box.nonDeferredLenParams().begin(),
+                box.nonDeferredLenParams().end()};
+      },
+      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
+        return {box.getExplicitParameters().begin(),
+                box.getExplicitParameters().end()};
+      },
+      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
 }
 
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,

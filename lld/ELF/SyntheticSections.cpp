@@ -2319,7 +2319,7 @@ bool SymtabShndxSection::isNeeded() const {
   // a .symtab_shndx section when the amount of output sections is huge.
   size_t size = 0;
   for (SectionCommand *cmd : script->sectionCommands)
-    if (isa<OutputSection>(cmd))
+    if (isa<OutputDesc>(cmd))
       ++size;
   return size >= SHN_LORESERVE;
 }

@@ -35,9 +35,9 @@ define <4 x i32> @smin_vec2(<4 x i32> %x) {
 define <4 x i32> @smin_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smin_vec3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpandn %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %sub = sub nsw <4 x i32> %x, %y
   %cmp = icmp sgt <4 x i32> %x, %y
@@ -50,9 +50,9 @@ define <4 x i32> @smin_vec3(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @smin_vec4(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smin_vec4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %sub = sub nsw <4 x i32> %x, %y
   %cmp = icmp slt <4 x i32> %x, %y
@@ -91,9 +91,9 @@ define <4 x i32> @smax_vec2(<4 x i32> %x) {
 define <4 x i32> @smax_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smax_vec3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpandn %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %sub = sub nsw <4 x i32> %x, %y
   %cmp = icmp slt <4 x i32> %x, %y
@@ -106,9 +106,9 @@ define <4 x i32> @smax_vec3(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @smax_vec4(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smax_vec4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %sub = sub nsw <4 x i32> %x, %y
   %cmp = icmp sgt <4 x i32> %x, %y

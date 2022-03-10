@@ -44,16 +44,3 @@ void j() = delete;
 extern void k() {} // expected-warning {{no previous prototype for function 'k'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{.*}}-[[@LINE-2]]:{{.*}}}:"{{.*}}"
-
-namespace {
-struct anon { };
-}
-
-// No warning because this has internal linkage despite not being declared
-// explicitly 'static', owing to the internal linkage parameter.
-void l(anon) {
-}
-
-void *operator new(decltype(sizeof(3)) size, const anon &) throw() {
-  return nullptr;
-}

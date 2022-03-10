@@ -475,6 +475,112 @@ func @fold_empty_loops() -> index {
 
 // -----
 
+// CHECK-LABEL:  func @fold_empty_loop()
+func @fold_empty_loop() -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %res:2 = affine.for %i = 0 to 10 iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %c2, %arg1 : index, index
+  }
+  // CHECK-DAG: %[[one:.*]] = arith.constant 1
+  // CHECK-DAG: %[[two:.*]] = arith.constant 2
+  // CHECK-NEXT: return %[[two]], %[[one]]
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @fold_empty_loops_trip_count_1()
+func @fold_empty_loops_trip_count_1() -> (index, index, index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %res1:2 = affine.for %i = 0 to 1 iter_args(%arg0 = %c2, %arg1 = %c0) -> (index, index) {
+    affine.yield %c1, %arg0 : index, index
+  }
+  %res2:2 = affine.for %i = 0 to 2 step 3 iter_args(%arg0 = %c2, %arg1 = %c0) -> (index, index) {
+    affine.yield %arg1, %arg0 : index, index
+  }
+  // CHECK-DAG: %[[zero:.*]] = arith.constant 0
+  // CHECK-DAG: %[[one:.*]] = arith.constant 1
+  // CHECK-DAG: %[[two:.*]] = arith.constant 2
+  // CHECK-NEXT: return %[[one]], %[[two]], %[[zero]], %[[two]]
+  return %res1#0, %res1#1, %res2#0, %res2#1 : index, index, index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @fold_empty_loop_trip_count_0()
+func @fold_empty_loop_trip_count_0() -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %res:2 = affine.for %i = 0 to 0 iter_args(%arg0 = %c2, %arg1 = %c0) -> (index, index) {
+    affine.yield %c1, %arg0 : index, index
+  }
+  // CHECK-DAG: %[[zero:.*]] = arith.constant 0
+  // CHECK-DAG: %[[two:.*]] = arith.constant 2
+  // CHECK-NEXT: return %[[two]], %[[zero]]
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @fold_empty_loop_trip_count_unknown
+func @fold_empty_loop_trip_count_unknown(%in : index) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %res:2 = affine.for %i = 0 to %in iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %arg0, %arg1 : index, index
+  }
+  // CHECK-DAG: %[[zero:.*]] = arith.constant 0
+  // CHECK-DAG: %[[one:.*]] = arith.constant 1
+  // CHECK-NEXT: return %[[zero]], %[[one]]
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @empty_loops_not_folded_1
+func @empty_loops_not_folded_1(%in : index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: affine.for
+  %res = affine.for %i = 0 to %in iter_args(%arg = %c0) -> index {
+    affine.yield %c1 : index
+  }
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL:  func @empty_loops_not_folded_2
+func @empty_loops_not_folded_2(%in : index) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: affine.for
+  %res:2 = affine.for %i = 0 to %in iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %arg1, %arg0 : index, index
+  }
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @empty_loops_not_folded_3
+func @empty_loops_not_folded_3() -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: affine.for
+  %res:2 = affine.for %i = 0 to 10 iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %arg1, %arg0 : index, index
+  }
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
 // CHECK-LABEL:  func @fold_zero_iter_loops
 // CHECK-SAME: %[[ARG:.*]]: index
 func @fold_zero_iter_loops(%in : index) -> index {

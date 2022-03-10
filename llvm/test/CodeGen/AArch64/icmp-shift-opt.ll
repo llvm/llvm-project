@@ -12,8 +12,7 @@ define i128 @opt_setcc_lt_power_of_2(i128 %a) nounwind {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds x0, x0, #1
 ; CHECK-NEXT:    adcs x1, x1, xzr
-; CHECK-NEXT:    orr x8, x0, x1
-; CHECK-NEXT:    extr x8, x1, x8, #60
+; CHECK-NEXT:    orr x8, x1, x0, lsr #60
 ; CHECK-NEXT:    cbnz x8, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -32,8 +31,7 @@ exit:
 define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_srl_eq_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x0, x1
-; CHECK-NEXT:    extr x8, x1, x8, #17
+; CHECK-NEXT:    orr x8, x1, x0, lsr #17
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -45,8 +43,7 @@ define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_srl_ne_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x0, x1
-; CHECK-NEXT:    extr x8, x1, x8, #17
+; CHECK-NEXT:    orr x8, x1, x0, lsr #17
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -58,8 +55,7 @@ define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 define i1 @opt_setcc_shl_eq_zero(i128 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_shl_eq_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x1, x0
-; CHECK-NEXT:    extr x8, x8, x0, #47
+; CHECK-NEXT:    orr x8, x0, x1, lsl #17
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -71,8 +67,7 @@ define i1 @opt_setcc_shl_eq_zero(i128 %a) nounwind {
 define i1 @opt_setcc_shl_ne_zero(i128 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_shl_ne_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x1, x0
-; CHECK-NEXT:    extr x8, x8, x0, #47
+; CHECK-NEXT:    orr x8, x0, x1, lsl #17
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -106,8 +101,7 @@ define i1 @opt_setcc_shl_eq_zero_multiple_shl_users(i128 %a) nounwind {
 define i1 @opt_setcc_expanded_shl_correct_shifts(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: opt_setcc_expanded_shl_correct_shifts:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x0, x1
-; CHECK-NEXT:    extr x8, x8, x1, #47
+; CHECK-NEXT:    orr x8, x1, x0, lsl #17
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret

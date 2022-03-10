@@ -1,5 +1,5 @@
 ; Test unique linkage name decoding and canonicalization from dwarf debug info
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-dwarf.perfscript --binary=%S/Inputs/unique-linkage-name-dwarf.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-dwarf.perfscript --binary=%S/Inputs/unique-linkage-name-dwarf.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-DWARF-FNAME
 
 ; CHECK-DWARF-FNAME:[main:1 @ foo]:309:0
@@ -10,7 +10,7 @@
 
 
 ; Test unique linkage name decoding and canonicalization from pseudo probe info
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-probe.perfscript --binary=%S/Inputs/unique-linkage-name-probe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-probe.perfscript --binary=%S/Inputs/unique-linkage-name-probe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-PROBE-FNAME
 
 ; CHECK-PROBE-FNAME:[main:2 @ foo]:75:0
