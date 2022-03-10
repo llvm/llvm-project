@@ -409,15 +409,33 @@ addCoalescedPolyhedron(SmallVectorImpl<IntegerPolyhedron> &polyhedrons,
   assert(i != j && "The indices must refer to different polyhedra");
 
   unsigned n = polyhedrons.size();
-  polyhedrons[i] = polyhedrons[n - 1];
-  polyhedrons[j] = polyhedrons[n - 2];
-  polyhedrons.pop_back();
-  polyhedrons[n - 2] = poly;
+  if (j == n - 1) {
+    // This case needs special handling since position `n` - 1 is removed from
+    // the vector, hence the `IntegerPolyhedron` at position `n` - 2 is lost
+    // otherwise.
+    polyhedrons[i] = polyhedrons[n - 2];
+    polyhedrons.pop_back();
+    polyhedrons[n - 2] = poly;
 
-  simplices[i] = simplices[n - 1];
-  simplices[j] = simplices[n - 2];
-  simplices.pop_back();
-  simplices[n - 2] = Simplex(poly);
+    simplices[i] = simplices[n - 2];
+    simplices.pop_back();
+    simplices[n - 2] = Simplex(poly);
+
+  } else {
+    // Other possible edge cases are correct since for `j` or `i` == `n` - 2,
+    // the `IntegerPolyhedron` at position `n` - 2 should be lost. The case
+    // `i` == `n` - 1 makes the first following statement a noop. Hence, in this
+    // case the same thing is done as above, but with `j` rather than `i`.
+    polyhedrons[i] = polyhedrons[n - 1];
+    polyhedrons[j] = polyhedrons[n - 2];
+    polyhedrons.pop_back();
+    polyhedrons[n - 2] = poly;
+
+    simplices[i] = simplices[n - 1];
+    simplices[j] = simplices[n - 2];
+    simplices.pop_back();
+    simplices[n - 2] = Simplex(poly);
+  }
 }
 
 /// Given two polyhedra `a` and `b` at positions `i` and `j` in `polyhedrons`
