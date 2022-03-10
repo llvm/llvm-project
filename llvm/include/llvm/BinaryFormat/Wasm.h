@@ -91,7 +91,7 @@ struct WasmTable {
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmInitExpr {
+struct WasmInitExprMVP {
   uint8_t Opcode;
   union {
     int32_t Int32;
@@ -100,6 +100,13 @@ struct WasmInitExpr {
     uint64_t Float64;
     uint32_t Global;
   } Value;
+};
+
+struct WasmInitExpr {
+  uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
+                    // one instruction)
+  WasmInitExprMVP Inst;
+  ArrayRef<uint8_t> Body;
 };
 
 struct WasmGlobalType {
@@ -285,7 +292,11 @@ enum : unsigned {
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
   WASM_OPCODE_I32_ADD = 0x6a,
+  WASM_OPCODE_I32_SUB = 0x6b,
+  WASM_OPCODE_I32_MUL = 0x6c,
   WASM_OPCODE_I64_ADD = 0x7c,
+  WASM_OPCODE_I64_SUB = 0x7d,
+  WASM_OPCODE_I64_MUL = 0x7e,
   WASM_OPCODE_REF_NULL = 0xd0,
 };
 

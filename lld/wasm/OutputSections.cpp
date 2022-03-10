@@ -159,9 +159,10 @@ void DataSection::finalizeContents() {
       writeUleb128(os, 0, "memory index");
     if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       WasmInitExpr initExpr;
+      initExpr.Extended = false;
       if (config->isPic) {
-        initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-        initExpr.Value.Global = WasmSym::memoryBase->getGlobalIndex();
+        initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
+        initExpr.Inst.Value.Global = WasmSym::memoryBase->getGlobalIndex();
       } else {
         initExpr = intConst(segment->startVA, config->is64.getValueOr(false));
       }
