@@ -1409,6 +1409,22 @@ def int_vp_scatter: DefaultAttrsIntrinsic<[],
                                 llvm_i32_ty],
                               [ IntrArgMemOnly, IntrNoSync, IntrWillReturn ]>; // TODO allow IntrNoCapture for vectors of pointers
 
+// Experimental strided memory accesses
+def int_experimental_vp_strided_store : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty,
+                               LLVMPointerToElt<0>,
+                               llvm_anyint_ty, // Stride in bytes
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<1>>, IntrNoSync, IntrWriteMem, IntrArgMemOnly, IntrWillReturn ]>;
+
+def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                             [ LLVMPointerToElt<0>,
+                               llvm_anyint_ty, // Stride in bytes
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
+
 // Speculatable Binary operators
 let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
   def int_vp_add : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
