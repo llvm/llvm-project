@@ -2998,7 +2998,7 @@ bool ResourceManager::canReserveResources(const MCInstrDesc *MID) const {
   if (!SCDesc->isValid()) {
     LLVM_DEBUG({
       dbgs() << "No valid Schedule Class Desc for schedClass!\n";
-      dbgs() << "isPseduo:" << MID->isPseudo() << "\n";
+      dbgs() << "isPseudo:" << MID->isPseudo() << "\n";
     });
     return true;
   }
@@ -3038,7 +3038,7 @@ void ResourceManager::reserveResources(const MCInstrDesc *MID) {
   if (!SCDesc->isValid()) {
     LLVM_DEBUG({
       dbgs() << "No valid Schedule Class Desc for schedClass!\n";
-      dbgs() << "isPseduo:" << MID->isPseudo() << "\n";
+      dbgs() << "isPseudo:" << MID->isPseudo() << "\n";
     });
     return;
   }

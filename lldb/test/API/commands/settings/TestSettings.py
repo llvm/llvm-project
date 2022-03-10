@@ -779,3 +779,13 @@ class SettingsCommandTestCase(TestBase):
         # finally, confirm that trying to set a setting that does not exist still fails.
         # (SHOWING a setting that does not exist does not currently yield an error.)
         self.expect('settings set target.setting-which-does-not-exist true', error=True)
+
+    def test_settings_set_exists(self):
+        cmdinterp = self.dbg.GetCommandInterpreter()
+
+        # An unknown option should succeed.
+        self.expect('settings set -e foo bar')
+        self.expect('settings set --exists foo bar')
+
+        # A known option should fail if its argument is invalid.
+        self.expect("settings set auto-confirm bogus", error=True)

@@ -20,7 +20,7 @@ namespace mlir {
 
 namespace {
 struct TestPadFusionPass
-    : public PassWrapper<TestPadFusionPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestPadFusionPass, OperationPass<>> {
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
@@ -32,11 +32,10 @@ struct TestPadFusionPass
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
-    FuncOp funcOp = getOperation();
     RewritePatternSet patterns(context);
     linalg::populateFuseTensorPadWithProducerLinalgOpPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                            std::move(patterns))))
+    if (failed(
+            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

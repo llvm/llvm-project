@@ -93,7 +93,7 @@
 ; GFX8-NEXT:      - .offset:         220
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_shared_base
-; CHECK-NEXT:      - .address_space:  global
+; CHECK:      - .address_space:  global
 ; CHECK-NEXT:        .offset:         224
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_queue_ptr

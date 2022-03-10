@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
 
 declare i32* @captures(i32* %cap) nounwind readonly
 

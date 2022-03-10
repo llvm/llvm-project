@@ -230,12 +230,11 @@ public:
   /// Create an assumption that \p Idx is less than \p NumElements.
   void CreateIndexAssumption(Value *Idx, unsigned NumElements,
                              Twine const &Name = "") {
-
     Value *NumElts =
         B.getIntN(Idx->getType()->getScalarSizeInBits(), NumElements);
     auto *Cmp = B.CreateICmpULT(Idx, NumElts);
-    if (auto *ConstCond = dyn_cast<ConstantInt>(Cmp))
-      assert(ConstCond->isOne() && "Index must be valid!");
+    if (isa<ConstantInt>(Cmp))
+      assert(cast<ConstantInt>(Cmp)->isOne() && "Index must be valid!");
     else
       B.CreateAssumption(Cmp);
   }
@@ -244,7 +243,6 @@ public:
   /// a matrix with \p NumRows embedded in a vector.
   Value *CreateIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
                      Twine const &Name = "") {
-
     unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
                                  ColumnIdx->getType()->getScalarSizeInBits());
     Type *IntTy = IntegerType::get(RowIdx->getType()->getContext(), MaxWidth);

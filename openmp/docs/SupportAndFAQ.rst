@@ -151,14 +151,17 @@ bugs.
 Q: What are the LLVM components used in offloading and how are they found?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The libraries used by an executable compiled for target offloading are:
+
 - ``libomp.so`` (or similar), the host openmp runtime
 - ``libomptarget.so``, the target-agnostic target offloading openmp runtime
 - plugins loaded by libomptarget.so:
+
   - ``libomptarget.rtl.amdgpu.so``
   - ``libomptarget.rtl.cuda.so``
   - ``libomptarget.rtl.x86_64.so``
   - ``libomptarget.rtl.ve.so``
   - and others
+
 - dependencies of those plugins, e.g. cuda/rocr for nvptx/amdgpu
 
 The compiled executable is dynamically linked against a host runtime, e.g.

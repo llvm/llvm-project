@@ -73,13 +73,12 @@ TEST(OpenMPParsingTest, getProcBindKind) {
 TEST(OpenMPParsingTest, getScheduleKind) {
   EXPECT_EQ(getScheduleKind("foobar"), OMP_SCHEDULE_Default);
 
-  // FIXME: Why are these not lower case?
-  EXPECT_EQ(getScheduleKind("Static"), OMP_SCHEDULE_Static);
-  EXPECT_EQ(getScheduleKind("Dynamic"), OMP_SCHEDULE_Dynamic);
-  EXPECT_EQ(getScheduleKind("Guided"), OMP_SCHEDULE_Guided);
-  EXPECT_EQ(getScheduleKind("Auto"), OMP_SCHEDULE_Auto);
-  EXPECT_EQ(getScheduleKind("Runtime"), OMP_SCHEDULE_Runtime);
-  EXPECT_EQ(getScheduleKind("Default"), OMP_SCHEDULE_Default);
+  EXPECT_EQ(getScheduleKind("static"), OMP_SCHEDULE_Static);
+  EXPECT_EQ(getScheduleKind("dynamic"), OMP_SCHEDULE_Dynamic);
+  EXPECT_EQ(getScheduleKind("guided"), OMP_SCHEDULE_Guided);
+  EXPECT_EQ(getScheduleKind("auto"), OMP_SCHEDULE_Auto);
+  EXPECT_EQ(getScheduleKind("runtime"), OMP_SCHEDULE_Runtime);
+  EXPECT_EQ(getScheduleKind("default"), OMP_SCHEDULE_Default);
 }
 
 } // namespace

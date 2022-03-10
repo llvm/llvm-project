@@ -96,7 +96,7 @@ private:
 
   /// Read info from special sections. E.g. eh_frame and .gcc_except_table
   /// for exception and stack unwinding information.
-  void readSpecialSections();
+  Error readSpecialSections();
 
   /// Adjust supplied command-line options based on input data.
   void adjustCommandLineOptions();
@@ -260,9 +260,9 @@ private:
   void disassemblePLTSectionX86(BinarySection &Section, uint64_t EntrySize);
 
   /// ELF-specific part. TODO: refactor into new class.
-#define ELF_FUNCTION(FUNC)                                                     \
-  template <typename ELFT> void FUNC(object::ELFObjectFile<ELFT> *Obj);        \
-  void FUNC() {                                                                \
+#define ELF_FUNCTION(TYPE, FUNC)                                               \
+  template <typename ELFT> TYPE FUNC(object::ELFObjectFile<ELFT> *Obj);        \
+  TYPE FUNC() {                                                                \
     if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(InputFile))        \
       return FUNC(ELF32LE);                                                    \
     if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(InputFile))        \
@@ -277,25 +277,25 @@ private:
   void patchELFPHDRTable();
 
   /// Create section header table.
-  ELF_FUNCTION(patchELFSectionHeaderTable);
+  ELF_FUNCTION(void, patchELFSectionHeaderTable);
 
   /// Create the regular symbol table and patch dyn symbol tables.
-  ELF_FUNCTION(patchELFSymTabs);
+  ELF_FUNCTION(void, patchELFSymTabs);
 
   /// Read dynamic section/segment of ELF.
-  ELF_FUNCTION(readELFDynamic);
+  ELF_FUNCTION(Error, readELFDynamic);
 
   /// Patch dynamic section/segment of ELF.
-  ELF_FUNCTION(patchELFDynamic);
+  ELF_FUNCTION(void, patchELFDynamic);
 
   /// Patch .got
-  ELF_FUNCTION(patchELFGOT);
+  ELF_FUNCTION(void, patchELFGOT);
 
   /// Patch allocatable relocation sections.
-  ELF_FUNCTION(patchELFAllocatableRelaSections);
+  ELF_FUNCTION(void, patchELFAllocatableRelaSections);
 
   /// Finalize memory image of section header string table.
-  ELF_FUNCTION(finalizeSectionStringTable);
+  ELF_FUNCTION(void, finalizeSectionStringTable);
 
   /// Return a name of the input file section in the output file.
   template <typename ELFObjType, typename ELFShdrTy>
@@ -498,7 +498,8 @@ private:
   };
 
   /// AArch64 PLT sections.
-  const PLTSectionInfo AArch64_PLTSections[2] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo AArch64_PLTSections[3] = {
+      {".plt"}, {".iplt"}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.

@@ -20,7 +20,7 @@
 ; V9:       ret
 ; V9-NEXT:  restore
 
-define void @test() nounwind {
+define void @test() #0 {
 entry:
  %0 = tail call i32 (...) @foo() nounwind
  tail call void (...) @bar() nounwind
@@ -31,13 +31,10 @@ declare i32 @foo(...)
 
 declare void @bar(...)
 
-
 ; V8-LABEL: test_tail_call_with_return
-; V8:       save %sp
-; V8:       call foo
-; V8-NEXT:  nop
-; V8:       ret
-; V8-NEXT:  restore %g0, %o0, %o0
+; V8:       mov %o7, %g1
+; V8-NEXT:  call foo
+; V8-NEXT:  mov %g1, %o7
 
 ; V9-LABEL: test_tail_call_with_return
 ; V9:       save %sp
@@ -51,3 +48,5 @@ entry:
  %0 = tail call i32 (...) @foo() nounwind
  ret i32 %0
 }
+
+attributes #0 = { nounwind "disable-tail-calls"="true" }

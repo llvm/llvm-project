@@ -108,6 +108,16 @@ fir::MutableBoxValue createMutableBox(mlir::Location loc,
                                       AbstractConverter &converter,
                                       const SomeExpr &expr, SymMap &symMap);
 
+/// Create a fir::BoxValue describing the value of \p expr.
+/// If \p expr is a variable without vector subscripts, the fir::BoxValue
+/// described the variable storage. Otherwise, the created fir::BoxValue
+/// describes a temporary storage containing \p expr evaluation, and clean-up
+/// for the temporary is added to the provided StatementContext \p stmtCtx.
+fir::ExtendedValue createBoxValue(mlir::Location loc,
+                                  AbstractConverter &converter,
+                                  const SomeExpr &expr, SymMap &symMap,
+                                  StatementContext &stmtCtx);
+
 /// Lower an array assignment expression.
 ///
 /// 1. Evaluate the lhs to determine the rank and how to form the ArrayLoad
@@ -139,6 +149,13 @@ void createAllocatableArrayAssignment(AbstractConverter &converter,
                                       ImplicitIterSpace &implicitIterSpace,
                                       SymMap &symMap,
                                       StatementContext &stmtCtx);
+
+/// Lower an array expression with "parallel" semantics. Such a rhs expression
+/// is fully evaluated prior to being assigned back to a temporary array.
+fir::ExtendedValue createSomeArrayTempValue(AbstractConverter &converter,
+                                            const SomeExpr &expr,
+                                            SymMap &symMap,
+                                            StatementContext &stmtCtx);
 
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to

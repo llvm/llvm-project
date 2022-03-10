@@ -193,12 +193,12 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
            dimension == mlir::cast<fir::ShapeOp>(shapeVal.getDefiningOp())
                             .getType()
                             .getRank());
-    auto one = builder.template create<arith::ConstantIndexOp>(loc, 1);
+    auto one = builder.template create<mlir::arith::ConstantIndexOp>(loc, 1);
     for (auto i : llvm::enumerate(indices)) {
       if (i.index() < dimension) {
         assert(fir::isa_integer(i.value().getType()));
         result.push_back(
-            builder.template create<arith::AddIOp>(loc, i.value(), one));
+            builder.template create<mlir::arith::AddIOp>(loc, i.value(), one));
       } else {
         result.push_back(i.value());
       }
@@ -209,7 +209,7 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
   unsigned origOff = 0;
   for (auto i : llvm::enumerate(indices)) {
     if (i.index() < dimension)
-      result.push_back(builder.template create<arith::AddIOp>(
+      result.push_back(builder.template create<mlir::arith::AddIOp>(
           loc, i.value(), origins[origOff++]));
     else
       result.push_back(i.value());

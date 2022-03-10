@@ -26,7 +26,7 @@ define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ;
 ; GFX9-LABEL: is_private_vgpr:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc
@@ -40,7 +40,7 @@ define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ;
 ; GFX10-LABEL: is_private_vgpr:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc dlc
@@ -79,7 +79,7 @@ define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
 ;
 ; GFX9-LABEL: is_private_sgpr:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
@@ -94,7 +94,7 @@ define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
 ;
 ; GFX10-LABEL: is_private_sgpr:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 16

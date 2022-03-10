@@ -104,7 +104,7 @@ static_assert(test(std::ranges::max_element, a));
 static_assert(test(std::ranges::min_element, a));
 //static_assert(test(std::ranges::minmax, a));
 //static_assert(test(std::ranges::minmax_element, a));
-//static_assert(test(std::ranges::mismatch, a, a));
+static_assert(test(std::ranges::mismatch, a, a));
 //static_assert(test(std::ranges::move, a, a));
 //static_assert(test(std::ranges::move_backward, a, a));
 //static_assert(test(std::ranges::next_permutation, a));

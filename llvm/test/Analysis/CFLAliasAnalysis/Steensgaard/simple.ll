@@ -1,7 +1,7 @@
 ; This testcase consists of alias relations which should be completely
 ; resolvable by cfl-steens-aa (derived from BasicAA/2003-11-04-SimpleCases.ll).
 
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 %T = type { i32, [10 x i8] }
 

@@ -5,47 +5,47 @@
 ; CHECK-LABEL: define void @f(
 ; CHECK:       coro.init:
 ; CHECK:        %[[begin:.*]] = call noalias nonnull i8* @llvm.coro.begin(
+; CHECK:        call void @llvm.dbg.declare(metadata i8* %[[begin]], metadata ![[CORO_FRAME:[0-9]+]], metadata !DIExpression())
 ; CHECK:        %[[FramePtr:.*]] = bitcast i8* %[[begin]] to
-; CHECK:        call void @llvm.dbg.declare(metadata %f.Frame* %[[FramePtr]], metadata ![[CORO_FRAME:[0-9]+]], metadata !DIExpression())
 ;
 ; CHECK:       define internal fastcc void @f.resume(
 ; CHECK:       entry.resume:
 ; CHECK:            call void @llvm.dbg.declare(metadata %f.Frame** %[[FramePtr_RESUME:.*]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression()
 ;
-; CHECK: ![[FILE:[0-9]+]] = !DIFile(filename: "coro-debug.cpp"
-; CHECK: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",
-; CHECK: ![[RAMP_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[RAMP]], file: ![[FILE]], line: 23
-; CHECK: ![[CORO_FRAME]] = !DILocalVariable(name: "__coro_frame", scope: ![[RAMP_SCOPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE:[0-9]+]], type: ![[FRAME_TYPE:[0-9]+]], flags: DIFlagArtificial)
-; CHECK: ![[FRAME_TYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__coro_frame_ty", scope: ![[RAMP]], {{.*}}elements: ![[ELEMENTS:[0-9]+]]
-; CHECK: ![[ELEMENTS]] = !{![[RESUME_FN:[0-9]+]], ![[DESTROY_FN:[0-9]+]], ![[PROMISE:[0-9]+]], ![[INT64_0:[0-9]+]], ![[DOUBLE_1:[0-9]+]], ![[INT32_2:[0-9]+]], ![[INT32_3:[0-9]+]], ![[STRUCT_4:[0-9]+]], ![[CORO_INDEX:[0-9]+]]
-; CHECK: ![[RESUME_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__resume_fn"{{.*}}, flags: DIFlagArtificial
-; CHECK: ![[DESTROY_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__destroy_fn"{{.*}}, flags: DIFlagArtificial
-; CHECK: ![[PROMISE]] = !DIDerivedType(tag: DW_TAG_member, name: "__promise",{{.*}}baseType: ![[PROMISE_BASE:[0-9]+]]
-; CHECK: ![[PROMISE_BASE]] = !DIDerivedType(tag: DW_TAG_typedef, name: "promise_type"
-; CHECK: ![[INT64_0]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_0", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I64_BASE:[0-9]+]],{{.*}}, flags: DIFlagArtificial
-; CHECK: ![[I64_BASE]] = !DIBasicType(name: "__int_64", size: 64, encoding: DW_ATE_signed, flags: DIFlagArtificial)
-; CHECK: ![[DOUBLE_1]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__1", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[DOUBLE_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
-; CHECK: ![[DOUBLE_BASE]] = !DIBasicType(name: "__double_", size: 64, encoding: DW_ATE_float, flags: DIFlagArtificial)
-; CHECK: ![[INT32_2]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_2", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
-; CHECK: ![[I32_BASE]] = !DIBasicType(name: "__int_32", size: 32, encoding: DW_ATE_signed, flags: DIFlagArtificial)
-; CHECK: ![[INT32_3]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_3", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE]]
-; CHECK: ![[STRUCT_4]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_4", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
-; CHECK: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}elements: ![[STRUCT_ELEMENTS:[0-9]+]]
-; CHECK: ![[STRUCT_ELEMENTS]] = !{![[MEM_TYPE:[0-9]+]]}
-; CHECK: ![[MEM_TYPE]] = !DIDerivedType(tag: DW_TAG_member, name: "UnknownType_4000"
-; CHECK: ![[CORO_INDEX]] = !DIDerivedType(tag: DW_TAG_member, name: "__coro_index"
-; CHECK: ![[PROMISE_VAR:[0-9]+]] = !DILocalVariable(name: "__promise", scope: ![[RAMP_SCOPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]]
-; CHECK: ![[BAR_FUNC:[0-9]+]] = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv",
-; CHECK: ![[BAR_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[BAR_FUNC]], file: !1
-; CHECK: ![[FRAME_TYPE_IN_BAR:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__coro_frame_ty", scope: ![[BAR_FUNC]], file: ![[FILE]], line: [[BAR_LINE:[0-9]+]]{{.*}}elements: ![[ELEMENTS_IN_BAR:[0-9]+]]
-; CHECK: ![[ELEMENTS_IN_BAR]] = !{![[RESUME_FN_IN_BAR:[0-9]+]], ![[DESTROY_FN_IN_BAR:[0-9]+]], ![[PROMISE_IN_BAR:[0-9]+]], ![[INT64_0_IN_BAR:[0-9]+]], ![[DOUBLE_1_IN_BAR:[0-9]+]], ![[INT32_2_IN_BAR:[0-9]+]], ![[STRUCT_3_IN_BAR:[0-9]+]], ![[CORO_INDEX_IN_BAR:[0-9]+]]
-; CHECK: ![[PROMISE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__promise",{{.*}}baseType: ![[PROMISE_BASE]]
-; CHECK: ![[INT64_0_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_0", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I64_BASE]]
-; CHECK: ![[DOUBLE_1_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__1", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[DOUBLE_BASE]]
-; CHECK: ![[INT32_2_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_2", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I32_BASE]]
-; CHECK: ![[STRUCT_3_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_3", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[STRUCT_BASE_IN_BAR:[0-9]+]]
-; CHECK: ![[STRUCT_BASE_IN_BAR]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]],{{.*}}
-; CHECK: ![[CORO_FRAME_IN_RESUME]] = !DILocalVariable(name: "__coro_frame",{{.*}}type: ![[FRAME_TYPE]]
+; CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "coro-debug.cpp"
+; CHECK-DAG: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",
+; CHECK-DAG: ![[RAMP_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[RAMP]], file: ![[FILE]], line: 23
+; CHECK-DAG: ![[CORO_FRAME]] = !DILocalVariable(name: "__coro_frame", scope: ![[RAMP_SCOPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE:[0-9]+]], type: ![[FRAME_TYPE:[0-9]+]], flags: DIFlagArtificial)
+; CHECK-DAG: ![[FRAME_TYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__coro_frame_ty", scope: ![[RAMP]], {{.*}}elements: ![[ELEMENTS:[0-9]+]]
+; CHECK-DAG: ![[ELEMENTS]] = !{![[RESUME_FN:[0-9]+]], ![[DESTROY_FN:[0-9]+]], ![[PROMISE:[0-9]+]], ![[INT64_0:[0-9]+]], ![[DOUBLE_1:[0-9]+]], ![[INT32_2:[0-9]+]], ![[INT32_3:[0-9]+]], ![[STRUCT_4:[0-9]+]], ![[CORO_INDEX:[0-9]+]]
+; CHECK-DAG: ![[RESUME_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__resume_fn"{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[DESTROY_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__destroy_fn"{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[PROMISE]] = !DIDerivedType(tag: DW_TAG_member, name: "__promise",{{.*}}baseType: ![[PROMISE_BASE:[0-9]+]]
+; CHECK-DAG: ![[PROMISE_BASE]] = !DIDerivedType(tag: DW_TAG_typedef, name: "promise_type"
+; CHECK-DAG: ![[INT64_0]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_0", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I64_BASE:[0-9]+]],{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[I64_BASE]] = !DIBasicType(name: "__int_64", size: 64, encoding: DW_ATE_signed, flags: DIFlagArtificial)
+; CHECK-DAG: ![[DOUBLE_1]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__1", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[DOUBLE_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[DOUBLE_BASE]] = !DIBasicType(name: "__double_", size: 64, encoding: DW_ATE_float, flags: DIFlagArtificial)
+; CHECK-DAG: ![[INT32_2]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_2", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[I32_BASE]] = !DIBasicType(name: "__int_32", size: 32, encoding: DW_ATE_signed, flags: DIFlagArtificial)
+; CHECK-DAG: ![[INT32_3]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_3", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE]]
+; CHECK-DAG: ![[STRUCT_4]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_4", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
+; CHECK-DAG: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}elements: ![[STRUCT_ELEMENTS:[0-9]+]]
+; CHECK-DAG: ![[STRUCT_ELEMENTS]] = !{![[MEM_TYPE:[0-9]+]]}
+; CHECK-DAG: ![[MEM_TYPE]] = !DIDerivedType(tag: DW_TAG_member, name: "UnknownType_4000"
+; CHECK-DAG: ![[CORO_INDEX]] = !DIDerivedType(tag: DW_TAG_member, name: "__coro_index"
+; CHECK-DAG: ![[PROMISE_VAR:[0-9]+]] = !DILocalVariable(name: "__promise", scope: ![[RAMP_SCOPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]]
+; CHECK-DAG: ![[BAR_FUNC:[0-9]+]] = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv",
+; CHECK-DAG: ![[BAR_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[BAR_FUNC]], file: !1
+; CHECK-DAG: ![[FRAME_TYPE_IN_BAR:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__coro_frame_ty", scope: ![[BAR_FUNC]], file: ![[FILE]], line: [[BAR_LINE:[0-9]+]]{{.*}}elements: ![[ELEMENTS_IN_BAR:[0-9]+]]
+; CHECK-DAG: ![[ELEMENTS_IN_BAR]] = !{![[RESUME_FN_IN_BAR:[0-9]+]], ![[DESTROY_FN_IN_BAR:[0-9]+]], ![[PROMISE_IN_BAR:[0-9]+]], ![[INT64_0_IN_BAR:[0-9]+]], ![[DOUBLE_1_IN_BAR:[0-9]+]], ![[INT32_2_IN_BAR:[0-9]+]], ![[STRUCT_3_IN_BAR:[0-9]+]], ![[CORO_INDEX_IN_BAR:[0-9]+]]
+; CHECK-DAG: ![[PROMISE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__promise",{{.*}}baseType: ![[PROMISE_BASE]]
+; CHECK-DAG: ![[INT64_0_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_0", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I64_BASE]]
+; CHECK-DAG: ![[DOUBLE_1_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__1", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[DOUBLE_BASE]]
+; CHECK-DAG: ![[INT32_2_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_2", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I32_BASE]]
+; CHECK-DAG: ![[STRUCT_3_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_3", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[STRUCT_BASE_IN_BAR:[0-9]+]]
+; CHECK-DAG: ![[STRUCT_BASE_IN_BAR]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]],{{.*}}
+; CHECK-DAG: ![[CORO_FRAME_IN_RESUME]] = !DILocalVariable(name: "__coro_frame",{{.*}}type: ![[FRAME_TYPE]]
 
 
 %promise_type = type { i32, i32, double }

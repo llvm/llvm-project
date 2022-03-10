@@ -12,9 +12,7 @@ define i64 @opt_setcc_lt_power_of_2(i64 %a) nounwind {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r0, r0, #1
 ; CHECK-NEXT:    adc r1, r1, #0
-; CHECK-NEXT:    orr r2, r0, r1
-; CHECK-NEXT:    uxth r3, r1
-; CHECK-NEXT:    orr r2, r3, r2, lsr #16
+; CHECK-NEXT:    orr r2, r1, r0, lsr #16
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %exit
@@ -34,9 +32,7 @@ exit:
 define i1 @opt_setcc_srl_eq_zero(i64 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_srl_eq_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    orr r0, r0, r1
-; CHECK-NEXT:    lsr r0, r0, #17
-; CHECK-NEXT:    orr r0, r0, r1, lsl #15
+; CHECK-NEXT:    orr r0, r1, r0, lsr #17
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -48,9 +44,7 @@ define i1 @opt_setcc_srl_eq_zero(i64 %a) nounwind {
 define i1 @opt_setcc_srl_ne_zero(i64 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_srl_ne_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    orr r0, r0, r1
-; CHECK-NEXT:    lsr r0, r0, #17
-; CHECK-NEXT:    orr r0, r0, r1, lsl #15
+; CHECK-NEXT:    orr r0, r1, r0, lsr #17
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    movwne r0, #1
 ; CHECK-NEXT:    bx lr
@@ -62,9 +56,7 @@ define i1 @opt_setcc_srl_ne_zero(i64 %a) nounwind {
 define i1 @opt_setcc_shl_eq_zero(i64 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_shl_eq_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    orr r1, r1, r0
-; CHECK-NEXT:    lsl r1, r1, #17
-; CHECK-NEXT:    orr r0, r1, r0, lsr #15
+; CHECK-NEXT:    orr r0, r0, r1, lsl #17
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -76,9 +68,7 @@ define i1 @opt_setcc_shl_eq_zero(i64 %a) nounwind {
 define i1 @opt_setcc_shl_ne_zero(i64 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_shl_ne_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    orr r1, r1, r0
-; CHECK-NEXT:    lsl r1, r1, #17
-; CHECK-NEXT:    orr r0, r1, r0, lsr #15
+; CHECK-NEXT:    orr r0, r0, r1, lsl #17
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    movwne r0, #1
 ; CHECK-NEXT:    bx lr
@@ -113,9 +103,7 @@ define i1 @opt_setcc_shl_eq_zero_multiple_shl_users(i64 %a) nounwind {
 define i1 @opt_setcc_expanded_shl_correct_shifts(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: opt_setcc_expanded_shl_correct_shifts:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    orr r0, r0, r1
-; CHECK-NEXT:    lsl r0, r0, #17
-; CHECK-NEXT:    orr r0, r0, r1, lsr #15
+; CHECK-NEXT:    orr r0, r1, r0, lsl #17
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr

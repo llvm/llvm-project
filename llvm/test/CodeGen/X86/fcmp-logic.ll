@@ -6,11 +6,11 @@
 define i1 @olt_ole_and_f32(float %w, float %x, float %y, float %z) {
 ; SSE2-LABEL: olt_ole_and_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    ucomiss %xmm0, %xmm1
-; SSE2-NEXT:    seta %cl
-; SSE2-NEXT:    ucomiss %xmm2, %xmm3
-; SSE2-NEXT:    setae %al
-; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    cmpleps %xmm3, %xmm2
+; SSE2-NEXT:    cmpltps %xmm1, %xmm0
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: olt_ole_and_f32:
@@ -43,13 +43,11 @@ define i1 @olt_ole_and_f32(float %w, float %x, float %y, float %z) {
 define i1 @oge_oeq_or_f32(float %w, float %x, float %y, float %z) {
 ; SSE2-LABEL: oge_oeq_or_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    ucomiss %xmm1, %xmm0
-; SSE2-NEXT:    setae %cl
-; SSE2-NEXT:    ucomiss %xmm3, %xmm2
-; SSE2-NEXT:    setnp %dl
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    andb %dl, %al
-; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    cmpeqps %xmm3, %xmm2
+; SSE2-NEXT:    cmpleps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm2, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: oge_oeq_or_f32:
@@ -121,13 +119,11 @@ define i1 @ord_one_xor_f32(float %w, float %x, float %y, float %z) {
 define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: une_ugt_and_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    ucomisd %xmm1, %xmm0
-; SSE2-NEXT:    setp %al
-; SSE2-NEXT:    setne %cl
-; SSE2-NEXT:    orb %al, %cl
-; SSE2-NEXT:    ucomisd %xmm2, %xmm3
-; SSE2-NEXT:    setb %al
-; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    cmpnlepd %xmm3, %xmm2
+; SSE2-NEXT:    cmpneqpd %xmm1, %xmm0
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: une_ugt_and_f64:
@@ -160,11 +156,11 @@ define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 define i1 @ult_uge_or_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: ult_uge_or_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    ucomisd %xmm1, %xmm0
-; SSE2-NEXT:    setb %cl
-; SSE2-NEXT:    ucomisd %xmm2, %xmm3
-; SSE2-NEXT:    setbe %al
-; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    cmpnltpd %xmm3, %xmm2
+; SSE2-NEXT:    cmpnlepd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm2, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: ult_uge_or_f64:
@@ -198,13 +194,11 @@ define i1 @ult_uge_or_f64(double %w, double %x, double %y, double %z) {
 define i1 @une_uno_xor_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: une_uno_xor_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    ucomisd %xmm1, %xmm0
-; SSE2-NEXT:    setp %al
-; SSE2-NEXT:    setne %cl
-; SSE2-NEXT:    orb %al, %cl
-; SSE2-NEXT:    ucomisd %xmm3, %xmm2
-; SSE2-NEXT:    setp %al
-; SSE2-NEXT:    xorb %cl, %al
+; SSE2-NEXT:    cmpunordpd %xmm3, %xmm2
+; SSE2-NEXT:    cmpneqpd %xmm1, %xmm0
+; SSE2-NEXT:    xorpd %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: une_uno_xor_f64:
@@ -337,11 +331,11 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ; SSE2-LABEL: f32cmp3:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm4, %xmm4
-; SSE2-NEXT:    ucomiss %xmm4, %xmm0
-; SSE2-NEXT:    seta %al
-; SSE2-NEXT:    ucomiss %xmm4, %xmm1
-; SSE2-NEXT:    seta %cl
-; SSE2-NEXT:    orb %al, %cl
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    cmpltps %xmm1, %xmm5
+; SSE2-NEXT:    cmpltps %xmm0, %xmm4
+; SSE2-NEXT:    orps %xmm5, %xmm4
+; SSE2-NEXT:    movd %xmm4, %ecx
 ; SSE2-NEXT:    ucomiss %xmm2, %xmm3
 ; SSE2-NEXT:    seta %al
 ; SSE2-NEXT:    xorb %cl, %al

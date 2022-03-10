@@ -3651,6 +3651,8 @@ WebAssembly
 
 .. option:: -mtail-call, -mno-tail-call
 
+.. option:: -mextended-const, -mno-extended-const
+
 WebAssembly Driver
 ------------------
 .. option:: -mexec-model=<arg>

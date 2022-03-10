@@ -355,6 +355,18 @@ public:
     IsScopedEnumerationType ();
 
     %feature("docstring",
+    "Returns true if this type is an aggregate type.
+
+    Language-specific behaviour:
+
+    * C: Returns true for struct values, arrays, and vectors.
+    * C++: Same a C. Also includes class instances.
+    * Objective-C: Same as C. Also includes class instances.
+    ") IsAggregateType;
+    bool
+    IsAggregateType ();
+
+    %feature("docstring",
     "Returns a type that represents a pointer to this type.
 
     If the type system of the current language can't represent a pointer to this

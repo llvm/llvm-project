@@ -279,13 +279,23 @@ def test_tensor_copy():
   A.insert([1, 2], 6.0)
   B = mlir_pytaco.Tensor([I, J])
   B[i, j] = A[i, j]
+  passed = (B._assignment is not None)
+  passed += (B._engine is None)
+  try:
+    B.compute()
+  except ValueError as e:
+    passed += (str(e).startswith("Need to invoke compile"))
+  B.compile()
+  passed += (B._engine is not None)
+  B.compute()
+  passed += (B._assignment is None)
+  passed += (B._engine is None)
   indices, values = B.get_coordinates_and_values()
-  passed = np.array_equal(indices, [[0, 1], [1, 2]])
+  passed += np.array_equal(indices, [[0, 1], [1, 2]])
   passed += np.allclose(values, [5.0, 6.0])
   # No temporary tensor is used.
   passed += (B._stats.get_total() == 0)
-
-  # CHECK: Number of passed: 3
+  # CHECK: Number of passed: 9
   print("Number of passed:", passed)
 
 

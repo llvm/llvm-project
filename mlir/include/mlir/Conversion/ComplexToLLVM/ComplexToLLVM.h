@@ -12,9 +12,7 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class ModuleOp;
-template <typename T>
-class OperationPass;
+class Pass;
 class RewritePatternSet;
 
 class ComplexStructBuilder : public StructBuilder {
@@ -41,7 +39,7 @@ void populateComplexToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns);
 
 /// Create a pass to convert Complex operations to the LLVMIR dialect.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertComplexToLLVMPass();
+std::unique_ptr<Pass> createConvertComplexToLLVMPass();
 
 } // namespace mlir
 

@@ -118,8 +118,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       std::vector<char> Dep;
       Instruction *Src = cast<Instruction>(*I);
       Instruction *Dst = cast<Instruction>(*J);
-      if (Src == Dst)
-        continue;
       // Ignore Input dependencies.
       if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
         continue;

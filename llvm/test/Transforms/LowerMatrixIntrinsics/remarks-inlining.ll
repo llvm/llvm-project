@@ -2,7 +2,7 @@
 
 ; This test needs to be target specific due to the cost estimate in the output.
 
-; RUN: opt -lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos -S < %s 2>&1 | FileCheck  %s
+; RUN: opt -passes=lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos -S < %s 2>&1 | FileCheck  %s
 
 ; Test the propagation of matrix expressions along to inlined-at chain. The IR
 ; in the test roughly corresponds to the C++ code below, with the IR containing

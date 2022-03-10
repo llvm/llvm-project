@@ -23,12 +23,18 @@ namespace {
 namespace mlir {
 namespace spirv {
 void populateSPIRVGLSLCanonicalizationPatterns(RewritePatternSet &results) {
-  results.add<ConvertComparisonIntoClampSPV_FOrdLessThanOp,
-              ConvertComparisonIntoClampSPV_FOrdLessThanEqualOp,
-              ConvertComparisonIntoClampSPV_SLessThanOp,
-              ConvertComparisonIntoClampSPV_SLessThanEqualOp,
-              ConvertComparisonIntoClampSPV_ULessThanOp,
-              ConvertComparisonIntoClampSPV_ULessThanEqualOp>(
+  results.add<ConvertComparisonIntoClamp1_SPV_FOrdLessThanOp,
+              ConvertComparisonIntoClamp1_SPV_FOrdLessThanEqualOp,
+              ConvertComparisonIntoClamp1_SPV_SLessThanOp,
+              ConvertComparisonIntoClamp1_SPV_SLessThanEqualOp,
+              ConvertComparisonIntoClamp1_SPV_ULessThanOp,
+              ConvertComparisonIntoClamp1_SPV_ULessThanEqualOp,
+              ConvertComparisonIntoClamp2_SPV_FOrdLessThanOp,
+              ConvertComparisonIntoClamp2_SPV_FOrdLessThanEqualOp,
+              ConvertComparisonIntoClamp2_SPV_SLessThanOp,
+              ConvertComparisonIntoClamp2_SPV_SLessThanEqualOp,
+              ConvertComparisonIntoClamp2_SPV_ULessThanOp,
+              ConvertComparisonIntoClamp2_SPV_ULessThanEqualOp>(
       results.getContext());
 }
 } // namespace spirv

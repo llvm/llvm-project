@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___ALGORITHM_COMP_REF_TYPE_H
 #define _LIBCPP___ALGORITHM_COMP_REF_TYPE_H
 
-#include <__assert>
 #include <__config>
 #include <__debug>
 #include <__utility/declval.h>
@@ -53,7 +52,7 @@ struct __debug_less
     decltype((void)declval<_Compare&>()(
         declval<_LHS &>(), declval<_RHS &>()))
     __do_compare_assert(int, _LHS & __l, _RHS & __r) {
-        _LIBCPP_ASSERT(!__comp_(__l, __r),
+        _LIBCPP_DEBUG_ASSERT(!__comp_(__l, __r),
             "Comparator does not induce a strict weak ordering");
         (void)__l;
         (void)__r;
@@ -69,10 +68,10 @@ template <class _Comp>
 struct __comp_ref_type {
   // Pass the comparator by lvalue reference. Or in debug mode, using a
   // debugging wrapper that stores a reference.
-#if _LIBCPP_DEBUG_LEVEL == 0
-  typedef _Comp& type;
-#else
+#if _LIBCPP_DEBUG_LEVEL == 2
   typedef __debug_less<_Comp> type;
+#else
+  typedef _Comp& type;
 #endif
 };
 

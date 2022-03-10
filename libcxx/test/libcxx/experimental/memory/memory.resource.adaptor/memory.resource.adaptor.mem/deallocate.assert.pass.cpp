@@ -14,11 +14,10 @@
 
 // T* polymorphic_allocator<T>::deallocate(T*, size_t size)
 
-int AssertCount = 0;
+// UNSUPPORTED: libcxx-no-debug-mode
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : (void)::AssertCount++)
-#define _LIBCPP_DEBUG 0
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>
@@ -26,21 +25,23 @@ int AssertCount = 0;
 #include "test_memory_resource.h"
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 namespace ex = std::experimental::pmr;
 
 int main(int, char**)
 {
-    using Alloc = ex::polymorphic_allocator<int>;
-    using Traits = std::allocator_traits<Alloc>;
-    NullResource R;
-    Alloc a(&R);
-    const std::size_t maxSize = Traits::max_size(a);
+    using Alloc = NullAllocator<char>;
 
-    a.deallocate(nullptr, maxSize);
-    assert(AssertCount == 0);
-    a.deallocate(nullptr, maxSize + 1);
-    assert(AssertCount == 1);
+    AllocController P;
+    ex::resource_adaptor<Alloc> r(Alloc{P});
+    ex::memory_resource & m1 = r;
 
-  return 0;
+    std::size_t maxSize = std::numeric_limits<std::size_t>::max()
+                            - alignof(std::max_align_t);
+
+    m1.deallocate(nullptr, maxSize); // no assertion
+    TEST_LIBCPP_ASSERT_FAILURE(m1.deallocate(nullptr, maxSize + 1), "do_deallocate called for size which exceeds the maximum allocation size");
+
+    return 0;
 }

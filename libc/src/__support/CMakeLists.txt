@@ -23,7 +23,7 @@ add_header_library(
     .ctype_utils
     libc.include.errno
     libc.src.errno.errno
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.limits
 )
 
 add_header_library(
@@ -44,7 +44,7 @@ add_header_library(
     .high_precision_decimal
     libc.include.errno
     libc.src.errno.errno
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fputil
 )
 
