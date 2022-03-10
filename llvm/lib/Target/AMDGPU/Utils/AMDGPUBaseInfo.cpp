@@ -163,6 +163,13 @@ unsigned getHeapPtrImplicitArgPosition() {
   return 0;
 }
 
+unsigned getQueuePtrImplicitArgPosition() {
+  if (AmdhsaCodeObjectVersion == 5)
+    return 200;
+  llvm_unreachable("queue_ptr is supported only by code object version 5");
+  return 0;
+}
+
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
 #define GET_MIMGInfoTable_IMPL
