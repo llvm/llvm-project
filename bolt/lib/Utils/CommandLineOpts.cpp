@@ -42,6 +42,11 @@ AlignText("align-text",
   cl::Hidden,
   cl::cat(BoltCategory));
 
+cl::opt<unsigned> AlignFunctions(
+    "align-functions",
+    cl::desc("align functions at a given value (relocation mode)"),
+    cl::init(64), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
 cl::opt<bool>
 AggregateOnly("aggregate-only",
   cl::desc("exit after writing aggregated data file"),

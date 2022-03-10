@@ -291,6 +291,12 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
   BC.Ctx->addGenDwarfSection(Section);
 
   if (BC.HasRelocations) {
+    // Set section alignment to at least maximum possible object alignment.
+    // We need this to support LongJmp and other passes that calculates
+    // tentative layout.
+    if (Section->getAlignment() < opts::AlignFunctions)
+      Section->setAlignment(Align(opts::AlignFunctions));
+
     Streamer.emitCodeAlignment(BinaryFunction::MinAlign, &*BC.STI);
     uint16_t MaxAlignBytes = EmitColdPart ? Function.getMaxColdAlignmentBytes()
                                           : Function.getMaxAlignmentBytes();
