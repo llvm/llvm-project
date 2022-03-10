@@ -20,6 +20,7 @@
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
@@ -1200,8 +1201,15 @@ private:
     TODO(toLocation(), "OpenACCDeclarativeConstruct lowering");
   }
 
-  void genFIR(const Fortran::parser::OpenMPConstruct &) {
-    TODO(toLocation(), "OpenMPConstruct lowering");
+  void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
+    localSymbols.pushScope();
+    Fortran::lower::genOpenMPConstruct(*this, getEval(), omp);
+
+    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
+      genFIR(e);
+    localSymbols.popScope();
+    builder->restoreInsertionPoint(insertPt);
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &) {
