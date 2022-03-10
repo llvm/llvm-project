@@ -135,6 +135,19 @@ void createSomeArrayAssignment(AbstractConverter &converter,
                                const SomeExpr &lhs, const SomeExpr &rhs,
                                SymMap &symMap, StatementContext &stmtCtx);
 
+/// Lower an array assignment expression with a pre-evaluated left hand side.
+///
+/// 1. Scan the rhs, creating the ArrayLoads and evaluate the scalar subparts to
+/// be added to the map.
+/// 2. Create the loop nest and evaluate the elemental expression, threading the
+/// results.
+/// 3. Copy the resulting array back with ArrayMergeStore to the lhs as
+/// determined per step 1.
+void createSomeArrayAssignment(AbstractConverter &converter,
+                               const fir::ExtendedValue &lhs,
+                               const SomeExpr &rhs, SymMap &symMap,
+                               StatementContext &stmtCtx);
+
 /// Lower an array assignment expression with pre-evaluated left and right
 /// hand sides. This implements an array copy taking into account
 /// non-contiguity and potential overlaps.
