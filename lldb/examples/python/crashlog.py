@@ -267,7 +267,7 @@ class CrashLog(symbolication.Symbolicator):
             self.resolved = True
             uuid_str = self.get_normalized_uuid_string()
             if self.show_symbol_progress():
-                print('Getting symbols for %s %s...' % (uuid_str, self.path), end=' ')
+                print('Getting symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
@@ -317,7 +317,7 @@ class CrashLog(symbolication.Symbolicator):
                     pass
             if (self.resolved_path and os.path.exists(self.resolved_path)) or (
                     self.path and os.path.exists(self.path)):
-                print('ok')
+                print('Resolved symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
                 return True
             else:
                 self.unavailable = True
