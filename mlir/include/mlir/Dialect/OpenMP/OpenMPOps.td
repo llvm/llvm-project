@@ -650,6 +650,15 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
     atomic. Generally the region must have only one instruction, but can
     potentially have more than one instructions too. The update is sematically
     similar to a compare-exchange loop based atomic update.
+
+    The syntax of atomic update operation is different from atomic read and
+    atomic write operations. This is because only the host dialect knows how to
+    appropriately update a value. For example, while generating LLVM IR, if
+    there are no special `atomicrmw` instructions for the operation-type
+    combination in atomic update, a compare-exchange loop is generated, where
+    the core update operation is directly translated like regular operations by
+    the host dialect. The front-end must handle semantic checks for allowed
+    operations.
   }];
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
