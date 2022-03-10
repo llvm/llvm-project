@@ -38,6 +38,8 @@ public:
       }
     }
     ASSERT_EQ(i, int(ELEMENT_COUNT));
+    __llvm_libc::cpp::BlockStore<Element, BLOCK_SIZE, REVERSE>::destroy(
+        &block_store);
   }
 };
 
