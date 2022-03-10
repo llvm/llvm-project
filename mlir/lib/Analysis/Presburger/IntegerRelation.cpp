@@ -2048,3 +2048,9 @@ void IntegerRelation::print(raw_ostream &os) const {
 }
 
 void IntegerRelation::dump() const { print(llvm::errs()); }
+
+unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
+  assert((kind != IdKind::Domain || num == 0) &&
+         "Domain has to be zero in a set");
+  return IntegerRelation::insertId(kind, pos, num);
+}

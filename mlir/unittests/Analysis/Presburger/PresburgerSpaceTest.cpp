@@ -14,7 +14,7 @@ using namespace mlir;
 using namespace presburger;
 
 TEST(PresburgerSpaceTest, insertId) {
-  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 1);
+  PresburgerSpace space(2, 2, 1);
 
   // Try inserting 2 domain ids.
   space.insertId(IdKind::Domain, 0, 2);
@@ -26,7 +26,7 @@ TEST(PresburgerSpaceTest, insertId) {
 }
 
 TEST(PresburgerSpaceTest, insertIdSet) {
-  PresburgerSpace space = PresburgerSpace::getSetSpace(2, 1);
+  PresburgerSpace space(0, 2, 1);
 
   // Try inserting 2 dimension ids. The space should have 4 range ids since
   // spaces which do not distinguish between domain, range are implemented like
@@ -36,7 +36,7 @@ TEST(PresburgerSpaceTest, insertIdSet) {
 }
 
 TEST(PresburgerSpaceTest, removeIdRange) {
-  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3);
+  PresburgerSpace space(2, 1, 3);
 
   // Remove 1 domain identifier.
   space.removeIdRange(IdKind::Domain, 0, 1);

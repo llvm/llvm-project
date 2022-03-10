@@ -406,21 +406,6 @@ public:
   void dump() const;
 
 protected:
-  /// Constructs a set reserving memory for the specified number
-  /// of constraints and identifiers. This constructor should not be used
-  /// directly to create a relation and should only be used to create Sets.
-  /// Internally this constructs a relation with with no domain and a
-  /// space with no distinction between domain and range identifiers.
-  IntegerRelation(unsigned numReservedInequalities,
-                  unsigned numReservedEqualities, unsigned numReservedCols,
-                  unsigned numDims, unsigned numSymbols, unsigned numLocals)
-      : PresburgerLocalSpace(numDims, numSymbols, numLocals),
-        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
-        inequalities(0, getNumIds() + 1, numReservedInequalities,
-                     numReservedCols) {
-    assert(numReservedCols >= getNumIds() + 1);
-  }
-
   /// Checks all rows of equality/inequality constraints for trivial
   /// contradictions (for example: 1 == 0, 0 >= 1), which may have surfaced
   /// after elimination. Returns true if an invalid constraint is found;
@@ -540,7 +525,8 @@ public:
                     unsigned numReservedEqualities, unsigned numReservedCols,
                     unsigned numDims, unsigned numSymbols, unsigned numLocals)
       : IntegerRelation(numReservedInequalities, numReservedEqualities,
-                        numReservedCols, numDims, numSymbols, numLocals) {}
+                        numReservedCols, /*numDomain=*/0, /*numRange=*/numDims,
+                        numSymbols, numLocals) {}
 
   /// Constructs a relation with the specified number of dimensions and symbols.
   IntegerPolyhedron(unsigned numDims = 0, unsigned numSymbols = 0,
@@ -567,6 +553,12 @@ public:
 
   // Clones this object.
   std::unique_ptr<IntegerPolyhedron> clone() const;
+
+  /// Insert `num` identifiers of the specified kind at position `pos`.
+  /// Positions are relative to the kind of identifier. Return the absolute
+  /// column position (i.e., not relative to the kind of identifier) of the
+  /// first added identifier.
+  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
 };
 
 } // namespace presburger

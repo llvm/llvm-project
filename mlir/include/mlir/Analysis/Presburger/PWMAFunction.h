@@ -151,7 +151,8 @@ private:
 class PWMAFunction : public PresburgerSpace {
 public:
   PWMAFunction(unsigned numDims, unsigned numSymbols, unsigned numOutputs)
-      : PresburgerSpace(numDims, numSymbols), numOutputs(numOutputs) {
+      : PresburgerSpace(/*numDomain=*/0, /*numRange=*/numDims, numSymbols),
+        numOutputs(numOutputs) {
     assert(numOutputs >= 1 && "The function must output something!");
   }
 
