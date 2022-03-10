@@ -13,6 +13,7 @@
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"

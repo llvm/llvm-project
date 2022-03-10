@@ -17,6 +17,7 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 using namespace llvm;

@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_SCHEDULEDAG_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -31,6 +30,7 @@
 
 namespace llvm {
 
+template <class GraphType> struct GraphTraits;
 template<class Graph> class GraphWriter;
 class LLVMTargetMachine;
 class MachineFunction;

@@ -15,20 +15,15 @@
 #ifndef LLVM_CODEGEN_REGALLOCSCORE_H_
 #define LLVM_CODEGEN_REGALLOCSCORE_H_
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/Utils/TFUtils.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/IR/Module.h"
-#include <cassert>
-#include <cstdint>
-#include <limits>
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
+
+class AAResults;
+class MachineBasicBlock;
+class MachineBlockFrequencyInfo;
+class MachineFunction;
+class MachineInstr;
 
 /// Regalloc score.
 class RegAllocScore final {

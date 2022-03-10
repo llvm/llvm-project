@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"

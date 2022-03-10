@@ -16,6 +16,7 @@
 #include "R600.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include <set>
 
 using namespace llvm;

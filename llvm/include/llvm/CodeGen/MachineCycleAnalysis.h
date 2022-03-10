@@ -15,7 +15,6 @@
 #define LLVM_CODEGEN_MACHINECYCLEANALYSIS_H
 
 #include "llvm/ADT/GenericCycleInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 
 namespace llvm {

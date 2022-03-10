@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 

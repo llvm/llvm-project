@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
 

@@ -10,17 +10,14 @@
 #define LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_INSTRREFBASEDLDV_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 #include "LiveDebugValues.h"

@@ -14,6 +14,7 @@
 #include "WebAssemblyExceptionInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyUtilities.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"

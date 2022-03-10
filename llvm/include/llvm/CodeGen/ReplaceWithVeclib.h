@@ -17,8 +17,10 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 
 namespace llvm {
+class Function;
 struct ReplaceWithVeclib : public PassInfoMixin<ReplaceWithVeclib> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineModuleInfo.h"
+#include "llvm/MC/MCSymbol.h"
 
 namespace llvm {
 

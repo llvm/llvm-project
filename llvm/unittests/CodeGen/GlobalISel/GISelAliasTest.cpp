@@ -8,6 +8,7 @@
 
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"

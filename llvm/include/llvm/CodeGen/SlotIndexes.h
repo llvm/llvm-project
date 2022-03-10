@@ -28,7 +28,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include <algorithm>
 #include <cassert>

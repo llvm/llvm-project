@@ -24,7 +24,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -34,7 +33,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 

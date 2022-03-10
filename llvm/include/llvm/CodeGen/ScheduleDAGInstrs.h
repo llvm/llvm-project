@@ -16,10 +16,10 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/SparseSet.h"
+#include "llvm/ADT/identity.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"

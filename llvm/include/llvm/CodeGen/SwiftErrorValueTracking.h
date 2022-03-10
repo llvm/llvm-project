@@ -20,8 +20,6 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
-#include <functional>
-#include <type_traits>
 #include <utility>
 
 

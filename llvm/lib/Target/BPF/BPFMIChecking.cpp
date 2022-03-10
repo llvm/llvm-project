@@ -17,6 +17,7 @@
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"

@@ -19,7 +19,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -31,6 +30,10 @@
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
 using namespace llvm;
+
+namespace llvm {
+class TargetLowering;
+}
 
 #define DEBUG_TYPE "expandmemcmp"
 

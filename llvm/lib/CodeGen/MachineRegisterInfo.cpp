@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
