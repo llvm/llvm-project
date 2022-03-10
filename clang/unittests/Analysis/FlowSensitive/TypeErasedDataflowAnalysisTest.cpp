@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NoopAnalysis.h"
+#include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,8 +17,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/Testing/DataflowAnalysis.h"
-#include "clang/Analysis/FlowSensitive/Testing/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Tooling/Tooling.h"
