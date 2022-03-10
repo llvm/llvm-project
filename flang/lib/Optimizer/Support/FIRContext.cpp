@@ -12,19 +12,20 @@
 
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/KindMapping.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/Host.h"
 
-static constexpr const char *tripleName = "fir.triple";
-
 void fir::setTargetTriple(mlir::ModuleOp mod, llvm::StringRef triple) {
   auto target = fir::determineTargetTriple(triple);
-  mod->setAttr(tripleName, mlir::StringAttr::get(mod.getContext(), target));
+  mod->setAttr(mlir::LLVM::LLVMDialect::getTargetTripleAttrName(),
+               mlir::StringAttr::get(mod.getContext(), target));
 }
 
 llvm::Triple fir::getTargetTriple(mlir::ModuleOp mod) {
-  if (auto target = mod->getAttrOfType<mlir::StringAttr>(tripleName))
+  if (auto target = mod->getAttrOfType<mlir::StringAttr>(
+          mlir::LLVM::LLVMDialect::getTargetTripleAttrName()))
     return llvm::Triple(target.getValue());
   return llvm::Triple(llvm::sys::getDefaultTargetTriple());
 }

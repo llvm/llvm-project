@@ -40,6 +40,9 @@ enum ActionKind {
   /// Emit a .o file.
   EmitObj,
 
+  /// Emit a .s file.
+  EmitAssembly,
+
   /// Parse, unparse the parse-tree and output a Fortran source file
   DebugUnparse,
 
