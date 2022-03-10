@@ -84,6 +84,10 @@ static llvm::cl::opt<bool> enableOpenMP("fopenmp",
                                         llvm::cl::desc("enable openmp"),
                                         llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableOpenACC("fopenacc",
+                                         llvm::cl::desc("enable openacc"),
+                                         llvm::cl::init(false));
+
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
 
@@ -249,6 +253,12 @@ int main(int argc, char **argv) {
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
     options.predefinitions.emplace_back("_OPENMP", "201511");
+  }
+
+  // enable parsing of OpenACC
+  if (enableOpenACC) {
+    options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+    options.predefinitions.emplace_back("_OPENACC", "201911");
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
