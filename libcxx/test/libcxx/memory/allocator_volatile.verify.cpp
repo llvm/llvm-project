@@ -6,30 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <memory>
-
-// shared_ptr();
+// http://wg21.link/LWG2447 gives implementors freedom to reject volatile types in `std::allocator`.
 
 #include <memory>
-#include <cassert>
 
-#include "test_macros.h"
-
-struct A {};
-
-template <class T>
-void test() {
-  std::shared_ptr<T> p;
-  assert(p.use_count() == 0);
-  assert(p.get() == 0);
-}
-
-int main(int, char**) {
-  test<int>();
-  test<A>();
-  test<int*>();
-  test<int[]>();
-  test<int[8]>();
-
-  return 0;
-}
+std::allocator<volatile int> A1; // expected-error@*:* {{std::allocator does not support volatile types}}
+std::allocator<const volatile int> A2; // expected-error@*:* {{std::allocator does not support volatile types}}
