@@ -23,4 +23,6 @@ __m256d foo(void) { return bar_avx2(); }
 // CHECK: define{{.*}} @foo.V() #[[V:[0-9]+]]
 
 // CHECK: attributes #[[A]] = {{.*}}"target-features"="+avx,+crc32,+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK-SAME: "tune-cpu"="generic"
 // CHECK: attributes #[[V]] = {{.*}}"target-features"="+avx,+avx2,+bmi,+cmov,+crc32,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK-SAME: "tune-cpu"="haswell"

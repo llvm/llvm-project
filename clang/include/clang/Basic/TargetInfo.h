@@ -1375,6 +1375,13 @@ public:
         "cpu_specific Multiversioning not implemented on this target");
   }
 
+  // Get the value for the 'tune-cpu' flag for a cpu_specific variant with the
+  // programmer-specified 'Name'.
+  virtual StringRef getCPUSpecificTuneName(StringRef Name) const {
+    llvm_unreachable(
+        "cpu_specific Multiversioning not implemented on this target");
+  }
+
   // Get a list of the features that make up the CPU option for
   // cpu_specific/cpu_dispatch so that it can be passed to llvm as optimization
   // options.
