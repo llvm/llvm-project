@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -22,12 +22,12 @@ define amdgpu_kernel void @sint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 
 ; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[ZERO]]:[[SEL]]]
 ; VI: s_endpgm
 
-; SI-DAG: s_cmp_eq_u32
-; SI-DAG: s_cselect_b64 vcc, -1, 0
-; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}, vcc
-; SI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[ZERO]]:[[SEL]]]
-; SI: s_endpgm
+; CI-DAG: s_cmp_eq_u32
+; CI-DAG: s_cselect_b64 vcc, -1, 0
+; CI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}, vcc
+; CI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
+; CI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[ZERO]]:[[SEL]]]
+; CI: s_endpgm
 define amdgpu_kernel void @sint_to_fp_i1_f64(double addrspace(1)* %out, i32 %in) {
   %cmp = icmp eq i32 %in, 0
   %fp = sitofp i1 %cmp to double
@@ -72,8 +72,8 @@ define amdgpu_kernel void @v_sint_to_fp_i64_to_f64(double addrspace(1)* %out, i6
 ; FIXME: bfe and sext on VI+
 ; GCN-LABEL: {{^}}s_sint_to_fp_i8_to_f64:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
-; SI-NOT: bfe
-; SI: s_sext_i32_i8 [[SEXT:s[0-9]+]], [[VAL]]
+; CI-NOT: bfe
+; CI: s_sext_i32_i8 [[SEXT:s[0-9]+]], [[VAL]]
 
 ; VI: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x80000
 ; VI: s_sext_i32_i16 [[SEXT:s[0-9]+]], [[BFE]]
