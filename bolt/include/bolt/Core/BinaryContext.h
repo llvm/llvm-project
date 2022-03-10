@@ -489,7 +489,9 @@ public:
   void adjustCodePadding();
 
   /// Regular page size.
-  static constexpr unsigned RegularPageSize = 0x1000;
+  unsigned RegularPageSize{0x1000};
+  static constexpr unsigned RegularPageSizeX86 = 0x1000;
+  static constexpr unsigned RegularPageSizeAArch64 = 0x10000;
 
   /// Huge page size to use.
   static constexpr unsigned HugePageSize = 0x200000;
