@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 
@@ -223,4 +224,15 @@ bool fir::BoxValue::verify() const {
   if (isCharacter() && explicitParams.size() > 1)
     return false;
   return true;
+}
+
+/// Get exactly one extent for any array-like extended value, \p exv. If \p exv
+/// is not an array or has rank less then \p dim, the result will be a nullptr.
+mlir::Value fir::getExtentAtDimension(const fir::ExtendedValue &exv,
+                                      fir::FirOpBuilder &builder,
+                                      mlir::Location loc, unsigned dim) {
+  auto extents = fir::factory::getExtents(builder, loc, exv);
+  if (dim < extents.size())
+    return extents[dim];
+  return {};
 }
