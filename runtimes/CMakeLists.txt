@@ -238,6 +238,16 @@ if(LLVM_INCLUDE_TESTS)
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
+
+  if(LLVM_RUNTIMES_TARGET)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
+  else()
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
+  endif()
 endif()
 
 get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)
