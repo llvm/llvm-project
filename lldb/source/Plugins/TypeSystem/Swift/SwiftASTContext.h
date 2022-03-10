@@ -415,7 +415,7 @@ public:
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
-                        uint32_t last_line = UINT32_MAX);
+                        uint32_t last_line = UINT32_MAX) const;
 
   ConstString GetMangledTypeName(swift::TypeBase *);
 
@@ -441,8 +441,9 @@ public:
     return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
   }
 
-  Status GetFatalErrors();
+  Status GetFatalErrors() const;
   void DiagnoseWarnings(Process &process, Module &module) const override;
+  void LogFatalErrors() const;
 
   /// Return a list of warnings collected from ClangImporter.
   const std::vector<std::string> &GetModuleImportWarnings() const {
@@ -883,12 +884,13 @@ protected:
   bool m_initialized_language_options = false;
   bool m_initialized_search_path_options = false;
   bool m_initialized_clang_importer_options = false;
-  bool m_reported_fatal_error = false;
+  mutable bool m_reported_fatal_error = false;
+  mutable bool m_logged_fatal_error = false;
 
   /// Whether this is a scratch or a module AST context.
   bool m_is_scratch_context = false;
 
-  Status m_fatal_errors;
+  mutable Status m_fatal_errors;
 
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;

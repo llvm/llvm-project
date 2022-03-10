@@ -170,16 +170,14 @@ std::recursive_mutex g_log_mutex;
 #define VALID_OR_RETURN(value)                                                 \
   do {                                                                         \
     if (HasFatalErrors()) {                                                    \
-      LOG_PRINTF(GetLog(LLDBLog::Types),                                       \
-                 "SwiftASTContext is in fatal error state, bailing out.");     \
+      LogFatalErrors();                                                        \
       return value;                                                            \
     }                                                                          \
   } while (0)
 #define VALID_OR_RETURN_CHECK_TYPE(type, value)                                \
   do {                                                                         \
     if (HasFatalErrors()) {                                                    \
-      LOG_PRINTF(GetLog(LLDBLog::Types),                                       \
-                 "SwiftASTContext is in fatal error state, bailing out.");     \
+      LogFatalErrors();                                                        \
       return (value);                                                          \
     }                                                                          \
     if (!type) {                                                               \
@@ -2361,7 +2359,7 @@ bool SwiftASTContext::SupportsLanguage(lldb::LanguageType language) {
 
 Status SwiftASTContext::IsCompatible() { return GetFatalErrors(); }
 
-Status SwiftASTContext::GetFatalErrors() {
+Status SwiftASTContext::GetFatalErrors() const {
   Status error;
   if (HasFatalErrors()) {
     error = m_fatal_errors;
@@ -2373,6 +2371,21 @@ Status SwiftASTContext::GetFatalErrors() {
     }
   }
   return error;
+}
+
+void SwiftASTContext::LogFatalErrors() const {
+  // Avoid spamming the health log with redundant copies of the fatal error.
+  if (m_logged_fatal_error) {
+    LOG_PRINTF(GetLog(LLDBLog::Types),
+               "SwiftASTContext is in fatal error state, bailing out.");
+    return;
+  }
+  if (!m_fatal_errors.Fail())
+    GetFatalErrors();
+  HEALTH_LOG_PRINTF(
+      "SwiftASTContext is in fatal error state, bailing out: (%s).",
+      m_fatal_errors.AsCString());
+  m_logged_fatal_error = true;
 }
 
 swift::IRGenOptions &SwiftASTContext::GetIRGenOptions() {
@@ -4735,7 +4748,7 @@ void SwiftASTContext::AddErrorStatusAsGenericDiagnostic(Status error) {
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
-                                       uint32_t last_line) {
+                                       uint32_t last_line) const {
   LLDB_SCOPED_TIMER();
   // If this is a fatal error, copy the error into the AST context's
   // fatal error field, and then put it to the stream, otherwise just
