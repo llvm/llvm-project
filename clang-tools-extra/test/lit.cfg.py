@@ -16,9 +16,6 @@ from lit.llvm import llvm_config
 config.name = 'Clang Tools'
 
 # testFormat: The test format to use to interpret tests.
-#
-# For now we require '&&' between commands, until they get globally killed and
-# the test runner updated.
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
@@ -73,23 +70,6 @@ path = os.path.pathsep.join((config.clang_libs_dir, config.llvm_libs_dir,
                               config.environment.get('LD_LIBRARY_PATH','')))
 config.environment['LD_LIBRARY_PATH'] = path
 
-# When running under valgrind, we mangle '-vg' onto the end of the triple so we
-# can check it with XFAIL and XTARGET.
-if lit_config.useValgrind:
-    config.target_triple += '-vg'
-
-config.available_features.add('crash-recovery')
-# Set available features we allow tests to conditionalize on.
-#
-
-# Exclude MSYS due to transforming '/' to 'X:/mingwroot/'.
-if not platform.system() in ['Windows'] or llvm_config.use_lit_shell:
-    config.available_features.add('shell-preserves-root')
-
-# ANSI escape sequences in non-dumb terminal
-if platform.system() not in ['Windows']:
-    config.available_features.add('ansi-escape-sequences')
-
 if config.clang_tidy_staticanalyzer:
     config.available_features.add('static-analyzer')
 
@@ -119,11 +99,6 @@ config.substitutions.append(
     ('%run_clang_tidy',
      '%s %s' % (python_exec, run_clang_tidy)) )
 
-clangd_benchmarks_dir = os.path.join(os.path.dirname(config.clang_tools_dir),
-                                     "tools", "clang", "tools", "extra",
-                                     "clangd", "benchmarks")
-config.substitutions.append(('%clangd-benchmark-dir',
-                             '%s' % (clangd_benchmarks_dir)))
 config.substitutions.append(('%llvmshlibdir', config.clang_libs_dir))
 config.substitutions.append(('%pluginext', config.llvm_plugin_ext))
 
