@@ -63,15 +63,26 @@ namespace {
 const char CheckFunctionName[] = "__CheckForDebuggerJustMyCode";
 
 std::string getFlagName(DISubprogram &SP, bool UseX86FastCall) {
+  // absolute windows path:           windows_backslash
+  // relative windows backslash path: windows_backslash
+  // relative windows slash path:     posix
+  // absolute posix path:             posix
+  // relative posix path:             posix
+  sys::path::Style PathStyle =
+      has_root_name(SP.getDirectory(), sys::path::Style::windows_backslash) ||
+              SP.getDirectory().find("\\") != StringRef::npos ||
+              SP.getFilename().find("\\") != StringRef::npos
+          ? sys::path::Style::windows_backslash
+          : sys::path::Style::posix;
   // Best effort path normalization. This is to guarantee an unique flag symbol
   // is produced for the same directory. Some builds may want to use relative
   // paths, or paths with a specific prefix (see the -fdebug-compilation-dir
   // flag), so only hash paths in debuginfo. Don't expand them to absolute
   // paths.
   SmallString<256> FilePath(SP.getDirectory());
-  sys::path::append(FilePath, SP.getFilename());
-  sys::path::native(FilePath);
-  sys::path::remove_dots(FilePath, /*remove_dot_dot=*/true);
+  sys::path::append(FilePath, PathStyle, SP.getFilename());
+  sys::path::native(FilePath, PathStyle);
+  sys::path::remove_dots(FilePath, /*remove_dot_dot=*/true, PathStyle);
 
   // The naming convention for the flag name is __<hash>_<file name> with '.' in
   // <file name> replaced with '@'. For example C:\file.any.c would have a flag
@@ -80,10 +91,10 @@ std::string getFlagName(DISubprogram &SP, bool UseX86FastCall) {
   // is different from MSVC's.
 
   std::string Suffix;
-  for (auto C : sys::path::filename(FilePath))
+  for (auto C : sys::path::filename(FilePath, PathStyle))
     Suffix.push_back(C == '.' ? '@' : C);
 
-  sys::path::remove_filename(FilePath);
+  sys::path::remove_filename(FilePath, PathStyle);
   return (UseX86FastCall ? "_" : "__") +
          utohexstr(djbHash(FilePath), /*LowerCase=*/false,
                    /*Width=*/8) +
