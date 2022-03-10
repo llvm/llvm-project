@@ -189,7 +189,7 @@ def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
 def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 106;
+  let HWEncoding = VCC_LO.HWEncoding;
 }
 
 defm EXEC_LO : SIRegLoHi16<"exec_lo", 126>, DwarfRegNum<[1, 1]>;
@@ -198,7 +198,7 @@ defm EXEC_HI : SIRegLoHi16<"exec_hi", 127>;
 def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 126;
+  let HWEncoding = EXEC_LO.HWEncoding;
 }
 
 // 32-bit real registers, for MC only.
@@ -237,7 +237,7 @@ def XNACK_MASK :
     RegisterWithSubRegs<"xnack_mask", [XNACK_MASK_LO, XNACK_MASK_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 104;
+  let HWEncoding = XNACK_MASK_LO.HWEncoding;
 }
 
 // Trap handler registers
@@ -247,7 +247,7 @@ defm TBA_HI : SIRegLoHi16<"tba_hi", 109>;
 def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 108;
+  let HWEncoding = TBA_LO.HWEncoding;
 }
 
 defm TMA_LO : SIRegLoHi16<"tma_lo", 110>;
@@ -256,7 +256,7 @@ defm TMA_HI : SIRegLoHi16<"tma_hi", 111>;
 def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 110;
+  let HWEncoding = TMA_LO.HWEncoding;
 }
 
 foreach Index = 0...15 in {
