@@ -9745,10 +9745,18 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
   EVT EltVT = Op.getValueType().getVectorElementType();
   unsigned BytesPerElt = EltVT.getSizeInBits() / 8;
 
+  bool Swap = false;
+  if (V1.isUndef() || isZerosVector(V1.getNode())) {
+    std::swap(V1, V2);
+    Swap = true;
+  }
+
   SmallVector<SDValue, 8> TBLMask;
   for (int Val : ShuffleMask) {
     for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
       unsigned Offset = Byte + Val * BytesPerElt;
+      if (Swap)
+        Offset = Offset < 16 ? Offset + 16 : Offset - 16;
       TBLMask.push_back(DAG.getConstant(Offset, DL, MVT::i32));
     }
   }
@@ -9764,7 +9772,9 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
   SDValue V2Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V2);
 
   SDValue Shuffle;
-  if (V2.getNode()->isUndef()) {
+  // If the V2 source if undef or zero then we can use a tbl1, as tbl1 will fill
+  // out of range values with 0s.
+  if (V2.isUndef() || isZerosVector(V2.getNode())) {
     if (IndexLen == 8)
       V1Cst = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, V1Cst, V1Cst);
     Shuffle = DAG.getNode(
