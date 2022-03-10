@@ -1341,7 +1341,10 @@ void CStringSection::finalizeContents() {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
       if (!isec->pieces[i].live)
         continue;
-      uint32_t pieceAlign = MinAlign(isec->pieces[i].inSecOff, align);
+      // See comment above DeduplicatedCStringSection for how alignment is
+      // handled.
+      uint32_t pieceAlign =
+          1 << countTrailingZeros(isec->align | isec->pieces[i].inSecOff);
       offset = alignTo(offset, pieceAlign);
       isec->pieces[i].outSecOff = offset;
       isec->isFinal = true;
@@ -1351,45 +1354,89 @@ void CStringSection::finalizeContents() {
   }
   size = offset;
 }
+
 // Mergeable cstring literals are found under the __TEXT,__cstring section. In
 // contrast to ELF, which puts strings that need different alignments into
 // different sections, clang's Mach-O backend puts them all in one section.
 // Strings that need to be aligned have the .p2align directive emitted before
-// them, which simply translates into zero padding in the object file.
+// them, which simply translates into zero padding in the object file. In other
+// words, we have to infer the desired alignment of these cstrings from their
+// addresses.
 //
-// I *think* ld64 extracts the desired per-string alignment from this data by
-// preserving each string's offset from the last section-aligned address. I'm
-// not entirely certain since it doesn't seem consistent about doing this, and
-// in fact doesn't seem to be correct in general: we can in fact can induce ld64
-// to produce a crashing binary just by linking in an additional object file
-// that only contains a duplicate cstring at a different alignment. See PR50563
-// for details.
+// We differ slightly from ld64 in how we've chosen to align these cstrings.
+// Both LLD and ld64 preserve the number of trailing zeros in each cstring's
+// address in the input object files. When deduplicating identical cstrings,
+// both linkers pick the cstring whose address has more trailing zeros, and
+// preserve the alignment of that address in the final binary. However, ld64
+// goes a step further and also preserves the offset of the cstring from the
+// last section-aligned address.  I.e. if a cstring is at offset 18 in the
+// input, with a section alignment of 16, then both LLD and ld64 will ensure the
+// final address is 2-byte aligned (since 18 == 16 + 2). But ld64 will also
+// ensure that the final address is of the form 16 * k + 2 for some k.
 //
-// On x86_64, the cstrings we've seen so far that require special alignment are
-// all accessed by SIMD operations -- x86_64 requires SIMD accesses to be
-// 16-byte-aligned. arm64 also seems to require 16-byte-alignment in some cases
-// (PR50791), but I haven't tracked down the root cause. So for now, I'm just
-// aligning all strings to 16 bytes.  This is indeed wasteful, but
-// implementation-wise it's simpler than preserving per-string
-// alignment+offsets. It also avoids the aforementioned crash after
-// deduplication of differently-aligned strings.  Finally, the overhead is not
-// huge: using 16-byte alignment (vs no alignment) is only a 0.5% size overhead
-// when linking chromium_framework on x86_64.
-DeduplicatedCStringSection::DeduplicatedCStringSection()
-    : builder(StringTableBuilder::RAW, /*Alignment=*/16) {}
-
+// Note that ld64's heuristic means that a dedup'ed cstring's final address is
+// dependent on the order of the input object files. E.g. if in addition to the
+// cstring at offset 18 above, we have a duplicate one in another file with a
+// `.cstring` section alignment of 2 and an offset of zero, then ld64 will pick
+// the cstring from the object file earlier on the command line (since both have
+// the same number of trailing zeros in their address). So the final cstring may
+// either be at some address `16 * k + 2` or at some address `2 * k`.
+//
+// I've opted not to follow this behavior primarily for implementation
+// simplicity, and secondarily to save a few more bytes. It's not clear to me
+// that preserving the section alignment + offset is ever necessary, and there
+// are many cases that are clearly redundant. In particular, if an x86_64 object
+// file contains some strings that are accessed via SIMD instructions, then the
+// .cstring section in the object file will be 16-byte-aligned (since SIMD
+// requires its operand addresses to be 16-byte aligned). However, there will
+// typically also be other cstrings in the same file that aren't used via SIMD
+// and don't need this alignment. They will be emitted at some arbitrary address
+// `A`, but ld64 will treat them as being 16-byte aligned with an offset of `16
+// % A`.
 void DeduplicatedCStringSection::finalizeContents() {
-  // Add all string pieces to the string table builder to create section
-  // contents.
-  for (CStringInputSection *isec : inputs) {
-    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
-      if (isec->pieces[i].live)
-        isec->pieces[i].outSecOff =
-            builder.add(isec->getCachedHashStringRef(i));
-    isec->isFinal = true;
+  // Find the largest alignment required for each string.
+  for (const CStringInputSection *isec : inputs) {
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      const StringPiece &piece = isec->pieces[i];
+      if (!piece.live)
+        continue;
+      auto s = isec->getCachedHashStringRef(i);
+      assert(isec->align != 0);
+      uint8_t trailingZeros = countTrailingZeros(isec->align | piece.inSecOff);
+      auto it = stringOffsetMap.insert(
+          std::make_pair(s, StringOffset(trailingZeros)));
+      if (!it.second && it.first->second.trailingZeros < trailingZeros)
+        it.first->second.trailingZeros = trailingZeros;
+    }
   }
 
-  builder.finalizeInOrder();
+  // Assign an offset for each string and save it to the corresponding
+  // StringPieces for easy access.
+  for (CStringInputSection *isec : inputs) {
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      if (!isec->pieces[i].live)
+        continue;
+      auto s = isec->getCachedHashStringRef(i);
+      auto it = stringOffsetMap.find(s);
+      assert(it != stringOffsetMap.end());
+      StringOffset &offsetInfo = it->second;
+      if (offsetInfo.outSecOff == UINT64_MAX) {
+        offsetInfo.outSecOff = alignTo(size, 1 << offsetInfo.trailingZeros);
+        size = offsetInfo.outSecOff + s.size();
+      }
+      isec->pieces[i].outSecOff = offsetInfo.outSecOff;
+    }
+    isec->isFinal = true;
+  }
+}
+
+void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
+  for (const auto &p : stringOffsetMap) {
+    StringRef data = p.first.val();
+    uint64_t off = p.second.outSecOff;
+    if (!data.empty())
+      memcpy(buf + off, data.data(), data.size());
+  }
 }
 
 // This section is actually emitted as __TEXT,__const by ld64, but clang may
