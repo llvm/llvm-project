@@ -2157,6 +2157,13 @@ std::pair<MachineInstr*, MachineInstr*>
 SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
   assert (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
+  if (ST.hasMovB64() &&
+      AMDGPU::isLegal64BitDPPControl(
+        getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl)->getImm())) {
+    MI.setDesc(get(AMDGPU::V_MOV_B64_dpp));
+    return std::make_pair(&MI, nullptr);
+  }
+
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
   MachineFunction *MF = MBB.getParent();
