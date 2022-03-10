@@ -1187,6 +1187,24 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       cpu = "apple-latest";
   }
 
+  if (triple.isRISCV()) {
+    uint32_t arch_flags = arch.GetFlags();
+    if (arch_flags & ArchSpec::eRISCV_rvc)
+      features_str += "+c,";
+    if (arch_flags & ArchSpec::eRISCV_rve)
+      features_str += "+e,";
+    if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+        ArchSpec::eRISCV_float_abi_single)
+      features_str += "+f,";
+    if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+        ArchSpec::eRISCV_float_abi_double)
+      features_str += "+f,+d,";
+    if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+        ArchSpec::eRISCV_float_abi_quad)
+      features_str += "+f,+d,+q,";
+    // FIXME: how do we detect features such as `+a`, `+m`?
+  }
+
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
   // isn't good for some reason, we won't be valid and FindPlugin will fail and
   // we won't get used.
