@@ -24805,6 +24805,19 @@ TEST_F(FormatTest, RemoveBraces) {
                "}",
                Style);
 
+  verifyFormat("// clang-format off\n"
+               "// comment\n"
+               "while (i > 0) { --i; }\n"
+               "// clang-format on\n"
+               "while (j < 0)\n"
+               "  ++j;",
+               "// clang-format off\n"
+               "// comment\n"
+               "while (i > 0) { --i; }\n"
+               "// clang-format on\n"
+               "while (j < 0) { ++j; }",
+               Style);
+
   verifyFormat("if (a)\n"
                "  b; // comment\n"
                "else if (c)\n"

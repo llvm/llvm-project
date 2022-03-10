@@ -1808,7 +1808,8 @@ private:
       removeBraces(Line->Children, Result);
       if (!Line->Affected)
         continue;
-      for (FormatToken *Token = Line->First; Token; Token = Token->Next) {
+      for (FormatToken *Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
         if (!Token->Optional)
           continue;
         assert(Token->isOneOf(tok::l_brace, tok::r_brace));
