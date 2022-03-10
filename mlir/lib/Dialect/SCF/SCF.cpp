@@ -282,6 +282,19 @@ LogicalResult ForOp::verify() {
     if (cst.value() <= 0)
       return emitOpError("constant step operand must be positive");
 
+  auto opNumResults = getNumResults();
+  if (opNumResults == 0)
+    return success();
+  // If ForOp defines values, check that the number and types of
+  // the defined values match ForOp initial iter operands and backedge
+  // basic block arguments.
+  if (getNumIterOperands() != opNumResults)
+    return emitOpError(
+        "mismatch in number of loop-carried values and defined values");
+  return success();
+}
+
+LogicalResult ForOp::verifyRegions() {
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = getBody();
@@ -293,15 +306,11 @@ LogicalResult ForOp::verify() {
   auto opNumResults = getNumResults();
   if (opNumResults == 0)
     return success();
-  // If ForOp defines values, check that the number and types of
-  // the defined values match ForOp initial iter operands and backedge
-  // basic block arguments.
-  if (getNumIterOperands() != opNumResults)
-    return emitOpError(
-        "mismatch in number of loop-carried values and defined values");
+
   if (getNumRegionIterArgs() != opNumResults)
     return emitOpError(
         "mismatch in number of basic block args and defined values");
+
   auto iterOperands = getIterOperands();
   auto iterArgs = getRegionIterArgs();
   auto opResults = getResults();
@@ -2130,7 +2139,7 @@ void ReduceOp::build(
                   body->getArgument(1));
 }
 
-LogicalResult ReduceOp::verify() {
+LogicalResult ReduceOp::verifyRegions() {
   // The region of a ReduceOp has two arguments of the same type as its operand.
   auto type = getOperand().getType();
   Block &block = getReductionOperator().front();
@@ -2333,7 +2342,7 @@ static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
   return nullptr;
 }
 
-LogicalResult scf::WhileOp::verify() {
+LogicalResult scf::WhileOp::verifyRegions() {
   auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
       *this, getBefore(),
       "expects the 'before' region to terminate with 'scf.condition'");

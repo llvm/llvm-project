@@ -159,7 +159,7 @@ pdl.pattern : benefit(1) {
 // expected-error@below {{expected body to terminate with `pdl.rewrite`}}
 pdl.pattern : benefit(1) {
   // expected-note@below {{see terminator defined here}}
-  return
+  "test.finish" () : () -> ()
 }
 
 // -----

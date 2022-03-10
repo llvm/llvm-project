@@ -920,7 +920,7 @@ struct SingleBlockImplicitTerminator {
     /// The type of the operation used as the implicit terminator type.
     using ImplicitTerminatorOpT = TerminatorOpType;
 
-    static LogicalResult verifyTrait(Operation *op) {
+    static LogicalResult verifyRegionTrait(Operation *op) {
       if (failed(Base::verifyTrait(op)))
         return failure();
       for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
@@ -1218,7 +1218,7 @@ template <typename ConcreteType>
 class IsIsolatedFromAbove
     : public TraitBase<ConcreteType, IsIsolatedFromAbove> {
 public:
-  static LogicalResult verifyTrait(Operation *op) {
+  static LogicalResult verifyRegionTrait(Operation *op) {
     return impl::verifyIsIsolatedFromAbove(op);
   }
 };
@@ -1262,7 +1262,7 @@ struct HasParent {
   class Impl : public TraitBase<ConcreteType, Impl> {
   public:
     static LogicalResult verifyTrait(Operation *op) {
-      if (llvm::isa<ParentOpTypes...>(op->getParentOp()))
+      if (llvm::isa_and_nonnull<ParentOpTypes...>(op->getParentOp()))
         return success();
 
       return op->emitOpError()

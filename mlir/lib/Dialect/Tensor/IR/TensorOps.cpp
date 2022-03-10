@@ -533,6 +533,11 @@ LogicalResult GenerateOp::verify() {
     return emitError("must have as many index operands as dynamic extents "
                      "in the result type");
 
+  return success();
+}
+
+LogicalResult GenerateOp::verifyRegions() {
+  RankedTensorType resultTy = getType().cast<RankedTensorType>();
   // Ensure that region arguments span the index space.
   if (!llvm::all_of(body().getArgumentTypes(),
                     [](Type ty) { return ty.isIndex(); }))
@@ -1749,8 +1754,12 @@ LogicalResult PadOp::verify() {
            << expectedType;
   }
 
+  return success();
+}
+
+LogicalResult PadOp::verifyRegions() {
   auto &region = getRegion();
-  unsigned rank = resultType.getRank();
+  unsigned rank = result().getType().cast<RankedTensorType>().getRank();
   Block &block = region.front();
   if (block.getNumArguments() != rank)
     return emitError("expected the block to have ") << rank << " arguments";

@@ -2297,10 +2297,6 @@ void OpEmitter::genCustomVerifier() {
   if (def.getValueAsBit("hasVerifier")) {
     auto *method = opClass.declareMethod("::mlir::LogicalResult", "verify");
     ERROR_IF_PRUNED(method, "verify", op);
-  } else if (def.getValueAsBit("hasRegionVerifier")) {
-    auto *method =
-        opClass.declareMethod("::mlir::LogicalResult", "verifyRegions");
-    ERROR_IF_PRUNED(method, "verifyRegions", op);
   } else if (hasCustomVerifyCodeBlock) {
     auto *method = opClass.addMethod("::mlir::LogicalResult", "verify");
     ERROR_IF_PRUNED(method, "verify", op);
@@ -2310,6 +2306,12 @@ void OpEmitter::genCustomVerifier() {
     fctx.addSubst("cppClass", opClass.getClassName());
     auto printer = stringInit->getValue().ltrim().rtrim(" \t\v\f\r");
     body << "  " << tgfmt(printer, &fctx);
+  }
+
+  if (def.getValueAsBit("hasRegionVerifier")) {
+    auto *method =
+        opClass.declareMethod("::mlir::LogicalResult", "verifyRegions");
+    ERROR_IF_PRUNED(method, "verifyRegions", op);
   }
 }
 

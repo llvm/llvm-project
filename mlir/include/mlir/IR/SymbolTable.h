@@ -337,7 +337,7 @@ namespace OpTrait {
 template <typename ConcreteType>
 class SymbolTable : public TraitBase<ConcreteType, SymbolTable> {
 public:
-  static LogicalResult verifyTrait(Operation *op) {
+  static LogicalResult verifyRegionTrait(Operation *op) {
     return ::mlir::detail::verifySymbolTable(op);
   }
 

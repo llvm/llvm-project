@@ -172,8 +172,7 @@ llvm.func @bar() {
 
 // -----
 
-// expected-error @+2 {{'llvm.mlir.global' op expects regions to end with 'llvm.return', found 'llvm.mlir.constant'}}
-// expected-note @+1 {{in custom textual format, the absence of terminator implies 'llvm.return'}}
+// expected-error @+2 {{block with no terminator}}
 llvm.mlir.global internal @g() : i64 {
   %c = llvm.mlir.constant(42 : i64) : i64
 }
