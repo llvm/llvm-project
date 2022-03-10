@@ -1109,10 +1109,10 @@ public:
   }
 
   ExtValue gen(const Fortran::evaluate::DataRef &dref) {
-    TODO(getLoc(), "gen DataRef");
+    return std::visit([&](const auto &x) { return gen(x); }, dref.u);
   }
   ExtValue genval(const Fortran::evaluate::DataRef &dref) {
-    TODO(getLoc(), "genval DataRef");
+    return std::visit([&](const auto &x) { return genval(x); }, dref.u);
   }
 
   // Helper function to turn the Component structure into a list of nested
@@ -1166,10 +1166,18 @@ public:
   }
 
   ExtValue gen(const Fortran::evaluate::Component &cmpt) {
-    TODO(getLoc(), "gen Component");
+    // Components may be pointer or allocatable. In the gen() path, the mutable
+    // aspect is lost to simplify handling on the client side. To retain the
+    // mutable aspect, genMutableBoxValue should be used.
+    return genComponent(cmpt).match(
+        [&](const fir::MutableBoxValue &mutableBox) {
+          return fir::factory::genMutableBoxRead(builder, getLoc(), mutableBox);
+        },
+        [](auto &box) -> ExtValue { return box; });
   }
+
   ExtValue genval(const Fortran::evaluate::Component &cmpt) {
-    TODO(getLoc(), "genval Component");
+    return genLoad(gen(cmpt));
   }
 
   ExtValue genval(const Fortran::semantics::Bound &bound) {
@@ -1345,7 +1353,7 @@ public:
   mlir::Type genType(const Fortran::evaluate::DynamicType &dt) {
     if (dt.category() != Fortran::common::TypeCategory::Derived)
       return converter.genType(dt.category(), dt.kind());
-    TODO(getLoc(), "genType Derived Type");
+    return converter.genType(dt.GetDerivedTypeSpec());
   }
 
   /// Lower a function reference

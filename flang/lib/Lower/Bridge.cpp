@@ -241,25 +241,25 @@ public:
     return foldingContext;
   }
 
-  mlir::Type genType(const Fortran::evaluate::DataRef &) override final {
-    TODO_NOLOC("Not implemented genType DataRef. Needed for more complex "
-               "expression lowering");
-  }
   mlir::Type genType(const Fortran::lower::SomeExpr &expr) override final {
     return Fortran::lower::translateSomeExprToFIRType(*this, expr);
   }
   mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
     return Fortran::lower::translateSymbolToFIRType(*this, sym);
   }
-  mlir::Type genType(Fortran::common::TypeCategory tc) override final {
-    TODO_NOLOC("Not implemented genType TypeCategory. Needed for more complex "
-               "expression lowering");
-  }
   mlir::Type
   genType(Fortran::common::TypeCategory tc, int kind,
           llvm::ArrayRef<std::int64_t> lenParameters) override final {
     return Fortran::lower::getFIRType(&getMLIRContext(), tc, kind,
                                       lenParameters);
+  }
+  mlir::Type
+  genType(const Fortran::semantics::DerivedTypeSpec &tySpec) override final {
+    return Fortran::lower::translateDerivedTypeToFIRType(*this, tySpec);
+  }
+  mlir::Type genType(Fortran::common::TypeCategory tc) override final {
+    TODO_NOLOC("Not implemented genType TypeCategory. Needed for more complex "
+               "expression lowering");
   }
   mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
     return Fortran::lower::translateVariableToFIRType(*this, var);

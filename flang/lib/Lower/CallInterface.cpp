@@ -215,7 +215,11 @@ void Fortran::lower::CallerInterface::walkResultLengths(
             dynamicType.GetCharLength())
       visitor(toEvExpr(*length));
   } else if (dynamicType.category() == common::TypeCategory::Derived) {
-    TODO(converter.getCurrentLocation(), "walkResultLengths derived type");
+    const Fortran::semantics::DerivedTypeSpec &derivedTypeSpec =
+        dynamicType.GetDerivedTypeSpec();
+    if (Fortran::semantics::CountLenParameters(derivedTypeSpec) > 0)
+      TODO(converter.getCurrentLocation(),
+           "function result with derived type length parameters");
   }
 }
 
@@ -759,8 +763,10 @@ private:
     Fortran::common::TypeCategory cat = dynamicType.category();
     // DERIVED
     if (cat == Fortran::common::TypeCategory::Derived) {
-      TODO(interface.converter.getCurrentLocation(),
-           "[translateDynamicType] Derived types");
+      if (dynamicType.IsPolymorphic())
+        TODO(interface.converter.getCurrentLocation(),
+             "[translateDynamicType] polymorphic types");
+      return getConverter().genType(dynamicType.GetDerivedTypeSpec());
     }
     // CHARACTER with compile time constant length.
     if (cat == Fortran::common::TypeCategory::Character)
