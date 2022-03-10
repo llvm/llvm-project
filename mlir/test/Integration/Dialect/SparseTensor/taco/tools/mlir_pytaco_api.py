@@ -16,6 +16,8 @@ from . import mlir_pytaco
 from . import mlir_pytaco_io
 
 # Functions defined by PyTACO API.
+ceil = mlir_pytaco.ceil
+floor = mlir_pytaco.floor
 get_index_vars = mlir_pytaco.get_index_vars
 from_array = mlir_pytaco.Tensor.from_array
 read = mlir_pytaco_io.read
