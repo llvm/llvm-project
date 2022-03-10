@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s1, typename S::value_type s2)
 {
     typedef typename S::traits_type T;

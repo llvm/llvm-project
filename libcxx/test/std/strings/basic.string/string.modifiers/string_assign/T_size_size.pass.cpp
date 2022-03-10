@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
 {
     if (pos <= sv.size())
@@ -29,7 +29,7 @@ test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -45,7 +45,7 @@ test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
 }
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test_npos(S s, SV sv, typename S::size_type pos, S expected)
 {
     if (pos <= sv.size())
@@ -55,7 +55,7 @@ test_npos(S s, SV sv, typename S::size_type pos, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {

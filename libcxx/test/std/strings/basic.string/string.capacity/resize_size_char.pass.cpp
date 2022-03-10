@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type n, typename S::value_type c, S expected)
 {
     if (n <= s.max_size())
@@ -28,7 +28,7 @@ test(S s, typename S::size_type n, typename S::value_type c, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
