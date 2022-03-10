@@ -83,7 +83,7 @@ config.available_features.add('crash-recovery')
 #
 
 # Exclude MSYS due to transforming '/' to 'X:/mingwroot/'.
-if not platform.system() in ['Windows'] or not execute_external:
+if not platform.system() in ['Windows'] or llvm_config.use_lit_shell:
     config.available_features.add('shell-preserves-root')
 
 # ANSI escape sequences in non-dumb terminal
