@@ -319,7 +319,7 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
                                         kmp_int32 if_expr,
                                         kmp_int32 num_threads, int proc_bind,
                                         void *fn, void *wrapper_fn, void **args,
-                                        size_t nargs) {
+                                        const size_t nargs) {
 
   PRINT0(LD_IO | LD_PAR, "call kmpc_parallel_51\n");
   // Handle the serialized case first, same for SPMD/non-SPMD

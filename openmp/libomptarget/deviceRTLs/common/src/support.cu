@@ -217,7 +217,7 @@ char *GetTeamsReductionScratchpad() {
 // Invoke an outlined parallel function unwrapping arguments (up
 // to 32).
 void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
-                            void **args, size_t nargs) {
+                            void **args, const size_t nargs) {
   switch (nargs) {
 #include "common/generated_microtask_cases.gen"
   default:
