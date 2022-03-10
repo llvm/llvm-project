@@ -9772,7 +9772,7 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
   SDValue V2Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V2);
 
   SDValue Shuffle;
-  // If the V2 source if undef or zero then we can use a tbl1, as tbl1 will fill
+  // If the V2 source is undef or zero then we can use a tbl1, as tbl1 will fill
   // out of range values with 0s.
   if (V2.isUndef() || isZerosVector(V2.getNode())) {
     if (IndexLen == 8)
