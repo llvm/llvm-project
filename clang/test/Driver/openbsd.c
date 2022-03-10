@@ -121,7 +121,8 @@
 
 // Check that unwind tables are enabled
 // RUN: %clang -target arm-unknown-openbsd -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// RUN: FileCheck -check-prefix=NO-UNWIND-TABLES %s
 // RUN: %clang -target mips64-unknown-openbsd -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=UNWIND-TABLES %s
 // UNWIND-TABLES: "-funwind-tables=2"
+// NO-UNWIND-TABLES-NOT: "-funwind-tables=2"
