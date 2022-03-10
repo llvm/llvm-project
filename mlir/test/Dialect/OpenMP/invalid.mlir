@@ -132,6 +132,56 @@ func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+llvm.func @test_omp_wsloop_dynamic_bad_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{unknown modifier type: ginandtonic}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, ginandtonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_many_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{unexpected modifier(s)}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic, monotonic, monotonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_wrong_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{incorrect modifier order}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, simd, monotonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_wrong_modifier2(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{incorrect modifier order}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic, monotonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_wrong_modifier3(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{incorrect modifier order}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, simd, simd) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
 // expected-error @below {{op expects initializer region with one argument of the reduction type}}
 omp.reduction.declare @add_f32 : f64
 init {
