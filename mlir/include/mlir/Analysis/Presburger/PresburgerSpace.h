@@ -110,8 +110,9 @@ public:
   /// first added identifier.
   virtual unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
 
-  /// Removes identifiers in the column range [idStart, idLimit).
-  virtual void removeIdRange(unsigned idStart, unsigned idLimit);
+  /// Removes identifiers of the specified kind in the column range [idStart,
+  /// idLimit). The range is relative to the kind of identifier.
+  virtual void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
 
   /// Returns true if both the spaces are equal i.e. if both spaces have the
   /// same number of identifiers of each kind (excluding Local Identifiers).
@@ -182,7 +183,7 @@ public:
   unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
 
   /// Removes identifiers in the column range [idStart, idLimit).
-  void removeIdRange(unsigned idStart, unsigned idLimit) override;
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
 
   /// Returns true if both the spaces are equal i.e. if both spaces have the
   /// same number of identifiers of each kind.

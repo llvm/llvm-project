@@ -412,6 +412,12 @@ public:
   unsigned appendSymbolId(ValueRange vals);
   using FlatAffineConstraints::appendSymbolId;
 
+  /// Removes identifiers in the column range [idStart, idLimit), and copies any
+  /// remaining valid data into place, updates member variables, and resizes
+  /// arrays as needed.
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
+  using IntegerRelation::removeIdRange;
+
   /// Add the specified values as a dim or symbol id depending on its nature, if
   /// it already doesn't exist in the system. `val` has to be either a terminal
   /// symbol or a loop IV, i.e., it cannot be the result affine.apply of any
@@ -557,11 +563,6 @@ protected:
   /// is meant to be used within an assert internally.
   bool hasConsistentState() const override;
 
-  /// Removes identifiers in the column range [idStart, idLimit), and copies any
-  /// remaining valid data into place, updates member variables, and resizes
-  /// arrays as needed.
-  void removeIdRange(unsigned idStart, unsigned idLimit) override;
-
   /// Eliminates the identifier at the specified position using Fourier-Motzkin
   /// variable elimination, but uses Gaussian elimination if there is an
   /// equality involving that identifier. If the result of the elimination is
@@ -643,17 +644,18 @@ public:
   void appendDomainId(unsigned num = 1);
   void appendRangeId(unsigned num = 1);
 
+  /// Removes identifiers in the column range [idStart, idLimit), and copies any
+  /// remaining valid data into place, updates member variables, and resizes
+  /// arrays as needed.
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
+  using IntegerRelation::removeIdRange;
+
 protected:
   // Number of dimension identifers corresponding to domain identifers.
   unsigned numDomainDims;
 
   // Number of dimension identifers corresponding to range identifers.
   unsigned numRangeDims;
-
-  /// Removes identifiers in the column range [idStart, idLimit), and copies any
-  /// remaining valid data into place, updates member variables, and resizes
-  /// arrays as needed.
-  void removeIdRange(unsigned idStart, unsigned idLimit) override;
 };
 
 /// Flattens 'expr' into 'flattenedExpr', which contains the coefficients of the

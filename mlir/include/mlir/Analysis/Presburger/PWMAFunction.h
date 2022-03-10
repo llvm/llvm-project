@@ -84,7 +84,8 @@ public:
   void swapId(unsigned posA, unsigned posB) override;
 
   /// Remove the specified range of ids.
-  void removeIdRange(unsigned idStart, unsigned idLimit) override;
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
+  using IntegerRelation::removeIdRange;
 
   /// Eliminate the `posB^th` local identifier, replacing every instance of it
   /// with the `posA^th` local identifier. This should be used when the two

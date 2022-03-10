@@ -94,8 +94,9 @@ void MultiAffineFunction::swapId(unsigned posA, unsigned posB) {
   IntegerPolyhedron::swapId(posA, posB);
 }
 
-void MultiAffineFunction::removeIdRange(unsigned idStart, unsigned idLimit) {
-  output.removeColumns(idStart, idLimit - idStart);
+void MultiAffineFunction::removeIdRange(IdKind kind, unsigned idStart,
+                                        unsigned idLimit) {
+  output.removeColumns(idStart + getIdKindOffset(kind), idLimit - idStart);
   IntegerPolyhedron::removeIdRange(idStart, idLimit);
 }
 
