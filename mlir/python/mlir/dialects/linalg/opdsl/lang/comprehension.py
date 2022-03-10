@@ -274,6 +274,10 @@ class UnaryFn:
   """Unary function namespace."""
   exp = UnaryFnType("exp")
   log = UnaryFnType("log")
+  abs = UnaryFnType("abs")
+  ceil = UnaryFnType("ceil")
+  floor = UnaryFnType("floor")
+  negf = UnaryFnType("negf")
 
 
 class BinaryFnType:
