@@ -5133,14 +5133,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     }
   }
 
-  // For scalable vectors don't use tail folding for low trip counts or
-  // optimizing for code size. We only permit this if the user has explicitly
-  // requested it.
-  if (ScalarEpilogueStatus != CM_ScalarEpilogueNotNeededUsePredicate &&
-      ScalarEpilogueStatus != CM_ScalarEpilogueNotAllowedUsePredicate &&
-      MaxFactors.ScalableVF.isVector())
-    MaxFactors.ScalableVF = ElementCount::getScalable(0);
-
   // If we don't know the precise trip count, or if the trip count that we
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
