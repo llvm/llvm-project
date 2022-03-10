@@ -2,7 +2,7 @@
 Test python scripted process in lldb
 """
 
-import os
+import os, shutil
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -43,29 +43,39 @@ class ScriptedProcesTestCase(TestBase):
         self.expect('script dir(ScriptedProcess)',
                     substrs=["launch"])
 
+    def move_blueprint_to_dsym(self, blueprint_name):
+        blueprint_origin_path = os.path.join(self.getSourceDir(), blueprint_name)
+        dsym_bundle = self.getBuildArtifact("a.out.dSYM")
+        blueprint_destination_path = os.path.join(dsym_bundle, "Contents",
+                                                  "Resources", "Python")
+        if not os.path.exists(blueprint_destination_path):
+            os.mkdir(blueprint_destination_path)
+
+        blueprint_destination_path = os.path.join(blueprint_destination_path, "a_out.py")
+        shutil.copy(blueprint_origin_path, blueprint_destination_path)
+
     @skipUnlessDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
         Scripted Thread, with invalid register context."""
         self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-        log_file = self.getBuildArtifact('thread.log')
-        self.runCmd("log enable lldb thread -f " + log_file)
-        self.assertTrue(os.path.isfile(log_file))
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
         def cleanup():
           del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
         self.addTearDownHook(cleanup)
 
-        scripted_process_example_relpath = 'invalid_scripted_process.py'
-        self.runCmd("command script import " + os.path.join(self.getSourceDir(),
-                                                            scripted_process_example_relpath))
+        self.runCmd("settings set target.load-script-from-symbol-file true")
+        self.move_blueprint_to_dsym('invalid_scripted_process.py')
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        log_file = self.getBuildArtifact('thread.log')
+        self.runCmd("log enable lldb thread -f " + log_file)
+        self.assertTrue(os.path.isfile(log_file))
 
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
-        launch_info.SetScriptedProcessClassName("invalid_scripted_process.InvalidScriptedProcess")
+        launch_info.SetScriptedProcessClassName("a_out.InvalidScriptedProcess")
         error = lldb.SBError()
 
         process = target.Launch(launch_info, error)
