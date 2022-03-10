@@ -1,4 +1,4 @@
-//===--- TestingSupport.h - Testing utils for dataflow analyses -*- C++ -*-===//
+//===--- DataflowAnalysis.h - Testing utils for dataflow analyses * C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
-#define LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
+#ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TESTING_DATAFLOWANALYSIS_H
+#define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TESTING_DATAFLOWANALYSIS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -179,4 +179,4 @@ const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
 } // namespace dataflow
 } // namespace clang
 
-#endif // LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
+#endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TESTING_DATAFLOWANALYSIS_H
