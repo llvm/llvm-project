@@ -645,6 +645,17 @@ TEST(SetTest, coalesceDoubleIncrement) {
   expectCoalesce(3, set);
 }
 
+TEST(SetTest, coalesceLastCoalesced) {
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
+      1, {
+             "(x) : (x == 0)",
+             "(x) : (x - 1 >= 0, -x + 3 >= 0)",
+             "(x) : (x + 2 == 0)",
+             "(x) : (x - 2 >= 0, -x + 4 >= 0)",
+         });
+  expectCoalesce(3, set);
+}
+
 TEST(SetTest, coalesceDiv) {
   PresburgerSet set =
       parsePresburgerSetFromPolyStrings(1, {
