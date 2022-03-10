@@ -14,8 +14,6 @@
 #include <winsock2.h>
 #endif
 
-#include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
@@ -29,6 +27,8 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
+
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -140,8 +140,7 @@ Status PlatformWindows::ConnectRemote(Args &args) {
   } else {
     if (!m_remote_platform_sp)
       m_remote_platform_sp =
-          platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
-              /*force=*/true, nullptr);
+          Platform::Create(ConstString("remote-gdb-server"), error);
 
     if (m_remote_platform_sp) {
       if (error.Success()) {
