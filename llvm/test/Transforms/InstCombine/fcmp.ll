@@ -829,3 +829,347 @@ define i1 @lossy_uno(half %x) {
   %r = fcmp uno float %e, 2049.0
   ret i1 %r
 }
+
+define i1 @fneg_oeq(float %a) {
+; CHECK-LABEL: @fneg_oeq(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp oeq float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_ogt(half %a) {
+; CHECK-LABEL: @fneg_ogt(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg half [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ogt half [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg half %a
+  %cmp = fcmp fast ogt half %fneg, %a
+  ret i1 %cmp
+}
+
+define <2 x i1> @fneg_oge(<2 x float> %a) {
+; CHECK-LABEL: @fneg_oge(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg fast <2 x float> [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <2 x float> [[FNEG]], [[A]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %fneg = fneg fast <2 x float> %a
+  %cmp = fcmp oge <2 x float> %fneg, %a
+  ret <2 x i1> %cmp
+}
+
+define i1 @fneg_olt(float %a, float* %q) {
+; CHECK-LABEL: @fneg_olt(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  store float %fneg, float* %q
+  %cmp = fcmp olt float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_ole(float %a) {
+; CHECK-LABEL: @fneg_ole(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ole float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp nsz ole float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_one(float %a) {
+; CHECK-LABEL: @fneg_one(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan one float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp nnan one float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_ord(float %a) {
+; CHECK-LABEL: @fneg_ord(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ord float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp ninf ord float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_uno(float %a) {
+; CHECK-LABEL: @fneg_uno(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp uno float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_ueq(half %a) {
+; CHECK-LABEL: @fneg_ueq(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg half [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ueq half [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg half %a
+  %cmp = fcmp fast ueq half %fneg, %a
+  ret i1 %cmp
+}
+
+define <2 x i1> @fneg_ugt(<2 x float> %a) {
+; CHECK-LABEL: @fneg_ugt(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg fast <2 x float> [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt <2 x float> [[FNEG]], [[A]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %fneg = fneg fast <2 x float> %a
+  %cmp = fcmp ugt <2 x float> %fneg, %a
+  ret <2 x i1> %cmp
+}
+
+define i1 @fneg_uge(float %a, float* %q) {
+; CHECK-LABEL: @fneg_uge(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  store float %fneg, float* %q
+  %cmp = fcmp uge float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_ult(float %a) {
+; CHECK-LABEL: @fneg_ult(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ult float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp nsz ult float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_ule(float %a) {
+; CHECK-LABEL: @fneg_ule(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ule float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp nnan ule float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_une(float %a) {
+; CHECK-LABEL: @fneg_une(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf une float [[FNEG]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp ninf une float %fneg, %a
+  ret i1 %cmp
+}
+
+define i1 @fneg_oeq_swap(float %p) {
+; CHECK-LABEL: @fneg_oeq_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp oeq float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_ogt_swap(half %p) {
+; CHECK-LABEL: @fneg_ogt_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd half [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg half [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ogt half [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd half %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg half %a
+  %cmp = fcmp fast ogt half %a, %fneg
+  ret i1 %cmp
+}
+
+define <2 x i1> @fneg_oge_swap(<2 x float> %p) {
+; CHECK-LABEL: @fneg_oge_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd <2 x float> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg fast <2 x float> [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <2 x float> [[A]], [[FNEG]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %a = fadd <2 x float> %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg fast <2 x float> %a
+  %cmp = fcmp oge <2 x float> %a, %fneg
+  ret <2 x i1> %cmp
+}
+
+define i1 @fneg_olt_swap(float %p, float* %q) {
+; CHECK-LABEL: @fneg_olt_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  store float %fneg, float* %q
+  %cmp = fcmp olt float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_ole_swap(float %p) {
+; CHECK-LABEL: @fneg_ole_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ole float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp nsz ole float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_one_swap(float %p) {
+; CHECK-LABEL: @fneg_one_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan one float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp nnan one float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_ord_swap(float %p) {
+; CHECK-LABEL: @fneg_ord_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ord float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp ninf ord float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_uno_swap(float %p) {
+; CHECK-LABEL: @fneg_uno_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp uno float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_ueq_swap(half %p) {
+; CHECK-LABEL: @fneg_ueq_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd half [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg half [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ueq half [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd half %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg half %a
+  %cmp = fcmp fast ueq half %a, %fneg
+  ret i1 %cmp
+}
+
+define <2 x i1> @fneg_ugt_swap(<2 x float> %p) {
+; CHECK-LABEL: @fneg_ugt_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd <2 x float> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg fast <2 x float> [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt <2 x float> [[A]], [[FNEG]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %a = fadd <2 x float> %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg fast <2 x float> %a
+  %cmp = fcmp ugt <2 x float> %a, %fneg
+  ret <2 x i1> %cmp
+}
+
+define i1 @fneg_uge_swap(float %p, float* %q) {
+; CHECK-LABEL: @fneg_uge_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  store float %fneg, float* %q
+  %cmp = fcmp uge float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_ult_swap(float %p) {
+; CHECK-LABEL: @fneg_ult_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ult float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp nsz ult float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_ule_swap(float %p) {
+; CHECK-LABEL: @fneg_ule_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ule float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp nnan ule float %a, %fneg
+  ret i1 %cmp
+}
+
+define i1 @fneg_une_swap(float %p) {
+; CHECK-LABEL: @fneg_une_swap(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf une float [[A]], [[FNEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = fadd float %p, %p ; thwart complexity-based canonicalization
+  %fneg = fneg float %a
+  %cmp = fcmp ninf une float %a, %fneg
+  ret i1 %cmp
+}

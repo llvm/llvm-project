@@ -349,6 +349,19 @@ define fp128 @select_fcmp_ogt_zero(fp128 %x) {
   ret fp128 %fabs
 }
 
+define float @select_fcmp_ogt_fneg(float %a) {
+; CHECK-LABEL: @select_fcmp_ogt_fneg(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[FNEG]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP]], float [[A]], float [[FNEG]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp ogt float %a, %fneg
+  %r = select nsz i1 %cmp, float %a, float %fneg
+  ret float %r
+}
+
 define fp128 @select_fcmp_nnan_ogt_zero(fp128 %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ogt_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
