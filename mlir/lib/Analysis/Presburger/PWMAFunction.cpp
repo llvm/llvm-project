@@ -84,6 +84,8 @@ bool MultiAffineFunction::isEqual(const MultiAffineFunction &other) const {
 
 unsigned MultiAffineFunction::insertId(IdKind kind, unsigned pos,
                                        unsigned num) {
+  assert((kind != IdKind::Domain || num == 0) &&
+         "Domain has to be zero in a set");
   unsigned absolutePos = getIdKindOffset(kind) + pos;
   output.insertColumns(absolutePos, num);
   return IntegerPolyhedron::insertId(kind, pos, num);
