@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -300,16 +301,18 @@ public:
   }
 };
 
-/// Return the number of leftmost dimensions from the first rightmost transposed
-/// dimension found in 'transpose'.
-size_t getNumDimsFromFirstTransposedDim(ArrayRef<int64_t> transpose) {
+/// Given a 'transpose' pattern, prune the rightmost dimensions that are not
+/// transposed.
+void pruneNonTransposedDims(ArrayRef<int64_t> transpose,
+                            SmallVectorImpl<int64_t> &result) {
   size_t numTransposedDims = transpose.size();
   for (size_t transpDim : llvm::reverse(transpose)) {
     if (transpDim != numTransposedDims - 1)
       break;
     numTransposedDims--;
   }
-  return numTransposedDims;
+
+  result.append(transpose.begin(), transpose.begin() + numTransposedDims);
 }
 
 /// Progressive lowering of TransposeOp.
@@ -334,6 +337,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
+    Value input = op.vector();
+    VectorType inputType = op.getVectorType();
     VectorType resType = op.getResultType();
 
     // Set up convenience transposition table.
@@ -354,7 +359,7 @@ public:
       Type flattenedType =
           VectorType::get(resType.getNumElements(), resType.getElementType());
       auto matrix =
-          rewriter.create<vector::ShapeCastOp>(loc, flattenedType, op.vector());
+          rewriter.create<vector::ShapeCastOp>(loc, flattenedType, input);
       auto rows = rewriter.getI32IntegerAttr(resType.getShape()[0]);
       auto columns = rewriter.getI32IntegerAttr(resType.getShape()[1]);
       Value trans = rewriter.create<vector::FlatTransposeOp>(
@@ -365,54 +370,40 @@ public:
 
     // Generate unrolled extract/insert ops. We do not unroll the rightmost
     // (i.e., highest-order) dimensions that are not transposed and leave them
-    // in vector form to improve performance.
-    size_t numLeftmostTransposedDims = getNumDimsFromFirstTransposedDim(transp);
+    // in vector form to improve performance. Therefore, we prune those
+    // dimensions from the shape/transpose data structures used to generate the
+    // extract/insert ops.
+    SmallVector<int64_t, 4> prunedTransp;
+    pruneNonTransposedDims(transp, prunedTransp);
+    size_t numPrunedDims = transp.size() - prunedTransp.size();
+    auto prunedInShape = inputType.getShape().drop_back(numPrunedDims);
+    SmallVector<int64_t, 4> ones(prunedInShape.size(), 1);
+    auto prunedInStrides = computeStrides(prunedInShape, ones);
 
-    // The type of the extract operation will be scalar if all the dimensions
-    // are unrolled. Otherwise, it will be a vector with the shape of the
-    // dimensions that are not transposed.
-    Type extractType =
-        numLeftmostTransposedDims == transp.size()
-            ? resType.getElementType()
-            : VectorType::Builder(resType).setShape(
-                  resType.getShape().drop_front(numLeftmostTransposedDims));
-
+    // Generates the extract/insert operations for every scalar/vector element
+    // of the leftmost transposed dimensions. We traverse every transpose
+    // element using a linearized index that we delinearize to generate the
+    // appropriate indices for the extract/insert operations.
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resType, rewriter.getZeroAttr(resType));
-    SmallVector<int64_t, 4> lhs(numLeftmostTransposedDims, 0);
-    SmallVector<int64_t, 4> rhs(numLeftmostTransposedDims, 0);
-    rewriter.replaceOp(op, expandIndices(loc, resType, extractType, 0,
-                                         numLeftmostTransposedDims, transp, lhs,
-                                         rhs, op.vector(), result, rewriter));
+    int64_t numTransposedElements = ShapedType::getNumElements(prunedInShape);
+
+    for (int64_t linearIdx = 0; linearIdx < numTransposedElements;
+         ++linearIdx) {
+      auto extractIdxs = delinearize(prunedInStrides, linearIdx);
+      SmallVector<int64_t, 4> insertIdxs(extractIdxs);
+      applyPermutationToVector(insertIdxs, prunedTransp);
+      Value extractOp =
+          rewriter.create<vector::ExtractOp>(loc, input, extractIdxs);
+      result =
+          rewriter.create<vector::InsertOp>(loc, extractOp, result, insertIdxs);
+    }
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 
 private:
-  // Builds the indices arrays for the lhs and rhs. Generates the extract/insert
-  // operations when all the ranks go over the last dimension being transposed.
-  Value expandIndices(Location loc, VectorType resType, Type extractType,
-                      int64_t pos, int64_t numLeftmostTransposedDims,
-                      SmallVector<int64_t, 4> &transp,
-                      SmallVector<int64_t, 4> &lhs,
-                      SmallVector<int64_t, 4> &rhs, Value input, Value result,
-                      PatternRewriter &rewriter) const {
-    if (pos >= numLeftmostTransposedDims) {
-      auto ridx = rewriter.getI64ArrayAttr(rhs);
-      auto lidx = rewriter.getI64ArrayAttr(lhs);
-      Value e =
-          rewriter.create<vector::ExtractOp>(loc, extractType, input, ridx);
-      return rewriter.create<vector::InsertOp>(loc, resType, e, result, lidx);
-    }
-    for (int64_t d = 0, e = resType.getDimSize(pos); d < e; ++d) {
-      lhs[pos] = d;
-      rhs[transp[pos]] = d;
-      result = expandIndices(loc, resType, extractType, pos + 1,
-                             numLeftmostTransposedDims, transp, lhs, rhs, input,
-                             result, rewriter);
-    }
-    return result;
-  }
-
   /// Options to control the vector patterns.
   vector::VectorTransformsOptions vectorTransformOptions;
 };
