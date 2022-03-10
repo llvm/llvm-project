@@ -244,16 +244,17 @@ projects="llvm clang"
 if [ $do_clang_tools = "yes" ]; then
   projects="$projects clang-tools-extra"
 fi
+runtimes=""
 if [ $do_rt = "yes" ]; then
-  projects="$projects compiler-rt"
+  runtimes="$runtimes compiler-rt"
 fi
 if [ $do_libs = "yes" ]; then
-  projects="$projects libcxx"
+  runtimes="$runtimes libcxx"
   if [ $do_libcxxabi = "yes" ]; then
-    projects="$projects libcxxabi"
+    runtimes="$runtimes libcxxabi"
   fi
   if [ $do_libunwind = "yes" ]; then
-    projects="$projects libunwind"
+    runtimes="$runtimes libunwind"
   fi
 fi
 if [ $do_openmp = "yes" ]; then
@@ -380,6 +381,7 @@ function configure_llvmCore() {
     esac
 
     project_list=${projects// /;}
+    runtime_list=${runtimes// /;}
     echo "# Using C compiler: $c_compiler"
     echo "# Using C++ compiler: $cxx_compiler"
 
@@ -392,6 +394,7 @@ function configure_llvmCore() {
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DLLVM_ENABLE_PROJECTS="$project_list" \
         -DLLVM_LIT_ARGS="-j $NumJobs" \
+        -DLLVM_ENABLE_RUNTIMES="$runtime_list" \
         $ExtraConfigureFlags $BuildDir/llvm-project/llvm \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
     env CC="$c_compiler" CXX="$cxx_compiler" \
@@ -400,6 +403,7 @@ function configure_llvmCore() {
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DLLVM_ENABLE_PROJECTS="$project_list" \
         -DLLVM_LIT_ARGS="-j $NumJobs" \
+        -DLLVM_ENABLE_RUNTIMES="$runtime_list" \
         $ExtraConfigureFlags $BuildDir/llvm-project/llvm \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
 
