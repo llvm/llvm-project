@@ -101,6 +101,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)) {
   Relocation::Arch = this->TheTriple->getArch();
+  RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
 
