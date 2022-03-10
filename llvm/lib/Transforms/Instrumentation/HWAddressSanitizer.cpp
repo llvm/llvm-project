@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1301,6 +1302,11 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
+static bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
+}
+
 bool HWAddressSanitizer::instrumentStack(
     memtag::StackInfo &SInfo, Value *StackTag,
     llvm::function_ref<const DominatorTree &()> GetDT,
@@ -1326,8 +1332,32 @@ bool HWAddressSanitizer::instrumentStack(
         AI->hasName() ? AI->getName().str() : "alloca." + itostr(N);
     Replacement->setName(Name + ".hwasan");
 
-    AI->replaceUsesWithIf(Replacement,
-                          [AILong](Use &U) { return U.getUser() != AILong; });
+    size_t Size = memtag::getAllocaSizeInBytes(*AI);
+    size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
+
+    Value *AICast = IRB.CreatePointerCast(AI, Int8PtrTy);
+
+    auto HandleLifetime = [&](IntrinsicInst *II) {
+      // Set the lifetime intrinsic to cover the whole alloca. This reduces the
+      // set of assumptions we need to make about the lifetime. Without this we
+      // would need to ensure that we can track the lifetime pointer to a
+      // constant offset from the alloca, and would still need to change the
+      // size to include the extra alignment we use for the untagging to make
+      // the size consistent.
+      //
+      // The check for standard lifetime below makes sure that we have exactly
+      // one set of start / end in any execution (i.e. the ends are not
+      // reachable from each other), so this will not cause any problems.
+      II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
+      II->setArgOperand(1, AICast);
+    };
+    llvm::for_each(Info.LifetimeStart, HandleLifetime);
+    llvm::for_each(Info.LifetimeEnd, HandleLifetime);
+
+    AI->replaceUsesWithIf(Replacement, [AICast, AILong](Use &U) {
+      auto *User = U.getUser();
+      return User != AILong && User != AICast && !isLifetimeIntrinsic(User);
+    });
 
     for (auto *DDI : Info.DbgVariableIntrinsics) {
       // Prepend "tag_offset, N" to the dwarf expression.
@@ -1341,8 +1371,6 @@ bool HWAddressSanitizer::instrumentStack(
                                                           NewOps, LocNo));
     }
 
-    size_t Size = memtag::getAllocaSizeInBytes(*AI);
-    size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
       Value *UARTag = getUARTag(IRB, StackTag);

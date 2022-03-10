@@ -21,11 +21,13 @@ entry:
   %0 = bitcast i32* %x to i8*
   call void @llvm.lifetime.start.p0i8(i64 8, i8* %0)
   invoke void @mayFail(i32* %x) to label %invoke.cont unwind label %lpad
+; CHECK: [[CAST:%.*]] = bitcast { i32, [12 x i8] }* %x to i32*
+; CHECK: [[TMP1:%.*]] = bitcast i32* {{.*}}[[CAST]] to i8*
 
 invoke.cont:                                      ; preds = %entry
 ; CHECK: invoke.cont:
-; CHECK:  call void @llvm.memset.p0i8.i64(i8* align 1 %31, i8 0, i64 1, i1 false)
-; CHECK:  call void @llvm.lifetime.end.p0i8(i64 8, i8* %28)
+; CHECK:  call void @llvm.memset.p0i8.i64(i8* align 1 %{{.*}}, i8 0, i64 1, i1 false)
+; CHECK:  call void @llvm.lifetime.end.p0i8(i64 16, i8* {{.*}}[[TMP1]])
 ; CHECK:  ret void
 
   %1 = bitcast i32* %x to i8*
@@ -34,9 +36,8 @@ invoke.cont:                                      ; preds = %entry
 
 lpad:                                             ; preds = %entry
 ; CHECK: lpad
-; CHECK:  %41 = getelementptr i8, i8* %17, i64 %40
-; CHECK:  call void @llvm.memset.p0i8.i64(i8* align 1 %41, i8 0, i64 1, i1 false)
-; CHECK:  call void @llvm.lifetime.end.p0i8(i64 8, i8* %38)
+; CHECK:  call void @llvm.memset.p0i8.i64(i8* align 1 %{{.*}}, i8 0, i64 1, i1 false)
+; CHECK:  call void @llvm.lifetime.end.p0i8(i64 16, i8* {{.*}}[[TMP1]])
 ; CHECK:  br label %eh.resume
 
   %2 = landingpad { i8*, i32 }
