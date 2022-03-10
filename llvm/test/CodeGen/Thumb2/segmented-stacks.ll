@@ -67,4 +67,108 @@ define void @test_basic() #0 {
   ret void
 }
 
+define void @test_large() #0 {
+        %mem = alloca i32, i32 10000
+        call void @dummy_use (i32* %mem, i32 0)
+        ret void
+
+; THUMB-LABEL:   test_large:
+
+; THUMB:         push    {r4, r5}
+; THUMB-NEXT:    movw    r4, #40192
+; THUMB-NEXT:    mov     r5, sp
+; THUMB-NEXT:    movt    r4, #0
+; THUMB-NEXT:    sub     r5, r5, r4
+; THUMB-NEXT:    mrc     p15, #0, r4, c13, c0, #3
+; THUMB-NEXT:    ldr.w   r4, [r4, #252]
+; THUMB-NEXT:    cmp     r4, r5
+; THUMB-NEXT:    blo     .LBB1_2
+
+; THUMB:         movw    r4, #40192
+; THUMB-NEXT:    movt    r4, #0
+; THUMB-NEXT:    mov     r5, #0
+; THUMB-NEXT:    push    {lr}
+; THUMB-NEXT:    bl      __morestack
+; THUMB-NEXT:    ldr     lr, [sp], #4
+; THUMB-NEXT:    pop     {r4, r5}
+; THUMB-NEXT:    bx      lr
+
+; THUMB:         pop     {r4, r5}
+
+
+; ARM-LABEL:   test_large:
+
+; ARM:         push    {r4, r5}
+; ARM-NEXT:    ldr     r4, .LCPI1_0
+; ARM-NEXT:    sub     r5, sp, r4
+; ARM-NEXT:    mrc     p15, #0, r4, c13, c0, #3
+; ARM-NEXT:    ldr     r4, [r4, #252]
+; ARM-NEXT:    cmp     r4, r5
+; ARM-NEXT:    blo     .LBB1_2
+
+; ARM:         ldr     r4, .LCPI1_0
+; ARM-NEXT:    mov     r5, #0
+; ARM-NEXT:    stmdb   sp!, {lr}
+; ARM-NEXT:    bl      __morestack
+; ARM-NEXT:    ldm     sp!, {lr}
+; ARM-NEXT:    pop     {r4, r5}
+; ARM-NEXT:    bx      lr
+
+; ARM:         pop     {r4, r5}
+
+; ARM:         .LCPI1_0:
+; ARM-NEXT:    .long   40192
+
+}
+
+define fastcc void @test_fastcc_large() #0 {
+        %mem = alloca i32, i32 10000
+        call void @dummy_use (i32* %mem, i32 0)
+        ret void
+
+; THUMB-LABEL:   test_fastcc_large:
+
+; THUMB:         push    {r4, r5}
+; THUMB-NEXT:    movw    r4, #40192
+; THUMB-NEXT:    mov     r5, sp
+; THUMB-NEXT:    movt    r4, #0
+; THUMB-NEXT:    sub     r5, r5, r4
+; THUMB-NEXT:    mrc     p15, #0, r4, c13, c0, #3
+; THUMB-NEXT:    ldr.w   r4, [r4, #252]
+; THUMB-NEXT:    cmp     r4, r5
+; THUMB-NEXT:    blo     .LBB2_2
+
+; THUMB:         movw    r4, #40192
+; THUMB-NEXT:    movt    r4, #0
+; THUMB-NEXT:    mov     r5, #0
+; THUMB-NEXT:    push    {lr}
+; THUMB-NEXT:    bl      __morestack
+; THUMB-NEXT:    ldr     lr, [sp], #4
+; THUMB-NEXT:    pop     {r4, r5}
+; THUMB-NEXT:    bx      lr
+
+; THUMB:         pop     {r4, r5}
+
+; ARM-LABEL:   test_fastcc_large:
+
+; ARM:         push    {r4, r5}
+; ARM-NEXT:    ldr     r4, .LCPI2_0
+; ARM-NEXT:    sub     r5, sp, r4
+; ARM-NEXT:    mrc     p15, #0, r4, c13, c0, #3
+; ARM-NEXT:    ldr     r4, [r4, #252]
+; ARM-NEXT:    cmp     r4, r5
+; ARM-NEXT:    blo     .LBB2_2
+
+; ARM:         ldr     r4, .LCPI2_0
+; ARM-NEXT:    mov     r5, #0
+; ARM-NEXT:    stmdb   sp!, {lr}
+; ARM-NEXT:    bl      __morestack
+; ARM-NEXT:    ldm     sp!, {lr}
+; ARM-NEXT:    pop     {r4, r5}
+; ARM-NEXT:    bx      lr
+
+; ARM:         .LCPI2_0:
+; ARM-NEXT:    .long   40192
+}
+
 attributes #0 = { "split-stack" }
