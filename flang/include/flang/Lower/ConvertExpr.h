@@ -140,6 +140,40 @@ void createSomeArrayAssignment(AbstractConverter &converter,
                                const fir::ExtendedValue &rhs, SymMap &symMap,
                                StatementContext &stmtCtx);
 
+/// Common entry point for both explicit iteration spaces and implicit iteration
+/// spaces with masks.
+///
+/// For an implicit iteration space with masking, lowers an array assignment
+/// expression with masking expression(s).
+///
+/// 1. Evaluate the lhs to determine the rank and how to form the ArrayLoad
+/// (e.g., if there is a slicing op).
+/// 2. Scan the rhs, creating the ArrayLoads and evaluate the scalar subparts to
+/// be added to the map.
+/// 3. Create the loop nest.
+/// 4. Create the masking condition. Step 5 is conditionally executed only when
+/// the mask condition evaluates to true.
+/// 5. Evaluate the elemental expression, threading the results.
+/// 6. Copy the resulting array back with ArrayMergeStore to the lhs as
+/// determined per step 1.
+///
+/// For an explicit iteration space, lower a scalar or array assignment
+/// expression with a user-defined iteration space and possibly with masking
+/// expression(s).
+///
+/// If the expression is scalar, then the assignment is an array assignment but
+/// the array accesses are explicitly defined by the user and not implied for
+/// each element in the array. Mask expressions are optional.
+///
+/// If the expression has rank, then the assignment has a combined user-defined
+/// iteration space as well as a inner (subordinate) implied iteration
+/// space. The implied iteration space may include WHERE conditions, `masks`.
+void createAnyMaskedArrayAssignment(AbstractConverter &converter,
+                                    const SomeExpr &lhs, const SomeExpr &rhs,
+                                    ExplicitIterSpace &explicitIterSpace,
+                                    ImplicitIterSpace &implicitIterSpace,
+                                    SymMap &symMap, StatementContext &stmtCtx);
+
 /// Lower an assignment to an allocatable array, allocating the array if
 /// it is not allocated yet or reallocation it if it does not conform
 /// with the right hand side.
@@ -156,6 +190,19 @@ fir::ExtendedValue createSomeArrayTempValue(AbstractConverter &converter,
                                             const SomeExpr &expr,
                                             SymMap &symMap,
                                             StatementContext &stmtCtx);
+
+/// Somewhat similar to createSomeArrayTempValue, but the temporary buffer is
+/// allocated lazily (inside the loops instead of before the loops) to
+/// accomodate buffers with shapes that cannot be precomputed. In fact, the
+/// buffer need not even be hyperrectangular. The buffer may be created as an
+/// instance of a ragged array, which may be useful if an array's extents are
+/// functions of other loop indices. The ragged array structure is built with \p
+/// raggedHeader being the root header variable. The header is a tuple of
+/// `{rank, data-is-headers, [data]*, [extents]*}`, which is built recursively.
+/// The base header, \p raggedHeader, must be initialized to zeros.
+void createLazyArrayTempValue(AbstractConverter &converter,
+                              const SomeExpr &expr, mlir::Value raggedHeader,
+                              SymMap &symMap, StatementContext &stmtCtx);
 
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to

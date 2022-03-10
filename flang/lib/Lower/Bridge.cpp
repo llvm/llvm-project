@@ -1165,6 +1165,12 @@ private:
     TODO(toLocation(), "CaseConstruct lowering");
   }
 
+  template <typename A>
+  void genNestedStatement(const Fortran::parser::Statement<A> &stmt) {
+    setCurrentPosition(stmt.source);
+    genFIR(stmt.statement);
+  }
+
   void genFIR(const Fortran::parser::ConcurrentHeader &header) {
     TODO(toLocation(), "ConcurrentHeader lowering");
   }
@@ -1461,6 +1467,15 @@ private:
     TODO(toLocation(), "LockStmt lowering");
   }
 
+  /// Return true if the current context is a conditionalized and implied
+  /// iteration space.
+  bool implicitIterationSpace() { return !implicitIterSpace.empty(); }
+
+  /// Return true if context is currently an explicit iteration space. A scalar
+  /// assignment expression may be contextually within a user-defined iteration
+  /// space, transforming it into an array expression.
+  bool explicitIterationSpace() { return explicitIterSpace.isActive(); }
+
   /// Generate an array assignment.
   /// This is an assignment expression with rank > 0. The assignment may or may
   /// not be in a WHERE and/or FORALL context.
@@ -1475,46 +1490,106 @@ private:
       return;
     }
 
-    // No masks and the iteration space is implied by the array, so create a
-    // simple array assignment.
-    Fortran::lower::createSomeArrayAssignment(*this, assign.lhs, assign.rhs,
-                                              localSymbols, stmtCtx);
+    if (!implicitIterationSpace() && !explicitIterationSpace()) {
+      // No masks and the iteration space is implied by the array, so create a
+      // simple array assignment.
+      Fortran::lower::createSomeArrayAssignment(*this, assign.lhs, assign.rhs,
+                                                localSymbols, stmtCtx);
+      return;
+    }
+
+    // If there is an explicit iteration space, generate an array assignment
+    // with a user-specified iteration space and possibly with masks. These
+    // assignments may *appear* to be scalar expressions, but the scalar
+    // expression is evaluated at all points in the user-defined space much like
+    // an ordinary array assignment. More specifically, the semantics inside the
+    // FORALL much more closely resembles that of WHERE than a scalar
+    // assignment.
+    // Otherwise, generate a masked array assignment. The iteration space is
+    // implied by the lhs array expression.
+    Fortran::lower::createAnyMaskedArrayAssignment(
+        *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
+        localSymbols,
+        explicitIterationSpace() ? explicitIterSpace.stmtContext()
+                                 : implicitIterSpace.stmtContext());
   }
 
   void genFIR(const Fortran::parser::WhereConstruct &c) {
-    TODO(toLocation(), "WhereConstruct lowering");
+    implicitIterSpace.growStack();
+    genNestedStatement(
+        std::get<
+            Fortran::parser::Statement<Fortran::parser::WhereConstructStmt>>(
+            c.t));
+    for (const auto &body :
+         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(c.t))
+      genFIR(body);
+    for (const auto &e :
+         std::get<std::list<Fortran::parser::WhereConstruct::MaskedElsewhere>>(
+             c.t))
+      genFIR(e);
+    if (const auto &e =
+            std::get<std::optional<Fortran::parser::WhereConstruct::Elsewhere>>(
+                c.t);
+        e.has_value())
+      genFIR(*e);
+    genNestedStatement(
+        std::get<Fortran::parser::Statement<Fortran::parser::EndWhereStmt>>(
+            c.t));
   }
-
   void genFIR(const Fortran::parser::WhereBodyConstruct &body) {
-    TODO(toLocation(), "WhereBodyConstruct lowering");
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Statement<
+                Fortran::parser::AssignmentStmt> &stmt) {
+              genNestedStatement(stmt);
+            },
+            [&](const Fortran::parser::Statement<Fortran::parser::WhereStmt>
+                    &stmt) { genNestedStatement(stmt); },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::WhereConstruct> &c) { genFIR(c.value()); },
+        },
+        body.u);
   }
-
   void genFIR(const Fortran::parser::WhereConstructStmt &stmt) {
-    TODO(toLocation(), "WhereConstructStmt lowering");
+    implicitIterSpace.append(Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
   }
-
   void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
-    TODO(toLocation(), "MaskedElsewhere lowering");
+    genNestedStatement(
+        std::get<
+            Fortran::parser::Statement<Fortran::parser::MaskedElsewhereStmt>>(
+            ew.t));
+    for (const auto &body :
+         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
+      genFIR(body);
   }
-
   void genFIR(const Fortran::parser::MaskedElsewhereStmt &stmt) {
-    TODO(toLocation(), "MaskedElsewhereStmt lowering");
+    implicitIterSpace.append(Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
   }
-
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
-    TODO(toLocation(), "Elsewhere lowering");
+    genNestedStatement(
+        std::get<Fortran::parser::Statement<Fortran::parser::ElsewhereStmt>>(
+            ew.t));
+    for (const auto &body :
+         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
+      genFIR(body);
   }
-
   void genFIR(const Fortran::parser::ElsewhereStmt &stmt) {
-    TODO(toLocation(), "ElsewhereStmt lowering");
+    implicitIterSpace.append(nullptr);
   }
-
   void genFIR(const Fortran::parser::EndWhereStmt &) {
-    TODO(toLocation(), "EndWhereStmt lowering");
+    implicitIterSpace.shrinkStack();
   }
 
   void genFIR(const Fortran::parser::WhereStmt &stmt) {
-    TODO(toLocation(), "WhereStmt lowering");
+    Fortran::lower::StatementContext stmtCtx;
+    const auto &assign = std::get<Fortran::parser::AssignmentStmt>(stmt.t);
+    implicitIterSpace.growStack();
+    implicitIterSpace.append(Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
+    genAssignment(*assign.typedAssignment->v);
+    implicitIterSpace.shrinkStack();
   }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
