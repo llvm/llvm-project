@@ -4071,6 +4071,21 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
 
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+    MachineOperand &Src1 = MI.getOperand(2);
+
+    if (IsAdd && ST.hasLshlAddB64()) {
+      auto Add = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_LSHL_ADD_U64_e64),
+                         Dest.getReg())
+                     .add(Src0)
+                     .addImm(0)
+                     .add(Src1);
+      TII->legalizeOperands(*Add);
+      MI.eraseFromParent();
+      return BB;
+    }
+
     const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
     Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -4078,10 +4093,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     Register CarryReg = MRI.createVirtualRegister(CarryRC);
     Register DeadCarryReg = MRI.createVirtualRegister(CarryRC);
-
-    MachineOperand &Dest = MI.getOperand(0);
-    MachineOperand &Src0 = MI.getOperand(1);
-    MachineOperand &Src1 = MI.getOperand(2);
 
     const TargetRegisterClass *Src0RC = Src0.isReg()
                                             ? MRI.getRegClass(Src0.getReg())

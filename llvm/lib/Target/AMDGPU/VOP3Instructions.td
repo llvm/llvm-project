@@ -609,6 +609,23 @@ class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
   }];
 }
 
+def shl_0_to_4 : PatFrag<
+  (ops node:$src0, node:$src1), (shl node:$src0, node:$src1),
+  [{
+     if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+       return C->getZExtValue() <= 4;
+     }
+     return false;
+   }]> {
+  let GISelPredicateCode = [{
+    int64_t Imm = 0;
+    if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Imm)) &&
+        !mi_match(MI.getOperand(2).getReg(), MRI, m_Copy(m_ICst(Imm))))
+      return false;
+    return (uint64_t)Imm <= 4;
+  }];
+}
+
 let SubtargetPredicate = isGFX9Plus in {
 let isCommutable = 1, isReMaterializable = 1 in {
   defm V_ADD3_U32 : VOP3Inst <"v_add3_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
@@ -649,6 +666,10 @@ defm V_LSHL_ADD_U32 : VOP3Inst <"v_lshl_add_u32", VOP3_Profile<VOP_I32_I32_I32_I
 defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 } // End isReMaterializable = 1
 
+// V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
+// src0 is shifted left by 0-4 (use “0” to get ADD_U64).
+let SubtargetPredicate = isGFX940Plus in
+defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
 
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
   // This matches (op2 (op1 i32:$src0, i32:$src1), i32:$src2) with conditions.
@@ -663,6 +684,12 @@ def : ThreeOp_i32_Pats<cshl_32, or, V_LSHL_OR_B32_e64>;
 def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
+
+let SubtargetPredicate = isGFX940Plus in
+def : GCNPat<
+  (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
+  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
+>;
 
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
@@ -1273,3 +1300,5 @@ defm V_MAD_I32_I16 : VOP3OpSel_Real_gfx9 <0x1f2>;
 
 defm V_CVT_PKNORM_I16_F16 : VOP3OpSel_Real_gfx9 <0x299>;
 defm V_CVT_PKNORM_U16_F16 : VOP3OpSel_Real_gfx9 <0x29a>;
+
+defm V_LSHL_ADD_U64 : VOP3_Real_vi <0x208>;

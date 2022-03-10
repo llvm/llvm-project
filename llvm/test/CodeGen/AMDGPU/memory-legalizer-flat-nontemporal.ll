@@ -212,10 +212,9 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
 ; GFX940-NOTTGSPLIT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-NOTTGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX940-NOTTGSPLIT-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
-; GFX940-NOTTGSPLIT-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX940-NOTTGSPLIT-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_load_dword v2, v[0:1] nt
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
@@ -227,10 +226,9 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX940-TGSPLIT:       ; %bb.0: ; %entry
 ; GFX940-TGSPLIT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-TGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX940-TGSPLIT-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
-; GFX940-TGSPLIT-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX940-TGSPLIT-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
 ; GFX940-TGSPLIT-NEXT:    flat_load_dword v2, v[0:1] nt
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
@@ -450,13 +448,12 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
 ; GFX940-NOTTGSPLIT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-NOTTGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX940-NOTTGSPLIT-NEXT:    flat_load_dword v2, v[2:3]
-; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-NOTTGSPLIT-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
-; GFX940-NOTTGSPLIT-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX940-NOTTGSPLIT-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 nt
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
@@ -465,13 +462,12 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX940-TGSPLIT:       ; %bb.0: ; %entry
 ; GFX940-TGSPLIT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX940-TGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX940-TGSPLIT-NEXT:    flat_load_dword v2, v[2:3]
-; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-TGSPLIT-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
-; GFX940-TGSPLIT-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX940-TGSPLIT-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 nt
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
