@@ -1350,6 +1350,10 @@ bool HWAddressSanitizer::instrumentStack(
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
       Value *UARTag = getUARTag(IRB, StackTag);
+      // When untagging, use the `AlignedSize` because we need to set the tags
+      // for the entire alloca to zero. If we used `Size` here, we would
+      // keep the last granule tagged, and store zero in the last byte of the
+      // last granule, due to how short granules are implemented.
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
     // Calls to functions that may return twice (e.g. setjmp) confuse the
