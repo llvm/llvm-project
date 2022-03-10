@@ -16,6 +16,7 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
@@ -26,6 +27,7 @@
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/Support/CommandLine.h"
@@ -232,6 +234,8 @@ struct IntrinsicLibrary {
   /// if the argument is an integer, into llvm intrinsics if the argument is
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAssociated(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
@@ -311,6 +315,7 @@ struct IntrinsicHandler {
 
 constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
 constexpr auto asBox = Fortran::lower::LowerIntrinsicArgAs::Box;
+constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
 using I = IntrinsicLibrary;
 
 /// Flag to indicate that an intrinsic argument has to be handled as
@@ -327,6 +332,10 @@ static constexpr bool handleDynamicOptional = true;
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
+    {"associated",
+     &I::genAssociated,
+     {{{"pointer", asInquired}, {"target", asInquired}}},
+     /*isElemental=*/false},
     {"iand", &I::genIand},
     {"sum",
      &I::genSum,
@@ -1043,6 +1052,44 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
     return genRuntimeCall("hypot", resultType, args);
   }
   llvm_unreachable("unexpected type in ABS argument");
+}
+
+// ASSOCIATED
+fir::ExtendedValue
+IntrinsicLibrary::genAssociated(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto *pointer =
+      args[0].match([&](const fir::MutableBoxValue &x) { return &x; },
+                    [&](const auto &) -> const fir::MutableBoxValue * {
+                      fir::emitFatalError(loc, "pointer not a MutableBoxValue");
+                    });
+  const fir::ExtendedValue &target = args[1];
+  if (isAbsent(target))
+    return fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, *pointer);
+
+  mlir::Value targetBox = builder.createBox(loc, target);
+  if (fir::valueHasFirAttribute(fir::getBase(target),
+                                fir::getOptionalAttrName())) {
+    // Subtle: contrary to other intrinsic optional arguments, disassociated
+    // POINTER and unallocated ALLOCATABLE actual argument are not considered
+    // absent here. This is because ASSOCIATED has special requirements for
+    // TARGET actual arguments that are POINTERs. There is no precise
+    // requirements for ALLOCATABLEs, but all existing Fortran compilers treat
+    // them similarly to POINTERs. That is: unallocated TARGETs cause ASSOCIATED
+    // to rerun false.  The runtime deals with the disassociated/unallocated
+    // case. Simply ensures that TARGET that are OPTIONAL get conditionally
+    // emboxed here to convey the optional aspect to the runtime.
+    auto isPresent = builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
+                                                      fir::getBase(target));
+    auto absentBox = builder.create<fir::AbsentOp>(loc, targetBox.getType());
+    targetBox = builder.create<mlir::arith::SelectOp>(loc, isPresent, targetBox,
+                                                      absentBox);
+  }
+  mlir::Value pointerBoxRef =
+      fir::factory::getMutableIRBox(builder, loc, *pointer);
+  auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
+  return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
 // IAND

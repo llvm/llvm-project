@@ -39,12 +39,6 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
                                   mlir::Value base) {
   return exv.match(
       [=](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
-      [=](const fir::BoxValue &) -> fir::ExtendedValue {
-        llvm::report_fatal_error("TODO: substbase of BoxValue");
-      },
-      [=](const fir::MutableBoxValue &) -> fir::ExtendedValue {
-        llvm::report_fatal_error("TODO: substbase of MutableBoxValue");
-      },
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 

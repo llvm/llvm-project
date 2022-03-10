@@ -1720,8 +1720,19 @@ private:
     Fortran::lower::genDeallocateStmt(*this, stmt, toLocation());
   }
 
+  /// Nullify pointer object list
+  ///
+  /// For each pointer object, reset the pointer to a disassociated status.
+  /// We do this by setting each pointer to null.
   void genFIR(const Fortran::parser::NullifyStmt &stmt) {
-    TODO(toLocation(), "NullifyStmt lowering");
+    mlir::Location loc = toLocation();
+    for (auto &pointerObject : stmt.v) {
+      const Fortran::lower::SomeExpr *expr =
+          Fortran::semantics::GetExpr(pointerObject);
+      assert(expr);
+      fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
+      fir::factory::disassociateMutableBox(*builder, loc, box);
+    }
   }
 
   //===--------------------------------------------------------------------===//
@@ -1868,7 +1879,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
-    TODO(toLocation(), "PointerAssignmentStmt lowering");
+    genAssignment(*stmt.typedAssignment->v);
   }
 
   void genFIR(const Fortran::parser::AssignmentStmt &stmt) {
