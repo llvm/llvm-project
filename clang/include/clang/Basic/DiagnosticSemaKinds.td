@@ -5629,7 +5629,7 @@ def warn_undefined_inline : Warning<"inline function %q0 is not defined">,
 def err_undefined_inline_var : Error<"inline variable %q0 is not defined">;
 def note_used_here : Note<"used here">;
 
-def err_attribute_missing_on_first_decl : Error<
+def err_attribute_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">;
 def warn_internal_linkage_local_storage : Warning<
   "'internal_linkage' attribute on a non-static local variable is ignored">,
