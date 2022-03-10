@@ -2950,8 +2950,10 @@ void RewriteInstance::buildFunctionsCFG() {
         if (!BF.buildCFG(AllocId))
           return;
 
-        if (opts::PrintAll)
+        if (opts::PrintAll) {
+          auto L = BC->scopeLock();
           BF.print(outs(), "while building cfg", true);
+        }
       };
 
   ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
