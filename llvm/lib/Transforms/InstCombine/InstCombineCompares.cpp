@@ -4110,29 +4110,31 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   //  icmp (A + C1), (C + C2) -> icmp A, (C + C3)
   //  s.t. C3 = C2 - C1
   if (A && C && NoOp0WrapProblem && NoOp1WrapProblem &&
-      (BO0->hasOneUse() || BO1->hasOneUse()) && !I.isUnsigned())
-    if (ConstantInt *C1 = dyn_cast<ConstantInt>(B))
-      if (ConstantInt *C2 = dyn_cast<ConstantInt>(D)) {
-        const APInt &AP1 = C1->getValue();
-        const APInt &AP2 = C2->getValue();
-        if (AP1.isNegative() == AP2.isNegative()) {
-          APInt AP1Abs = C1->getValue().abs();
-          APInt AP2Abs = C2->getValue().abs();
-          if (AP1Abs.uge(AP2Abs)) {
-            ConstantInt *C3 = Builder.getInt(AP1 - AP2);
-            bool HasNUW = BO0->hasNoUnsignedWrap() && C3->getValue().ule(AP1);
-            bool HasNSW = BO0->hasNoSignedWrap();
-            Value *NewAdd = Builder.CreateAdd(A, C3, "", HasNUW, HasNSW);
-            return new ICmpInst(Pred, NewAdd, C);
-          } else {
-            ConstantInt *C3 = Builder.getInt(AP2 - AP1);
-            bool HasNUW = BO1->hasNoUnsignedWrap() && C3->getValue().ule(AP2);
-            bool HasNSW = BO1->hasNoSignedWrap();
-            Value *NewAdd = Builder.CreateAdd(C, C3, "", HasNUW, HasNSW);
-            return new ICmpInst(Pred, A, NewAdd);
-          }
-        }
+      (BO0->hasOneUse() || BO1->hasOneUse()) && !I.isUnsigned()) {
+    const APInt *AP1, *AP2;
+    // TODO: Support non-uniform vectors.
+    // TODO: Allow undef passthrough if B AND D's element is undef.
+    if (match(B, m_APIntAllowUndef(AP1)) && match(D, m_APIntAllowUndef(AP2)) &&
+        AP1->isNegative() == AP2->isNegative()) {
+      APInt AP1Abs = AP1->abs();
+      APInt AP2Abs = AP2->abs();
+      if (AP1Abs.uge(AP2Abs)) {
+        APInt Diff = *AP1 - *AP2;
+        bool HasNUW = BO0->hasNoUnsignedWrap() && Diff.ule(*AP1);
+        bool HasNSW = BO0->hasNoSignedWrap();
+        Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
+        Value *NewAdd = Builder.CreateAdd(A, C3, "", HasNUW, HasNSW);
+        return new ICmpInst(Pred, NewAdd, C);
+      } else {
+        APInt Diff = *AP2 - *AP1;
+        bool HasNUW = BO1->hasNoUnsignedWrap() && Diff.ule(*AP2);
+        bool HasNSW = BO1->hasNoSignedWrap();
+        Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
+        Value *NewAdd = Builder.CreateAdd(C, C3, "", HasNUW, HasNSW);
+        return new ICmpInst(Pred, A, NewAdd);
       }
+    }
+  }
 
   // Analyze the case when either Op0 or Op1 is a sub instruction.
   // Op0 = A - B (or A and B are null); Op1 = C - D (or C and D are null).
