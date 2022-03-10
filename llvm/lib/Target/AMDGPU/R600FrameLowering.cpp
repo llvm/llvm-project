@@ -8,7 +8,6 @@
 
 #include "R600FrameLowering.h"
 #include "R600Subtarget.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 

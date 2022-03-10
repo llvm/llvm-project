@@ -20,23 +20,24 @@
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOutliner.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 
-class MachineFunction;
-class RegisterClassInfo;
-class VirtRegMap;
 class AAResults;
 class DFAPacketizer;
 class InstrItineraryData;

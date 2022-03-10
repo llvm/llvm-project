@@ -16,7 +16,6 @@
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"

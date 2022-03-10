@@ -25,7 +25,9 @@
 #ifndef LLVM_CODEGEN_DFAPACKETIZER_H
 #define LLVM_CODEGEN_DFAPACKETIZER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/Support/Automaton.h"
 #include <cstdint>
 #include <map>
@@ -36,7 +38,6 @@
 namespace llvm {
 
 class DefaultVLIWScheduler;
-class ScheduleDAGMutation;
 class InstrItineraryData;
 class MachineFunction;
 class MachineInstr;

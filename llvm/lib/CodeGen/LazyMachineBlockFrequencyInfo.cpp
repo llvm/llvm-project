@@ -14,7 +14,6 @@
 ///===---------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;

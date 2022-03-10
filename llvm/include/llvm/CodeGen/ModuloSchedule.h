@@ -61,6 +61,7 @@
 #define LLVM_CODEGEN_MODULOSCHEDULE_H
 
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -69,8 +70,6 @@
 
 namespace llvm {
 class MachineBasicBlock;
-class MachineLoop;
-class MachineRegisterInfo;
 class MachineInstr;
 class LiveIntervals;
 

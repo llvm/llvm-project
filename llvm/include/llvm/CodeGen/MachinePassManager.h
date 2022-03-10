@@ -25,15 +25,13 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
-
-#include <map>
+#include "llvm/Support/type_traits.h"
 
 namespace llvm {
 class Module;
-class Function;
-class MachineFunction;
 
 extern template class AnalysisManager<MachineFunction>;
 

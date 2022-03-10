@@ -13,9 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "livestacks"

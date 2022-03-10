@@ -39,6 +39,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
+#include <cstddef>
 #include <string>
 #include <utility>
 #include <vector>
