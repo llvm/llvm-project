@@ -396,6 +396,8 @@ protected:
 
   /// All lldb::Type pointers produced by DWARFASTParser Swift go here.
   ThreadSafeDenseMap<const char *, lldb::TypeSP> m_swift_type_map;
+  /// Map ConstString Clang type identifiers to Clang types.
+  ThreadSafeDenseMap<const char *, lldb::TypeSP> m_clang_type_cache;
 };
 
 /// This one owns a SwiftASTContextForExpressions.

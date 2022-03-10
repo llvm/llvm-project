@@ -190,8 +190,8 @@ GetTypeAlias(swift::Demangle::Demangler &dem,
 }
 
 /// Find a Clang type by name in the modules in \p module_holder.
-TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name) {
-  auto lookup = [](Module &M, StringRef name) -> TypeSP {
+TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
+  auto lookup = [](Module &M, ConstString name) -> TypeSP {
     llvm::SmallVector<CompilerContext, 2> decl_context;
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
     decl_context.push_back({CompilerContextKind::AnyType, ConstString(name)});
@@ -203,8 +203,19 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name) {
       return {};
     return clang_types.GetTypeAtIndex(0);
   };
-  if (auto *M = GetModule())
-    return lookup(*M, name);
+
+  // Check the cache first. Negative results are also cached.
+  TypeSP result;
+  ConstString name(name_ref);
+  if (m_clang_type_cache.Lookup(name.AsCString(), result))
+    return result;
+  
+  if (auto *M = GetModule()) {
+    TypeSP result = lookup(*M, name);
+    // Cache it.
+    m_clang_type_cache.Insert(name.AsCString(), result);
+    return result;
+  }
 
   SwiftASTContext *target_holder = GetSwiftASTContext();
   if (!target_holder)
@@ -212,9 +223,13 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name) {
   TargetSP target_sp = target_holder->GetTargetWP().lock();
   if (!target_sp)
     return {};
-  TypeSP result;
   target_sp->GetImages().ForEach([&](const ModuleSP &module) -> bool {
+    // Don't recursively call into LookupClangTypes() to avoid filling
+    // hundreds of image caches with negative results.
     result = lookup(const_cast<Module &>(*module), name);
+    // Cache it in the expression context.
+    if (result)
+      m_clang_type_cache.Insert(name.AsCString(), result);
     return !result;
   });
   return result;
