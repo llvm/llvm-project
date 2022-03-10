@@ -13,6 +13,12 @@ programs which have (incorrectly) relied on string deduplication always
 occurring. In particular, programs which compare string literals via pointer
 equality must be fixed to use value equality instead.
 
+String Alignment
+****************
+LLD is slightly less conservative about aligning cstrings, allowing it to pack
+them more compactly. This should not result in any meaningful semantic
+difference.
+
 ``-no_deduplicate`` Flag
 **********************
 - LD64:

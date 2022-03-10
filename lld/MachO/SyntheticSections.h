@@ -531,13 +531,19 @@ private:
 
 class DeduplicatedCStringSection final : public CStringSection {
 public:
-  DeduplicatedCStringSection();
-  uint64_t getSize() const override { return builder.getSize(); }
+  uint64_t getSize() const override { return size; }
   void finalizeContents() override;
-  void writeTo(uint8_t *buf) const override { builder.write(buf); }
+  void writeTo(uint8_t *buf) const override;
 
 private:
-  llvm::StringTableBuilder builder;
+  struct StringOffset {
+    uint8_t trailingZeros;
+    uint64_t outSecOff = UINT64_MAX;
+
+    explicit StringOffset(uint8_t zeros) : trailingZeros(zeros) {}
+  };
+  llvm::DenseMap<llvm::CachedHashStringRef, StringOffset> stringOffsetMap;
+  size_t size = 0;
 };
 
 /*
