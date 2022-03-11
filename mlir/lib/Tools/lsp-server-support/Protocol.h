@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_PROTOCOL_H_
-#define LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_PROTOCOL_H_
+#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H_
+#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H_
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Optional.h"
@@ -644,7 +644,8 @@ llvm::json::Value toJSON(const PublishDiagnosticsParams &params);
 } // namespace mlir
 
 namespace llvm {
-template <> struct format_provider<mlir::lsp::Position> {
+template <>
+struct format_provider<mlir::lsp::Position> {
   static void format(const mlir::lsp::Position &pos, raw_ostream &os,
                      StringRef style) {
     assert(style.empty() && "style modifiers for this type are not supported");

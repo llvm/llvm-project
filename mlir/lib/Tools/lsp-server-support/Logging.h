@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_LOGGING_H
-#define LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_LOGGING_H
+#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
+#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/Debug.h"
@@ -30,13 +30,16 @@ public:
 
   /// Initiate a log message at various severity levels. These should be called
   /// after a call to `initialize`.
-  template <typename... Ts> static void debug(const char *fmt, Ts &&... vals) {
+  template <typename... Ts>
+  static void debug(const char *fmt, Ts &&...vals) {
     log(Level::Debug, fmt, llvm::formatv(fmt, std::forward<Ts>(vals)...));
   }
-  template <typename... Ts> static void info(const char *fmt, Ts &&... vals) {
+  template <typename... Ts>
+  static void info(const char *fmt, Ts &&...vals) {
     log(Level::Info, fmt, llvm::formatv(fmt, std::forward<Ts>(vals)...));
   }
-  template <typename... Ts> static void error(const char *fmt, Ts &&... vals) {
+  template <typename... Ts>
+  static void error(const char *fmt, Ts &&...vals) {
     log(Level::Error, fmt, llvm::formatv(fmt, std::forward<Ts>(vals)...));
   }
 
@@ -59,4 +62,4 @@ private:
 } // namespace lsp
 } // namespace mlir
 
-#endif // LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_LOGGING_H
+#endif // LIB_MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H

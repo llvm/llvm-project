@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_TRANSPORT_H_
-#define LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_TRANSPORT_H_
+#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H_
+#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H_
 
 #include "Logging.h"
 #include "Protocol.h"
