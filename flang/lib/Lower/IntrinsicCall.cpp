@@ -236,6 +236,7 @@ struct IntrinsicLibrary {
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
@@ -336,6 +337,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"char", &I::genChar},
     {"iand", &I::genIand},
     {"sum",
      &I::genSum,
@@ -1090,6 +1092,24 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+// CHAR
+fir::ExtendedValue
+IntrinsicLibrary::genChar(mlir::Type type,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Optional KIND argument.
+  assert(args.size() >= 1);
+  const mlir::Value *arg = args[0].getUnboxed();
+  // expect argument to be a scalar integer
+  if (!arg)
+    mlir::emitError(loc, "CHAR intrinsic argument not unboxed");
+  fir::factory::CharacterExprHelper helper{builder, loc};
+  fir::CharacterType::KindTy kind = helper.getCharacterType(type).getFKind();
+  mlir::Value cast = helper.createSingletonFromCode(*arg, kind);
+  mlir::Value len =
+      builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
+  return fir::CharBoxValue{cast, len};
 }
 
 // IAND
