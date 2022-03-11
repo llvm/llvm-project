@@ -5,7 +5,7 @@
 #
 # Check that splitting of eh-frame sections works.
 #
-# CHECK: EHFrameSplitter: Processing __TEXT,__eh_frame...
+# CHECK: DWARFRecordSectionSplitter: Processing __TEXT,__eh_frame...
 # CHECK:  Processing block at
 # CHECK:    Processing CFI record at
 # CHECK:      Extracted {{.*}} section = __TEXT,__eh_frame
