@@ -25525,6 +25525,12 @@ TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
                Style);
 }
 
+TEST_F(FormatTest, FormatsVariableTemplates) {
+  verifyFormat("inline bool var = is_integral_v<int> && is_signed_v<int>;");
+  verifyFormat("template <typename T> "
+               "inline bool var = is_integral_v<T> && is_signed_v<T>;");
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
