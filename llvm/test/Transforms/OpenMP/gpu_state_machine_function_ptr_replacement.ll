@@ -30,9 +30,9 @@
 ; CHECK-DAG:   icmp eq void (i16, i32)* %worker.work_fn.addr_cast, bitcast (i8* @__omp_outlined__2_wrapper.ID to void (i16, i32)*)
 
 
-; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* noundef @1, i32 %{{.*}}, i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* noundef @__omp_outlined__1_wrapper.ID, i8** noundef %{{.*}}, i64 noundef 0)
-; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* noundef @1, i32 %{{.*}}, i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef @__omp_outlined__2_wrapper.ID, i8** noundef %{{.*}}, i64 noundef 0)
-; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* noundef @2, i32 %{{.*}}, i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** noundef %{{.*}}, i64 noundef 0)
+; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* @__omp_outlined__1_wrapper.ID, i8** %{{.*}}, i64 0)
+; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* @__omp_outlined__2_wrapper.ID, i8** %{{.*}}, i64 0)
+; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* @2, i32 %{{.*}}, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** %{{.*}}, i64 0)
 
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
