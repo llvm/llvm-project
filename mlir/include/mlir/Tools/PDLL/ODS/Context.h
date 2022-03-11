@@ -53,6 +53,11 @@ public:
   /// with that name was inserted.
   const Dialect *lookupDialect(StringRef name) const;
 
+  /// Return a range of all of the registered dialects.
+  auto getDialects() const {
+    return llvm::make_pointee_range(llvm::make_second_range(dialects));
+  }
+
   /// Insert a new operation with the context. Returns the inserted operation,
   /// and a boolean indicating if the operation newly inserted (false if the
   /// operation already existed).

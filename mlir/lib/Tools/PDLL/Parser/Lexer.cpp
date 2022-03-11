@@ -9,6 +9,7 @@
 #include "Lexer.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/PDLL/AST/Diagnostic.h"
+#include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SourceMgr.h"
@@ -67,11 +68,19 @@ std::string Token::getStringValue() const {
 // Lexer
 //===----------------------------------------------------------------------===//
 
-Lexer::Lexer(llvm::SourceMgr &mgr, ast::DiagnosticEngine &diagEngine)
-    : srcMgr(mgr), diagEngine(diagEngine), addedHandlerToDiagEngine(false) {
+Lexer::Lexer(llvm::SourceMgr &mgr, ast::DiagnosticEngine &diagEngine,
+             CodeCompleteContext *codeCompleteContext)
+    : srcMgr(mgr), diagEngine(diagEngine), addedHandlerToDiagEngine(false),
+      codeCompletionLocation(nullptr) {
   curBufferID = mgr.getMainFileID();
   curBuffer = srcMgr.getMemoryBuffer(curBufferID)->getBuffer();
   curPtr = curBuffer.begin();
+
+  // Set the code completion location if necessary.
+  if (codeCompleteContext) {
+    codeCompletionLocation =
+        codeCompleteContext->getCodeCompleteLoc().getPointer();
+  }
 
   // If the diag engine has no handler, add a default that emits to the
   // SourceMgr.
@@ -146,6 +155,10 @@ int Lexer::getNextChar() {
 Token Lexer::lexToken() {
   while (true) {
     const char *tokStart = curPtr;
+
+    // Check to see if this token is at the code completion location.
+    if (tokStart == codeCompletionLocation)
+      return formToken(Token::code_complete, tokStart);
 
     // This always consumes at least one character.
     int curChar = getNextChar();

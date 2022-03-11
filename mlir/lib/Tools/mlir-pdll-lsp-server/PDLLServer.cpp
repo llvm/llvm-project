@@ -17,6 +17,7 @@
 #include "mlir/Tools/PDLL/ODS/Context.h"
 #include "mlir/Tools/PDLL/ODS/Dialect.h"
 #include "mlir/Tools/PDLL/ODS/Operation.h"
+#include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -276,6 +277,13 @@ struct PDLDocument {
   //===--------------------------------------------------------------------===//
 
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
+                                        const lsp::Position &completePos);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -547,6 +555,279 @@ void PDLDocument::findDocumentSymbols(
 }
 
 //===----------------------------------------------------------------------===//
+// PDLDocument: Code Completion
+//===----------------------------------------------------------------------===//
+
+namespace {
+class LSPCodeCompleteContext : public CodeCompleteContext {
+public:
+  LSPCodeCompleteContext(SMLoc completeLoc, lsp::CompletionList &completionList,
+                         ods::Context &odsContext)
+      : CodeCompleteContext(completeLoc), completionList(completionList),
+        odsContext(odsContext) {}
+
+  void codeCompleteTupleMemberAccess(ast::TupleType tupleType) final {
+    ArrayRef<ast::Type> elementTypes = tupleType.getElementTypes();
+    ArrayRef<StringRef> elementNames = tupleType.getElementNames();
+    for (unsigned i = 0, e = tupleType.size(); i < e; ++i) {
+      // Push back a completion item that uses the result index.
+      lsp::CompletionItem item;
+      item.label = llvm::formatv("{0} (field #{0})", i).str();
+      item.insertText = Twine(i).str();
+      item.filterText = item.sortText = item.insertText;
+      item.kind = lsp::CompletionItemKind::Field;
+      item.detail = llvm::formatv("{0}: {1}", i, elementTypes[i]);
+      item.insertTextFormat = lsp::InsertTextFormat::PlainText;
+      completionList.items.emplace_back(item);
+
+      // If the element has a name, push back a completion item with that name.
+      if (!elementNames[i].empty()) {
+        item.label =
+            llvm::formatv("{1} (field #{0})", i, elementNames[i]).str();
+        item.filterText = item.label;
+        item.insertText = elementNames[i].str();
+        completionList.items.emplace_back(item);
+      }
+    }
+  }
+
+  void codeCompleteOperationMemberAccess(ast::OperationType opType) final {
+    Optional<StringRef> opName = opType.getName();
+    const ods::Operation *odsOp =
+        opName ? odsContext.lookupOperation(*opName) : nullptr;
+    if (!odsOp)
+      return;
+
+    ArrayRef<ods::OperandOrResult> results = odsOp->getResults();
+    for (const auto &it : llvm::enumerate(results)) {
+      const ods::OperandOrResult &result = it.value();
+      const ods::TypeConstraint &constraint = result.getConstraint();
+
+      // Push back a completion item that uses the result index.
+      lsp::CompletionItem item;
+      item.label = llvm::formatv("{0} (field #{0})", it.index()).str();
+      item.insertText = Twine(it.index()).str();
+      item.filterText = item.sortText = item.insertText;
+      item.kind = lsp::CompletionItemKind::Field;
+      switch (result.getVariableLengthKind()) {
+      case ods::VariableLengthKind::Single:
+        item.detail = llvm::formatv("{0}: Value", it.index()).str();
+        break;
+      case ods::VariableLengthKind::Optional:
+        item.detail = llvm::formatv("{0}: Value?", it.index()).str();
+        break;
+      case ods::VariableLengthKind::Variadic:
+        item.detail = llvm::formatv("{0}: ValueRange", it.index()).str();
+        break;
+      }
+      item.documentation = lsp::MarkupContent{
+          lsp::MarkupKind::Markdown,
+          llvm::formatv("{0}\n\n```c++\n{1}\n```\n", constraint.getSummary(),
+                        constraint.getCppClass())
+              .str()};
+      item.insertTextFormat = lsp::InsertTextFormat::PlainText;
+      completionList.items.emplace_back(item);
+
+      // If the result has a name, push back a completion item with the result
+      // name.
+      if (!result.getName().empty()) {
+        item.label =
+            llvm::formatv("{1} (field #{0})", it.index(), result.getName())
+                .str();
+        item.filterText = item.label;
+        item.insertText = result.getName().str();
+        completionList.items.emplace_back(item);
+      }
+    }
+  }
+
+  void codeCompleteOperationAttributeName(StringRef opName) final {
+    const ods::Operation *odsOp = odsContext.lookupOperation(opName);
+    if (!odsOp)
+      return;
+
+    for (const ods::Attribute &attr : odsOp->getAttributes()) {
+      const ods::AttributeConstraint &constraint = attr.getConstraint();
+
+      lsp::CompletionItem item;
+      item.label = attr.getName().str();
+      item.kind = lsp::CompletionItemKind::Field;
+      item.detail = attr.isOptional() ? "optional" : "";
+      item.documentation = lsp::MarkupContent{
+          lsp::MarkupKind::Markdown,
+          llvm::formatv("{0}\n\n```c++\n{1}\n```\n", constraint.getSummary(),
+                        constraint.getCppClass())
+              .str()};
+      item.insertTextFormat = lsp::InsertTextFormat::PlainText;
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  void codeCompleteConstraintName(ast::Type currentType,
+                                  bool allowNonCoreConstraints,
+                                  bool allowInlineTypeConstraints,
+                                  const ast::DeclScope *scope) final {
+    auto addCoreConstraint = [&](StringRef constraint, StringRef mlirType,
+                                 StringRef snippetText = "") {
+      lsp::CompletionItem item;
+      item.label = constraint.str();
+      item.kind = lsp::CompletionItemKind::Class;
+      item.detail = (constraint + " constraint").str();
+      item.documentation = lsp::MarkupContent{
+          lsp::MarkupKind::Markdown,
+          ("A single entity core constraint of type `" + mlirType + "`").str()};
+      item.sortText = "0";
+      item.insertText = snippetText.str();
+      item.insertTextFormat = snippetText.empty()
+                                  ? lsp::InsertTextFormat::PlainText
+                                  : lsp::InsertTextFormat::Snippet;
+      completionList.items.emplace_back(item);
+    };
+
+    // Insert completions for the core constraints. Some core constraints have
+    // additional characteristics, so we may add then even if a type has been
+    // inferred.
+    if (!currentType) {
+      addCoreConstraint("Attr", "mlir::Attribute");
+      addCoreConstraint("Op", "mlir::Operation *");
+      addCoreConstraint("Value", "mlir::Value");
+      addCoreConstraint("ValueRange", "mlir::ValueRange");
+      addCoreConstraint("Type", "mlir::Type");
+      addCoreConstraint("TypeRange", "mlir::TypeRange");
+    }
+    if (allowInlineTypeConstraints) {
+      /// Attr<Type>.
+      if (!currentType || currentType.isa<ast::AttributeType>())
+        addCoreConstraint("Attr<type>", "mlir::Attribute", "Attr<$1>");
+      /// Value<Type>.
+      if (!currentType || currentType.isa<ast::ValueType>())
+        addCoreConstraint("Value<type>", "mlir::Value", "Value<$1>");
+      /// ValueRange<TypeRange>.
+      if (!currentType || currentType.isa<ast::ValueRangeType>())
+        addCoreConstraint("ValueRange<type>", "mlir::ValueRange",
+                          "ValueRange<$1>");
+    }
+
+    // If a scope was provided, check it for potential constraints.
+    while (scope) {
+      for (const ast::Decl *decl : scope->getDecls()) {
+        if (const auto *cst = dyn_cast<ast::UserConstraintDecl>(decl)) {
+          if (!allowNonCoreConstraints)
+            continue;
+
+          lsp::CompletionItem item;
+          item.label = cst->getName().getName().str();
+          item.kind = lsp::CompletionItemKind::Interface;
+          item.sortText = "2_" + item.label;
+
+          // Skip constraints that are not single-arg. We currently only
+          // complete variable constraints.
+          if (cst->getInputs().size() != 1)
+            continue;
+
+          // Ensure the input type matched the given type.
+          ast::Type constraintType = cst->getInputs()[0]->getType();
+          if (currentType && !currentType.refineWith(constraintType))
+            continue;
+
+          // Format the constraint signature.
+          {
+            llvm::raw_string_ostream strOS(item.detail);
+            strOS << "(";
+            llvm::interleaveComma(
+                cst->getInputs(), strOS, [&](const ast::VariableDecl *var) {
+                  strOS << var->getName().getName() << ": " << var->getType();
+                });
+            strOS << ") -> " << cst->getResultType();
+          }
+
+          completionList.items.emplace_back(item);
+        }
+      }
+
+      scope = scope->getParentScope();
+    }
+  }
+
+  void codeCompleteDialectName() final {
+    // Code complete known dialects.
+    for (const ods::Dialect &dialect : odsContext.getDialects()) {
+      lsp::CompletionItem item;
+      item.label = dialect.getName().str();
+      item.kind = lsp::CompletionItemKind::Class;
+      item.insertTextFormat = lsp::InsertTextFormat::PlainText;
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  void codeCompleteOperationName(StringRef dialectName) final {
+    const ods::Dialect *dialect = odsContext.lookupDialect(dialectName);
+    if (!dialect)
+      return;
+
+    for (const auto &it : dialect->getOperations()) {
+      const ods::Operation &op = *it.second;
+
+      lsp::CompletionItem item;
+      item.label = op.getName().drop_front(dialectName.size() + 1).str();
+      item.kind = lsp::CompletionItemKind::Field;
+      item.insertTextFormat = lsp::InsertTextFormat::PlainText;
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  void codeCompletePatternMetadata() final {
+    auto addSimpleConstraint = [&](StringRef constraint, StringRef desc,
+                                   StringRef snippetText = "") {
+      lsp::CompletionItem item;
+      item.label = constraint.str();
+      item.kind = lsp::CompletionItemKind::Class;
+      item.detail = "pattern metadata";
+      item.documentation =
+          lsp::MarkupContent{lsp::MarkupKind::Markdown, desc.str()};
+      item.insertText = snippetText.str();
+      item.insertTextFormat = snippetText.empty()
+                                  ? lsp::InsertTextFormat::PlainText
+                                  : lsp::InsertTextFormat::Snippet;
+      completionList.items.emplace_back(item);
+    };
+
+    addSimpleConstraint("benefit", "The `benefit` of matching the pattern.",
+                        "benefit($1)");
+    addSimpleConstraint("recursion",
+                        "The pattern properly handles recursive application.");
+  }
+
+private:
+  lsp::CompletionList &completionList;
+  ods::Context &odsContext;
+};
+} // namespace
+
+lsp::CompletionList
+PDLDocument::getCodeCompletion(const lsp::URIForFile &uri,
+                               const lsp::Position &completePos) {
+  SMLoc posLoc = completePos.getAsSMLoc(sourceMgr);
+  if (!posLoc.isValid())
+    return lsp::CompletionList();
+
+  // Adjust the position one further to after the completion trigger token.
+  posLoc = SMLoc::getFromPointer(posLoc.getPointer() + 1);
+
+  // To perform code completion, we run another parse of the module with the
+  // code completion context provided.
+  ods::Context tmpODSContext;
+  lsp::CompletionList completionList;
+  LSPCodeCompleteContext lspCompleteContext(posLoc, completionList,
+                                            tmpODSContext);
+
+  ast::Context tmpContext(tmpODSContext);
+  (void)parsePDLAST(tmpContext, sourceMgr, &lspCompleteContext);
+
+  return completionList;
+}
+
+//===----------------------------------------------------------------------===//
 // PDLTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -600,6 +881,8 @@ public:
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  lsp::Position hoverPos);
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
+  lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
+                                        lsp::Position completePos);
 
 private:
   /// Find the PDL document that contains the given position, and update the
@@ -737,6 +1020,22 @@ void PDLTextFile::findDocumentSymbols(
   }
 }
 
+lsp::CompletionList PDLTextFile::getCodeCompletion(const lsp::URIForFile &uri,
+                                                   lsp::Position completePos) {
+  PDLTextFileChunk &chunk = getChunkFor(completePos);
+  lsp::CompletionList completionList =
+      chunk.document.getCodeCompletion(uri, completePos);
+
+  // Adjust any completion locations.
+  for (lsp::CompletionItem &item : completionList.items) {
+    if (item.textEdit)
+      chunk.adjustLocForChunkOffset(item.textEdit->range);
+    for (lsp::TextEdit &edit : item.additionalTextEdits)
+      chunk.adjustLocForChunkOffset(edit.range);
+  }
+  return completionList;
+}
+
 PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -814,4 +1113,13 @@ void lsp::PDLLServer::findDocumentSymbols(
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findDocumentSymbols(symbols);
+}
+
+lsp::CompletionList
+lsp::PDLLServer::getCodeCompletion(const URIForFile &uri,
+                                   const Position &completePos) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->getCodeCompletion(uri, completePos);
+  return CompletionList();
 }

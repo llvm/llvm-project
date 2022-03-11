@@ -15,6 +15,7 @@
 namespace mlir {
 namespace lsp {
 struct Diagnostic;
+struct CompletionList;
 struct DocumentSymbol;
 struct Hover;
 struct Location;
@@ -56,6 +57,10 @@ public:
   /// Find all of the document symbols within the given file.
   void findDocumentSymbols(const URIForFile &uri,
                            std::vector<DocumentSymbol> &symbols);
+
+  /// Get the code completion list for the position within the given file.
+  CompletionList getCodeCompletion(const URIForFile &uri,
+                                   const Position &completePos);
 
 private:
   struct Impl;

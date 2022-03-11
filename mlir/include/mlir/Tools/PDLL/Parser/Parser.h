@@ -19,14 +19,19 @@ class SourceMgr;
 
 namespace mlir {
 namespace pdll {
+class CodeCompleteContext;
+
 namespace ast {
 class Context;
 class Module;
 } // namespace ast
 
-/// Parse an AST module from the main file of the given source manager.
-FailureOr<ast::Module *> parsePDLAST(ast::Context &ctx,
-                                     llvm::SourceMgr &sourceMgr);
+/// Parse an AST module from the main file of the given source manager. An
+/// optional code completion context may be provided to receive code completion
+/// suggestions. If a completion is hit, this method returns a failure.
+FailureOr<ast::Module *>
+parsePDLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
+            CodeCompleteContext *codeCompleteContext = nullptr);
 } // namespace pdll
 } // namespace mlir
 

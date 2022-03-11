@@ -21,6 +21,8 @@ namespace mlir {
 struct LogicalResult;
 
 namespace pdll {
+class CodeCompleteContext;
+
 namespace ast {
 class DiagnosticEngine;
 } // namespace ast
@@ -35,6 +37,7 @@ public:
     // Markers.
     eof,
     error,
+    code_complete,
 
     // Keywords.
     KW_BEGIN,
@@ -162,7 +165,8 @@ private:
 
 class Lexer {
 public:
-  Lexer(llvm::SourceMgr &mgr, ast::DiagnosticEngine &diagEngine);
+  Lexer(llvm::SourceMgr &mgr, ast::DiagnosticEngine &diagEngine,
+        CodeCompleteContext *codeCompleteContext);
   ~Lexer();
 
   /// Return a reference to the source manager used by the lexer.
@@ -215,6 +219,9 @@ private:
   /// A flag indicating if we added a default diagnostic handler to the provided
   /// diagEngine.
   bool addedHandlerToDiagEngine;
+
+  /// The optional code completion point within the input file.
+  const char *codeCompletionLocation;
 };
 } // namespace pdll
 } // namespace mlir
