@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 
 #include "CIRGenCall.h"
+#include "CIRGenModule.h"
 #include "CIRGenValue.h"
 
 #include "mlir/IR/Value.h"
@@ -73,6 +74,10 @@ public:
   }
 
   CIRGenFunction(CIRGenModule &CGM);
+
+  CIRGenTypes &getTypes() const { return CGM.getTypes(); }
+
+  const clang::LangOptions &getLangOpts() const { return CGM.getLangOpts(); }
 
   // TODO: This is currently just a dumb stub. But we want to be able to clearly
   // assert where we arne't doing things that we know we should and will crash

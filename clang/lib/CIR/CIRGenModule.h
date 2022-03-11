@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 
-#include "CIRGenFunction.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
 
@@ -34,6 +33,7 @@
 
 namespace cir {
 
+class CIRGenFunction;
 class CIRGenCXXABI;
 class TargetCIRGenInfo;
 
