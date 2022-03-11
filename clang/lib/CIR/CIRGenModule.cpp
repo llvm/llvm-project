@@ -1659,10 +1659,6 @@ void CIRGenModule::verifyModule() {
     theModule.emitError("module verification error");
 }
 
-mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
-  return symbolTable.lookup(D);
-}
-
 mlir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD,
                                              mlir::Type Ty, bool ForVTable,
                                              bool DontDefer,
@@ -1808,3 +1804,6 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   assert(false && "Incompmlete functions NYI");
 }
 
+mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
+  return symbolTable.lookup(D);
+}
