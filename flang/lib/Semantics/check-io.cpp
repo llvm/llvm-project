@@ -38,7 +38,8 @@ bool FormatErrorReporter::Say(const common::FormatMessage &msg) {
     return false;
   }
   parser::MessageFormattedText text{
-      parser::MessageFixedText(msg.text, strlen(msg.text), msg.isError),
+      parser::MessageFixedText{msg.text, strlen(msg.text),
+          msg.isError ? parser::Severity::Error : parser::Severity::Warning},
       msg.arg};
   if (formatCharBlock_.size()) {
     // The input format is a folded expression.  Error markers span the full
@@ -234,7 +235,7 @@ void IoChecker::Enter(const parser::Format &spec) {
               if (context_.ShouldWarn(
                       common::LanguageFeature::NonCharacterFormat)) {
                 context_.Say(format.source,
-                    "Non-character format expression is not standard"_en_US);
+                    "Non-character format expression is not standard"_port_en_US);
               }
             } else if (!type ||
                 type->kind() !=
@@ -872,8 +873,9 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
     if (specKind == IoSpecKind::Access && upper == "APPEND") {
       if (context_.languageFeatures().ShouldWarn(
               common::LanguageFeature::OpenAccessAppend)) {
-        context_.Say(source, "ACCESS='%s' interpreted as POSITION='%s'"_en_US,
-            value, upper);
+        context_.Say(source,
+            "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value,
+            upper);
       }
     } else {
       context_.Say(source, "Invalid %s value '%s'"_err_en_US,

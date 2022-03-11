@@ -12669,6 +12669,13 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "};",
                MergeInlineOnly);
   verifyFormat("int f() {}", MergeInlineOnly);
+  // https://llvm.org/PR54147
+  verifyFormat("auto lambda = []() {\n"
+               "  // comment\n"
+               "  f();\n"
+               "  g();\n"
+               "};",
+               MergeInlineOnly);
 
   // Also verify behavior when BraceWrapping.AfterFunction = true
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -23340,7 +23347,7 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
-  // These tests are not in NamespaceFixer because that doesn't
+  // These tests are not in NamespaceEndCommentsFixerTest because that doesn't
   // test its interaction with line wrapping
   FormatStyle Style = getLLVMStyleWithColumns(80);
   verifyFormat("namespace {\n"
@@ -24796,6 +24803,19 @@ TEST_F(FormatTest, RemoveBraces) {
                "    markAsIgnored(D);\n"
                "  }\n"
                "}",
+               Style);
+
+  verifyFormat("// clang-format off\n"
+               "// comment\n"
+               "while (i > 0) { --i; }\n"
+               "// clang-format on\n"
+               "while (j < 0)\n"
+               "  ++j;",
+               "// clang-format off\n"
+               "// comment\n"
+               "while (i > 0) { --i; }\n"
+               "// clang-format on\n"
+               "while (j < 0) { ++j; }",
                Style);
 
   verifyFormat("if (a)\n"

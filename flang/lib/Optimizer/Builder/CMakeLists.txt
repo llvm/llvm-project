@@ -6,11 +6,13 @@ add_flang_library(FIRBuilder
   Complex.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
+  LowLevelIntrinsics.cpp
   MutableBox.cpp
   Runtime/Assign.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp
   Runtime/Derived.cpp
+  Runtime/Inquiry.cpp
   Runtime/Numeric.cpp
   Runtime/Ragged.cpp
   Runtime/Reduction.cpp

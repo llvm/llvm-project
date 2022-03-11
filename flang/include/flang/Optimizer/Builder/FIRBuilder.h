@@ -371,6 +371,12 @@ public:
   /// Generate code testing \p addr is a null address.
   mlir::Value genIsNull(mlir::Location loc, mlir::Value addr);
 
+  /// Compute the extent of (lb:ub:step) as max((ub-lb+step)/step, 0). See
+  /// Fortran 2018 9.5.3.3.2 section for more details.
+  mlir::Value genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
+                                   mlir::Value ub, mlir::Value step,
+                                   mlir::Type type);
+
 private:
   const KindMapping &kindMap;
 };
@@ -419,6 +425,18 @@ llvm::SmallVector<mlir::Value> getExtents(fir::FirOpBuilder &builder,
 /// This must not be used on unlimited polymorphic and assumed rank entities.
 fir::ExtendedValue readBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::BoxValue &box);
+
+/// Get non default (not all ones) lower bounds of \p exv. Returns empty
+/// vector if the lower bounds are all ones.
+llvm::SmallVector<mlir::Value>
+getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
+                         const fir::ExtendedValue &exv);
+
+/// Return length parameters associated to \p exv that are not deferred (that
+/// are available without having to read any fir.box values).
+/// Empty if \p exv has no length parameters or if they are all deferred.
+llvm::SmallVector<mlir::Value>
+getNonDeferredLengthParams(const fir::ExtendedValue &exv);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers

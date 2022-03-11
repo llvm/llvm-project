@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_SIFT_DOWN_H
 #define _LIBCPP___ALGORITHM_SIFT_DOWN_H
 
+#include <__assert>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
@@ -71,6 +72,38 @@ __sift_down(_RandomAccessIterator __first, _Compare __comp,
         // check if we are in heap-order
     } while (!__comp(*__child_i, __top));
     *__start = _VSTD::move(__top);
+}
+
+template <class _Compare, class _RandomAccessIterator>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 _RandomAccessIterator
+__floyd_sift_down(_RandomAccessIterator __first, _Compare __comp,
+                  typename iterator_traits<_RandomAccessIterator>::difference_type __len)
+{
+    using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
+    _LIBCPP_ASSERT(__len >= 2, "shouldn't be called unless __len >= 2");
+
+    _RandomAccessIterator __hole = __first;
+    _RandomAccessIterator __child_i = __first;
+    difference_type __child = 0;
+
+    while (true) {
+        __child_i += difference_type(__child + 1);
+        __child = 2 * __child + 1;
+
+        if ((__child + 1) < __len && __comp(*__child_i, *(__child_i + difference_type(1)))) {
+            // right-child exists and is greater than left-child
+            ++__child_i;
+            ++__child;
+        }
+
+        // swap __hole with its largest child
+        *__hole = std::move(*__child_i);
+        __hole = __child_i;
+
+        // if __hole is now a leaf, we're done
+        if (__child > (__len - 2) / 2)
+            return __hole;
+    }
 }
 
 _LIBCPP_END_NAMESPACE_STD

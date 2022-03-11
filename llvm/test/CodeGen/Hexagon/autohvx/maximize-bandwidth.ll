@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -hexagon-autohvx -loop-vectorize -S < %s | FileCheck %s
+; RUN: opt -march=hexagon -hexagon-autohvx -passes=loop-vectorize -S < %s | FileCheck %s
 ; Check that the loop is vectorized with VF=32.
 ; CHECK: wide.load{{.*}} = load <32 x i32>
 ; CHECK: wide.load{{.*}} = load <32 x i16>

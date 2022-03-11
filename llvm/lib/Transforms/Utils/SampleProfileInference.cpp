@@ -36,6 +36,29 @@ static cl::opt<unsigned> SampleProfileMaxDfsCalls(
     "sample-profile-max-dfs-calls", cl::init(10), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Maximum number of dfs iterations for even count distribution."));
 
+static cl::opt<unsigned> SampleProfileProfiCostInc(
+    "sample-profile-profi-cost-inc", cl::init(10), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("A cost of increasing a block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostDec(
+    "sample-profile-profi-cost-dec", cl::init(20), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("A cost of decreasing a block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostIncZero(
+    "sample-profile-profi-cost-inc-zero", cl::init(11), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("A cost of increasing a count of zero-weight block by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostIncEntry(
+    "sample-profile-profi-cost-inc-entry", cl::init(40), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("A cost of increasing the entry block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostDecEntry(
+    "sample-profile-profi-cost-dec-entry", cl::init(10), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("A cost of decreasing the entry block's count by one."));
+
 /// A value indicating an infinite flow/capacity/weight of a block/edge.
 /// Not using numeric_limits<int64_t>::max(), as the values can be summed up
 /// during the execution.
@@ -147,18 +170,10 @@ public:
     return Flow;
   }
 
-  /// A cost of increasing a block's count by one.
-  static constexpr int64_t AuxCostInc = 10;
-  /// A cost of decreasing a block's count by one.
-  static constexpr int64_t AuxCostDec = 20;
-  /// A cost of increasing a count of zero-weight block by one.
-  static constexpr int64_t AuxCostIncZero = 11;
-  /// A cost of increasing the entry block's count by one.
-  static constexpr int64_t AuxCostIncEntry = 40;
-  /// A cost of decreasing the entry block's count by one.
-  static constexpr int64_t AuxCostDecEntry = 10;
   /// A cost of taking an unlikely jump.
   static constexpr int64_t AuxCostUnlikely = ((int64_t)1) << 30;
+  /// Minimum BaseDistance for the jump distance values in island joining.
+  static constexpr uint64_t MinBaseDistance = 10000;
 
 private:
   /// Iteratively find an augmentation path/dag in the network and send the
@@ -557,6 +572,9 @@ private:
   std::vector<std::vector<Edge *>> AugmentingEdges;
 };
 
+constexpr int64_t MinCostMaxFlow::AuxCostUnlikely;
+constexpr uint64_t MinCostMaxFlow::MinBaseDistance;
+
 /// A post-processing adjustment of control flow. It applies two steps by
 /// rerouting some flow and making it more realistic:
 ///
@@ -718,19 +736,22 @@ private:
   /// A distance of a path for a given jump.
   /// In order to incite the path to use blocks/jumps with large positive flow,
   /// and avoid changing branch probability of outgoing edges drastically,
-  /// set the distance as follows:
-  ///   if Jump.Flow > 0, then distance = max(100 - Jump->Flow, 0)
-  ///   if Block.Weight > 0, then distance = 1
-  ///   otherwise distance >> 1
+  /// set the jump distance so as:
+  ///   - to minimize the number of unlikely jumps used and subject to that,
+  ///   - to minimize the number of Flow == 0 jumps used and subject to that,
+  ///   - minimizes total multiplicative Flow increase for the remaining edges.
+  /// To capture this objective with integer distances, we round off fractional
+  /// parts to a multiple of 1 / BaseDistance.
   int64_t jumpDistance(FlowJump *Jump) const {
-    int64_t BaseDistance = 100;
+    uint64_t BaseDistance =
+        std::max(static_cast<uint64_t>(MinCostMaxFlow::MinBaseDistance),
+                 std::min(Func.Blocks[Func.Entry].Flow,
+                          MinCostMaxFlow::AuxCostUnlikely / NumBlocks()));
     if (Jump->IsUnlikely)
       return MinCostMaxFlow::AuxCostUnlikely;
     if (Jump->Flow > 0)
-      return std::max(BaseDistance - (int64_t)Jump->Flow, (int64_t)0);
-    if (Func.Blocks[Jump->Target].Weight > 0)
-      return BaseDistance;
-    return BaseDistance * (NumBlocks() + 1);
+      return BaseDistance + BaseDistance / Jump->Flow;
+    return BaseDistance * NumBlocks();
   };
 
   uint64_t NumBlocks() const { return Func.Blocks.size(); }
@@ -1063,8 +1084,8 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
     // We assume that decreasing block counts is more expensive than increasing,
     // and thus, setting separate costs here. In the future we may want to tune
     // the relative costs so as to maximize the quality of generated profiles.
-    int64_t AuxCostInc = MinCostMaxFlow::AuxCostInc;
-    int64_t AuxCostDec = MinCostMaxFlow::AuxCostDec;
+    int64_t AuxCostInc = SampleProfileProfiCostInc;
+    int64_t AuxCostDec = SampleProfileProfiCostDec;
     if (Block.UnknownWeight) {
       // Do not penalize changing weights of blocks w/o known profile count
       AuxCostInc = 0;
@@ -1073,12 +1094,12 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
       // Increasing the count for "cold" blocks with zero initial count is more
       // expensive than for "hot" ones
       if (Block.Weight == 0) {
-        AuxCostInc = MinCostMaxFlow::AuxCostIncZero;
+        AuxCostInc = SampleProfileProfiCostIncZero;
       }
       // Modifying the count of the entry block is expensive
       if (Block.isEntry()) {
-        AuxCostInc = MinCostMaxFlow::AuxCostIncEntry;
-        AuxCostDec = MinCostMaxFlow::AuxCostDecEntry;
+        AuxCostInc = SampleProfileProfiCostIncEntry;
+        AuxCostDec = SampleProfileProfiCostDecEntry;
       }
     }
     // For blocks with self-edges, do not penalize a reduction of the count,

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-topological-sort 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.func(test-print-topological-sort)" 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : region
 //       CHECK: arith.addi {{.*}} : index

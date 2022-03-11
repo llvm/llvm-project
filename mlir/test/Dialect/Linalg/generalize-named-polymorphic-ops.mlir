@@ -250,45 +250,28 @@ func @generalize_fill_2d(%value: f64, %O: memref<16x32xf32>) {
 
 // -----
 
-func @generalize_fill_rng_2d_f32(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
+func @generalize_index(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
   %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
 
-// CHECK-LABEL: @generalize_fill_rng_2d_f32
-// CHECK-DAG:  ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %[[O:.+]]: f32
+// CHECK-LABEL: @generalize_index
 // CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
 // CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
 // CHECK-DAG:    %[[IDX0_CAST:.+]] = arith.index_cast %[[IDX0]] : index to i32
 // CHECK-DAG:    %[[IDX1_CAST:.+]] = arith.index_cast %[[IDX1]] : index to i32
-// CHECK-DAG:    %[[VAL0:.+]] = arith.addi %[[IDX0_CAST]], %[[SEED]] : i32
-// CHECK-DAG:    %[[CST0:.+]] = arith.constant 1103515245 : i32
-// CHECK-DAG:    %[[CST1:.+]] = arith.constant 12345 : i32
-// CHECK-DAG:    %[[VAL1:.+]] = arith.muli %[[VAL0]], %[[CST0]] : i32
-// CHECK-DAG:    %[[VAL2:.+]] = arith.addi %[[VAL1]], %[[CST1]] : i32
-// Skip random number computation for the second index.
-// CHECK-DAG:    %[[DIFF:.+]] = arith.subf %[[MAX]], %[[MIN]] : f64
-// CHECK-DAG:    %[[CST2:.+]] = arith.constant 2.3283063999999999E-10 : f64
-// CHECK-DAG:    %[[FACT:.+]] = arith.mulf %[[DIFF]], %[[CST2]] : f64
-// CHECK-DAG:    %[[VAL4:.+]] = arith.mulf %{{.+}}, %[[FACT]] : f64
-// CHECK-DAG:    %[[VAL5:.+]] = arith.addf %[[VAL4]], %[[MIN]] : f64
-// CHECK-DAG:    %[[VAL6:.+]] = arith.truncf %[[VAL5]] : f64 to f32
-// CHECK-NEXT:   linalg.yield %[[VAL6]] : f32
-// CHECK-NEXT: -> tensor<16x32xf32>
 
 // -----
 
-func @generalize_fill_rng_2d_i32(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xi32>) -> tensor<16x32xi32>
-  return %0: tensor<16x32xi32>
+func @generalize_const(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
 }
 
-// CHECK-LABEL: @generalize_fill_rng_2d_i32
-// CHECK: ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %[[O:.+]]: i32
-// Verifies floating point to integer cast.
-// CHECK:        %[[VAL6:.+]] = arith.fptosi %{{.+}} : f64 to i32
-// CHECK-NEXT:   linalg.yield %[[VAL6]] : i32
-// CHECK-NEXT: -> tensor<16x32xi32>
+// CHECK-LABEL: @generalize_const
+// CHECK-DAG:    %[[CST0:.+]] = arith.constant 1103515245 : i32
+// CHECK-DAG:    %[[CST1:.+]] = arith.constant 12345 : i32
+// CHECK-DAG:    %[[CST2:.+]] = arith.constant 2.3283063999999999E-10 : f64
 
 // -----
 
@@ -315,6 +298,54 @@ func @generalize_elemwise_log(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>)
 
 // -----
 
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_abs(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<abs>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_abs
+// CHECK:        = math.abs
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_ceil(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<ceil>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_ceil
+// CHECK:        = math.ceil
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_floor(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<floor>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_floor
+// CHECK:        = math.floor
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_negf(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<negf>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_negf
+// CHECK:        = arith.negf
+
+// -----
+
 // Verifies the default value of the fun attribute is an add op.
 func @generalize_elemwise_add(%lhs : tensor<4x8xf32>, %rhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
   %0 = linalg.elemwise_binary ins(%lhs, %rhs: tensor<4x8xf32>, tensor<4x8xf32>)
@@ -337,3 +368,31 @@ func @generalize_elemwise_mul(%lhs : tensor<4x8xf32>, %rhs : tensor<4x8xf32>, %o
 
 // CHECK-LABEL: @generalize_elemwise_mul
 // CHECK:        = arith.mulf
+
+// -----
+
+// Verifies pointwise ops support rank zero input tensors
+func @generalize_elemwise_rank_zero(%lhs : tensor<f32>, %rhs : tensor<f32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<sub>}
+                              ins(%lhs, %rhs: tensor<f32>, tensor<f32>)
+                              outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_rank_zero
+// CHECK:       linalg.generic
+// CHECK-SAME:  iterator_types = ["parallel", "parallel"]
+// CHECK:        = arith.subf
+
+// -----
+
+// Verifies the fun attribute controls the binary function used.
+func @generalize_copy(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.copy ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_copy
+//       CHECK:   linalg.generic
+//  CHECK-NEXT:   ^bb0(%[[I:[0-9a-zA-Z]*]]: f32
+//  CHECK-NEXT:   linalg.yield %[[I]]

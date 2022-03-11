@@ -107,6 +107,18 @@ op->emitError() << "Compose an interesting error: " << fooAttr << ", " << fooTyp
 "Compose an interesting error: @foo, i32, (0, 1, 2)"
 ```
 
+Operations attached to a diagnostic will be printed in generic form if the
+severity level is `Error`, otherwise custom operation printers will be used.
+```c++
+// `anotherOp` will be printed in generic form,
+// e.g. %3 = "arith.addf"(%arg4, %2) : (f32, f32) -> f32
+op->emitError() << anotherOp;
+
+// `anotherOp` will be printed using the custom printer,
+// e.g. %3 = arith.addf %arg4, %2 : f32
+op->emitRemark() << anotherOp;
+```
+
 ### Attaching notes
 
 Unlike many other compiler frameworks, notes in MLIR cannot be emitted directly.

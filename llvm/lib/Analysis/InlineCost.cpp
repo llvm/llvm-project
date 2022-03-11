@@ -133,8 +133,6 @@ static cl::opt<bool> DisableGEPConstOperand(
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
 namespace {
-class InlineCostCallAnalyzer;
-
 /// This function behaves more like CallBase::hasFnAttr: when it looks for the
 /// requested attribute, it check both the call instruction and the called
 /// function (if it's available and operand bundles don't prohibit that).
@@ -151,7 +149,9 @@ Attribute getFnAttr(CallBase &CB, StringRef AttrKind) {
 
   return {};
 }
+} // namespace
 
+namespace llvm {
 Optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind) {
   Attribute Attr = getFnAttr(CB, AttrKind);
   int AttrValue;
@@ -159,6 +159,10 @@ Optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind) {
     return None;
   return AttrValue;
 }
+} // namespace llvm
+
+namespace {
+class InlineCostCallAnalyzer;
 
 // This struct is used to store information about inline cost of a
 // particular instruction
@@ -903,6 +907,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     if (Optional<int> AttrCost =
             getStringFnAttrAsInt(CandidateCall, "function-inline-cost"))
       Cost = *AttrCost;
+
+    if (Optional<int> AttrCostMult = getStringFnAttrAsInt(
+            CandidateCall,
+            InlineConstants::FunctionInlineCostMultiplierAttributeName))
+      Cost *= *AttrCostMult;
 
     if (Optional<int> AttrThreshold =
             getStringFnAttrAsInt(CandidateCall, "function-inline-threshold"))

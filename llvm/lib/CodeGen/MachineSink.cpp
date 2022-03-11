@@ -1279,8 +1279,7 @@ bool MachineSinking::SinkIntoLoop(MachineLoop *L, MachineInstr &I) {
   }
 
   LLVM_DEBUG(dbgs() << "LoopSink: Sinking instruction!\n");
-  SinkBlock->splice(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()), Preheader,
-                    I);
+  SinkBlock->splice(SinkBlock->getFirstNonPHI(), Preheader, I);
 
   // The instruction is moved from its basic block, so do not retain the
   // debug information.
@@ -1400,8 +1399,9 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   }
 
   // Determine where to insert into. Skip phi nodes.
-  MachineBasicBlock::iterator InsertPos =
-      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
+  MachineBasicBlock::iterator InsertPos = SuccToSinkTo->begin();
+  while (InsertPos != SuccToSinkTo->end() && InsertPos->isPHI())
+    ++InsertPos;
 
   // Collect debug users of any vreg that this inst defines.
   SmallVector<MIRegs, 4> DbgUsersToSink;
@@ -1803,8 +1803,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.
     clearKillFlags(&MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
-    MachineBasicBlock::iterator InsertPos =
-        SuccBB->SkipPHIsAndLabels(SuccBB->begin());
+    MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
     performSink(MI, *SuccBB, InsertPos, DbgValsToSink);
     updateLiveIn(&MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 

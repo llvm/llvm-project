@@ -18,6 +18,7 @@ config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.cc = "@CMAKE_C_COMPILER@"
+config.targets_to_build = "@TARGETS_TO_BUILD@"
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

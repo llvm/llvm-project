@@ -162,6 +162,27 @@ static mlir::Type unwrapElementType(mlir::Type type) {
   return type;
 }
 
+fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::SomeExpr &addr) {
+  Fortran::lower::SymMap globalOpSymMap;
+  Fortran::lower::AggregateStoreMap storeMap;
+  Fortran::lower::StatementContext stmtCtx;
+  if (const Fortran::semantics::Symbol *sym =
+          Fortran::evaluate::GetFirstSymbol(addr)) {
+    // Length parameters processing will need care in global initializer
+    // context.
+    if (hasDerivedTypeWithLengthParameters(*sym))
+      TODO(loc, "initial-data-target with derived type length parameters");
+
+    auto var = Fortran::lower::pft::Variable(*sym, /*global=*/true);
+    Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
+                                        storeMap);
+  }
+  return Fortran::lower::createInitializerAddress(loc, converter, addr,
+                                                  globalOpSymMap, stmtCtx);
+}
+
 /// create initial-data-target fir.box in a global initializer region.
 mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -739,7 +760,9 @@ void Fortran::lower::mapSymbolAttributes(
       // Lower lower bounds, explicit type parameters and explicit
       // extents if any.
       if (ba.isChar())
-        TODO(loc, "lowerToBoxValue character");
+        if (mlir::Value len =
+                lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
+          explicitParams.push_back(len);
       // TODO: derived type length parameters.
       lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
       lowerExplicitExtents(converter, loc, ba, lbounds, extents, symMap,
@@ -899,7 +922,40 @@ void Fortran::lower::mapSymbolAttributes(
       //===--------------------------------------------------------------===//
 
       [&](const Fortran::lower::details::ScalarDynamicChar &x) {
-        TODO(loc, "ScalarDynamicChar variable lowering");
+        // type is a CHARACTER, determine the LEN value
+        auto charLen = x.charLen();
+        if (replace) {
+          Fortran::lower::SymbolBox symBox = symMap.lookupSymbol(sym);
+          mlir::Value boxAddr = symBox.getAddr();
+          mlir::Value len;
+          mlir::Type addrTy = boxAddr.getType();
+          if (addrTy.isa<fir::BoxCharType>() || addrTy.isa<fir::BoxType>()) {
+            std::tie(boxAddr, len) = charHelp.createUnboxChar(symBox.getAddr());
+          } else {
+            // dummy from an other entry case: we cannot get a dynamic length
+            // for it, it's illegal for the user program to use it. However,
+            // since we are lowering all function unit statements regardless
+            // of whether the execution will reach them or not, we need to
+            // fill a value for the length here.
+            len = builder.createIntegerConstant(
+                loc, builder.getCharacterLengthType(), 1);
+          }
+          // Override LEN with an expression
+          if (charLen)
+            len = genExplicitCharLen(charLen);
+          symMap.addCharSymbol(sym, boxAddr, len, true);
+          return;
+        }
+        // local CHARACTER variable
+        mlir::Value len = genExplicitCharLen(charLen);
+        if (preAlloc) {
+          symMap.addCharSymbol(sym, preAlloc, len);
+          return;
+        }
+        llvm::SmallVector<mlir::Value> lengths = {len};
+        mlir::Value local =
+            createNewLocal(converter, loc, var, preAlloc, llvm::None, lengths);
+        symMap.addCharSymbol(sym, local, len);
       },
 
       //===--------------------------------------------------------------===//

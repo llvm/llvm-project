@@ -299,7 +299,8 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
           static_cast<std::intmax_t>(*openRecl));
       return false;
     }
-  } else if (recordLength) {
+  }
+  if (recordLength) {
     // It is possible for recordLength to have a value now for a
     // variable-length output record if the previous operation
     // was a BACKSPACE or non advancing input statement.

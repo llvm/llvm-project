@@ -177,6 +177,13 @@ unsigned getHeapPtrImplicitArgPosition() {
   return 0;
 }
 
+unsigned getQueuePtrImplicitArgPosition() {
+  if (AmdhsaCodeObjectVersion == 5)
+    return 200;
+  llvm_unreachable("queue_ptr is supported only by code object version 5");
+  return 0;
+}
+
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
 #define GET_MIMGInfoTable_IMPL
@@ -1668,6 +1675,10 @@ bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+}
+
+bool isGFX940(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts];
 }
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {

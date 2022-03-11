@@ -91,7 +91,7 @@ static cl::opt<bool> UpdateTotalSamples(
 extern cl::opt<int> ProfileSummaryCutoffHot;
 
 static cl::opt<bool> GenCSNestedProfile(
-    "gen-cs-nested-profile", cl::Hidden, cl::init(false),
+    "gen-cs-nested-profile", cl::Hidden, cl::init(true),
     cl::desc("Generate nested function profiles for CSSPGO"));
 
 using namespace llvm;

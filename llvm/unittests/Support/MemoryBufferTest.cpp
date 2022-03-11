@@ -219,6 +219,11 @@ TEST_F(MemoryBufferTest, make_new) {
   EXPECT_NE(nullptr, Four.get());
   for (size_t i = 0; i < 123; ++i)
     EXPECT_EQ(0, Four->getBufferStart()[0]);
+
+  // uninitialized buffer with rollover size
+  OwningBuffer Five(
+      WritableMemoryBuffer::getNewUninitMemBuffer(SIZE_MAX, "huge"));
+  EXPECT_EQ(nullptr, Five.get());
 }
 
 void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {

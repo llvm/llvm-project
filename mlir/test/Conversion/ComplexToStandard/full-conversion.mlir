@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-complex-to-standard -convert-complex-to-llvm -convert-math-to-llvm -convert-arith-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.func(convert-complex-to-standard),convert-complex-to-llvm,builtin.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" | FileCheck %s
 
 // CHECK-LABEL: llvm.func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])

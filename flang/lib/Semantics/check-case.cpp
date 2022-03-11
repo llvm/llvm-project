@@ -50,7 +50,7 @@ private:
                 auto pair{ComputeBounds(range)};
                 if (pair.first && pair.second && *pair.first > *pair.second) {
                   context_.Say(stmt.source,
-                      "CASE has lower bound greater than upper bound"_en_US);
+                      "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
                   if constexpr (T::category == TypeCategory::Logical) { // C1148
                     if ((pair.first || pair.second) &&

@@ -30,6 +30,7 @@ import os
 import threading
 
 # Import MLIR related modules.
+from mlir import execution_engine
 from mlir import ir
 from mlir import runtime
 from mlir.dialects import arith
@@ -52,6 +53,7 @@ _INDEX_BIT_WIDTH = 0
 _ENTRY_NAME = "main"
 
 # Type aliases for type annotation.
+_UnaryOp = Callable[[Any], Any]
 _BinaryOp = Callable[[Any, Any], Any]
 _ExprVisitor = Callable[..., None]
 _ExprInfoDict = Dict["IndexExpr", "_ExprInfo"]
@@ -644,6 +646,7 @@ class Tensor:
     dtype = dtype or DType(Type.FLOAT32)
     self._name = name or self._get_unique_name()
     self._assignment = None
+    self._engine = None
     self._sparse_value_location = _SparseValueInfo._UNPACKED
     self._dense_storage = None
     self._dtype = dtype
@@ -978,17 +981,72 @@ class Tensor:
                        f"len({indices}) != {self.order}.")
 
     self._assignment = _Assignment(indices, value)
+    self._engine = None
 
-  def evaluate(self) -> None:
-    """Evaluates the assignment to the tensor."""
-    result = self._assignment.expression.evaluate(self,
-                                                  self._assignment.indices)
-    self._assignment = None
+  def compile(self, force_recompile: bool = False) -> None:
+    """Compiles the tensor assignment to an execution engine.
+
+    Calling compile the second time does not do anything unless
+    force_recompile is True.
+
+    Args:
+      force_recompile: A boolean value to enable recompilation, such as for the
+        purpose of timing.
+
+    Raises:
+      ValueError: If the assignment is not proper or not supported.
+    """
+    if self._assignment is None or (self._engine is not None and
+                                    not force_recompile):
+      return
+
+    self._engine = self._assignment.expression.compile(self,
+                                                       self._assignment.indices)
+
+  def compute(self) -> None:
+    """Executes the engine for the tensor assignment.
+
+    Raises:
+      ValueError: If the assignment hasn't been compiled yet.
+    """
+    if self._assignment is None:
+      return
+
+    if self._engine is None:
+      raise ValueError("Need to invoke compile() before invoking compute().")
+
+    input_accesses = self._assignment.expression.get_input_accesses()
+    # Gather the pointers for the input buffers.
+    input_pointers = [a.tensor.ctype_pointer() for a in input_accesses]
     if self.is_dense():
+      # The pointer to receive dense output is the first argument to the
+      # execution engine.
+      arg_pointers = [self.dense_dst_ctype_pointer()] + input_pointers
+    else:
+      # The pointer to receive the sparse tensor output is the last argument
+      # to the execution engine and is a pointer to pointer of char.
+      arg_pointers = input_pointers + [
+          ctypes.pointer(ctypes.pointer(ctypes.c_char(0)))
+      ]
+
+    # Invoke the execution engine to run the module.
+    self._engine.invoke(_ENTRY_NAME, *arg_pointers)
+
+    # Retrieve the result.
+    if self.is_dense():
+      result = runtime.ranked_memref_to_numpy(arg_pointers[0][0])
       assert isinstance(result, np.ndarray)
       self._dense_storage = result
     else:
-      self._set_packed_sparse_tensor(result)
+      self._set_packed_sparse_tensor(arg_pointers[-1][0])
+
+    self._assignment = None
+    self._engine = None
+
+  def evaluate(self) -> None:
+    """Evaluates the tensor assignment."""
+    self.compile()
+    self.compute()
 
   def _sync_value(self) -> None:
     """Updates the tensor value by evaluating the pending assignment."""
@@ -1166,6 +1224,14 @@ class IndexExpr(abc.ABC):
       raise ValueError(f"Expected IndexExpr: {rhs}")
     return _BinaryExpr(op, self, rhs)
 
+  def _build_unary_expr(self, op: _UnaryOp) -> "_UnaryExpr":
+    """Build a unary expression.
+
+    Args:
+      op: A _UnaryOp object representing the unary operation.
+    """
+    return _UnaryExpr(op, self)
+
   def __add__(self, rhs) -> "_BinaryExpr":
     """Defines the operator +.
 
@@ -1195,6 +1261,22 @@ class IndexExpr(abc.ABC):
       ValueError: If rhs is not an IndexExpr.
     """
     return self._verify_operand_and_build_expr(rhs, operator.mul)
+
+  def __abs__(self) -> "_UnaryExpr":
+    """Defines the operator abs.
+
+    Returns:
+      A _UnaryExpr object representing the operation.
+    """
+    return self._build_unary_expr(operator.abs)
+
+  def __neg__(self) -> "_UnaryExpr":
+    """Defines the operator neg.
+
+    Returns:
+      A _UnaryExpr object representing the operation.
+    """
+    return self._build_unary_expr(operator.neg)
 
   def __sub__(self, rhs) -> "_BinaryExpr":
     """Defines the operator -.
@@ -1444,29 +1526,31 @@ class IndexExpr(abc.ABC):
       linalg_funcop.func_op.attributes[
           "llvm.emit_c_interface"] = ir.UnitAttr.get()
 
-  def evaluate(
+  def get_input_accesses(self) -> List["Access"]:
+    """Compute the list of input accesses for the expression."""
+    input_accesses = []
+    self._visit(_gather_input_accesses_index_vars, (input_accesses,))
+    return input_accesses
+
+  def compile(
       self,
       dst: Tensor,
       dst_indices: Tuple[IndexVar, ...],
-  ) -> Union[np.ndarray, ctypes.c_void_p]:
-    """Evaluates tensor assignment dst[dst_indices] = expression.
+  ) -> execution_engine.ExecutionEngine:
+    """Compiles the tensor assignment dst[dst_indices] = expression.
 
     Args:
       dst: The destination tensor.
       dst_indices: The tuple of IndexVar used to access the destination tensor.
 
     Returns:
-      The result of the dense tensor represented in numpy ndarray or the pointer
-      to the MLIR sparse tensor.
+      The execution engine for the tensor assignment.
 
     Raises:
       ValueError: If the expression is not proper or not supported.
     """
     expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
-
-    # Compute a list of input accesses.
-    input_accesses = []
-    self._visit(_gather_input_accesses_index_vars, (input_accesses,))
+    input_accesses = self.get_input_accesses()
 
     # Build and compile the module to produce the execution engine.
     with ir.Context(), ir.Location.unknown():
@@ -1475,29 +1559,7 @@ class IndexExpr(abc.ABC):
                             input_accesses)
       engine = utils.compile_and_build_engine(module)
 
-    # Gather the pointers for the input buffers.
-    input_pointers = [a.tensor.ctype_pointer() for a in input_accesses]
-    if dst.is_dense():
-      # The pointer to receive dense output is the first argument to the
-      # execution engine.
-      arg_pointers = [dst.dense_dst_ctype_pointer()] + input_pointers
-    else:
-      # The pointer to receive sparse output is the last argument to the
-      # execution engine. The pointer to receive a sparse tensor output is a
-      # pointer to pointer of char.
-      arg_pointers = input_pointers + [
-          ctypes.pointer(ctypes.pointer(ctypes.c_char(0)))
-      ]
-
-    # Invoke the execution engine to run the module and return the result.
-    engine.invoke(_ENTRY_NAME, *arg_pointers)
-
-    if dst.is_dense():
-      return runtime.ranked_memref_to_numpy(arg_pointers[0][0])
-
-    # Return the sparse tensor pointer.
-    return arg_pointers[-1][0]
-
+    return engine
 
 @dataclasses.dataclass(frozen=True)
 class Access(IndexExpr):
@@ -1566,6 +1628,75 @@ def _gather_input_accesses_index_vars(
     input_accesses.append(expr)
 
 
+def _op_ceil(__a: Any) -> Any:
+  """A _UnaryOp object for operation ceil."""
+  pass
+
+
+def _op_floor(__a: Any) -> Any:
+  """A _UnaryOp object for operation floor."""
+  pass
+
+
+def _op_unary_to_callable(op: _UnaryOp) -> lang.UnaryFnType:
+  """Returns the linalg dialect function object for the given operation."""
+  op_to_callable = {
+      operator.abs: lang.UnaryFn.abs,
+      operator.neg: lang.UnaryFn.negf,
+      _op_ceil: lang.UnaryFn.ceil,
+      _op_floor: lang.UnaryFn.floor,
+  }
+  return op_to_callable[op]
+
+
+@dataclasses.dataclass(frozen=True)
+class _UnaryExpr(IndexExpr):
+  """The representation for a Unary operation.
+
+  Attributes:
+  op: A _UnaryOp representing the operation.
+  a: An IndexExpr representing the operand for the operation.
+  """
+  op: _BinaryOp
+  a: IndexExpr
+
+  def __post_init__(self) -> None:
+    """Verifies that the operand being added is an IndexExpr."""
+    assert isinstance(self.a, IndexExpr)
+
+  def _emit_expression(
+      self,
+      expr_to_opnd: Dict[IndexExpr, lang.OperandDef],
+      expr_to_info: _ExprInfoDict,
+  ) -> lang.ScalarExpression:
+    """Emits the expression tree and returns the expression."""
+    # The current expression node is an internal node of the structured op.
+    if self not in expr_to_opnd:
+      a = self.a._emit_expression(expr_to_opnd, expr_to_info)
+      return _op_unary_to_callable(self.op)(a)
+
+    # The current expression is a leaf node of the structured op. That is, it is
+    # a temporary tensor generated by its child structured op.
+    op_info = expr_to_info[self].structop_info
+    assert op_info is not None
+    dims = _mlir_dimensions_from_index_vars(op_info.dst_indices)
+    return lang.TensorUse(expr_to_opnd[self], dims)
+
+  def _visit(self,
+             func: _ExprVisitor,
+             args,
+             *,
+             leaf_checker: _SubtreeLeafChecker = None) -> None:
+    """A post-order visitor."""
+    if leaf_checker is None or not leaf_checker(self, *args):
+      self.a._visit(func, args, leaf_checker=leaf_checker)
+    func(self, *args)
+
+  def dtype(self) -> DType:
+    """Returns the data type of the operation."""
+    return self.a.dtype()
+
+
 def _op_to_callable(op: _BinaryOp) -> lang.BinaryFnType:
   """Returns the linalg dialect function object for the given operation."""
   op_to_callable = {
@@ -1574,7 +1705,6 @@ def _op_to_callable(op: _BinaryOp) -> lang.BinaryFnType:
       operator.mul: lang.BinaryFn.mul,
   }
   return op_to_callable[op]
-
 
 @dataclasses.dataclass(frozen=True)
 class _BinaryExpr(IndexExpr):
@@ -1703,6 +1833,15 @@ def _validate_and_collect_expr_info(
       mode_formats = tuple(expr.tensor.format.format_pack.formats)
     assert len(src_dims) == len(mode_formats)
     dim_infos = tuple([_DimInfo(d, m) for d, m in zip(src_dims, mode_formats)])
+  elif isinstance(expr, _UnaryExpr):
+    a_info = expr_to_info[expr.a]
+    index_to_dim_info = {
+        i: d for i, d in zip(a_info.src_indices, a_info.dim_infos)
+    }
+    # Here we rely on the fact that dictionaries keep the insertion order for
+    # keys and values.
+    src_indices = tuple(index_to_dim_info.keys())
+    dim_infos = tuple(index_to_dim_info.values())
   else:
     assert isinstance(expr, _BinaryExpr)
     a_info = expr_to_info[expr.a]
@@ -1789,6 +1928,10 @@ def _accumulate_reduce_indices(
     expr_info.acc_reduce_indices = (
         a_info.acc_reduce_indices | b_info.acc_reduce_indices
         | expr_info.reduce_indices)
+  elif isinstance(expr, _UnaryExpr):
+    a_info = expr_to_info[expr.a]
+    expr_info.acc_reduce_indices = (
+        a_info.acc_reduce_indices | expr_info.reduce_indices)
   else:
     assert isinstance(expr, Access)
     # Handle simple reduction expression in the format of A[i] = B[i, j].
@@ -1928,3 +2071,51 @@ def _emit_structured_op_input(
   opnd = lang.OperandDef(lang.OperandKind.INPUT_TENSOR, lang.T, dim_sym)
   op_def.add_operand(name, opnd)
   return opnd
+
+
+def _check_and_build_unary(a: Access, op: _UnaryOp) -> "_UnaryExpr":
+  """Build a unary operation ceil.
+
+    Args:
+      a: The operand, which could be any Python object from user inputs.
+      op: An _UnaryOp object representing the operation.
+
+    Returns:
+      A _UnaryExpr object representing the operation.
+
+    Raises:
+      ValueError: If a is not an IndexExpr.
+    """
+  if not isinstance(a, Access):
+    raise ValueError(f"Expected an Access Operand: {a}")
+  return a._build_unary_expr(op)
+
+
+def ceil(a: Access) -> "_UnaryExpr":
+  """Defines the operation ceil.
+
+    Args:
+      a: The operand, which could be any Python object from user inputs.
+
+    Returns:
+      A _UnaryExpr object representing the operation.
+
+    Raises:
+      ValueError: If a is not an IndexExpr.
+    """
+  return _check_and_build_unary(a, _op_ceil)
+
+
+def floor(a: Access) -> "_UnaryExpr":
+  """Defines the operation floor.
+
+    Args:
+      a: The operand, which could be any Python object from user inputs.
+
+    Returns:
+      A _UnaryExpr object representing the operation.
+
+    Raises:
+      ValueError: If a is not an IndexExpr.
+    """
+  return _check_and_build_unary(a, _op_floor)

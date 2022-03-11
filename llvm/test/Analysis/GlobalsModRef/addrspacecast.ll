@@ -1,4 +1,4 @@
-; RUN: opt -globals-aa -aa-eval -print-all-alias-modref-info -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=globals-aa,basic-aa -passes='require<globals-aa>,aa-eval' -print-all-alias-modref-info -disable-output %s 2>&1 | FileCheck %s
 
 @g0 = internal addrspace(3) global i32 undef
 

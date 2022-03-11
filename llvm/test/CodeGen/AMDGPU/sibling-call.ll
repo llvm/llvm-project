@@ -201,17 +201,17 @@ entry:
 ; GCN: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
 ; GCN-NEXT: buffer_store_dword [[CSRV:v[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec
-; GCN: s_mov_b32 s33, s32
+; GCN: v_writelane_b32 [[CSRV]], s33, 2
 ; GCN-DAG: s_addk_i32 s32, 0x400
-
-; GCN-DAG: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GCN-DAG: buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-DAG: v_writelane_b32 [[CSRV]], s34, 0
-; GCN-DAG: v_writelane_b32 [[CSRV]], s35, 1
 
 ; GCN-DAG: s_getpc_b64 s[4:5]
 ; GCN-DAG: s_add_u32 s4, s4, i32_fastcc_i32_i32@gotpcrel32@lo+4
 ; GCN-DAG: s_addc_u32 s5, s5, i32_fastcc_i32_i32@gotpcrel32@hi+12
+
+; GCN-DAG: v_writelane_b32 [[CSRV]], s30, 0
+; GCN-DAG: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-DAG: v_writelane_b32 [[CSRV]], s31, 1
 
 
 ; GCN: s_swappc_b64
@@ -223,8 +223,8 @@ entry:
 ; GCN-NEXT: s_add_u32 s4, s4, sibling_call_i32_fastcc_i32_i32@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
 
-; GCN-DAG: v_readlane_b32 s34, [[CSRV]], 0
-; GCN-DAG: v_readlane_b32 s35, [[CSRV]], 1
+; GCN-DAG: v_readlane_b32 s30, [[CSRV]], 0
+; GCN-DAG: v_readlane_b32 s31, [[CSRV]], 1
 
 ; GCN: s_addk_i32 s32, 0xfc00
 ; GCN-NEXT: v_readlane_b32 s33,

@@ -9,6 +9,7 @@
 #include "MLIRServer.h"
 #include "lsp/Logging.h"
 #include "lsp/Protocol.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Parser/AsmParserState.h"
 #include "mlir/Parser/Parser.h"

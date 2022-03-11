@@ -536,8 +536,7 @@ func @return_type_mismatch() -> i32 {
 
 func @return_inside_loop() {
   affine.for %i = 1 to 100 {
-    // expected-error@-1 {{op expects regions to end with 'affine.yield', found 'func.return'}}
-    // expected-note@-2 {{in custom textual format, the absence of terminator implies}}
+    // expected-error@+1 {{'func.return' op expects parent op 'builtin.func'}}
     return
   }
   return

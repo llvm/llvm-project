@@ -28,6 +28,7 @@ enum Kind {
   // Leaf.
   kTensor = 0,
   kInvariant,
+  kIndex,
   // Unary operations.
   kAbsF,
   kCeilF,
@@ -42,6 +43,7 @@ enum Kind {
   kCastUF, // unsigned
   kCastS,  // signed
   kCastU,  // unsigned
+  kCastIdx,
   kTruncI,
   kBitCast,
   // Binary operations.
@@ -78,6 +80,9 @@ struct TensorExp {
   union {
     /// Expressions representing tensors simply have a tensor number.
     unsigned tensor;
+
+    /// Indices hold the index number.
+    unsigned index;
 
     /// Tensor operations hold the indices of their children.
     Children children;

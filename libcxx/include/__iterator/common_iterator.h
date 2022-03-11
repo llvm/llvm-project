@@ -37,31 +37,18 @@ concept __can_use_postfix_proxy =
 template<input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
   requires (!same_as<_Iter, _Sent> && copyable<_Iter>)
 class common_iterator {
-  class __proxy {
-    friend common_iterator;
-
-    iter_value_t<_Iter> __value;
-    // We can move __x because the only caller verifies that __x is not a reference.
-    constexpr explicit __proxy(iter_reference_t<_Iter>&& __x)
-      : __value(_VSTD::move(__x)) {}
-
-  public:
+  struct __proxy {
     constexpr const iter_value_t<_Iter>* operator->() const noexcept {
-      return _VSTD::addressof(__value);
+      return _VSTD::addressof(__value_);
     }
+    iter_value_t<_Iter> __value_;
   };
 
-  class __postfix_proxy {
-    friend common_iterator;
-
-    iter_value_t<_Iter> __value;
-    constexpr explicit __postfix_proxy(iter_reference_t<_Iter>&& __x)
-      : __value(_VSTD::forward<iter_reference_t<_Iter>>(__x)) {}
-
-  public:
+  struct __postfix_proxy {
     constexpr const iter_value_t<_Iter>& operator*() const noexcept {
-      return __value;
+      return __value_;
     }
+    iter_value_t<_Iter> __value_;
   };
 
 public:
@@ -133,7 +120,7 @@ public:
       auto&& __tmp = *_VSTD::__unchecked_get<_Iter>(__hold_);
       return _VSTD::addressof(__tmp);
     } else {
-      return __proxy(*_VSTD::__unchecked_get<_Iter>(__hold_));
+      return __proxy{*_VSTD::__unchecked_get<_Iter>(__hold_)};
     }
   }
 
@@ -152,7 +139,7 @@ public:
                          !__can_use_postfix_proxy<_Iter>) {
       return _VSTD::__unchecked_get<_Iter>(__hold_)++;
     } else {
-      __postfix_proxy __p(**this);
+      auto __p = __postfix_proxy{**this};
       ++*this;
       return __p;
     }

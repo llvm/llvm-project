@@ -305,17 +305,17 @@ cc_library(
 )
 
 cc_library(
-    name = "TestStandardToLLVM",
-    srcs = glob(["lib/Conversion/StandardToLLVM/*.cpp"]),
+    name = "TestFuncToLLVM",
+    srcs = glob(["lib/Conversion/FuncToLLVM/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
         "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:Pass",
-        "//mlir:StandardToLLVM",
     ],
 )
 

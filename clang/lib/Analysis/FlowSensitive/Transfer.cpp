@@ -103,11 +103,9 @@ public:
       auto &Loc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, Loc);
       if (S->getOpcode() == BO_LAnd)
-        Env.setValue(Loc, Env.takeOwnership(std::make_unique<ConjunctionValue>(
-                              *LHSVal, *RHSVal)));
+        Env.setValue(Loc, Env.makeAnd(*LHSVal, *RHSVal));
       else
-        Env.setValue(Loc, Env.takeOwnership(std::make_unique<DisjunctionValue>(
-                              *LHSVal, *RHSVal)));
+        Env.setValue(Loc, Env.makeOr(*LHSVal, *RHSVal));
       break;
     }
     default:
@@ -269,8 +267,7 @@ public:
 
       auto &ExprLoc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, ExprLoc);
-      Env.setValue(ExprLoc, Env.takeOwnership(
-                                std::make_unique<NegationValue>(*SubExprVal)));
+      Env.setValue(ExprLoc, Env.makeNot(*SubExprVal));
       break;
     }
     default:

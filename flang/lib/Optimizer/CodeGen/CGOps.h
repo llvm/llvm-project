@@ -16,8 +16,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
-using namespace mlir;
-
 #define GET_OP_CLASSES
 #include "flang/Optimizer/CodeGen/CGOps.h.inc"
 

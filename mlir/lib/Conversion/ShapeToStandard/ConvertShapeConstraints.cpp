@@ -63,7 +63,6 @@ class ConvertShapeConstraints
 };
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createConvertShapeConstraintsPass() {
+std::unique_ptr<Pass> mlir::createConvertShapeConstraintsPass() {
   return std::make_unique<ConvertShapeConstraints>();
 }

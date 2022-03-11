@@ -44,10 +44,10 @@ Symbol &Resolve(const parser::Name &name, Symbol &symbol) {
   return *Resolve(name, &symbol);
 }
 
-parser::MessageFixedText WithIsFatal(
-    const parser::MessageFixedText &msg, bool isFatal) {
+parser::MessageFixedText WithSeverity(
+    const parser::MessageFixedText &msg, parser::Severity severity) {
   return parser::MessageFixedText{
-      msg.text().begin(), msg.text().size(), isFatal};
+      msg.text().begin(), msg.text().size(), severity};
 }
 
 bool IsIntrinsicOperator(
@@ -436,9 +436,9 @@ bool EquivalenceSets::CheckCanEquivalence(
       !(isAnyNum2 || isChar2)) { // C8110 - C8113
     if (AreTkCompatibleTypes(type1, type2)) {
       if (context_.ShouldWarn(LanguageFeature::EquivalenceSameNonSequence)) {
-        msg = "nonstandard: Equivalence set contains '%s' and '%s' with same "
-              "type "
-              "that is neither numeric nor character sequence type"_en_US;
+        msg =
+            "nonstandard: Equivalence set contains '%s' and '%s' with same "
+            "type that is neither numeric nor character sequence type"_port_en_US;
       }
     } else {
       msg = "Equivalence set cannot contain '%s' and '%s' with distinct types "
@@ -449,20 +449,17 @@ bool EquivalenceSets::CheckCanEquivalence(
       if (context_.ShouldWarn(
               LanguageFeature::EquivalenceNumericWithCharacter)) {
         msg = "nonstandard: Equivalence set contains '%s' that is numeric "
-              "sequence "
-              "type and '%s' that is character"_en_US;
+              "sequence type and '%s' that is character"_port_en_US;
       }
     } else if (isAnyNum2 &&
         context_.ShouldWarn(LanguageFeature::EquivalenceNonDefaultNumeric)) {
       if (isDefaultNum1) {
         msg =
             "nonstandard: Equivalence set contains '%s' that is a default "
-            "numeric "
-            "sequence type and '%s' that is numeric with non-default kind"_en_US;
+            "numeric sequence type and '%s' that is numeric with non-default kind"_port_en_US;
       } else if (!isDefaultNum2) {
         msg = "nonstandard: Equivalence set contains '%s' and '%s' that are "
-              "numeric "
-              "sequence types with non-default kinds"_en_US;
+              "numeric sequence types with non-default kinds"_port_en_US;
       }
     }
   }
@@ -576,7 +573,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
     return false; // an error has already occurred
   }
   currObject_.symbol = name.symbol;
-  parser::MessageFixedText msg{"", 0};
+  parser::MessageFixedText msg;
   const Symbol &symbol{*name.symbol};
   if (symbol.owner().IsDerivedType()) { // C8107
     msg = "Derived type component '%s'"

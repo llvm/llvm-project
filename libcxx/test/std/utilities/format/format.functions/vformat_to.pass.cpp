@@ -11,10 +11,6 @@
 // TODO FMT Evaluate gcc-11 status
 // UNSUPPORTED: gcc-11
 
-// The tests write fixed size buffer, make sure it remains in bounds.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-// UNSUPPORTED: libcxx-no-debug-mode
-
 // <format>
 
 // template<class Out>

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf \
 // RUN:  -arith-bufferize -convert-vector-to-llvm="enable-amx" \
-// RUN:  -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN:  -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" \
 // RUN:  --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \

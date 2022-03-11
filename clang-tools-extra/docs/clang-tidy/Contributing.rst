@@ -364,6 +364,11 @@ other support classes by writing a unit test than by writing a ``FileCheck`` int
 test.  The ``ASTMatchersTests`` target contains unit tests for the public AST matcher
 classes and is a good source of testing idioms for matchers.
 
+You can build the Clang-tidy unit tests by building the ``ClangTidyTests`` target.
+Test targets in LLVM and Clang are excluded from the "build all" style action of
+IDE-based CMake generators, so you need to explicitly build the target for the unit
+tests to be built.
+
 Making your check robust
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

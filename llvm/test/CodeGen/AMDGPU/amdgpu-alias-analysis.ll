@@ -1,5 +1,3 @@
-; RUN: opt -mtriple=amdgcn-- -data-layout=A5 -aa-eval -amdgpu-aa -amdgpu-aa-wrapper -disable-basic-aa  -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=r600-- -data-layout=A5 -aa-eval -amdgpu-aa -amdgpu-aa-wrapper -disable-basic-aa  -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -mtriple=amdgcn-- -data-layout=A5 -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -mtriple=r600-- -data-layout=A5 -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 

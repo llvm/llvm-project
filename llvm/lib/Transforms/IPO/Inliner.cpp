@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -92,6 +93,18 @@ STATISTIC(NumMergedAllocas, "Number of allocas merged together");
 static cl::opt<bool>
     DisableInlinedAllocaMerging("disable-inlined-alloca-merging",
                                 cl::init(false), cl::Hidden);
+
+static cl::opt<int> IntraSCCCostMultiplier(
+    "intra-scc-cost-multiplier", cl::init(2), cl::Hidden,
+    cl::desc(
+        "Cost multiplier to multiply onto inlined call sites where the "
+        "new call was previously an intra-SCC call (not relevant when the "
+        "original call was already intra-SCC). This can accumulate over "
+        "multiple inlinings (e.g. if a call site already had a cost "
+        "multiplier and one of its inlined calls was also subject to "
+        "this, the inlined call would have the original multiplier "
+        "multiplied by intra-scc-cost-multiplier). This is to prevent tons of "
+        "inlining through a child SCC which can cause terrible compile times"));
 
 /// A flag for test, so we can print the content of the advisor when running it
 /// as part of the default (e.g. -O3) pipeline.
@@ -877,8 +890,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // trigger infinite inlining, much like is prevented within the inliner
       // itself by the InlineHistory above, but spread across CGSCC iterations
       // and thus hidden from the full inline history.
-      if (CG.lookupSCC(*CG.lookup(Callee)) == C &&
-          UR.InlinedInternalEdges.count({&N, C})) {
+      LazyCallGraph::SCC *CalleeSCC = CG.lookupSCC(*CG.lookup(Callee));
+      if (CalleeSCC == C && UR.InlinedInternalEdges.count({&N, C})) {
         LLVM_DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
                              "previously split out of this SCC by inlining: "
                           << F.getName() << " -> " << Callee.getName() << "\n");
@@ -897,6 +910,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         Advice->recordUnattemptedInlining();
         continue;
       }
+
+      int CBCostMult =
+          getStringFnAttrAsInt(
+              *CB, InlineConstants::FunctionInlineCostMultiplierAttributeName)
+              .getValueOr(1);
 
       // Setup the data structure used to plumb customization into the
       // `InlineFunction` routine.
@@ -936,9 +954,28 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
             if (tryPromoteCall(*ICB))
               NewCallee = ICB->getCalledFunction();
           }
-          if (NewCallee)
-            if (!NewCallee->isDeclaration())
+          if (NewCallee) {
+            if (!NewCallee->isDeclaration()) {
               Calls->push({ICB, NewHistoryID});
+              // Continually inlining through an SCC can result in huge compile
+              // times and bloated code since we arbitrarily stop at some point
+              // when the inliner decides it's not profitable to inline anymore.
+              // We attempt to mitigate this by making these calls exponentially
+              // more expensive.
+              // This doesn't apply to calls in the same SCC since if we do
+              // inline through the SCC the function will end up being
+              // self-recursive which the inliner bails out on, and inlining
+              // within an SCC is necessary for performance.
+              if (CalleeSCC != C &&
+                  CalleeSCC == CG.lookupSCC(CG.get(*NewCallee))) {
+                Attribute NewCBCostMult = Attribute::get(
+                    M.getContext(),
+                    InlineConstants::FunctionInlineCostMultiplierAttributeName,
+                    itostr(CBCostMult * IntraSCCCostMultiplier));
+                ICB->addFnAttr(NewCBCostMult);
+              }
+            }
+          }
         }
       }
 

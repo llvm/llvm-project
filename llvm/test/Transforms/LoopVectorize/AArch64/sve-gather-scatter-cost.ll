@@ -3,7 +3,7 @@
 
 target triple="aarch64--linux-gnu"
 
-; CHECK: LV: Checking a loop in "gather_nxv4i32_loaded_index"
+; CHECK: LV: Checking a loop in 'gather_nxv4i32_loaded_index'
 ; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %1 = load float, float* %arrayidx3, align 4
 define void @gather_nxv4i32_loaded_index(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) #0 {
 entry:
@@ -25,7 +25,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-; CHECK: LV: Checking a loop in "scatter_nxv4i32_loaded_index"
+; CHECK: LV: Checking a loop in 'scatter_nxv4i32_loaded_index'
 ; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %1, float* %arrayidx5, align 4
 define void @scatter_nxv4i32_loaded_index(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) #0 {
 entry:
@@ -49,7 +49,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 ; NOTE: For runtime-determined strides the vectoriser versions the loop and adds SCEV checks
 ; to ensure the stride value is always 1. Therefore, it can assume a contiguous load and a cost of 1.
-; CHECK: LV: Checking a loop in "gather_nxv4i32_unknown_stride"
+; CHECK: LV: Checking a loop in 'gather_nxv4i32_unknown_stride'
 ; CHECK: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
 define void @gather_nxv4i32_unknown_stride(float* noalias nocapture readonly %a, float* noalias nocapture %b, i64 %stride, i64 %n) #0 {
 entry:
@@ -72,7 +72,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 ; NOTE: For runtime-determined strides the vectoriser versions the loop and adds SCEV checks
 ; to ensure the stride value is always 1. Therefore, it can assume a contiguous load and cost is 1.
-; CHECK: LV: Checking a loop in "scatter_nxv4i32_unknown_stride"
+; CHECK: LV: Checking a loop in 'scatter_nxv4i32_unknown_stride'
 ; CHECK: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
 define void @scatter_nxv4i32_unknown_stride(float* noalias nocapture readonly %a, float* noalias nocapture %b, i64 %stride, i64 %n) #0 {
 entry:
@@ -93,7 +93,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-; CHECK: LV: Checking a loop in "gather_nxv4i32_stride2"
+; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride2'
 ; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
 define void @gather_nxv4i32_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
@@ -114,7 +114,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-; CHECK: LV: Checking a loop in "scatter_nxv4i32_stride2"
+; CHECK: LV: Checking a loop in 'scatter_nxv4i32_stride2'
 ; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
 define void @scatter_nxv4i32_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
@@ -136,7 +136,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 
-; CHECK: LV: Checking a loop in "gather_nxv4i32_stride64"
+; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride64'
 ; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
 define void @gather_nxv4i32_stride64(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
@@ -157,7 +157,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-; CHECK: LV: Checking a loop in "scatter_nxv4i32_stride64"
+; CHECK: LV: Checking a loop in 'scatter_nxv4i32_stride64'
 ; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
 define void @scatter_nxv4i32_stride64(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:

@@ -5,7 +5,7 @@ add_library(
   LibcTest.h
 )
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
-add_dependencies(LibcUnitTest libc.src.__support.CPP.standalone_cpp)
+add_dependencies(LibcUnitTest libc.src.__support.CPP.type_traits)
 target_link_libraries(LibcUnitTest PUBLIC libc_test_utils)
 
 add_library(
@@ -14,7 +14,7 @@ add_library(
 )
 
 target_include_directories(LibcUnitTestMain PUBLIC ${LIBC_SOURCE_DIR})
-add_dependencies(LibcUnitTestMain LibcUnitTest libc.src.__support.CPP.standalone_cpp)
+add_dependencies(LibcUnitTestMain LibcUnitTest)
 target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest libc_test_utils)
 
 add_library(
@@ -29,7 +29,6 @@ target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
-  libc.src.__support.CPP.standalone_cpp
   libc.src.__support.FPUtil.fputil
 )
 
@@ -43,5 +42,5 @@ target_link_libraries(LibcMemoryHelpers LibcUnitTest)
 add_dependencies(
   LibcMemoryHelpers
   LibcUnitTest
-  libc.src.__support.CPP.standalone_cpp
+  libc.src.__support.CPP.array_ref
 )

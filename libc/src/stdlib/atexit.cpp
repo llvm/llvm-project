@@ -7,47 +7,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/atexit.h"
-#include "src/__support/CPP/vector.h"
+#include "src/__support/CPP/blockstore.h"
 #include "src/__support/common.h"
-#include "src/threads/mtx_init.h"
-#include "src/threads/mtx_lock.h"
-#include "src/threads/mtx_unlock.h"
+#include "src/__support/threads/mutex.h"
 
 namespace __llvm_libc {
 
 namespace {
 
-mtx_t lock;
-// TODO need an easier way to use mtx_t internally, or use pthread_mutex_t
-// with PTHREAD_MUTEX_INITIALIZER when it lands.
-struct Init {
-  Init() { __llvm_libc::mtx_init(&lock, mtx_plain); }
-} init;
+Mutex handler_list_mtx(false, false, false);
 
-// TOOD should we make cpp::vector like llvm::SmallVector<T, N> where it will
-// allocate at least N before needing dynamic allocation?
-static cpp::vector<void (*)(void)> handlers;
+using AtExitCallback = void(void);
+using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitCallback *, 32>;
+constinit ExitCallbackList exit_callbacks;
 
 } // namespace
 
 namespace internal {
 
-void call_exit_handlers() {
-  __llvm_libc::mtx_lock(&lock);
-  // TODO: implement rbegin() + rend() for cpp::vector
-  for (int i = handlers.size() - 1; i >= 0; i--) {
-    __llvm_libc::mtx_unlock(&lock);
-    handlers[i]();
-    __llvm_libc::mtx_lock(&lock);
+void call_exit_callbacks() {
+  handler_list_mtx.lock();
+  for (auto callback : exit_callbacks) {
+    handler_list_mtx.unlock();
+    callback();
+    handler_list_mtx.lock();
   }
+  ExitCallbackList::destroy(&exit_callbacks);
 }
 
 } // namespace internal
 
-LLVM_LIBC_FUNCTION(int, atexit, (void (*function)())) {
-  __llvm_libc::mtx_lock(&lock);
-  handlers.push_back(function);
-  __llvm_libc::mtx_unlock(&lock);
+LLVM_LIBC_FUNCTION(int, atexit, (AtExitCallback * callback)) {
+  handler_list_mtx.lock();
+  exit_callbacks.push_back(callback);
+  handler_list_mtx.unlock();
   return 0;
 }
 

@@ -11,8 +11,8 @@ define void @flat_user(i8* %ptr) {
 
 ; CHECK-LABEL: {{^}}cast_alloca:
 ; CHECK: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; CHECK-NEXT: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
-; CHECK-NEXT: v_lshrrev_b32_e64 v0, 6, s33
+; CHECK: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
+; CHECK: v_lshrrev_b32_e64 v0, 6, s33
 ; CHECK-NEXT: v_mov_b32_e32 v1, [[APERTURE]]
 ; CHECK-NOT: v0
 ; CHECK-NOT: v1
@@ -27,9 +27,9 @@ define void @cast_alloca() {
 
 ; CHECK-LABEL: {{^}}cast_lds_gv:
 ; CHECK: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; CHECK-NEXT: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
-; CHECK-NEXT: v_mov_b32_e32 v0, 0
-; CHECK-NEXT: v_mov_b32_e32 v1, [[APERTURE]]
+; CHECK: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
+; CHECK: v_mov_b32_e32 v0, 0
+; CHECK: v_mov_b32_e32 v1, [[APERTURE]]
 ; CHECK-NOT: v0
 ; CHECK-NOT: v1
 define void @cast_lds_gv() {

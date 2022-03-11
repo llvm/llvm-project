@@ -31,7 +31,7 @@ static unsigned getNestingDepth(Operation *op) {
 }
 
 class TestLoopUnrollingPass
-    : public PassWrapper<TestLoopUnrollingPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLoopUnrollingPass, OperationPass<>> {
 public:
   StringRef getArgument() const final { return "test-loop-unrolling"; }
   StringRef getDescription() const final {
@@ -52,9 +52,8 @@ public:
   }
 
   void runOnOperation() override {
-    FuncOp func = getOperation();
     SmallVector<scf::ForOp, 4> loops;
-    func.walk([&](scf::ForOp forOp) {
+    getOperation()->walk([&](scf::ForOp forOp) {
       if (getNestingDepth(forOp) == loopDepth)
         loops.push_back(forOp);
     });

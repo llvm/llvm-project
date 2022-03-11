@@ -433,7 +433,7 @@ struct IntTypeVisitor {
                          LanguageFeature::BigIntLiterals)) {
             analyzer.Say(digits,
                 "Integer literal is too large for default INTEGER(KIND=%d); "
-                "assuming INTEGER(KIND=%d)"_en_US,
+                "assuming INTEGER(KIND=%d)"_port_en_US,
                 kind, T::kind);
           }
         }
@@ -556,7 +556,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   auto kind{AnalyzeKindParam(x.kind, defaultKind)};
   if (letterKind && kind != *letterKind && expoLetter != 'e') {
     Say("Explicit kind parameter on real constant disagrees with "
-        "exponent letter '%c'"_en_US,
+        "exponent letter '%c'"_port_en_US,
         expoLetter);
   }
   auto result{common::SearchTypes(
@@ -1284,7 +1284,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
       if (exprAnalyzer_.context().ShouldWarn(
               common::LanguageFeature::BOZAsDefaultInteger)) {
         exprAnalyzer_.Say(
-            "BOZ literal in array constructor without explicit type is assumed to be default INTEGER"_en_US);
+            "BOZ literal in array constructor without explicit type is assumed to be default INTEGER"_port_en_US);
       }
       x = AsGenericExpr(ConvertToKind<TypeCategory::Integer>(
           exprAnalyzer_.GetDefaultKind(TypeCategory::Integer),
@@ -1299,7 +1299,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
         if (exprAnalyzer_.context().ShouldWarn(
                 common::LanguageFeature::BOZAsDefaultInteger)) {
           exprAnalyzer_.Say(
-              "BOZ literal in array constructor without explicit type is assumed to be default INTEGER"_en_US);
+              "BOZ literal in array constructor without explicit type is assumed to be default INTEGER"_port_en_US);
         }
         x = AsGenericExpr(ConvertToKind<TypeCategory::Integer>(
             exprAnalyzer_.GetDefaultKind(TypeCategory::Integer),
@@ -1360,7 +1360,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
             if (!(messageDisplayedSet_ & 1)) {
               exprAnalyzer_.Say(
                   "Character literal in array constructor without explicit "
-                  "type has different length than earlier elements"_en_US);
+                  "type has different length than earlier elements"_port_en_US);
               messageDisplayedSet_ |= 1;
             }
           }
@@ -1642,7 +1642,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
           if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
             Say(source,
                 "Whole parent component '%s' in structure "
-                "constructor should not be anonymous"_en_US,
+                "constructor should not be anonymous"_port_en_US,
                 symbol->name());
           }
         }
@@ -1766,7 +1766,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                 *symbol);
           }
         } else if (IsAllocatable(*symbol) && IsBareNullPointer(&*value)) {
-          // NULL() with no arguments allowed by 7.5.10 para 6 for ALLOCATABLE
+          // NULL() with no arguments allowed by 7.5.10 para 6 for ALLOCATABLE.
+          result.Add(*symbol, Expr<SomeType>{NullPointer{}});
         } else if (auto symType{DynamicType::From(symbol)}) {
           if (IsAllocatable(*symbol) && symType->IsUnlimitedPolymorphic() &&
               valueType) {
@@ -1795,10 +1796,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   // Ensure that unmentioned component objects have default initializers.
   for (const Symbol &symbol : components) {
     if (!symbol.test(Symbol::Flag::ParentComp) &&
-        unavailable.find(symbol.name()) == unavailable.cend() &&
-        !IsAllocatable(symbol)) {
-      if (const auto *details{
-              symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+        unavailable.find(symbol.name()) == unavailable.cend()) {
+      if (IsAllocatable(symbol)) {
+        // Set all remaining allocatables to explicit NULL()
+        result.Add(symbol, Expr<SomeType>{NullPointer{}});
+      } else if (const auto *details{
+                     symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
         if (details->init()) {
           result.Add(symbol, common::Clone(*details->init()));
         } else { // C799
@@ -2242,7 +2245,7 @@ void ExpressionAnalyzer::CheckBadExplicitType(
                 typeAndShape->Characterize(intrinsic, GetFoldingContext())}) {
           if (!declared->type().IsTkCompatibleWith(typeAndShape->type())) {
             if (auto *msg{Say(
-                    "The result type '%s' of the intrinsic function '%s' is not the explicit declared type '%s'"_en_US,
+                    "The result type '%s' of the intrinsic function '%s' is not the explicit declared type '%s'"_warn_en_US,
                     typeAndShape->AsFortran(), intrinsic.name(),
                     declared->AsFortran())}) {
               msg->Attach(intrinsic.name(),
@@ -3449,10 +3452,10 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
   std::optional<parser::MessageFixedText> msg;
   if (lhs == TypeCategory::Integer && rhs == TypeCategory::Logical) {
     // allow assignment to LOGICAL from INTEGER as a legacy extension
-    msg = "nonstandard usage: assignment of LOGICAL to INTEGER"_en_US;
+    msg = "nonstandard usage: assignment of LOGICAL to INTEGER"_port_en_US;
   } else if (lhs == TypeCategory::Logical && rhs == TypeCategory::Integer) {
     // ... and assignment to LOGICAL from INTEGER
-    msg = "nonstandard usage: assignment of INTEGER to LOGICAL"_en_US;
+    msg = "nonstandard usage: assignment of INTEGER to LOGICAL"_port_en_US;
   } else {
     return false;
   }

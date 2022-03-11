@@ -17,7 +17,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;     }
 ; (relates to the testcase in PR50566)
 
-; DISABLED_MASKED_STRIDED: LV: Checking a loop in "test1"
+; DISABLED_MASKED_STRIDED: LV: Checking a loop in 'test1'
 ;
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
@@ -34,7 +34,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 68 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 68 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
-; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test1"
+; ENABLED_MASKED_STRIDED: LV: Checking a loop in 'test1'
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
@@ -84,7 +84,7 @@ for.end:
 ;       points[i*4 + 1] = y[i];
 ;     }
 
-; DISABLED_MASKED_STRIDED: LV: Checking a loop in "test2"
+; DISABLED_MASKED_STRIDED: LV: Checking a loop in 'test2'
 ;
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
@@ -101,7 +101,7 @@ for.end:
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 50 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
-; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test2"
+; ENABLED_MASKED_STRIDED: LV: Checking a loop in 'test2'
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
@@ -161,7 +161,7 @@ for.end:
 ;         points[i*3] = x[i];
 ;     }
 
-; DISABLED_MASKED_STRIDED: LV: Checking a loop in "test"
+; DISABLED_MASKED_STRIDED: LV: Checking a loop in 'test'
 ;
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %0, i16* %arrayidx6, align 2
@@ -169,7 +169,7 @@ for.end:
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   store i16 %0, i16* %arrayidx6, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 20 for VF 16 For instruction:   store i16 %0, i16* %arrayidx6, align 2
 
-; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test"
+; ENABLED_MASKED_STRIDED: LV: Checking a loop in 'test'
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %0, i16* %arrayidx6, align 2

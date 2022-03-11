@@ -68,11 +68,13 @@ special_sgpr:
 .amdhsa_kernel minimal
   .amdhsa_next_free_vgpr 0
   .amdhsa_next_free_sgpr 0
+  .amdhsa_shared_vgpr_count 0
 .end_amdhsa_kernel
 
 // ASM: .amdhsa_kernel minimal
 // ASM: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM: .amdhsa_shared_vgpr_count 0
 // ASM: .end_amdhsa_kernel
 
 // Test that we can specify all available directives with non-default values.
@@ -153,6 +155,7 @@ special_sgpr:
 // ASM-NEXT: .amdhsa_workgroup_processor_mode 1
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
+// ASM-NEXT: .amdhsa_shared_vgpr_count 0
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero 1

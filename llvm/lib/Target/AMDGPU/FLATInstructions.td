@@ -643,6 +643,12 @@ let SubtargetPredicate = isGFX90APlus in {
   defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_max_f64", VReg_64, f64, int_amdgcn_global_atomic_fmax>;
 } // End SubtargetPredicate = isGFX90APlus
 
+let SubtargetPredicate = isGFX940Plus in {
+  defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_f16",  VGPR_32, v2f16, int_amdgcn_flat_atomic_fadd>;
+  defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_bf16", VGPR_32, v2f16>;
+  defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Atomic_Pseudo<"global_atomic_pk_add_bf16", VGPR_32, v2f16>;
+} // End SubtargetPredicate = isGFX940Plus
+
 // GFX7-, GFX10-, GFX11-only flat instructions.
 let SubtargetPredicate = isGFX7GFX10GFX11 in {
 
@@ -657,10 +663,10 @@ defm FLAT_ATOMIC_FMAX        : FLAT_Atomic_Pseudo <"flat_atomic_fmax",
 
 } // End SubtargetPredicate = isGFX7GFX10GFX11
 
-// GFX11-only flat instructions.
-let SubtargetPredicate = isGFX11Plus in {
+// GFX940-, GFX11-only flat instructions.
+let SubtargetPredicate = isGFX940GFX11Plus in {
   defm FLAT_ATOMIC_ADD_F32       : FLAT_Atomic_Pseudo<"flat_atomic_add_f32",     VGPR_32, f32,   int_amdgcn_flat_atomic_fadd>;
-} // End SubtargetPredicate = isGFX11Plus
+} // End SubtargetPredicate = isGFX940GFX11Plus
 
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
 defm GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
@@ -1342,6 +1348,13 @@ def : FlatSignedAtomicPat <FLAT_ATOMIC_MAX_F64_RTN, atomic_load_fmax_flat_ret_64
 def : FlatSignedAtomicPat <FLAT_ATOMIC_MAX_F64, atomic_load_fmax_flat_noret_64, f64>;
 }
 
+let OtherPredicates = [isGFX940Plus] in {
+def  : FlatSignedAtomicPat  <FLAT_ATOMIC_ADD_F32_RTN,        atomic_load_fadd_flat_32,             f32>;
+def  : FlatSignedAtomicPat  <FLAT_ATOMIC_PK_ADD_F16_RTN,     atomic_load_fadd_v2f16_flat_32,       v2f16>;
+def  : FlatSignedAtomicPat  <FLAT_ATOMIC_PK_ADD_BF16_RTN,    int_amdgcn_flat_atomic_fadd_v2bf16,   v2i16>;
+defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_PK_ADD_BF16", int_amdgcn_global_atomic_fadd_v2bf16, v2i16>;
+}
+
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
 let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {
@@ -1494,6 +1507,14 @@ multiclass FLAT_Real_AllAddr_vi<bits<7> op,
   def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb>;
 }
 
+class FLAT_Real_gfx940 <bits<7> op, FLAT_Pseudo ps> :
+  FLAT_Real <op, ps>,
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX940> {
+  let AssemblerPredicate = isGFX940Plus;
+  let DecoderNamespace = "GFX9";
+  let Inst{25} = !if(ps.has_sccb, cpol{CPolBit.SCC}, ps.sccbValue);
+}
+
 def FLAT_LOAD_UBYTE_vi         : FLAT_Real_vi <0x10, FLAT_LOAD_UBYTE>;
 def FLAT_LOAD_SBYTE_vi         : FLAT_Real_vi <0x11, FLAT_LOAD_SBYTE>;
 def FLAT_LOAD_USHORT_vi        : FLAT_Real_vi <0x12, FLAT_LOAD_USHORT>;
@@ -1636,9 +1657,10 @@ defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_vi <0x1d>;
 defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_vi <0x1e>;
 defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_vi <0x1f>;
 
-let SubtargetPredicate = HasAtomicFaddNoRtnInsts in {
-defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Global_Real_Atomics_vi <0x04d, 0>;
-defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
+let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
+  // These instructions are encoded differently on gfx90* and gfx940.
+  defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Global_Real_Atomics_vi <0x04d, 0>;
+  defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
 }
 
 let SubtargetPredicate = isGFX90AOnly in {
@@ -1649,6 +1671,39 @@ let SubtargetPredicate = isGFX90AOnly in {
   defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
   defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
 } // End SubtargetPredicate = isGFX90AOnly
+
+multiclass FLAT_Real_AllAddr_gfx940<bits<7> op> {
+  def _gfx940       : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
+  def _SADDR_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
+}
+
+multiclass FLAT_Real_Atomics_gfx940 <bits<7> op, FLAT_Pseudo ps> {
+  def _gfx940     : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr)>;
+  def _RTN_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN")>;
+}
+
+multiclass FLAT_Global_Real_Atomics_gfx940<bits<7> op> :
+  FLAT_Real_AllAddr_gfx940<op> {
+  def _RTN_gfx940       : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_RTN")>;
+  def _SADDR_RTN_gfx940 : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN")>;
+}
+
+let SubtargetPredicate = isGFX940Plus in {
+  // These instructions are encoded differently on gfx90* and gfx940.
+  defm GLOBAL_ATOMIC_ADD_F32     : FLAT_Global_Real_Atomics_gfx940 <0x04d>;
+  defm GLOBAL_ATOMIC_PK_ADD_F16  : FLAT_Global_Real_Atomics_gfx940 <0x04e>;
+
+  defm FLAT_ATOMIC_ADD_F64       : FLAT_Real_Atomics_gfx940<0x4f, FLAT_ATOMIC_ADD_F64>;
+  defm FLAT_ATOMIC_MIN_F64       : FLAT_Real_Atomics_gfx940<0x50, FLAT_ATOMIC_MIN_F64>;
+  defm FLAT_ATOMIC_MAX_F64       : FLAT_Real_Atomics_gfx940<0x51, FLAT_ATOMIC_MAX_F64>;
+  defm GLOBAL_ATOMIC_ADD_F64     : FLAT_Global_Real_Atomics_gfx940<0x4f>;
+  defm GLOBAL_ATOMIC_MIN_F64     : FLAT_Global_Real_Atomics_gfx940<0x50>;
+  defm GLOBAL_ATOMIC_MAX_F64     : FLAT_Global_Real_Atomics_gfx940<0x51>;
+  defm FLAT_ATOMIC_ADD_F32       : FLAT_Real_Atomics_vi<0x4d, FLAT_ATOMIC_ADD_F32>;
+  defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Real_Atomics_vi<0x4e, FLAT_ATOMIC_PK_ADD_F16>;
+  defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Real_Atomics_vi<0x52, FLAT_ATOMIC_PK_ADD_BF16>;
+  defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Real_Atomics_vi<0x52>;
+} // End SubtargetPredicate = isGFX940Plus
 
 //===----------------------------------------------------------------------===//
 // GFX10.

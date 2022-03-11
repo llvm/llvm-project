@@ -2963,6 +2963,11 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   }
 
   void initialize(Attributor &A) override {
+    if (DisableOpenMPOptDeglobalization) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
 

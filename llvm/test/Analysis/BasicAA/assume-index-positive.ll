@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -aa-eval -print-all-alias-modref-info %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info %s 2>&1 | FileCheck %s
 
 ; %col.ptr.1 and %col.ptr.2 do not alias, if we know that %skip >= 0, because
 ; the distance between %col.ptr.1 and %col.ptr.2 is %skip + 6 and we load 6

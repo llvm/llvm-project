@@ -7,7 +7,7 @@ Search,find_if,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
 Search,find_if_not,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
 Search,find_first_of,Not assigned,n/a,Not started
 Search,adjacent_find,Not assigned,n/a,Not started
-Search,mismatch,Not assigned,n/a,Not started
+Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`,Complete
 Search,equal,Not assigned,n/a,Not started
 Search,lexicographical_compare,Not assigned,n/a,Not started
 Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review

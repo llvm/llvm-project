@@ -23,6 +23,8 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
+using namespace mlir;
+
 static const Fortran::parser::Name *
 getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
   const auto *dataRef{std::get_if<Fortran::parser::DataRef>(&designator.u)};

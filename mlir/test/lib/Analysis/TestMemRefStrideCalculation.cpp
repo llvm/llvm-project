@@ -14,7 +14,8 @@ using namespace mlir;
 
 namespace {
 struct TestMemRefStrideCalculation
-    : public PassWrapper<TestMemRefStrideCalculation, OperationPass<FuncOp>> {
+    : public PassWrapper<TestMemRefStrideCalculation,
+                         InterfacePass<SymbolOpInterface>> {
   StringRef getArgument() const final {
     return "test-memref-stride-calculation";
   }

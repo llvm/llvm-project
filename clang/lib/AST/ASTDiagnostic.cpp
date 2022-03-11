@@ -372,7 +372,7 @@ void clang::FormatASTNodeDiagnosticArgument(
     default: llvm_unreachable("unknown ArgumentKind");
     case DiagnosticsEngine::ak_addrspace: {
       assert(Modifier.empty() && Argument.empty() &&
-             "Invalid modifier for Qualfiers argument");
+             "Invalid modifier for Qualifiers argument");
 
       auto S = Qualifiers::getAddrSpaceAsString(static_cast<LangAS>(Val));
       if (S.empty()) {
@@ -387,7 +387,7 @@ void clang::FormatASTNodeDiagnosticArgument(
     }
     case DiagnosticsEngine::ak_qual: {
       assert(Modifier.empty() && Argument.empty() &&
-             "Invalid modifier for Qualfiers argument");
+             "Invalid modifier for Qualifiers argument");
 
       Qualifiers Q(Qualifiers::fromOpaqueValue(Val));
       auto S = Q.getAsString();

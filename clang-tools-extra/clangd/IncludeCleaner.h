@@ -51,8 +51,7 @@ struct ReferencedLocations {
 /// - don't attempt to describe where symbols were referenced from in
 ///   ambiguous cases (e.g. implicitly used symbols, multiple declarations)
 /// - err on the side of reporting all possible locations
-ReferencedLocations findReferencedLocations(const SourceManager &SM,
-                                            ASTContext &Ctx, Preprocessor &PP,
+ReferencedLocations findReferencedLocations(ASTContext &Ctx, Preprocessor &PP,
                                             const syntax::TokenBuffer *Tokens);
 ReferencedLocations findReferencedLocations(ParsedAST &AST);
 

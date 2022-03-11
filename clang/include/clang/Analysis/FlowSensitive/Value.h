@@ -201,11 +201,13 @@ public:
     return Val->getKind() == Kind::Struct;
   }
 
-  /// Returns the child value that is assigned for `D`.
-  Value &getChild(const ValueDecl &D) const {
+  /// Returns the child value that is assigned for `D` or null if the child is
+  /// not initialized.
+  Value *getChild(const ValueDecl &D) const {
     auto It = Children.find(&D);
-    assert(It != Children.end());
-    return *It->second;
+    if (It == Children.end())
+      return nullptr;
+    return It->second;
   }
 
   /// Assigns `Val` as the child value for `D`.

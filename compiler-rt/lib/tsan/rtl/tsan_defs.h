@@ -176,6 +176,7 @@ enum : AccessType {
   kAccessExternalPC = 1 << 4,  // access PC can have kExternalPCBit set
   kAccessCheckOnly = 1 << 5,   // check for races, but don't store
   kAccessNoRodata = 1 << 6,    // don't check for .rodata marker
+  kAccessSlotLocked = 1 << 7,  // memory access with TidSlot locked
 };
 
 // Descriptor of user's memory block.

@@ -16,6 +16,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallString.h"
 
@@ -207,7 +208,7 @@ template <typename ConcreteOp>
 LogicalResult verifyTrait(ConcreteOp op) {
   if (!op.getTypeAttr())
     return op.emitOpError("requires a type attribute '")
-           << ConcreteOp::getTypeAttrName() << '\'';
+           << function_interface_impl::getTypeAttrName() << '\'';
 
   if (failed(op.verifyType()))
     return failure();

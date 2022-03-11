@@ -69,11 +69,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
                                                 StringRef ABIName) {
   // Determine default and user-specified characteristics
   bool Is64Bit = TT.isArch64Bit();
-  if (CPU.empty())
+  if (CPU.empty() || CPU == "generic")
     CPU = Is64Bit ? "generic-rv64" : "generic-rv32";
-  if (CPU == "generic")
-    report_fatal_error(Twine("CPU 'generic' is not supported. Use ") +
-                       (Is64Bit ? "generic-rv64" : "generic-rv32"));
 
   if (TuneCPU.empty())
     TuneCPU = CPU;

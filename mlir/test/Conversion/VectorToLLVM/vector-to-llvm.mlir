@@ -1245,34 +1245,33 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
   return %f: vector<17xf32>
 }
 // CHECK-LABEL: func @transfer_read_1d
-//  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<17xf32>
-//       CHECK: %[[c7:.*]] = arith.constant 7.0
-//       CHECK: %[[C0:.*]] = arith.constant 0 : index
-//       CHECK: %[[DIM:.*]] = memref.dim %{{.*}}, %[[C0]] : memref<?xf32>
+//  CHECK-SAME: %[[MEM:.*]]: memref<?xf32>,
+//  CHECK-SAME: %[[BASE:.*]]: index) -> vector<17xf32>
+//       CHECK: %[[C7:.*]] = arith.constant 7.0
 //
-// 1. Create a vector with linear indices [ 0 .. vector_length - 1 ].
+// 1. Let dim be the memref dimension, compute the in-bound index (dim - offset)
+//       CHECK: %[[C0:.*]] = arith.constant 0 : index
+//       CHECK: %[[DIM:.*]] = memref.dim %[[MEM]], %[[C0]] : memref<?xf32>
+//       CHECK: %[[BOUND:.*]] = arith.subi %[[DIM]],  %[[BASE]] : index
+//
+// 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex:.*]] = arith.constant dense
 //  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
 //  CHECK-SAME: vector<17xi32>
 //
-// 2. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: %[[otrunc:.*]] = arith.index_cast %[[BASE]] : index to i32
-//       CHECK: %[[offsetVecInsert:.*]] = llvm.insertelement %[[otrunc]]
-//       CHECK: %[[offsetVec:.*]] = llvm.shufflevector %[[offsetVecInsert]]
-//       CHECK: %[[offsetVec2:.*]] = arith.addi %[[offsetVec]], %[[linearIndex]] : vector<17xi32>
-//
-// 3. Let dim the memref dimension, compute the vector comparison mask:
-//    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-//       CHECK: %[[dtrunc:.*]] = arith.index_cast %[[DIM]] : index to i32
-//       CHECK: %[[dimVecInsert:.*]] = llvm.insertelement %[[dtrunc]]
-//       CHECK: %[[dimVec:.*]] = llvm.shufflevector %[[dimVecInsert]]
-//       CHECK: %[[mask:.*]] = arith.cmpi slt, %[[offsetVec2]], %[[dimVec]] : vector<17xi32>
+// 3. Create bound vector to compute in-bound mask:
+//    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
+//       CHECK: %[[btrunc:.*]] = arith.index_cast %[[BOUND]] : index to i32
+//       CHECK: %[[boundVecInsert:.*]] = llvm.insertelement %[[btrunc]]
+//       CHECK: %[[boundVect:.*]] = llvm.shufflevector %[[boundVecInsert]]
+//       CHECK: %[[mask:.*]] = arith.cmpi slt, %[[linearIndex]], %[[boundVect]]
+//  CHECK-SAME: : vector<17xi32>
 //
 // 4. Create pass-through vector.
 //       CHECK: %[[PASS_THROUGH:.*]] = arith.constant dense<7.{{.*}}> : vector<17xf32>
 //
 // 5. Bitcast to vector form.
-//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
+//       CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}} :
 //  CHECK-SAME: (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 //       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
 //  CHECK-SAME: !llvm.ptr<f32> to !llvm.ptr<vector<17xf32>>
@@ -1280,21 +1279,24 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 // 6. Rewrite as a masked read.
 //       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %[[vecPtr]], %[[mask]],
 //  CHECK-SAME: %[[PASS_THROUGH]] {alignment = 4 : i32} :
-//  CHECK-SAME: (!llvm.ptr<vector<17xf32>>, vector<17xi1>, vector<17xf32>) -> vector<17xf32>
 //
-// 1. Create a vector with linear indices [ 0 .. vector_length - 1 ].
+// 1. Let dim be the memref dimension, compute the in-bound index (dim - offset)
+//       CHECK: %[[C0_b:.*]] = arith.constant 0 : index
+//       CHECK: %[[DIM_b:.*]] = memref.dim %[[MEM]], %[[C0_b]] : memref<?xf32>
+//       CHECK: %[[BOUND_b:.*]] = arith.subi %[[DIM_b]], %[[BASE]] : index
+//
+// 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex_b:.*]] = arith.constant dense
 //  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
 //  CHECK-SAME: vector<17xi32>
 //
-// 2. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: llvm.shufflevector %{{.*}} : vector<17xi32>
-//       CHECK: arith.addi
-//
-// 3. Let dim the memref dimension, compute the vector comparison mask:
-//    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-//       CHECK: llvm.shufflevector %{{.*}} : vector<17xi32>
-//       CHECK: %[[mask_b:.*]] = arith.cmpi slt, {{.*}} : vector<17xi32>
+// 3. Create bound vector to compute in-bound mask:
+//    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
+//       CHECK: %[[btrunc_b:.*]] = arith.index_cast %[[BOUND_b]] : index to i32
+//       CHECK: %[[boundVecInsert_b:.*]] = llvm.insertelement %[[btrunc_b]]
+//       CHECK: %[[boundVect_b:.*]] = llvm.shufflevector %[[boundVecInsert_b]]
+//       CHECK: %[[mask_b:.*]] = arith.cmpi slt, %[[linearIndex_b]],
+//  CHECK-SAME: %[[boundVect_b]] : vector<17xi32>
 //
 // 4. Bitcast to vector form.
 //       CHECK: %[[gep_b:.*]] = llvm.getelementptr {{.*}} :
@@ -1344,16 +1346,20 @@ func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: index)
 //       CHECK: %[[c1:.*]] = arith.constant 1 : index
 //       CHECK: %[[DIM:.*]] = memref.dim %{{.*}}, %[[c1]] : memref<?x?xf32>
 //
-// Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: %[[trunc:.*]] = arith.index_cast %[[BASE_1]] : index to i32
-//       CHECK: %[[offsetVecInsert:.*]] = llvm.insertelement %[[trunc]]
-//       CHECK: %[[offsetVec:.*]] = llvm.shufflevector %[[offsetVecInsert]]
+// Compute the in-bound index (dim - offset)
+//       CHECK: %[[BOUND:.*]] = arith.subi %[[DIM]], %[[BASE_1]] : index
 //
-// Let dim the memref dimension, compute the vector comparison mask:
-//    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-//       CHECK: %[[dimtrunc:.*]] = arith.index_cast %[[DIM]] : index to i32
-//       CHECK: %[[dimtruncInsert:.*]] = llvm.insertelement %[[dimtrunc]]
-//       CHECK: llvm.shufflevector %[[dimtruncInsert]]
+// Create a vector with linear indices [ 0 .. vector_length - 1 ].
+//       CHECK: %[[linearIndex:.*]] = arith.constant dense
+//  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
+//  CHECK-SAME: vector<17xi32>
+//
+// Create bound vector to compute in-bound mask:
+//    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
+//       CHECK: %[[btrunc:.*]] = arith.index_cast %[[BOUND]] : index to i32
+//       CHECK: %[[boundVecInsert:.*]] = llvm.insertelement %[[btrunc]]
+//       CHECK: %[[boundVect:.*]] = llvm.shufflevector %[[boundVecInsert]]
+//       CHECK: %[[mask:.*]] = arith.cmpi slt, %[[linearIndex]], %[[boundVect]]
 
 // -----
 

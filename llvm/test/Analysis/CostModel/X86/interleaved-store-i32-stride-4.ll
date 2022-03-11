@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = global [1024 x i8] zeroinitializer, align 128
 @B = global [1024 x i32] zeroinitializer, align 128
 
-; CHECK: LV: Checking a loop in "test"
+; CHECK: LV: Checking a loop in 'test'
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i32 %v3, i32* %out3, align 4
 ; SSE2: LV: Found an estimated cost of 28 for VF 2 For instruction:   store i32 %v3, i32* %out3, align 4

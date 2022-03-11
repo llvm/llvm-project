@@ -15,7 +15,7 @@ module m
   ! -0 (sqrt is -0)
   real(8), parameter :: n08 = z'8000000000000000'
   real(8), parameter :: sqrt_n08 = sqrt(n08)
-!WARN: division by zero
+  !WARN: warning: division by zero
   real(8), parameter :: inf_n08 = 1.0_8 / sqrt_n08, inf_n08z = z'fff0000000000000'
   logical, parameter :: test_n08 = inf_n08 == inf_n08z
   ! min normal

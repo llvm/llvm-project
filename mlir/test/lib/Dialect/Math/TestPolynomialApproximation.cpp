@@ -23,8 +23,7 @@ using namespace mlir;
 
 namespace {
 struct TestMathPolynomialApproximationPass
-    : public PassWrapper<TestMathPolynomialApproximationPass,
-                         OperationPass<FuncOp>> {
+    : public PassWrapper<TestMathPolynomialApproximationPass, OperationPass<>> {
   TestMathPolynomialApproximationPass() = default;
   TestMathPolynomialApproximationPass(
       const TestMathPolynomialApproximationPass &pass)

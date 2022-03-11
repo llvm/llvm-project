@@ -476,7 +476,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);
 
   // A module (partition) implementation unit shall not be exported.
-  if (getLangOpts().CPlusPlusModules && Mod && ExportLoc.isValid() &&
+  if (getLangOpts().CPlusPlusModules && ExportLoc.isValid() &&
       Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
     Diag(ExportLoc, diag::err_export_partition_impl)
         << SourceRange(ExportLoc, Path.back().second);

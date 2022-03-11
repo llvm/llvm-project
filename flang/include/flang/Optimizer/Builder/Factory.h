@@ -188,17 +188,18 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
     auto ty = fir::dyn_cast_ptrOrBoxEleTy(memTy);
     assert(ty && ty.isa<fir::SequenceType>());
     auto seqTy = ty.cast<fir::SequenceType>();
+    auto one = builder.template create<mlir::arith::ConstantIndexOp>(loc, 1);
     const auto dimension = seqTy.getDimension();
-    assert(shapeVal &&
-           dimension == mlir::cast<fir::ShapeOp>(shapeVal.getDefiningOp())
-                            .getType()
-                            .getRank());
-    auto one = builder.template create<arith::ConstantIndexOp>(loc, 1);
+    if (shapeVal) {
+      assert(dimension == mlir::cast<fir::ShapeOp>(shapeVal.getDefiningOp())
+                              .getType()
+                              .getRank());
+    }
     for (auto i : llvm::enumerate(indices)) {
       if (i.index() < dimension) {
         assert(fir::isa_integer(i.value().getType()));
         result.push_back(
-            builder.template create<arith::AddIOp>(loc, i.value(), one));
+            builder.template create<mlir::arith::AddIOp>(loc, i.value(), one));
       } else {
         result.push_back(i.value());
       }
@@ -209,7 +210,7 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
   unsigned origOff = 0;
   for (auto i : llvm::enumerate(indices)) {
     if (i.index() < dimension)
-      result.push_back(builder.template create<arith::AddIOp>(
+      result.push_back(builder.template create<mlir::arith::AddIOp>(
           loc, i.value(), origins[origOff++]));
     else
       result.push_back(i.value());

@@ -74,20 +74,6 @@ void initTLS() {
 
 using __llvm_libc::app;
 
-struct Args {
-  // At the language level, argc is an int. But we use uint64_t as the x86_64
-  // ABI specifies it as an 8 byte value.
-  uint64_t argc;
-
-  // At the language level, argv is a char** value. However, we use uint64_t as
-  // the x86_64 ABI specifies the argv vector be an |argc| long array of 8-byte
-  // values. Even though a flexible length array would be more suitable here, we
-  // set the array length to 1 to avoid a compiler warning about it being a C99
-  // extension. Length of 1 is not really wrong as |argc| is guaranteed to be
-  // atleast 1, and there is an 8-byte null entry at the end of the argv array.
-  uint64_t argv[1];
-};
-
 // TODO: Would be nice to use the aux entry structure from elf.h when available.
 struct AuxEntry {
   uint64_t type;
@@ -95,18 +81,30 @@ struct AuxEntry {
 };
 
 extern "C" void _start() {
-  uintptr_t *frame_ptr =
-      reinterpret_cast<uintptr_t *>(__builtin_frame_address(0));
-
   // This TU is compiled with -fno-omit-frame-pointer. Hence, the previous value
   // of the base pointer is pushed on to the stack. So, we step over it (the
   // "+ 1" below) to get to the args.
-  Args *args = reinterpret_cast<Args *>(frame_ptr + 1);
+  app.args = reinterpret_cast<__llvm_libc::Args *>(
+      reinterpret_cast<uintptr_t *>(__builtin_frame_address(0)) + 1);
+
+  // The x86_64 ABI requires that the stack pointer is aligned to a 16-byte
+  // boundary. We align it here but we cannot use any local variables created
+  // before the following alignment. Best would be to not create any local
+  // variables before the alignment. Also, note that we are aligning the stack
+  // downwards as the x86_64 stack grows downwards. This ensures that we don't
+  // tread on argc, argv etc.
+  // NOTE: Compiler attributes for alignment do not help here as the stack
+  // pointer on entry to this _start function is controlled by the OS. In fact,
+  // compilers can generate code assuming the alignment as required by the ABI.
+  // If the stack pointers as setup by the OS are already aligned, then the
+  // following code is a NOP.
+  __asm__ __volatile__("andq $0xfffffffffffffff0, %%rsp\n\t" ::: "%rsp");
+  __asm__ __volatile__("andq $0xfffffffffffffff0, %%rbp\n\t" ::: "%rbp");
 
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
   // value. We step over it (the "+ 1" below) to get to the env values.
-  uint64_t *env_ptr = args->argv + args->argc + 1;
+  uint64_t *env_ptr = app.args->argv + app.args->argc + 1;
   uint64_t *env_end_marker = env_ptr;
   app.envPtr = env_ptr;
   while (*env_end_marker)
@@ -145,7 +143,7 @@ extern "C" void _start() {
 
   __llvm_libc::initTLS();
 
-  __llvm_libc::syscall(SYS_exit,
-                       main(args->argc, reinterpret_cast<char **>(args->argv),
-                            reinterpret_cast<char **>(env_ptr)));
+  __llvm_libc::syscall(SYS_exit, main(app.args->argc,
+                                      reinterpret_cast<char **>(app.args->argv),
+                                      reinterpret_cast<char **>(env_ptr)));
 }

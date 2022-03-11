@@ -873,6 +873,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   const TargetRegisterClass *SrcRC = RI.getPhysRegClass(SrcReg);
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
+    if (ST.hasMovB64()) {
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+      return;
+    }
     if (ST.hasPackedFP32Ops()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
@@ -916,7 +921,10 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              (RI.isProperlyAlignedRC(*RC) &&
               (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
-    if (ST.hasPackedFP32Ops()) {
+    if (ST.hasMovB64()) {
+      Opcode = AMDGPU::V_MOV_B64_e32;
+      EltSize = 8;
+    } else if (ST.hasPackedFP32Ops()) {
       Opcode = AMDGPU::V_PK_MOV_B32;
       EltSize = 8;
     }
@@ -1798,6 +1806,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
+    if (ST.hasMovB64()) {
+      MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
+      if (!isLiteralConstant(MI, 1) || isUInt<32>(SrcOp.getImm()))
+        break;
+    }
     if (SrcOp.isImm()) {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
@@ -2082,6 +2095,23 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // This only gets its own opcode so that SIPreAllocateWWMRegs can tell when
     // WWM/STICT_WQM is exited.
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
+    break;
+  }
+  case AMDGPU::SI_RETURN: {
+    const MachineFunction *MF = MBB.getParent();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    // Hiding the return address use with SI_RETURN may lead to extra kills in
+    // the function and missing live-ins. We are fine in practice because callee
+    // saved register handling ensures the register value is restored before
+    // RET, but we need the undef flag here to appease the MachineVerifier
+    // liveness checks.
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MI, DL, get(AMDGPU::S_SETPC_B64_return))
+            .addReg(TRI->getReturnAddressReg(*MF), RegState::Undef);
+
+    MIB.copyImplicitOps(MI);
+    MI.eraseFromParent();
     break;
   }
   }
@@ -2788,6 +2818,8 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
+  case AMDGPU::V_MOV_B64_e32:
+  case AMDGPU::V_MOV_B64_e64:
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B64:
   case AMDGPU::COPY:
@@ -7776,7 +7808,8 @@ enum SIEncodingFamily {
   GFX10 = 6,
   SDWA10 = 7,
   GFX90A = 8,
-  GFX11 = 9,
+  GFX940 = 9,
+  GFX11 = 10,
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
@@ -7859,6 +7892,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   if (ST.hasGFX90AInsts()) {
     uint16_t NMCOp = (uint16_t)-1;
+    if (ST.hasGFX940Insts())
+      NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX940);
+    if (NMCOp == (uint16_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX90A);
     if (NMCOp == (uint16_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX9);

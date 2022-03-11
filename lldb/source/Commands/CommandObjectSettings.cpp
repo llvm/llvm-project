@@ -102,6 +102,9 @@ insert-before or insert-after.");
       case 'g':
         m_global = true;
         break;
+      case 'e':
+        m_exists = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -112,6 +115,7 @@ insert-before or insert-after.");
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_global = false;
       m_force = false;
+      m_exists = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -120,7 +124,8 @@ insert-before or insert-after.");
 
     // Instance variables to hold the values for command options.
     bool m_global = false;
-    bool m_force;
+    bool m_force = false;
+    bool m_exists = false;
   };
 
   void
@@ -219,13 +224,12 @@ protected:
                                              var_name, var_value);
     }
 
-    if (error.Fail()) {
+    if (error.Fail() && !m_options.m_exists) {
       result.AppendError(error.AsCString());
       return false;
-    } else {
-      result.SetStatus(eReturnStatusSuccessFinishResult);
     }
 
+    result.SetStatus(eReturnStatusSuccessFinishResult);
     return result.Succeeded();
   }
 

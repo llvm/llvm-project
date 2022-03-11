@@ -954,6 +954,7 @@ struct AdditionalKeywords {
     kw_event = &IdentTable.get("event");
     kw_fixed = &IdentTable.get("fixed");
     kw_foreach = &IdentTable.get("foreach");
+    kw_init = &IdentTable.get("init");
     kw_implicit = &IdentTable.get("implicit");
     kw_internal = &IdentTable.get("internal");
     kw_lock = &IdentTable.get("lock");
@@ -986,11 +987,11 @@ struct AdditionalKeywords {
 
     CSharpExtraKeywords = std::unordered_set<IdentifierInfo *>(
         {kw_base, kw_byte, kw_checked, kw_decimal, kw_delegate, kw_event,
-         kw_fixed, kw_foreach, kw_implicit, kw_in, kw_interface, kw_internal,
-         kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override, kw_params,
-         kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte, kw_sealed,
-         kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort, kw_when,
-         kw_where,
+         kw_fixed, kw_foreach, kw_implicit, kw_in, kw_init, kw_interface,
+         kw_internal, kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override,
+         kw_params, kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte,
+         kw_sealed, kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort,
+         kw_when, kw_where,
          // Keywords from the JavaScript section.
          kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
          kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
@@ -1078,6 +1079,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_fixed;
   IdentifierInfo *kw_foreach;
   IdentifierInfo *kw_implicit;
+  IdentifierInfo *kw_init;
   IdentifierInfo *kw_internal;
 
   IdentifierInfo *kw_lock;

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -convert-arith-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | mlir-translate -mlir-to-llvmir | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="convert-vector-to-llvm,builtin.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" | mlir-translate -mlir-to-llvmir | FileCheck %s
 
 func @genbool_1d() -> vector<8xi1> {
   %0 = vector.constant_mask [4] : vector<8xi1>

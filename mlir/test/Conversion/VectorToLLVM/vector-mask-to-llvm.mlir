@@ -25,16 +25,26 @@ func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
 }
 
 // CMP32-LABEL: @transfer_read_1d
+// CMP32: %[[MEM:.*]]: memref<?xf32>, %[[OFF:.*]]: index) -> vector<16xf32> {
+// CMP32: %[[D:.*]] = memref.dim %[[MEM]], %{{.*}} : memref<?xf32>
+// CMP32: %[[S:.*]] = arith.subi %[[D]], %[[OFF]] : index
 // CMP32: %[[C:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi32>
-// CMP32: %[[A:.*]] = arith.addi %{{.*}}, %[[C]] : vector<16xi32>
-// CMP32: %[[M:.*]] = arith.cmpi slt, %[[A]], %{{.*}} : vector<16xi32>
+// CMP32: %[[B:.*]] = arith.index_cast %[[S]] : index to i32
+// CMP32: %[[B0:.*]] = llvm.insertelement %[[B]], %{{.*}} : vector<16xi32>
+// CMP32: %[[BV:.*]] = llvm.shufflevector %[[B0]], {{.*}} : vector<16xi32>, vector<16xi32>
+// CMP32: %[[M:.*]] = arith.cmpi slt, %[[C]], %[[BV]] : vector<16xi32>
 // CMP32: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %[[M]], %{{.*}}
 // CMP32: return %[[L]] : vector<16xf32>
 
-// CMP64-LABEL: @transfer_read_1d
+// CMP64-LABEL: @transfer_read_1d(
+// CMP64: %[[MEM:.*]]: memref<?xf32>, %[[OFF:.*]]: index) -> vector<16xf32> {
+// CMP64: %[[D:.*]] = memref.dim %[[MEM]], %{{.*}} : memref<?xf32>
+// CMP64: %[[S:.*]] = arith.subi %[[D]], %[[OFF]] : index
 // CMP64: %[[C:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi64>
-// CMP64: %[[A:.*]] = arith.addi %{{.*}}, %[[C]] : vector<16xi64>
-// CMP64: %[[M:.*]] = arith.cmpi slt, %[[A]], %{{.*}} : vector<16xi64>
+// CMP64: %[[B:.*]] = arith.index_cast %[[S]] : index to i64
+// CMP64: %[[B0:.*]] = llvm.insertelement %[[B]], %{{.*}} : vector<16xi64>
+// CMP64: %[[BV:.*]] = llvm.shufflevector %[[B0]], {{.*}} : vector<16xi64>, vector<16xi64>
+// CMP64: %[[M:.*]] = arith.cmpi slt, %[[C]], %[[BV]] : vector<16xi64>
 // CMP64: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %[[M]], %{{.*}}
 // CMP64: return %[[L]] : vector<16xf32>
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --tosa-to-linalg %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.func(tosa-to-linalg)" %s -verify-diagnostics -o -| FileCheck %s
 
 // CHECK: #[[$MAP0:.*]] = affine_map<() -> ()>
 

@@ -30,11 +30,11 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ;}
 
 
-; STRIDED_UNMASKED: LV: Checking a loop in "masked_strided1" 
+; STRIDED_UNMASKED: LV: Checking a loop in 'masked_strided1' 
 ; STRIDED_UNMASKED: LV: Analyzing interleaved accesses...
 ; STRIDED_UNMASKED-NOT: LV: Creating an interleave group 
 
-; STRIDED_MASKED: LV: Checking a loop in "masked_strided1" 
+; STRIDED_MASKED: LV: Checking a loop in 'masked_strided1' 
 ; STRIDED_MASKED: LV: Analyzing interleaved accesses...
 ; STRIDED_MASKED-NEXT: LV: Creating an interleave group with:  store i8 %{{.*}}, i8* %{{.*}}, align 1
 ; STRIDED_MASKED-NEXT: LV: Inserted:  store i8  %{{.*}}, i8* %{{.*}}, align 1
@@ -63,13 +63,13 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ; }
 ;}
 
-; STRIDED_UNMASKED: LV: Checking a loop in "masked_strided2" 
+; STRIDED_UNMASKED: LV: Checking a loop in 'masked_strided2' 
 ; STRIDED_UNMASKED: LV: Analyzing interleaved accesses...
 ; STRIDED_UNMASKED-NEXT: LV: Creating an interleave group with:  store i8 1, i8* %{{.*}}, align 1
 ; STRIDED_UNMASKED-NEXT: LV: Invalidate candidate interleaved store group due to gaps.
 ; STRIDED_UNMASKED-NOT: LV: Creating an interleave group 
 
-; STRIDED_MASKED: LV: Checking a loop in "masked_strided2" 
+; STRIDED_MASKED: LV: Checking a loop in 'masked_strided2' 
 ; STRIDED_MASKED: LV: Analyzing interleaved accesses...
 ; STRIDED_MASKED-NEXT: LV: Creating an interleave group with:  store i8 2, i8* %{{.*}}, align 1
 ; STRIDED_MASKED-NEXT: LV: Creating an interleave group with:  store i8 1, i8* %{{.*}}, align 1
@@ -97,11 +97,11 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ;}
 
 
-; STRIDED_UNMASKED: LV: Checking a loop in "masked_strided3" 
+; STRIDED_UNMASKED: LV: Checking a loop in 'masked_strided3' 
 ; STRIDED_UNMASKED: LV: Analyzing interleaved accesses...
 ; STRIDED_UNMASKED-NOT: LV: Creating an interleave group 
 
-; STRIDED_MASKED: LV: Checking a loop in "masked_strided3" 
+; STRIDED_MASKED: LV: Checking a loop in 'masked_strided3' 
 ; STRIDED_MASKED: LV: Analyzing interleaved accesses...
 ; STRIDED_MASKED-NEXT: LV: Creating an interleave group with:  store i8 2, i8* %{{.*}}, align 1
 ; STRIDED_MASKED-NEXT: LV: Creating an interleave group with:  store i8 1, i8* %{{.*}}, align 1

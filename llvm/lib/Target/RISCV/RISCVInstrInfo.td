@@ -901,6 +901,9 @@ def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
 def : InstAlias<"hfence.gvma",     (HFENCE_GVMA      X0, X0)>;
 def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 
+def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0)>;
+def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
+
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
                 (LB  GPR:$rd, GPR:$rs1, 0)>;
@@ -1088,13 +1091,14 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
 
-def add_oneuse : PatFrag<(ops node:$A, node:$B), (add node:$A, node:$B), [{
+class binop_oneuse<SDPatternOperator operator>
+    : PatFrag<(ops node:$A, node:$B),
+              (operator node:$A, node:$B), [{
   return N->hasOneUse();
 }]>;
 
-def mul_oneuse : PatFrag<(ops node:$A, node:$B), (mul node:$A, node:$B), [{
-  return N->hasOneUse();
-}]>;
+def add_oneuse : binop_oneuse<add>;
+def mul_oneuse : binop_oneuse<mul>;
 
 def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
                                (mul node:$A, node:$B), [{
@@ -1104,22 +1108,16 @@ def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
   return false;
 }]>;
 
-def sext_oneuse : PatFrag<(ops node:$A), (sext node:$A), [{
+class unop_oneuse<SDPatternOperator operator>
+    : PatFrag<(ops node:$A),
+              (operator node:$A), [{
   return N->hasOneUse();
 }]>;
 
-def zext_oneuse : PatFrag<(ops node:$A), (zext node:$A), [{
-  return N->hasOneUse();
-}]>;
-
-def anyext_oneuse : PatFrag<(ops node:$A), (anyext node:$A), [{
-  return N->hasOneUse();
-}]>;
-
-def fpext_oneuse : PatFrag<(ops node:$A),
-                           (any_fpextend node:$A), [{
-  return N->hasOneUse();
-}]>;
+def sext_oneuse   : unop_oneuse<sext>;
+def zext_oneuse   : unop_oneuse<zext>;
+def anyext_oneuse : unop_oneuse<anyext>;
+def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
 /// Simple arithmetic operations
 

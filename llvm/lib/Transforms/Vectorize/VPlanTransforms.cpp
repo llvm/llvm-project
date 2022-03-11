@@ -359,6 +359,27 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
+// Check for live-out users currently not modeled in VPlan.
+// Note that exit values of inductions are generated independent of
+// the recipe. This means  VPWidenIntOrFpInductionRecipe &
+// VPScalarIVStepsRecipe can be removed, independent of uses outside
+// the loop.
+// TODO: Remove once live-outs are modeled in VPlan.
+static bool hasOutsideUser(Instruction &I, Loop &OrigLoop) {
+  return any_of(I.users(), [&OrigLoop](User *U) {
+    if (!OrigLoop.contains(cast<Instruction>(U)))
+      return true;
+
+    // Look through single-value phis in the loop, as they won't be modeled in
+    // VPlan and may be used outside the loop.
+    if (auto *PN = dyn_cast<PHINode>(U))
+      if (PN->getNumIncomingValues() == 1)
+        return hasOutsideUser(*PN, OrigLoop);
+
+    return false;
+  });
+}
+
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // Remove dead recipes in header block. The recipes in the block are processed
@@ -370,15 +391,7 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
                [](VPValue *V) { return V->getNumUsers() > 0; }) ||
         (!isa<VPWidenIntOrFpInductionRecipe>(&R) &&
          !isa<VPScalarIVStepsRecipe>(&R) && R.getUnderlyingInstr() &&
-         any_of(R.getUnderlyingInstr()->users(), [&OrigLoop](User *U) {
-           // Check for live-out users currently not modeled in VPlan.
-           // Note that exit values of inductions are generated independent of
-           // the recipe. This means  VPWidenIntOrFpInductionRecipe &
-           // VPScalarIVStepsRecipe can be removed, independent of uses outside
-           // the loop.
-           // TODO: Remove once live-outs are modeled in VPlan.
-           return !OrigLoop.contains(cast<Instruction>(U));
-         })))
+         hasOutsideUser(*R.getUnderlyingInstr(), OrigLoop)))
       continue;
     R.eraseFromParent();
   }

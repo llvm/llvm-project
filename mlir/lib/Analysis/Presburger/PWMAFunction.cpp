@@ -30,7 +30,7 @@ PresburgerSet PWMAFunction::getDomain() const {
   PresburgerSet domain =
       PresburgerSet::getEmptySet(getNumDimIds(), getNumSymbolIds());
   for (const MultiAffineFunction &piece : pieces)
-    domain.unionPolyInPlace(piece.getDomain());
+    domain.unionInPlace(piece.getDomain());
   return domain;
 }
 
@@ -84,6 +84,8 @@ bool MultiAffineFunction::isEqual(const MultiAffineFunction &other) const {
 
 unsigned MultiAffineFunction::insertId(IdKind kind, unsigned pos,
                                        unsigned num) {
+  assert((kind != IdKind::Domain || num == 0) &&
+         "Domain has to be zero in a set");
   unsigned absolutePos = getIdKindOffset(kind) + pos;
   output.insertColumns(absolutePos, num);
   return IntegerPolyhedron::insertId(kind, pos, num);
@@ -94,8 +96,9 @@ void MultiAffineFunction::swapId(unsigned posA, unsigned posB) {
   IntegerPolyhedron::swapId(posA, posB);
 }
 
-void MultiAffineFunction::removeIdRange(unsigned idStart, unsigned idLimit) {
-  output.removeColumns(idStart, idLimit - idStart);
+void MultiAffineFunction::removeIdRange(IdKind kind, unsigned idStart,
+                                        unsigned idLimit) {
+  output.removeColumns(idStart + getIdKindOffset(kind), idLimit - idStart);
   IntegerPolyhedron::removeIdRange(idStart, idLimit);
 }
 

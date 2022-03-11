@@ -55,6 +55,7 @@ def matmul(A=TensorDef(T1, S.M, S.K),
   them to the same data type as the accumulator/output.
   """
   domain(D.m, D.n, D.k)
+  defines(Canonicalizer)
   implements(ContractionOpInterface)
   C[D.m, D.n] += TypeFn.cast_signed(
       U, A[D.m, D.k]) * TypeFn.cast_signed(U, B[D.k, D.n])
@@ -77,6 +78,9 @@ An explicit iteration domain dimension order can be declared for the op via
 
 Special identifying op interfaces can be declared for the op via
 `implements(interface1[, interface2...])`.
+
+Extra method definitions can be declared for the op via
+`defines(definition1[, definition2...])`.
 
 ## Parameters
 

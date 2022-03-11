@@ -311,10 +311,6 @@ enum NodeType : unsigned {
   STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCVT_WU_RV64,
 
-  // Memory opcodes start here.
-  VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
-  VSE_VL,
-
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
   // opcodes will be thought as target memory ops!
@@ -685,11 +681,11 @@ namespace RISCVVIntrinsicsTable {
 
 struct RISCVVIntrinsicInfo {
   unsigned IntrinsicID;
-  uint8_t SplatOperand;
+  uint8_t ScalarOperand;
   uint8_t VLOperand;
-  bool hasSplatOperand() const {
-    // 0xF is not valid. See NoSplatOperand in IntrinsicsRISCV.td.
-    return SplatOperand != 0xF;
+  bool hasScalarOperand() const {
+    // 0xF is not valid. See NoScalarOperand in IntrinsicsRISCV.td.
+    return ScalarOperand != 0xF;
   }
   bool hasVLOperand() const {
     // 0x1F is not valid. See NoVLOperand in IntrinsicsRISCV.td.

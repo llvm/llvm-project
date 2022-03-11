@@ -565,18 +565,16 @@ _additional_ verification, you can use
 
 ```tablegen
 let hasVerifier = 1;
-```
-
-or
-
-```tablegen
 let hasRegionVerifier = 1;
 ```
 
-This will generate either `LogicalResult verify()` or
-`LogicalResult verifyRegions()` method declaration on the op class
-that can be defined with any additional verification constraints. These method
-will be invoked on its verification order.
+This will generate `LogicalResult verify()`/`LogicalResult verifyRegions()`
+method declarations on the op class that can be defined with any additional
+verification constraints. For verificaiton which needs to access the nested
+operations, you should use `hasRegionVerifier` to ensure that it won't access
+any ill-formed operation. Except that, The other verifications can be
+implemented with `hasVerifier`. Check the next section for the execution order
+of these verification methods.
 
 #### Verification Ordering
 
@@ -600,6 +598,15 @@ If an operation has regions, then it may have the second phase,
 Note that the second phase will be run after the operations in the region are
 verified. Verifiers further down the order can rely on certain invariants being
 verified by a previous verifier and do not need to re-verify them.
+
+#### Emitting diagnostics in custom verifiers
+
+Custom verifiers should avoid printing operations using custom operation
+printers, because they require the printed operation (and sometimes its parent
+operation) to be verified first. In particular, when emitting diagnostics,
+custom verifiers should use the `Error` severity level, which prints operations
+in generic form by default, and avoid using lower severity levels (`Note`,
+`Remark`, `Warning`).
 
 ### Declarative Assembly Format
 

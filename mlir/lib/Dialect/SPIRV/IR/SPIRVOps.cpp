@@ -2935,7 +2935,7 @@ static inline bool hasOneBranchOpTo(Block &srcBlock, Block &dstBlock) {
   return branchOp && branchOp.getSuccessor() == &dstBlock;
 }
 
-LogicalResult spirv::LoopOp::verify() {
+LogicalResult spirv::LoopOp::verifyRegions() {
   auto *op = getOperation();
 
   // We need to verify that the blocks follow the following layout:
@@ -3072,6 +3072,7 @@ LogicalResult spirv::MergeOp::verify() {
     return emitOpError(
         "expected parent op to be 'spv.mlir.selection' or 'spv.mlir.loop'");
 
+  // TODO: This check should be done in `verifyRegions` of parent op.
   Block &parentLastBlock = (*this)->getParentRegion()->back();
   if (getOperation() != parentLastBlock.getTerminator())
     return emitOpError("can only be used in the last block of "
@@ -3173,7 +3174,7 @@ void spirv::ModuleOp::print(OpAsmPrinter &printer) {
   printer.printRegion(getRegion());
 }
 
-LogicalResult spirv::ModuleOp::verify() {
+LogicalResult spirv::ModuleOp::verifyRegions() {
   Dialect *dialect = (*this)->getDialect();
   DenseMap<std::pair<spirv::FuncOp, spirv::ExecutionModel>, spirv::EntryPointOp>
       entryPoints;
@@ -3322,7 +3323,7 @@ void spirv::SelectionOp::print(OpAsmPrinter &printer) {
                       /*printBlockTerminators=*/true);
 }
 
-LogicalResult spirv::SelectionOp::verify() {
+LogicalResult spirv::SelectionOp::verifyRegions() {
   auto *op = getOperation();
 
   // We need to verify that the blocks follow the following layout:
@@ -4106,7 +4107,7 @@ void spirv::SpecConstantOperationOp::print(OpAsmPrinter &printer) {
   printer.printGenericOp(&body().front().front());
 }
 
-LogicalResult spirv::SpecConstantOperationOp::verify() {
+LogicalResult spirv::SpecConstantOperationOp::verifyRegions() {
   Block &block = getRegion().getBlocks().front();
 
   if (block.getOperations().size() != 2)
@@ -4422,6 +4423,19 @@ void spirv::PtrAccessChainOp::print(OpAsmPrinter &printer) {
 
 LogicalResult spirv::PtrAccessChainOp::verify() {
   return verifyAccessChain(*this, indices());
+}
+
+//===----------------------------------------------------------------------===//
+// spv.VectorTimesScalarOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::VectorTimesScalarOp::verify() {
+  if (vector().getType() != getType())
+    return emitOpError("vector operand and result type mismatch");
+  auto scalarType = getType().cast<VectorType>().getElementType();
+  if (scalar().getType() != scalarType)
+    return emitOpError("scalar operand and result element type match");
+  return success();
 }
 
 // TableGen'erated operation interfaces for querying versions, extensions, and

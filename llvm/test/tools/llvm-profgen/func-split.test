@@ -1,6 +1,6 @@
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --ignore-stack-samples
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --ignore-stack-samples --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
 
 ;CHECK: [foo]:409:0

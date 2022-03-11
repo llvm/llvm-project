@@ -11,10 +11,11 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
+#include <__algorithm/push_heap.h>
 #include <__algorithm/sift_down.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
-#include <__utility/swap.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,10 +29,21 @@ void
 __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
            typename iterator_traits<_RandomAccessIterator>::difference_type __len)
 {
+    using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
+
     if (__len > 1)
     {
-        swap(*__first, *--__last);
-        _VSTD::__sift_down<_Compare>(__first, __comp, __len - 1, __first);
+        value_type __top = std::move(*__first);  // create a hole at __first
+        _RandomAccessIterator __hole = std::__floyd_sift_down<_Compare>(__first, __comp, __len);
+        --__last;
+        if (__hole == __last) {
+            *__hole = std::move(__top);
+        } else {
+            *__hole = std::move(*__last);
+            ++__hole;
+            *__last = std::move(__top);
+            std::__sift_up<_Compare>(__first, __hole, __comp, __hole - __first);
+        }
     }
 }
 

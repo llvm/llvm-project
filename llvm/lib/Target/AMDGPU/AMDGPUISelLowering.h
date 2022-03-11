@@ -367,9 +367,6 @@ enum NodeType : unsigned {
   // Return with values from a non-entry function.
   RET_FLAG,
 
-  // Return with values from a non-entry function (AMDGPU_Gfx CC).
-  RET_GFX_FLAG,
-
   DWORDADDR,
   FRACT,
 

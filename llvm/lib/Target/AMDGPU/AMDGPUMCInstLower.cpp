@@ -138,16 +138,9 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
-  switch (Opcode) {
-  case AMDGPU::S_SETPC_B64_return:
-  case AMDGPU::S_SETPC_B64_return_gfx:
+  if (Opcode == AMDGPU::S_SETPC_B64_return)
     Opcode = AMDGPU::S_SETPC_B64;
-    break;
-  case AMDGPU::SI_TCRETURN:
-    // TODO: How to use branch immediate and avoid register+add?
-    Opcode = AMDGPU::S_SETPC_B64;
-    break;
-  case AMDGPU::SI_CALL: {
+  else if (Opcode == AMDGPU::SI_CALL) {
     // SI_CALL is just S_SWAPPC_B64 with an additional operand to track the
     // called function (which we need to remove here).
     OutMI.setOpcode(TII->pseudoToMCOpcode(AMDGPU::S_SWAPPC_B64));
@@ -157,9 +150,9 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Dest);
     OutMI.addOperand(Src);
     return;
-  }
-  default:
-    break;
+  } else if (Opcode == AMDGPU::SI_TCRETURN) {
+    // TODO: How to use branch immediate and avoid register+add?
+    Opcode = AMDGPU::S_SETPC_B64;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);

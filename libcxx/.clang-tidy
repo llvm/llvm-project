@@ -1,2 +1,50 @@
 InheritParentConfig: true
-Checks: '-readability-identifier-naming,-llvm-header-guard,-misc-unconventional-assign-operator,-llvm-else-after-return,-llvm-qualified-auto'
+Checks: >
+  bugprone-copy-constructor-init,
+  bugprone-dangling-handle,
+  bugprone-infinite-loop,
+
+  -llvm-else-after-return,
+  -llvm-header-guard,
+  -llvm-qualified-auto,
+
+  -misc-unconventional-assign-operator,
+
+  modernize-redundant-void-arg,
+
+  readability-duplicate-include,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  -readability-identifier-naming,
+  readability-misplaced-array-index,
+  readability-redundant-control-flow,
+  readability-redundant-function-ptr-dereference,
+  readability-redundant-preprocessor,
+  readability-simplify-subscript-expr,
+  readability-uniqueptr-delete-release,
+
+CheckOptions:
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: 143 # TODO: bring that number down
+  - key:   readability-function-size.LineThreshold
+    value: 194 # TODO: bring that number down
+
+# TODO: investigate these checks
+# bugprone-branch-clone,
+# bugprone-macro-parentheses,
+# cppcoreguidelines-prefer-member-initializer,
+# modernize-loop-convert,
+# modernize-use-bool-literals,
+# modernize-use-default-member-init,
+# modernize-use-equals-default,
+# modernize-use-equals-delete,
+# modernize-use-nullptr,
+# modernize-use-override,
+# portability-restrict-system-includes,
+# readability-function-cognitive-complexity,
+# readability-implicit-bool-conversion,
+# readability-isolate-declaration,
+# readability-redundant-access-specifiers,
+# readability-redundant-declaration,
+# readability-redundant-member-init,
+# readability-simplify-boolean-expr,

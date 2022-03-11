@@ -8,6 +8,7 @@
 
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/Todo.h"
@@ -16,6 +17,7 @@
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-lower-type"
 
@@ -139,7 +141,7 @@ public:
 
     mlir::Type baseType;
     if (category == Fortran::common::TypeCategory::Derived) {
-      TODO(converter.getCurrentLocation(), "genExprType derived");
+      baseType = genDerivedType(dynamicType->GetDerivedTypeSpec());
     } else {
       // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
       llvm::SmallVector<Fortran::lower::LenParameterTy> params;
@@ -231,8 +233,9 @@ public:
         ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (type->IsPolymorphic()) {
         TODO(loc, "genSymbolType polymorphic types");
-      } else if (type->AsDerived()) {
-        TODO(loc, "genSymbolType derived type");
+      } else if (const Fortran::semantics::DerivedTypeSpec *tySpec =
+                     type->AsDerived()) {
+        ty = genDerivedType(*tySpec);
       } else {
         fir::emitFatalError(loc, "symbol's type must have a type spec");
       }
@@ -261,6 +264,71 @@ public:
     if (isAlloc)
       return fir::HeapType::get(ty);
     return ty;
+  }
+
+  /// Does \p component has non deferred lower bounds that are not compile time
+  /// constant 1.
+  static bool componentHasNonDefaultLowerBounds(
+      const Fortran::semantics::Symbol &component) {
+    if (const auto *objDetails =
+            component.detailsIf<Fortran::semantics::ObjectEntityDetails>())
+      for (const Fortran::semantics::ShapeSpec &bounds : objDetails->shape())
+        if (auto lb = bounds.lbound().GetExplicit())
+          if (auto constant = Fortran::evaluate::ToInt64(*lb))
+            if (!constant || *constant != 1)
+              return true;
+    return false;
+  }
+
+  mlir::Type genDerivedType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
+    std::vector<std::pair<std::string, mlir::Type>> ps;
+    std::vector<std::pair<std::string, mlir::Type>> cs;
+    const Fortran::semantics::Symbol &typeSymbol = tySpec.typeSymbol();
+    if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
+      return ty;
+    auto rec = fir::RecordType::get(context,
+                                    Fortran::lower::mangle::mangleName(tySpec));
+    // Maintain the stack of types for recursive references.
+    derivedTypeInConstruction.emplace_back(typeSymbol, rec);
+
+    // Gather the record type fields.
+    // (1) The data components.
+    for (const auto &field :
+         Fortran::semantics::OrderedComponentIterator(tySpec)) {
+      // Lowering is assuming non deferred component lower bounds are always 1.
+      // Catch any situations where this is not true for now.
+      if (componentHasNonDefaultLowerBounds(field))
+        TODO(converter.genLocation(field.name()),
+             "lowering derived type components with non default lower bounds");
+      if (IsProcName(field))
+        TODO(converter.genLocation(field.name()), "procedure components");
+      mlir::Type ty = genSymbolType(field);
+      // Do not add the parent component (component of the parents are
+      // added and should be sufficient, the parent component would
+      // duplicate the fields).
+      if (field.test(Fortran::semantics::Symbol::Flag::ParentComp))
+        continue;
+      cs.emplace_back(field.name().ToString(), ty);
+    }
+
+    // (2) The LEN type parameters.
+    for (const auto &param :
+         Fortran::semantics::OrderParameterDeclarations(typeSymbol))
+      if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
+          Fortran::common::TypeParamAttr::Len)
+        ps.emplace_back(param->name().ToString(), genSymbolType(*param));
+
+    rec.finalize(ps, cs);
+    popDerivedTypeInConstruction();
+
+    if (!ps.empty()) {
+      // This type is a PDT (parametric derived type). Create the functions to
+      // use for allocation, dereferencing, and address arithmetic here.
+      TODO(converter.genLocation(typeSymbol.name()),
+           "parametrized derived types lowering");
+    }
+    LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
+    return rec;
   }
 
   // To get the character length from a symbol, make an fold a designator for
@@ -326,7 +394,27 @@ public:
     return genSymbolType(var.getSymbol(), var.isHeapAlloc(), var.isPointer());
   }
 
-private:
+  /// Derived type can be recursive. That is, pointer components of a derived
+  /// type `t` have type `t`. This helper returns `t` if it is already being
+  /// lowered to avoid infinite loops.
+  mlir::Type getTypeIfDerivedAlreadyInConstruction(
+      const Fortran::lower::SymbolRef derivedSym) const {
+    for (const auto &[sym, type] : derivedTypeInConstruction)
+      if (sym == derivedSym)
+        return type;
+    return {};
+  }
+
+  void popDerivedTypeInConstruction() {
+    assert(!derivedTypeInConstruction.empty());
+    derivedTypeInConstruction.pop_back();
+  }
+
+  /// Stack derived type being processed to avoid infinite loops in case of
+  /// recursive derived types. The depth of derived types is expected to be
+  /// shallow (<10), so a SmallVector is sufficient.
+  llvm::SmallVector<std::pair<const Fortran::lower::SymbolRef, mlir::Type>>
+      derivedTypeInConstruction;
   Fortran::lower::AbstractConverter &converter;
   mlir::MLIRContext *context;
 };
@@ -338,6 +426,12 @@ mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,
                                       int kind,
                                       llvm::ArrayRef<LenParameterTy> params) {
   return genFIRType(context, tc, kind, params);
+}
+
+mlir::Type Fortran::lower::translateDerivedTypeToFIRType(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::semantics::DerivedTypeSpec &tySpec) {
+  return TypeBuilder{converter}.genDerivedType(tySpec);
 }
 
 mlir::Type Fortran::lower::translateSomeExprToFIRType(

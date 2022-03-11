@@ -31,7 +31,13 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetMachine.h"
 #include <clang/Basic/Diagnostic.h>
 #include <memory>
 
@@ -417,7 +423,6 @@ void CodeGenAction::GenerateLLVMIR() {
 
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
-  mlir::PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm);
@@ -490,11 +495,90 @@ void EmitMLIRAction::ExecuteAction() {
   mlirModule->print(*os);
 }
 
-void EmitObjAction::ExecuteAction() {
+void BackendAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
-  unsigned DiagID = ci.diagnostics().getCustomDiagID(
-      clang::DiagnosticsEngine::Error, "code-generation is not available yet");
-  ci.diagnostics().Report(DiagID);
+  // Generate an LLVM module if it's not already present (it will already be
+  // present if the input file is an LLVM IR/BC file).
+  if (!llvmModule)
+    GenerateLLVMIR();
+
+  // Create `Target`
+  std::string error;
+  const std::string &theTriple = llvmModule->getTargetTriple();
+  const llvm::Target *theTarget =
+      llvm::TargetRegistry::lookupTarget(theTriple, error);
+  // TODO: Make this a diagnostic once `flang-new` can consume LLVM IR files
+  // (in which users could use unsupported triples)
+  assert(theTarget && "Failed to create Target");
+
+  // Create `TargetMachine`
+  std::unique_ptr<llvm::TargetMachine> TM;
+  TM.reset(theTarget->createTargetMachine(theTriple, /*CPU=*/"",
+      /*Features=*/"", llvm::TargetOptions(), llvm::None));
+  assert(TM && "Failed to create TargetMachine");
+  llvmModule->setDataLayout(TM->createDataLayout());
+
+  // If the output stream is a file, generate it and define the corresponding
+  // output stream. If a pre-defined output stream is available, we will use
+  // that instead.
+  //
+  // NOTE: `os` is a smart pointer that will be destroyed at the end of this
+  // method. However, it won't be written to until `CodeGenPasses` is
+  // destroyed. By defining `os` before `CodeGenPasses`, we make sure that the
+  // output stream won't be destroyed before it is written to. This only
+  // applies when an output file is used (i.e. there is no pre-defined output
+  // stream).
+  // TODO: Revisit once the new PM is ready (i.e. when `CodeGenPasses` is
+  // updated to use it).
+  std::unique_ptr<llvm::raw_pwrite_stream> os;
+  if (ci.IsOutputStreamNull()) {
+    // Get the output buffer/file
+    switch (action) {
+    case BackendActionTy::Backend_EmitAssembly:
+      os = ci.CreateDefaultOutputFile(
+          /*Binary=*/false, /*InFile=*/GetCurrentFileOrBufferName(), "s");
+      break;
+    case BackendActionTy::Backend_EmitObj:
+      os = ci.CreateDefaultOutputFile(
+          /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "o");
+      break;
+    }
+    if (!os) {
+      unsigned diagID = ci.diagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "failed to create the output file");
+      ci.diagnostics().Report(diagID);
+      return;
+    }
+  }
+
+  // Create an LLVM code-gen pass pipeline. Currently only the legacy pass
+  // manager is supported.
+  // TODO: Switch to the new PM once it's available in the backend.
+  llvm::legacy::PassManager CodeGenPasses;
+  CodeGenPasses.add(
+      createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  llvm::Triple triple(theTriple);
+
+  std::unique_ptr<llvm::TargetLibraryInfoImpl> TLII =
+      std::make_unique<llvm::TargetLibraryInfoImpl>(triple);
+  assert(TLII && "Failed to create TargetLibraryInfo");
+  CodeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*TLII));
+
+  llvm::CodeGenFileType cgft = (action == BackendActionTy::Backend_EmitAssembly)
+      ? llvm::CodeGenFileType::CGFT_AssemblyFile
+      : llvm::CodeGenFileType::CGFT_ObjectFile;
+  if (TM->addPassesToEmitFile(CodeGenPasses,
+          ci.IsOutputStreamNull() ? *os : ci.GetOutputStream(), nullptr,
+          cgft)) {
+    unsigned diagID =
+        ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
+            "emission of this file type is not supported");
+    ci.diagnostics().Report(diagID);
+    return;
+  }
+
+  // Run the code-gen passes
+  CodeGenPasses.run(*llvmModule);
 }
 
 void InitOnlyAction::ExecuteAction() {
@@ -506,3 +590,17 @@ void InitOnlyAction::ExecuteAction() {
 }
 
 void PluginParseTreeAction::ExecuteAction() {}
+
+void DebugDumpPFTAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
+  if (auto ast = Fortran::lower::createPFT(
+          *ci.parsing().parseTree(), ci.semantics().context())) {
+    Fortran::lower::dumpPFT(llvm::outs(), *ast);
+    return;
+  }
+
+  unsigned DiagID = ci.diagnostics().getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
+  ci.diagnostics().Report(DiagID);
+}

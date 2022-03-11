@@ -1,5 +1,5 @@
-; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NO-PHI-VALUES
-; RUN: opt < %s -phi-values -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,PHI-VALUES
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NO-PHI-VALUES
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<phi-values>,aa-eval' -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,PHI-VALUES
 
 ; CHECK-LABEL: Function: simple: 5 pointers, 0 call sites
 ; CHECK:         NoAlias:      float* %src1, float* %src2

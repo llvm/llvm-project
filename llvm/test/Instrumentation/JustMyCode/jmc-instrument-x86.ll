@@ -1,4 +1,3 @@
-; REQUIRES: system-windows
 ; RUN: opt -jmc-instrument -S < %s | FileCheck %s
 
 ; CHECK: $_JustMyCode_Default = comdat any
@@ -11,11 +10,11 @@
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: declare x86_fastcallcc void @__CheckForDebuggerJustMyCode(i8* inreg noundef) unnamed_addr
-
 ; CHECK: define void @_JustMyCode_Default(i8* inreg noundef %0) unnamed_addr comdat {
 ; CHECK:   ret void
 ; CHECK: }
+
+; CHECK: declare x86_fastcallcc void @__CheckForDebuggerJustMyCode(i8* inreg noundef) unnamed_addr
 
 ; CHECK: !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 ; CHECK: !1 = distinct !DIGlobalVariable(name: "_A8764FDD_x@c", scope: !2, file: !3, type: !5, isLocal: true, isDefinition: true)

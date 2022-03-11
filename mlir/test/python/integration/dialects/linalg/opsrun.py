@@ -25,19 +25,19 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
   %v1 = arith.constant 1.0 : f32
   %v2 = arith.constant 2.0 : f32
 
-  %lhs = memref.alloc() : memref<4x8xf32>
+  %lhs = memref.alloc() : memref<f32>
   %rhs = memref.alloc() : memref<4x8xf32>
   %O0 = memref.alloc() : memref<4x8xf32>
   %O1 = memref.alloc() : memref<4x8xf32>
-  linalg.fill(%v1, %lhs) : f32, memref<4x8xf32>
+  linalg.fill(%v1, %lhs) : f32, memref<f32>
   linalg.fill(%v2, %rhs) : f32, memref<4x8xf32>
   linalg.fill(%v0, %O0) : f32, memref<4x8xf32>
   linalg.fill(%v0, %O1) : f32, memref<4x8xf32>
 
   call @elemwise_exp_add_on_buffers(%lhs, %rhs, %O0) :
-    (memref<4x8xf32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
+    (memref<f32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
   call @elemwise_log_mul_on_buffers(%lhs, %rhs, %O1) :
-    (memref<4x8xf32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
+    (memref<f32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
 
   %c0 = arith.constant 0 : index
   %res0 = memref.load %O0[%c0, %c0] : memref<4x8xf32>
@@ -198,7 +198,7 @@ def transform(module, boilerplate):
   pm = PassManager.parse(
       "builtin.func(convert-linalg-to-loops, lower-affine, " +
       "convert-math-to-llvm, convert-scf-to-cf, arith-expand, memref-expand), "
-      + "convert-vector-to-llvm, convert-memref-to-llvm, convert-std-to-llvm," +
+      + "convert-vector-to-llvm, convert-memref-to-llvm, convert-func-to-llvm," +
       "reconcile-unrealized-casts")
   pm.run(mod)
   return mod
@@ -212,14 +212,14 @@ def test_elemwise_builtin():
     with InsertionPoint(module.body):
 
       @builtin.FuncOp.from_py_func(
-          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_exp_add_on_buffers(lhs, rhs, out):
         linalg.elemwise_unary(lhs, outs=[out])
         linalg.elemwise_binary(out, rhs, outs=[out])
 
       @builtin.FuncOp.from_py_func(
-          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_log_mul_on_buffers(lhs, rhs, out):
         linalg.elemwise_unary(lhs, outs=[out], fun=UnaryFn.log)
@@ -251,14 +251,14 @@ def test_elemwise_generic():
     with InsertionPoint(module.body):
 
       @builtin.FuncOp.from_py_func(
-          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_exp_add_on_buffers(lhs, rhs, out):
         linalg.elemwise_unary(lhs, outs=[out], emit_generic=True)
         linalg.elemwise_binary(out, rhs, outs=[out], emit_generic=True)
 
       @builtin.FuncOp.from_py_func(
-          MemRefType.get((4, 8), f32), MemRefType.get((4, 8), f32),
+          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
           MemRefType.get((4, 8), f32))
       def elemwise_log_mul_on_buffers(lhs, rhs, out):
         linalg.elemwise_unary(

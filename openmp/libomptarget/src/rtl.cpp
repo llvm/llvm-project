@@ -165,6 +165,8 @@ void RTLsTy::LoadRTLs() {
        R.NumberOfDevices);
 
     // Optional functions
+    *((void **)&R.deinit_device) =
+        dlsym(dynlib_handle, "__tgt_rtl_deinit_device");
     *((void **)&R.init_requires) =
         dlsym(dynlib_handle, "__tgt_rtl_init_requires");
     *((void **)&R.data_submit_async) =

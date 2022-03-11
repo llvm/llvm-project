@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 
@@ -38,12 +39,6 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
                                   mlir::Value base) {
   return exv.match(
       [=](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
-      [=](const fir::BoxValue &) -> fir::ExtendedValue {
-        llvm::report_fatal_error("TODO: substbase of BoxValue");
-      },
-      [=](const fir::MutableBoxValue &) -> fir::ExtendedValue {
-        llvm::report_fatal_error("TODO: substbase of MutableBoxValue");
-      },
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
@@ -187,15 +182,13 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 /// always be called, so it should not have any functional side effects,
 /// the const is here to enforce that.
 bool fir::MutableBoxValue::verify() const {
-  auto type = fir::dyn_cast_ptrEleTy(getAddr().getType());
+  mlir::Type type = fir::dyn_cast_ptrEleTy(getAddr().getType());
   if (!type)
     return false;
   auto box = type.dyn_cast<fir::BoxType>();
   if (!box)
     return false;
-  auto eleTy = box.getEleTy();
-  if (!eleTy.isa<fir::PointerType>() && !eleTy.isa<fir::HeapType>())
-    return false;
+  // A boxed value always takes a memory reference,
 
   auto nParams = lenParams.size();
   if (isCharacter()) {
@@ -225,4 +218,15 @@ bool fir::BoxValue::verify() const {
   if (isCharacter() && explicitParams.size() > 1)
     return false;
   return true;
+}
+
+/// Get exactly one extent for any array-like extended value, \p exv. If \p exv
+/// is not an array or has rank less then \p dim, the result will be a nullptr.
+mlir::Value fir::getExtentAtDimension(const fir::ExtendedValue &exv,
+                                      fir::FirOpBuilder &builder,
+                                      mlir::Location loc, unsigned dim) {
+  auto extents = fir::factory::getExtents(builder, loc, exv);
+  if (dim < extents.size())
+    return extents[dim];
+  return {};
 }

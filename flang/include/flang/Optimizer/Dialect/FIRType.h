@@ -127,6 +127,13 @@ inline bool isa_complex(mlir::Type t) {
 /// Is `t` a CHARACTER type? Does not check the length.
 inline bool isa_char(mlir::Type t) { return t.isa<fir::CharacterType>(); }
 
+/// Is `t` a trivial intrinsic type? CHARACTER is <em>excluded</em> because it
+/// is a dependent type.
+inline bool isa_trivial(mlir::Type t) {
+  return isa_integer(t) || isa_real(t) || isa_complex(t) ||
+         t.isa<fir::LogicalType>();
+}
+
 /// Is `t` a CHARACTER type with a LEN other than 1?
 inline bool isa_char_string(mlir::Type t) {
   if (auto ct = t.dyn_cast_or_null<fir::CharacterType>())
@@ -184,12 +191,21 @@ inline bool singleIndirectionLevel(mlir::Type ty) {
 }
 #endif
 
+/// Return true iff `ty` is the type of an ALLOCATABLE entity or value.
+bool isAllocatableType(mlir::Type ty);
+
+/// Return true iff `ty` is a RecordType with members that are allocatable.
+bool isRecordWithAllocatableMember(mlir::Type ty);
+
 /// Return true iff `ty` is a RecordType with type parameters.
 inline bool isRecordWithTypeParameters(mlir::Type ty) {
   if (auto recTy = ty.dyn_cast_or_null<fir::RecordType>())
     return recTy.getNumLenParams() != 0;
   return false;
 }
+
+/// Is this tuple type holding a character function and its result length ?
+bool isCharacterProcedureTuple(mlir::Type type, bool acceptRawFunc = true);
 
 /// Apply the components specified by `path` to `rootTy` to determine the type
 /// of the resulting component element. `rootTy` should be an aggregate type.

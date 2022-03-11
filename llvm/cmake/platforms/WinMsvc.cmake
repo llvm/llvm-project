@@ -83,21 +83,21 @@ include_guard(GLOBAL)
 
 # When configuring CMake with a toolchain file against a top-level CMakeLists.txt,
 # it will actually run CMake many times, once for each small test program used to
-# determine what features a compiler supports.  Unfortunately, none of these
+# determine what features a compiler supports. By default, none of these
 # invocations share a CMakeCache.txt with the top-level invocation, meaning they
-# won't see the value of any arguments the user passed via -D.  Since these are
+# won't see the value of any arguments the user passed via -D. Since these are
 # necessary to properly configure MSVC in both the top-level configuration as well as
-# all feature-test invocations, we set environment variables with the values so that
-# these environments get inherited by child invocations. We can switch to
-# CMAKE_TRY_COMPILE_PLATFORM_VARIABLES once our minimum supported CMake version
-# is 3.6 or greater.
-function(init_user_prop prop)
-  if(${prop})
-    set(ENV{_${prop}} "${${prop}}")
-  else()
-    set(${prop} "$ENV{_${prop}}" PARENT_SCOPE)
-  endif()
-endfunction()
+# all feature-test invocations, we include them in CMAKE_TRY_COMPILE_PLATFORM_VARIABLES,
+# so that they get inherited by child invocations.
+list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+  HOST_ARCH
+  LLVM_NATIVE_TOOLCHAIN
+  LLVM_WINSYSROOT
+  MSVC_VER
+  WINSDK_VER
+  winsdk_lib_symlinks_dir
+  winsdk_vfs_overlay_path
+  )
 
 function(generate_winsdk_vfs_overlay winsdk_include_dir output_path)
   set(include_dirs)
@@ -168,12 +168,6 @@ endfunction()
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_SYSTEM_VERSION 10.0)
 set(CMAKE_SYSTEM_PROCESSOR AMD64)
-
-init_user_prop(HOST_ARCH)
-init_user_prop(LLVM_NATIVE_TOOLCHAIN)
-init_user_prop(LLVM_WINSYSROOT)
-init_user_prop(MSVC_VER)
-init_user_prop(WINSDK_VER)
 
 if(NOT HOST_ARCH)
   set(HOST_ARCH x86_64)
@@ -270,11 +264,9 @@ set(COMPILE_FLAGS
 
 if(case_sensitive_filesystem)
   # Ensure all sub-configures use the top-level VFS overlay instead of generating their own.
-  init_user_prop(winsdk_vfs_overlay_path)
   if(NOT winsdk_vfs_overlay_path)
     set(winsdk_vfs_overlay_path "${CMAKE_BINARY_DIR}/winsdk_vfs_overlay.yaml")
     generate_winsdk_vfs_overlay("${WINSDK_INCLUDE}" "${winsdk_vfs_overlay_path}")
-    init_user_prop(winsdk_vfs_overlay_path)
   endif()
   list(APPEND COMPILE_FLAGS
        -Xclang -ivfsoverlay -Xclang "${winsdk_vfs_overlay_path}")
@@ -295,11 +287,9 @@ set(LINK_FLAGS
 
 if(case_sensitive_filesystem)
   # Ensure all sub-configures use the top-level symlinks dir instead of generating their own.
-  init_user_prop(winsdk_lib_symlinks_dir)
   if(NOT winsdk_lib_symlinks_dir)
     set(winsdk_lib_symlinks_dir "${CMAKE_BINARY_DIR}/winsdk_lib_symlinks")
     generate_winsdk_lib_symlinks("${WINSDK_LIB}/um/${WINSDK_ARCH}" "${winsdk_lib_symlinks_dir}")
-    init_user_prop(winsdk_lib_symlinks_dir)
   endif()
   list(APPEND LINK_FLAGS
        -libpath:"${winsdk_lib_symlinks_dir}")

@@ -1243,7 +1243,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (!arg) {
       ++missingActualArguments;
     } else if (arg->isAlternateReturn()) {
-      messages.Say(
+      messages.Say(arg->sourceLocation(),
           "alternate return specifier not acceptable on call to intrinsic '%s'"_err_en_US,
           name);
       return std::nullopt;
@@ -1323,7 +1323,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         continue;
       }
     } else if (d.optionality == Optionality::missing) {
-      messages.Say("unexpected '%s=' argument"_err_en_US, d.keyword);
+      messages.Say(arg->sourceLocation(), "unexpected '%s=' argument"_err_en_US,
+          d.keyword);
       return std::nullopt;
     }
     if (arg->GetAssumedTypeDummy()) {
@@ -1334,8 +1335,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
               d.typePattern.kindCode == KindCode::addressable)) {
         continue;
       } else {
-        messages.Say("Assumed type TYPE(*) dummy argument not allowed "
-                     "for '%s=' intrinsic argument"_err_en_US,
+        messages.Say(arg->sourceLocation(),
+            "Assumed type TYPE(*) dummy argument not allowed for '%s=' intrinsic argument"_err_en_US,
             d.keyword);
         return std::nullopt;
       }
@@ -1352,11 +1353,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           const IntrinsicDummyArgument *nextParam{
               j + 1 < dummies ? &dummy[j + 1] : nullptr};
           if (nextParam && nextParam->rank == Rank::elementalOrBOZ) {
-            messages.Say(
+            messages.Say(arg->sourceLocation(),
                 "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
                 d.keyword, nextParam->keyword);
           } else {
-            messages.Say(
+            messages.Say(arg->sourceLocation(),
                 "Typeless (BOZ) not allowed for '%s=' argument"_err_en_US,
                 d.keyword);
           }
@@ -1370,15 +1371,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         } else if (d.typePattern.kindCode == KindCode::nullPointerType) {
           continue;
         } else {
-          messages.Say(
+          messages.Say(arg->sourceLocation(),
               "Actual argument for '%s=' may not be a procedure"_err_en_US,
               d.keyword);
         }
       }
       return std::nullopt;
     } else if (!d.typePattern.categorySet.test(type->category())) {
-      messages.Say("Actual argument for '%s=' has bad type '%s'"_err_en_US,
-          d.keyword, type->AsFortran());
+      messages.Say(arg->sourceLocation(),
+          "Actual argument for '%s=' has bad type '%s'"_err_en_US, d.keyword,
+          type->AsFortran());
       return std::nullopt; // argument has invalid type category
     }
     bool argOk{false};
@@ -1457,7 +1459,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CRASH_NO_CASE;
     }
     if (!argOk) {
-      messages.Say(
+      messages.Say(arg->sourceLocation(),
           "Actual argument for '%s=' has bad type or kind '%s'"_err_en_US,
           d.keyword, type->AsFortran());
       return std::nullopt;
@@ -1475,8 +1477,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (const ActualArgument * arg{actualForDummy[j]}) {
       bool isAssumedRank{IsAssumedRank(*arg)};
       if (isAssumedRank && d.rank != Rank::anyOrAssumedRank) {
-        messages.Say("Assumed-rank array cannot be forwarded to "
-                     "'%s=' argument"_err_en_US,
+        messages.Say(arg->sourceLocation(),
+            "Assumed-rank array cannot be forwarded to '%s=' argument"_err_en_US,
             d.keyword);
         return std::nullopt;
       }
@@ -1499,7 +1501,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       case Rank::shape:
         CHECK(!shapeArgSize);
         if (rank != 1) {
-          messages.Say(
+          messages.Say(arg->sourceLocation(),
               "'shape=' argument must be an array of rank 1"_err_en_US);
           return std::nullopt;
         } else {
@@ -1512,7 +1514,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           }
         }
         if (!argOk) {
-          messages.Say(
+          messages.Say(arg->sourceLocation(),
               "'shape=' argument must be a vector of known size"_err_en_US);
           return std::nullopt;
         }
@@ -1530,7 +1532,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       case Rank::coarray:
         argOk = IsCoarray(*arg);
         if (!argOk) {
-          messages.Say(
+          messages.Say(arg->sourceLocation(),
               "'coarray=' argument must have corank > 0 for intrinsic '%s'"_err_en_US,
               name);
           return std::nullopt;
@@ -1556,11 +1558,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           if (std::optional<Shape> shape{GetShape(context, *arg)}) {
             if (!shape->empty() && !shape->back().has_value()) {
               if (strcmp(name, "shape") == 0) {
-                messages.Say(
+                messages.Say(arg->sourceLocation(),
                     "The '%s=' argument to the intrinsic function '%s' may not be assumed-size"_err_en_US,
                     d.keyword, name);
               } else {
-                messages.Say(
+                messages.Say(arg->sourceLocation(),
                     "A dim= argument is required for '%s' when the array is assumed-size"_err_en_US,
                     name);
               }
@@ -1606,8 +1608,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             d.keyword, name);
       }
       if (!argOk) {
-        messages.Say("'%s=' argument has unacceptable rank %d"_err_en_US,
-            d.keyword, rank);
+        messages.Say(arg->sourceLocation(),
+            "'%s=' argument has unacceptable rank %d"_err_en_US, d.keyword,
+            rank);
         return std::nullopt;
       }
     }
@@ -2020,14 +2023,15 @@ bool CheckAndRearrangeArguments(ActualArguments &arguments,
         return false;
       }
     } else if (anyKeywords) {
-      messages.Say(
+      messages.Say(arg ? arg->sourceLocation() : messages.at(),
           "A positional actual argument may not appear after any keyword arguments"_err_en_US);
       return false;
     } else {
       dummyIndex = position++;
     }
     if (rearranged[dummyIndex]) {
-      messages.Say("Dummy argument '%s=' appears more than once"_err_en_US,
+      messages.Say(arg ? arg->sourceLocation() : messages.at(),
+          "Dummy argument '%s=' appears more than once"_err_en_US,
           dummyKeywords[dummyIndex]);
       return false;
     }
@@ -2081,7 +2085,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
               "mold"s, characteristics::DummyDataObject{typeAndShape});
           fResult.emplace(std::move(typeAndShape));
         } else {
-          context.messages().Say(
+          context.messages().Say(arguments[0]->sourceLocation(),
               "MOLD= argument to NULL() lacks type"_err_en_US);
         }
         if (goodProcPointer) {
@@ -2095,7 +2099,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
         }
       }
     }
-    context.messages().Say(
+    context.messages().Say(arguments[0]->sourceLocation(),
         "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
   }
   characteristics::Procedure::Attrs attrs;
@@ -2121,7 +2125,7 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     CHECK(arguments.size() == 3);
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
       if (expr->Rank() > 0) {
-        context.messages().Say(
+        context.messages().Say(arguments[0]->sourceLocation(),
             "CPTR= argument to C_F_POINTER() must be scalar"_err_en_US);
       }
       if (auto type{expr->GetType()}) {
@@ -2129,7 +2133,7 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
             type->IsPolymorphic() ||
             type->GetDerivedTypeSpec().typeSymbol().name() !=
                 "__builtin_c_ptr") {
-          context.messages().Say(
+          context.messages().Say(arguments[0]->sourceLocation(),
               "CPTR= argument to C_F_POINTER() must be a C_PTR"_err_en_US);
         }
         characteristics::DummyDataObject cptr{
@@ -2142,11 +2146,11 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
       int fptrRank{expr->Rank()};
       if (auto type{expr->GetType()}) {
         if (type->HasDeferredTypeParameter()) {
-          context.messages().Say(
+          context.messages().Say(arguments[1]->sourceLocation(),
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
         }
         if (ExtractCoarrayRef(*expr)) {
-          context.messages().Say(
+          context.messages().Say(arguments[1]->sourceLocation(),
               "FPTR= argument to C_F_POINTER() may not be a coindexed object"_err_en_US);
         }
         characteristics::DummyDataObject fptr{
@@ -2155,11 +2159,11 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
         fptr.attrs.set(characteristics::DummyDataObject::Attr::Pointer);
         dummies.emplace_back("fptr"s, std::move(fptr));
       } else {
-        context.messages().Say(
+        context.messages().Say(arguments[1]->sourceLocation(),
             "FPTR= argument to C_F_POINTER() must have a type"_err_en_US);
       }
       if (arguments[2] && fptrRank == 0) {
-        context.messages().Say(
+        context.messages().Say(arguments[2]->sourceLocation(),
             "SHAPE= argument to C_F_POINTER() may not appear when FPTR= is scalar"_err_en_US);
       } else if (!arguments[2] && fptrRank > 0) {
         context.messages().Say(
@@ -2196,7 +2200,7 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
     if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
       if (const Symbol * pointerSymbol{GetLastSymbol(*pointerExpr)}) {
         if (!pointerSymbol->attrs().test(semantics::Attr::POINTER)) {
-          AttachDeclaration(context.messages().Say(
+          AttachDeclaration(context.messages().Say(pointerArg->sourceLocation(),
                                 "POINTER= argument of ASSOCIATED() must be a "
                                 "POINTER"_err_en_US),
               *pointerSymbol);
@@ -2268,6 +2272,7 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                 CHECK(!symbols.empty());
                 if (!GetLastTarget(symbols)) {
                   parser::Message *msg{context.messages().Say(
+                      targetArg->sourceLocation(),
                       "TARGET= argument '%s' must have either the POINTER or the TARGET attribute"_err_en_US,
                       targetExpr->AsFortran())};
                   for (SymbolRef ref : symbols) {
@@ -2301,7 +2306,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
   if (name == "allocated") {
-    if (const auto &arg{call.arguments[0]}) {
+    const auto &arg{call.arguments[0]};
+    if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
         if (const Symbol * symbol{GetLastSymbol(*expr)}) {
           ok = symbol->attrs().test(semantics::Attr::ALLOCATABLE);
@@ -2310,20 +2316,23 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
     if (!ok) {
       context.messages().Say(
+          arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
   } else if (name == "loc") {
-    if (const auto &arg{call.arguments[0]}) {
-      ok = arg->GetAssumedTypeDummy() || GetLastSymbol(arg->UnwrapExpr());
-    }
+    const auto &arg{call.arguments[0]};
+    ok =
+        arg && (arg->GetAssumedTypeDummy() || GetLastSymbol(arg->UnwrapExpr()));
     if (!ok) {
       context.messages().Say(
+          arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
   } else if (name == "present") {
-    if (const auto &arg{call.arguments[0]}) {
+    const auto &arg{call.arguments[0]};
+    if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
         if (const Symbol * symbol{UnwrapWholeSymbolDataRef(*expr)}) {
           ok = symbol->attrs().test(semantics::Attr::OPTIONAL);
@@ -2332,6 +2341,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
     if (!ok) {
       context.messages().Say(
+          arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of PRESENT() must be the name of an OPTIONAL dummy argument"_err_en_US);
     }
   }
@@ -2466,7 +2476,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             context.messages().Say(
                 "argument types do not match specific intrinsic '%s' "
                 "requirements; using '%s' generic instead and converting the "
-                "result to %s if needed"_en_US,
+                "result to %s if needed"_port_en_US,
                 call.name, genericName, newType.AsFortran());
             specificCall->specificIntrinsic.name = call.name;
             specificCall->specificIntrinsic.characteristics.value()

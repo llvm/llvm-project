@@ -23,6 +23,8 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
+using namespace mlir;
+
 static const Fortran::parser::Name *
 getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
   const auto *dataRef = std::get_if<Fortran::parser::DataRef>(&designator.u);
@@ -179,13 +181,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         omp::ClauseProcBindKind pbKind;
         switch (ompProcBindClause.v) {
         case Fortran::parser::OmpProcBindClause::Type::Master:
-          pbKind = omp::ClauseProcBindKind::master;
+          pbKind = omp::ClauseProcBindKind::Master;
           break;
         case Fortran::parser::OmpProcBindClause::Type::Close:
-          pbKind = omp::ClauseProcBindKind::close;
+          pbKind = omp::ClauseProcBindKind::Close;
           break;
         case Fortran::parser::OmpProcBindClause::Type::Spread:
-          pbKind = omp::ClauseProcBindKind::spread;
+          pbKind = omp::ClauseProcBindKind::Spread;
           break;
         }
         parallelOp.proc_bind_valAttr(omp::ClauseProcBindKindAttr::get(

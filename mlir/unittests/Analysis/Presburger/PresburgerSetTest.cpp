@@ -32,7 +32,7 @@ static PresburgerSet
 parsePresburgerSetFromPolyStrings(unsigned numDims, ArrayRef<StringRef> strs) {
   PresburgerSet set = PresburgerSet::getEmptySet(numDims);
   for (StringRef str : strs)
-    set.unionPolyInPlace(parsePoly(str));
+    set.unionInPlace(parsePoly(str));
   return set;
 }
 
@@ -103,7 +103,7 @@ static PresburgerSet makeSetFromPoly(unsigned numDims,
                                      ArrayRef<IntegerPolyhedron> polys) {
   PresburgerSet set = PresburgerSet::getEmptySet(numDims);
   for (const IntegerPolyhedron &poly : polys)
-    set.unionPolyInPlace(poly);
+    set.unionInPlace(poly);
   return set;
 }
 
@@ -641,6 +641,17 @@ TEST(SetTest, coalesceDoubleIncrement) {
              "(x) : (x - 2 == 0)",
              "(x) : (x + 2 == 0)",
              "(x) : (x - 2 >= 0, -x + 3 >= 0)",
+         });
+  expectCoalesce(3, set);
+}
+
+TEST(SetTest, coalesceLastCoalesced) {
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
+      1, {
+             "(x) : (x == 0)",
+             "(x) : (x - 1 >= 0, -x + 3 >= 0)",
+             "(x) : (x + 2 == 0)",
+             "(x) : (x - 2 >= 0, -x + 4 >= 0)",
          });
   expectCoalesce(3, set);
 }

@@ -152,8 +152,8 @@ class SOP1_64_0 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 }
 
 // 64-bit input, no output
-class SOP1_1 <string opName, RegisterClass rc = SReg_64, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs), (ins rc:$src0), "$src0", pattern> {
+class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SReg_64:$src0), "$src0", pattern> {
   let has_sdst = 0;
 }
 
@@ -300,8 +300,7 @@ def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
 let isReturn = 1 in {
 // Define variant marked as return rather than branch.
-def S_SETPC_B64_return : SOP1_1<"", CCR_SGPR_64, [(AMDGPUret_flag i64:$src0)]>;
-def S_SETPC_B64_return_gfx : SOP1_1<"", Gfx_CCR_SGPR_64, [(AMDGPUret_gfx_flag i64:$src0)]>;
+def S_SETPC_B64_return : SOP1_1<"">;
 }
 } // End isTerminator = 1, isBarrier = 1
 

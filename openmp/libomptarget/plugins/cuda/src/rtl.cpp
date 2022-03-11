@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cuda.h>
@@ -22,6 +23,7 @@
 
 #include "Debug.h"
 #include "DeviceEnvironment.h"
+#include "omptarget.h"
 #include "omptargetplugin.h"
 
 #define TARGET_NAME CUDA
@@ -142,6 +144,8 @@ int syncEvent(void *EventPtr) {
   return OFFLOAD_SUCCESS;
 }
 
+namespace {
+
 // Structure contains per-device data
 struct DeviceDataTy {
   /// List that contains all the kernels.
@@ -162,27 +166,18 @@ struct DeviceDataTy {
 /// Resource allocator where \p T is the resource type.
 /// Functions \p create and \p destroy return OFFLOAD_SUCCESS and OFFLOAD_FAIL
 /// accordingly. The implementation should not raise any exception.
-template <typename T> class AllocatorTy {
-public:
+template <typename T> struct AllocatorTy {
+  using ElementTy = T;
   /// Create a resource and assign to R.
-  int create(T &R) noexcept;
+  virtual int create(T &R) noexcept = 0;
   /// Destroy the resource.
-  int destroy(T) noexcept;
+  virtual int destroy(T) noexcept = 0;
 };
 
 /// Allocator for CUstream.
-template <> class AllocatorTy<CUstream> {
-  CUcontext Context;
-
-public:
-  AllocatorTy(CUcontext C) noexcept : Context(C) {}
-
+struct StreamAllocatorTy final : public AllocatorTy<CUstream> {
   /// See AllocatorTy<T>::create.
-  int create(CUstream &Stream) noexcept {
-    if (!checkResult(cuCtxSetCurrent(Context),
-                     "Error returned from cuCtxSetCurrent\n"))
-      return OFFLOAD_FAIL;
-
+  int create(CUstream &Stream) noexcept override {
     if (!checkResult(cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING),
                      "Error returned from cuStreamCreate\n"))
       return OFFLOAD_FAIL;
@@ -191,10 +186,7 @@ public:
   }
 
   /// See AllocatorTy<T>::destroy.
-  int destroy(CUstream Stream) noexcept {
-    if (!checkResult(cuCtxSetCurrent(Context),
-                     "Error returned from cuCtxSetCurrent\n"))
-      return OFFLOAD_FAIL;
+  int destroy(CUstream Stream) noexcept override {
     if (!checkResult(cuStreamDestroy(Stream),
                      "Error returned from cuStreamDestroy\n"))
       return OFFLOAD_FAIL;
@@ -204,10 +196,9 @@ public:
 };
 
 /// Allocator for CUevent.
-template <> class AllocatorTy<CUevent> {
-public:
+struct EventAllocatorTy final : public AllocatorTy<CUevent> {
   /// See AllocatorTy<T>::create.
-  int create(CUevent &Event) noexcept {
+  int create(CUevent &Event) noexcept override {
     if (!checkResult(cuEventCreate(&Event, CU_EVENT_DEFAULT),
                      "Error returned from cuEventCreate\n"))
       return OFFLOAD_FAIL;
@@ -216,7 +207,7 @@ public:
   }
 
   /// See AllocatorTy<T>::destroy.
-  int destroy(CUevent Event) noexcept {
+  int destroy(CUevent Event) noexcept override {
     if (!checkResult(cuEventDestroy(Event),
                      "Error returned from cuEventDestroy\n"))
       return OFFLOAD_FAIL;
@@ -227,15 +218,16 @@ public:
 
 /// A generic pool of resources where \p T is the resource type.
 /// \p T should be copyable as the object is stored in \p std::vector .
-template <typename T> class ResourcePoolTy {
+template <typename AllocTy> class ResourcePoolTy {
+  using ElementTy = typename AllocTy::ElementTy;
   /// Index of the next available resource.
   size_t Next = 0;
   /// Mutex to guard the pool.
   std::mutex Mutex;
   /// Pool of resources.
-  std::vector<T> Resources;
+  std::vector<ElementTy> Resources;
   /// A reference to the corresponding allocator.
-  AllocatorTy<T> Allocator;
+  AllocTy Allocator;
 
   /// If `Resources` is used up, we will fill in more resources. It assumes that
   /// the new size `Size` should be always larger than the current size.
@@ -244,7 +236,7 @@ template <typename T> class ResourcePoolTy {
     assert(Size > CurSize && "Unexpected smaller size");
     Resources.reserve(Size);
     for (auto I = CurSize; I < Size; ++I) {
-      T NewItem;
+      ElementTy NewItem;
       int Ret = Allocator.create(NewItem);
       if (Ret != OFFLOAD_SUCCESS)
         return false;
@@ -254,7 +246,7 @@ template <typename T> class ResourcePoolTy {
   }
 
 public:
-  ResourcePoolTy(AllocatorTy<T> &&A, size_t Size = 0) noexcept
+  ResourcePoolTy(AllocTy &&A, size_t Size = 0) noexcept
       : Allocator(std::move(A)) {
     if (Size)
       (void)resize(Size);
@@ -273,7 +265,7 @@ public:
   /// xxxxxs+++++++++
   ///       ^
   ///       Next
-  int acquire(T &R) noexcept {
+  int acquire(ElementTy &R) noexcept {
     std::lock_guard<std::mutex> LG(Mutex);
     if (Next == Resources.size()) {
       auto NewSize = Resources.size() ? Resources.size() * 2 : 1;
@@ -300,7 +292,7 @@ public:
   /// `Next`. The left one will in the end be overwritten by another resource.
   /// Therefore, after several execution, the order of pool might be different
   /// from its initial state.
-  void release(T R) noexcept {
+  void release(ElementTy R) noexcept {
     std::lock_guard<std::mutex> LG(Mutex);
     Resources[--Next] = R;
   }
@@ -314,6 +306,8 @@ public:
   }
 };
 
+} // namespace
+
 class DeviceRTLTy {
   int NumberOfDevices;
   // OpenMP environment properties
@@ -324,41 +318,42 @@ class DeviceRTLTy {
   int64_t RequiresFlags;
   // Amount of dynamic shared memory to use at launch.
   uint64_t DynamicMemorySize;
-  // Number of initial streams for each device.
+
+  /// Number of initial streams for each device.
   int NumInitialStreams = 32;
+
+  /// Number of initial events for each device.
+  int NumInitialEvents = 8;
 
   static constexpr const int32_t HardThreadLimit = 1024;
   static constexpr const int32_t DefaultNumTeams = 128;
   static constexpr const int32_t DefaultNumThreads = 128;
 
-  using StreamPoolTy = ResourcePoolTy<CUstream>;
+  using StreamPoolTy = ResourcePoolTy<StreamAllocatorTy>;
   std::vector<std::unique_ptr<StreamPoolTy>> StreamPool;
 
-  ResourcePoolTy<CUevent> EventPool;
+  using EventPoolTy = ResourcePoolTy<EventAllocatorTy>;
+  std::vector<std::unique_ptr<EventPoolTy>> EventPool;
 
   std::vector<DeviceDataTy> DeviceData;
-  std::vector<CUmodule> Modules;
+  std::vector<std::vector<CUmodule>> Modules;
+
+  /// Vector of flags indicating the initalization status of all associated
+  /// devices.
+  std::vector<bool> InitializedFlags;
 
   /// A class responsible for interacting with device native runtime library to
   /// allocate and free memory.
   class CUDADeviceAllocatorTy : public DeviceAllocatorTy {
-    const int DeviceId;
-    const std::vector<DeviceDataTy> &DeviceData;
     std::unordered_map<void *, TargetAllocTy> HostPinnedAllocs;
 
   public:
-    CUDADeviceAllocatorTy(int DeviceId, std::vector<DeviceDataTy> &DeviceData)
-        : DeviceId(DeviceId), DeviceData(DeviceData) {}
-
     void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
       if (Size == 0)
         return nullptr;
 
-      CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-      if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-        return nullptr;
-
       void *MemAlloc = nullptr;
+      CUresult Err;
       switch (Kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE:
@@ -389,10 +384,7 @@ class DeviceRTLTy {
     }
 
     int free(void *TgtPtr) override {
-      CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-      if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-        return OFFLOAD_FAIL;
-
+      CUresult Err;
       // Host pinned memory must be freed differently.
       TargetAllocTy Kind =
           (HostPinnedAllocs.find(TgtPtr) == HostPinnedAllocs.end())
@@ -467,7 +459,6 @@ class DeviceRTLTy {
   }
 
 public:
-
   CUstream getStream(const int DeviceId, __tgt_async_info *AsyncInfo) const {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
@@ -489,7 +480,7 @@ public:
   DeviceRTLTy()
       : NumberOfDevices(0), EnvNumTeams(-1), EnvTeamLimit(-1),
         EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED),
-        DynamicMemorySize(0), EventPool(AllocatorTy<CUevent>()) {
+        DynamicMemorySize(0) {
 
     DP("Start initializing CUDA\n");
 
@@ -513,7 +504,9 @@ public:
     }
 
     DeviceData.resize(NumberOfDevices);
+    Modules.resize(NumberOfDevices);
     StreamPool.resize(NumberOfDevices);
+    EventPool.resize(NumberOfDevices);
 
     // Get environment variables regarding teams
     if (const char *EnvStr = getenv("OMP_TEAM_LIMIT")) {
@@ -544,7 +537,7 @@ public:
     }
 
     for (int I = 0; I < NumberOfDevices; ++I)
-      DeviceAllocators.emplace_back(I, DeviceData);
+      DeviceAllocators.emplace_back();
 
     // Get the size threshold from environment variable
     std::pair<size_t, bool> Res = MemoryManagerTy::getSizeThresholdFromEnv();
@@ -555,36 +548,14 @@ public:
       for (int I = 0; I < NumberOfDevices; ++I)
         MemoryManagers.emplace_back(std::make_unique<MemoryManagerTy>(
             DeviceAllocators[I], MemoryManagerThreshold));
+
+    // We lazily initialize all devices later.
+    InitializedFlags.assign(NumberOfDevices, false);
   }
 
   ~DeviceRTLTy() {
-    // We first destruct memory managers in case that its dependent data are
-    // destroyed before it.
-    for (auto &M : MemoryManagers)
-      M.release();
-
-    for (CUmodule &M : Modules)
-      // Close module
-      if (M)
-        checkResult(cuModuleUnload(M), "Error returned from cuModuleUnload\n");
-
-    for (auto &S : StreamPool)
-      S.reset();
-
-    EventPool.clear();
-
-    for (DeviceDataTy &D : DeviceData) {
-      // Destroy context
-      if (D.Context) {
-        checkResult(cuCtxSetCurrent(D.Context),
-                    "Error returned from cuCtxSetCurrent\n");
-        CUdevice Device;
-        checkResult(cuCtxGetDevice(&Device),
-                    "Error returned from cuCtxGetDevice\n");
-        checkResult(cuDevicePrimaryCtxRelease(Device),
-                    "Error returned from cuDevicePrimaryCtxRelease\n");
-      }
-    }
+    for (int DeviceId = 0; DeviceId < NumberOfDevices; ++DeviceId)
+      deinitDevice(DeviceId);
   }
 
   // Check whether a given DeviceId is valid
@@ -603,6 +574,9 @@ public:
     CUresult Err = cuDeviceGet(&Device, DeviceId);
     if (!checkResult(Err, "Error returned from cuDeviceGet\n"))
       return OFFLOAD_FAIL;
+
+    assert(InitializedFlags[DeviceId] == false && "Reinitializing device!");
+    InitializedFlags[DeviceId] = true;
 
     // Query the current flags of the primary context and set its flags if
     // it is inactive
@@ -636,11 +610,15 @@ public:
     if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
       return OFFLOAD_FAIL;
 
-    // Initialize stream pool
+    // Initialize the stream pool.
     if (!StreamPool[DeviceId])
-      StreamPool[DeviceId] = std::make_unique<StreamPoolTy>(
-          AllocatorTy<CUstream>(DeviceData[DeviceId].Context),
-          NumInitialStreams);
+      StreamPool[DeviceId] = std::make_unique<StreamPoolTy>(StreamAllocatorTy(),
+                                                            NumInitialStreams);
+
+    // Initialize the event pool.
+    if (!EventPool[DeviceId])
+      EventPool[DeviceId] =
+          std::make_unique<EventPoolTy>(EventAllocatorTy(), NumInitialEvents);
 
     // Query attributes to determine number of threads/block and blocks/grid.
     int MaxGridDimX;
@@ -761,26 +739,58 @@ public:
     return OFFLOAD_SUCCESS;
   }
 
+  int deinitDevice(const int DeviceId) {
+    auto IsInitialized = InitializedFlags[DeviceId];
+    if (!IsInitialized)
+      return OFFLOAD_SUCCESS;
+    InitializedFlags[DeviceId] = false;
+
+    if (UseMemoryManager)
+      MemoryManagers[DeviceId].release();
+
+    StreamPool[DeviceId].reset();
+    EventPool[DeviceId].reset();
+
+    DeviceDataTy &D = DeviceData[DeviceId];
+    if (!checkResult(cuCtxSetCurrent(D.Context),
+                     "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    // Unload all modules.
+    for (auto &M : Modules[DeviceId])
+      if (!checkResult(cuModuleUnload(M),
+                       "Error returned from cuModuleUnload\n"))
+        return OFFLOAD_FAIL;
+
+    // Destroy context.
+    CUdevice Device;
+    if (!checkResult(cuCtxGetDevice(&Device),
+                     "Error returned from cuCtxGetDevice\n"))
+      return OFFLOAD_FAIL;
+
+    if (!checkResult(cuDevicePrimaryCtxRelease(Device),
+                     "Error returned from cuDevicePrimaryCtxRelease\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+
   __tgt_target_table *loadBinary(const int DeviceId,
                                  const __tgt_device_image *Image) {
-    // Set the context we are using
-    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-      return nullptr;
-
     // Clear the offload table as we are going to create a new one.
     clearOffloadEntriesTable(DeviceId);
 
     // Create the module and extract the function pointers.
     CUmodule Module;
     DP("Load data from image " DPxMOD "\n", DPxPTR(Image->ImageStart));
-    Err = cuModuleLoadDataEx(&Module, Image->ImageStart, 0, nullptr, nullptr);
+    CUresult Err =
+        cuModuleLoadDataEx(&Module, Image->ImageStart, 0, nullptr, nullptr);
     if (!checkResult(Err, "Error returned from cuModuleLoadDataEx\n"))
       return nullptr;
 
     DP("CUDA module successfully loaded!\n");
 
-    Modules.push_back(Module);
+    Modules[DeviceId].push_back(Module);
 
     // Find the symbols in the module by name.
     const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
@@ -961,13 +971,8 @@ public:
                  const int64_t Size, __tgt_async_info *AsyncInfo) const {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
-    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-      return OFFLOAD_FAIL;
-
     CUstream Stream = getStream(DeviceId, AsyncInfo);
-
-    Err = cuMemcpyHtoDAsync((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
+    CUresult Err = cuMemcpyHtoDAsync((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
     if (Err != CUDA_SUCCESS) {
       DP("Error when copying data from host to device. Pointers: host "
          "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
@@ -983,13 +988,8 @@ public:
                    const int64_t Size, __tgt_async_info *AsyncInfo) const {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
-    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-      return OFFLOAD_FAIL;
-
     CUstream Stream = getStream(DeviceId, AsyncInfo);
-
-    Err = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
+    CUresult Err = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     if (Err != CUDA_SUCCESS) {
       DP("Error when copying data from device to host. Pointers: host "
          "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
@@ -1005,10 +1005,7 @@ public:
                    int64_t Size, __tgt_async_info *AsyncInfo) const {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
-    CUresult Err = cuCtxSetCurrent(DeviceData[SrcDevId].Context);
-    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-      return OFFLOAD_FAIL;
-
+    CUresult Err;
     CUstream Stream = getStream(SrcDevId, AsyncInfo);
 
     // If they are two devices, we try peer to peer copy first
@@ -1064,10 +1061,6 @@ public:
                           const int TeamNum, const int ThreadLimit,
                           const unsigned int LoopTripCount,
                           __tgt_async_info *AsyncInfo) const {
-    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
-      return OFFLOAD_FAIL;
-
     // All args are references.
     std::vector<void *> Args(ArgNum);
     std::vector<void *> Ptrs(ArgNum);
@@ -1107,6 +1100,7 @@ public:
       CudaThreadsPerBlock = DeviceData[DeviceId].ThreadsPerBlock;
     }
 
+    CUresult Err;
     if (!KernelInfo->MaxThreadsPerBlock) {
       Err = cuFuncGetAttribute(&KernelInfo->MaxThreadsPerBlock,
                                CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
@@ -1390,16 +1384,16 @@ public:
     printf("    Compute Capabilities: \t\t%d%d \n", TmpInt, TmpInt2);
   }
 
-  int createEvent(void **P) {
+  int createEvent(int DeviceId, void **P) {
     CUevent Event = nullptr;
-    if (EventPool.acquire(Event) != OFFLOAD_SUCCESS)
+    if (EventPool[DeviceId]->acquire(Event) != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
     *P = Event;
     return OFFLOAD_SUCCESS;
   }
 
-  int destroyEvent(void *EventPtr) {
-    EventPool.release(reinterpret_cast<CUevent>(EventPtr));
+  int destroyEvent(int DeviceId, void *EventPtr) {
+    EventPool[DeviceId]->release(reinterpret_cast<CUevent>(EventPtr));
     return OFFLOAD_SUCCESS;
   }
 
@@ -1433,10 +1427,6 @@ public:
   }
 
   int initAsyncInfo(int DeviceId, __tgt_async_info **AsyncInfo) const {
-    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-    if (!checkResult(Err, "error returned from cuCtxSetCurrent"))
-      return OFFLOAD_FAIL;
-
     *AsyncInfo = new __tgt_async_info;
     getStream(DeviceId, *AsyncInfo);
     return OFFLOAD_SUCCESS;
@@ -1458,6 +1448,16 @@ public:
         return OFFLOAD_FAIL;
       }
     }
+    return OFFLOAD_SUCCESS;
+  }
+
+  int setContext(int DeviceId) {
+    assert(InitializedFlags[DeviceId] && "Device is not initialized");
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "error returned from cuCtxSetCurrent"))
+      return OFFLOAD_FAIL;
+
     return OFFLOAD_SUCCESS;
   }
 };
@@ -1492,13 +1492,24 @@ int32_t __tgt_rtl_is_data_exchangable(int32_t src_dev_id, int dst_dev_id) {
 
 int32_t __tgt_rtl_init_device(int32_t device_id) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // Context is set when init the device.
 
   return DeviceRTL.initDevice(device_id);
+}
+
+int32_t __tgt_rtl_deinit_device(int32_t device_id) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // Context is set when deinit the device.
+
+  return DeviceRTL.deinitDevice(device_id);
 }
 
 __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
                                           __tgt_device_image *image) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return nullptr;
 
   return DeviceRTL.loadBinary(device_id, image);
 }
@@ -1507,12 +1518,16 @@ void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *,
                            int32_t kind) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return nullptr;
+
   return DeviceRTL.dataAlloc(device_id, size, (TargetAllocTy)kind);
 }
 
 int32_t __tgt_rtl_data_submit(int32_t device_id, void *tgt_ptr, void *hst_ptr,
                               int64_t size) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // Context is set in __tgt_rtl_data_submit_async.
 
   __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_data_submit_async(device_id, tgt_ptr, hst_ptr,
@@ -1529,6 +1544,9 @@ int32_t __tgt_rtl_data_submit_async(int32_t device_id, void *tgt_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
 
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
   return DeviceRTL.dataSubmit(device_id, tgt_ptr, hst_ptr, size,
                               async_info_ptr);
 }
@@ -1536,6 +1554,7 @@ int32_t __tgt_rtl_data_submit_async(int32_t device_id, void *tgt_ptr,
 int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
                                 int64_t size) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // Context is set in __tgt_rtl_data_retrieve_async.
 
   __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_data_retrieve_async(device_id, hst_ptr, tgt_ptr,
@@ -1552,6 +1571,9 @@ int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
 
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
   return DeviceRTL.dataRetrieve(device_id, hst_ptr, tgt_ptr, size,
                                 async_info_ptr);
 }
@@ -1563,7 +1585,8 @@ int32_t __tgt_rtl_data_exchange_async(int32_t src_dev_id, void *src_ptr,
   assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
   assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
   assert(AsyncInfo && "AsyncInfo is nullptr");
-
+  // NOTE: We don't need to set context for data exchange as the device contexts
+  // are passed to CUDA function directly.
   return DeviceRTL.dataExchange(src_dev_id, src_ptr, dst_dev_id, dst_ptr, size,
                                 AsyncInfo);
 }
@@ -1573,6 +1596,7 @@ int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
                                 int64_t size) {
   assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
   assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
+  // Context is set in __tgt_rtl_data_exchange_async.
 
   __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_data_exchange_async(
@@ -1586,6 +1610,9 @@ int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
 int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
   return DeviceRTL.dataDelete(device_id, tgt_ptr);
 }
 
@@ -1596,6 +1623,7 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
                                          int32_t thread_limit,
                                          uint64_t loop_tripcount) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // Context is set in __tgt_rtl_run_target_team_region_async.
 
   __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_run_target_team_region_async(
@@ -1614,6 +1642,9 @@ int32_t __tgt_rtl_run_target_team_region_async(
     __tgt_async_info *async_info_ptr) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
   return DeviceRTL.runTargetTeamRegion(
       device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
       thread_limit, loop_tripcount, async_info_ptr);
@@ -1623,6 +1654,7 @@ int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
                                     void **tgt_args, ptrdiff_t *tgt_offsets,
                                     int32_t arg_num) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // Context is set in __tgt_rtl_run_target_region_async.
 
   __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_run_target_region_async(
@@ -1639,7 +1671,7 @@ int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
                                           int32_t arg_num,
                                           __tgt_async_info *async_info_ptr) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-
+  // Context is set in __tgt_rtl_run_target_team_region_async.
   return __tgt_rtl_run_target_team_region_async(
       device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
       /* team num*/ 1, /* thread_limit */ 1, /* loop_tripcount */ 0,
@@ -1651,7 +1683,7 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
   assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
-
+  // NOTE: We don't need to set context for stream sync.
   return DeviceRTL.synchronize(device_id, async_info_ptr);
 }
 
@@ -1662,12 +1694,17 @@ void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
 
 void __tgt_rtl_print_device_info(int32_t device_id) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  // NOTE: We don't need to set context for print device info.
   DeviceRTL.printDeviceInfo(device_id);
 }
 
 int32_t __tgt_rtl_create_event(int32_t device_id, void **event) {
   assert(event && "event is nullptr");
-  return DeviceRTL.createEvent(event);
+
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  return DeviceRTL.createEvent(device_id, event);
 }
 
 int32_t __tgt_rtl_record_event(int32_t device_id, void *event_ptr,
@@ -1675,7 +1712,7 @@ int32_t __tgt_rtl_record_event(int32_t device_id, void *event_ptr,
   assert(async_info_ptr && "async_info_ptr is nullptr");
   assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
   assert(event_ptr && "event_ptr is nullptr");
-
+  // NOTE: We might not need to set context for event record.
   return recordEvent(event_ptr, async_info_ptr);
 }
 
@@ -1684,26 +1721,32 @@ int32_t __tgt_rtl_wait_event(int32_t device_id, void *event_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
   assert(event_ptr && "event is nullptr");
-
+  // NOTE: We might not need to set context for event sync.
   return DeviceRTL.waitEvent(device_id, async_info_ptr, event_ptr);
 }
 
 int32_t __tgt_rtl_sync_event(int32_t device_id, void *event_ptr) {
   assert(event_ptr && "event is nullptr");
-
+  // NOTE: We might not need to set context for event sync.
   return syncEvent(event_ptr);
 }
 
 int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
   assert(event_ptr && "event is nullptr");
 
-  return DeviceRTL.destroyEvent(event_ptr);
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  return DeviceRTL.destroyEvent(device_id, event_ptr);
 }
 
 int32_t __tgt_rtl_release_async_info(int32_t device_id,
                                      __tgt_async_info *async_info) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info && "async_info is nullptr");
+
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
 
   return DeviceRTL.releaseAsyncInfo(device_id, async_info);
 }
@@ -1713,6 +1756,9 @@ int32_t __tgt_rtl_init_async_info(int32_t device_id,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info && "async_info is nullptr");
 
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
   return DeviceRTL.initAsyncInfo(device_id, async_info);
 }
 
@@ -1721,6 +1767,9 @@ int32_t __tgt_rtl_init_device_info(int32_t device_id,
                                    const char **err_str) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(device_info_ptr && "device_info_ptr is nullptr");
+
+  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
 
   return DeviceRTL.initDeviceInfo(device_id, device_info_ptr, err_str);
 }

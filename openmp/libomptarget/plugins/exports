@@ -5,6 +5,7 @@ VERS1.0 {
     __tgt_rtl_number_of_devices;
     __tgt_rtl_init_requires;
     __tgt_rtl_init_device;
+    __tgt_rtl_deinit_device;
     __tgt_rtl_load_binary;
     __tgt_rtl_data_alloc;
     __tgt_rtl_data_submit;

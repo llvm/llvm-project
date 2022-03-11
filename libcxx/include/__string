@@ -559,17 +559,6 @@ char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-template <class _Traits>
-_LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR
-inline size_t __char_traits_length_checked(const typename _Traits::char_type* __s) _NOEXCEPT {
-#if _LIBCPP_DEBUG_LEVEL >= 1
-  return __s ? _Traits::length(__s) : (_VSTD::__libcpp_debug_function(_VSTD::__libcpp_debug_info(__FILE__, __LINE__, "p == nullptr", "null pointer pass to non-null argument of char_traits<...>::length")), 0);
-#else
-  return _Traits::length(__s);
-#endif
-}
-
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 
 template <>
@@ -1154,19 +1143,6 @@ size_t __do_string_hash(_Ptr __p, _Ptr __e)
     typedef typename iterator_traits<_Ptr>::value_type value_type;
     return __murmur2_or_cityhash<size_t>()(__p, (__e-__p)*sizeof(value_type));
 }
-
-template <class _CharT, class _Iter, class _Traits = char_traits<_CharT> >
-struct __quoted_output_proxy
-{
-    _Iter  __first_;
-    _Iter  __last_;
-    _CharT  __delim_;
-    _CharT  __escape_;
-
-    _LIBCPP_HIDE_FROM_ABI
-    explicit __quoted_output_proxy(_Iter __f, _Iter __l, _CharT __d, _CharT __e)
-        : __first_(__f), __last_(__l), __delim_(__d), __escape_(__e) {}
-};
 
 _LIBCPP_END_NAMESPACE_STD
 

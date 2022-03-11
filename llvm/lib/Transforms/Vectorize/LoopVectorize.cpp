@@ -10356,8 +10356,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   const std::string DebugLocStr = getDebugLocString(L);
 #endif /* NDEBUG */
 
-  LLVM_DEBUG(dbgs() << "\nLV: Checking a loop in \""
-                    << L->getHeader()->getParent()->getName() << "\" from "
+  LLVM_DEBUG(dbgs() << "\nLV: Checking a loop in '"
+                    << L->getHeader()->getParent()->getName() << "' from "
                     << DebugLocStr << "\n");
 
   LoopVectorizeHints Hints(L, InterleaveOnlyWhenForced, *ORE, TTI);

@@ -21,6 +21,18 @@ entry:
   ret float 1.0
 }
 
+; CHECK: swifterror alloca must have pointer type
+define void @swifterror_alloca_invalid_type() {
+  %a = alloca swifterror i128
+  ret void
+}
+
+; CHECK: swifterror alloca must not be array allocation
+define void @swifterror_alloca_array() {
+  %a = alloca swifterror i8*, i64 2
+  ret void
+}
+
 ; CHECK: Cannot have multiple 'swifterror' parameters!
 declare void @a(i32** swifterror %a, i32** swifterror %b)
 

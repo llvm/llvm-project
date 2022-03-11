@@ -1,11 +1,11 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples --csspgo-preinliner=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
 
-; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --populate-profile-symbol-list=1 --csspgo-preinliner=0
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --populate-profile-symbol-list=1 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: llvm-profdata show -show-prof-sym-list -sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST
 
 ; CHECK-SYM-LIST: Dump profile symbol list

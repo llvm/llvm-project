@@ -18,6 +18,7 @@ __attribute__((noinline)) void *SecondaryThread(void *x) {
 void *Thread(void *x) {
   const int me = (long)x;
   volatile long sink = 0;
+  int fd = -1;
   while (!stop) {
     // If me == 0, we do all of the following,
     // otherwise only 1 type of action.
@@ -57,6 +58,13 @@ void *Thread(void *x) {
       sink += racy;
 #endif
     }
+    if (me == 0 || me == 10) {
+      fd = open("/dev/null", O_RDONLY);
+      if (fd != -1) {
+        close(fd);
+        fd = -1;
+      }
+    }
     // If you add more actions, update kActions in main.
   }
   return NULL;
@@ -70,7 +78,7 @@ int main() {
     exit((perror("fcntl"), 1));
   if (fcntl(fds[1], F_SETFL, O_NONBLOCK))
     exit((perror("fcntl"), 1));
-  const int kActions = 10;
+  const int kActions = 11;
 #if RACE
   const int kMultiplier = 1;
 #else

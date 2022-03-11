@@ -551,96 +551,6 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     }]
   >];
 
-  let parser = [{
-    mlir::OpAsmParser::OperandType selector;
-    mlir::Type type;
-    if (parseSelector(parser, result, selector, type))
-      return mlir::failure();
-
-    llvm::SmallVector<mlir::Attribute> ivalues;
-    llvm::SmallVector<mlir::Block *> dests;
-    llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
-    while (true) {
-      mlir::Attribute ivalue; // Integer or Unit
-      mlir::Block *dest;
-      llvm::SmallVector<mlir::Value> destArg;
-      mlir::NamedAttrList temp;
-      if (parser.parseAttribute(ivalue, "i", temp) ||
-          parser.parseComma() ||
-          parser.parseSuccessorAndUseList(dest, destArg))
-        return mlir::failure();
-      ivalues.push_back(ivalue);
-      dests.push_back(dest);
-      destArgs.push_back(destArg);
-      if (!parser.parseOptionalRSquare())
-        break;
-      if (parser.parseComma())
-        return mlir::failure();
-    }
-    auto &bld = parser.getBuilder();
-    result.addAttribute(getCasesAttr(), bld.getArrayAttr(ivalues));
-    llvm::SmallVector<int32_t> argOffs;
-    int32_t sumArgs = 0;
-    const auto count = dests.size();
-    for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
-      result.addSuccessors(dests[i]);
-      result.addOperands(destArgs[i]);
-      auto argSize = destArgs[i].size();
-      argOffs.push_back(argSize);
-      sumArgs += argSize;
-    }
-    result.addAttribute(getOperandSegmentSizeAttr(),
-                        bld.getI32VectorAttr({1, 0, sumArgs}));
-    result.addAttribute(getTargetOffsetAttr(), bld.getI32VectorAttr(argOffs));
-    return mlir::success();
-  }];
-
-  let printer = [{
-    p << ' ';
-    p.printOperand(getSelector());
-    p << " : " << getSelector().getType() << " [";
-    auto cases =
-        (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumConditions();
-    for (decltype(count) i = 0; i != count; ++i) {
-      if (i)
-        p << ", ";
-      auto &attr = cases[i];
-      if (auto intAttr = attr.dyn_cast_or_null<mlir::IntegerAttr>())
-        p << intAttr.getValue();
-      else
-        p.printAttribute(attr);
-      p << ", ";
-      printSuccessorAtIndex(p, i);
-    }
-    p << ']';
-    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(),
-        getCompareOffsetAttr(), getTargetOffsetAttr(),
-        getOperandSegmentSizeAttr()});
-  }];
-
-  let verifier = [{
-    if (!(getSelector().getType().isa<mlir::IntegerType>() ||
-          getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntegerType>()))
-      return emitOpError("must be an integer");
-    auto cases =
-        (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumDest();
-    if (count == 0)
-      return emitOpError("must have at least one successor");
-    if (getNumConditions() != count)
-      return emitOpError("number of cases and targets don't match");
-    if (targetOffsetSize() != count)
-      return emitOpError("incorrect number of successor operand groups");
-    for (decltype(count) i = 0; i != count; ++i) {
-      auto &attr = cases[i];
-      if (!(attr.isa<mlir::IntegerAttr>() || attr.isa<mlir::UnitAttr>()))
-        return emitOpError("invalid case alternative");
-    }
-    return mlir::success();
-  }];
-
   let extraClassDeclaration = extraSwitchClassDeclaration;
 }
 
@@ -663,6 +573,9 @@ def fir_SelectOp : fir_IntegralSwitchTerminatorOp<"select"> {
                         unit, ^bb5]
     ```
   }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
 }
 
 def fir_SelectRankOp : fir_IntegralSwitchTerminatorOp<"select_rank"> {
@@ -683,6 +596,8 @@ def fir_SelectRankOp : fir_IntegralSwitchTerminatorOp<"select_rank"> {
                              unit, ^bb5]
     ```
   }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
@@ -2064,7 +1979,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
       "mlir::Type":$recTy),
     [{
       $_state.addAttribute(fieldAttrName(), $_builder.getStringAttr(fieldName));
-      $_state.addAttribute(typeAttrName(), TypeAttr::get(recTy));
+      $_state.addAttribute(typeAttrName(), mlir::TypeAttr::get(recTy));
     }]
   >];
 
@@ -2103,9 +2018,8 @@ def FirRegionTerminator : SingleBlockImplicitTerminator<"ResultOp">;
 class region_Op<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
     !listconcat(traits, [FirRegionTerminator, RecursiveSideEffects])> {
-  let printer = "return ::print(p, *this);";
-  let verifier = "return ::verify(*this);";
-  let parser = "return ::parse$cppClass(parser, result);";
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def fir_DoLoopOp : region_Op<"do_loop",
@@ -2131,6 +2045,9 @@ def fir_DoLoopOp : region_Op<"do_loop",
     keyword indicates that the iterations can be executed in any order.
   }];
 
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+
   let arguments = (ins
     Index:$lowerBound,
     Index:$upperBound,
@@ -2154,7 +2071,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
   let extraClassDeclaration = [{
     mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::OpBuilder getBodyBuilder() {
-      return OpBuilder(getBody(), std::prev(getBody()->end()));
+      return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
     }
     mlir::Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
@@ -2163,9 +2080,9 @@ def fir_DoLoopOp : region_Op<"do_loop",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
-    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
-    void setStep(Value step) { (*this)->setOperand(2, step); }
+    void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -2312,8 +2229,8 @@ def fir_IterWhileOp : region_Op<"iterate_while",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
-    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
+    void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
     void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
@@ -2376,18 +2293,18 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
         CArg<"mlir::ValueRange", "{}">:$operands),
     [{
       build($_builder, $_state,
-          SymbolRefAttr::get($_builder.getContext(), callee), results,
+          mlir::SymbolRefAttr::get($_builder.getContext(), callee), results,
           operands);
     }]>];
 
   let extraClassDeclaration = [{
-    static constexpr StringRef getCalleeAttrNameStr() { return "callee"; }
+    static constexpr llvm::StringRef getCalleeAttrNameStr() { return "callee"; }
 
     mlir::FunctionType getFunctionType();
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
-      if ((*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
+      if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
         return {arg_operand_begin(), arg_operand_end()};
       return {arg_operand_begin() + 1, arg_operand_end()};
     }
@@ -2396,9 +2313,9 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
     operand_iterator arg_operand_end() { return operand_end(); }
 
     /// Return the callee of this operation.
-    CallInterfaceCallable getCallableForCallee() {
+    mlir::CallInterfaceCallable getCallableForCallee() {
       if (auto calling =
-          (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
+          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
         return calling;
       return getOperand(0);
     }
@@ -2577,12 +2494,12 @@ def fir_CmpcOp : fir_Op<"cmpc",
       return "predicate";
     }
 
-    arith::CmpFPredicate getPredicate() {
-      return (arith::CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
+    mlir::arith::CmpFPredicate getPredicate() {
+      return (mlir::arith::CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
           getPredicateAttrName()).getInt();
     }
 
-    static arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
+    static mlir::arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
   }];
 }
 
@@ -2642,16 +2559,16 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<TypeAttr>()">,
-    Or<[CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::CharacterType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::ComplexType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntegerType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::LogicalType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RealType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,
+def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
+    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::ComplexType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::IntegerType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::LogicalType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::RealType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,
     "Fortran surface type"> {
-  let storageType = [{ TypeAttr }];
-  let returnType = "Type";
+  let storageType = [{ ::mlir::TypeAttr }];
+  let returnType = "mlir::Type";
   let convertFromStorage = "$_self.getValue().cast<Type>()";
 }
 
@@ -2773,7 +2690,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    Attribute getValueOrNull() { return getInitVal().getValueOr(Attribute()); }
+    mlir::Attribute getValueOrNull() { return getInitVal().getValueOr(mlir::Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.
@@ -2783,11 +2700,11 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Block &getBlock() { return getRegion().front(); }
 
     /// Determine if `linkage` is a supported keyword
-    static mlir::ParseResult verifyValidLinkage(StringRef linkage);
+    static mlir::ParseResult verifyValidLinkage(llvm::StringRef linkage);
 
     bool hasInitializationBody() {
       return ((*this)->getNumRegions() == 1) && !getRegion().empty() &&
-        !isa<fir::FirEndOp>(getBlock().front());
+        !mlir::isa<fir::FirEndOp>(getBlock().front());
     }
 
     mlir::FlatSymbolRefAttr getSymbol() {

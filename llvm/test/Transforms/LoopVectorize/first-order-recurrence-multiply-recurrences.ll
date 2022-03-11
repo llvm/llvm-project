@@ -171,3 +171,188 @@ exit:
 }
 
 declare float @llvm.fmuladd.f32(float, float, float) #1
+
+define void @test_pr54227(i32* noalias %a, i32* noalias %b) {
+; CHECK-LABEL: @test_pr54227(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[AND17:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[AND1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[MUL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[E_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[AND17]], 255
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[E_0]]
+; CHECK-NEXT:    [[AND1]] = and i32 [[E_0]], [[F_0]]
+; CHECK-NEXT:    [[MUL]] = shl nsw i32 [[OR]], 1
+; CHECK-NEXT:    [[ADD]] = or i32 [[AND1]], 1
+; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[MUL]], i32* [[B_GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %and17 = phi i32 [ 0, %entry ], [ %and1, %loop ]
+  %f.0 = phi i32 [ 0, %entry ], [ %mul, %loop ]
+  %e.0 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %and = and i32 %and17, 255
+  %or = or i32 %and, %e.0
+  %and1 = and i32 %e.0, %f.0
+  %mul = shl nsw i32 %or, 1
+  %add = or i32 %and1, 1
+  %a.gep = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 %add, i32* %a.gep, align 4
+  %b.gep = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 %mul, i32* %b.gep, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_pr54233_for_depend_on_each_other(i32* noalias %a, i32* noalias %b) {
+; CHECK-LABEL: @test_pr54233_for_depend_on_each_other(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FOR_2]], 10
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[FOR_2]], [[FOR_1]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[SHL]], 255
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[FOR_1_NEXT]] = xor i32 12, [[FOR_2]]
+; CHECK-NEXT:    [[FOR_2_NEXT]] = load i32, i32* [[B:%.*]], align 4
+; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[AND]], i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %for.1 = phi i32 [ 0, %entry ], [ %for.1.next, %loop ]
+  %for.2 = phi i32 [ 0, %entry ], [ %for.2.next, %loop ]
+  %or = or i32 %for.2, 10
+  %shl = shl i32 %for.2, %for.1
+  %xor = xor i32 %shl, 255
+  %and = and i32 %xor, %or
+  %for.1.next = xor i32 12, %for.2
+  %for.2.next = load i32, i32* %b
+  %a.gep = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 %and, i32* %a.gep, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @pr54218(i8* %dst, i32* noalias %d) {
+; CHECK-LABEL: @pr54218(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[P_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[FOR_1]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_1]], i8 [[P]], i8 0
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[FOR_1_NEXT]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[P_NEXT]] = add i8 [[SEL]], -1
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i8 [[SEL]], i8* [[DST_GEP]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %for.1 = phi i32 [ 0, %entry ], [ %for.1.next, %loop.latch ]
+  %p = phi i8 [ 0, %entry ], [ %p.next, %loop.latch ]
+  %c.1 = icmp eq i32 %for.1, 0
+  %sel = select i1 %c.1, i8 %p, i8 0
+  %exitcond = icmp eq i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop.latch
+
+loop.latch:
+  %for.1.next = load i32, i32* %d, align 4
+  %p.next = add i8 %sel, -1
+  %dst.gep = getelementptr inbounds i8, i8* %dst, i64 %iv
+  store i8 %sel, i8* %dst.gep
+  %iv.next = add nuw i64 %iv, 1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+define void @pr54254_fors_depend_on_each_other(i32* %dst) {
+; CHECK-LABEL: @pr54254_fors_depend_on_each_other(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[D_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[XOR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[REM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[XOR1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[D_0]], -1
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[F_0]], [[NEG]]
+; CHECK-NEXT:    [[XOR]] = xor i32 [[C_0]], 1
+; CHECK-NEXT:    [[XOR1]] = xor i32 [[REM]], 1
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[REM_NEXT]] = add i32 [[REM]], 10
+; CHECK-NEXT:    store i32 [[REM]], i32* [[DST_GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %d.0 = phi i32 [ 0, %entry ], [ %xor, %loop ]
+  %c.0 = phi i32 [ 0, %entry ], [ %rem.next, %loop ]
+  %f.0 = phi i32 [ 0, %entry ], [ %xor1, %loop ]
+  %neg = xor i32 %d.0, -1
+  %rem = srem i32 %f.0, %neg
+  %xor = xor i32 %c.0, 1
+  %xor1 = xor i32 %rem, 1
+  %dst.gep = getelementptr inbounds i32, i32* %dst, i64 %iv
+  %rem.next = add i32 %rem, 10
+  store i32 %rem, i32* %dst.gep
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}

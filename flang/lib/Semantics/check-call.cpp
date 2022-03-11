@@ -93,7 +93,7 @@ static void PadShortCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
           ToInt64(Fold(context, common::Clone(*actualType.LEN())))};
       if (dummyLength && actualLength && *actualLength < *dummyLength) {
         messages.Say(
-            "Actual length '%jd' is less than expected length '%jd'"_en_US,
+            "Actual length '%jd' is less than expected length '%jd'"_warn_en_US,
             *actualLength, *dummyLength);
         auto converted{ConvertToType(dummyType.type(), std::move(actual))};
         CHECK(converted);
@@ -124,7 +124,7 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
     actual = std::move(*converted);
     if (dummyType.type().kind() < actualType.type().kind()) {
       messages.Say(
-          "Actual argument scalar expression of type INTEGER(%d) was converted to smaller dummy argument type INTEGER(%d)"_en_US,
+          "Actual argument scalar expression of type INTEGER(%d) was converted to smaller dummy argument type INTEGER(%d)"_port_en_US,
           actualType.type().kind(), dummyType.type().kind());
     }
     actualType = dummyType;
@@ -309,29 +309,34 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
           dummyName);
     }
-    if (!IsArrayElement(actual) &&
-        !(actualType.type().category() == TypeCategory::Character &&
-            actualType.type().kind() == 1) &&
-        !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-        !dummyIsAssumedRank) {
-      messages.Say(
-          "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
-          dummyName);
-    }
-    if (actualIsPolymorphic) {
-      messages.Say(
-          "Polymorphic scalar may not be associated with a %s array"_err_en_US,
-          dummyName);
-    }
-    if (actualIsPointer) {
-      messages.Say(
-          "Scalar POINTER target may not be associated with a %s array"_err_en_US,
-          dummyName);
-    }
-    if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
-      messages.Say(
-          "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
-          dummyName);
+    bool actualIsArrayElement{IsArrayElement(actual)};
+    bool actualIsCKindCharacter{
+        actualType.type().category() == TypeCategory::Character &&
+        actualType.type().kind() == 1};
+    if (!actualIsCKindCharacter) {
+      if (!actualIsArrayElement &&
+          !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
+          !dummyIsAssumedRank) {
+        messages.Say(
+            "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
+      if (actualIsPolymorphic) {
+        messages.Say(
+            "Polymorphic scalar may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
+      if (actualIsArrayElement && actualLastSymbol &&
+          IsPointer(*actualLastSymbol)) {
+        messages.Say(
+            "Element of pointer array may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
+      if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
+        messages.Say(
+            "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
     }
   }
   if (actualLastObject && actualLastObject->IsCoarray() &&
@@ -451,7 +456,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if (dummy.intent == common::Intent::In && typesCompatible) {
         // extension: allow with warning, rule is only relevant for definables
         messages.Say(
-            "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_en_US);
+            "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
       } else {
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so"_err_en_US);
@@ -461,7 +466,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         if (dummy.intent == common::Intent::In) {
           // extension: allow with warning, rule is only relevant for definables
           messages.Say(
-              "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_en_US);
+              "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_port_en_US);
         } else {
           messages.Say(
               "POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind"_err_en_US);
@@ -577,7 +582,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                 messages.Say(
                     "Actual procedure argument has an implicit interface "
                     "which is not known to be compatible with %s which has an "
-                    "explicit interface"_en_US,
+                    "explicit interface"_warn_en_US,
                     dummyName);
               }
             }
@@ -882,7 +887,7 @@ void CheckArguments(const characteristics::Procedure &proc,
         CheckExplicitInterface(proc, actuals, context, scope, intrinsic)};
     if (treatingExternalAsImplicit && !buffer.empty()) {
       if (auto *msg{messages.Say(
-              "Warning: if the procedure's interface were explicit, this reference would be in error:"_en_US)}) {
+              "If the procedure's interface were explicit, this reference would be in error:"_warn_en_US)}) {
         buffer.AttachTo(*msg);
       }
     }

@@ -226,7 +226,8 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
-      libc.src.__support.CPP.standalone_cpp
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.utility
   )
 
   # add_libc_unittest(

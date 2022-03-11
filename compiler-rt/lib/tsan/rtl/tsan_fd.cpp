@@ -113,12 +113,17 @@ static void init(ThreadState *thr, uptr pc, int fd, FdSync *s,
   }
   d->creation_tid = thr->tid;
   d->creation_stack = CurrentStackId(thr, pc);
+  // This prevents false positives on fd_close_norace3.cpp test.
+  // The mechanics of the false positive are not completely clear,
+  // but it happens only if global reset is enabled (flush_memory_ms=1)
+  // and may be related to lost writes during asynchronous MADV_DONTNEED.
+  SlotLocker locker(thr);
   if (write) {
     // To catch races between fd usage and open.
     MemoryRangeImitateWrite(thr, pc, (uptr)d, 8);
   } else {
     // See the dup-related comment in FdClose.
-    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
+    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead | kAccessSlotLocked);
   }
 }
 
@@ -195,25 +200,33 @@ void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
   if (bogusfd(fd))
     return;
   FdDesc *d = fddesc(thr, pc, fd);
-  if (!MustIgnoreInterceptor(thr)) {
-    if (write) {
-      // To catch races between fd usage and close.
-      MemoryAccess(thr, pc, (uptr)d, 8, kAccessWrite);
-    } else {
-      // This path is used only by dup2/dup3 calls.
-      // We do read instead of write because there is a number of legitimate
-      // cases where write would lead to false positives:
-      // 1. Some software dups a closed pipe in place of a socket before closing
-      //    the socket (to prevent races actually).
-      // 2. Some daemons dup /dev/null in place of stdin/stdout.
-      // On the other hand we have not seen cases when write here catches real
-      // bugs.
-      MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
+  {
+    // Need to lock the slot to make MemoryAccess and MemoryResetRange atomic
+    // with respect to global reset. See the comment in MemoryRangeFreed.
+    SlotLocker locker(thr);
+    if (!MustIgnoreInterceptor(thr)) {
+      if (write) {
+        // To catch races between fd usage and close.
+        MemoryAccess(thr, pc, (uptr)d, 8,
+                     kAccessWrite | kAccessCheckOnly | kAccessSlotLocked);
+      } else {
+        // This path is used only by dup2/dup3 calls.
+        // We do read instead of write because there is a number of legitimate
+        // cases where write would lead to false positives:
+        // 1. Some software dups a closed pipe in place of a socket before
+        // closing
+        //    the socket (to prevent races actually).
+        // 2. Some daemons dup /dev/null in place of stdin/stdout.
+        // On the other hand we have not seen cases when write here catches real
+        // bugs.
+        MemoryAccess(thr, pc, (uptr)d, 8,
+                     kAccessRead | kAccessCheckOnly | kAccessSlotLocked);
+      }
     }
+    // We need to clear it, because if we do not intercept any call out there
+    // that creates fd, we will hit false postives.
+    MemoryResetRange(thr, pc, (uptr)d, 8);
   }
-  // We need to clear it, because if we do not intercept any call out there
-  // that creates fd, we will hit false postives.
-  MemoryResetRange(thr, pc, (uptr)d, 8);
   unref(thr, pc, d->sync);
   d->sync = 0;
   d->creation_tid = kInvalidTid;

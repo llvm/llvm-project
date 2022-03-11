@@ -81,12 +81,12 @@ public:
     }
     if (IsProcedurePointer(symbol)) {
       context_.Say(source_,
-          "Procedure pointer '%s' in a DATA statement is not standard"_en_US,
+          "Procedure pointer '%s' in a DATA statement is not standard"_port_en_US,
           symbol.name());
     }
     if (IsInBlankCommon(symbol)) {
       context_.Say(source_,
-          "Blank COMMON object '%s' in a DATA statement is not standard"_en_US,
+          "Blank COMMON object '%s' in a DATA statement is not standard"_port_en_US,
           symbol.name());
     }
     return true;

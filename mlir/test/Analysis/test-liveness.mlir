@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-liveness -split-input-file 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.func(test-print-liveness)" -split-input-file 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : func_empty
 func @func_empty() {

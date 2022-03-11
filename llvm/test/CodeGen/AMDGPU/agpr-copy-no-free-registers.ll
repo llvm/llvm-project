@@ -8,8 +8,8 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-LABEL: no_free_vgprs_at_agpr_copy:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v33, v0
-; GFX908-NEXT:    v_mov_b32_e32 v34, v1
+; GFX908-NEXT:    v_mov_b32_e32 v33, v1
+; GFX908-NEXT:    v_mov_b32_e32 v34, v0
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def v[0:31] a[0:15]
 ; GFX908-NEXT:    ;;#ASMEND
@@ -62,7 +62,7 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_write_b32 a16, v32
 ; GFX908-NEXT:    s_nop 0
-; GFX908-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v34, a[16:31]
+; GFX908-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v34, v33, a[16:31]
 ; GFX908-NEXT:    s_nop 7
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v32, a0 ; Reload Reuse
@@ -159,8 +159,8 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-LABEL: no_free_vgprs_at_agpr_copy:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v32, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v33, v1
+; GFX90A-NEXT:    v_mov_b32_e32 v33, v0
+; GFX90A-NEXT:    v_mov_b32_e32 v32, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31] a[0:15]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -181,7 +181,7 @@ define void @no_free_vgprs_at_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a17, a1
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a16, a0
 ; GFX90A-NEXT:    s_nop 1
-; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v32, v33, a[16:31]
+; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v32, a[16:31]
 ; GFX90A-NEXT:    s_nop 7
 ; GFX90A-NEXT:    s_nop 2
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[0:3], s32 ; 4-byte Folded Spill
@@ -533,21 +533,19 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_lshl_b64 s[10:11], s[2:3], 5
 ; GFX908-NEXT:    s_or_b32 s10, s10, 28
 ; GFX908-NEXT:    v_rcp_iflag_f32_e32 v1, v1
-; GFX908-NEXT:    v_mov_b32_e32 v13, s10
+; GFX908-NEXT:    v_mov_b32_e32 v11, s10
 ; GFX908-NEXT:    s_lshr_b32 s12, s7, 16
 ; GFX908-NEXT:    v_mov_b32_e32 v32, s11
 ; GFX908-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX908-NEXT:    v_cvt_u32_f32_e32 v2, v1
-; GFX908-NEXT:    v_cvt_f32_f16_e32 v28, s7
-; GFX908-NEXT:    v_cvt_f32_f16_e32 v29, s12
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, v13
+; GFX908-NEXT:    v_cvt_f32_f16_e32 v26, s7
+; GFX908-NEXT:    v_cvt_f32_f16_e32 v27, s12
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, v11
 ; GFX908-NEXT:    v_mul_lo_u32 v1, s4, v2
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v32
-; GFX908-NEXT:    v_mov_b32_e32 v11, s3
 ; GFX908-NEXT:    s_lshl_b64 s[4:5], s[8:9], 5
 ; GFX908-NEXT:    v_mul_hi_u32 v3, v2, v1
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 0
-; GFX908-NEXT:    v_mov_b32_e32 v10, s2
 ; GFX908-NEXT:    v_add_u32_e32 v2, v2, v3
 ; GFX908-NEXT:    v_mul_hi_u32 v4, s0, v2
 ; GFX908-NEXT:    v_mul_lo_u32 v5, v4, s1
@@ -560,24 +558,26 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_add_u32_e32 v7, 1, v4
 ; GFX908-NEXT:    v_cmp_le_u32_e32 vcc, s1, v5
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_and_b32_e32 v30, 0xffff, v0
+; GFX908-NEXT:    v_and_b32_e32 v28, 0xffff, v0
 ; GFX908-NEXT:    v_cndmask_b32_e32 v0, v4, v7, vcc
-; GFX908-NEXT:    v_mul_lo_u32 v8, s9, v30
-; GFX908-NEXT:    v_mul_hi_u32 v9, s8, v30
+; GFX908-NEXT:    v_mul_lo_u32 v8, s9, v28
+; GFX908-NEXT:    v_mul_hi_u32 v9, s8, v28
 ; GFX908-NEXT:    v_lshlrev_b64 v[2:3], 5, v[0:1]
-; GFX908-NEXT:    v_mul_lo_u32 v6, s8, v30
+; GFX908-NEXT:    v_mul_lo_u32 v6, s8, v28
 ; GFX908-NEXT:    v_add_u32_e32 v7, v9, v8
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, v2
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, v3
 ; GFX908-NEXT:    v_lshlrev_b64 v[6:7], 5, v[6:7]
+; GFX908-NEXT:    v_mov_b32_e32 v9, s3
+; GFX908-NEXT:    v_mov_b32_e32 v8, s2
 ; GFX908-NEXT:    s_branch .LBB3_2
 ; GFX908-NEXT:  .LBB3_1: ; %bb12
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
-; GFX908-NEXT:    v_add_co_u32_e32 v10, vcc, v10, v0
+; GFX908-NEXT:    v_add_co_u32_e32 v8, vcc, v8, v0
 ; GFX908-NEXT:    s_nop 0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v5, a3
-; GFX908-NEXT:    v_addc_co_u32_e32 v11, vcc, 0, v11, vcc
+; GFX908-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v9, vcc
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v4, a2
 ; GFX908-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
@@ -591,79 +591,79 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_cbranch_scc0 .LBB3_1
 ; GFX908-NEXT:  ; %bb.3: ; %bb14
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
-; GFX908-NEXT:    v_mov_b32_e32 v2, 0
-; GFX908-NEXT:    v_mov_b32_e32 v3, 0
-; GFX908-NEXT:    global_load_dwordx2 v[12:13], v[2:3], off
+; GFX908-NEXT:    v_mov_b32_e32 v10, 0
+; GFX908-NEXT:    v_mov_b32_e32 v11, 0
+; GFX908-NEXT:    global_load_dwordx2 v[10:11], v[10:11], off
 ; GFX908-NEXT:    s_mov_b32 s7, s6
-; GFX908-NEXT:    v_cmp_gt_i64_e64 s[0:1], 0, v[10:11]
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a1
+; GFX908-NEXT:    v_cmp_gt_i64_e64 s[0:1], 0, v[8:9]
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a1
+; GFX908-NEXT:    v_mov_b32_e32 v15, s7
 ; GFX908-NEXT:    v_mov_b32_e32 v17, s7
-; GFX908-NEXT:    v_mov_b32_e32 v19, s7
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a0
+; GFX908-NEXT:    v_mov_b32_e32 v14, s6
 ; GFX908-NEXT:    v_mov_b32_e32 v16, s6
-; GFX908-NEXT:    v_mov_b32_e32 v18, s6
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_add_co_u32_e32 v22, vcc, 1, v12
-; GFX908-NEXT:    v_addc_co_u32_e32 v20, vcc, 0, v13, vcc
-; GFX908-NEXT:    v_mul_lo_u32 v23, s4, v20
-; GFX908-NEXT:    v_mul_hi_u32 v24, s4, v22
-; GFX908-NEXT:    v_mul_lo_u32 v25, s5, v22
-; GFX908-NEXT:    v_mul_lo_u32 v31, s4, v22
+; GFX908-NEXT:    v_add_co_u32_e32 v20, vcc, 1, v10
+; GFX908-NEXT:    v_addc_co_u32_e32 v18, vcc, 0, v11, vcc
+; GFX908-NEXT:    v_mul_lo_u32 v21, s4, v18
+; GFX908-NEXT:    v_mul_hi_u32 v22, s4, v20
+; GFX908-NEXT:    v_mul_lo_u32 v23, s5, v20
+; GFX908-NEXT:    v_mul_lo_u32 v29, s4, v20
+; GFX908-NEXT:    v_mov_b32_e32 v19, s7
+; GFX908-NEXT:    v_add_u32_e32 v20, v22, v21
+; GFX908-NEXT:    v_add_u32_e32 v30, v20, v23
 ; GFX908-NEXT:    v_mov_b32_e32 v21, s7
-; GFX908-NEXT:    v_add_u32_e32 v22, v24, v23
-; GFX908-NEXT:    v_add_u32_e32 v33, v22, v25
-; GFX908-NEXT:    v_mov_b32_e32 v23, s7
+; GFX908-NEXT:    v_mov_b32_e32 v18, s6
 ; GFX908-NEXT:    v_mov_b32_e32 v20, s6
-; GFX908-NEXT:    v_mov_b32_e32 v22, s6
 ; GFX908-NEXT:    s_branch .LBB3_5
 ; GFX908-NEXT:  .LBB3_4: ; %bb58
 ; GFX908-NEXT:    ; in Loop: Header=BB3_5 Depth=2
-; GFX908-NEXT:    v_add_co_u32_e32 v12, vcc, v12, v30
-; GFX908-NEXT:    v_addc_co_u32_e32 v13, vcc, 0, v13, vcc
-; GFX908-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[12:13]
-; GFX908-NEXT:    v_add_co_u32_e64 v14, s[2:3], v14, v6
-; GFX908-NEXT:    v_addc_co_u32_e64 v15, s[2:3], v15, v7, s[2:3]
+; GFX908-NEXT:    v_add_co_u32_e32 v10, vcc, v10, v28
+; GFX908-NEXT:    v_addc_co_u32_e32 v11, vcc, 0, v11, vcc
+; GFX908-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[10:11]
+; GFX908-NEXT:    v_add_co_u32_e64 v12, s[2:3], v12, v6
+; GFX908-NEXT:    v_addc_co_u32_e64 v13, s[2:3], v13, v7, s[2:3]
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_1
 ; GFX908-NEXT:  .LBB3_5: ; %bb16
 ; GFX908-NEXT:    ; Parent Loop BB3_2 Depth=1
 ; GFX908-NEXT:    ; => This Inner Loop Header: Depth=2
-; GFX908-NEXT:    v_add_co_u32_e32 v24, vcc, v14, v31
-; GFX908-NEXT:    v_addc_co_u32_e32 v25, vcc, v15, v33, vcc
-; GFX908-NEXT:    global_load_dword v35, v[24:25], off offset:-12 glc
+; GFX908-NEXT:    v_add_co_u32_e32 v22, vcc, v12, v29
+; GFX908-NEXT:    v_addc_co_u32_e32 v23, vcc, v13, v30, vcc
+; GFX908-NEXT:    global_load_dword v33, v[22:23], off offset:-12 glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_load_dword v34, v[24:25], off offset:-8 glc
+; GFX908-NEXT:    global_load_dword v31, v[22:23], off offset:-8 glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_load_dword v26, v[24:25], off offset:-4 glc
+; GFX908-NEXT:    global_load_dword v24, v[22:23], off offset:-4 glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_load_dword v24, v[24:25], off glc
+; GFX908-NEXT:    global_load_dword v22, v[22:23], off glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    ds_read_b64 v[24:25], v1
-; GFX908-NEXT:    ds_read_b64 v[26:27], v0
+; GFX908-NEXT:    ds_read_b64 v[22:23], v1
+; GFX908-NEXT:    ds_read_b64 v[24:25], v0
 ; GFX908-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_cbranch_vccnz .LBB3_4
 ; GFX908-NEXT:  ; %bb.6: ; %bb51
 ; GFX908-NEXT:    ; in Loop: Header=BB3_5 Depth=2
-; GFX908-NEXT:    v_cvt_f32_f16_sdwa v8, v35 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX908-NEXT:    v_cvt_f32_f16_e32 v9, v35
-; GFX908-NEXT:    v_cvt_f32_f16_sdwa v35, v34 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX908-NEXT:    v_cvt_f32_f16_e32 v34, v34
-; GFX908-NEXT:    v_add_f32_e32 v4, v28, v24
-; GFX908-NEXT:    v_add_f32_e32 v5, v29, v25
-; GFX908-NEXT:    v_add_f32_e32 v2, 0, v24
-; GFX908-NEXT:    v_add_f32_e32 v3, 0, v25
-; GFX908-NEXT:    v_add_f32_e32 v8, v8, v27
-; GFX908-NEXT:    v_add_f32_e32 v9, v9, v26
-; GFX908-NEXT:    v_add_f32_e32 v25, v35, v25
-; GFX908-NEXT:    v_add_f32_e32 v24, v34, v24
-; GFX908-NEXT:    v_add_f32_e32 v17, v17, v5
-; GFX908-NEXT:    v_add_f32_e32 v16, v16, v4
-; GFX908-NEXT:    v_add_f32_e32 v19, v19, v3
-; GFX908-NEXT:    v_add_f32_e32 v18, v18, v2
-; GFX908-NEXT:    v_add_f32_e32 v20, v20, v9
-; GFX908-NEXT:    v_add_f32_e32 v21, v21, v8
-; GFX908-NEXT:    v_add_f32_e32 v22, v22, v24
-; GFX908-NEXT:    v_add_f32_e32 v23, v23, v25
+; GFX908-NEXT:    v_cvt_f32_f16_sdwa v34, v33 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX908-NEXT:    v_cvt_f32_f16_e32 v33, v33
+; GFX908-NEXT:    v_cvt_f32_f16_sdwa v35, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX908-NEXT:    v_cvt_f32_f16_e32 v31, v31
+; GFX908-NEXT:    v_add_f32_e32 v4, v26, v22
+; GFX908-NEXT:    v_add_f32_e32 v5, v27, v23
+; GFX908-NEXT:    v_add_f32_e32 v2, 0, v22
+; GFX908-NEXT:    v_add_f32_e32 v3, 0, v23
+; GFX908-NEXT:    v_add_f32_e32 v25, v34, v25
+; GFX908-NEXT:    v_add_f32_e32 v24, v33, v24
+; GFX908-NEXT:    v_add_f32_e32 v23, v35, v23
+; GFX908-NEXT:    v_add_f32_e32 v22, v31, v22
+; GFX908-NEXT:    v_add_f32_e32 v15, v15, v5
+; GFX908-NEXT:    v_add_f32_e32 v14, v14, v4
+; GFX908-NEXT:    v_add_f32_e32 v17, v17, v3
+; GFX908-NEXT:    v_add_f32_e32 v16, v16, v2
+; GFX908-NEXT:    v_add_f32_e32 v18, v18, v24
+; GFX908-NEXT:    v_add_f32_e32 v19, v19, v25
+; GFX908-NEXT:    v_add_f32_e32 v20, v20, v22
+; GFX908-NEXT:    v_add_f32_e32 v21, v21, v23
 ; GFX908-NEXT:    s_branch .LBB3_4
 ;
 ; GFX90A-LABEL: introduced_copy_to_sgpr:

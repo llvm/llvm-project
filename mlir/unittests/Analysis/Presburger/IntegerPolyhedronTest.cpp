@@ -81,10 +81,12 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
       EXPECT_TRUE(poly.containsPoint(*maybeSample));
 
       ASSERT_FALSE(maybeLexMin.isEmpty());
-      if (maybeLexMin.isUnbounded())
+      if (maybeLexMin.isUnbounded()) {
         EXPECT_TRUE(Simplex(poly).isUnbounded());
-      if (maybeLexMin.isBounded())
+      }
+      if (maybeLexMin.isBounded()) {
         EXPECT_TRUE(poly.containsPoint(*maybeLexMin));
+      }
     }
     break;
   case TestFunction::Empty:

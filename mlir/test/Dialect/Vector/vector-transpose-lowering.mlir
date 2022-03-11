@@ -8,14 +8,14 @@
 // ELTWISE:      %[[Z:.*]] = arith.constant dense<0.000000e+00> : vector<3x2xf32>
 // ELTWISE:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : vector<2x3xf32>
 // ELTWISE:      %[[T1:.*]] = vector.insert %[[T0]], %[[Z]] [0, 0] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T2:.*]] = vector.extract %[[A]][1, 0] : vector<2x3xf32>
-// ELTWISE:      %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [0, 1] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T4:.*]] = vector.extract %[[A]][0, 1] : vector<2x3xf32>
-// ELTWISE:      %[[T5:.*]] = vector.insert %[[T4]], %[[T3]] [1, 0] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T6:.*]] = vector.extract %[[A]][1, 1] : vector<2x3xf32>
-// ELTWISE:      %[[T7:.*]] = vector.insert %[[T6]], %[[T5]] [1, 1] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T8:.*]] = vector.extract %[[A]][0, 2] : vector<2x3xf32>
-// ELTWISE:      %[[T9:.*]] = vector.insert %[[T8]], %[[T7]] [2, 0] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T2:.*]] = vector.extract %[[A]][0, 1] : vector<2x3xf32>
+// ELTWISE:      %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [1, 0] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T4:.*]] = vector.extract %[[A]][0, 2] : vector<2x3xf32>
+// ELTWISE:      %[[T5:.*]] = vector.insert %[[T4]], %[[T3]] [2, 0] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T6:.*]] = vector.extract %[[A]][1, 0] : vector<2x3xf32>
+// ELTWISE:      %[[T7:.*]] = vector.insert %[[T6]], %[[T5]] [0, 1] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T8:.*]] = vector.extract %[[A]][1, 1] : vector<2x3xf32>
+// ELTWISE:      %[[T9:.*]] = vector.insert %[[T8]], %[[T7]] [1, 1] : f32 into vector<3x2xf32>
 // ELTWISE:      %[[T10:.*]] = vector.extract %[[A]][1, 2] : vector<2x3xf32>
 // ELTWISE:      %[[T11:.*]] = vector.insert %[[T10]], %[[T9]] [2, 1] : f32 into vector<3x2xf32>
 // ELTWISE:      return %[[T11]] : vector<3x2xf32>
@@ -577,8 +577,25 @@ func @transpose021_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
 
 // -----
 
+// ELTWISE-LABEL: func @transpose102_1x8x8xf32
 // AVX2-LABEL: func @transpose102_1x8x8
 func @transpose102_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
+  //      ELTWISE: vector.extract {{.*}}[0, 0] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 1] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [1, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 2] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [2, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 3] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [3, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 4] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [4, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 5] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [5, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 6] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [6, 0] : vector<8xf32> into vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[0, 7] : vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [7, 0] : vector<8xf32> into vector<8x1x8xf32>
   %0 = vector.transpose %arg0, [1, 0, 2] : vector<1x8x8xf32> to vector<8x1x8xf32>
   return %0 : vector<8x1x8xf32>
 }
@@ -587,10 +604,41 @@ func @transpose102_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
 
 // -----
 
+// ELTWISE-LABEL: func @transpose102_8x1x8xf32
 // AVX2-LABEL: func @transpose102_8x1x8
 func @transpose102_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
+  //      ELTWISE: vector.extract {{.*}}[0, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 0] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[1, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 1] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[2, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 2] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[3, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 3] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[4, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 4] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[5, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 5] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[6, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 6] : vector<8xf32> into vector<1x8x8xf32>
+  // ELTWISE-NEXT: vector.extract {{.*}}[7, 0] : vector<8x1x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 7] : vector<8xf32> into vector<1x8x8xf32>
   %0 = vector.transpose %arg0, [1, 0, 2] : vector<8x1x8xf32> to vector<1x8x8xf32>
   return %0 : vector<1x8x8xf32>
+}
+
+// AVX2-NOT: vector.shuffle
+
+// -----
+
+// ELTWISE-LABEL:   func @transpose1023_1x1x8x8xf32(
+// AVX2-LABEL: func @transpose1023_1x1x8x8
+func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8x8xf32> {
+  // Note the single 2-D extract/insert pair since 2 and 3 are not transposed!
+  //      ELTWISE: vector.extract {{.*}}[0, 0] : vector<1x1x8x8xf32>
+  // ELTWISE-NEXT: vector.insert {{.*}} [0, 0] : vector<8x8xf32> into vector<1x1x8x8xf32>
+  %0 = vector.transpose %arg0, [1, 0, 2, 3] : vector<1x1x8x8xf32> to vector<1x1x8x8xf32>
+  return %0 : vector<1x1x8x8xf32>
 }
 
 // AVX2-NOT: vector.shuffle

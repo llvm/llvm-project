@@ -17,6 +17,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+using namespace mlir;
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -67,12 +69,9 @@ public:
   matchAndRewrite(mlir::FuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
-    auto result = fir::NameUniquer::deconstruct(op.sym_name());
-    if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
-      auto newName = mangleExternalName(result);
-      op.sym_nameAttr(rewriter.getStringAttr(newName));
-      SymbolTable::setSymbolName(op, newName);
-    }
+    auto result = fir::NameUniquer::deconstruct(op.getSymName());
+    if (fir::NameUniquer::isExternalFacingUniquedName(result))
+      op.setSymNameAttr(rewriter.getStringAttr(mangleExternalName(result)));
     rewriter.finalizeRootUpdate(op);
     return success();
   }
@@ -165,7 +164,7 @@ void ExternalNameConversionPass::runOnOperation() {
   });
 
   target.addDynamicallyLegalOp<mlir::FuncOp>([](mlir::FuncOp op) {
-    return !fir::NameUniquer::needExternalNameMangling(op.sym_name());
+    return !fir::NameUniquer::needExternalNameMangling(op.getSymName());
   });
 
   target.addDynamicallyLegalOp<fir::GlobalOp>([](fir::GlobalOp op) {

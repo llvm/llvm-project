@@ -110,6 +110,7 @@ C2x Feature Support
 -------------------
 
 - Implemented `WG14 N2674 The noreturn attribute <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2764.pdf>`_.
+- Implemented `WG14 N2935 Make false and true first-class language features <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2935.pdf>`_.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -118,6 +119,8 @@ C++ Language Changes in Clang
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Diagnose consteval and constexpr issues that happen at namespace scope. This
+  partially addresses `Issue 51593 <https://github.com/llvm/llvm-project/issues/51593>`_.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

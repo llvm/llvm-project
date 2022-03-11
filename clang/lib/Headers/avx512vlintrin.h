@@ -6525,79 +6525,65 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, unsigned int __imm)
                                         (__v4di)_mm256_setzero_si256());
 }
 
-#define _mm_ternarylogic_epi32(A, B, C, imm) \
-  ((__m128i)__builtin_ia32_pternlogd128_mask((__v4si)(__m128i)(A), \
-                                             (__v4si)(__m128i)(B), \
-                                             (__v4si)(__m128i)(C), (int)(imm), \
-                                             (__mmask8)-1))
+#define _mm_ternarylogic_epi32(A, B, C, imm)                                   \
+  ((__m128i)__builtin_ia32_pternlogd128_mask(                                  \
+      (__v4si)(__m128i)(A), (__v4si)(__m128i)(B), (__v4si)(__m128i)(C),        \
+      (unsigned char)(imm), (__mmask8)-1))
 
-#define _mm_mask_ternarylogic_epi32(A, U, B, C, imm) \
-  ((__m128i)__builtin_ia32_pternlogd128_mask((__v4si)(__m128i)(A), \
-                                             (__v4si)(__m128i)(B), \
-                                             (__v4si)(__m128i)(C), (int)(imm), \
-                                             (__mmask8)(U)))
+#define _mm_mask_ternarylogic_epi32(A, U, B, C, imm)                           \
+  ((__m128i)__builtin_ia32_pternlogd128_mask(                                  \
+      (__v4si)(__m128i)(A), (__v4si)(__m128i)(B), (__v4si)(__m128i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm_maskz_ternarylogic_epi32(U, A, B, C, imm) \
-  ((__m128i)__builtin_ia32_pternlogd128_maskz((__v4si)(__m128i)(A), \
-                                              (__v4si)(__m128i)(B), \
-                                              (__v4si)(__m128i)(C), (int)(imm), \
-                                              (__mmask8)(U)))
+#define _mm_maskz_ternarylogic_epi32(U, A, B, C, imm)                          \
+  ((__m128i)__builtin_ia32_pternlogd128_maskz(                                 \
+      (__v4si)(__m128i)(A), (__v4si)(__m128i)(B), (__v4si)(__m128i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm256_ternarylogic_epi32(A, B, C, imm) \
-  ((__m256i)__builtin_ia32_pternlogd256_mask((__v8si)(__m256i)(A), \
-                                             (__v8si)(__m256i)(B), \
-                                             (__v8si)(__m256i)(C), (int)(imm), \
-                                             (__mmask8)-1))
+#define _mm256_ternarylogic_epi32(A, B, C, imm)                                \
+  ((__m256i)__builtin_ia32_pternlogd256_mask(                                  \
+      (__v8si)(__m256i)(A), (__v8si)(__m256i)(B), (__v8si)(__m256i)(C),        \
+      (unsigned char)(imm), (__mmask8)-1))
 
-#define _mm256_mask_ternarylogic_epi32(A, U, B, C, imm) \
-  ((__m256i)__builtin_ia32_pternlogd256_mask((__v8si)(__m256i)(A), \
-                                             (__v8si)(__m256i)(B), \
-                                             (__v8si)(__m256i)(C), (int)(imm), \
-                                             (__mmask8)(U)))
+#define _mm256_mask_ternarylogic_epi32(A, U, B, C, imm)                        \
+  ((__m256i)__builtin_ia32_pternlogd256_mask(                                  \
+      (__v8si)(__m256i)(A), (__v8si)(__m256i)(B), (__v8si)(__m256i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm256_maskz_ternarylogic_epi32(U, A, B, C, imm) \
-  ((__m256i)__builtin_ia32_pternlogd256_maskz((__v8si)(__m256i)(A), \
-                                              (__v8si)(__m256i)(B), \
-                                              (__v8si)(__m256i)(C), (int)(imm), \
-                                              (__mmask8)(U)))
+#define _mm256_maskz_ternarylogic_epi32(U, A, B, C, imm)                       \
+  ((__m256i)__builtin_ia32_pternlogd256_maskz(                                 \
+      (__v8si)(__m256i)(A), (__v8si)(__m256i)(B), (__v8si)(__m256i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm_ternarylogic_epi64(A, B, C, imm) \
-  ((__m128i)__builtin_ia32_pternlogq128_mask((__v2di)(__m128i)(A), \
-                                             (__v2di)(__m128i)(B), \
-                                             (__v2di)(__m128i)(C), (int)(imm), \
-                                             (__mmask8)-1))
+#define _mm_ternarylogic_epi64(A, B, C, imm)                                   \
+  ((__m128i)__builtin_ia32_pternlogq128_mask(                                  \
+      (__v2di)(__m128i)(A), (__v2di)(__m128i)(B), (__v2di)(__m128i)(C),        \
+      (unsigned char)(imm), (__mmask8)-1))
 
-#define _mm_mask_ternarylogic_epi64(A, U, B, C, imm) \
-  ((__m128i)__builtin_ia32_pternlogq128_mask((__v2di)(__m128i)(A), \
-                                             (__v2di)(__m128i)(B), \
-                                             (__v2di)(__m128i)(C), (int)(imm), \
-                                             (__mmask8)(U)))
+#define _mm_mask_ternarylogic_epi64(A, U, B, C, imm)                           \
+  ((__m128i)__builtin_ia32_pternlogq128_mask(                                  \
+      (__v2di)(__m128i)(A), (__v2di)(__m128i)(B), (__v2di)(__m128i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm_maskz_ternarylogic_epi64(U, A, B, C, imm) \
-  ((__m128i)__builtin_ia32_pternlogq128_maskz((__v2di)(__m128i)(A), \
-                                              (__v2di)(__m128i)(B), \
-                                              (__v2di)(__m128i)(C), (int)(imm), \
-                                              (__mmask8)(U)))
+#define _mm_maskz_ternarylogic_epi64(U, A, B, C, imm)                          \
+  ((__m128i)__builtin_ia32_pternlogq128_maskz(                                 \
+      (__v2di)(__m128i)(A), (__v2di)(__m128i)(B), (__v2di)(__m128i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm256_ternarylogic_epi64(A, B, C, imm) \
-  ((__m256i)__builtin_ia32_pternlogq256_mask((__v4di)(__m256i)(A), \
-                                             (__v4di)(__m256i)(B), \
-                                             (__v4di)(__m256i)(C), (int)(imm), \
-                                             (__mmask8)-1))
+#define _mm256_ternarylogic_epi64(A, B, C, imm)                                \
+  ((__m256i)__builtin_ia32_pternlogq256_mask(                                  \
+      (__v4di)(__m256i)(A), (__v4di)(__m256i)(B), (__v4di)(__m256i)(C),        \
+      (unsigned char)(imm), (__mmask8)-1))
 
-#define _mm256_mask_ternarylogic_epi64(A, U, B, C, imm) \
-  ((__m256i)__builtin_ia32_pternlogq256_mask((__v4di)(__m256i)(A), \
-                                             (__v4di)(__m256i)(B), \
-                                             (__v4di)(__m256i)(C), (int)(imm), \
-                                             (__mmask8)(U)))
+#define _mm256_mask_ternarylogic_epi64(A, U, B, C, imm)                        \
+  ((__m256i)__builtin_ia32_pternlogq256_mask(                                  \
+      (__v4di)(__m256i)(A), (__v4di)(__m256i)(B), (__v4di)(__m256i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
-#define _mm256_maskz_ternarylogic_epi64(U, A, B, C, imm) \
-  ((__m256i)__builtin_ia32_pternlogq256_maskz((__v4di)(__m256i)(A), \
-                                              (__v4di)(__m256i)(B), \
-                                              (__v4di)(__m256i)(C), (int)(imm), \
-                                              (__mmask8)(U)))
-
-
+#define _mm256_maskz_ternarylogic_epi64(U, A, B, C, imm)                       \
+  ((__m256i)__builtin_ia32_pternlogq256_maskz(                                 \
+      (__v4di)(__m256i)(A), (__v4di)(__m256i)(B), (__v4di)(__m256i)(C),        \
+      (unsigned char)(imm), (__mmask8)(U)))
 
 #define _mm256_shuffle_f32x4(A, B, imm) \
   ((__m256)__builtin_ia32_shuf_f32x4_256((__v8sf)(__m256)(A), \

@@ -252,13 +252,17 @@ InputFile::InputFile(Kind kind, const InterfaceFile &interface)
 // Note that "record" is a term I came up with. In contrast, "literal" is a term
 // used by the Mach-O format.
 static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
-  if (name == section_names::cfString) {
-    if (config->icfLevel != ICFLevel::none && segname == segment_names::data)
-      return target->wordSize == 8 ? 32 : 16;
-  } else if (name == section_names::compactUnwind) {
-    if (segname == segment_names::ld)
-      return target->wordSize == 8 ? 32 : 20;
+  if (name == section_names::compactUnwind) {
+      if (segname == segment_names::ld)
+        return target->wordSize == 8 ? 32 : 20;
   }
+  if (config->icfLevel == ICFLevel::none)
+    return {};
+
+  if (name == section_names::cfString && segname == segment_names::data)
+    return target->wordSize == 8 ? 32 : 16;
+  if (name == section_names::objcClassRefs && segname == segment_names::data)
+    return target->wordSize;
   return {};
 }
 

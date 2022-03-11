@@ -42,6 +42,10 @@ cl::opt<bool> SampleProfileUseProfi(
     "sample-profile-use-profi", cl::init(false), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Use profi to infer block and edge counts."));
 
+cl::opt<bool> SampleProfileInferEntryCount(
+    "sample-profile-infer-entry-count", cl::init(true), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Use profi to infer function entry count."));
+
 namespace sampleprofutil {
 
 /// Return true if the given callsite is hot wrt to hot cutoff threshold.

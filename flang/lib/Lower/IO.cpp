@@ -31,6 +31,8 @@
 
 #define DEBUG_TYPE "flang-lower-io"
 
+using namespace mlir;
+
 // Define additional runtime type models specific to IO.
 namespace fir::runtime {
 template <>

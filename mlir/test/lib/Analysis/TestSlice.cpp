@@ -16,7 +16,8 @@ static const StringLiteral kOrderMarker = "__test_sort_original_idx__";
 namespace {
 
 struct TestTopologicalSortPass
-    : public PassWrapper<TestTopologicalSortPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestTopologicalSortPass,
+                         InterfacePass<SymbolOpInterface>> {
   StringRef getArgument() const final { return "test-print-topological-sort"; }
   StringRef getDescription() const final {
     return "Print operations in topological order";

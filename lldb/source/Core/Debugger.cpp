@@ -378,10 +378,36 @@ bool Debugger::SetUseColor(bool b) {
   return ret;
 }
 
+bool Debugger::GetShowProgress() const {
+  const uint32_t idx = ePropertyShowProgress;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
+llvm::StringRef Debugger::GetShowProgressAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowProgressAnsiPrefix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
+llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowProgressAnsiSuffix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
 bool Debugger::GetUseAutosuggestion() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
+llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowAutosuggestionAnsiPrefix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
+llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowAutosuggestionAnsiSuffix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
 }
 
 bool Debugger::GetUseSourceCache() const {
@@ -1605,6 +1631,9 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousOutputData |
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
+  listener_sp->StartListeningForEvents(&m_broadcaster,
+                                       Debugger::eBroadcastBitProgress);
+
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
   m_sync_broadcaster.BroadcastEvent(eBroadcastBitEventThreadIsListening);
@@ -1654,6 +1683,9 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
                 }
               }
             }
+          } else if (broadcaster == &m_broadcaster) {
+            if (event_type & Debugger::eBroadcastBitProgress)
+              HandleProgressEvent(event_sp);
           }
         }
 
@@ -1717,6 +1749,73 @@ lldb::thread_result_t Debugger::IOHandlerThread() {
   RunIOHandlers();
   StopEventHandlerThread();
   return {};
+}
+
+void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
+  auto *data =
+      Debugger::ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  if (!data)
+    return;
+
+  // Do some bookkeeping for the current event, regardless of whether we're
+  // going to show the progress.
+  const uint64_t id = data->GetID();
+  if (m_current_event_id) {
+    if (id != *m_current_event_id)
+      return;
+    if (data->GetCompleted())
+      m_current_event_id.reset();
+  } else {
+    m_current_event_id = id;
+  }
+
+  // Decide whether we actually are going to show the progress. This decision
+  // can change between iterations so check it inside the loop.
+  if (!GetShowProgress())
+    return;
+
+  // Determine whether the current output file is an interactive terminal with
+  // color support. We assume that if we support ANSI escape codes we support
+  // vt100 escape codes.
+  File &output = GetOutputFile();
+  if (!output.GetIsInteractive() || !output.GetIsTerminalWithColors())
+    return;
+
+  // Print over previous line, if any.
+  output.Printf("\r");
+
+  if (data->GetCompleted()) {
+    // Clear the current line.
+    output.Printf("\x1B[2K");
+    output.Flush();
+    return;
+  }
+
+  const bool use_color = GetUseColor();
+  llvm::StringRef ansi_prefix = GetShowProgressAnsiPrefix();
+  if (!ansi_prefix.empty())
+    output.Printf(
+        "%s", ansi::FormatAnsiTerminalCodes(ansi_prefix, use_color).c_str());
+
+  // Print the progress message.
+  std::string message = data->GetMessage();
+  if (data->GetTotal() != UINT64_MAX) {
+    output.Printf("[%" PRIu64 "/%" PRIu64 "] %s...", data->GetCompleted(), data->GetTotal(),
+                  message.c_str());
+  } else {
+    output.Printf("%s...", message.c_str());
+  }
+
+  llvm::StringRef ansi_suffix = GetShowProgressAnsiSuffix();
+  if (!ansi_suffix.empty())
+    output.Printf(
+        "%s", ansi::FormatAnsiTerminalCodes(ansi_suffix, use_color).c_str());
+
+  // Clear until the end of the line.
+  output.Printf("\x1B[K\r");
+
+  // Flush the output.
+  output.Flush();
 }
 
 bool Debugger::HasIOHandlerThread() { return m_io_handler_thread.IsJoinable(); }

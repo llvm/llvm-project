@@ -44,6 +44,8 @@ namespace llvm {
       GLOBAL_BASE_REG, // Global base reg for PIC.
       FLUSHW,      // FLUSH register windows to stack.
 
+      TAIL_CALL,   // Tail call
+
       TLS_ADD,     // For Thread Local Storage (TLS).
       TLS_LD,
       TLS_CALL
@@ -181,6 +183,10 @@ namespace llvm {
                                    SelectionDAG &DAG) const;
 
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+    bool IsEligibleForTailCallOptimization(CCState &CCInfo,
+                                           CallLoweringInfo &CLI,
+                                           MachineFunction &MF) const;
 
     bool ShouldShrinkFPConstant(EVT VT) const override {
       // Do not shrink FP constpool if VT == MVT::f128.

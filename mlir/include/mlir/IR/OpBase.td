@@ -876,9 +876,10 @@ class MixedContainerType<Type etype, Pred containerPred, code elementTypesCall,
         And<[
             containerPred,
             Concat<
-                "::llvm::all_of(" # elementTypesCall # ", [](Type t) { return ",
+                "::llvm::all_of(" # elementTypesCall # ", [](Type t) { "
+                "return t && (",
                 SubstLeaves<"$_self", "t", etype.predicate>,
-                "; })"
+                "); })"
             >
         ]>,
         descr # " with any combination of " # etype.summary # " values"> {
@@ -1264,6 +1265,11 @@ class TypeAttrBase<string retType, string summary> :
 }
 
 def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
+  let constBuilderCall = "::mlir::TypeAttr::get($0)";
+}
+
+class TypeAttrOf<Type ty>
+   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.description> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
 
@@ -1671,9 +1677,9 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
       CPred<"$_self.isa<::mlir::ArrayAttr>()">,
       // Guarantee all elements satisfy the constraints from `element`
       Concat<"::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), "
-                            "[&](::mlir::Attribute attr) { return ",
+                            "[&](::mlir::Attribute attr) { return attr && (",
                                SubstLeaves<"$_self", "attr", element.predicate>,
-                            "; })">]>,
+                            "); })">]>,
     summary> {
 
   Attr elementAttr = element;
@@ -2067,9 +2073,11 @@ def ResultsBroadcastableShape :
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
 // op op X == op X (unary) / X op X == X (binary)
-def Idempotent  : NativeOpTrait<"IsIdempotent">;
+// FIXME: Idempotent should depend on SameOperandsAndResultType
+def Idempotent : NativeOpTrait<"IsIdempotent">;
 // op op X == X
-def Involution  : NativeOpTrait<"IsInvolution">;
+// FIXME: Involution should depend on SameOperandsAndResultType
+def Involution : NativeOpTrait<"IsInvolution">;
 // Op behaves like a constant.
 def ConstantLike : NativeOpTrait<"ConstantLike">;
 // Op is isolated from above.
@@ -2097,11 +2105,11 @@ def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
 // Op is elementwise on tensor/vector operands and results.
 def Elementwise : NativeOpTrait<"Elementwise">;
 // Elementwise op can be applied to scalars instead tensor/vector operands.
-def Scalarizable : NativeOpTrait<"Scalarizable">;
+def Scalarizable : NativeOpTrait<"Scalarizable", [Elementwise]>;
 // Elementwise op can be applied to all-vector operands.
-def Vectorizable : NativeOpTrait<"Vectorizable">;
+def Vectorizable : NativeOpTrait<"Vectorizable", [Elementwise]>;
 // Elementwise op can be applied to all-tensor operands.
-def Tensorizable : NativeOpTrait<"Tensorizable">;
+def Tensorizable : NativeOpTrait<"Tensorizable", [Elementwise]>;
 
 // Group together `Elementwise`, `Scalarizable`, `Vectorizable`, and
 // `Tensorizable` for convenience.
@@ -2483,7 +2491,9 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // verified (aside from those verified by other ODS constructs). If set to `1`,
   // an additional `LogicalResult verify()` declaration will be generated on the
   // operation class. The operation should implement this method and verify the
-  // additional necessary invariants.
+  // additional necessary invariants. This verifier shouldn't access any nested
+  // operations because those operations may ill-formed. Use the
+  // `hasRegionVerifier` below instead.
   bit hasVerifier = 0;
 
   // A bit indicating if the operation has additional invariants that need to

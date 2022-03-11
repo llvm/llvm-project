@@ -341,8 +341,6 @@ namespace ranges {
 
 } // namespace ranges
 
-#undef _CONSTEXPR_TERNARY
-
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD

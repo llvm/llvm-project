@@ -3,6 +3,7 @@
 module m1
   integer, parameter :: ia1(2:6) = [1, 2, 3, 2, 1]
   integer, parameter :: ia2(2:3,2:4) = reshape([1, 2, 3, 3, 2, 1], shape(ia2))
+  integer, parameter :: ia3(2,0,2) = 0 ! middle dimension has zero extent
 
   logical, parameter :: test_fi1a = all(findloc(ia1, 1) == 1)
   logical, parameter :: test_fi1ar = rank(findloc(ia1, 1)) == 1
@@ -54,4 +55,9 @@ module m1
   logical, parameter :: test_ni2e = all(minloc(ia2, dim=1) == [1, 1, 2])
   logical, parameter :: test_ni2f = all(minloc(ia2, dim=1, back=.true.) == [1, 2, 2])
   logical, parameter :: test_ni2g = all(minloc(ia2, dim=2) == [1, 3])
+
+  logical, parameter :: test_xi3a = all(maxloc(ia3) == [0,0,0])
+  logical, parameter :: test_xi3b = all(maxloc(ia3, back=.true.) == [0,0,0])
+  logical, parameter :: test_xi3c = all(maxloc(ia3, dim=2) == reshape([0,0,0,0],shape=[2,2]))
+  logical, parameter :: test_xi3d = all(maxloc(ia3, dim=2, back=.true.) == reshape([0,0,0,0],shape=[2,2]))
 end module

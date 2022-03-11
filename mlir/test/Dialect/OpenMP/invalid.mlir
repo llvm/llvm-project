@@ -132,6 +132,56 @@ func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+llvm.func @test_omp_wsloop_dynamic_bad_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{unknown modifier type: ginandtonic}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, ginandtonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_many_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{unexpected modifier(s)}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic, monotonic, monotonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_wrong_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{incorrect modifier order}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, simd, monotonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_wrong_modifier2(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{incorrect modifier order}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic, monotonic) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @test_omp_wsloop_dynamic_wrong_modifier3(%lb : i64, %ub : i64, %step : i64) -> () {
+  // expected-error @+1 {{incorrect modifier order}}
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, simd, simd) {
+    omp.yield
+  }
+  llvm.return
+}
+
+// -----
+
 // expected-error @below {{op expects initializer region with one argument of the reduction type}}
 omp.reduction.declare @add_f32 : f64
 init {
@@ -615,6 +665,17 @@ func @omp_atomic_update8(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32, %tmp: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_update9(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{the update region must have at least two operations (binop and terminator)}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    omp.yield (%xval : i32)
   }
   return
 }

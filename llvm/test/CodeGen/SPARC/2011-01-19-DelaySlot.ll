@@ -3,7 +3,7 @@
 
 target triple = "sparc-unknown-linux-gnu"
 
-define i32 @test(i32 %a) nounwind {
+define i32 @test(i32 %a) #0 {
 entry:
 ; CHECK: test
 ; CHECK: call bar
@@ -14,7 +14,7 @@ entry:
   ret i32 %0
 }
 
-define i32 @test_jmpl(i32 (i32, i32)* nocapture %f, i32 %a, i32 %b) nounwind {
+define i32 @test_jmpl(i32 (i32, i32)* nocapture %f, i32 %a, i32 %b) #0 {
 entry:
 ; CHECK:      test_jmpl
 ; CHECK:      call
@@ -53,7 +53,7 @@ bb5:                                              ; preds = %bb, %entry
   ret i32 %a_addr.1.lcssa
 }
 
-define i32 @test_inlineasm(i32 %a) nounwind {
+define i32 @test_inlineasm(i32 %a) #0 {
 entry:
 ;CHECK-LABEL:      test_inlineasm:
 ;CHECK: cmp
@@ -79,7 +79,7 @@ declare i32 @foo(...)
 declare i32 @bar(i32)
 
 
-define i32 @test_implicit_def() nounwind {
+define i32 @test_implicit_def() #0 {
 entry:
 ;UNOPT-LABEL:       test_implicit_def:
 ;UNOPT:       call func
@@ -88,7 +88,7 @@ entry:
   ret i32 0
 }
 
-define i32 @prevent_o7_in_call_delay_slot(i32 %i0) {
+define i32 @prevent_o7_in_call_delay_slot(i32 %i0) #0 {
 entry:
 ;CHECK-LABEL:       prevent_o7_in_call_delay_slot:
 ;CHECK:       add %i0, 2, %o5
@@ -128,7 +128,7 @@ entry:
   ret i32 %1
 }
 
-define i32 @restore_or(i32 %a) {
+define i32 @restore_or(i32 %a) #0 {
 entry:
 ;CHECK-LABEL:  restore_or:
 ;CHECK:  ret
@@ -184,3 +184,4 @@ entry:
   ret i32 %2
 }
 
+attributes #0 = { nounwind "disable-tail-calls"="true" }

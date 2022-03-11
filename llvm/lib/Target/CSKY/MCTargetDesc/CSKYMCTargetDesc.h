@@ -34,8 +34,7 @@ MCAsmBackend *createCSKYAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                    const MCRegisterInfo &MRI,
                                    const MCTargetOptions &Options);
 
-MCCodeEmitter *createCSKYMCCodeEmitter(const MCInstrInfo &MCII,
-                                       MCContext &Ctx);
+MCCodeEmitter *createCSKYMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 } // namespace llvm
 
 #define GET_REGINFO_ENUM

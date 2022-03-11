@@ -1,5 +1,3 @@
-; RUN: opt -disable-output < %s -disable-basic-aa -scev-aa -aa-eval -print-all-alias-modref-info \
-; RUN:   2>&1 | FileCheck %s
 ; RUN: opt -disable-output < %s -aa-pipeline=scev-aa -passes=aa-eval -print-all-alias-modref-info \
 ; RUN:   2>&1 | FileCheck %s
 
