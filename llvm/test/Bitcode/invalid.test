@@ -291,3 +291,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-diimportedentity-record.bc 2
 RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
 
 INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record
+
+RUN: not llvm-dis -disable-output -opaque-pointers %p/Inputs/missing-element-type-for-attribute.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=MISSING-ELEMENT-TYPE-FOR-ATTRIBUTE %s
+
+MISSING-ELEMENT-TYPE-FOR-ATTRIBUTE: Missing element type for typed attribute upgrade
