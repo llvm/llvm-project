@@ -30,8 +30,10 @@ define <4 x i32> @smin_vec2(<4 x i32> %x) {
   ret <4 x i32> %sel
 }
 
-; Z = X -nsw Y
-; (X >s Y) ? 0 : Z ==> (Z >s 0) ? 0 : Z ==> SMIN(Z, 0)
+; TODO:
+; This and the next test were intended to become smin,
+; but that is not correct in general.
+
 define <4 x i32> @smin_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smin_vec3:
 ; CHECK:       # %bb.0:
@@ -45,8 +47,6 @@ define <4 x i32> @smin_vec3(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %sel
 }
 
-; Z = X -nsw Y
-; (X <s Y) ? Z : 0 ==> (Z <s 0) ? Z : 0 ==> SMIN(Z, 0)
 define <4 x i32> @smin_vec4(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smin_vec4:
 ; CHECK:       # %bb.0:
@@ -86,8 +86,10 @@ define <4 x i32> @smax_vec2(<4 x i32> %x) {
   ret <4 x i32> %sel
 }
 
-; Z = X -nsw Y
-; (X <s Y) ? 0 : Z ==> (Z <s 0) ? 0 : Z ==> SMAX(Z, 0)
+; TODO:
+; This and the next test were intended to become smax,
+; but that is not correct in general.
+
 define <4 x i32> @smax_vec3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smax_vec3:
 ; CHECK:       # %bb.0:
@@ -101,8 +103,6 @@ define <4 x i32> @smax_vec3(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %sel
 }
 
-; Z = X -nsw Y
-; (X >s Y) ? Z : 0 ==> (Z >s 0) ? Z : 0 ==> SMAX(Z, 0)
 define <4 x i32> @smax_vec4(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: smax_vec4:
 ; CHECK:       # %bb.0:

@@ -61,7 +61,11 @@ def Linalg_Dialect : Dialect {
 // Define the function attribute enums matching the OpDSL functions.
 def UnaryFn : I32EnumAttr<"UnaryFn", "", [
   I32EnumAttrCase<"exp", 0>,
-  I32EnumAttrCase<"log", 1>
+  I32EnumAttrCase<"log", 1>,
+  I32EnumAttrCase<"abs", 2>,
+  I32EnumAttrCase<"ceil", 3>,
+  I32EnumAttrCase<"floor", 4>,
+  I32EnumAttrCase<"negf", 5>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";

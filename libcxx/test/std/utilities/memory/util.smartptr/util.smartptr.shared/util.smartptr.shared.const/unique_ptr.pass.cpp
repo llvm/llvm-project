@@ -94,6 +94,18 @@ int main(int, char**)
         assert(p.get() == raw_ptr);
         assert(ptr.get() == 0);
     }
+
+    {
+        std::unique_ptr<A const> ptr(new A);
+        A const* raw_ptr = ptr.get();
+        std::shared_ptr<B const> p(std::move(ptr));
+        assert(A::count == 1);
+        assert(B::count == 1);
+        assert(p.use_count() == 1);
+        assert(p.get() == raw_ptr);
+        assert(ptr.get() == 0);
+    }
+
 #ifndef TEST_HAS_NO_EXCEPTIONS
     assert(A::count == 0);
     {

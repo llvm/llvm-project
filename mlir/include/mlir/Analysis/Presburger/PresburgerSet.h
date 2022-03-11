@@ -114,7 +114,7 @@ private:
   /// Construct an empty PresburgerSet with the specified number of dimension
   /// and symbols.
   PresburgerSet(unsigned numDims = 0, unsigned numSymbols = 0)
-      : PresburgerSpace(numDims, numSymbols) {}
+      : PresburgerSpace(/*numDomain=*/0, /*numRange=*/numDims, numSymbols) {}
 
   /// The list of polyhedrons that this set is the union of.
   SmallVector<IntegerPolyhedron, 2> integerPolyhedrons;

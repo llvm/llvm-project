@@ -137,8 +137,6 @@ public:
   // Types
   //===--------------------------------------------------------------------===//
 
-  /// Generate the type of a DataRef
-  virtual mlir::Type genType(const Fortran::evaluate::DataRef &) = 0;
   /// Generate the type of an Expr
   virtual mlir::Type genType(const SomeExpr &) = 0;
   /// Generate the type of a Symbol
@@ -149,6 +147,8 @@ public:
   virtual mlir::Type
   genType(Fortran::common::TypeCategory tc, int kind,
           llvm::ArrayRef<std::int64_t> lenParameters = llvm::None) = 0;
+  /// Generate the type from a DerivedTypeSpec.
+  virtual mlir::Type genType(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Generate the type from a Variable
   virtual mlir::Type genType(const pft::Variable &) = 0;
 

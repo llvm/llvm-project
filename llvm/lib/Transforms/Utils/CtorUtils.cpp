@@ -63,8 +63,6 @@ static void removeGlobalCtors(GlobalVariable *GCL, const BitVector &CtorsToRemov
 /// Given a llvm.global_ctors list that we can understand,
 /// return a list of the functions and null terminator as a vector.
 static std::vector<Function *> parseGlobalCtors(GlobalVariable *GV) {
-  if (GV->getInitializer()->isNullValue())
-    return std::vector<Function *>();
   ConstantArray *CA = cast<ConstantArray>(GV->getInitializer());
   std::vector<Function *> Result;
   Result.reserve(CA->getNumOperands());
@@ -87,9 +85,11 @@ static GlobalVariable *findGlobalCtors(Module &M) {
   if (!GV->hasUniqueInitializer())
     return nullptr;
 
-  if (isa<ConstantAggregateZero>(GV->getInitializer()))
-    return GV;
-  ConstantArray *CA = cast<ConstantArray>(GV->getInitializer());
+  // If there are no ctors, then the initializer might be null/undef/poison.
+  // Ignore anything but an array.
+  ConstantArray *CA = dyn_cast<ConstantArray>(GV->getInitializer());
+  if (!CA)
+    return nullptr;
 
   for (auto &V : CA->operands()) {
     if (isa<ConstantAggregateZero>(V))

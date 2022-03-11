@@ -298,6 +298,54 @@ func @generalize_elemwise_log(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>)
 
 // -----
 
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_abs(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<abs>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_abs
+// CHECK:        = math.abs
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_ceil(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<ceil>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_ceil
+// CHECK:        = math.ceil
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_floor(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<floor>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_floor
+// CHECK:        = math.floor
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_negf(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<negf>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_negf
+// CHECK:        = arith.negf
+
+// -----
+
 // Verifies the default value of the fun attribute is an add op.
 func @generalize_elemwise_add(%lhs : tensor<4x8xf32>, %rhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
   %0 = linalg.elemwise_binary ins(%lhs, %rhs: tensor<4x8xf32>, tensor<4x8xf32>)

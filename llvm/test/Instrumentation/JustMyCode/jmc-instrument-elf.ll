@@ -1,8 +1,7 @@
-; REQUIRES: system-linux
 ; RUN: opt -jmc-instrument -mtriple=x86_64-unknown-linux-gnu  -S < %s | FileCheck %s
 
 ; CHECK: @"__7DF23CF5_x@c" = internal unnamed_addr global i8 1, section ".just.my.code", align 1, !dbg !0
-; CHECK: @"__A85D9D03_x@c" = internal unnamed_addr global i8 1, section ".just.my.code", align 1, !dbg !5
+; CHECK: @"__A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".just.my.code", align 1, !dbg !5
 
 ; CHECK: define void @l1() !dbg !12 {
 ; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__7DF23CF5_x@c")
@@ -15,22 +14,22 @@
 ; CHECK: }
 
 ; CHECK: define void @w1() !dbg !18 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A85D9D03_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w2() !dbg !19 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A85D9D03_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w3() !dbg !21 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A85D9D03_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w4() !dbg !23 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A85D9D03_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
@@ -48,7 +47,7 @@
 ; CHECK: !3 = !DIFile(filename: "a/x.c", directory: "/tmp")
 ; CHECK: !4 = !{!0, !5}
 ; CHECK: !5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
-; CHECK: !6 = distinct !DIGlobalVariable(name: "__A85D9D03_x@c", scope: !2, file: !7, type: !8, isLocal: true, isDefinition: true)
+; CHECK: !6 = distinct !DIGlobalVariable(name: "__A8764FDD_x@c", scope: !2, file: !7, type: !8, isLocal: true, isDefinition: true)
 ; CHECK: !7 = !DIFile(filename: "./x.c", directory: "C:\\\\a\\\\b\\\\")
 ; CHECK: !8 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char, flags: DIFlagArtificial)
 ; CHECK: !9 = !{i32 2, !"CodeView", i32 1}
