@@ -939,9 +939,12 @@ void ValueEnumerator::EnumerateValue(const Value *V) {
            I != E; ++I)
         if (!isa<BasicBlock>(*I)) // Don't enumerate BB operand to BlockAddress.
           EnumerateValue(*I);
-      if (auto *CE = dyn_cast<ConstantExpr>(C))
+      if (auto *CE = dyn_cast<ConstantExpr>(C)) {
         if (CE->getOpcode() == Instruction::ShuffleVector)
           EnumerateValue(CE->getShuffleMaskForBitcode());
+        if (auto *GEP = dyn_cast<GEPOperator>(CE))
+          EnumerateType(GEP->getSourceElementType());
+      }
 
       // Finally, add the value.  Doing this could make the ValueID reference be
       // dangling, don't reuse it.

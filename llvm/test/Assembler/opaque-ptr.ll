@@ -4,6 +4,9 @@
 ; CHECK: @global = external global ptr
 @global = external global ptr
 
+; CHECK: @global_const_gep = global ptr getelementptr inbounds (i47, ptr @global, i64 1)
+@global_const_gep = global ptr getelementptr (i47, ptr @global, i64 1)
+
 ; CHECK: @fptr1 = external global ptr
 ; CHECK: @fptr2 = external global ptr addrspace(1)
 ; CHECK: @fptr3 = external global ptr addrspace(2)
