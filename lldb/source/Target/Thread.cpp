@@ -1091,7 +1091,7 @@ void Thread::PopPlan() {
 
 void Thread::DiscardPlan() {
   Log *log = GetLog(LLDBLog::Step);
-  ThreadPlanSP discarded_plan_sp = GetPlans().PopPlan();
+  ThreadPlanSP discarded_plan_sp = GetPlans().DiscardPlan();
 
   LLDB_LOGF(log, "Discarding plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
             discarded_plan_sp->GetName(), 

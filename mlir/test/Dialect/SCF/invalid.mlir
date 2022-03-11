@@ -241,7 +241,7 @@ func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
-    // expected-error@+1 {{the block inside reduce should not be empty}}
+    // expected-error@+1 {{empty block: expect at least a terminator}}
     scf.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32):
     }
@@ -289,7 +289,7 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
     // expected-error@+1 {{the block inside reduce should be terminated with a 'scf.reduce.return' op}}
     scf.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32):
-        scf.yield
+        "test.finish" () : () -> ()
     }
   }
   return

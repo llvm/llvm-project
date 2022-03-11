@@ -72,9 +72,15 @@ define amdgpu_vs void @promote_store_aggr() #0 {
 ; CHECK-NEXT:    [[FOO2:%.*]] = load i32, i32* [[I]], align 4
 ; CHECK-NEXT:    [[FOO3:%.*]] = sitofp i32 [[FOO2]] to float
 ; CHECK-NEXT:    [[FOO4:%.*]] = getelementptr [2 x float], [2 x float]* [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store float [[FOO3]], float* [[FOO4]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [2 x float]* [[F1]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[FOO3]], i32 0
+; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [2 x float], [2 x float]* [[F1]], i32 0, i32 1
-; CHECK-NEXT:    store float 2.000000e+00, float* [[FOO5]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [2 x float]* [[F1]] to <2 x float>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, <2 x float>* [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float 2.000000e+00, i64 1
+; CHECK-NEXT:    store <2 x float> [[TMP6]], <2 x float>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[FOO6:%.*]] = load [2 x float], [2 x float]* [[F1]], align 4
 ; CHECK-NEXT:    [[FOO7:%.*]] = getelementptr [[BLOCK2]], [[BLOCK2]] addrspace(1)* @block2, i32 0, i32 1
 ; CHECK-NEXT:    store [2 x float] [[FOO6]], [2 x float] addrspace(1)* [[FOO7]], align 4
@@ -116,13 +122,15 @@ define amdgpu_vs void @promote_load_from_store_aggr() #0 {
 ; CHECK-NEXT:    store [2 x float] [[FOO3]], [2 x float]* [[F1]], align 4
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, i32* [[I]], align 4
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [2 x float], [2 x float]* [[F1]], i32 0, i32 [[FOO4]]
-; CHECK-NEXT:    [[FOO6:%.*]] = load float, float* [[FOO5]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [2 x float]* [[F1]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 [[FOO4]]
 ; CHECK-NEXT:    [[FOO7:%.*]] = alloca <4 x float>, align 16
 ; CHECK-NEXT:    [[FOO8:%.*]] = load <4 x float>, <4 x float>* [[FOO7]], align 16
-; CHECK-NEXT:    [[FOO9:%.*]] = insertelement <4 x float> [[FOO8]], float [[FOO6]], i32 0
-; CHECK-NEXT:    [[FOO10:%.*]] = insertelement <4 x float> [[FOO9]], float [[FOO6]], i32 1
-; CHECK-NEXT:    [[FOO11:%.*]] = insertelement <4 x float> [[FOO10]], float [[FOO6]], i32 2
-; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x float> [[FOO11]], float [[FOO6]], i32 3
+; CHECK-NEXT:    [[FOO9:%.*]] = insertelement <4 x float> [[FOO8]], float [[TMP3]], i32 0
+; CHECK-NEXT:    [[FOO10:%.*]] = insertelement <4 x float> [[FOO9]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[FOO11:%.*]] = insertelement <4 x float> [[FOO10]], float [[TMP3]], i32 2
+; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x float> [[FOO11]], float [[TMP3]], i32 3
 ; CHECK-NEXT:    [[FOO13:%.*]] = getelementptr [[GL_PERVERTEX:%.*]], [[GL_PERVERTEX]] addrspace(1)* @pv, i32 0, i32 0
 ; CHECK-NEXT:    store <4 x float> [[FOO12]], <4 x float> addrspace(1)* [[FOO13]], align 16
 ; CHECK-NEXT:    ret void
@@ -163,17 +171,28 @@ define amdgpu_ps void @promote_double_aggr() #0 {
 ; CHECK-NEXT:    [[FOO5:%.*]] = insertvalue [2 x double] [[FOO4]], double [[FOO3]], 1
 ; CHECK-NEXT:    store [2 x double] [[FOO5]], [2 x double]* [[S]], align 8
 ; CHECK-NEXT:    [[FOO6:%.*]] = getelementptr [2 x double], [2 x double]* [[S]], i32 0, i32 1
-; CHECK-NEXT:    [[FOO7:%.*]] = load double, double* [[FOO6]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [2 x double]* [[S]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[FOO8:%.*]] = getelementptr [2 x double], [2 x double]* [[S]], i32 0, i32 1
-; CHECK-NEXT:    [[FOO9:%.*]] = load double, double* [[FOO8]], align 8
-; CHECK-NEXT:    [[FOO10:%.*]] = fadd double [[FOO7]], [[FOO9]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [2 x double]* [[S]] to <2 x double>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, <2 x double>* [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
+; CHECK-NEXT:    [[FOO10:%.*]] = fadd double [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[FOO11:%.*]] = getelementptr [2 x double], [2 x double]* [[S]], i32 0, i32 0
-; CHECK-NEXT:    store double [[FOO10]], double* [[FOO11]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast [2 x double]* [[S]] to <2 x double>*
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, <2 x double>* [[TMP7]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[FOO10]], i32 0
+; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[TMP7]], align 16
 ; CHECK-NEXT:    [[FOO12:%.*]] = getelementptr [2 x double], [2 x double]* [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[FOO13:%.*]] = load double, double* [[FOO12]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast [2 x double]* [[S]] to <2 x double>*
+; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x double>, <2 x double>* [[TMP10]], align 16
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP11]], i32 0
 ; CHECK-NEXT:    [[FOO14:%.*]] = getelementptr [2 x double], [2 x double]* [[S]], i32 0, i32 1
-; CHECK-NEXT:    [[FOO15:%.*]] = load double, double* [[FOO14]], align 8
-; CHECK-NEXT:    [[FOO16:%.*]] = fadd double [[FOO13]], [[FOO15]]
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast [2 x double]* [[S]] to <2 x double>*
+; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x double>, <2 x double>* [[TMP13]], align 16
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP14]], i64 1
+; CHECK-NEXT:    [[FOO16:%.*]] = fadd double [[TMP12]], [[TMP15]]
 ; CHECK-NEXT:    [[FOO17:%.*]] = fptrunc double [[FOO16]] to float
 ; CHECK-NEXT:    [[FOO18:%.*]] = insertelement <4 x float> undef, float [[FOO17]], i32 0
 ; CHECK-NEXT:    [[FOO19:%.*]] = insertelement <4 x float> [[FOO18]], float [[FOO17]], i32 1

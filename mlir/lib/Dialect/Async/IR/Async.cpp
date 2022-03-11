@@ -236,7 +236,7 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-LogicalResult ExecuteOp::verify() {
+LogicalResult ExecuteOp::verifyRegions() {
   // Unwrap async.execute value operands types.
   auto unwrappedTypes = llvm::map_range(operands(), [](Value operand) {
     return operand.getType().cast<ValueType>().getValueType();

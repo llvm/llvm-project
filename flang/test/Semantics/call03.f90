@@ -196,21 +196,28 @@ module m01
   subroutine charray(x)
     character :: x(10)
   end subroutine
-  subroutine test09(ashape, polyarray, c) ! 15.5.2.4(14), 15.5.2.11
+  subroutine test09(ashape, polyarray, c, assumed_shape_char) ! 15.5.2.4(14), 15.5.2.11
     real :: x, arr(10)
     real, pointer :: p(:)
+    real, pointer :: p_scalar
+    character(10), pointer :: char_pointer(:)
+    character(*) :: assumed_shape_char(:)
     real :: ashape(:)
     class(t) :: polyarray(*)
     character(10) :: c(:)
     !ERROR: Whole scalar actual argument may not be associated with a dummy argument 'x=' array
     call assumedsize(x)
-    !ERROR: Scalar POINTER target may not be associated with a dummy argument 'x=' array
+    !ERROR: Whole scalar actual argument may not be associated with a dummy argument 'x=' array
+    call assumedsize(p_scalar)
+    !ERROR: Element of pointer array may not be associated with a dummy argument 'x=' array
     call assumedsize(p(1))
     !ERROR: Element of assumed-shape array may not be associated with a dummy argument 'x=' array
     call assumedsize(ashape(1))
     !ERROR: Polymorphic scalar may not be associated with a dummy argument 'x=' array
     call polyassumedsize(polyarray(1))
     call charray(c(1:1))  ! not an error if character
+    call charray(char_pointer(1))  ! not an error if character
+    call charray(assumed_shape_char(1))  ! not an error if character
     call assumedsize(arr(1))  ! not an error if element in sequence
     call assumedrank(x)  ! not an error
     call assumedtypeandsize(x)  ! not an error
