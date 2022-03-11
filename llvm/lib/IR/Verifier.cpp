@@ -3964,6 +3964,10 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   }
 
   if (AI.isSwiftError()) {
+    Assert(AI.getAllocatedType()->isPointerTy(),
+           "swifterror alloca must have pointer type", &AI);
+    Assert(!AI.isArrayAllocation(),
+           "swifterror alloca must not be array allocation", &AI);
     verifySwiftErrorValue(&AI);
   }
 
