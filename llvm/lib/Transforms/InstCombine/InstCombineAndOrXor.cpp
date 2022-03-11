@@ -1351,6 +1351,14 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     unsigned FCmpCodeL = getFCmpCode(PredL);
     unsigned FCmpCodeR = getFCmpCode(PredR);
     unsigned NewPred = IsAnd ? FCmpCodeL & FCmpCodeR : FCmpCodeL | FCmpCodeR;
+
+    // Intersect the fast math flags.
+    // TODO: We can union the fast math flags.
+    IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+    FastMathFlags FMF = LHS->getFastMathFlags();
+    FMF &= RHS->getFastMathFlags();
+    Builder.setFastMathFlags(FMF);
+
     return getFCmpValue(NewPred, LHS0, LHS1, Builder);
   }
 

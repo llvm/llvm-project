@@ -97,6 +97,11 @@ void SimpleObjectCache::dumpToObjectFile(StringRef outputFilename) {
 }
 
 void ExecutionEngine::dumpToObjectFile(StringRef filename) {
+  if (cache == nullptr) {
+    llvm::errs() << "cannot dump ExecutionEngine object code to file: "
+                    "object cache is disabled\n";
+    return;
+  }
   cache->dumpToObjectFile(filename);
 }
 

@@ -1631,10 +1631,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousOutputData |
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
-  if (!m_broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitProgress)) {
-    listener_sp->StartListeningForEvents(&m_broadcaster,
-                                         Debugger::eBroadcastBitProgress);
-  }
+  listener_sp->StartListeningForEvents(&m_broadcaster,
+                                       Debugger::eBroadcastBitProgress);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
@@ -1802,7 +1800,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Print the progress message.
   std::string message = data->GetMessage();
   if (data->GetTotal() != UINT64_MAX) {
-    output.Printf("[%llu/%llu] %s...", data->GetCompleted(), data->GetTotal(),
+    output.Printf("[%" PRIu64 "/%" PRIu64 "] %s...", data->GetCompleted(), data->GetTotal(),
                   message.c_str());
   } else {
     output.Printf("%s...", message.c_str());

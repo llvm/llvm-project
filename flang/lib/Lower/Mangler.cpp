@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/MD5.h"
 
 // recursively build the vector of module scopes
 static void moduleNames(const Fortran::semantics::Scope &scope,
@@ -167,6 +168,53 @@ std::string Fortran::lower::mangle::mangleName(
 std::string Fortran::lower::mangle::demangleName(llvm::StringRef name) {
   auto result = fir::NameUniquer::deconstruct(name);
   return result.second.name;
+}
+
+//===----------------------------------------------------------------------===//
+// Array Literals Mangling
+//===----------------------------------------------------------------------===//
+
+static std::string typeToString(Fortran::common::TypeCategory cat, int kind) {
+  switch (cat) {
+  case Fortran::common::TypeCategory::Integer:
+    return "i" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Real:
+    return "r" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Complex:
+    return "z" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Logical:
+    return "l" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Character:
+    return "c" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Derived:
+    // FIXME: Replace "DT" with the (fully qualified) type name.
+    return "dt.DT";
+  }
+  llvm_unreachable("bad TypeCategory");
+}
+
+std::string Fortran::lower::mangle::mangleArrayLiteral(
+    const uint8_t *addr, size_t size,
+    const Fortran::evaluate::ConstantSubscripts &shape,
+    Fortran::common::TypeCategory cat, int kind,
+    Fortran::common::ConstantSubscript charLen) {
+  std::string typeId = "";
+  for (Fortran::evaluate::ConstantSubscript extent : shape)
+    typeId.append(std::to_string(extent)).append("x");
+  if (charLen >= 0)
+    typeId.append(std::to_string(charLen)).append("x");
+  typeId.append(typeToString(cat, kind));
+  std::string name =
+      fir::NameUniquer::doGenerated("ro."s.append(typeId).append("."));
+  if (!size)
+    return name += "null";
+  llvm::MD5 hashValue{};
+  hashValue.update(llvm::ArrayRef<uint8_t>{addr, size});
+  llvm::MD5::MD5Result hashResult;
+  hashValue.final(hashResult);
+  llvm::SmallString<32> hashString;
+  llvm::MD5::stringifyResult(hashResult, hashString);
+  return name += hashString.c_str();
 }
 
 //===----------------------------------------------------------------------===//

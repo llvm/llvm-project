@@ -671,23 +671,30 @@ void sigint_handler(int signo) {
   _exit(signo);
 }
 
-void sigtstp_handler(int signo) {
+#ifndef _WIN32
+static void sigtstp_handler(int signo) {
   if (g_driver != nullptr)
     g_driver->GetDebugger().SaveInputTerminalState();
 
+  // Unblock the signal and remove our handler.
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, signo);
+  pthread_sigmask(SIG_UNBLOCK, &set, nullptr);
   signal(signo, SIG_DFL);
-  kill(getpid(), signo);
-  signal(signo, sigtstp_handler);
-}
 
-void sigcont_handler(int signo) {
+  // Now re-raise the signal. We will immediately suspend...
+  raise(signo);
+  // ... and resume after a SIGCONT.
+
+  // Now undo the modifications.
+  pthread_sigmask(SIG_BLOCK, &set, nullptr);
+  signal(signo, sigtstp_handler);
+
   if (g_driver != nullptr)
     g_driver->GetDebugger().RestoreInputTerminalState();
-
-  signal(signo, SIG_DFL);
-  kill(getpid(), signo);
-  signal(signo, sigcont_handler);
 }
+#endif
 
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
@@ -826,7 +833,6 @@ int main(int argc, char const *argv[]) {
   signal(SIGPIPE, SIG_IGN);
   signal(SIGWINCH, sigwinch_handler);
   signal(SIGTSTP, sigtstp_handler);
-  signal(SIGCONT, sigcont_handler);
 #endif
 
   int exit_code = 0;

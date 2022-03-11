@@ -2950,8 +2950,10 @@ void RewriteInstance::buildFunctionsCFG() {
         if (!BF.buildCFG(AllocId))
           return;
 
-        if (opts::PrintAll)
+        if (opts::PrintAll) {
+          auto L = BC->scopeLock();
           BF.print(outs(), "while building cfg", true);
+        }
       };
 
   ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
@@ -5135,8 +5137,10 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
                              "dynamic section sizes should match");
 
   // Go through all dynamic entries to locate entries of interest.
-  typename ELFT::DynRange DynamicEntries =
-      cantFail(Obj.dynamicEntries(), "error accessing dynamic table");
+  auto DynamicEntriesOrErr = Obj.dynamicEntries();
+  if (!DynamicEntriesOrErr)
+    return DynamicEntriesOrErr.takeError();
+  typename ELFT::DynRange DynamicEntries = DynamicEntriesOrErr.get();
 
   for (const Elf_Dyn &Dyn : DynamicEntries) {
     switch (Dyn.d_tag) {

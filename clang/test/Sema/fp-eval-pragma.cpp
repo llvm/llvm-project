@@ -27,6 +27,16 @@ int foo2() {
   return 0;
 }
 
+void apply_pragma_with_wrong_value() {
+  // expected-error@+1{{unexpected argument 'value' to '#pragma clang fp eval_method'; expected 'source', 'double' or 'extended'}}
+#pragma clang fp eval_method(value)
+}
+
+int foo3() {
+  apply_pragma_with_wrong_value();
+  return 0;
+}
+
 void foo() {
   auto a = __FLT_EVAL_METHOD__;
   {

@@ -1934,8 +1934,9 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
 TEST(CommandLineTest, ResetAllOptionOccurrences) {
   cl::ResetCommandLineParser();
 
-  // -option -enableA -enableC [sink] input [args]
+  // -option -str -enableA -enableC [sink] input [args]
   StackOption<bool> Option("option");
+  StackOption<std::string> Str("str");
   enum Vals { ValA, ValB, ValC };
   StackOption<Vals, cl::bits<Vals>> Bits(
       cl::values(clEnumValN(ValA, "enableA", "Enable A"),
@@ -1945,15 +1946,16 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   StackOption<std::string> Input(cl::Positional);
   StackOption<std::string, cl::list<std::string>> ExtraArgs(cl::ConsumeAfter);
 
-  const char *Args[] = {"prog",     "-option", "-enableA", "-enableC",
-                        "-unknown", "input",   "-arg"};
+  const char *Args[] = {"prog",     "-option",  "-str=STR", "-enableA",
+                        "-enableC", "-unknown", "input",    "-arg"};
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(7, Args, StringRef(), &OS));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(8, Args, StringRef(), &OS));
   EXPECT_TRUE(OS.str().empty());
 
   EXPECT_TRUE(Option);
+  EXPECT_EQ("STR", Str);
   EXPECT_EQ((1u << ValA) | (1u << ValC), Bits.getBits());
   EXPECT_EQ(1u, Sink.size());
   EXPECT_EQ("-unknown", Sink[0]);
@@ -1963,10 +1965,67 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(Option);
+  EXPECT_EQ("", Str);
   EXPECT_EQ(0u, Bits.getBits());
   EXPECT_EQ(0u, Sink.size());
   EXPECT_EQ(0, Input.getNumOccurrences());
   EXPECT_EQ(0u, ExtraArgs.size());
+}
+
+TEST(CommandLineTest, DefaultValue) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> BoolOption("bool-option");
+  StackOption<std::string> StrOption("str-option");
+  StackOption<bool> BoolInitOption("bool-init-option", cl::init(true));
+  StackOption<std::string> StrInitOption("str-init-option",
+                                         cl::init("str-default-value"));
+
+  const char *Args[] = {"prog"}; // no options
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(1, Args, StringRef(), &OS));
+  EXPECT_TRUE(OS.str().empty());
+
+  EXPECT_TRUE(!BoolOption);
+  EXPECT_FALSE(BoolOption.Default.hasValue());
+  EXPECT_EQ(0, BoolOption.getNumOccurrences());
+
+  EXPECT_EQ("", StrOption);
+  EXPECT_FALSE(StrOption.Default.hasValue());
+  EXPECT_EQ(0, StrOption.getNumOccurrences());
+
+  EXPECT_TRUE(BoolInitOption);
+  EXPECT_TRUE(BoolInitOption.Default.hasValue());
+  EXPECT_EQ(0, BoolInitOption.getNumOccurrences());
+
+  EXPECT_EQ("str-default-value", StrInitOption);
+  EXPECT_TRUE(StrInitOption.Default.hasValue());
+  EXPECT_EQ(0, StrInitOption.getNumOccurrences());
+
+  const char *Args2[] = {"prog", "-bool-option", "-str-option=str-value",
+                         "-bool-init-option=0",
+                         "-str-init-option=str-init-value"};
+
+  EXPECT_TRUE(cl::ParseCommandLineOptions(5, Args2, StringRef(), &OS));
+  EXPECT_TRUE(OS.str().empty());
+
+  EXPECT_TRUE(BoolOption);
+  EXPECT_FALSE(BoolOption.Default.hasValue());
+  EXPECT_EQ(1, BoolOption.getNumOccurrences());
+
+  EXPECT_EQ("str-value", StrOption);
+  EXPECT_FALSE(StrOption.Default.hasValue());
+  EXPECT_EQ(1, StrOption.getNumOccurrences());
+
+  EXPECT_FALSE(BoolInitOption);
+  EXPECT_TRUE(BoolInitOption.Default.hasValue());
+  EXPECT_EQ(1, BoolInitOption.getNumOccurrences());
+
+  EXPECT_EQ("str-init-value", StrInitOption);
+  EXPECT_TRUE(StrInitOption.Default.hasValue());
+  EXPECT_EQ(1, StrInitOption.getNumOccurrences());
 }
 
 } // anonymous namespace

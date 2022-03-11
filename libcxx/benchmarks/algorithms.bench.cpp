@@ -151,7 +151,6 @@ void fillValues(std::vector<std::string>& V, size_t N, Order O) {
 
 template <class T>
 void sortValues(T& V, Order O) {
-  assert(std::is_sorted(V.begin(), V.end()));
   switch (O) {
   case Order::Random: {
     std::random_device R;

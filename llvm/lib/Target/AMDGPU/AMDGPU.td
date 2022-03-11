@@ -1558,13 +1558,6 @@ def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
 def HasAtomicFaddInsts : Predicate<"Subtarget->hasAtomicFaddInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicFaddInsts)>;
 
-// Differentiate between two functionally equivalent, but incompatible
-// encoding-wise FP atomics between gfx90* and gfx940
-def HasAtomicFaddInstsGFX90X : Predicate<"Subtarget->hasAtomicFaddInsts()">,
-  AssemblerPredicate<(all_of FeatureAtomicFaddInsts, (not FeatureGFX940Insts))>;
-def HasAtomicFaddInstsGFX940 : Predicate<"Subtarget->hasAtomicFaddInsts()">,
-  AssemblerPredicate<(all_of FeatureAtomicFaddInsts, FeatureGFX940Insts)>;
-
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 

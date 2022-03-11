@@ -2064,7 +2064,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
       "mlir::Type":$recTy),
     [{
       $_state.addAttribute(fieldAttrName(), $_builder.getStringAttr(fieldName));
-      $_state.addAttribute(typeAttrName(), TypeAttr::get(recTy));
+      $_state.addAttribute(typeAttrName(), mlir::TypeAttr::get(recTy));
     }]
   >];
 
@@ -2154,7 +2154,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
   let extraClassDeclaration = [{
     mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::OpBuilder getBodyBuilder() {
-      return OpBuilder(getBody(), std::prev(getBody()->end()));
+      return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
     }
     mlir::Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
@@ -2163,9 +2163,9 @@ def fir_DoLoopOp : region_Op<"do_loop",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
-    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
-    void setStep(Value step) { (*this)->setOperand(2, step); }
+    void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -2312,8 +2312,8 @@ def fir_IterWhileOp : region_Op<"iterate_while",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
-    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
+    void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
     void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
@@ -2376,18 +2376,18 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
         CArg<"mlir::ValueRange", "{}">:$operands),
     [{
       build($_builder, $_state,
-          SymbolRefAttr::get($_builder.getContext(), callee), results,
+          mlir::SymbolRefAttr::get($_builder.getContext(), callee), results,
           operands);
     }]>];
 
   let extraClassDeclaration = [{
-    static constexpr StringRef getCalleeAttrNameStr() { return "callee"; }
+    static constexpr llvm::StringRef getCalleeAttrNameStr() { return "callee"; }
 
     mlir::FunctionType getFunctionType();
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
-      if ((*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
+      if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
         return {arg_operand_begin(), arg_operand_end()};
       return {arg_operand_begin() + 1, arg_operand_end()};
     }
@@ -2396,9 +2396,9 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
     operand_iterator arg_operand_end() { return operand_end(); }
 
     /// Return the callee of this operation.
-    CallInterfaceCallable getCallableForCallee() {
+    mlir::CallInterfaceCallable getCallableForCallee() {
       if (auto calling =
-          (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
+          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
         return calling;
       return getOperand(0);
     }
@@ -2577,12 +2577,12 @@ def fir_CmpcOp : fir_Op<"cmpc",
       return "predicate";
     }
 
-    arith::CmpFPredicate getPredicate() {
-      return (arith::CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
+    mlir::arith::CmpFPredicate getPredicate() {
+      return (mlir::arith::CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
           getPredicateAttrName()).getInt();
     }
 
-    static arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
+    static mlir::arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
   }];
 }
 
@@ -2642,16 +2642,16 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<TypeAttr>()">,
-    Or<[CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::CharacterType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::ComplexType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntegerType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::LogicalType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RealType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,
+def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
+    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::ComplexType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::IntegerType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::LogicalType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::RealType>()">,
+        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,
     "Fortran surface type"> {
-  let storageType = [{ TypeAttr }];
-  let returnType = "Type";
+  let storageType = [{ ::mlir::TypeAttr }];
+  let returnType = "mlir::Type";
   let convertFromStorage = "$_self.getValue().cast<Type>()";
 }
 
@@ -2773,7 +2773,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    Attribute getValueOrNull() { return getInitVal().getValueOr(Attribute()); }
+    mlir::Attribute getValueOrNull() { return getInitVal().getValueOr(mlir::Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.
@@ -2783,11 +2783,11 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Block &getBlock() { return getRegion().front(); }
 
     /// Determine if `linkage` is a supported keyword
-    static mlir::ParseResult verifyValidLinkage(StringRef linkage);
+    static mlir::ParseResult verifyValidLinkage(llvm::StringRef linkage);
 
     bool hasInitializationBody() {
       return ((*this)->getNumRegions() == 1) && !getRegion().empty() &&
-        !isa<fir::FirEndOp>(getBlock().front());
+        !mlir::isa<fir::FirEndOp>(getBlock().front());
     }
 
     mlir::FlatSymbolRefAttr getSymbol() {

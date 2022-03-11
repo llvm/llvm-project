@@ -12,6 +12,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
+#include <mutex>
 #include <thread>
 
 using namespace llvm;

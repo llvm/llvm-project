@@ -15,8 +15,6 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-using namespace mlir;
-
 namespace fir {
 
 class FirEndOp;

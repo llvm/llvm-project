@@ -1846,15 +1846,27 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (hasFP(MF) && AFI->hasSwiftAsyncContext()) {
-    // We need to reset FP to its untagged state on return. Bit 60 is currently
-    // used to show the presence of an extended frame.
+    switch (MF.getTarget().Options.SwiftAsyncFramePointer) {
+    case SwiftAsyncFramePointerMode::DeploymentBased:
+      // Avoid the reload as it is GOT relative, and instead fall back to the
+      // hardcoded value below.  This allows a mismatch between the OS and
+      // application without immediately terminating on the difference.
+      LLVM_FALLTHROUGH;
+    case SwiftAsyncFramePointerMode::Always:
+      // We need to reset FP to its untagged state on return. Bit 60 is
+      // currently used to show the presence of an extended frame.
 
-    // BIC x29, x29, #0x1000_0000_0000_0000
-    BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::ANDXri),
-            AArch64::FP)
-        .addUse(AArch64::FP)
-        .addImm(0x10fe)
-        .setMIFlag(MachineInstr::FrameDestroy);
+      // BIC x29, x29, #0x1000_0000_0000_0000
+      BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::ANDXri),
+              AArch64::FP)
+          .addUse(AArch64::FP)
+          .addImm(0x10fe)
+          .setMIFlag(MachineInstr::FrameDestroy);
+      break;
+
+    case SwiftAsyncFramePointerMode::Never:
+      break;
+    }
   }
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);

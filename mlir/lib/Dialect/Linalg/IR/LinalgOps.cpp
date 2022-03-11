@@ -144,6 +144,14 @@ public:
       return builder.create<math::ExpOp>(arg.getLoc(), arg);
     case UnaryFn::log:
       return builder.create<math::LogOp>(arg.getLoc(), arg);
+    case UnaryFn::abs:
+      return builder.create<math::AbsOp>(arg.getLoc(), arg);
+    case UnaryFn::ceil:
+      return builder.create<math::CeilOp>(arg.getLoc(), arg);
+    case UnaryFn::floor:
+      return builder.create<math::FloorOp>(arg.getLoc(), arg);
+    case UnaryFn::negf:
+      return builder.create<arith::NegFOp>(arg.getLoc(), arg);
     }
     llvm_unreachable("unsupported unary function");
   }
@@ -1199,7 +1207,7 @@ LogicalResult linalg::YieldOp::verify() {
     return emitOpError("expected single non-empty parent region");
 
   if (auto linalgOp = dyn_cast<LinalgOp>(parentOp))
-    return verifyYield(*this, cast<LinalgOp>(parentOp));
+    return verifyYield(*this, linalgOp);
 
   return emitOpError("expected parent op with LinalgOp interface");
 }

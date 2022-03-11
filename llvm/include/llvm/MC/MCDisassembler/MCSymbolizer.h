@@ -17,9 +17,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <utility>
 
 namespace llvm {
 

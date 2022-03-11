@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NamespaceEndCommentsFixer.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 
@@ -22,6 +23,40 @@ namespace clang {
 namespace format {
 
 namespace {
+// Iterates all tokens starting from StartTok to EndTok and apply Fn to all
+// tokens between them including StartTok and EndTok. Returns the token after
+// EndTok.
+const FormatToken *
+processTokens(const FormatToken *Tok, tok::TokenKind StartTok,
+              tok::TokenKind EndTok,
+              llvm::function_ref<void(const FormatToken *)> Fn) {
+  if (!Tok || Tok->isNot(StartTok))
+    return Tok;
+  int NestLevel = 0;
+  do {
+    if (Tok->is(StartTok))
+      ++NestLevel;
+    else if (Tok->is(EndTok))
+      --NestLevel;
+    if (Fn)
+      Fn(Tok);
+    Tok = Tok->getNextNonComment();
+  } while (Tok && NestLevel > 0);
+  return Tok;
+}
+
+const FormatToken *skipAttribute(const FormatToken *Tok) {
+  if (!Tok)
+    return nullptr;
+  if (Tok->is(tok::kw___attribute)) {
+    Tok = Tok->getNextNonComment();
+    Tok = processTokens(Tok, tok::l_paren, tok::r_paren, nullptr);
+  } else if (Tok->is(tok::l_square)) {
+    Tok = processTokens(Tok, tok::l_square, tok::r_square, nullptr);
+  }
+  return Tok;
+}
+
 // Computes the name of a namespace given the namespace token.
 // Returns "" for anonymous namespace.
 std::string computeName(const FormatToken *NamespaceTok) {
@@ -39,48 +74,69 @@ std::string computeName(const FormatToken *NamespaceTok) {
       name += Tok->TokenText;
       Tok = Tok->getNextNonComment();
     }
-  } else {
-    // Skip attributes.
-    if (Tok && Tok->is(tok::l_square)) {
-      for (int NestLevel = 1; NestLevel > 0;) {
-        Tok = Tok->getNextNonComment();
-        if (!Tok)
-          break;
-        if (Tok->is(tok::l_square))
-          ++NestLevel;
-        else if (Tok->is(tok::r_square))
-          --NestLevel;
-      }
-      if (Tok)
-        Tok = Tok->getNextNonComment();
-    }
-
-    // Use the string after `namespace` as a name candidate until `{` or `::` or
-    // `(`. If the name is empty, use the candicate.
-    std::string FirstNSName;
-    // For `namespace [[foo]] A::B::inline C {` or
-    // `namespace MACRO1 MACRO2 A::B::inline C {`, returns "A::B::inline C".
-    // Peek for the first '::' (or '{' or '(')) and then return all tokens from
-    // one token before that up until the '{'. A '(' might be a macro with
-    // arguments.
-    const FormatToken *FirstNSTok = Tok;
-    while (Tok && !Tok->isOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
-      FirstNSName += FirstNSTok->TokenText;
-      FirstNSTok = Tok;
-      Tok = Tok->getNextNonComment();
-    }
-
-    Tok = FirstNSTok;
-    while (Tok && !Tok->is(tok::l_brace)) {
-      name += Tok->TokenText;
-      if (Tok->is(tok::kw_inline))
-        name += " ";
-      Tok = Tok->getNextNonComment();
-    }
-    if (name.empty())
-      name = FirstNSName;
+    return name;
   }
-  return name;
+  Tok = skipAttribute(Tok);
+
+  std::string FirstNSName;
+  // For `namespace [[foo]] A::B::inline C {` or
+  // `namespace MACRO1 MACRO2 A::B::inline C {`, returns "A::B::inline C".
+  // Peek for the first '::' (or '{' or '(')) and then return all tokens from
+  // one token before that up until the '{'. A '(' might be a macro with
+  // arguments.
+  const FormatToken *FirstNSTok = nullptr;
+  while (Tok && !Tok->isOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
+    if (FirstNSTok)
+      FirstNSName += FirstNSTok->TokenText;
+    FirstNSTok = Tok;
+    Tok = Tok->getNextNonComment();
+  }
+
+  if (FirstNSTok)
+    Tok = FirstNSTok;
+  Tok = skipAttribute(Tok);
+
+  FirstNSTok = nullptr;
+  // Add everything from '(' to ')'.
+  auto AddToken = [&name](const FormatToken *Tok) { name += Tok->TokenText; };
+  bool IsPrevColoncolon = false;
+  bool HasColoncolon = false;
+  bool IsPrevInline = false;
+  bool NameFinished = false;
+  // If we found '::' in name, then it's the name. Otherwise, we can't tell
+  // which one is name. For example, `namespace A B {`.
+  while (Tok && Tok->isNot(tok::l_brace)) {
+    if (FirstNSTok) {
+      if (!IsPrevInline && HasColoncolon && !IsPrevColoncolon) {
+        if (FirstNSTok->is(tok::l_paren)) {
+          FirstNSTok = Tok =
+              processTokens(FirstNSTok, tok::l_paren, tok::r_paren, AddToken);
+          continue;
+        }
+        if (FirstNSTok->isNot(tok::coloncolon)) {
+          NameFinished = true;
+          break;
+        }
+      }
+      name += FirstNSTok->TokenText;
+      IsPrevColoncolon = FirstNSTok->is(tok::coloncolon);
+      HasColoncolon = HasColoncolon || IsPrevColoncolon;
+      if (FirstNSTok->is(tok::kw_inline)) {
+        name += " ";
+        IsPrevInline = true;
+      }
+    }
+    FirstNSTok = Tok;
+    Tok = Tok->getNextNonComment();
+    const FormatToken *TokAfterAttr = skipAttribute(Tok);
+    if (TokAfterAttr != Tok)
+      FirstNSTok = Tok = TokAfterAttr;
+  }
+  if (!NameFinished && FirstNSTok && FirstNSTok->isNot(tok::l_brace))
+    name += FirstNSTok->TokenText;
+  if (FirstNSName.empty() || HasColoncolon)
+    return name;
+  return name.empty() ? FirstNSName : FirstNSName + " " + name;
 }
 
 std::string computeEndCommentText(StringRef NamespaceName, bool AddNewline,

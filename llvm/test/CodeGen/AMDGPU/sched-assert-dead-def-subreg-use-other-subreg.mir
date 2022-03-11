@@ -24,7 +24,6 @@ body:             |
   ; CHECK-NEXT:   undef %0.sub3:vreg_512 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 0, [[V_MOV_B32_e32_]], implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_512 = COPY %0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -39,10 +38,11 @@ body:             |
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def dead [[COPY1]], 851978 /* regdef:VGPR_LO16 */, def dead [[COPY]].sub1, 2147483657 /* reguse tiedto:$0 */, [[COPY1]], 2147549193 /* reguse tiedto:$1 */, [[COPY]].sub1
   ; CHECK-NEXT:   %11.sub0:vreg_512 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   %11.sub3:vreg_512 = COPY [[COPY]].sub3
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   dead %10:vgpr_32 = V_ADD_CO_U32_e32 4, [[V_MOV_B32_e32_1]], implicit-def dead $vcc, implicit $exec
   ; CHECK-NEXT:   %11.sub2:vreg_512 = COPY undef [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   %11.sub5:vreg_512 = COPY undef [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_512 = COPY %11
-  ; CHECK-NEXT:   dead %10:vgpr_32 = V_ADD_CO_U32_e32 4, [[V_MOV_B32_e32_1]], implicit-def dead $vcc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
     liveins: $sgpr6_sgpr7

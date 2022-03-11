@@ -12,6 +12,7 @@
 #include "PdbIndex.h"
 #include "PdbSymUid.h"
 
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
@@ -20,6 +21,7 @@
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
@@ -47,6 +49,22 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
   result.Append(start, end - start);
   return result;
 }
+
+namespace {
+struct FindMembersSize : public TypeVisitorCallbacks {
+  FindMembersSize(std::vector<std::pair<RegisterId, uint32_t>> &members_info,
+                  TpiStream &tpi)
+      : members_info(members_info), tpi(tpi) {}
+  std::vector<std::pair<RegisterId, uint32_t>> &members_info;
+  TpiStream &tpi;
+  llvm::Error visitKnownMember(CVMemberRecord &cvr,
+                               DataMemberRecord &member) override {
+    members_info.emplace_back(llvm::codeview::RegisterId::NONE,
+                              GetSizeOfType(member.Type, tpi));
+    return llvm::Error::success();
+  }
+};
+} // namespace
 
 CVTagRecord CVTagRecord::create(CVType type) {
   assert(IsTagRecord(type) && "type is not a tag record!");
@@ -477,6 +495,8 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
     cantFail(SymbolDeserializer::deserializeAs<LocalSym>(sym, local));
     result.type = local.Type;
     result.name = local.Name;
+    result.is_param =
+        ((local.Flags & LocalSymFlags::IsParameter) != LocalSymFlags::None);
     return result;
   }
 
@@ -609,7 +629,8 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
     PdbCompilandSymId loc_specifier_id(var_id.modi,
                                        var_id.offset + sym.RecordData.size());
     CVSymbol loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
-    if (loc_specifier_cvs.kind() == S_DEFRANGE_FRAMEPOINTER_REL) {
+    switch(loc_specifier_cvs.kind()) {
+    case S_DEFRANGE_FRAMEPOINTER_REL: {
       DefRangeFramePointerRelSym loc(
           SymbolRecordKind::DefRangeFramePointerRelSym);
       cantFail(SymbolDeserializer::deserializeAs<DefRangeFramePointerRelSym>(
@@ -632,10 +653,8 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
       PdbCompilandSymId frame_proc_id(
           func_scope_id.modi, func_scope_id.offset + func_block_cvs.length());
 
-      bool is_parameter =
-          ((local.Flags & LocalSymFlags::IsParameter) != LocalSymFlags::None);
       RegisterId base_reg =
-          GetBaseFrameRegister(index, frame_proc_id, is_parameter);
+          GetBaseFrameRegister(index, frame_proc_id, result.is_param);
 
       if (base_reg == RegisterId::VFRAME) {
         llvm::StringRef program;
@@ -651,7 +670,9 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
             MakeRegRelLocationExpression(base_reg, loc.Hdr.Offset, module);
         result.ranges = std::move(ranges);
       }
-    } else if (loc_specifier_cvs.kind() == S_DEFRANGE_REGISTER_REL) {
+      break;
+    } 
+    case S_DEFRANGE_REGISTER_REL: {
       DefRangeRegisterRelSym loc(SymbolRecordKind::DefRangeRegisterRelSym);
       cantFail(SymbolDeserializer::deserializeAs<DefRangeRegisterRelSym>(
           loc_specifier_cvs, loc));
@@ -674,9 +695,76 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
             base_reg, loc.Hdr.BasePointerOffset, module);
         result.ranges = std::move(ranges);
       }
+      break;
     }
+    case S_DEFRANGE_REGISTER: {
+      DefRangeRegisterSym loc(SymbolRecordKind::DefRangeRegisterSym);
+      cantFail(SymbolDeserializer::deserializeAs<DefRangeRegisterSym>(
+          loc_specifier_cvs, loc));
 
-    // FIXME: Handle other kinds
+      RegisterId base_reg = (RegisterId)(uint16_t)loc.Hdr.Register;
+      result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+      result.location = MakeEnregisteredLocationExpression(base_reg, module);
+      break;
+    }
+    case S_DEFRANGE_SUBFIELD_REGISTER: {
+      CVType class_cvt = index.tpi().getType(result.type);
+      ClassRecord class_record = CVTagRecord::create(class_cvt).asClass();
+      CVType field_list = index.tpi().getType(class_record.FieldList);
+      std::vector<std::pair<RegisterId, uint32_t>> members_info;
+      FindMembersSize find_members_size(members_info, index.tpi());
+      if (llvm::Error err =
+              visitMemberRecordStream(field_list.data(), find_members_size))
+        llvm::consumeError(std::move(err));
+
+      std::vector<Variable::RangeList> range_lists;
+      uint32_t cur_offset = 0;
+      size_t member_idx = 0;
+      // Assuming S_DEFRANGE_SUBFIELD_REGISTER is followed only by
+      // S_DEFRANGE_SUBFIELD_REGISTER, need to verify.
+      while (loc_specifier_cvs.kind() == S_DEFRANGE_SUBFIELD_REGISTER &&
+             member_idx < members_info.size()) {
+        DefRangeSubfieldRegisterSym loc(
+            SymbolRecordKind::DefRangeSubfieldRegisterSym);
+        cantFail(SymbolDeserializer::deserializeAs<DefRangeSubfieldRegisterSym>(
+            loc_specifier_cvs, loc));
+
+        if (result.ranges) {
+          result.ranges = Variable::RangeList::GetOverlaps(
+              *result.ranges, MakeRangeList(index, loc.Range, loc.Gaps));
+        } else {
+          result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+          result.ranges->Sort();
+        }
+
+        // Some fields maybe optimized away and have no
+        // S_DEFRANGE_SUBFIELD_REGISTER to describe them. Skip them.
+        while (loc.Hdr.OffsetInParent != cur_offset) {
+          cur_offset += members_info[member_idx].second;
+          ++member_idx;
+        }
+        if (member_idx < members_info.size()) {
+          members_info[member_idx].first =
+              (RegisterId)(uint16_t)loc.Hdr.Register;
+          cur_offset += members_info[member_idx].second;
+          ++member_idx;
+        }
+        // Go to next S_DEFRANGE_SUBFIELD_REGISTER.
+        loc_specifier_id = PdbCompilandSymId(
+            loc_specifier_id.modi,
+            loc_specifier_id.offset + loc_specifier_cvs.RecordData.size());
+        loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
+      }
+      auto member_info_ref = llvm::makeArrayRef(members_info);
+      result.location =
+          MakeEnregisteredLocationExpressionForClass(member_info_ref, module);
+      break;
+    }
+    default:
+      // FIXME: Handle other kinds. LLVM only generates the 4 types of records
+      // above.
+      break;
+    }
     return result;
   }
   llvm_unreachable("Symbol is not a local variable!");

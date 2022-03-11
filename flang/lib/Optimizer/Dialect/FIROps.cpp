@@ -32,6 +32,7 @@ namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
 using namespace fir;
+using namespace mlir;
 
 /// Return true if a sequence type is of some incomplete size or a record type
 /// is malformed or contains an incomplete sequence type. An incomplete sequence
@@ -3255,6 +3256,15 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
   auto result = modBuilder.create<fir::GlobalOp>(loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
   return result;
+}
+
+bool fir::hasHostAssociationArgument(mlir::FuncOp func) {
+  if (auto allArgAttrs = func.getAllArgAttrs())
+    for (auto attr : allArgAttrs)
+      if (auto dict = attr.template dyn_cast_or_null<mlir::DictionaryAttr>())
+        if (dict.get(fir::getHostAssocAttrName()))
+          return true;
+  return false;
 }
 
 bool fir::valueHasFirAttribute(mlir::Value value,

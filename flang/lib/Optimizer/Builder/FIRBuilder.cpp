@@ -71,7 +71,7 @@ mlir::Type fir::FirOpBuilder::getRealType(int kind) {
   case llvm::Type::TypeID::FP128TyID:
     return mlir::FloatType::getF128(getContext());
   default:
-    fir::emitFatalError(UnknownLoc::get(getContext()),
+    fir::emitFatalError(mlir::UnknownLoc::get(getContext()),
                         "unsupported type !fir.real<kind>");
   }
 }
@@ -505,6 +505,23 @@ mlir::Value fir::FirOpBuilder::genIsNotNull(mlir::Location loc,
 mlir::Value fir::FirOpBuilder::genIsNull(mlir::Location loc, mlir::Value addr) {
   return genNullPointerComparison(*this, loc, addr,
                                   mlir::arith::CmpIPredicate::eq);
+}
+
+mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
+                                                    mlir::Value lb,
+                                                    mlir::Value ub,
+                                                    mlir::Value step,
+                                                    mlir::Type type) {
+  auto zero = createIntegerConstant(loc, type, 0);
+  lb = createConvert(loc, type, lb);
+  ub = createConvert(loc, type, ub);
+  step = createConvert(loc, type, step);
+  auto diff = create<mlir::arith::SubIOp>(loc, ub, lb);
+  auto add = create<mlir::arith::AddIOp>(loc, diff, step);
+  auto div = create<mlir::arith::DivSIOp>(loc, add, step);
+  auto cmp = create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sgt,
+                                         div, zero);
+  return create<mlir::arith::SelectOp>(loc, cmp, div, zero);
 }
 
 //===--------------------------------------------------------------------===//

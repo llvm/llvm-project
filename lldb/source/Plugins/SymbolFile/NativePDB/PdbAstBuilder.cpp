@@ -497,7 +497,8 @@ clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
   if (isLocalVariableType(cvs.kind())) {
     clang::DeclContext *scope = GetParentDeclContext(id);
     clang::Decl *scope_decl = clang::Decl::castFromDeclContext(scope);
-    PdbCompilandSymId scope_id(id.modi, m_decl_to_status[scope_decl].uid);
+    PdbCompilandSymId scope_id =
+        PdbSymUid(m_decl_to_status[scope_decl].uid).asCompilandSym();
     return GetOrCreateVariableDecl(scope_id, id);
   }
 

@@ -3072,3 +3072,47 @@ define i1 @auto_gen_135_logical(double %a, double %b) {
   %retval = select i1 %cmp, i1 true, i1 %cmp1
   ret i1 %retval
 }
+
+define i1 @intersect_fmf_1(double %a, double %b) {
+; CHECK-LABEL: @intersect_fmf_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp fast olt double %a, %b
+  %cmp1 = fcmp fast ogt double %a, %b
+  %retval = or i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @intersect_fmf_2(double %a, double %b) {
+; CHECK-LABEL: @intersect_fmf_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp fast olt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = or i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @intersect_fmf_3(double %a, double %b) {
+; CHECK-LABEL: @intersect_fmf_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp fast ogt double %a, %b
+  %retval = or i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @intersect_fmf_4(double %a, double %b) {
+; CHECK-LABEL: @intersect_fmf_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ninf olt double %a, %b
+  %cmp1 = fcmp nnan ogt double %a, %b
+  %retval = or i1 %cmp, %cmp1
+  ret i1 %retval
+}

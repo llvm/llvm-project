@@ -702,7 +702,7 @@ private:
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
   /// corresponding argument's pointee type. Also upgrades intrinsics that now
   /// require an elementtype attribute.
-  void propagateAttributeTypes(CallBase *CB, ArrayRef<unsigned> ArgsTys);
+  Error propagateAttributeTypes(CallBase *CB, ArrayRef<unsigned> ArgsTys);
 
   /// Converts alignment exponent (i.e. power of two (or zero)) to the
   /// corresponding alignment to use. If alignment is too large, returns
@@ -4081,8 +4081,8 @@ Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
   return Error::success();
 }
 
-void BitcodeReader::propagateAttributeTypes(CallBase *CB,
-                                            ArrayRef<unsigned> ArgTyIDs) {
+Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
+                                             ArrayRef<unsigned> ArgTyIDs) {
   for (unsigned i = 0; i != CB->arg_size(); ++i) {
     for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet,
                                      Attribute::InAlloca}) {
@@ -4093,6 +4093,9 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
       CB->removeParamAttr(i, Kind);
 
       Type *PtrEltTy = getPtrElementTypeByID(ArgTyIDs[i]);
+      if (!PtrEltTy)
+        return error("Missing element type for typed attribute upgrade");
+
       Attribute NewAttr;
       switch (Kind) {
       case Attribute::ByVal:
@@ -4121,6 +4124,8 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
 
       if (CI.isIndirect && !CB->getParamElementType(ArgNo)) {
         Type *ElemTy = getPtrElementTypeByID(ArgTyIDs[ArgNo]);
+        if (!ElemTy)
+          return error("Missing element type for inline asm upgrade");
         CB->addParamAttr(
             ArgNo, Attribute::get(Context, Attribute::ElementType, ElemTy));
       }
@@ -4134,6 +4139,8 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
   case Intrinsic::preserve_struct_access_index:
     if (!CB->getParamElementType(0)) {
       Type *ElTy = getPtrElementTypeByID(ArgTyIDs[0]);
+      if (!ElTy)
+        return error("Missing element type for elementtype upgrade");
       Attribute NewAttr = Attribute::get(Context, Attribute::ElementType, ElTy);
       CB->addParamAttr(0, NewAttr);
     }
@@ -4141,6 +4148,8 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
   default:
     break;
   }
+
+  return Error::success();
 }
 
 /// Lazily parse the specified function body block.
@@ -4456,18 +4465,20 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       I = GetElementPtrInst::Create(Ty, BasePtr, GEPIdx);
 
       ResTypeID = TyID;
-      auto GTI = std::next(gep_type_begin(I));
-      for (Value *Idx : drop_begin(cast<GEPOperator>(I)->indices())) {
-        unsigned SubType = 0;
-        if (GTI.isStruct()) {
-          ConstantInt *IdxC =
-              Idx->getType()->isVectorTy()
-                  ? cast<ConstantInt>(cast<Constant>(Idx)->getSplatValue())
-                  : cast<ConstantInt>(Idx);
-          SubType = IdxC->getZExtValue();
+      if (cast<GEPOperator>(I)->getNumIndices() != 0) {
+        auto GTI = std::next(gep_type_begin(I));
+        for (Value *Idx : drop_begin(cast<GEPOperator>(I)->indices())) {
+          unsigned SubType = 0;
+          if (GTI.isStruct()) {
+            ConstantInt *IdxC =
+                Idx->getType()->isVectorTy()
+                    ? cast<ConstantInt>(cast<Constant>(Idx)->getSplatValue())
+                    : cast<ConstantInt>(Idx);
+            SubType = IdxC->getZExtValue();
+          }
+          ResTypeID = getContainedTypeID(ResTypeID, SubType);
+          ++GTI;
         }
-        ResTypeID = getContainedTypeID(ResTypeID, SubType);
-        ++GTI;
       }
 
       // At this point ResTypeID is the result element type. We need a pointer
@@ -5065,7 +5076,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<InvokeInst>(I)->setCallingConv(
           static_cast<CallingConv::ID>(CallingConv::MaxID & CCInfo));
       cast<InvokeInst>(I)->setAttributes(PAL);
-      propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs);
+      if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
+        I->deleteValue();
+        return Err;
+      }
 
       break;
     }
@@ -5159,7 +5173,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<CallBrInst>(I)->setCallingConv(
           static_cast<CallingConv::ID>((0x7ff & CCInfo) >> bitc::CALL_CCONV));
       cast<CallBrInst>(I)->setAttributes(PAL);
-      propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs);
+      if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
+        I->deleteValue();
+        return Err;
+      }
       break;
     }
     case bitc::FUNC_CODE_INST_UNREACHABLE: // UNREACHABLE
@@ -5771,7 +5788,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         TCK = CallInst::TCK_NoTail;
       cast<CallInst>(I)->setTailCallKind(TCK);
       cast<CallInst>(I)->setAttributes(PAL);
-      propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs);
+      if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
+        I->deleteValue();
+        return Err;
+      }
       if (FMF.any()) {
         if (!isa<FPMathOperator>(I))
           return error("Fast-math-flags specified for call without "

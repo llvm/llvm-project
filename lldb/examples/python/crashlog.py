@@ -28,8 +28,10 @@
 
 from __future__ import print_function
 import cmd
+import contextlib
 import datetime
 import glob
+import json
 import optparse
 import os
 import platform
@@ -41,7 +43,6 @@ import subprocess
 import sys
 import time
 import uuid
-import json
 
 try:
     # First try for LLDB in case PYTHONPATH is already correctly setup.
@@ -266,7 +267,7 @@ class CrashLog(symbolication.Symbolicator):
             self.resolved = True
             uuid_str = self.get_normalized_uuid_string()
             if self.show_symbol_progress():
-                print('Getting symbols for %s %s...' % (uuid_str, self.path), end=' ')
+                print('Getting symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
@@ -316,7 +317,7 @@ class CrashLog(symbolication.Symbolicator):
                     pass
             if (self.resolved_path and os.path.exists(self.resolved_path)) or (
                     self.path and os.path.exists(self.path)):
-                print('ok')
+                print('Resolved symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
                 return True
             else:
                 self.unavailable = True
@@ -1016,6 +1017,31 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file):
     launch_info.SetScriptedProcessDictionary(structured_data)
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
+
+    if not process or error.Fail():
+        return
+
+    @contextlib.contextmanager
+    def synchronous(debugger):
+        async_state = debugger.GetAsync()
+        debugger.SetAsync(False)
+        try:
+            yield
+        finally:
+            debugger.SetAsync(async_state)
+
+    with synchronous(debugger):
+        run_options = lldb.SBCommandInterpreterRunOptions()
+        run_options.SetStopOnError(True)
+        run_options.SetStopOnCrash(True)
+        run_options.SetEchoCommands(True)
+
+        commands_stream = lldb.SBStream()
+        commands_stream.Print("process status\n")
+        commands_stream.Print("thread backtrace\n")
+        error = debugger.SetInputString(commands_stream.GetData())
+        if error.Success():
+            debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)
 
 def CreateSymbolicateCrashLogOptions(
         command_name,

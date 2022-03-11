@@ -203,8 +203,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 12"
-    command: "libcxx/utils/ci/run-buildbot generic-clang-12"
+  - label: "Clang 13"
+    command: "libcxx/utils/ci/run-buildbot generic-clang-13"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -217,8 +217,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 13"
-    command: "libcxx/utils/ci/run-buildbot generic-clang-13"
+  - label: "Clang 14"
+    command: "libcxx/utils/ci/run-buildbot generic-clang-14"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -678,7 +678,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "aarch64"
       retry:
         automatic:
@@ -692,7 +692,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "aarch64"
       retry:
         automatic:
@@ -706,7 +706,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l"
       retry:
         automatic:
@@ -720,7 +720,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l"
       retry:
         automatic:
@@ -734,7 +734,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l" # Compiling for v7, running on v8 hardware
       retry:
         automatic:
@@ -748,7 +748,7 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
-        queue: "libcxx-builders-linaro-arm"
+        queue: "libcxx-builders-linaro-arm-test"
         arch: "armv8l" # Compiling for v7, running on v8 hardware
       retry:
         automatic:

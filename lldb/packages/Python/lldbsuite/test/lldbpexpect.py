@@ -23,11 +23,15 @@ class PExpectTest(TestBase):
     def expect_prompt(self):
         self.child.expect_exact(self.PROMPT)
 
-    def launch(self, executable=None, extra_args=None, timeout=60, dimensions=None):
+    def launch(self, executable=None, extra_args=None, timeout=60,
+               dimensions=None, run_under=None, post_spawn=None):
         logfile = getattr(sys.stdout, 'buffer',
                             sys.stdout) if self.TraceOn() else None
 
-        args = ['--no-lldbinit', '--no-use-colors']
+        args = []
+        if run_under is not None:
+            args += run_under
+        args += [lldbtest_config.lldbExec, '--no-lldbinit', '--no-use-colors']
         for cmd in self.setUpCommands():
             args += ['-O', cmd]
         if executable is not None:
@@ -41,8 +45,11 @@ class PExpectTest(TestBase):
 
         import pexpect
         self.child = pexpect.spawn(
-                lldbtest_config.lldbExec, args=args, logfile=logfile,
+                args[0], args=args[1:], logfile=logfile,
                 timeout=timeout, dimensions=dimensions, env=env)
+
+        if post_spawn is not None:
+            post_spawn()
         self.expect_prompt()
         for cmd in self.setUpCommands():
             self.child.expect_exact(cmd)

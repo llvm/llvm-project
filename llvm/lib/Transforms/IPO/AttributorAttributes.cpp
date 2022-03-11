@@ -864,55 +864,6 @@ struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
 
 } // namespace llvm
 
-/// Implementation of the DenseMapInfo.
-///
-///{
-inline llvm::AccessAsInstructionInfo::Access
-llvm::AccessAsInstructionInfo::getEmptyKey() {
-  return Access(Base::getEmptyKey(), nullptr, AAPointerInfo::AK_READ, nullptr);
-}
-inline llvm::AccessAsInstructionInfo::Access
-llvm::AccessAsInstructionInfo::getTombstoneKey() {
-  return Access(Base::getTombstoneKey(), nullptr, AAPointerInfo::AK_READ,
-                nullptr);
-}
-unsigned llvm::AccessAsInstructionInfo::getHashValue(
-    const llvm::AccessAsInstructionInfo::Access &A) {
-  return Base::getHashValue(A.getRemoteInst());
-}
-bool llvm::AccessAsInstructionInfo::isEqual(
-    const llvm::AccessAsInstructionInfo::Access &LHS,
-    const llvm::AccessAsInstructionInfo::Access &RHS) {
-  return LHS.getRemoteInst() == RHS.getRemoteInst();
-}
-inline llvm::DenseMapInfo<AAPointerInfo::Access>::Access
-llvm::DenseMapInfo<AAPointerInfo::Access>::getEmptyKey() {
-  return AAPointerInfo::Access(nullptr, nullptr, AAPointerInfo::AK_READ,
-                               nullptr);
-}
-inline llvm::DenseMapInfo<AAPointerInfo::Access>::Access
-llvm::DenseMapInfo<AAPointerInfo::Access>::getTombstoneKey() {
-  return AAPointerInfo::Access(nullptr, nullptr, AAPointerInfo::AK_WRITE,
-                               nullptr);
-}
-
-unsigned llvm::DenseMapInfo<AAPointerInfo::Access>::getHashValue(
-    const llvm::DenseMapInfo<AAPointerInfo::Access>::Access &A) {
-  return detail::combineHashValue(
-             DenseMapInfo<Instruction *>::getHashValue(A.getRemoteInst()),
-             (A.isWrittenValueYetUndetermined()
-                  ? ~0
-                  : DenseMapInfo<Value *>::getHashValue(A.getWrittenValue()))) +
-         A.getKind();
-}
-
-bool llvm::DenseMapInfo<AAPointerInfo::Access>::isEqual(
-    const llvm::DenseMapInfo<AAPointerInfo::Access>::Access &LHS,
-    const llvm::DenseMapInfo<AAPointerInfo::Access>::Access &RHS) {
-  return LHS == RHS;
-}
-///}
-
 /// A type to track pointer/struct usage and accesses for AAPointerInfo.
 struct AA::PointerInfo::State : public AbstractState {
 
@@ -977,15 +928,11 @@ struct AA::PointerInfo::State : public AbstractState {
         return false;
       auto &Accs = It->getSecond();
       auto &RAccs = RIt->getSecond();
-      if (Accs.size() != RAccs.size())
+      if (Accs->size() != RAccs->size())
         return false;
-      auto AccIt = Accs.begin(), RAccIt = RAccs.begin(), AccE = Accs.end();
-      while (AccIt != AccE) {
-        if (*AccIt != *RAccIt)
+      for (const auto &ZipIt : llvm::zip(*Accs, *RAccs))
+        if (std::get<0>(ZipIt) != std::get<1>(ZipIt))
           return false;
-        ++AccIt;
-        ++RAccIt;
-      }
       ++It;
       ++RIt;
     }
@@ -994,42 +941,69 @@ struct AA::PointerInfo::State : public AbstractState {
   bool operator!=(const State &R) const { return !(*this == R); }
 
   /// We store accesses in a set with the instruction as key.
-  using Accesses = DenseSet<AAPointerInfo::Access, AccessAsInstructionInfo>;
+  struct Accesses {
+    SmallVector<AAPointerInfo::Access, 4> Accesses;
+    DenseMap<const Instruction *, unsigned> Map;
+
+    unsigned size() const { return Accesses.size(); }
+
+    using vec_iterator = decltype(Accesses)::iterator;
+    vec_iterator begin() { return Accesses.begin(); }
+    vec_iterator end() { return Accesses.end(); }
+
+    using iterator = decltype(Map)::const_iterator;
+    iterator find(AAPointerInfo::Access &Acc) {
+      return Map.find(Acc.getRemoteInst());
+    }
+    iterator find_end() { return Map.end(); }
+
+    AAPointerInfo::Access &get(iterator &It) {
+      return Accesses[It->getSecond()];
+    }
+
+    void insert(AAPointerInfo::Access &Acc) {
+      Map[Acc.getRemoteInst()] = Accesses.size();
+      Accesses.push_back(Acc);
+    }
+  };
 
   /// We store all accesses in bins denoted by their offset and size.
-  using AccessBinsTy = DenseMap<AAPointerInfo::OffsetAndSize, Accesses>;
+  using AccessBinsTy = DenseMap<AAPointerInfo::OffsetAndSize, Accesses *>;
 
   AccessBinsTy::const_iterator begin() const { return AccessBins.begin(); }
   AccessBinsTy::const_iterator end() const { return AccessBins.end(); }
 
 protected:
   /// The bins with all the accesses for the associated pointer.
-  DenseMap<AAPointerInfo::OffsetAndSize, Accesses> AccessBins;
+  AccessBinsTy AccessBins;
 
   /// Add a new access to the state at offset \p Offset and with size \p Size.
   /// The access is associated with \p I, writes \p Content (if anything), and
   /// is of kind \p Kind.
   /// \Returns CHANGED, if the state changed, UNCHANGED otherwise.
-  ChangeStatus addAccess(int64_t Offset, int64_t Size, Instruction &I,
-                         Optional<Value *> Content,
+  ChangeStatus addAccess(Attributor &A, int64_t Offset, int64_t Size,
+                         Instruction &I, Optional<Value *> Content,
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr,
                          Accesses *BinPtr = nullptr) {
     AAPointerInfo::OffsetAndSize Key{Offset, Size};
-    Accesses &Bin = BinPtr ? *BinPtr : AccessBins[Key];
+    Accesses *&Bin = BinPtr ? BinPtr : AccessBins[Key];
+    if (!Bin)
+      Bin = new (A.Allocator) Accesses;
     AAPointerInfo::Access Acc(&I, RemoteI ? RemoteI : &I, Content, Kind, Ty);
     // Check if we have an access for this instruction in this bin, if not,
     // simply add it.
-    auto It = Bin.find(Acc);
-    if (It == Bin.end()) {
-      Bin.insert(Acc);
+    auto It = Bin->find(Acc);
+    if (It == Bin->find_end()) {
+      Bin->insert(Acc);
       return ChangeStatus::CHANGED;
     }
     // If the existing access is the same as then new one, nothing changed.
-    AAPointerInfo::Access Before = *It;
+    AAPointerInfo::Access &Current = Bin->get(It);
+    AAPointerInfo::Access Before = Current;
     // The new one will be combined with the existing one.
-    *It &= Acc;
-    return *It == Before ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
+    Current &= Acc;
+    return Current == Before ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
   }
 
   /// See AAPointerInfo::forallInterferingAccesses.
@@ -1044,7 +1018,7 @@ protected:
       if (!OAS.mayOverlap(ItOAS))
         continue;
       bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
-      for (auto &Access : It.getSecond())
+      for (auto &Access : *It.getSecond())
         if (!CB(Access, IsExact))
           return false;
     }
@@ -1061,7 +1035,7 @@ protected:
     // First find the offset and size of I.
     AAPointerInfo::OffsetAndSize OAS(-1, -1);
     for (auto &It : AccessBins) {
-      for (auto &Access : It.getSecond()) {
+      for (auto &Access : *It.getSecond()) {
         if (Access.getRemoteInst() == &I) {
           OAS = It.getFirst();
           break;
@@ -1297,8 +1271,8 @@ struct AAPointerInfoImpl
       if (CallArgOffset != OffsetAndSize::Unknown)
         OAS = OffsetAndSize(It.first.getOffset() + CallArgOffset,
                             It.first.getSize());
-      Accesses &Bin = AccessBins[OAS];
-      for (const AAPointerInfo::Access &RAcc : It.second) {
+      Accesses *Bin = AccessBins[OAS];
+      for (const AAPointerInfo::Access &RAcc : *It.second) {
         if (IsByval && !RAcc.isRead())
           continue;
         bool UsedAssumedInformation = false;
@@ -1308,8 +1282,8 @@ struct AAPointerInfoImpl
             AccessKind(RAcc.getKind() & (IsByval ? AccessKind::AK_READ
                                                  : AccessKind::AK_READ_WRITE));
         Changed =
-            Changed | addAccess(OAS.getOffset(), OAS.getSize(), CB, Content, AK,
-                                RAcc.getType(), RAcc.getRemoteInst(), &Bin);
+            Changed | addAccess(A, OAS.getOffset(), OAS.getSize(), CB, Content,
+                                AK, RAcc.getType(), RAcc.getRemoteInst(), Bin);
       }
     }
     return Changed;
@@ -1342,7 +1316,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       if (!AccessSize.isScalable())
         Size = AccessSize.getFixedSize();
     }
-    Changed = Changed | addAccess(Offset, Size, I, Content, Kind, Ty);
+    Changed = Changed | addAccess(A, Offset, Size, I, Content, Kind, Ty);
     return true;
   };
 
@@ -1532,15 +1506,19 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       for (auto &It : AccessBins) {
         dbgs() << "[" << It.first.getOffset() << "-"
                << It.first.getOffset() + It.first.getSize()
-               << "] : " << It.getSecond().size() << "\n";
-        for (auto &Acc : It.getSecond()) {
+               << "] : " << It.getSecond()->size() << "\n";
+        for (auto &Acc : *It.getSecond()) {
           dbgs() << "     - " << Acc.getKind() << " - " << *Acc.getLocalInst()
                  << "\n";
           if (Acc.getLocalInst() != Acc.getRemoteInst())
             dbgs() << "     -->                         "
                    << *Acc.getRemoteInst() << "\n";
-          if (!Acc.isWrittenValueYetUndetermined())
-            dbgs() << "     - " << Acc.getWrittenValue() << "\n";
+          if (!Acc.isWrittenValueYetUndetermined()) {
+            if (Acc.getWrittenValue())
+              dbgs() << "       - c: " << *Acc.getWrittenValue() << "\n";
+            else
+              dbgs() << "       - c: <unknown>\n";
+          }
         }
       }
     });
@@ -5318,7 +5296,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     LLVM_DEBUG({
-      errs() << "SAV: " << SimplifiedAssociatedValue << " ";
+      errs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
       if (SimplifiedAssociatedValue && *SimplifiedAssociatedValue)
         errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });

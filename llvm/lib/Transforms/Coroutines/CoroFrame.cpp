@@ -808,9 +808,10 @@ static StringRef solveTypeName(Type *Ty) {
     return "__floating_type_";
   }
 
-  if (Ty->isPointerTy()) {
-    auto *PtrTy = cast<PointerType>(Ty);
-    Type *PointeeTy = PtrTy->getPointerElementType();
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
+    if (PtrTy->isOpaque())
+      return "PointerType";
+    Type *PointeeTy = PtrTy->getNonOpaquePointerElementType();
     auto Name = solveTypeName(PointeeTy);
     if (Name == "UnknownType")
       return "PointerType";
@@ -2282,7 +2283,10 @@ static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
   IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
-  auto ValueTy = ArgTy->getPointerElementType();
+  // swifterror arguments are required to have pointer-to-pointer type,
+  // so create a pointer-typed alloca with opaque pointers.
+  auto ValueTy = ArgTy->isOpaque() ? PointerType::getUnqual(F.getContext())
+                                   : ArgTy->getNonOpaquePointerElementType();
 
   // Reduce to the alloca case:
 

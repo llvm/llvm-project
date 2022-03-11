@@ -6,9 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// http://wg21.link/LWG2447 gives implementors freedom to reject const or volatile types in `std::allocator`.
+// UNSUPPORTED: c++03
 
-#include <memory>
+// <vector>
 
-std::allocator<volatile int> A1; // expected-error@*:* {{std::allocator does not support volatile types}}
-std::allocator<const int> A2; // expected-error@*:* {{std::allocator does not support const types}}
+// vector<const int> v;  // an extension
+
+#include <vector>
+#include <type_traits>
+
+#include "test_macros.h"
+
+int main(int, char**)
+{
+    std::vector<const int> v = {1, 2, 3};
+
+  return 0;
+}

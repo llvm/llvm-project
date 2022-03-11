@@ -3586,6 +3586,8 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
     AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr) {
+  // TODO: handle the case where XElemTy is not byte-sized or not a power of 2
+  // or a complex datatype.
   bool DoCmpExch = (RMWOp == AtomicRMWInst::BAD_BINOP) ||
                    (RMWOp == AtomicRMWInst::FAdd) ||
                    (RMWOp == AtomicRMWInst::FSub) ||

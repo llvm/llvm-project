@@ -73,12 +73,12 @@ private:
 
 public:
   void SetUp() override {
-#if math_errhandling & MATH_ERREXCEPT
-    // We will disable all exceptions so that the test will not
-    // crash with SIGFPE. We can still use fetestexcept to check
-    // if the appropriate flag was raised.
-    __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
-#endif
+    if (math_errhandling & MATH_ERREXCEPT) {
+      // We will disable all exceptions so that the test will not
+      // crash with SIGFPE. We can still use fetestexcept to check
+      // if the appropriate flag was raised.
+      __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
+    }
   }
 
   void do_infinity_and_na_n_test(RoundToIntegerFunc func) {

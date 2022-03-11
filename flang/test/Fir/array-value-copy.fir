@@ -104,12 +104,12 @@ func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
 // CHECK-LABEL: func @conversion_with_temporary(
 // CHECK-SAME:                                  %[[ARR0:.*]]: !fir.ref<!fir.array<10xi32>>)
 // Allocation of temporary array.
-// CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32>, %{{.*}}
+// CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32>
 // Copy of original array to temp.
 // CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-// CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Perform the assignment i = i(10:1:-1) using the temporary array.
@@ -125,8 +125,8 @@ func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
 // Copy the result back to the original array.
 // CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-// CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0:.*]] : !fir.ref<i32>
 // CHECK:           %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0:.*]] : !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Free temporary array.
@@ -176,7 +176,7 @@ func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
 // CHECK-SAME:                                           %[[ARR0:.*]]: !fir.ref<!fir.array<10x5xi32>>) {
 // CHECK:         %[[CST10:.*]] = arith.constant 10 : index
 // CHECK:         %[[CST5:.*]] = arith.constant 5 : index
-// CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10x5xi32>, %c10, %c5
+// CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10x5xi32>
 // CHECK:         %[[IDX5:.*]] = fir.convert %[[CST5]] : (index) -> index
 // CHECK:         %[[UB5:.*]] = arith.subi %[[IDX5]], %{{.*}} : index
 // CHECK:         fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %[[UB5]] step %{{.*}} {
@@ -186,8 +186,8 @@ func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
 // CHECK:             %[[IDX1:.*]] = arith.addi %[[INDUC1]], %{{.*}} : index
 // CHECK:             %[[IDX2:.*]] = arith.addi %[[INDUC0]], %{{.*}} : index
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %[[IDX1:.*]], %[[IDX2:.*]] : (!fir.ref<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
-// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         %{{.*}} = fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x5xi32>) {
 // CHECK:           %{{.*}} = fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x5xi32>) {
@@ -208,8 +208,8 @@ func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
 // CHECK:             %[[IDX1:.*]] = arith.addi %[[INDUC1]], %{{.*}} : index
 // CHECK:             %[[IDX2:.*]] = arith.addi %[[INDUC0]], %{{.*}} : index  
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %[[IDX1]], %[[IDX2]] : (!fir.heap<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
-// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         fir.freemem %[[TEMP]] : <!fir.array<10x5xi32>>
 
@@ -283,12 +283,12 @@ func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // CHECK-SAME:                               %[[ARR0:.*]]: !fir.ref<!fir.array<100xf32>>) {
 // CHECK:           %[[VAR0:.*]] = fir.alloca f32
 // Allocate the temporary array.
-// CHECK:           %[[TEMP:.*]] = fir.allocmem !fir.array<100xf32>, %{{.*}}
+// CHECK:           %[[TEMP:.*]] = fir.allocmem !fir.array<100xf32>
 // Copy original array to temp.
 // CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<f32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<f32>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<f32>
 // CHECK:           }
 // CHECK:           %[[VAL_21:.*]] = fir.undefined !fir.array<100xf32>
@@ -304,8 +304,8 @@ func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // Copy back result to original array from temp.
 // CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<f32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+// CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<f32>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<f32>
 // CHECK:           }
 // Free the temporary array.
@@ -374,8 +374,9 @@ func @array_of_types() {
 // Test fir.array_load/boxed array
 func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>) {
   %c10 = arith.constant 10 : index
-  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2 = fir.array_load %arr0(%1) : (!fir.box<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.array<10xi32>
+  %1:3 = fir.box_dims %arr0, %c10 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
+  %shift = fir.shift %1#0 : (index) -> !fir.shift<1>
+  %2 = fir.array_load %arr0(%shift) : (!fir.box<!fir.array<10xi32>>, !fir.shift<1>) -> !fir.array<10xi32>
   %c10_i64 = arith.constant 10 : i64
   %3 = fir.convert %c10_i64 : (i64) -> index
   %c1_i64 = arith.constant 1 : i64
@@ -398,12 +399,12 @@ func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>
 // CHECK-LABEL: func @conversion_with_temporary_boxed_array(
 // CHECK-SAME:                                              %[[ARR0:.*]]: !fir.box<!fir.array<10xi32>>)
 // Allocation of temporary array.
-// CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32>, %{{.*}}
+// CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32>
 // Copy of original array to temp.
 // CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-// CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
-// CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Perform the assignment i = i(10:1:-1) using the temporary array.
@@ -412,15 +413,15 @@ func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>
 // CHECK-NOT:       %{{.*}} = fir.update
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) [%{{.*}}] %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
-// CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:           fir.result %{{.*}} : !fir.array<10xi32>
 // CHECK:         }
 // Copy the result back to the original array.
 // CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-// CHECK:           %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0:.*]] : !fir.ref<i32>
-// CHECK:           %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Free temporary array.
