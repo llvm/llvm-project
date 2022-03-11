@@ -14,16 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
-#include "CodeGenDAGPatterns.h"
+#include "CodeGenInstruction.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenSchedule.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 using namespace llvm;
 
