@@ -1917,6 +1917,13 @@ public:
   VPCanonicalIVPHIRecipe *getCanonicalIV() const;
   VPValue *getStartValue() const { return getOperand(1); }
   VPValue *getStepValue() const { return getOperand(2); }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
