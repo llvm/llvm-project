@@ -1553,7 +1553,7 @@ struct Attributor {
   /// is used, e.g., to replace \p II with a call, after information was
   /// manifested.
   void registerInvokeWithDeadSuccessor(InvokeInst &II) {
-    InvokeWithDeadSuccessor.push_back(&II);
+    InvokeWithDeadSuccessor.insert(&II);
   }
 
   /// Record that \p I is deleted after information was manifested. This also
@@ -2022,7 +2022,7 @@ private:
   /// (\see registerFunctionSignatureRewrite) and return Changed if the module
   /// was altered.
   ChangeStatus
-  rewriteFunctionSignatures(SmallPtrSetImpl<Function *> &ModifiedFns);
+  rewriteFunctionSignatures(SmallSetVector<Function *, 8> &ModifiedFns);
 
   /// Check if the Attribute \p AA should be seeded.
   /// See getOrCreateAAFor.
@@ -2054,7 +2054,7 @@ private:
 
   /// Set of functions for which we modified the content such that it might
   /// impact the call graph.
-  SmallPtrSet<Function *, 8> CGModifiedFunctions;
+  SmallSetVector<Function *, 8> CGModifiedFunctions;
 
   /// Information about a dependence. If FromAA is changed ToAA needs to be
   /// updated as well.
@@ -2091,17 +2091,17 @@ private:
 
   /// Uses we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
-  DenseMap<Use *, Value *> ToBeChangedUses;
+  SmallMapVector<Use *, Value *, 32> ToBeChangedUses;
 
   /// Values we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
-  DenseMap<Value *, std::pair<Value *, bool>> ToBeChangedValues;
+  SmallMapVector<Value *, std::pair<Value *, bool>, 32> ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
-  SmallDenseSet<WeakVH, 16> ToBeChangedToUnreachableInsts;
+  SmallSetVector<WeakVH, 16> ToBeChangedToUnreachableInsts;
 
   /// Invoke instructions with at least a single dead successor block.
-  SmallVector<WeakVH, 16> InvokeWithDeadSuccessor;
+  SmallSetVector<WeakVH, 16> InvokeWithDeadSuccessor;
 
   /// A flag that indicates which stage of the process we are in. Initially, the
   /// phase is SEEDING. Phase is changed in `Attributor::run()`
@@ -2118,10 +2118,10 @@ private:
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
   ///{
-  SmallPtrSet<Function *, 8> ToBeDeletedFunctions;
-  SmallPtrSet<BasicBlock *, 8> ToBeDeletedBlocks;
   SmallPtrSet<BasicBlock *, 8> ManifestAddedBlocks;
-  SmallDenseSet<WeakVH, 8> ToBeDeletedInsts;
+  SmallSetVector<Function *, 8> ToBeDeletedFunctions;
+  SmallSetVector<BasicBlock *, 8> ToBeDeletedBlocks;
+  SmallSetVector<WeakVH, 8> ToBeDeletedInsts;
   ///}
 
   /// Callback to get an OptimizationRemarkEmitter from a Function *.
