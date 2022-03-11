@@ -1663,6 +1663,55 @@ mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
   return symbolTable.lookup(D);
 }
 
+static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
+                                      const NamedDecl *ND,
+                                      bool OmitMultiVersionMangling = false) {
+  assert(!OmitMultiVersionMangling && "NYI");
+
+  SmallString<256> Buffer;
+
+  llvm::raw_svector_ostream Out(Buffer);
+  MangleContext &MC = CGM.getCXXABI().getMangleContext();
+
+  // TODO: support the module name hash
+  auto ShouldMangle = MC.shouldMangleDeclName(ND);
+  assert(!ShouldMangle && "Mangling not actually implemented yet.");
+
+  auto *II = ND->getIdentifier();
+  assert(II && "Attempt to mangle unnamed decl.");
+
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  assert(FD && "Only FunctionDecl supported");
+  assert(FD->getType()->castAs<FunctionType>()->getCallConv() !=
+             CC_X86RegCall &&
+         "NYI");
+  assert(!FD->hasAttr<CUDAGlobalAttr>() && "NYI");
+
+  Out << II->getName();
+
+  assert(!ShouldMangle && "Mangling not actually implemented yet.");
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    assert(!FD->isMultiVersion() && "NYI");
+  }
+  assert(!CGM.getLangOpts().GPURelocatableDeviceCode && "NYI");
+
+  return std::string(Out.str());
+}
+
+StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
+  auto CanonicalGD = GD.getCanonicalDecl();
+  assert(!dyn_cast<CXXConstructorDecl>(CanonicalGD.getDecl()) && "NYI");
+  assert(!langOpts.CUDAIsDevice && "NYI");
+
+  // Keep the first result in the case of a mangling collision.
+  const auto *ND = cast<NamedDecl>(GD.getDecl());
+  std::string MangledName = getMangledNameImpl(*this, GD, ND);
+
+  auto Result = Manglings.insert(std::make_pair(MangledName, GD));
+  return MangledDeclNames[CanonicalGD] = Result.first->first();
+}
+
 /// GetOrCreateCIRFunction - If the specified mangled name is not in the module,
 /// create and return a CIR Function with the specified type. If there is
 /// something in the module with the specified name, return it potentially
