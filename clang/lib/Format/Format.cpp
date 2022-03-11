@@ -1784,48 +1784,6 @@ FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
 
 namespace {
 
-class BracesRemover : public TokenAnalyzer {
-public:
-  BracesRemover(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {}
-
-  std::pair<tooling::Replacements, unsigned>
-  analyze(TokenAnnotator &Annotator,
-          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-          FormatTokenLexer &Tokens) override {
-    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
-    tooling::Replacements Result;
-    removeBraces(AnnotatedLines, Result);
-    return {Result, 0};
-  }
-
-private:
-  void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
-                    tooling::Replacements &Result) {
-    const auto &SourceMgr = Env.getSourceManager();
-    for (AnnotatedLine *Line : Lines) {
-      removeBraces(Line->Children, Result);
-      if (!Line->Affected)
-        continue;
-      for (FormatToken *Token = Line->First; Token && !Token->Finalized;
-           Token = Token->Next) {
-        if (!Token->Optional)
-          continue;
-        assert(Token->isOneOf(tok::l_brace, tok::r_brace));
-        assert(Token->Next || Token == Line->Last);
-        const auto Start =
-            Token == Line->Last || (Token->Next->is(tok::kw_else) &&
-                                    Token->Next->NewlinesBefore > 0)
-                ? Token->WhitespaceRange.getBegin()
-                : Token->Tok.getLocation();
-        const auto Range =
-            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
-        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
-      }
-    }
-  }
-};
-
 class BracesInserter : public TokenAnalyzer {
 public:
   BracesInserter(const Environment &Env, const FormatStyle &Style)
@@ -1863,6 +1821,48 @@ private:
         Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
         cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
+      }
+    }
+  }
+};
+
+class BracesRemover : public TokenAnalyzer {
+public:
+  BracesRemover(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    removeBraces(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
+                    tooling::Replacements &Result) {
+    const auto &SourceMgr = Env.getSourceManager();
+    for (AnnotatedLine *Line : Lines) {
+      removeBraces(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      for (FormatToken *Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
+        if (!Token->Optional)
+          continue;
+        assert(Token->isOneOf(tok::l_brace, tok::r_brace));
+        assert(Token->Next || Token == Line->Last);
+        const auto Start =
+            Token == Line->Last || (Token->Next->is(tok::kw_else) &&
+                                    Token->Next->NewlinesBefore > 0)
+                ? Token->WhitespaceRange.getBegin()
+                : Token->Tok.getLocation();
+        const auto Range =
+            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
       }
     }
   }
@@ -3169,18 +3169,18 @@ reformat(const FormatStyle &Style, StringRef Code,
   typedef std::function<std::pair<tooling::Replacements, unsigned>(
       const Environment &)>
       AnalyzerPass;
-  SmallVector<AnalyzerPass, 4> Passes;
-
-  if (Style.isCpp() && Style.QualifierAlignment != FormatStyle::QAS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return QualifierAlignmentFixer(Env, Expanded, Code, Ranges,
-                                     FirstStartColumn, NextStartColumn,
-                                     LastStartColumn, FileName)
-          .process();
-    });
-  }
+  SmallVector<AnalyzerPass, 8> Passes;
 
   if (Style.isCpp()) {
+    if (Style.QualifierAlignment != FormatStyle::QAS_Leave) {
+      Passes.emplace_back([&](const Environment &Env) {
+        return QualifierAlignmentFixer(Env, Expanded, Code, Ranges,
+                                       FirstStartColumn, NextStartColumn,
+                                       LastStartColumn, FileName)
+            .process();
+      });
+    }
+
     if (Style.InsertBraces)
       Passes.emplace_back([&](const Environment &Env) {
         return BracesInserter(Env, Expanded).process();
