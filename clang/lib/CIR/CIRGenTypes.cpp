@@ -1,4 +1,5 @@
 #include "CIRGenTypes.h"
+#include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "CallingConv.h"
@@ -432,6 +433,37 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 /// top-level unqualified.
 // static CanQualType GetReturnType(QualType RetTy) {
 //   return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+// }
+
+/// Arrange a call as unto a free function, except possibly with an additional
+/// number of formal parameters considered required.
+// static const CIRGenFunctionInfo &
+// arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
+//                             const CallArgList &args, const FunctionType *fnType,
+//                             unsigned numExtraRequiredArgs, bool chainCall) {
+//   assert(args.size() >= numExtraRequiredArgs);
+//   assert(!chainCall && "Chain call NYI");
+
+//   llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+
+//   // In most cases, there are no optional arguments.
+//   RequiredArgs required = RequiredArgs::All;
+
+//   // if we have a variadic prototype, the required arguments are the extra
+//   // prefix plus the arguments in the prototype.
+//   auto *proto = dyn_cast<FunctionProtoType>(fnType);
+//   assert(proto && "Only FunctionProtoType supported so far");
+//   assert(dyn_cast<FunctionProtoType>(fnType) &&
+//          "Only FunctionProtoType supported so far");
+//   assert(!proto->isVariadic() && "Variadic NYI");
+//   assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
+
+//   // FIXME: Kill copy.
+//   SmallVector<CanQualType, 16> argTypes;
+//   assert(args.size() == 0 && "Args NYI");
+//   return CGT.arrangeCIRFunctionInfo(
+//       GetReturnType(fnType->getReturnType()), /*instanceMethod=*/false,
+//       chainCall, argTypes, fnType->getExtInfo(), paramInfos, required);
 // }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
