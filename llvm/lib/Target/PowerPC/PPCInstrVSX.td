@@ -2900,6 +2900,27 @@ def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (XSMSUBMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (XSNMADDMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fre f64:$A), (XSREDP $A)>;
 def : Pat<(int_ppc_frsqrte vsfrc:$XB), (XSRSQRTEDP $XB)>;
+
+// XXMRG[LH]W is a direct replacement for VMRG[LH]W respectively.
+// Prefer the VSX form for greater register range.
+def:Pat<(vmrglw_unary_shuffle v16i8:$vA, undef),
+        (COPY_TO_REGCLASS (XXMRGLW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def:Pat<(vmrghw_unary_shuffle v16i8:$vA, undef),
+        (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def:Pat<(vmrglw_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGLW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vB, VSRC)), VRRC)>;
+def:Pat<(vmrghw_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vB, VSRC)), VRRC)>;
+def:Pat<(vmrglw_swapped_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGLW (COPY_TO_REGCLASS $vB, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def:Pat<(vmrghw_swapped_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vB, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
 } // HasVSX
 
 // Any big endian VSX subtarget.

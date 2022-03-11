@@ -5,9 +5,9 @@
 define <4 x float> @shuffle1(<16 x i8> %v1, <16 x i8> %v2) {
 ; BE-LABEL: shuffle1:
 ; BE:       # %bb.0:
-; BE-NEXT:    vmrglw 4, 2, 3
-; BE-NEXT:    vmrghw 2, 2, 3
-; BE-NEXT:    vmrghw 2, 2, 4
+; BE-NEXT:    xxmrglw 0, 34, 35
+; BE-NEXT:    xxmrghw 1, 34, 35
+; BE-NEXT:    xxmrghw 34, 1, 0
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: shuffle1:
@@ -38,12 +38,12 @@ define <4 x float> @shuffle2(<16 x i8> %v1, <16 x i8> %v2) {
 define <4 x float> @shuffle3(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %v3, <16 x i8> %v4) {
 ; BE-LABEL: shuffle3:
 ; BE:       # %bb.0:
-; BE-NEXT:    vmrglw 0, 2, 3
-; BE-NEXT:    vmrghw 2, 2, 3
-; BE-NEXT:    vmrglw 3, 4, 5
-; BE-NEXT:    vmrghw 4, 4, 5
-; BE-NEXT:    vmrghw 2, 2, 0
-; BE-NEXT:    vmrghw 3, 4, 3
+; BE-NEXT:    xxmrglw 0, 34, 35
+; BE-NEXT:    xxmrghw 1, 34, 35
+; BE-NEXT:    xxmrghw 34, 1, 0
+; BE-NEXT:    xxmrglw 0, 36, 37
+; BE-NEXT:    xxmrghw 1, 36, 37
+; BE-NEXT:    xxmrghw 35, 1, 0
 ; BE-NEXT:    xvaddsp 34, 34, 35
 ; BE-NEXT:    blr
 ;
@@ -87,22 +87,22 @@ define <4 x float> @shuffle4(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %v3, <16 x 
 define <4 x float> @shuffle5(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %v3, <16 x i8> %v4) {
 ; BE-LABEL: shuffle5:
 ; BE:       # %bb.0: # %entry
-; BE-NEXT:    vmrglw 0, 2, 3
-; BE-NEXT:    vmrghw 3, 2, 3
+; BE-NEXT:    xxmrglw 0, 34, 35
+; BE-NEXT:    xxmrghw 1, 34, 35
 ; BE-NEXT:    li 3, 8
 ; BE-NEXT:    vextublx 3, 3, 2
-; BE-NEXT:    vmrghw 3, 3, 0
+; BE-NEXT:    xxmrghw 0, 1, 0
 ; BE-NEXT:    andi. 3, 3, 255
-; BE-NEXT:    vmr 2, 3
+; BE-NEXT:    xxlor 1, 0, 0
 ; BE-NEXT:    beq 0, .LBB4_2
 ; BE-NEXT:  # %bb.1: # %exit
-; BE-NEXT:    xvaddsp 34, 35, 34
+; BE-NEXT:    xvaddsp 34, 0, 1
 ; BE-NEXT:    blr
 ; BE-NEXT:  .LBB4_2: # %second
-; BE-NEXT:    vmrglw 2, 4, 5
-; BE-NEXT:    vmrghw 4, 4, 5
-; BE-NEXT:    vmrghw 2, 4, 2
-; BE-NEXT:    xvaddsp 34, 35, 34
+; BE-NEXT:    xxmrglw 1, 36, 37
+; BE-NEXT:    xxmrghw 2, 36, 37
+; BE-NEXT:    xxmrghw 1, 2, 1
+; BE-NEXT:    xvaddsp 34, 0, 1
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: shuffle5:

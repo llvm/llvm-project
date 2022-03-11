@@ -161,17 +161,17 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ;
 ; PPC64LE-LABEL: test_urem_vec:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    mtvsrwz 34, 3
-; PPC64LE-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; PPC64LE-NEXT:    mtvsrwz 35, 4
-; PPC64LE-NEXT:    addi 3, 3, .LCPI4_0@toc@l
+; PPC64LE-NEXT:    addis 6, 2, .LCPI4_0@toc@ha
+; PPC64LE-NEXT:    mtfprwz 0, 3
+; PPC64LE-NEXT:    mtfprwz 1, 4
+; PPC64LE-NEXT:    addi 3, 6, .LCPI4_0@toc@l
 ; PPC64LE-NEXT:    addis 4, 2, .LCPI4_2@toc@ha
+; PPC64LE-NEXT:    lvx 2, 0, 3
 ; PPC64LE-NEXT:    mtvsrwz 36, 5
-; PPC64LE-NEXT:    vmrghw 2, 3, 2
-; PPC64LE-NEXT:    lvx 3, 0, 3
 ; PPC64LE-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; PPC64LE-NEXT:    xxmrghw 35, 1, 0
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI4_1@toc@l
-; PPC64LE-NEXT:    vperm 2, 4, 2, 3
+; PPC64LE-NEXT:    vperm 2, 4, 3, 2
 ; PPC64LE-NEXT:    vspltisw 3, -11
 ; PPC64LE-NEXT:    lvx 4, 0, 3
 ; PPC64LE-NEXT:    addi 3, 4, .LCPI4_2@toc@l

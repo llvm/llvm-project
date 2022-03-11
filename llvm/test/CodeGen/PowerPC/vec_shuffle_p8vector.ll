@@ -14,11 +14,11 @@ define void @VPKUDUM_unary(<2 x i64>* %A) {
 ;
 ; CHECK-PWR7-LABEL: VPKUDUM_unary:
 ; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 3
-; CHECK-PWR7-NEXT:    vmrglw 3, 2, 2
-; CHECK-PWR7-NEXT:    vmrghw 2, 2, 2
-; CHECK-PWR7-NEXT:    vmrglw 2, 2, 3
-; CHECK-PWR7-NEXT:    stxvw4x 34, 0, 3
+; CHECK-PWR7-NEXT:    lxvw4x 0, 0, 3
+; CHECK-PWR7-NEXT:    xxmrglw 1, 0, 0
+; CHECK-PWR7-NEXT:    xxmrghw 0, 0, 0
+; CHECK-PWR7-NEXT:    xxmrglw 0, 0, 1
+; CHECK-PWR7-NEXT:    stxvw4x 0, 0, 3
 ; CHECK-PWR7-NEXT:    blr
 entry:
         %tmp = load <2 x i64>, <2 x i64>* %A
@@ -45,12 +45,12 @@ define void @VPKUDUM(<2 x i64>* %A, <2 x i64>* %B) {
 ;
 ; CHECK-PWR7-LABEL: VPKUDUM:
 ; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 3
-; CHECK-PWR7-NEXT:    lxvw4x 35, 0, 4
-; CHECK-PWR7-NEXT:    vmrglw 4, 2, 3
-; CHECK-PWR7-NEXT:    vmrghw 2, 2, 3
-; CHECK-PWR7-NEXT:    vmrglw 2, 2, 4
-; CHECK-PWR7-NEXT:    stxvw4x 34, 0, 3
+; CHECK-PWR7-NEXT:    lxvw4x 0, 0, 3
+; CHECK-PWR7-NEXT:    lxvw4x 1, 0, 4
+; CHECK-PWR7-NEXT:    xxmrglw 2, 0, 1
+; CHECK-PWR7-NEXT:    xxmrghw 0, 0, 1
+; CHECK-PWR7-NEXT:    xxmrglw 0, 0, 2
+; CHECK-PWR7-NEXT:    stxvw4x 0, 0, 3
 ; CHECK-PWR7-NEXT:    blr
 entry:
         %tmp = load <2 x i64>, <2 x i64>* %A

@@ -8,9 +8,9 @@ define dso_local void @_Z1jjPiPj() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std r3, -16(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    vmrglw v2, v2, v2
-; CHECK-NEXT:    xxswapd vs0, v2
+; CHECK-NEXT:    xxswapd vs0, vs0
+; CHECK-NEXT:    xxmrglw vs0, vs0, vs0
+; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-NEXT:    blr
 entry:

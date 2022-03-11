@@ -1465,16 +1465,16 @@ entry:
 define <4 x float> @testSameVecEl1LE(<4 x float> %a) {
 ; CHECK-64-LABEL: testSameVecEl1LE:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    xxswapd 35, 34
-; CHECK-64-NEXT:    vmrghw 2, 2, 3
-; CHECK-64-NEXT:    vmrghw 2, 2, 3
+; CHECK-64-NEXT:    xxswapd 0, 34
+; CHECK-64-NEXT:    xxmrghw 1, 34, 0
+; CHECK-64-NEXT:    xxmrghw 34, 1, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testSameVecEl1LE:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    xxswapd 35, 34
-; CHECK-32-NEXT:    vmrghw 2, 2, 3
-; CHECK-32-NEXT:    vmrghw 2, 2, 3
+; CHECK-32-NEXT:    xxswapd 0, 34
+; CHECK-32-NEXT:    xxmrghw 1, 34, 0
+; CHECK-32-NEXT:    xxmrghw 34, 1, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 0, i32 6, i32 2, i32 3>

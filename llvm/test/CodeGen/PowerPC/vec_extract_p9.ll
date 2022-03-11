@@ -190,10 +190,10 @@ define double @test10(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-BE-LABEL: test10:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
-; CHECK-BE-NEXT:    vmrghw 3, 3, 3
-; CHECK-BE-NEXT:    lfs 0, .LCPI9_0@toc@l(3)
-; CHECK-BE-NEXT:    vmrglw 2, 3, 2
-; CHECK-BE-NEXT:    xsadddp 1, 34, 0
+; CHECK-BE-NEXT:    xxmrghw 0, 35, 35
+; CHECK-BE-NEXT:    lfs 1, .LCPI9_0@toc@l(3)
+; CHECK-BE-NEXT:    xxmrglw 0, 0, 34
+; CHECK-BE-NEXT:    xsadddp 1, 0, 1
 ; CHECK-BE-NEXT:    blr
 entry:
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 5, i32 2, i32 3, i32 7>

@@ -9,8 +9,8 @@ entry:
   ret <2 x i32> %strided.vec
 
 ; CHECK-LABEL: @test1
-; CHECK: xxswapd 35, 34
-; CHECK: vmrghw 2, 2, 3
+; CHECK: xxswapd 0, 34
+; CHECK: xxmrghw 34, 34, 0
 ; CHECK: blr
 }
 

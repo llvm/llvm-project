@@ -443,31 +443,31 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r9
 ; CHECK-PWR9-LE-NEXT:    xor r26, r26, r25
 ; CHECK-PWR9-LE-NEXT:    vmrghb v4, v5, v4
-; CHECK-PWR9-LE-NEXT:    mtvsrd v5, r30
 ; CHECK-PWR9-LE-NEXT:    sub r26, r26, r25
-; CHECK-PWR9-LE-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-LE-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
-; CHECK-PWR9-LE-NEXT:    mtvsrd v0, r26
+; CHECK-PWR9-LE-NEXT:    mtvsrd v5, r26
 ; CHECK-PWR9-LE-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-LE-NEXT:    vmrglh v3, v4, v3
-; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r12
-; CHECK-PWR9-LE-NEXT:    vmrglw v2, v3, v2
-; CHECK-PWR9-LE-NEXT:    mtvsrd v3, r11
+; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r30
+; CHECK-PWR9-LE-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-PWR9-LE-NEXT:    xxmrglw vs0, v3, v2
+; CHECK-PWR9-LE-NEXT:    mtvsrd v2, r11
+; CHECK-PWR9-LE-NEXT:    mtvsrd v3, r12
+; CHECK-PWR9-LE-NEXT:    vmrghb v2, v3, v2
+; CHECK-PWR9-LE-NEXT:    mtvsrd v3, r0
 ; CHECK-PWR9-LE-NEXT:    vmrghb v3, v4, v3
-; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r0
-; CHECK-PWR9-LE-NEXT:    vmrghb v4, v5, v4
-; CHECK-PWR9-LE-NEXT:    mtvsrd v5, r28
+; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r28
 ; CHECK-PWR9-LE-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-PWR9-LE-NEXT:    vmrglh v3, v4, v3
-; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r29
+; CHECK-PWR9-LE-NEXT:    vmrglh v2, v3, v2
+; CHECK-PWR9-LE-NEXT:    mtvsrd v3, r29
 ; CHECK-PWR9-LE-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-PWR9-LE-NEXT:    vmrghb v4, v5, v4
-; CHECK-PWR9-LE-NEXT:    mtvsrd v5, r27
+; CHECK-PWR9-LE-NEXT:    vmrghb v3, v4, v3
+; CHECK-PWR9-LE-NEXT:    mtvsrd v4, r27
 ; CHECK-PWR9-LE-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; CHECK-PWR9-LE-NEXT:    vmrghb v5, v0, v5
-; CHECK-PWR9-LE-NEXT:    vmrglh v4, v5, v4
-; CHECK-PWR9-LE-NEXT:    vmrglw v3, v4, v3
-; CHECK-PWR9-LE-NEXT:    xxmrgld v2, v3, v2
+; CHECK-PWR9-LE-NEXT:    vmrghb v4, v5, v4
+; CHECK-PWR9-LE-NEXT:    vmrglh v3, v4, v3
+; CHECK-PWR9-LE-NEXT:    xxmrglw vs1, v3, v2
+; CHECK-PWR9-LE-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-PWR9-LE-NEXT:    blr
 ;
 ; CHECK-PWR9-BE-LABEL: sub_absv_8_ext:
@@ -508,7 +508,6 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    sub r5, r5, r8
 ; CHECK-PWR9-BE-NEXT:    vextublx r7, r6, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r6, r6, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v1, r3
 ; CHECK-PWR9-BE-NEXT:    clrlwi r7, r7, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r6, r6, 24
 ; CHECK-PWR9-BE-NEXT:    sub r6, r7, r6
@@ -645,23 +644,24 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r12
 ; CHECK-PWR9-BE-NEXT:    vperm v5, v0, v5, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r7
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r3
 ; CHECK-PWR9-BE-NEXT:    vmrghh v3, v5, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r9
-; CHECK-PWR9-BE-NEXT:    vmrghw v2, v3, v2
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r10
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r7
+; CHECK-PWR9-BE-NEXT:    xxmrghw vs0, v3, v2
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v2, r10
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r9
+; CHECK-PWR9-BE-NEXT:    vperm v2, v3, v2, v4
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r8
 ; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r8
-; CHECK-PWR9-BE-NEXT:    vperm v5, v0, v5, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r5
-; CHECK-PWR9-BE-NEXT:    vmrghh v3, v5, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r6
-; CHECK-PWR9-BE-NEXT:    vperm v5, v0, v5, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r4
-; CHECK-PWR9-BE-NEXT:    vperm v4, v1, v0, v4
-; CHECK-PWR9-BE-NEXT:    vmrghh v4, v4, v5
-; CHECK-PWR9-BE-NEXT:    vmrghw v3, v4, v3
-; CHECK-PWR9-BE-NEXT:    xxmrghd v2, v3, v2
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r5
+; CHECK-PWR9-BE-NEXT:    vmrghh v2, v3, v2
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r6
+; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r4
+; CHECK-PWR9-BE-NEXT:    vperm v4, v0, v5, v4
+; CHECK-PWR9-BE-NEXT:    vmrghh v3, v4, v3
+; CHECK-PWR9-BE-NEXT:    xxmrghw vs1, v3, v2
+; CHECK-PWR9-BE-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-PWR9-BE-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: sub_absv_8_ext:
@@ -868,9 +868,9 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR8-NEXT:    vmrglh v3, v3, v0
 ; CHECK-PWR8-NEXT:    vmrglh v4, v6, v5
 ; CHECK-PWR8-NEXT:    vmrglh v5, v1, v8
-; CHECK-PWR8-NEXT:    vmrglw v2, v3, v2
-; CHECK-PWR8-NEXT:    vmrglw v3, v5, v4
-; CHECK-PWR8-NEXT:    xxmrgld v2, v2, v3
+; CHECK-PWR8-NEXT:    xxmrglw vs0, v3, v2
+; CHECK-PWR8-NEXT:    xxmrglw vs1, v5, v4
+; CHECK-PWR8-NEXT:    xxmrgld v2, vs0, vs1
 ; CHECK-PWR8-NEXT:    blr
 ;
 ; CHECK-PWR7-LABEL: sub_absv_8_ext:
@@ -1061,9 +1061,9 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR7-NEXT:    vmrghh v4, v6, v0
 ; CHECK-PWR7-NEXT:    vmrghh v3, v5, v3
 ; CHECK-PWR7-NEXT:    vmrghh v5, v7, v1
-; CHECK-PWR7-NEXT:    vmrghw v2, v4, v2
-; CHECK-PWR7-NEXT:    vmrghw v3, v5, v3
-; CHECK-PWR7-NEXT:    xxmrghd v2, v3, v2
+; CHECK-PWR7-NEXT:    xxmrghw vs0, v4, v2
+; CHECK-PWR7-NEXT:    xxmrghw vs1, v5, v3
+; CHECK-PWR7-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-PWR7-NEXT:    addi r1, r1, 416
 ; CHECK-PWR7-NEXT:    blr
 entry:

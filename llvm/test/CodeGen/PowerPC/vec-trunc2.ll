@@ -36,31 +36,31 @@ define dso_local <8 x i8> @test8x32(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5,
 ; CHECK-BE-NEXT:    stw r4, -48(r1)
 ; CHECK-BE-NEXT:    stw r3, -64(r1)
 ; CHECK-BE-NEXT:    addi r3, r1, -80
-; CHECK-BE-NEXT:    lxvw4x v2, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -96
-; CHECK-BE-NEXT:    lxvw4x v3, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs1, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -112
-; CHECK-BE-NEXT:    lxvw4x v4, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs2, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -128
-; CHECK-BE-NEXT:    lxvw4x v5, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs3, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -16
-; CHECK-BE-NEXT:    lxvw4x v0, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs4, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -32
-; CHECK-BE-NEXT:    lxvw4x v1, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs5, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -48
-; CHECK-BE-NEXT:    lxvw4x v6, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs6, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -64
-; CHECK-BE-NEXT:    lxvw4x v7, 0, r3
+; CHECK-BE-NEXT:    lxvw4x vs7, 0, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-BE-NEXT:    vmrghw v2, v3, v2
-; CHECK-BE-NEXT:    vmrghw v3, v5, v4
-; CHECK-BE-NEXT:    vmrghw v4, v1, v0
+; CHECK-BE-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-BE-NEXT:    xxmrghw vs1, vs3, vs2
+; CHECK-BE-NEXT:    xxmrghw vs2, vs5, vs4
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-BE-NEXT:    xxmrghd v2, v3, v2
-; CHECK-BE-NEXT:    lxvw4x v8, 0, r3
-; CHECK-BE-NEXT:    vmrghw v5, v7, v6
-; CHECK-BE-NEXT:    xxmrghd v3, v5, v4
-; CHECK-BE-NEXT:    vperm v2, v3, v2, v8
+; CHECK-BE-NEXT:    xxmrghd v3, vs1, vs0
+; CHECK-BE-NEXT:    lxvw4x v2, 0, r3
+; CHECK-BE-NEXT:    xxmrghw vs3, vs7, vs6
+; CHECK-BE-NEXT:    xxmrghd v4, vs3, vs2
+; CHECK-BE-NEXT:    vperm v2, v4, v3, v2
 ; CHECK-BE-NEXT:    blr
 %v10 = insertelement <8 x i32> undef, i32 %i1, i32 0
 %v11 = insertelement <8 x i32> %v10, i32 %i2, i32 1
@@ -127,9 +127,9 @@ define dso_local <8 x i16> @test8x24(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5
 ; CHECK-NEXT:    mtvsrd v5, r10
 ; CHECK-NEXT:    vmrghh v0, v1, v0
 ; CHECK-NEXT:    vmrghh v3, v5, v3
-; CHECK-NEXT:    vmrglw v2, v4, v2
-; CHECK-NEXT:    vmrglw v3, v3, v0
-; CHECK-NEXT:    xxmrgld v2, v3, v2
+; CHECK-NEXT:    xxmrglw vs0, v4, v2
+; CHECK-NEXT:    xxmrglw vs1, v3, v0
+; CHECK-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test8x24:
@@ -161,10 +161,10 @@ define dso_local <8 x i16> @test8x24(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5
 ; CHECK-BE-NEXT:    vmrghh v2, v3, v2
 ; CHECK-BE-NEXT:    vmrghh v3, v5, v4
 ; CHECK-BE-NEXT:    vmrghh v4, v1, v0
-; CHECK-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-BE-NEXT:    xxmrghw vs0, v3, v2
 ; CHECK-BE-NEXT:    vmrghh v5, v7, v6
-; CHECK-BE-NEXT:    vmrghw v3, v5, v4
-; CHECK-BE-NEXT:    xxmrghd v2, v3, v2
+; CHECK-BE-NEXT:    xxmrghw vs1, v5, v4
+; CHECK-BE-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-BE-NEXT:    blr
 %i11 = trunc i32 %i1 to i24
 %i21 = trunc i32 %i2 to i24

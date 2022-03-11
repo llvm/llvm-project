@@ -59,9 +59,9 @@ define <2 x i64> @buildl(i64 %a) {
 ; CHECK-NEXT:    stw 3, -32(1)
 ; CHECK-NEXT:    addi 3, 1, -16
 ; CHECK-NEXT:    addi 4, 1, -32
-; CHECK-NEXT:    lxvw4x 34, 0, 3
-; CHECK-NEXT:    lxvw4x 35, 0, 4
-; CHECK-NEXT:    vmrghw 2, 3, 2
+; CHECK-NEXT:    lxvw4x 0, 0, 3
+; CHECK-NEXT:    lxvw4x 1, 0, 4
+; CHECK-NEXT:    xxmrghw 34, 1, 0
 ; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    xxsldwi 34, 0, 34, 2
 ; CHECK-NEXT:    blr
@@ -90,7 +90,7 @@ entry:
 define <2 x double> @buildd() {
 ; CHECK-LABEL: buildd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz 3, L..C0(2)
+; CHECK-NEXT:    lwz 3, L..C0(2) # @d
 ; CHECK-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:

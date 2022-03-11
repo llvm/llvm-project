@@ -13,13 +13,13 @@ define <4 x float> @bar(float* %p, float* %q) {
 ; CHECK-NEXT:    lxvw4x 4, 4, 5
 ; CHECK-NEXT:    xvsubsp 0, 1, 0
 ; CHECK-NEXT:    lxvw4x 1, 3, 5
-; CHECK-NEXT:    xvsubsp 34, 3, 2
-; CHECK-NEXT:    xvsubsp 35, 4, 1
-; CHECK-NEXT:    xxsldwi 36, 0, 0, 1
-; CHECK-NEXT:    vmrglw 2, 4, 2
-; CHECK-NEXT:    vmrghw 3, 3, 3
-; CHECK-NEXT:    xxsldwi 0, 36, 34, 3
-; CHECK-NEXT:    xxsldwi 0, 35, 0, 3
+; CHECK-NEXT:    xvsubsp 2, 3, 2
+; CHECK-NEXT:    xvsubsp 1, 4, 1
+; CHECK-NEXT:    xxsldwi 0, 0, 0, 1
+; CHECK-NEXT:    xxmrglw 34, 0, 2
+; CHECK-NEXT:    xxsldwi 0, 0, 34, 3
+; CHECK-NEXT:    xxmrghw 34, 1, 1
+; CHECK-NEXT:    xxsldwi 0, 34, 0, 3
 ; CHECK-NEXT:    xxsldwi 34, 0, 0, 1
 ; CHECK-NEXT:    blr
   %1 = bitcast float* %p to <12 x float>*

@@ -41,11 +41,11 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
 ; LE-NEXT:    vmrghh 3, 3, 6
 ; LE-NEXT:    vmrghh 5, 0, 5
-; LE-NEXT:    vmrglw 2, 4, 2
+; LE-NEXT:    xxmrglw 0, 36, 34
 ; LE-NEXT:    vspltish 4, 15
-; LE-NEXT:    vmrglw 3, 5, 3
-; LE-NEXT:    xxmrgld 34, 35, 34
+; LE-NEXT:    xxmrglw 1, 37, 35
 ; LE-NEXT:    lvx 3, 0, 3
+; LE-NEXT:    xxmrgld 34, 1, 0
 ; LE-NEXT:    xxlor 34, 34, 35
 ; LE-NEXT:    vslh 2, 2, 4
 ; LE-NEXT:    vsrah 2, 2, 4
@@ -91,12 +91,12 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; BE-NEXT:    vperm 4, 6, 4, 1
 ; BE-NEXT:    addi 3, 3, .LCPI0_2@toc@l
 ; BE-NEXT:    vperm 5, 5, 7, 1
-; BE-NEXT:    lxvw4x 0, 0, 3
 ; BE-NEXT:    vperm 3, 0, 3, 1
-; BE-NEXT:    vmrghw 2, 4, 2
-; BE-NEXT:    vmrghw 3, 3, 5
-; BE-NEXT:    xxmrghd 34, 35, 34
+; BE-NEXT:    xxmrghw 0, 36, 34
+; BE-NEXT:    xxmrghw 1, 35, 37
 ; BE-NEXT:    vspltish 3, 15
+; BE-NEXT:    xxmrghd 34, 1, 0
+; BE-NEXT:    lxvw4x 0, 0, 3
 ; BE-NEXT:    xxlor 34, 34, 0
 ; BE-NEXT:    vslh 2, 2, 3
 ; BE-NEXT:    vsrah 2, 2, 3

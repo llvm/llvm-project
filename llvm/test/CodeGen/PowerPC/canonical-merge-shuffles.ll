@@ -274,17 +274,17 @@ entry:
 define dso_local <16 x i8> @testmrghw(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghw:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    vmrghw v2, v3, v2
+; CHECK-P8-NEXT:    xxmrghw v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrghw:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vmrghw v2, v3, v2
+; CHECK-P9-NEXT:    xxmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: testmrghw:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    vmrglw v2, v2, v3
+; CHECK-P9-BE-NEXT:    xxmrglw v2, v2, v3
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrghw:
@@ -294,7 +294,7 @@ define dso_local <16 x i8> @testmrghw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ;
 ; CHECK-P7-LABEL: testmrghw:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    vmrghw v2, v3, v2
+; CHECK-P7-NEXT:    xxmrghw v2, v3, v2
 ; CHECK-P7-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 12, i32 13, i32 14, i32 15, i32 28, i32 29, i32 30, i32 31>
@@ -303,17 +303,17 @@ entry:
 define dso_local <16 x i8> @testmrghw2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghw2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    vmrghw v2, v2, v3
+; CHECK-P8-NEXT:    xxmrghw v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrghw2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vmrghw v2, v2, v3
+; CHECK-P9-NEXT:    xxmrghw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: testmrghw2:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    vmrglw v2, v3, v2
+; CHECK-P9-BE-NEXT:    xxmrglw v2, v3, v2
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrghw2:
@@ -338,17 +338,17 @@ entry:
 define dso_local <16 x i8> @testmrglw(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrglw:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    vmrglw v2, v3, v2
+; CHECK-P8-NEXT:    xxmrglw v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrglw:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vmrglw v2, v3, v2
+; CHECK-P9-NEXT:    xxmrglw v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: testmrglw:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    vmrghw v2, v2, v3
+; CHECK-P9-BE-NEXT:    xxmrghw v2, v2, v3
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglw:
@@ -358,7 +358,7 @@ define dso_local <16 x i8> @testmrglw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ;
 ; CHECK-P7-LABEL: testmrglw:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    vmrglw v2, v3, v2
+; CHECK-P7-NEXT:    xxmrglw v2, v3, v2
 ; CHECK-P7-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23>
@@ -367,17 +367,17 @@ entry:
 define dso_local <16 x i8> @testmrglw2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrglw2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    vmrglw v2, v2, v3
+; CHECK-P8-NEXT:    xxmrglw v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrglw2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vmrglw v2, v2, v3
+; CHECK-P9-NEXT:    xxmrglw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: testmrglw2:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-P9-BE-NEXT:    xxmrghw v2, v3, v2
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglw2:
@@ -552,8 +552,8 @@ define dso_local <16 x i8> @no_crash_bitcast(i32 %a) {
 ;
 ; CHECK-P9-BE-LABEL: no_crash_bitcast:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    mtvsrwz v2, r3
-; CHECK-P9-BE-NEXT:    vmrghw v2, v2, v2
+; CHECK-P9-BE-NEXT:    mtfprwz f0, r3
+; CHECK-P9-BE-NEXT:    xxmrghw v2, vs0, vs0
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: no_crash_bitcast:
