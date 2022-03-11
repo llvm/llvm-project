@@ -129,15 +129,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 namespace {
-/// This silly constexpr allows us to filter out the useless __FUNCTION__ name
-/// of lambdas in the LOG_PRINTF macro.
-bool constexpr IsLambda(const char *name) {
-  return name[0] && name[0] == 'o' && name[1] && name[1] == 'p' && name[2] &&
-         name[2] == 'e' && name[3] && name[3] == 'r' && name[4] &&
-         name[4] == 'a' && name[5] && name[5] == 't' && name[6] &&
-         name[6] == 'o' && name[7] && name[7] == 'r' && name[8] &&
-         name[8] == '(' && name[9] && name[9] == ')';
-}
 
 /// Used to sort the log output.
 std::recursive_mutex g_log_mutex;
@@ -157,8 +148,7 @@ std::recursive_mutex g_log_mutex;
       if (!(VERBOSE) || log->GetVerbose()) {                                   \
         std::lock_guard<std::recursive_mutex> locker(g_log_mutex);             \
         /* The format string is optimized for code size, not speed. */         \
-        log->Printf("%s::%s%s" FMT, m_description.c_str(),                     \
-                    IsLambda(__FUNCTION__) ? "" : __FUNCTION__,                \
+        log->Printf("%s::%s%s" FMT, m_description.c_str(), __FUNCTION__,       \
                     (FMT && FMT[0] == '(') ? "" : "() -- ", ##__VA_ARGS__);    \
       }                                                                        \
   } while (0)
