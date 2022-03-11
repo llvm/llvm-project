@@ -807,6 +807,12 @@ processing.
 .It Cm pac-plt
 AArch64 only, use pointer authentication in PLT.
 .Pp
+.It Cm pack-relative-relocs
+Similar to
+.Cm -pack-dyn-relocs=relr
+, but synthesizes the GLIBC_ABI_DT_RELR version dependency if there is a GLIBC_2.* version dependency.
+glibc ld.so rejects loading a dynamically linked object without the GLIBC_ABI_DT_RELR version dependency.
+.Pp
 .It Cm rel
 Use REL format for dynamic relocations.
 .Pp
