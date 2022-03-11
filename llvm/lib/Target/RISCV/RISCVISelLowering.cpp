@@ -6800,7 +6800,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue NewOp1 =
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
     SDValue NewRes = DAG.getNode(RISCVISD::SHFL, DL, MVT::i64, NewOp0, NewOp1);
     // ReplaceNodeResults requires we maintain the same type for the return
     // value.
