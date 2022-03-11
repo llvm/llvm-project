@@ -1348,8 +1348,6 @@ struct Attributor {
 
     // Initialize and update is allowed for code outside of the current function
     // set, but only if it is part of module slice we are allowed to look at.
-    // Only exception is AAIsDeadFunction whose initialization is prevented
-    // directly, since we don't to compute it twice.
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
       if (!getInfoCache().isInModuleSlice(*FnScope)) {
         AA.getState().indicatePessimisticFixpoint();
