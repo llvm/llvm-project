@@ -16,7 +16,6 @@
 
 #define BEGINF(reg, op, s, i) \
 .globl  FNAME(reg, op, s, i) ;\
-.hidden  FNAME(reg, op, s, i) ;\
 ASM_TYPE_FUNCTION(FNAME(reg, op, s, i)) ;\
 .cfi_startproc ;\
 FNAME(reg, op, s, i): ;\
