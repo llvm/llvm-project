@@ -772,6 +772,14 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
+
+  /// Returns true if the recipe uses scalars of operand \p Op. Conservatively
+  /// returns if only first (scalar) lane is used, as default.
+  virtual bool usesScalars(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return onlyFirstLaneUsed(Op);
+  }
 };
 
 inline bool VPUser::classof(const VPDef *Def) {
@@ -1558,6 +1566,13 @@ public:
            "Op must be an operand of the recipe");
     return isUniform();
   }
+
+  /// Returns true if the recipe uses scalars of operand \p Op.
+  bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
@@ -1626,6 +1641,13 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns true if the recipe uses scalars of operand \p Op.
+  bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// A Recipe for widening load/store operations.

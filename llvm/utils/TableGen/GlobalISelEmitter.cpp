@@ -30,6 +30,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenDAGPatterns.h"
+#include "CodeGenInstruction.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Statistic.h"
