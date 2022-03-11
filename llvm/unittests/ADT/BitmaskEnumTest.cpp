@@ -76,6 +76,17 @@ TEST(BitmaskEnumTest, BitwiseXorEquals) {
   EXPECT_EQ(F3, f);
 }
 
+TEST(BitmaskEnumTest, ConstantExpression) {
+  constexpr Flags f1 = ~F1;
+  constexpr Flags f2 = F1 | F2;
+  constexpr Flags f3 = F1 & F2;
+  constexpr Flags f4 = F1 ^ F2;
+  EXPECT_EQ(f1, ~F1);
+  EXPECT_EQ(f2, F1 | F2);
+  EXPECT_EQ(f3, F1 & F2);
+  EXPECT_EQ(f4, F1 ^ F2);
+}
+
 TEST(BitmaskEnumTest, BitwiseNot) {
   Flags f = ~F1;
   EXPECT_EQ(14, f); // Largest value for f is 15.
