@@ -29,6 +29,11 @@ module ieee_arithmetic
     ieee_support_subnormal => __builtin_ieee_support_subnormal, &
     ieee_support_underflow_control => __builtin_ieee_support_underflow_control
 
+  ! 17.1: "The module IEEE_ARITHMETIC behaves as if it contained a USE statement
+  ! for IEEE_EXCEPTIONS; everything that is public in IEEE_EXCEPTIONS is public
+  ! in IEEE_ARITHMETIC."
+  use __Fortran_ieee_exceptions
+
   implicit none
 
   type :: ieee_class_type

@@ -279,7 +279,8 @@ public:
             " CONCURRENT"_err_en_US,
             doConcurrentSourcePosition_);
       }
-      if (name->symbol && fromScope(*name->symbol, "ieee_exceptions"s)) {
+      if (name->symbol &&
+          fromScope(*name->symbol, "__fortran_ieee_exceptions"s)) {
         if (name->source == "ieee_set_halting_mode") {
           SayWithDo(context_, currentStatementSourcePosition_,
               "IEEE_SET_HALTING_MODE is not allowed in DO "
