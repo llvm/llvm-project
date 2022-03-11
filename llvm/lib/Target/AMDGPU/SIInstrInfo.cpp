@@ -4740,26 +4740,37 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
       "Unexpected scalar opcode without corresponding vector one!");
 }
 
-static unsigned adjustAllocatableRegClass(const GCNSubtarget &ST,
-                                          const MachineRegisterInfo &MRI,
-                                          const MCInstrDesc &TID,
-                                          unsigned RCID,
-                                          bool IsAllocatable) {
+static const TargetRegisterClass *
+adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
+                          const MachineRegisterInfo &MRI,
+                          const MCInstrDesc &TID, unsigned RCID,
+                          bool IsAllocatable) {
   if ((IsAllocatable || !ST.hasGFX90AInsts() || !MRI.reservedRegsFrozen()) &&
       (((TID.mayLoad() || TID.mayStore()) &&
         !(TID.TSFlags & SIInstrFlags::VGPRSpill)) ||
        (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::MIMG)))) {
     switch (RCID) {
-    case AMDGPU::AV_32RegClassID: return AMDGPU::VGPR_32RegClassID;
-    case AMDGPU::AV_64RegClassID: return AMDGPU::VReg_64RegClassID;
-    case AMDGPU::AV_96RegClassID: return AMDGPU::VReg_96RegClassID;
-    case AMDGPU::AV_128RegClassID: return AMDGPU::VReg_128RegClassID;
-    case AMDGPU::AV_160RegClassID: return AMDGPU::VReg_160RegClassID;
+    case AMDGPU::AV_32RegClassID:
+      RCID = AMDGPU::VGPR_32RegClassID;
+      break;
+    case AMDGPU::AV_64RegClassID:
+      RCID = AMDGPU::VReg_64RegClassID;
+      break;
+    case AMDGPU::AV_96RegClassID:
+      RCID = AMDGPU::VReg_96RegClassID;
+      break;
+    case AMDGPU::AV_128RegClassID:
+      RCID = AMDGPU::VReg_128RegClassID;
+      break;
+    case AMDGPU::AV_160RegClassID:
+      RCID = AMDGPU::VReg_160RegClassID;
+      break;
     default:
       break;
     }
   }
-  return RCID;
+
+  return RI.getProperlyAlignedRC(RI.getRegClass(RCID));
 }
 
 const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
@@ -4789,9 +4800,8 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
                                                  AMDGPU::OpName::data1) != -1;
     }
   }
-  RegClass = adjustAllocatableRegClass(ST, MF.getRegInfo(), TID, RegClass,
-                                       IsAllocatable);
-  return RI.getRegClass(RegClass);
+  return adjustAllocatableRegClass(ST, RI, MF.getRegInfo(), TID, RegClass,
+                                   IsAllocatable);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
@@ -4808,8 +4818,7 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
   }
 
   unsigned RCID = Desc.OpInfo[OpNo].RegClass;
-  RCID = adjustAllocatableRegClass(ST, MRI, Desc, RCID, true);
-  return RI.getRegClass(RCID);
+  return adjustAllocatableRegClass(ST, RI, MRI, Desc, RCID, true);
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
