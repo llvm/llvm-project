@@ -5197,8 +5197,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       // floating-point type.
       size_t NumArgs = (Record.size() - 1) / 2;
       PHINode *PN = PHINode::Create(Ty, NumArgs);
-      if ((Record.size() - 1) % 2 == 1 && !isa<FPMathOperator>(PN))
+      if ((Record.size() - 1) % 2 == 1 && !isa<FPMathOperator>(PN)) {
+        PN->deleteValue();
         return error("Invalid phi record");
+      }
       InstructionList.push_back(PN);
 
       for (unsigned i = 0; i != NumArgs; i++) {
@@ -5211,8 +5213,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         else
           V = getValue(Record, i * 2 + 1, NextValueNo, Ty, TyID);
         BasicBlock *BB = getBasicBlock(Record[i * 2 + 2]);
-        if (!V || !BB)
+        if (!V || !BB) {
+          PN->deleteValue();
           return error("Invalid phi record");
+        }
         PN->addIncoming(V, BB);
       }
       I = PN;
