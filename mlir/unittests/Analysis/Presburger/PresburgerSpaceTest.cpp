@@ -39,11 +39,12 @@ TEST(PresburgerSpaceTest, removeIdRange) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3);
 
   // Remove 1 domain identifier.
-  space.removeIdRange(0, 1);
+  space.removeIdRange(IdKind::Domain, 0, 1);
   EXPECT_EQ(space.getNumDomainIds(), 1u);
 
   // Remove 1 symbol and 1 range identifier.
-  space.removeIdRange(1, 3);
+  space.removeIdRange(IdKind::Symbol, 0, 1);
+  space.removeIdRange(IdKind::Range, 0, 1);
   EXPECT_EQ(space.getNumDomainIds(), 1u);
   EXPECT_EQ(space.getNumRangeIds(), 0u);
   EXPECT_EQ(space.getNumSymbolIds(), 2u);

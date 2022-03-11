@@ -99,27 +99,24 @@ unsigned PresburgerSpace::insertId(IdKind kind, unsigned pos, unsigned num) {
   return absolutePos;
 }
 
-void PresburgerSpace::removeIdRange(unsigned idStart, unsigned idLimit) {
-  assert(idLimit <= getNumIds() && "invalid id limit");
+void PresburgerSpace::removeIdRange(IdKind kind, unsigned idStart,
+                                    unsigned idLimit) {
+  assert(idLimit <= getNumIdKind(kind) && "invalid id limit");
 
   if (idStart >= idLimit)
     return;
 
-  // We are going to be removing one or more identifiers from the range.
-  assert(idStart < getNumIds() && "invalid idStart position");
-
-  // Update members numDomain, numRange, numSymbols and numIds.
-  unsigned numDomainEliminated = 0;
-  if (spaceKind == Relation)
-    numDomainEliminated = getIdKindOverlap(IdKind::Domain, idStart, idLimit);
-  unsigned numRangeEliminated =
-      getIdKindOverlap(IdKind::Range, idStart, idLimit);
-  unsigned numSymbolsEliminated =
-      getIdKindOverlap(IdKind::Symbol, idStart, idLimit);
-
-  numDomain -= numDomainEliminated;
-  numRange -= numRangeEliminated;
-  numSymbols -= numSymbolsEliminated;
+  unsigned numIdsEliminated = idLimit - idStart;
+  if (kind == IdKind::Domain) {
+    assert(spaceKind == Relation && "IdKind::Domain is not supported in Set.");
+    numDomain -= numIdsEliminated;
+  } else if (kind == IdKind::Range) {
+    numRange -= numIdsEliminated;
+  } else if (kind == IdKind::Symbol) {
+    numSymbols -= numIdsEliminated;
+  } else {
+    llvm_unreachable("PresburgerSpace does not support local identifiers!");
+  }
 }
 
 unsigned PresburgerLocalSpace::insertId(IdKind kind, unsigned pos,
@@ -131,23 +128,17 @@ unsigned PresburgerLocalSpace::insertId(IdKind kind, unsigned pos,
   return PresburgerSpace::insertId(kind, pos, num);
 }
 
-void PresburgerLocalSpace::removeIdRange(unsigned idStart, unsigned idLimit) {
-  assert(idLimit <= getNumIds() && "invalid id limit");
+void PresburgerLocalSpace::removeIdRange(IdKind kind, unsigned idStart,
+                                         unsigned idLimit) {
+  assert(idLimit <= getNumIdKind(kind) && "invalid id limit");
 
   if (idStart >= idLimit)
     return;
 
-  // We are going to be removing one or more identifiers from the range.
-  assert(idStart < getNumIds() && "invalid idStart position");
-
-  unsigned numLocalsEliminated =
-      getIdKindOverlap(IdKind::Local, idStart, idLimit);
-
-  // Update space parameters.
-  PresburgerSpace::removeIdRange(idStart, idLimit);
-
-  // Update local ids.
-  numLocals -= numLocalsEliminated;
+  if (kind == IdKind::Local)
+    numLocals -= idLimit - idStart;
+  else
+    PresburgerSpace::removeIdRange(kind, idStart, idLimit);
 }
 
 bool PresburgerSpace::isEqual(const PresburgerSpace &other) const {

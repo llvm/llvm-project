@@ -621,6 +621,17 @@ func @omp_atomic_update8(%x: memref<i32>, %expr: i32) {
 
 // -----
 
+func @omp_atomic_update9(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{the update region must have at least two operations (binop and terminator)}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    omp.yield (%xval : i32)
+  }
+  return
+}
+
+// -----
+
 func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{expected three operations in omp.atomic.capture region}}
   omp.atomic.capture {
