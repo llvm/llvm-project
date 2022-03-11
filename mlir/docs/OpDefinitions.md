@@ -565,18 +565,16 @@ _additional_ verification, you can use
 
 ```tablegen
 let hasVerifier = 1;
-```
-
-or
-
-```tablegen
 let hasRegionVerifier = 1;
 ```
 
-This will generate either `LogicalResult verify()` or
-`LogicalResult verifyRegions()` method declaration on the op class
-that can be defined with any additional verification constraints. These method
-will be invoked on its verification order.
+This will generate `LogicalResult verify()`/`LogicalResult verifyRegions()`
+method declarations on the op class that can be defined with any additional
+verification constraints. For verificaiton which needs to access the nested
+operations, you should use `hasRegionVerifier` to ensure that it won't access
+any ill-formed operation. Except that, The other verifications can be
+implemented with `hasVerifier`. Check the next section for the execution order
+of these verification methods.
 
 #### Verification Ordering
 

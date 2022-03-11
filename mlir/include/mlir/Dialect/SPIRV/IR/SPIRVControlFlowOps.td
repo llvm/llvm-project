@@ -309,6 +309,9 @@ def SPV_LoopOp : SPV_Op<"mlir.loop", [InFunctionScope]> {
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+
+  let hasVerifier = 0;
+  let hasRegionVerifier = 1;
 }
 
 // -----
@@ -470,6 +473,9 @@ def SPV_SelectionOp : SPV_Op<"mlir.selection", [InFunctionScope]> {
   let autogenSerialization = 0;
 
   let hasCanonicalizer = 1;
+
+  let hasVerifier = 0;
+  let hasRegionVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_CONTROLFLOW_OPS

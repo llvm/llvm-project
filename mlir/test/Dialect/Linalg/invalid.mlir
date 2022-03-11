@@ -202,7 +202,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
 // -----
 
 func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of input/output operands}}
+  // expected-error @+6 {{'linalg.yield' op expected number of yield values (2) to match the number of operands of the enclosing LinalgOp (1)}}
   linalg.generic {
       indexing_maps =  [ affine_map<() -> ()>, affine_map<() -> ()> ],
       iterator_types = []}
@@ -215,7 +215,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
 // -----
 
 func @generic_shaped_operand_block_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected type of bb argument #0 ('i1') to match element or self type of the corresponding operand ('f32')}}
+  // expected-error @+6 {{'linalg.yield' op type of yield operand 1 ('i1') doesn't match the element type of the enclosing linalg.generic op ('f32')}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()> ],
     iterator_types = []}
@@ -228,7 +228,7 @@ func @generic_shaped_operand_block_arg_type(%arg0: memref<f32>) {
 // -----
 
 func @generic_scalar_operand_block_arg_type(%arg0: tensor<f32>) {
-  // expected-error @+1 {{expected type of bb argument #0 ('i1') to match element or self type of the corresponding operand ('f32')}}
+  // expected-error @+6 {{'linalg.yield' op type of yield operand 1 ('i1') doesn't match the element type of the enclosing linalg.generic op ('f32')}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()> ],
     iterator_types = []}
@@ -284,15 +284,14 @@ func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
 
 // -----
 
-func @generic(%arg0: memref<?x?xi4>) {
-  // expected-error @+2 {{op expects regions to end with 'linalg.yield', found 'arith.addf'}}
-  // expected-note @+1 {{in custom textual format, the absence of terminator implies 'linalg.yield'}}
+func @generic(%arg0: memref<?x?xf32>) {
+  // expected-error @+6 {{block with no terminator, has %0 = "arith.addf"(%arg1, %arg1) : (f32, f32) -> f32}}
   linalg.generic  {
     indexing_maps = [ affine_map<(i, j) -> (i, j)> ],
     iterator_types = ["parallel", "parallel"]}
-      outs(%arg0 : memref<?x?xi4>) {
-    ^bb(%0: i4) :
-      %1 = arith.addf %0, %0: i4
+      outs(%arg0 : memref<?x?xf32>) {
+    ^bb(%0: f32) :
+      %1 = arith.addf %0, %0: f32
   }
   return
 }

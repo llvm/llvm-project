@@ -1207,7 +1207,7 @@ LogicalResult linalg::YieldOp::verify() {
     return emitOpError("expected single non-empty parent region");
 
   if (auto linalgOp = dyn_cast<LinalgOp>(parentOp))
-    return verifyYield(*this, cast<LinalgOp>(parentOp));
+    return verifyYield(*this, linalgOp);
 
   return emitOpError("expected parent op with LinalgOp interface");
 }

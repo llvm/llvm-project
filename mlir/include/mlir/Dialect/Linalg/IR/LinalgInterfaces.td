@@ -34,6 +34,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
   }];
   let cppNamespace = "::mlir::linalg";
   let verify = [{ return detail::verifyContractionInterface($_op); }];
+  let verifyWithRegions = 1;
   let methods = [
     InterfaceMethod<
     /*desc=*/"Returns the left-hand side operand.",
@@ -1136,6 +1137,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
   }];
 
   let verify = [{ return detail::verifyStructuredOpInterface($_op); }];
+  let verifyWithRegions = 1;
 }
 
 #endif // LINALG_IR_LINALGINTERFACES

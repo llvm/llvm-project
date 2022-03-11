@@ -453,7 +453,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [
     /// Returns the rewrite operation of this pattern.
     RewriteOp getRewriter();
   }];
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -632,7 +632,7 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
               ($body^)?
     attr-dict-with-keyword
   }];
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

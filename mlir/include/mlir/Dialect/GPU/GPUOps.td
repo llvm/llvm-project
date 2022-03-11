@@ -556,7 +556,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
 
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
@@ -677,7 +677,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let regions = (region AnyRegion:$body);
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value $body attr-dict
                           `:` functional-type(operands, results) }];
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 def GPU_ShuffleOpXor  : I32EnumAttrCase<"XOR",  0, "xor">;

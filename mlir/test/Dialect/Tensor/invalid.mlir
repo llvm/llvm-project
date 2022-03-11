@@ -91,8 +91,7 @@ func @tensor.generate(%m : index, %n : index)
 
 func @tensor.generate(%m : index, %n : index)
     -> tensor<?x3x?xf32> {
-  // expected-error @+2 {{op expects regions to end with 'tensor.yield', found 'func.return'}}
-  // expected-note @+1 {{in custom textual format, the absence of terminator implies 'tensor.yield'}}
+  // expected-error @+4 {{'func.return' op expects parent op 'builtin.func'}}
   %tnsr = tensor.generate %m, %n {
     ^bb0(%i : index, %j : index, %k : index):
       %elem = arith.constant 8.0 : f32

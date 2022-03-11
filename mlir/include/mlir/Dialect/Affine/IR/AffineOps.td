@@ -344,7 +344,7 @@ def AffineForOp : Affine_Op<"for",
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 def AffineIfOp : Affine_Op<"if",
