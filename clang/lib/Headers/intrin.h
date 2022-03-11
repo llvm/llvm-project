@@ -574,7 +574,8 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 #if defined(__x86_64__) || defined(_WIN64) || defined(_AMD64_)
 __attribute__((always_inline)) unsigned char __vmx_on(unsigned long long *pa) {
   unsigned char error;
-  __asm __volatile(".byte 0xf3, 0x0f, 0xc7, 0x30" "; setna %0"
+  __asm__ __volatile__(".byte 0xf3, 0x0f, 0xc7, 0x30"
+                     "; setna %0"
                    : "=q"(error)
                    : "a"(pa), "m"(*pa)
                    : "memory", "cc");
@@ -582,12 +583,13 @@ __attribute__((always_inline)) unsigned char __vmx_on(unsigned long long *pa) {
 }
 
 __attribute__((always_inline)) void __vmx_off(void) {
-  __asm __volatile(".byte 0x0f, 0x01, 0xc4");
+  __asm__ __volatile__(".byte 0x0f, 0x01, 0xc4");
 }
 
 __attribute__((always_inline)) unsigned char __vmx_vmlaunch(void) {
   unsigned char error;
-  __asm __volatile(".byte 0x0f, 0x01, 0xc2" "; setna %0"
+  __asm__ __volatile__(".byte 0x0f, 0x01, 0xc2"
+                     "; setna %0"
                    : "=q"(error)
                    : /* no reads  */
                    : "cc");
@@ -596,7 +598,8 @@ __attribute__((always_inline)) unsigned char __vmx_vmlaunch(void) {
 
 __attribute__((always_inline)) unsigned char __vmx_vmresume(void) {
   unsigned char error;
-  __asm __volatile(".byte 0x0f, 0x01, 0xc3" "; setna %0"
+  __asm__ __volatile__(".byte 0x0f, 0x01, 0xc3"
+                     "; setna %0"
                    : "=q"(error)
                    : /* no reads  */
                    : "cc");
@@ -606,7 +609,8 @@ __attribute__((always_inline)) unsigned char __vmx_vmresume(void) {
 __attribute__((always_inline)) unsigned char
 __vmx_vmclear(unsigned long long *pa) {
   unsigned char error;
-  __asm __volatile(".byte 0x66, 0x0f, 0xc7, 0x30" "; setna %0"
+  __asm__ __volatile__(".byte 0x66, 0x0f, 0xc7, 0x30"
+                     "; setna %0"
                    : "=qm"(error)
                    : "a"(pa), "m"(*pa)
                    : "cc", "memory");
@@ -616,7 +620,8 @@ __vmx_vmclear(unsigned long long *pa) {
 __attribute__((always_inline)) unsigned char
 __vmx_vmptrld(unsigned long long *pa) {
   unsigned char error;
-  __asm __volatile(".byte 0x0f, 0xc7, 0x30" "; setna %0"
+  __asm__ __volatile__(".byte 0x0f, 0xc7, 0x30"
+                     "; setna %0"
                    : "=qm"(error)
                    : "a"(pa), "m"(*pa)
                    : "cc", "memory");
@@ -626,7 +631,7 @@ __vmx_vmptrld(unsigned long long *pa) {
 __attribute__((always_inline)) unsigned char __vmx_vmread(size_t field,
                                                           size_t *value) {
   unsigned char error;
-  __asm __volatile("vmread %2, %0; setna %1"
+  __asm__ __volatile__("vmread %2, %0; setna %1"
                    : "=r"(*value), "=qm"(error)
                    : "r"(field)
                    : "cc");
@@ -636,7 +641,7 @@ __attribute__((always_inline)) unsigned char __vmx_vmread(size_t field,
 __attribute__((always_inline)) unsigned char __vmx_vmwrite(size_t field,
                                                            size_t value) {
   unsigned char error;
-  __asm __volatile("vmwrite %1, %2; setna %0"
+  __asm__ __volatile__("vmwrite %1, %2; setna %0"
                    : "=qm"(error)
                    : "r"(value), "r"(field)
                    : "cc");
@@ -646,7 +651,10 @@ __attribute__((always_inline)) unsigned char __vmx_vmwrite(size_t field,
 __attribute__((always_inline)) unsigned char __vmx_vmcall(uintptr_t hc,
                                                           void *d) {
   unsigned char error;
-  __asm __volatile("vmcall; setna %0" : "=q"(error) : "c"(hc), "d"(d) : "cc");
+  __asm__ __volatile__("vmcall; setna %0"
+                       : "=q"(error)
+                       : "c"(hc), "d"(d)
+                       : "cc");
   return error;
 }
 
