@@ -426,6 +426,14 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   return ResultType;
 }
 
+/// Returns the "extra-canonicalized" return type, which discards qualifiers on
+/// the return type. Codegen doesn't care about them, and it makes ABI code a
+/// little easier to be able to assume that all parameter and return types are
+/// top-level unqualified.
+// static CanQualType GetReturnType(QualType RetTy) {
+//   return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+// }
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType resultType, bool instanceMethod, bool chainCall,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
