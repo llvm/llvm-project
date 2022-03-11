@@ -4,8 +4,10 @@
 # RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
 # RUN: llvm-as %S/Inputs/x86_64-osx.ll -o %t-x86_64.bc
 
-# RUN: rm -rf %t.lib
+# RUN: rm -rf %t.lib %t2.lib
 # RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o %t-x86_64.bc
+# RUN: llvm-libtool-darwin -static -o %t2.lib -o %t.lib %t-input1.o %t-input2.o %t-x86_64.bc
+# RUN: not ls %t2.lib
 
 ## Check that binaries are present:
 # RUN: llvm-ar t %t.lib | \

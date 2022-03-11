@@ -1737,21 +1737,6 @@ bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
   if (!MultiArg)
     NumOccurrences++; // Increment the number of times we have been seen
 
-  switch (getNumOccurrencesFlag()) {
-  case Optional:
-    if (NumOccurrences > 1)
-      return error("may only occur zero or one times!", ArgName);
-    break;
-  case Required:
-    if (NumOccurrences > 1)
-      return error("must occur exactly one time!", ArgName);
-    LLVM_FALLTHROUGH;
-  case OneOrMore:
-  case ZeroOrMore:
-  case ConsumeAfter:
-    break;
-  }
-
   return handleOccurrence(pos, ArgName, Value);
 }
 

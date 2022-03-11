@@ -30,10 +30,10 @@
 
 # RUN: rm -rf %t/dirname && mkdir -p %t/dirname
 # RUN: yaml2obj %S/Inputs/input1.yaml -o %t/dirname/%basename_t.tmp-input1.o
-# RUN: echo %basename_t.tmp-input1.o > %t.files.txt
+# RUN: echo %basename_t.tmp-input1.o > %t.files2.txt
 
 ## Passing in dirname:
-# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files.txt,%t/dirname
+# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files2.txt,%t/dirname
 # RUN: llvm-ar t %t.lib | \
 # RUN:   FileCheck %s --check-prefix=DIRNAME-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
 # RUN: llvm-nm --print-armap %t.lib | \
@@ -46,7 +46,7 @@
 # DIRNAME-SYMBOLS-EMPTY:
 
 ## Passing both -filelist option and object file as input:
-# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files.txt,%t/dirname %t-input2.o
+# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files2.txt,%t/dirname %t-input2.o
 # RUN: llvm-ar t %t.lib | \
 # RUN:   FileCheck %s --check-prefix=REVERSE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
 # RUN: llvm-nm --print-armap %t.lib | \
@@ -106,7 +106,6 @@
 
 ## Filelist option specified more than once:
 # RUN: touch %t.list1.txt and %t.list2.txt
-# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.list1.txt -filelist %t.list2.txt 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=DUPLICATE-ERROR
-
-# DUPLICATE-ERROR: for the --filelist option: may only occur zero or one times!
+# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.empty-list -filelist %t.files.txt 2>&1
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
