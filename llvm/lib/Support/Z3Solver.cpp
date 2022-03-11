@@ -13,6 +13,8 @@ using namespace llvm;
 
 #if LLVM_WITH_Z3
 
+#include "llvm/ADT/Twine.h"
+
 #include <z3.h>
 
 namespace {
