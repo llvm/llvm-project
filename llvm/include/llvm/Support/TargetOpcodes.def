@@ -620,6 +620,9 @@ HANDLE_TARGET_OPCODE(G_FABS)
 /// f64) is allowed.
 HANDLE_TARGET_OPCODE(G_FCOPYSIGN)
 
+/// Generic test for floating-point class.
+HANDLE_TARGET_OPCODE(G_IS_FPCLASS)
+
 /// Generic FP canonicalize value.
 HANDLE_TARGET_OPCODE(G_FCANONICALIZE)
 
