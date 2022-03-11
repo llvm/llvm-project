@@ -53,8 +53,11 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
       IP = ++I->getIterator();
       assert(IP != BB.end() && "guaranteed by the findPointer");
     }
-    auto *NewLoad =
-        new LoadInst(Ptr->getType()->getPointerElementType(), Ptr, "L", &*IP);
+    // For opaque pointers, pick the type independently.
+    Type *AccessTy = Ptr->getType()->isOpaquePointerTy()
+                         ? RS.getSelection()->getType()
+                         : Ptr->getType()->getNonOpaquePointerElementType();
+    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", &*IP);
 
     // Only sample this load if it really matches the descriptor
     if (Pred.matches(Srcs, NewLoad))
@@ -139,9 +142,12 @@ Value *RandomIRBuilder::findPointer(BasicBlock &BB,
     if (Inst->isTerminator())
       return false;
 
-    if (auto PtrTy = dyn_cast<PointerType>(Inst->getType())) {
+    if (auto *PtrTy = dyn_cast<PointerType>(Inst->getType())) {
+      if (PtrTy->isOpaque())
+        return true;
+
       // We can never generate loads from non first class or non sized types
-      Type *ElemTy = PtrTy->getPointerElementType();
+      Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
       if (!ElemTy->isSized() || !ElemTy->isFirstClassType())
         return false;
 

@@ -989,7 +989,7 @@ Vote Thread::ShouldReportStop(Event *event_ptr) {
     // the last plan, regardless of whether it is private or not.
     LLDB_LOGF(log,
               "Thread::ShouldReportStop() tid = 0x%4.4" PRIx64
-              ": returning vote  for complete stack's back plan",
+              ": returning vote for complete stack's back plan",
               GetID());
     return GetPlans().GetCompletedPlan(false)->ShouldReportStop(event_ptr);
   } else {
@@ -1091,7 +1091,7 @@ void Thread::PopPlan() {
 
 void Thread::DiscardPlan() {
   Log *log = GetLog(LLDBLog::Step);
-  ThreadPlanSP discarded_plan_sp = GetPlans().PopPlan();
+  ThreadPlanSP discarded_plan_sp = GetPlans().DiscardPlan();
 
   LLDB_LOGF(log, "Discarding plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
             discarded_plan_sp->GetName(), 

@@ -390,6 +390,26 @@ class _BodyBuilder:
       return math.LogOp(x).result
     raise NotImplementedError("Unsupported 'log' operand: {x}")
 
+  def _unary_abs(self, x: Value) -> Value:
+    if _is_floating_point_type(x.type):
+      return math.AbsOp(x).result
+    raise NotImplementedError("Unsupported 'abs' operand: {x}")
+
+  def _unary_ceil(self, x: Value) -> Value:
+    if _is_floating_point_type(x.type):
+      return math.CeilOp(x).result
+    raise NotImplementedError("Unsupported 'ceil' operand: {x}")
+
+  def _unary_floor(self, x: Value) -> Value:
+    if _is_floating_point_type(x.type):
+      return math.FloorOp(x).result
+    raise NotImplementedError("Unsupported 'floor' operand: {x}")
+
+  def _unary_negf(self, x: Value) -> Value:
+    if _is_floating_point_type(x.type):
+      return arith.NegFOp(x).result
+    raise NotImplementedError("Unsupported 'negf' operand: {x}")
+
   def _binary_add(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
       return arith.AddFOp(lhs, rhs).result

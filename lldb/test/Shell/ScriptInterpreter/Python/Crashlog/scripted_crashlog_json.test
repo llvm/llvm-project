@@ -4,9 +4,17 @@
 
 # RUN: cp %S/Inputs/scripted_crashlog.ips %t.crash
 # RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":9, "foo":16}' --json
-# RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog -i %t.crash' -o 'process status' 2>&1 | FileCheck %s
+# RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog -i %t.crash' 2>&1 | FileCheck %s
 
 # CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
-# CHECK: Process 92190 stopped
-# CHECK: * thread #1, name = 'CrashLogScriptedThread.thread-0', stop reason = EXC_BAD_ACCESS
-# CHECK: frame #0: 0x0000000104a23f68 scripted_crashlog_json.test.tmp.out`foo at test.c:3:6 [artificial]
+# CHECK: (lldb) process status
+# CHECK-NEXT: Process 92190 stopped
+# CHECK-NEXT: * thread #1, name = 'CrashLogScriptedThread.thread-0', stop reason = EXC_BAD_ACCESS
+# CHECK-NEXT: frame #0: 0x0000000104a23f68 scripted_crashlog_json.test.tmp.out`foo at test.c:3:6 [artificial]
+
+# CHECK: (lldb) thread backtrace
+# CHECK-NEXT: * thread #1, name = 'CrashLogScriptedThread.thread-0', stop reason = EXC_BAD_ACCESS
+# CHECK-NEXT: * frame #0: 0x0000000104a23f68 scripted_crashlog_json.test.tmp.out`foo at test.c:3:6 [artificial]
+# CHECK-NEXT: frame #1: 0x0000000104a23f80 scripted_crashlog_json.test.tmp.out`bar at test.c:6:21 [artificial]
+# CHECK-NEXT: frame #2: 0x0000000104a23fa0 scripted_crashlog_json.test.tmp.out`main(argc=<no summary available>, argv=<unavailable>) at test.c:8:35 [artificial]
+# CHECK-NEXT: frame #3: 0x0000000104a6108c dyld`start(kernArgs=<no summary available>) at dyldMain.cpp:879:18 [opt] [artificial]

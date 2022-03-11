@@ -11,7 +11,7 @@
 
 #include "src/__support/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_AARCH64)
+#if !defined(LLVM_LIBC_ARCH_AARCH64) || defined(__APPLE__)
 #error "Invalid include"
 #endif
 

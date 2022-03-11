@@ -276,8 +276,10 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
+  CXX_STANDARD
+    20 # For constinit of the atexit callback list.
   DEPENDS
-    libc.src.__support.CPP.vector
+    libc.src.__support.CPP.blockstore
     libc.src.__support.threads.thread
 )
 

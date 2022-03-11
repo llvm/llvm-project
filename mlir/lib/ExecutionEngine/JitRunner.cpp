@@ -212,6 +212,7 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   engineOptions.transformer = config.transformer;
   engineOptions.jitCodeGenOptLevel = jitCodeGenOptLevel;
   engineOptions.sharedLibPaths = executionEngineLibs;
+  engineOptions.enableObjectCache = true;
   auto expectedEngine = mlir::ExecutionEngine::create(module, engineOptions);
   if (!expectedEngine)
     return expectedEngine.takeError();

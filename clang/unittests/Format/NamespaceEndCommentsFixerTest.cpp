@@ -189,6 +189,49 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                 "int i;\n"
                 "int j;\n"
                 "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace A M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A M(x)",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace A M(x) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ(
+      "#define B __attribute__((availability(macos, introduced=10.15)))\n"
+      "namespace A B {\n"
+      "int i;\n"
+      "int j;\n"
+      "}// namespace A B",
+      fixNamespaceEndComments(
+          "#define B __attribute__((availability(macos, introduced=10.15)))\n"
+          "namespace A B {\n"
+          "int i;\n"
+          "int j;\n"
+          "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace A::B M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::B",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace A::B M(x) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ(
+      "namespace A __attribute__((availability(macos, introduced=10.15))) {\n"
+      "int i;\n"
+      "int j;\n"
+      "}// namespace A",
+      fixNamespaceEndComments(
+          "namespace A __attribute__((availability(macos, introduced=10.15))) "
+          "{\n"
+          "int i;\n"
+          "int j;\n"
+          "}"));
   EXPECT_EQ("inline namespace A {\n"
             "int i;\n"
             "int j;\n"

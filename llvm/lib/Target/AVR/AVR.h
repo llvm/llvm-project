@@ -15,6 +15,8 @@
 #define LLVM_AVR_H
 
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

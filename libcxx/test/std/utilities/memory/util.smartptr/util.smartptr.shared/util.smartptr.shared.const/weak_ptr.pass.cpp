@@ -65,6 +65,15 @@ int main(int, char**)
         assert(A::count == 1);
     }
     assert(A::count == 0);
+    {
+        std::shared_ptr<A const> sp0(new A);
+        std::weak_ptr<A const> wp(sp0);
+        std::shared_ptr<A const> sp(wp);
+        assert(sp.use_count() == 2);
+        assert(sp.get() == sp0.get());
+        assert(A::count == 1);
+    }
+    assert(A::count == 0);
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::shared_ptr<A> sp0(new A);

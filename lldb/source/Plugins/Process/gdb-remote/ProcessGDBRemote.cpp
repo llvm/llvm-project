@@ -74,7 +74,6 @@
 
 #include "GDBRemoteRegisterContext.h"
 #include "GDBRemoteRegisterFallback.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
@@ -253,7 +252,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_continue_C_tids(), m_continue_s_tids(), m_continue_S_tids(),
       m_max_memory_size(0), m_remote_stub_max_memory_size(0),
       m_addr_to_mmap_size(), m_thread_create_bp_sp(),
-      m_waiting_for_attach(false), m_destroy_tried_resuming(false),
+      m_waiting_for_attach(false),
       m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
       m_erased_flash_ranges(), m_vfork_in_progress(false) {
@@ -2379,109 +2378,6 @@ Status ProcessGDBRemote::DoDestroy() {
   Status error;
   Log *log = GetLog(GDBRLog::Process);
   LLDB_LOGF(log, "ProcessGDBRemote::DoDestroy()");
-
-  // There is a bug in older iOS debugservers where they don't shut down the
-  // process they are debugging properly.  If the process is sitting at a
-  // breakpoint or an exception, this can cause problems with restarting.  So
-  // we check to see if any of our threads are stopped at a breakpoint, and if
-  // so we remove all the breakpoints, resume the process, and THEN destroy it
-  // again.
-  //
-  // Note, we don't have a good way to test the version of debugserver, but I
-  // happen to know that the set of all the iOS debugservers which don't
-  // support GetThreadSuffixSupported() and that of the debugservers with this
-  // bug are equal.  There really should be a better way to test this!
-  //
-  // We also use m_destroy_tried_resuming to make sure we only do this once, if
-  // we resume and then halt and get called here to destroy again and we're
-  // still at a breakpoint or exception, then we should just do the straight-
-  // forward kill.
-  //
-  // And of course, if we weren't able to stop the process by the time we get
-  // here, it isn't necessary (or helpful) to do any of this.
-
-  if (!m_gdb_comm.GetThreadSuffixSupported() &&
-      m_public_state.GetValue() != eStateRunning) {
-    PlatformSP platform_sp = GetTarget().GetPlatform();
-
-    if (platform_sp && platform_sp->GetPluginName() ==
-                           PlatformRemoteiOS::GetPluginNameStatic()) {
-      if (m_destroy_tried_resuming) {
-        if (log)
-          log->PutCString("ProcessGDBRemote::DoDestroy() - Tried resuming to "
-                          "destroy once already, not doing it again.");
-      } else {
-        // At present, the plans are discarded and the breakpoints disabled
-        // Process::Destroy, but we really need it to happen here and it
-        // doesn't matter if we do it twice.
-        m_thread_list.DiscardThreadPlans();
-        DisableAllBreakpointSites();
-
-        bool stop_looks_like_crash = false;
-        ThreadList &threads = GetThreadList();
-
-        {
-          std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
-
-          size_t num_threads = threads.GetSize();
-          for (size_t i = 0; i < num_threads; i++) {
-            ThreadSP thread_sp = threads.GetThreadAtIndex(i);
-            StopInfoSP stop_info_sp = thread_sp->GetPrivateStopInfo();
-            StopReason reason = eStopReasonInvalid;
-            if (stop_info_sp)
-              reason = stop_info_sp->GetStopReason();
-            if (reason == eStopReasonBreakpoint ||
-                reason == eStopReasonException) {
-              LLDB_LOGF(log,
-                        "ProcessGDBRemote::DoDestroy() - thread: 0x%4.4" PRIx64
-                        " stopped with reason: %s.",
-                        thread_sp->GetProtocolID(),
-                        stop_info_sp->GetDescription());
-              stop_looks_like_crash = true;
-              break;
-            }
-          }
-        }
-
-        if (stop_looks_like_crash) {
-          if (log)
-            log->PutCString("ProcessGDBRemote::DoDestroy() - Stopped at a "
-                            "breakpoint, continue and then kill.");
-          m_destroy_tried_resuming = true;
-
-          // If we are going to run again before killing, it would be good to
-          // suspend all the threads before resuming so they won't get into
-          // more trouble.  Sadly, for the threads stopped with the breakpoint
-          // or exception, the exception doesn't get cleared if it is
-          // suspended, so we do have to run the risk of letting those threads
-          // proceed a bit.
-
-          {
-            std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
-
-            size_t num_threads = threads.GetSize();
-            for (size_t i = 0; i < num_threads; i++) {
-              ThreadSP thread_sp = threads.GetThreadAtIndex(i);
-              StopInfoSP stop_info_sp = thread_sp->GetPrivateStopInfo();
-              StopReason reason = eStopReasonInvalid;
-              if (stop_info_sp)
-                reason = stop_info_sp->GetStopReason();
-              if (reason != eStopReasonBreakpoint &&
-                  reason != eStopReasonException) {
-                LLDB_LOGF(log,
-                          "ProcessGDBRemote::DoDestroy() - Suspending "
-                          "thread: 0x%4.4" PRIx64 " before running.",
-                          thread_sp->GetProtocolID());
-                thread_sp->SetResumeState(eStateSuspended);
-              }
-            }
-          }
-          Resume();
-          return Destroy(false);
-        }
-      }
-    }
-  }
 
   // Interrupt if our inferior is running...
   int exit_status = SIGABRT;

@@ -67,3 +67,9 @@ add_header_library(
   HDRS
     atomic.h
 )
+
+add_header_library(
+  blockstore
+  HDRS
+    blockstore.h
+)

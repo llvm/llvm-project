@@ -91,7 +91,7 @@ void test() {
     static_assert(std::same_as<IterTraits::iterator_category, std::input_iterator_tag>);
     static_assert(std::same_as<IterTraits::value_type, int>);
     static_assert(std::same_as<IterTraits::difference_type, std::ptrdiff_t>);
-    static_assert(std::same_as<IterTraits::pointer, const Iter&>);
+    static_assert(std::same_as<IterTraits::pointer, int*>);
     static_assert(std::same_as<IterTraits::reference, int&>);
   }
   {
@@ -103,7 +103,7 @@ void test() {
     static_assert(std::same_as<IterTraits::iterator_category, std::forward_iterator_tag>);
     static_assert(std::same_as<IterTraits::value_type, int>);
     static_assert(std::same_as<IterTraits::difference_type, std::ptrdiff_t>);
-    static_assert(std::same_as<IterTraits::pointer, const Iter&>);
+    static_assert(std::same_as<IterTraits::pointer, int*>);
     static_assert(std::same_as<IterTraits::reference, int&>);
   }
   {
@@ -115,7 +115,7 @@ void test() {
     static_assert(std::same_as<IterTraits::iterator_category, std::forward_iterator_tag>);
     static_assert(std::same_as<IterTraits::value_type, int>);
     static_assert(std::same_as<IterTraits::difference_type, std::ptrdiff_t>);
-    static_assert(std::same_as<IterTraits::pointer, const Iter&>);
+    static_assert(std::same_as<IterTraits::pointer, int*>);
     static_assert(std::same_as<IterTraits::reference, int&>);
   }
 

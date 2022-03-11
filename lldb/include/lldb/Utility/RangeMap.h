@@ -59,6 +59,17 @@ template <typename B, typename S> struct Range {
     return false;
   }
 
+  Range Intersect(const Range &rhs) const {
+    const BaseType lhs_base = this->GetRangeBase();
+    const BaseType rhs_base = rhs.GetRangeBase();
+    const BaseType lhs_end = this->GetRangeEnd();
+    const BaseType rhs_end = rhs.GetRangeEnd();
+    Range range;
+    range.SetRangeBase(std::max(lhs_base, rhs_base));
+    range.SetRangeEnd(std::min(lhs_end, rhs_end));
+    return range;
+  }
+
   BaseType GetRangeEnd() const { return base + size; }
 
   void SetRangeEnd(BaseType end) {
@@ -99,12 +110,7 @@ template <typename B, typename S> struct Range {
 
   // Returns true if the two ranges intersect
   bool DoesIntersect(const Range &rhs) const {
-    const BaseType lhs_base = this->GetRangeBase();
-    const BaseType rhs_base = rhs.GetRangeBase();
-    const BaseType lhs_end = this->GetRangeEnd();
-    const BaseType rhs_end = rhs.GetRangeEnd();
-    bool result = (lhs_base < rhs_end) && (lhs_end > rhs_base);
-    return result;
+    return Intersect(rhs).IsValid();
   }
 
   bool operator<(const Range &rhs) const {
@@ -132,6 +138,38 @@ public:
   RangeVector() = default;
 
   ~RangeVector() = default;
+
+  static RangeVector GetOverlaps(const RangeVector &vec1,
+                                 const RangeVector &vec2) {
+#ifdef ASSERT_RANGEMAP_ARE_SORTED
+    assert(vec1.IsSorted() && vec2.IsSorted());
+#endif
+    RangeVector result;
+    auto pos1 = vec1.begin();
+    auto end1 = vec1.end();
+    auto pos2 = vec2.begin();
+    auto end2 = vec2.end();
+    while (pos1 != end1 && pos2 != end2) {
+      Entry entry = pos1->Intersect(*pos2);
+      if (entry.IsValid())
+        result.Append(entry);
+      if (pos1->GetRangeEnd() < pos2->GetRangeEnd())
+        ++pos1;
+      else
+        ++pos2;
+    }
+    return result;
+  }
+
+  bool operator==(const RangeVector &rhs) const {
+    if (GetSize() != rhs.GetSize())
+      return false;
+    for (size_t i = 0; i < GetSize(); ++i) {
+      if (GetEntryRef(i) != rhs.GetEntryRef(i))
+        return false;
+    }
+    return true;
+  }
 
   void Append(const Entry &entry) { m_entries.push_back(entry); }
 

@@ -19,7 +19,8 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
-#ifdef LLVM_LIBC_PUBLIC_PACKAGING
+// MacOS needs to be excluded because it does not support aliasing.
+#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && (!defined(__APPLE__))
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \

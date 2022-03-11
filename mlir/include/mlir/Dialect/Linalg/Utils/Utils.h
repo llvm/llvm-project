@@ -32,19 +32,6 @@ class LinalgDependenceGraph;
 /// `[0, permutation.size())`.
 bool isPermutation(ArrayRef<int64_t> permutation);
 
-/// Apply the permutation defined by `permutation` to `inVec`.
-/// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
-/// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
-/// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
-template <typename T, unsigned N>
-void applyPermutationToVector(SmallVector<T, N> &inVec,
-                              ArrayRef<int64_t> permutation) {
-  SmallVector<T, N> auxVec(inVec.size());
-  for (const auto &en : enumerate(permutation))
-    auxVec[en.index()] = inVec[en.value()];
-  inVec = auxVec;
-}
-
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);

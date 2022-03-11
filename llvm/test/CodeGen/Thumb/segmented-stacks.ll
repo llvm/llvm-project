@@ -116,13 +116,14 @@ define void @test_large() #0 {
 
 ; Thumb-android:      push    {r4, r5}
 ; Thumb-android-NEXT: mov     r5, sp
-; Thumb-android-NEXT: sub     r5, #40192
 ; Thumb-android-NEXT: ldr     r4, .LCPI2_2
+; Thumb-android-NEXT: sub     r5, r5, r4
+; Thumb-android-NEXT: ldr     r4, .LCPI2_3
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
 ; Thumb-android-NEXT: blo     .LBB2_2
 
-; Thumb-android:      mov     r4, #40192
+; Thumb-android:      ldr     r4, .LCPI2_2
 ; Thumb-android-NEXT: mov     r5, #0
 ; Thumb-android-NEXT: push    {lr}
 ; Thumb-android-NEXT: bl      __morestack
@@ -133,17 +134,21 @@ define void @test_large() #0 {
 
 ; Thumb-android:      pop     {r4, r5}
 
+; Thumb-android:      .LCPI2_2:
+; Thumb-android-NEXT: .long   40192
+
 ; Thumb-linux-LABEL:      test_large:
 
 ; Thumb-linux:      push    {r4, r5}
 ; Thumb-linux-NEXT: mov     r5, sp
-; Thumb-linux-NEXT: sub     r5, #40192
 ; Thumb-linux-NEXT: ldr     r4, .LCPI2_2
+; Thumb-linux-NEXT: sub     r5, r5, r4
+; Thumb-linux-NEXT: ldr     r4, .LCPI2_3
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
 ; Thumb-linux-NEXT: blo     .LBB2_2
 
-; Thumb-linux:      mov     r4, #40192
+; Thumb-linux:      ldr     r4, .LCPI2_2
 ; Thumb-linux-NEXT: mov     r5, #0
 ; Thumb-linux-NEXT: push    {lr}
 ; Thumb-linux-NEXT: bl      __morestack
@@ -212,13 +217,14 @@ define fastcc void @test_fastcc_large() #0 {
 
 ; Thumb-android:      push    {r4, r5}
 ; Thumb-android-NEXT: mov     r5, sp
-; Thumb-android-NEXT: sub     r5, #40192
 ; Thumb-android-NEXT: ldr     r4, .LCPI4_2
+; Thumb-android-NEXT: sub     r5, r5, r4
+; Thumb-android-NEXT: ldr     r4, .LCPI4_3
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
 ; Thumb-android-NEXT: blo     .LBB4_2
 
-; Thumb-android:      mov     r4, #40192
+; Thumb-android:      ldr     r4, .LCPI4_2
 ; Thumb-android-NEXT: mov     r5, #0
 ; Thumb-android-NEXT: push    {lr}
 ; Thumb-android-NEXT: bl      __morestack
@@ -229,17 +235,21 @@ define fastcc void @test_fastcc_large() #0 {
 
 ; Thumb-android:      pop     {r4, r5}
 
+; Thumb-android:      .LCPI4_2:
+; Thumb-android-NEXT: .long   40192
+
 ; Thumb-linux-LABEL:      test_fastcc_large:
 
 ; Thumb-linux:      push    {r4, r5}
 ; Thumb-linux-NEXT: mov     r5, sp
-; Thumb-linux-NEXT: sub     r5, #40192
 ; Thumb-linux-NEXT: ldr     r4, .LCPI4_2
+; Thumb-linux-NEXT: sub     r5, r5, r4
+; Thumb-linux-NEXT: ldr     r4, .LCPI4_3
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
 ; Thumb-linux-NEXT: blo     .LBB4_2
 
-; Thumb-linux:      mov     r4, #40192
+; Thumb-linux:      ldr     r4, .LCPI4_2
 ; Thumb-linux-NEXT: mov     r5, #0
 ; Thumb-linux-NEXT: push    {lr}
 ; Thumb-linux-NEXT: bl      __morestack
@@ -249,6 +259,9 @@ define fastcc void @test_fastcc_large() #0 {
 ; Thumb-linux-NEXT: bx      lr
 
 ; Thumb-linux:      pop     {r4, r5}
+
+; Thumb-linux:      .LCPI4_2:
+; Thumb-linux-NEXT: .long   40192
 
 }
 

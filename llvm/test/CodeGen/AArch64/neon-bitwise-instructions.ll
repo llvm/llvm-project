@@ -899,16 +899,40 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8(<8 x i8> %a, <8 x i8> %b) {
   ret <8 x i8> %c
 }
 
+define <8 x i8> @vselect_equivalent_shuffle_v8i8_zero(<8 x i8> %a) {
+; CHECK-LABEL: vselect_equivalent_shuffle_v8i8_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI90_0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI90_0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i8> %a, <8 x i8> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %c
+}
+
 define <8 x i16> @vselect_equivalent_shuffle_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vselect_equivalent_shuffle_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI90_0
+; CHECK-NEXT:    adrp x8, .LCPI91_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI90_0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI91_0]
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %c
+}
+
+define <8 x i16> @vselect_equivalent_shuffle_v8i16_zero(<8 x i16> %a) {
+; CHECK-LABEL: vselect_equivalent_shuffle_v8i16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI92_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI92_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i16> %a, <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %c
 }
 

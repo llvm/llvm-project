@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Runtime/pointer.h"
 #include "flang/Runtime/stop.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -111,4 +112,16 @@ void Fortran::lower::genPauseStatement(
   mlir::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
   builder.create<fir::CallOp>(loc, callee, llvm::None);
+}
+
+mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          mlir::Value pointer,
+                                          mlir::Value target) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(PointerIsAssociatedWith)>(loc,
+                                                                     builder);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, func.getType(), pointer, target);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
