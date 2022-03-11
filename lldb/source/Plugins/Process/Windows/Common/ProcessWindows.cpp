@@ -576,6 +576,10 @@ bool ProcessWindows::IsAlive() {
   }
 }
 
+ArchSpec ProcessWindows::GetSystemArchitecture() {
+  return HostInfo::GetArchitecture();
+}
+
 size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
                                     size_t size, Status &error) {
   size_t bytes_read = 0;
