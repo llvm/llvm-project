@@ -21,6 +21,7 @@
 namespace llvm {
 
 class Constant;
+class Error;
 class LLVMContext;
 class Type;
 class Value;
@@ -92,7 +93,7 @@ public:
   Constant *getConstantFwdRef(unsigned Idx, Type *Ty, unsigned TyID);
   Value *getValueFwdRef(unsigned Idx, Type *Ty, unsigned TyID);
 
-  void assignValue(unsigned Idx, Value *V, unsigned TypeID);
+  Error assignValue(unsigned Idx, Value *V, unsigned TypeID);
 
   /// Once all constants are read, this method bulk resolves any forward
   /// references.

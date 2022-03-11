@@ -17,6 +17,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 
@@ -60,11 +61,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPlaceHolder, Value)
 
 } // end namespace llvm
 
-void BitcodeReaderValueList::assignValue(unsigned Idx, Value *V,
-                                         unsigned TypeID) {
+Error BitcodeReaderValueList::assignValue(unsigned Idx, Value *V,
+                                          unsigned TypeID) {
   if (Idx == size()) {
     push_back(V, TypeID);
-    return;
+    return Error::success();
   }
 
   if (Idx >= size())
@@ -74,7 +75,7 @@ void BitcodeReaderValueList::assignValue(unsigned Idx, Value *V,
   if (!Old.first) {
     Old.first = V;
     Old.second = TypeID;
-    return;
+    return Error::success();
   }
 
   // Handle constants and non-constants (e.g. instrs) differently for
@@ -86,9 +87,14 @@ void BitcodeReaderValueList::assignValue(unsigned Idx, Value *V,
   } else {
     // If there was a forward reference to this value, replace it.
     Value *PrevVal = Old.first;
+    if (PrevVal->getType() != V->getType())
+      return createStringError(
+          std::errc::illegal_byte_sequence,
+          "Assigned value does not match type of forward declaration");
     Old.first->replaceAllUsesWith(V);
     PrevVal->deleteValue();
   }
+  return Error::success();
 }
 
 Constant *BitcodeReaderValueList::getConstantFwdRef(unsigned Idx, Type *Ty,
