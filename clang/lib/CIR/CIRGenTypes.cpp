@@ -26,7 +26,12 @@ CIRGenTypes::CIRGenTypes(CIRGenModule &cgm)
     : Context(cgm.getASTContext()), Builder(cgm.getBuilder()), CGM{cgm},
       TheCXXABI(cgm.getCXXABI()),
       TheABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
-CIRGenTypes::~CIRGenTypes() = default;
+CIRGenTypes::~CIRGenTypes() {
+  for (llvm::FoldingSet<CIRGenFunctionInfo>::iterator I = FunctionInfos.begin(),
+                                                      E = FunctionInfos.end();
+       I != E;)
+    delete &*I++;
+}
 
 std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
                                            StringRef suffix) {
