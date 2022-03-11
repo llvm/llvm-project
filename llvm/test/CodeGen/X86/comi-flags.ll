@@ -594,8 +594,8 @@ define i32 @test_x86_sse2_ucomineq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a
 }
 declare i32 @llvm.x86.sse2.ucomineq.sd(<2 x double>, <2 x double>) nounwind readnone
 
-define void @PR38960(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: PR38960:
+define void @PR38960_eq(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: PR38960_eq:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    comiss %xmm1, %xmm0
 ; SSE-NEXT:    setnp %al
@@ -609,7 +609,7 @@ define void @PR38960(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:  .LBB24_1: # %if.end
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: PR38960:
+; AVX-LABEL: PR38960_eq:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    setnp %al
@@ -624,6 +624,47 @@ define void @PR38960(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
 entry:
   %call = tail call i32 @llvm.x86.sse.comieq.ss(<4 x float> %A, <4 x float> %B) #3
+  %cmp = icmp eq i32 %call, 0
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:
+  tail call void @foo()
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @PR38960_neq(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: PR38960_neq:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    comiss %xmm1, %xmm0
+; SSE-NEXT:    setp %al
+; SSE-NEXT:    setne %cl
+; SSE-NEXT:    orb %al, %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    je .LBB25_1
+; SSE-NEXT:  # %bb.2: # %if.then
+; SSE-NEXT:    jmp foo@PLT # TAILCALL
+; SSE-NEXT:  .LBB25_1: # %if.end
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR38960_neq:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
+; AVX-NEXT:    setp %al
+; AVX-NEXT:    setne %cl
+; AVX-NEXT:    orb %al, %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    je .LBB25_1
+; AVX-NEXT:  # %bb.2: # %if.then
+; AVX-NEXT:    jmp foo@PLT # TAILCALL
+; AVX-NEXT:  .LBB25_1: # %if.end
+; AVX-NEXT:    retq
+entry:
+  %call = tail call i32 @llvm.x86.sse.comineq.ss(<4 x float> %A, <4 x float> %B) #3
   %cmp = icmp eq i32 %call, 0
   br i1 %cmp, label %if.end, label %if.then
 
