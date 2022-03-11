@@ -208,6 +208,10 @@ std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
   return std::chrono::seconds(GetGlobalPluginProperties().GetPacketTimeout());
 }
 
+ArchSpec ProcessGDBRemote::GetSystemArchitecture() {
+  return m_gdb_comm.GetHostArchitecture();
+}
+
 bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
                                 bool plugin_specified_by_name) {
   if (plugin_specified_by_name)
