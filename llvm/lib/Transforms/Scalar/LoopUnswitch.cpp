@@ -76,7 +76,6 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
-#include <set>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -904,9 +903,9 @@ bool LoopUnswitch::processCurrentLoop() {
 /// If true, we return true and set ExitBB to the block we
 /// exit through.
 ///
-static bool isTrivialLoopExitBlockHelper(Loop *L, BasicBlock *BB,
-                                         BasicBlock *&ExitBB,
-                                         std::set<BasicBlock*> &Visited) {
+static bool
+isTrivialLoopExitBlockHelper(Loop *L, BasicBlock *BB, BasicBlock *&ExitBB,
+                             SmallPtrSet<BasicBlock *, 8> &Visited) {
   if (!Visited.insert(BB).second) {
     // Already visited. Without more analysis, this could indicate an infinite
     // loop.
@@ -940,7 +939,7 @@ static bool isTrivialLoopExitBlockHelper(Loop *L, BasicBlock *BB,
 /// the specified loop, and has no side-effects in the process. If so, return
 /// the block that is exited to, otherwise return null.
 static BasicBlock *isTrivialLoopExitBlock(Loop *L, BasicBlock *BB) {
-  std::set<BasicBlock*> Visited;
+  SmallPtrSet<BasicBlock *, 8> Visited;
   Visited.insert(L->getHeader());  // Branches to header make infinite loops.
   BasicBlock *ExitBB = nullptr;
   if (isTrivialLoopExitBlockHelper(L, BB, ExitBB, Visited))

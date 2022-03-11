@@ -1090,6 +1090,8 @@ def MemRef_ReinterpretCastOp
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

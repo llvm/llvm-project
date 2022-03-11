@@ -2246,9 +2246,6 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         m_process_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
         m_process_arch.GetTriple().setOSName(llvm::StringRef(os_name));
         m_process_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
-        m_host_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
-        m_host_arch.GetTriple().setOSName(llvm::StringRef(os_name));
-        m_host_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
       }
       return true;
     }

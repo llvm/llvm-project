@@ -13,6 +13,11 @@ using namespace llvm;
 
 #if LLVM_WITH_Z3
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
+
+#include <set>
+
 #include <z3.h>
 
 namespace {

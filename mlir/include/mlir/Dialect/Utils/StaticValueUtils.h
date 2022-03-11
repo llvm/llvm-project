@@ -53,6 +53,9 @@ SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values);
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 Optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 
+/// Return true if `ofr` is constant integer equal to `value`.
+bool isConstantIntValue(OpFoldResult ofr, int64_t value);
+
 /// Return true if ofr1 and ofr2 are the same integer constant attribute values
 /// or the same SSA value.
 /// Ignore integer bitwitdh and type mismatch that come from the fact there is
