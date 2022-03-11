@@ -23,7 +23,7 @@ def validate_file_hashes : Joined<["/", "-"], "validate_file_hashes:">, HelpText
 def canonicalize : Flag<["/", "-"], "canonicalize:">, HelpText<"Not supported">, Group<unsupported>;
 def check_for_duplicates : Flag<["/", "-"], "check_for_duplicates:">, HelpText<"Not supported">, Group<unsupported>;
 def make_cdfs : Flag<["/", "-"], "makecdfs:">, HelpText<"Not supported">, Group<unsupported>;
-def notify_update : Flag<["/", "-"], "notify_update">, HelpText<"Not supported">, Group<unsupported>;
+def notify_update : Flag<["/", "-"], "notify_update">, HelpText<"Exit with a special exit code if the output file has changed">;
 def verbose : Flag<["/", "-"], "verbose">, HelpText<"Not supported">, Group<unsupported>;
 def help : Flag<["/", "-"], "?">;
 def help_long : Flag<["/", "-"], "help">, Alias<help>;
