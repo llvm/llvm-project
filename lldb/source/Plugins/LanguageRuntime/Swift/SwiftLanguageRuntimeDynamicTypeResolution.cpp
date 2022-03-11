@@ -2015,7 +2015,6 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   const swift::reflection::TypeRef *bound_type_ref =
       type_ref->subst(reflection_ctx->getBuilder(), substitutions);
   NodePointer node = bound_type_ref->getDemangling(dem);
-  CompilerType bound_type = ts.RemangleAsType(dem, node);
 
   // Import the type into the scratch context. Subsequent conversions
   // to Swift types must be performed in the scratch context, since
@@ -2037,15 +2036,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
              "No scratch context available.");
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
-  if (!swift_ast_ctx) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-             "No scratch context available.");
-    return ts.GetTypeFromMangledTypename(mangled_name);
-  }
-
-  bound_type = swift_ast_ctx->ImportType(bound_type, error);
-
+  CompilerType bound_type =  scratch_ctx->RemangleAsType(dem, node);
   LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
            mangled_name, bound_type.GetMangledTypeName());
   return bound_type;
