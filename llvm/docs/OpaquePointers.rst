@@ -18,7 +18,8 @@ Address spaces are still used to distinguish between different kinds of pointers
 where the distinction is relevant for lowering (e.g. data vs function pointers
 have different sizes on some architectures). Opaque pointers are not changing
 anything related to address spaces and lowering. For more information, see
-`DataLayout <LangRef.html#langref-datalayout>`_.
+`DataLayout <LangRef.html#langref-datalayout>`_. Opaque pointers in non-default
+address space are spelled ``ptr addrspace(N)``.
 
 Issues with explicit pointee types
 ==================================
@@ -191,24 +192,23 @@ on a pointer type.
 Transition State
 ================
 
-As of Febuary 2022 large parts of LLVM support opaque pointers. It is possible
-to build a lot of C and C++ code in opaque pointer mode, both with and without
+As of March 2022 most parts of LLVM support opaque pointers. It is possible
+to build most C and C++ code in opaque pointer mode, both with and without
 optimization, and produce working binaries. However, thes are still some major
 open problems:
-
-* Bitcode already fully supports opaque pointers, and reading up-to-date
-  typed pointer bitcode in opaque pointers mode also works. However, we
-  currently do not fully support pointee type based auto-upgrade of old bitcode
-  in opaque pointer mode.
 
 * While clang has limited support for opaque pointers (sufficient to compile
   most C/C++ code on Linux), a major effort will be needed to systematically
   remove all uses of ``getPointerElementType()`` and the deprecated
   ``Address::deprecated()`` constructor.
 
-* We do not yet have a testing strategy for how we can test both typed and
-  opaque pointers during the migration. Currently, individual tests for
-  opaque pointers are being added, but the bulk of tests still uses typed
-  pointers.
+* We do not yet have a firm strategy for enabling opaque pointers. A large
+  number of tests will have to be migrated to use opaque pointers.
 
-* Miscellanous uses of pointer element types remain everywhere.
+* Some pointer element type uses remain in LLVM.
+
+* Some pointer element type uses remain in LLDB.
+
+* Some pointer element type uses remain in MLIR.
+
+* Some pointer element type uses remain in Polly.
