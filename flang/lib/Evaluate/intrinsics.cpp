@@ -793,16 +793,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             DefaultingKIND},
         KINDInt},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
-    {"__builtin_ieee_is_normal", {{"a", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_is_negative", {{"a", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_normal", {{"a", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_next_after", {{"x", SameReal}, {"y", AnyReal}}, SameReal},
     {"__builtin_ieee_next_down", {{"x", SameReal}}, SameReal},
     {"__builtin_ieee_next_up", {{"x", SameReal}}, SameReal},
-    {"__builtin_ieee_selected_real_kind", // alias for selected_real_kind
-        {{"p", AnyInt, Rank::scalar},
-            {"r", AnyInt, Rank::scalar, Optionality::optional},
-            {"radix", AnyInt, Rank::scalar, Optionality::optional}},
-        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"__builtin_ieee_support_datatype",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
@@ -839,7 +834,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 //   LCOBOUND, UCOBOUND, FAILED_IMAGES, IMAGE_INDEX,
 //   STOPPED_IMAGES, COSHAPE
 // TODO: Non-standard intrinsic functions
-//  AND, OR, XOR, LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
+//  LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
 //  QCMPLX, QEXT, QFLOAT, QREAL, DNUM,
 //  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN,
@@ -850,6 +845,15 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // TODO: Optionally warn on use of non-standard intrinsics:
 //  LOC, probably others
 // TODO: Optionally warn on operand promotion extension
+
+// Aliases for a few generic intrinsic functions for legacy
+// compatibility and builtins.
+static const std::pair<const char *, const char *> genericAlias[]{
+    {"and", "iand"},
+    {"or", "ior"},
+    {"xor", "ieor"},
+    {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
+};
 
 // The following table contains the intrinsic functions listed in
 // Tables 16.2 and 16.3 in Fortran 2018.  The "unrestricted" functions
@@ -1897,6 +1901,10 @@ public:
     for (const IntrinsicInterface &f : genericIntrinsicFunction) {
       genericFuncs_.insert(std::make_pair(std::string{f.name}, &f));
     }
+    for (const std::pair<const char *, const char *> &a : genericAlias) {
+      aliases_.insert(
+          std::make_pair(std::string{a.first}, std::string{a.second}));
+    }
     for (const SpecificIntrinsicInterface &f : specificIntrinsicFunction) {
       specificFuncs_.insert(std::make_pair(std::string{f.name}, &f));
     }
@@ -1929,16 +1937,22 @@ private:
   SpecificCall HandleNull(ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_F_Pointer(
       ActualArguments &, FoldingContext &) const;
+  const std::string &ResolveAlias(const std::string &name) const {
+    auto iter{aliases_.find(name)};
+    return iter == aliases_.end() ? name : iter->second;
+  }
 
   common::IntrinsicTypeDefaultKinds defaults_;
   std::multimap<std::string, const IntrinsicInterface *> genericFuncs_;
   std::multimap<std::string, const SpecificIntrinsicInterface *> specificFuncs_;
   std::multimap<std::string, const IntrinsicInterface *> subroutines_;
   const semantics::Scope *builtinsScope_{nullptr};
+  std::map<std::string, std::string> aliases_;
 };
 
 bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
-    const std::string &name) const {
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
   auto specificRange{specificFuncs_.equal_range(name)};
   if (specificRange.first != specificRange.second) {
     return true;
@@ -2427,9 +2441,11 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
         return std::nullopt;
       }};
 
-  // Probe the generic intrinsic function table first.
+  // Probe the generic intrinsic function table first; allow for
+  // the use of a legacy alias.
   parser::Messages genericBuffer;
-  auto genericRange{genericFuncs_.equal_range(call.name)};
+  const std::string &name{ResolveAlias(call.name)};
+  auto genericRange{genericFuncs_.equal_range(name)};
   for (auto iter{genericRange.first}; iter != genericRange.second; ++iter) {
     if (auto specificCall{
             matchOrBufferMessages(*iter->second, genericBuffer)}) {

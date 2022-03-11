@@ -36,6 +36,7 @@ subroutine bozchecks
   !    B) Argument to intrinsics listed from 16.9 below
   !       BGE, BGT, BLE, BLT, CMPLX, DBLE, DSHIFTL,
   !       DSHIFTR, IAND, IEOR, INT, IOR, MERGE_BITS, REAL
+  !       and legacy aliases AND, OR, XOR
 
   ! part A
   data f / Z"AA" / ! OK
@@ -63,16 +64,25 @@ subroutine bozchecks
   !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
   resint = IAND(B"0001", B"0011")
   resint = IAND(B"0001", 3)
+  !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
+  resint = AND(B"0001", B"0011")
+  resint = AND(B"0001", 3)
 
   !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
   resint = IEOR(B"0001", B"0011")
   resint = IEOR(B"0001", 3)
+  !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
+  resint = XOR(B"0001", B"0011")
+  resint = XOR(B"0001", 3)
 
   resint = INT(B"1010")
 
   !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
   res = IOR(B"0101", B"0011")
   res = IOR(B"0101", 3)
+  !ERROR: Typeless (BOZ) not allowed for both 'i=' & 'j=' arguments
+  res = OR(B"0101", B"0011")
+  res = OR(B"0101", 3)
 
   res = MERGE_BITS(13,3,11)
   res = MERGE_BITS(B"1101",3,11)
