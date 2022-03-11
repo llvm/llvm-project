@@ -5272,7 +5272,7 @@ Address CGObjCMac::EmitSelectorAddr(Selector Sel) {
     Entry->setExternallyInitialized(true);
   }
 
-  return Address::deprecated(Entry, Align);
+  return Address(Entry, ObjCTypes.SelectorPtrTy, Align);
 }
 
 llvm::Constant *CGObjCCommonMac::GetClassName(StringRef RuntimeName) {
@@ -7643,7 +7643,7 @@ Address CGObjCNonFragileABIMac::EmitSelectorAddr(Selector Sel) {
     CGM.addCompilerUsedGlobal(Entry);
   }
 
-  return Address::deprecated(Entry, Align);
+  return Address(Entry, ObjCTypes.SelectorPtrTy, Align);
 }
 
 /// EmitObjCIvarAssign - Code gen for assigning to a __strong object.
