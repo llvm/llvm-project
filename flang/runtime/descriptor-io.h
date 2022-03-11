@@ -480,7 +480,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       return FormattedDerivedTypeIO<DIR>(io, descriptor);
     }
   }
-  handler.Crash("DescriptorIO: Bad type code (%d) in descriptor",
+  handler.Crash("DescriptorIO: bad type code (%d) in descriptor",
       static_cast<int>(descriptor.type().raw()));
   return false;
 }

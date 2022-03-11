@@ -564,7 +564,7 @@ bool IONAME(SetPos)(Cookie cookie, std::int64_t pos) {
     unit->SetPosition(pos - 1, handler);
     return true;
   }
-  io.GetIoErrorHandler().Crash("SetPos() on internal unit");
+  io.GetIoErrorHandler().Crash("SetPos() called on internal unit");
   return false;
 }
 
@@ -937,7 +937,7 @@ bool IONAME(GetNewUnit)(Cookie cookie, int &unit, int kind) {
   }
   std::int64_t result{open->unit().unitNumber()};
   if (!SetInteger(unit, kind, result)) {
-    open->SignalError("GetNewUnit(): Bad INTEGER kind(%d) or out-of-range "
+    open->SignalError("GetNewUnit(): bad INTEGER kind(%d) or out-of-range "
                       "value(%jd) for result",
         kind, static_cast<std::intmax_t>(result));
   }
@@ -1209,7 +1209,8 @@ bool IONAME(InquireInteger64)(
       return true;
     }
     io.GetIoErrorHandler().SignalError(
-        "InquireInteger64(): Bad INTEGER kind(%d) or out-of-range value(%jd) "
+        "InquireInteger64(): bad INTEGER kind(%d) or out-of-range "
+        "value(%jd) "
         "for result",
         kind, static_cast<std::intmax_t>(n));
   }

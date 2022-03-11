@@ -78,7 +78,7 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
 void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
   char buffer[16];
   const char *decode{InquiryKeywordHashDecode(buffer, sizeof buffer, inquiry)};
-  Crash("bad InquiryKeywordHash 0x%x (%s)", inquiry,
+  Crash("Bad InquiryKeywordHash 0x%x (%s)", inquiry,
       decode ? decode : "(cannot decode)");
 }
 

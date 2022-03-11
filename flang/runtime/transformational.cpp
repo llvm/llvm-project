@@ -525,12 +525,15 @@ void RTNAME(Unpack)(Descriptor &result, const Descriptor &vector,
   }
   mask.GetLowerBounds(maskAt);
   field.GetLowerBounds(fieldAt);
-  SubscriptValue vectorLeft{vector.GetDimension(0).Extent()};
+  SubscriptValue vectorElements{vector.GetDimension(0).Extent()};
+  SubscriptValue vectorLeft{vectorElements};
   for (std::size_t n{result.Elements()}; n-- > 0;) {
     if (IsLogicalElementTrue(mask, maskAt)) {
       if (vectorLeft-- == 0) {
-        terminator.Crash("UNPACK: VECTOR= argument has fewer elements than "
-                         "MASK= has .TRUE. entries");
+        terminator.Crash(
+            "UNPACK: VECTOR= argument has fewer elements (%d) than "
+            "MASK= has .TRUE. entries",
+            vectorElements);
       }
       CopyElement(result, resultAt, vector, &vectorAt, terminator);
       ++vectorAt;

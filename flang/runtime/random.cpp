@@ -108,7 +108,7 @@ void RTNAME(RandomNumber)(
     break;
 #endif
   default:
-    terminator.Crash("RANDOM_NUMBER(): unsupported REAL kind %d", kind);
+    terminator.Crash("RANDOM_NUMBER(): bad REAL kind %d", kind);
   }
 }
 

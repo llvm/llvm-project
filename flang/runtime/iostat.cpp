@@ -30,7 +30,7 @@ const char *IostatErrorString(int iostat) {
   case IostatInternalWriteOverrun:
     return "Internal write overran available records";
   case IostatErrorInFormat:
-    return "Invalid FORMAT";
+    return "Bad FORMAT";
   case IostatErrorInKeyword:
     return "Bad keyword argument value";
   case IostatEndfileDirect:
