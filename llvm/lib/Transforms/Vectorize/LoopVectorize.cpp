@@ -4455,6 +4455,14 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   assert(VF.isVector() && Scalars.find(VF) == Scalars.end() &&
          "This function should not be visited twice for the same VF");
 
+  // This avoids any chances of creating a REPLICATE recipe during planning
+  // since that would result in generation of scalarized code during execution,
+  // which is not supported for scalable vectors.
+  if (VF.isScalable()) {
+    Scalars[VF].insert(Uniforms[VF].begin(), Uniforms[VF].end());
+    return;
+  }
+
   SmallSetVector<Instruction *, 8> Worklist;
 
   // These sets are used to seed the analysis with pointers used by memory
