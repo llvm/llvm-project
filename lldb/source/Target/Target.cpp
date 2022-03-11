@@ -1684,7 +1684,6 @@ bool Target::ModuleIsExcludedForUnconstrainedSearches(
 
 size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
                                        size_t dst_len, Status &error) {
-  LLDB_SCOPED_TIMER();
   SectionSP section_sp(addr.GetSection());
   if (section_sp) {
     // If the contents of this section are encrypted, the on-disk file is
