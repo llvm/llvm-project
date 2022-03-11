@@ -1974,6 +1974,15 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
+  // Do not explicitly save the callee saved VSRp registers.
+  // The individual VSR subregisters will be saved instead.
+  SavedRegs.reset(PPC::VSRp26);
+  SavedRegs.reset(PPC::VSRp27);
+  SavedRegs.reset(PPC::VSRp28);
+  SavedRegs.reset(PPC::VSRp29);
+  SavedRegs.reset(PPC::VSRp30);
+  SavedRegs.reset(PPC::VSRp31);
+
   //  Save and clear the LR state.
   PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
   unsigned LR = RegInfo->getRARegister();
