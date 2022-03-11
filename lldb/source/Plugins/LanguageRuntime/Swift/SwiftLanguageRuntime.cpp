@@ -39,6 +39,7 @@
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/Module.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Reflection/ReflectionContext.h"
 #include "swift/RemoteAST/RemoteAST.h"
 
@@ -1945,19 +1946,6 @@ SwiftLanguageRuntime::CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bo
   return ::CreateExceptionResolver(bkpt, catch_bp, throw_bp);
 }
 
-static const char *
-SwiftDemangleNodeKindToCString(const swift::Demangle::Node::Kind node_kind) {
-#define NODE(e)                                                                \
-  case swift::Demangle::Node::Kind::e:                                         \
-    return #e;
-
-  switch (node_kind) {
-#include "swift/Demangling/DemangleNodes.def"
-  }
-  return "swift::Demangle::Node::Kind::???";
-#undef NODE
-}
-
 static OptionDefinition g_swift_demangle_options[] = {
     // clang-format off
   {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
@@ -2016,43 +2004,25 @@ public:
   };
 
 protected:
-  void PrintNode(swift::Demangle::NodePointer node_ptr, Stream &stream,
-                 int depth = 0) {
-    if (!node_ptr)
-      return;
-
-    std::string indent(2 * depth, ' ');
-
-    stream.Printf("%s", indent.c_str());
-
-    stream.Printf("kind=%s",
-                  SwiftDemangleNodeKindToCString(node_ptr->getKind()));
-    if (node_ptr->hasText()) {
-      std::string Text = node_ptr->getText().str();
-      stream.Printf(", text=\"%s\"", Text.c_str());
-    }
-    if (node_ptr->hasIndex())
-      stream.Printf(", index=%" PRIu64, node_ptr->getIndex());
-
-    stream.Printf("\n");
-
-    for (auto &&child : *node_ptr) {
-      PrintNode(child, stream, depth + 1);
-    }
-  }
-
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
-      const char *arg = command.GetArgumentAtIndex(i);
-      if (arg && *arg) {
+      StringRef name = command.GetArgumentAtIndex(i);
+      if (!name.empty()) {
         swift::Demangle::Context demangle_ctx;
-        auto node_ptr = demangle_ctx.demangleSymbolAsNode(llvm::StringRef(arg));
+        NodePointer node_ptr = nullptr;
+        // Match the behavior of swift-demangle and accept Swift symbols without
+        // the leading `$`. This makes symbol copy & paste more convenient.
+        if (name.startswith("S") || name.startswith("s")) {
+          std::string correctedName = std::string("$") + name.str();
+          node_ptr = demangle_ctx.demangleSymbolAsNode(correctedName);
+        } else {
+          node_ptr = demangle_ctx.demangleSymbolAsNode(name);
+        }
         if (node_ptr) {
-          if (m_options.m_expand) {
-            PrintNode(node_ptr, result.GetOutputStream());
-          }
+          if (m_options.m_expand)
+            result.GetOutputStream().PutCString(getNodeTreeAsString(node_ptr));
           result.GetOutputStream().Printf(
-              "%s ---> %s\n", arg,
+              "%s ---> %s\n", name.data(),
               swift::Demangle::nodeToString(node_ptr).c_str());
         }
       }
