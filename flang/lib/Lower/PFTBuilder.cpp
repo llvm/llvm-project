@@ -1163,8 +1163,9 @@ public:
   void dumpModuleLikeUnit(llvm::raw_ostream &outputStream,
                           const lower::pft::ModuleLikeUnit &moduleLikeUnit) {
     outputStream << getNodeIndex(moduleLikeUnit) << " ";
-    outputStream << "ModuleLike: ";
-    outputStream << "\nContains\n";
+    outputStream << "ModuleLike:\n";
+    dumpEvaluationList(outputStream, moduleLikeUnit.evaluationList);
+    outputStream << "Contains\n";
     for (const lower::pft::FunctionLikeUnit &func :
          moduleLikeUnit.nestedFunctions)
       dumpFunctionLikeUnit(outputStream, func);
