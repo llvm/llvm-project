@@ -8,14 +8,14 @@
 // ELTWISE:      %[[Z:.*]] = arith.constant dense<0.000000e+00> : vector<3x2xf32>
 // ELTWISE:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : vector<2x3xf32>
 // ELTWISE:      %[[T1:.*]] = vector.insert %[[T0]], %[[Z]] [0, 0] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T2:.*]] = vector.extract %[[A]][1, 0] : vector<2x3xf32>
-// ELTWISE:      %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [0, 1] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T4:.*]] = vector.extract %[[A]][0, 1] : vector<2x3xf32>
-// ELTWISE:      %[[T5:.*]] = vector.insert %[[T4]], %[[T3]] [1, 0] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T6:.*]] = vector.extract %[[A]][1, 1] : vector<2x3xf32>
-// ELTWISE:      %[[T7:.*]] = vector.insert %[[T6]], %[[T5]] [1, 1] : f32 into vector<3x2xf32>
-// ELTWISE:      %[[T8:.*]] = vector.extract %[[A]][0, 2] : vector<2x3xf32>
-// ELTWISE:      %[[T9:.*]] = vector.insert %[[T8]], %[[T7]] [2, 0] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T2:.*]] = vector.extract %[[A]][0, 1] : vector<2x3xf32>
+// ELTWISE:      %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [1, 0] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T4:.*]] = vector.extract %[[A]][0, 2] : vector<2x3xf32>
+// ELTWISE:      %[[T5:.*]] = vector.insert %[[T4]], %[[T3]] [2, 0] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T6:.*]] = vector.extract %[[A]][1, 0] : vector<2x3xf32>
+// ELTWISE:      %[[T7:.*]] = vector.insert %[[T6]], %[[T5]] [0, 1] : f32 into vector<3x2xf32>
+// ELTWISE:      %[[T8:.*]] = vector.extract %[[A]][1, 1] : vector<2x3xf32>
+// ELTWISE:      %[[T9:.*]] = vector.insert %[[T8]], %[[T7]] [1, 1] : f32 into vector<3x2xf32>
 // ELTWISE:      %[[T10:.*]] = vector.extract %[[A]][1, 2] : vector<2x3xf32>
 // ELTWISE:      %[[T11:.*]] = vector.insert %[[T10]], %[[T9]] [2, 1] : f32 into vector<3x2xf32>
 // ELTWISE:      return %[[T11]] : vector<3x2xf32>
