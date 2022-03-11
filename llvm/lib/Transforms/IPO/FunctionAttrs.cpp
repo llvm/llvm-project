@@ -247,10 +247,10 @@ MemoryAccessKind llvm::computeFunctionBodyMemoryAccess(Function &F,
   return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {});
 }
 
-/// Deduce readonly/readnone attributes for the SCC.
+/// Deduce readonly/readnone/writeonly attributes for the SCC.
 template <typename AARGetterT>
-static void addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
-                         SmallSet<Function *, 8> &Changed) {
+static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
+                           SmallSet<Function *, 8> &Changed) {
   // Check if any of the functions in the SCC read or write memory.  If they
   // write memory then they can't be marked readnone or readonly.
   bool ReadsMemory = false;
@@ -1810,7 +1810,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
   SmallSet<Function *, 8> Changed;
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
-  addReadAttrs(Nodes.SCCNodes, AARGetter, Changed);
+  addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
   addArgumentAttrs(Nodes.SCCNodes, Changed);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
