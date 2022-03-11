@@ -9,7 +9,7 @@ define internal i32 @test(i32* %X, i32* %Y) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 3
 ;
   %A = load i32, i32* %X
   %B = load i32, i32* %Y
@@ -22,7 +22,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 3
 ;
   %A = alloca i32
   store i32 1, i32* %A
