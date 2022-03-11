@@ -3,6 +3,7 @@
 import os
 import platform
 import re
+import shlex
 import subprocess
 
 import lit.formats
@@ -73,16 +74,7 @@ config.environment['LD_LIBRARY_PATH'] = path
 if config.clang_tidy_staticanalyzer:
     config.available_features.add('static-analyzer')
 
-# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
-# it's not available.
-try:
-    import shlex
-    sh_quote = shlex.quote
-except:
-    import pipes
-    sh_quote = pipes.quote
-python_exec = sh_quote(config.python_executable)
-
+python_exec = shlex.quote(config.python_executable)
 check_clang_tidy = os.path.join(
     config.test_source_root, "clang-tidy", "check_clang_tidy.py")
 config.substitutions.append(
