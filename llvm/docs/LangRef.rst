@@ -2114,6 +2114,11 @@ example:
     function with a tail call. The prototype of a thunk should not be used for
     optimization purposes. The caller is expected to cast the thunk prototype to
     match the thunk target prototype.
+
+``"tls-load-hoist"``
+    This attribute indicates that the function will try to reduce redundant
+    tls address caculation by hoisting tls variable.
+
 ``uwtable[(sync|async)]``
     This attribute indicates that the ABI being targeted requires that
     an unwind table entry be produced for this function even if we can

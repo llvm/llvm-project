@@ -630,14 +630,10 @@ define i32 @icmp64_uge_m2(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    ldrd lr, r0, [sp, #8]
 ; CHECKV7M-NEXT:    beq .LBB6_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    orrs r2, r3
-; CHECKV7M-NEXT:    lsrs r2, r2, #17
-; CHECKV7M-NEXT:    orr.w r2, r2, r3, lsl #15
-; CHECKV7M-NEXT:    orr.w r3, r12, r1
+; CHECKV7M-NEXT:    orr.w r2, r3, r2, lsr #17
+; CHECKV7M-NEXT:    orr.w r1, r1, r12, lsr #17
 ; CHECKV7M-NEXT:    cmp r2, #0
 ; CHECKV7M-NEXT:    mov r2, r0
-; CHECKV7M-NEXT:    lsr.w r3, r3, #17
-; CHECKV7M-NEXT:    orr.w r1, r3, r1, lsl #15
 ; CHECKV7M-NEXT:    it ne
 ; CHECKV7M-NEXT:    movne r2, lr
 ; CHECKV7M-NEXT:    cmp r1, #0
@@ -646,9 +642,7 @@ define i32 @icmp64_uge_m2(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    add r0, r2
 ; CHECKV7M-NEXT:    pop {r7, pc}
 ; CHECKV7M-NEXT:  .LBB6_2: @ %else
-; CHECKV7M-NEXT:    orr.w r1, r2, r3
-; CHECKV7M-NEXT:    lsrs r1, r1, #17
-; CHECKV7M-NEXT:    orr.w r1, r1, r3, lsl #15
+; CHECKV7M-NEXT:    orr.w r1, r3, r2, lsr #17
 ; CHECKV7M-NEXT:    cmp r1, #0
 ; CHECKV7M-NEXT:    it ne
 ; CHECKV7M-NEXT:    movne r0, lr
@@ -664,14 +658,10 @@ define i32 @icmp64_uge_m2(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    lsls r4, r4, #31
 ; CHECKV7A-NEXT:    beq .LBB6_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    orrs r2, r3
-; CHECKV7A-NEXT:    lsrs r2, r2, #17
-; CHECKV7A-NEXT:    orr.w r2, r2, r3, lsl #15
-; CHECKV7A-NEXT:    orr.w r3, r12, r1
+; CHECKV7A-NEXT:    orr.w r2, r3, r2, lsr #17
+; CHECKV7A-NEXT:    orr.w r1, r1, r12, lsr #17
 ; CHECKV7A-NEXT:    cmp r2, #0
 ; CHECKV7A-NEXT:    mov r2, r0
-; CHECKV7A-NEXT:    lsr.w r3, r3, #17
-; CHECKV7A-NEXT:    orr.w r1, r3, r1, lsl #15
 ; CHECKV7A-NEXT:    it ne
 ; CHECKV7A-NEXT:    movne r2, lr
 ; CHECKV7A-NEXT:    cmp r1, #0
@@ -680,9 +670,7 @@ define i32 @icmp64_uge_m2(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    add r0, r2
 ; CHECKV7A-NEXT:    pop {r4, pc}
 ; CHECKV7A-NEXT:  .LBB6_2: @ %else
-; CHECKV7A-NEXT:    orr.w r1, r2, r3
-; CHECKV7A-NEXT:    lsrs r1, r1, #17
-; CHECKV7A-NEXT:    orr.w r1, r1, r3, lsl #15
+; CHECKV7A-NEXT:    orr.w r1, r3, r2, lsr #17
 ; CHECKV7A-NEXT:    cmp r1, #0
 ; CHECKV7A-NEXT:    it ne
 ; CHECKV7A-NEXT:    movne r0, lr

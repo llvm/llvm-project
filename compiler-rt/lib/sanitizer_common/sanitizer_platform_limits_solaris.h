@@ -235,7 +235,6 @@ struct __sanitizer_dirent64 {
 
 typedef long __sanitizer_clock_t;
 typedef int __sanitizer_clockid_t;
-typedef void *__sanitizer_timer_t;
 
 // This thing depends on the platform. We are only interested in the upper
 // limit. Verified with a compiler assert in .cpp.

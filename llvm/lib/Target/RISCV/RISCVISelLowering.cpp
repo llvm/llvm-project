@@ -1126,6 +1126,24 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |= MachineMemOperand::MOStore;
     return true;
+  case Intrinsic::riscv_seg2_load:
+  case Intrinsic::riscv_seg3_load:
+  case Intrinsic::riscv_seg4_load:
+  case Intrinsic::riscv_seg5_load:
+  case Intrinsic::riscv_seg6_load:
+  case Intrinsic::riscv_seg7_load:
+  case Intrinsic::riscv_seg8_load:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.memVT =
+        getValueType(DL, I.getType()->getStructElementType(0)->getScalarType());
+    Info.align =
+        Align(DL.getTypeSizeInBits(
+                  I.getType()->getStructElementType(0)->getScalarType()) /
+              8);
+    Info.size = MemoryLocation::UnknownSize;
+    Info.flags |= MachineMemOperand::MOLoad;
+    return true;
   }
 }
 
@@ -4878,6 +4896,42 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
     return DAG.getMergeValues({Result, Chain}, DL);
   }
+  case Intrinsic::riscv_seg2_load:
+  case Intrinsic::riscv_seg3_load:
+  case Intrinsic::riscv_seg4_load:
+  case Intrinsic::riscv_seg5_load:
+  case Intrinsic::riscv_seg6_load:
+  case Intrinsic::riscv_seg7_load:
+  case Intrinsic::riscv_seg8_load: {
+    SDLoc DL(Op);
+    static const Intrinsic::ID VlsegInts[7] = {
+        Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
+        Intrinsic::riscv_vlseg4, Intrinsic::riscv_vlseg5,
+        Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
+        Intrinsic::riscv_vlseg8};
+    unsigned NF = Op->getNumValues() - 1;
+    assert(NF >= 2 && NF <= 8 && "Unexpected seg number");
+    MVT XLenVT = Subtarget.getXLenVT();
+    MVT VT = Op->getSimpleValueType(0);
+    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+
+    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    SDValue IntID = DAG.getTargetConstant(VlsegInts[NF - 2], DL, XLenVT);
+    auto *Load = cast<MemIntrinsicSDNode>(Op);
+    SmallVector<EVT, 9> ContainerVTs(NF, ContainerVT);
+    ContainerVTs.push_back(MVT::Other);
+    SDVTList VTs = DAG.getVTList(ContainerVTs);
+    SDValue Result =
+        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                {Load->getChain(), IntID, Op.getOperand(2), VL},
+                                Load->getMemoryVT(), Load->getMemOperand());
+    SmallVector<SDValue, 9> Results;
+    for (unsigned int RetIdx = 0; RetIdx < NF; RetIdx++)
+      Results.push_back(convertFromScalableVector(VT, Result.getValue(RetIdx),
+                                                  DAG, Subtarget));
+    Results.push_back(Result.getValue(NF));
+    return DAG.getMergeValues(Results, DL);
+  }
   }
 
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
@@ -5664,15 +5718,23 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
          "Expecting a correctly-aligned load");
 
   MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
-  SDValue VL =
-      DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
 
+  bool IsMaskOp = VT.getVectorElementType() == MVT::i1;
+  SDValue IntID = DAG.getTargetConstant(
+      IsMaskOp ? Intrinsic::riscv_vlm : Intrinsic::riscv_vle, DL, XLenVT);
+  SmallVector<SDValue, 4> Ops{Load->getChain(), IntID};
+  if (!IsMaskOp)
+    Ops.push_back(DAG.getUNDEF(ContainerVT));
+  Ops.push_back(Load->getBasePtr());
+  Ops.push_back(VL);
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
-  SDValue NewLoad = DAG.getMemIntrinsicNode(
-      RISCVISD::VLE_VL, DL, VTs, {Load->getChain(), Load->getBasePtr(), VL},
-      Load->getMemoryVT(), Load->getMemOperand());
+  SDValue NewLoad =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                              Load->getMemoryVT(), Load->getMemOperand());
 
   SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
   return DAG.getMergeValues({Result, Load->getChain()}, DL);
@@ -5691,6 +5753,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
 
   SDValue StoreVal = Store->getValue();
   MVT VT = StoreVal.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
 
   // If the size less than a byte, we need to pad with zeros to make a byte.
   if (VT.getVectorElementType() == MVT::i1 && VT.getVectorNumElements() < 8) {
@@ -5702,14 +5765,17 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
 
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
-  SDValue VL =
-      DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
 
   SDValue NewValue =
       convertToScalableVector(ContainerVT, StoreVal, DAG, Subtarget);
+
+  bool IsMaskOp = VT.getVectorElementType() == MVT::i1;
+  SDValue IntID = DAG.getTargetConstant(
+      IsMaskOp ? Intrinsic::riscv_vsm : Intrinsic::riscv_vse, DL, XLenVT);
   return DAG.getMemIntrinsicNode(
-      RISCVISD::VSE_VL, DL, DAG.getVTList(MVT::Other),
-      {Store->getChain(), NewValue, Store->getBasePtr(), VL},
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other),
+      {Store->getChain(), IntID, NewValue, Store->getBasePtr(), VL},
       Store->getMemoryVT(), Store->getMemOperand());
 }
 
@@ -10826,8 +10892,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VSEXT_VL)
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VCPOP_VL)
-  NODE_NAME_CASE(VLE_VL)
-  NODE_NAME_CASE(VSE_VL)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)
