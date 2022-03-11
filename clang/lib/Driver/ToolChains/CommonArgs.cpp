@@ -842,10 +842,6 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes())
     StaticRuntimes.push_back("stats_client");
 
-  // Always link the static runtime regardless of DSO or executable.
-  if (SanArgs.needsAsanRt())
-    HelperStaticRuntimes.push_back("asan_static");
-
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
     // Don't link static runtimes into DSOs.

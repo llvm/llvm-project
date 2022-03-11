@@ -383,22 +383,26 @@ void macho::foldIdenticalSections() {
       for (Defined *d : isec->symbols)
         if (d->unwindEntry)
           hashable.push_back(d->unwindEntry);
+
+      // __cfstring has embedded addends that foil ICF's hashing / equality
+      // checks. (We can ignore embedded addends when doing ICF because the same
+      // information gets recorded in our Reloc structs.) We therefore create a
+      // mutable copy of the CFString and zero out the embedded addends before
+      // performing any hashing / equality checks.
+      if (isCfStringSection(isec) || isClassRefsSection(isec)) {
+        // We have to do this copying serially as the BumpPtrAllocator is not
+        // thread-safe. FIXME: Make a thread-safe allocator.
+        MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
+        for (const Reloc &r : isec->relocs)
+          target->relocateOne(copy.data() + r.offset, r, /*va=*/0,
+                              /*relocVA=*/0);
+        isec->data = copy;
+      }
     } else {
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
   parallelForEach(hashable, [](ConcatInputSection *isec) {
-    // __cfstring has embedded addends that foil ICF's hashing / equality
-    // checks. (We can ignore embedded addends when doing ICF because the same
-    // information gets recorded in our Reloc structs.) We therefore create a
-    // mutable copy of the CFString and zero out the embedded addends before
-    // performing any hashing / equality checks.
-    if (isCfStringSection(isec) || isClassRefsSection(isec)) {
-      MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
-      for (const Reloc &r : isec->relocs)
-        target->relocateOne(copy.data() + r.offset, r, /*va=*/0, /*relocVA=*/0);
-      isec->data = copy;
-    }
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections

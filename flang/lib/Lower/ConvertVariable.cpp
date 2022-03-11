@@ -162,6 +162,27 @@ static mlir::Type unwrapElementType(mlir::Type type) {
   return type;
 }
 
+fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::SomeExpr &addr) {
+  Fortran::lower::SymMap globalOpSymMap;
+  Fortran::lower::AggregateStoreMap storeMap;
+  Fortran::lower::StatementContext stmtCtx;
+  if (const Fortran::semantics::Symbol *sym =
+          Fortran::evaluate::GetFirstSymbol(addr)) {
+    // Length parameters processing will need care in global initializer
+    // context.
+    if (hasDerivedTypeWithLengthParameters(*sym))
+      TODO(loc, "initial-data-target with derived type length parameters");
+
+    auto var = Fortran::lower::pft::Variable(*sym, /*global=*/true);
+    Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
+                                        storeMap);
+  }
+  return Fortran::lower::createInitializerAddress(loc, converter, addr,
+                                                  globalOpSymMap, stmtCtx);
+}
+
 /// create initial-data-target fir.box in a global initializer region.
 mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -739,7 +760,9 @@ void Fortran::lower::mapSymbolAttributes(
       // Lower lower bounds, explicit type parameters and explicit
       // extents if any.
       if (ba.isChar())
-        TODO(loc, "lowerToBoxValue character");
+        if (mlir::Value len =
+                lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
+          explicitParams.push_back(len);
       // TODO: derived type length parameters.
       lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
       lowerExplicitExtents(converter, loc, ba, lbounds, extents, symMap,

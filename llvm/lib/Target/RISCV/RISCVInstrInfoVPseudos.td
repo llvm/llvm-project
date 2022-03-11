@@ -5413,6 +5413,11 @@ foreach fvti = AllFloatVectors in {
              (fvti.Vector $rs1),
              (fvti.Scalar fvti.ScalarRegClass:$rs2),
              GPR:$vl, fvti.Log2SEW)>;
+
+  def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
+                         (fvti.Scalar (fpimm0)), VLOpFrag)),
+            (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
+             (fvti.Vector $rs1), X0, GPR:$vl, fvti.Log2SEW)>;
 }
 } // Predicates = [HasVInstructionsAnyF]
 

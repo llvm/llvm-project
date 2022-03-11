@@ -84,7 +84,7 @@ def Async_ExecuteOp :
 
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$dependencies,
       "ValueRange":$operands,

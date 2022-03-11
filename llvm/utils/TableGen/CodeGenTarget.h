@@ -17,16 +17,15 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
 #include "CodeGenHwModes.h"
-#include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Record.h"
-#include <algorithm>
 
 namespace llvm {
 
+class RecordKeeper;
+class Record;
+class CodeGenInstruction;
 struct CodeGenRegister;
 class CodeGenSchedModels;
 class CodeGenTarget;

@@ -374,12 +374,12 @@ bool Scope::IsParameterizedDerivedType() const {
   return false;
 }
 
-bool Scope::IsKindParameterizedDerivedType() const {
+bool Scope::IsDerivedTypeWithKindParameter() const {
   if (!IsDerivedType()) {
     return false;
   }
   if (const Scope * parent{GetDerivedTypeParent()}) {
-    if (parent->IsKindParameterizedDerivedType()) {
+    if (parent->IsDerivedTypeWithKindParameter()) {
       return true;
     }
   }
