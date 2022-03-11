@@ -5294,7 +5294,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     }
 
     case bitc::FUNC_CODE_INST_ALLOCA: { // ALLOCA: [instty, opty, op, align]
-      if (Record.size() != 4)
+      if (Record.size() != 4 && Record.size() != 5)
         return error("Invalid record");
       using APV = AllocaPackedValues;
       const uint64_t Rec = Record[3];
@@ -5321,9 +5321,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Ty || !Size)
         return error("Invalid record");
 
-      // FIXME: Make this an optional field.
       const DataLayout &DL = TheModule->getDataLayout();
-      unsigned AS = DL.getAllocaAddrSpace();
+      unsigned AS = Record.size() == 5 ? Record[4] : DL.getAllocaAddrSpace();
 
       SmallPtrSet<Type *, 4> Visited;
       if (!Align && !Ty->isSized(&Visited))
