@@ -12,6 +12,7 @@ add_clang_library(clangCIR
   CIRGenCall.cpp
   CIRGenerator.cpp
   CIRGenCXXABI.cpp
+  CIRGenExpr.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenModule.cpp

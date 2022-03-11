@@ -122,6 +122,8 @@ public:
       AbstractCallee AC = AbstractCallee(), unsigned ParamsToSkip = 0,
       EvaluationOrder Order = EvaluationOrder::Default);
 
+  CIRGenCallee buildCallee(const clang::Expr *E);
+
   /// buildAnyExpr - Emit code to compute the specified expression which can
   /// have any type. The result is returned as an RValue struct. If this is an
   /// aggregate expression, the aggloc/agglocvolatile arguments indicate where
