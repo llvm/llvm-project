@@ -68,7 +68,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   for (Scope &child : scope.children()) {
     ComputeOffsets(context_, child);
   }
-  if (scope.symbol() && scope.IsKindParameterizedDerivedType()) {
+  if (scope.symbol() && scope.IsDerivedTypeWithKindParameter()) {
     return; // only process instantiations of kind parameterized derived types
   }
   if (scope.alignment().has_value()) {
