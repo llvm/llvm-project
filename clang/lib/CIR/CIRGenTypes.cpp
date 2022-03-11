@@ -106,6 +106,78 @@ mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
   return *Builder.getContext();
 }
 
+mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
+  assert(QFT.isCanonical());
+  const Type *Ty = QFT.getTypePtr();
+  const FunctionType *FT = cast<FunctionType>(QFT.getTypePtr());
+  // First, check whether we can build the full fucntion type. If the function
+  // type depends on an incomplete type (e.g. a struct or enum), we cannot lower
+  // the function type.
+  assert(isFuncTypeConvertible(FT) && "NYI");
+
+  // While we're converting the parameter types for a function, we don't want to
+  // recursively convert any pointed-to structs. Converting directly-used
+  // structs is ok though.
+  assert(RecordsBeingLaidOut.insert(Ty).second && "NYI");
+
+  // The function type can be built; call the appropriate routines to build it
+  const CIRGenFunctionInfo *FI;
+  const auto *FPT = dyn_cast<FunctionProtoType>(FT);
+  assert(FPT && "FunctionNonPrototype NIY");
+  FI = &arrangeFreeFunctionType(
+      CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)));
+
+  mlir::Type ResultType = nullptr;
+  // If there is something higher level prodding our CIRGenFunctionInfo, then
+  // don't recurse into it again.
+  assert(!FunctionsBeingProcessed.count(FI) && "NYI");
+
+  // Otherwise, we're good to go, go ahead and convert it.
+  ResultType = GetFunctionType(*FI);
+
+  RecordsBeingLaidOut.erase(Ty);
+
+  assert(!SkippedLayout && "Shouldn't have skipped anything yet");
+
+  assert(RecordsBeingLaidOut.empty() && "Deferral NYI");
+  assert(DeferredRecords.empty() && "Deferral NYI");
+
+  return ResultType;
+}
+
+/// isFuncParamTypeConvertible - Return true if the specified type in a function
+/// parameter or result position can be converted to a CIR type at this point.
+/// This boils down to being whether it is complete, as well as whether we've
+/// temporarily deferred expanding the type because we're in a recursive
+/// context.
+bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType Ty) {
+  // Some ABIs cannot have their member pointers represented in LLVM IR unless
+  // certain circumstances have been reached.
+  assert(!Ty->getAs<MemberPointerType>() && "NYI");
+
+  // If this isn't a tagged type, we can convert it!
+  auto *TT = Ty->getAs<TagType>();
+  assert(!TT && "Only non-TagTypes implemented atm.");
+  return true;
+}
+
+/// Code to verify a given function type is complete, i.e. the return type and
+/// all of the parameter types are complete. Also check to see if we are in a
+/// RS_StructPointer context, and if so whether any struct types have been
+/// pended. If so, we don't want to ask the ABI lowering code to handle a type
+/// that cannot be converted to a CIR type.
+bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *FT) {
+  if (!isFuncParamTypeConvertible(FT->getReturnType()))
+    return false;
+
+  if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+    for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
+      if (!isFuncParamTypeConvertible(FPT->getParamType(i)))
+        return false;
+
+  return true;
+}
+
 /// ConvertType - Convert the specified type to its MLIR form.
 mlir::Type CIRGenTypes::ConvertType(QualType T) {
   T = Context.getCanonicalType(T);
@@ -376,7 +448,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    assert(0 && "not implemented");
+    ResultType = ConvertFunctionTypeInternal(T);
     break;
   case Type::ObjCObject:
     assert(0 && "not implemented");
