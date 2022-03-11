@@ -13,6 +13,8 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
+#include "clang/Basic/TargetInfo.h"
+
 using namespace cir;
 using namespace clang;
 
@@ -81,6 +83,74 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     llvm_unreachable("unknown type kind!");
   }
 }
+
+static bool hasInAllocaArgs(CIRGenModule &CGM, CallingConv ExplicitCC,
+                            ArrayRef<QualType> ArgTypes) {
+  assert(ExplicitCC != CC_Swift && ExplicitCC != CC_SwiftAsync && "Swift NYI");
+  assert(!CGM.getTarget().getCXXABI().isMicrosoft() && "MSABI NYI");
+
+  return false;
+}
+
+void CIRGenFunction::buildCallArgs(
+    CallArgList &Args, PrototypeWrapper Prototype,
+    llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
+    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
+
+  llvm::SmallVector<QualType, 16> ArgTypes;
+
+  assert((ParamsToSkip == 0 || Prototype.P) &&
+         "Can't skip parameters if type info is not provided");
+
+  // This variable only captures *explicitly* written conventions, not those
+  // applied by default via command line flags or target defaults, such as
+  // thiscall, appcs, stdcall via -mrtd, etc. Computing that correctly would
+  // require knowing if this is a C++ instance method or being able to see
+  // unprotyped FunctionTypes.
+  CallingConv ExplicitCC = CC_C;
+
+  // First, if a prototype was provided, use those argument types.
+  bool IsVariadic = false;
+  if (Prototype.P) {
+    const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
+    assert(!MD && "ObjCMethodDecl NYI");
+
+    const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
+    IsVariadic = FPT->isVariadic();
+    assert(!IsVariadic && "Variadic functions NYI");
+    ExplicitCC = FPT->getExtInfo().getCC();
+    ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
+                    FPT->param_type_end());
+  }
+
+  // If we still have any arguments, emit them using the type of the argument.
+  for (auto *A : llvm::drop_begin(ArgRange, ArgTypes.size())) {
+    assert(!IsVariadic && "Variadic functions NYI");
+    ArgTypes.push_back(A->getType());
+  };
+  assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
+
+  // We must evaluate arguments from right to left in the MS C++ ABI, because
+  // arguments are destroyed left to right in the callee. As a special case,
+  // there are certain language constructs taht require left-to-right
+  // evaluation, and in those cases we consider the evaluation order requirement
+  // to trump the "destruction order is reverse construction order" guarantee.
+  bool LeftToRight = true;
+  assert(!CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee() &&
+         "MSABI NYI");
+  assert(!hasInAllocaArgs(CGM, ExplicitCC, ArgTypes) && "NYI");
+
+  // Evaluate each argument in the appropriate order.
+  size_t CallArgsStart = Args.size();
+  assert(ArgTypes.size() == 0 && "Args NYI");
+
+  if (!LeftToRight) {
+    // Un-reverse the arguments we just evaluated so they match up with the CIR
+    // function.
+    std::reverse(Args.begin() + CallArgsStart, Args.end());
+  }
+}
+
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
 /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
