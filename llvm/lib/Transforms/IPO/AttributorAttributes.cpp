@@ -884,8 +884,9 @@ struct AA::PointerInfo::State : public AbstractState {
   }
 
   State() = default;
-  State(const State &SIS) : AccessBins(SIS.AccessBins) {}
-  State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {}
+  State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {
+    SIS.AccessBins.clear();
+  }
 
   const State &getAssumed() const { return *this; }
 
@@ -1336,7 +1337,6 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     using namespace AA::PointerInfo;
-    State S = getState();
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value &AssociatedValue = getAssociatedValue();
 
