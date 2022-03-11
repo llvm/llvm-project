@@ -89,11 +89,31 @@ class CIRGenTypes {
   /// Hold memoized CIRGenFunctionInfo results
   llvm::FoldingSet<CIRGenFunctionInfo> FunctionInfos;
 
+  /// This set keeps track of records that we're currently converting to a CIR
+  /// type. For example, when converting:
+  /// struct A { struct B { int x; } } when processing 'x', the 'A' and 'B'
+  /// types will be in this set.
+  llvm::SmallPtrSet<const clang::Type *, 4> RecordsBeingLaidOut;
+
   llvm::SmallPtrSet<const CIRGenFunctionInfo *, 4> FunctionsBeingProcessed;
+
+  /// True if we didn't layout a function due to being inside a recursive struct
+  /// conversion, set this to true.
+  bool SkippedLayout;
+
+  llvm::SmallVector<const clang::RecordDecl *, 8> DeferredRecords;
+
+  /// Heper for ConvertType.
+  mlir::Type ConvertFunctionTypeInternal(clang::QualType FT);
 
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
+
+  /// isFuncTypeConvertible - Utility to check whether a function type can be
+  /// converted to a CIR type (i.e. doesn't depend on an incomplete tag type).
+  bool isFuncTypeConvertible(const clang::FunctionType *FT);
+  bool isFuncParamTypeConvertible(clang::QualType Ty);
 
   /// Convert clang calling convention to LLVM calling convention.
   unsigned ClangCallConvToCIRCallConv(clang::CallingConv CC);
