@@ -730,23 +730,39 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
+      // Universal Mach-O files can't have an archicture slice that starts
+      // beyond the 4GB boundary. "lipo" can creeate a 64 bit universal header,
+      // but not all tools can parse these files so we want to return an error
+      // if the file can't be encoded as a file with a 32 bit universal header.
+      // To detect this, we check the size of each architecture's skinny Mach-O
+      // file and add up the offsets. If they exceed 4GB, then we return an
+      // error.
+
+      // First we compute the right offset where the first architecture will fit
+      // followin the 32 bit universal header. The 32 bit universal header
+      // starts with a uint32_t magic and a uint32_t number of architecture
+      // infos. Then it is followed by 5 uint32_t values for each architecture.
+      // So we set the start offset to the right value so we can calculate the
+      // exact offset that the first architecture slice can start at.
+      constexpr uint64_t MagicAndCountSize = 2 * 4;
+      constexpr uint64_t UniversalArchInfoSize = 5 * 4;
+      uint64_t FileOffset = MagicAndCountSize +
+          UniversalArchInfoSize * TempFiles.size();
+      for (const auto &File: TempFiles) {
+        ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
+        if (!stat)
+          break;
+        FileOffset += stat->getSize();
+        if (FileOffset > UINT32_MAX) {
+          WithColor::error() << "the univesral binary has a slice with an "
+              "offset exceeds 4GB and will produce an invalid Mach-O file.";
+          return EXIT_FAILURE;
+        }
+      }
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
                                                Options.LinkOpts, SDKPath))
         return EXIT_FAILURE;
-    }
-
-    // The Mach-O object file format is limited to 4GB. Make sure that we print
-    // an error when we emit an invalid Mach-O companion file. Leave the
-    // invalid object file around on disk for inspection.
-    ErrorOr<vfs::Status> stat =
-        Options.LinkOpts.VFS->status(OutputLocationOrErr->DWARFFile);
-    if (stat) {
-      if (stat->getSize() > std::numeric_limits<uint32_t>::max()) {
-        WithColor::error() << "the linked debug info exceeds the 4GB Mach-O "
-                              "object file format.";
-        return EXIT_FAILURE;
-      }
     }
   }
 
