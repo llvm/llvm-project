@@ -9,6 +9,7 @@
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::pdll::ast;
@@ -31,6 +32,135 @@ static StringRef copyStringWithNull(Context &ctx, StringRef str) {
 const Name &Name::create(Context &ctx, StringRef name, SMRange location) {
   return *new (ctx.getAllocator().Allocate<Name>())
       Name(copyStringWithNull(ctx, name), location);
+}
+
+//===----------------------------------------------------------------------===//
+// Node
+//===----------------------------------------------------------------------===//
+
+namespace {
+class NodeVisitor {
+public:
+  explicit NodeVisitor(function_ref<void(const Node *)> visitFn)
+      : visitFn(visitFn) {}
+
+  void visit(const Node *node) {
+    if (!node || !alreadyVisited.insert(node).second)
+      return;
+
+    visitFn(node);
+    TypeSwitch<const Node *>(node)
+        .Case<
+            // Statements.
+            const CompoundStmt, const EraseStmt, const LetStmt,
+            const ReplaceStmt, const ReturnStmt, const RewriteStmt,
+
+            // Expressions.
+            const AttributeExpr, const CallExpr, const DeclRefExpr,
+            const MemberAccessExpr, const OperationExpr, const TupleExpr,
+            const TypeExpr,
+
+            // Core Constraint Decls.
+            const AttrConstraintDecl, const OpConstraintDecl,
+            const TypeConstraintDecl, const TypeRangeConstraintDecl,
+            const ValueConstraintDecl, const ValueRangeConstraintDecl,
+
+            // Decls.
+            const NamedAttributeDecl, const OpNameDecl, const PatternDecl,
+            const UserConstraintDecl, const UserRewriteDecl, const VariableDecl,
+
+            const Module>(
+            [&](auto derivedNode) { this->visitImpl(derivedNode); })
+        .Default([](const Node *) { llvm_unreachable("unknown AST node"); });
+  }
+
+private:
+  void visitImpl(const CompoundStmt *stmt) {
+    for (const Node *child : stmt->getChildren())
+      visit(child);
+  }
+  void visitImpl(const EraseStmt *stmt) { visit(stmt->getRootOpExpr()); }
+  void visitImpl(const LetStmt *stmt) { visit(stmt->getVarDecl()); }
+  void visitImpl(const ReplaceStmt *stmt) {
+    visit(stmt->getRootOpExpr());
+    for (const Node *child : stmt->getReplExprs())
+      visit(child);
+  }
+  void visitImpl(const ReturnStmt *stmt) { visit(stmt->getResultExpr()); }
+  void visitImpl(const RewriteStmt *stmt) {
+    visit(stmt->getRootOpExpr());
+    visit(stmt->getRewriteBody());
+  }
+
+  void visitImpl(const AttributeExpr *expr) {}
+  void visitImpl(const CallExpr *expr) {
+    visit(expr->getCallableExpr());
+    for (const Node *child : expr->getArguments())
+      visit(child);
+  }
+  void visitImpl(const DeclRefExpr *expr) { visit(expr->getDecl()); }
+  void visitImpl(const MemberAccessExpr *expr) { visit(expr->getParentExpr()); }
+  void visitImpl(const OperationExpr *expr) {
+    visit(expr->getNameDecl());
+    for (const Node *child : expr->getOperands())
+      visit(child);
+    for (const Node *child : expr->getResultTypes())
+      visit(child);
+    for (const Node *child : expr->getAttributes())
+      visit(child);
+  }
+  void visitImpl(const TupleExpr *expr) {
+    for (const Node *child : expr->getElements())
+      visit(child);
+  }
+  void visitImpl(const TypeExpr *expr) {}
+
+  void visitImpl(const AttrConstraintDecl *decl) { visit(decl->getTypeExpr()); }
+  void visitImpl(const OpConstraintDecl *decl) { visit(decl->getNameDecl()); }
+  void visitImpl(const TypeConstraintDecl *decl) {}
+  void visitImpl(const TypeRangeConstraintDecl *decl) {}
+  void visitImpl(const ValueConstraintDecl *decl) {
+    visit(decl->getTypeExpr());
+  }
+  void visitImpl(const ValueRangeConstraintDecl *decl) {
+    visit(decl->getTypeExpr());
+  }
+
+  void visitImpl(const NamedAttributeDecl *decl) { visit(decl->getValue()); }
+  void visitImpl(const OpNameDecl *decl) {}
+  void visitImpl(const PatternDecl *decl) { visit(decl->getBody()); }
+  void visitImpl(const UserConstraintDecl *decl) {
+    for (const Node *child : decl->getInputs())
+      visit(child);
+    for (const Node *child : decl->getResults())
+      visit(child);
+    visit(decl->getBody());
+  }
+  void visitImpl(const UserRewriteDecl *decl) {
+    for (const Node *child : decl->getInputs())
+      visit(child);
+    for (const Node *child : decl->getResults())
+      visit(child);
+    visit(decl->getBody());
+  }
+  void visitImpl(const VariableDecl *decl) {
+    visit(decl->getInitExpr());
+    for (const ConstraintRef &child : decl->getConstraints())
+      visit(child.constraint);
+  }
+
+  void visitImpl(const Module *module) {
+    for (const Node *child : module->getChildren())
+      visit(child);
+  }
+
+  function_ref<void(const Node *)> visitFn;
+  SmallPtrSet<const Node *, 16> alreadyVisited;
+};
+} // namespace
+
+void Node::walk(function_ref<void(const Node *)> walkFn) const {
+  return NodeVisitor(walkFn).visit(this);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,0 +1,521 @@
+{
+  "name": "PDLL",
+  "fileTypes": [
+    "pdll"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#string_block"
+    },
+    {
+      "include": "#integer"
+    },
+    {
+      "include": "#include"
+    },
+    {
+      "include": "#user_constraint"
+    },
+    {
+      "include": "#user_rewrite"
+    },
+    {
+      "include": "#pattern"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "match": "\/\/.*$",
+      "name": "comment.line.double-slash.pdll"
+    },
+    "string": {
+      "name": "string.quoted.double.pdll",
+      "begin": "\"",
+      "end": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.pdll"
+        }
+      },
+      "patterns": [
+        {
+          "match": "\\\\[nt\"]",
+          "name": "constant.character.escape.pdll"
+        },
+        {
+          "match": "\\\\.",
+          "name": "invalid.illegal.pdll"
+        }
+      ],
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.pdll"
+        }
+      }
+    },
+    "string_block": {
+      "name": "string.quoted.triple.pdll",
+      "begin": "\\[{",
+      "end": "}]",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.pdll"
+        }
+      },
+      "patterns": [
+        {
+          "match": "\\\\[nt\"]",
+          "name": "constant.character.escape.pdll"
+        },
+        {
+          "match": "\\\\.",
+          "name": "invalid.illegal.pdll"
+        }
+      ],
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.pdll"
+        }
+      }
+    },
+    "integer": {
+      "match": "[0-9]+",
+      "name": "constant.numeric.pdll"
+    },
+    "include": {
+      "patterns": [
+        {
+          "match": "(#include)",
+          "name": "keyword.control.pdll"
+        }
+      ]
+    },
+    "argument_or_result_list": {
+      "patterns": [
+        {
+          "match": "\\b([aA-zZ_0-9]*)\\b\\s*:\\s*([aA-zZ_0-9]+)\\b(\\<([^\\>]+)\\>)?",
+          "captures": {
+            "1": {
+              "name": "variable.parameter.pdll"
+            },
+            "2": {
+              "name": "entity.name.type.pdll"
+            },
+            "4": {
+              "name": "variable.other.enummember.pdll"
+            }
+          }
+        },
+        {
+          "match": "(\\(|\\>|,)\\s*([aA-zZ_0-9]+)\\b(\\<([^\\>]+)\\>)?\\s*(?=[^:])",
+          "captures": {
+            "2": {
+              "name": "entity.name.type.pdll"
+            },
+            "4": {
+              "name": "variable.other.enummember.pdll"
+            }
+          }
+        }
+      ]
+    },
+    "user_constraint": {
+      "patterns": [
+        {
+          "begin": "\\b(Constraint)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.pdll"
+            },
+            "2": {
+              "name": "entity.name.type.pdll"
+            }
+          },
+          "patterns": [
+            {
+              "begin": "(\\[{)",
+              "patterns": [
+                {
+                  "include": "source.cpp"
+                }
+              ],
+              "end": "(}])"
+            },
+            {
+              "begin": "(?=\\()",
+              "patterns": [
+                {
+                  "include": "#argument_or_result_list"
+                }
+              ],
+              "end": "\\)"
+            },
+            {
+              "include": "#argument_or_result_list"
+            },
+            {
+              "begin": "{",
+              "patterns": [
+                {
+                  "include": "#inside_pattern"
+                }
+              ],
+              "end": "(?=})"
+            },
+            {
+              "begin": "=>",
+              "patterns": [
+                {
+                  "include": "#inside_pattern"
+                }
+              ],
+              "end": "(?=;|,|\\))"
+            }
+          ],
+          "end": "(}|;|,)|(?=\\))"
+        }
+      ]
+    },
+    "user_rewrite": {
+      "patterns": [
+        {
+          "begin": "\\b(Rewrite)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.pdll"
+            },
+            "2": {
+              "name": "entity.name.function.pdll"
+            }
+          },
+          "patterns": [
+            {
+              "begin": "(\\[{)",
+              "patterns": [
+                {
+                  "include": "source.cpp"
+                }
+              ],
+              "end": "(}])"
+            },
+            {
+              "begin": "(?=\\()",
+              "patterns": [
+                {
+                  "include": "#argument_or_result_list"
+                }
+              ],
+              "end": "\\)"
+            },
+            {
+              "include": "#argument_or_result_list"
+            },
+            {
+              "begin": "{",
+              "patterns": [
+                {
+                  "include": "#inside_pattern"
+                }
+              ],
+              "end": "(?=})"
+            },
+            {
+              "begin": "=>",
+              "patterns": [
+                {
+                  "include": "#inside_pattern"
+                }
+              ],
+              "end": "(?=;|,|\\))"
+            }
+          ],
+          "end": "(}|;|,)|(?=\\))"
+        }
+      ]
+    },
+    "pattern_metadata": {
+      "patterns": [
+        {
+          "match": "\\b(with)\\b",
+          "name": "keyword.other.pdll"
+        },
+        {
+          "match": "\\b(benefit)\\b\\(([0-9]+)\\)",
+          "captures": {
+            "1": {
+              "name": "entity.name.variable.pdll"
+            },
+            "2": {
+              "name": "constant.numeric.pdll"
+            }
+          }
+        },
+        {
+          "match": "\\b(recursion)\\b",
+          "name": "entity.name.variable.pdll"
+        }
+      ]
+    },
+    "pattern": {
+      "patterns": [
+        {
+          "begin": "\\b(Pattern)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?\\s*(\\bwith\\b\\s*[^\\{]*)?\\s*({)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.pdll"
+            },
+            "2": {
+              "name": "entity.name.function.pdll"
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#pattern_metadata"
+                }
+              ]
+            }
+          },
+          "patterns": [
+            {
+              "include": "#inside_pattern"
+            }
+          ],
+          "end": "(})"
+        },
+        {
+          "begin": "\\b(Pattern)\\b\\s*(\\b[aA-zZ_0-9]*\\b)?\\s*(\\bwith\\b\\s*[^\\=]*)?\\s*(=>)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.pdll"
+            },
+            "2": {
+              "name": "entity.name.function.pdll"
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#pattern_metadata"
+                }
+              ]
+            }
+          },
+          "patterns": [
+            {
+              "include": "#inside_pattern"
+            }
+          ],
+          "end": ";"
+        }
+      ]
+    },
+    "inside_pattern": {
+      "patterns": [
+        {
+          "match": "\\b(erase|let|replace|return|rewrite|with)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.pdll"
+            }
+          }
+        },
+        {
+          "include": "#expressions"
+        }
+      ]
+    },
+    "variable_constraint": {
+      "patterns": [
+        {
+          "match": "\\b(Op)<([a-zA-Z0-9_\\.$-]*)>",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.pdll"
+            },
+            "2": {
+              "name": "variable.other.enummember.pdll"
+            }
+          }
+        },
+        {
+          "begin": "<",
+          "patterns": [
+            {
+              "include": "#expressions"
+            }
+          ],
+          "end": ">"
+        },
+        {
+          "match": "[a-zA-Z_0-9]+",
+          "name": "entity.name.type.pdll"
+        }
+      ]
+    },
+    "variable_definition": {
+      "patterns": [
+        {
+          "begin": "\\b([aA-zZ_0-9]*)\\b\\s*:\\s*\\[",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.variable.pdll"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#variable_constraint"
+            }
+          ],
+          "end": "\\]"
+        },
+        {
+          "match": "\\b([aA-zZ_0-9]*)\\b\\s*:\\s*([aA-zZ_0-9]+(\\<([^\\>]+)\\>)?)",
+          "captures": {
+            "1": {
+              "name": "entity.name.variable.pdll"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#variable_constraint"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "expressions": {
+      "patterns": [
+        {
+          "include": "#user_constraint"
+        },
+        {
+          "include": "#user_rewrite"
+        },
+        {
+          "include": "#attr_expr"
+        },
+        {
+          "include": "#op_expr"
+        },
+        {
+          "include": "#type_expr"
+        },
+        {
+          "include": "#call_expr"
+        },
+        {
+          "include": "#variable_definition"
+        },
+        {
+          "include": "#identifier_expr"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#string_block"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "begin": "{",
+          "patterns": [
+            {
+              "include": "#inside_pattern"
+            }
+          ],
+          "end": "}"
+        },
+        {
+          "begin": "\\(",
+          "patterns": [
+            {
+              "include": "#expressions"
+            }
+          ],
+          "end": "\\)"
+        }
+      ]
+    },
+    "attr_expr": {
+      "patterns": [
+        {
+          "begin": "(attr)<",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.pdll"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#string"
+            },
+            {
+              "include": "#string_block"
+            }
+          ],
+          "end": ">"
+        }
+      ]
+    },
+    "call_expr": {
+      "begin": "\\b([a-zA-Z0-9_]+)\\(",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.variable.pdll"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#expressions"
+        }
+      ],
+      "end": "\\)"
+    },
+    "identifier_expr": {
+      "match": "\\b([a-zA-Z0-9_]+)\\b",
+      "name": "entity.name.variable.pdll"
+    },
+    "op_expr": {
+      "match": "\\b(op)<([0-9a-zA-Z_\\.]*)>",
+      "captures": {
+        "1": {
+          "name": "keyword.other.pdll"
+        },
+        "2": {
+          "name": "variable.other.enummember.pdll"
+        }
+      }
+    },
+    "type_expr": {
+      "patterns": [
+        {
+          "begin": "\\b(type)<",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.pdll"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#string"
+            },
+            {
+              "include": "#string_block"
+            }
+          ],
+          "end": ">"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.pdll"
+}

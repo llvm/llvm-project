@@ -82,6 +82,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-pdl-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
+  mlir-pdll-lsp-server
   mlir-opt
   mlir-pdll
   mlir-reduce

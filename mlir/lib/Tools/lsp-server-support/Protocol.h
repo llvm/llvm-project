@@ -26,6 +26,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <memory>
@@ -245,6 +246,13 @@ struct Position {
   Position(int line = 0, int character = 0)
       : line(line), character(character) {}
 
+  /// Construct a position from the given source location.
+  Position(llvm::SourceMgr &mgr, SMLoc loc) {
+    std::pair<unsigned, unsigned> lineAndCol = mgr.getLineAndColumn(loc);
+    line = lineAndCol.first - 1;
+    character = lineAndCol.second - 1;
+  }
+
   /// Line position in a document (zero-based).
   int line = 0;
 
@@ -266,6 +274,13 @@ struct Position {
     return std::tie(lhs.line, lhs.character) <=
            std::tie(rhs.line, rhs.character);
   }
+
+  /// Convert this position into a source location in the main file of the given
+  /// source manager.
+  SMLoc getAsSMLoc(llvm::SourceMgr &mgr) const {
+    return mgr.FindLocForLineAndColumn(mgr.getMainFileID(), line + 1,
+                                       character);
+  }
 };
 
 /// Add support for JSON serialization.
@@ -282,6 +297,10 @@ struct Range {
   Range() = default;
   Range(Position start, Position end) : start(start), end(end) {}
   Range(Position loc) : Range(loc, loc) {}
+
+  /// Construct a range from the given source range.
+  Range(llvm::SourceMgr &mgr, SMRange range)
+      : Range(Position(mgr, range.Start), Position(mgr, range.End)) {}
 
   /// The range's start position.
   Position start;
@@ -316,6 +335,13 @@ raw_ostream &operator<<(raw_ostream &os, const Range &value);
 //===----------------------------------------------------------------------===//
 
 struct Location {
+  Location() = default;
+  Location(const URIForFile &uri, Range range) : uri(uri), range(range) {}
+
+  /// Construct a Location from the given source range.
+  Location(const URIForFile &uri, llvm::SourceMgr &mgr, SMRange range)
+      : Location(uri, Range(mgr, range)) {}
+
   /// The text document's URI.
   URIForFile uri;
   Range range;
