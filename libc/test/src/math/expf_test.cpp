@@ -57,11 +57,13 @@ TEST(LlvmLibcExpfTest, Underflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   float x = float(FPBits(0xc2cffff8U));
-  EXPECT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x, __llvm_libc::expf(x),
+                                 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 
   x = float(FPBits(0xc2d00008U));
-  EXPECT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x, __llvm_libc::expf(x),
+                                 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
@@ -72,19 +74,23 @@ TEST(LlvmLibcExpfTest, Borderline) {
 
   errno = 0;
   x = float(FPBits(0x42affff8U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x, __llvm_libc::expf(x),
+                                 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0x42b00008U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x, __llvm_libc::expf(x),
+                                 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0xc2affff8U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x, __llvm_libc::expf(x),
+                                 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0xc2b00008U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x, __llvm_libc::expf(x),
+                                 0.5);
   EXPECT_MATH_ERRNO(0);
 }
 
@@ -104,6 +110,7 @@ TEST(LlvmLibcExpfTest, InFloatRange) {
     // wider precision.
     if (isnan(result) || isinf(result) || errno != 0)
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), 1.0);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x,
+                                   __llvm_libc::expf(x), 0.5);
   }
 }
