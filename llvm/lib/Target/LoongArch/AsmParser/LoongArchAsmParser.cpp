@@ -259,7 +259,7 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
 
 bool LoongArchAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
-  return Error(getParser().getTok().getLoc(), "invalid register number");
+  return Error(getLoc(), "invalid register number");
 }
 
 OperandMatchResultTy LoongArchAsmParser::tryParseRegister(unsigned &RegNo,
