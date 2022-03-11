@@ -59,6 +59,12 @@ struct LSPServer {
                Callback<Optional<Hover>> reply);
 
   //===--------------------------------------------------------------------===//
+  // Document Symbols
+
+  void onDocumentSymbol(const DocumentSymbolParams &params,
+                        Callback<std::vector<DocumentSymbol>> reply);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -91,6 +97,7 @@ void LSPServer::onInitialize(const InitializeParams &params,
       {"definitionProvider", true},
       {"referencesProvider", true},
       {"hoverProvider", true},
+      {"documentSymbolProvider", true},
   };
 
   llvm::json::Object result{
@@ -170,6 +177,16 @@ void LSPServer::onHover(const TextDocumentPositionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Document Symbols
+
+void LSPServer::onDocumentSymbol(const DocumentSymbolParams &params,
+                                 Callback<std::vector<DocumentSymbol>> reply) {
+  std::vector<DocumentSymbol> symbols;
+  server.findDocumentSymbols(params.textDocument.uri, symbols);
+  reply(std::move(symbols));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -200,6 +217,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
 
   // Hover
   messageHandler.method("textDocument/hover", &lspServer, &LSPServer::onHover);
+
+  // Document Symbols
+  messageHandler.method("textDocument/documentSymbol", &lspServer,
+                        &LSPServer::onDocumentSymbol);
 
   // Diagnostics
   lspServer.publishDiagnostics =
