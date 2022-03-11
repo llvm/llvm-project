@@ -113,16 +113,9 @@ entry:
   ret void
 }
 
-; FIXME: Should be able to promote this. Instcombine should fold the
-; cast in the hasOneUse case so it might not matter in practice
-
 ; OPT-LABEL: @vector_read_bitcast_alloca(
-; OPT: alloca [4 x float]
-; OPT: store float
-; OPT: store float
-; OPT: store float
-; OPT: store float
-; OPT: load float
+; OPT: %0 = extractelement <4 x float> <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>, i32 %index
+; OPT: store float %0, float addrspace(1)* %out, align 4
 define amdgpu_kernel void @vector_read_bitcast_alloca(float addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32], addrspace(5)

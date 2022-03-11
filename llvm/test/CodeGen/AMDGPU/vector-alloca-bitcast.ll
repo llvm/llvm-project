@@ -281,14 +281,8 @@ bb13:                                             ; preds = %.preheader
 ; TODO: llvm.assume can be ingored
 
 ; OPT-LABEL: @vector_read_alloca_bitcast_assume(
-; OPT:      %tmp = alloca <4 x i32>, align 16, addrspace(5)
-; OPT-NEXT: %x = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(5)* %tmp, i64 0, i64 0
-; OPT-NEXT: store i32 0, i32 addrspace(5)* %x, align 16
-; OPT-NEXT: %0 = load <4 x i32>, <4 x i32> addrspace(5)* %tmp, align 16
-; OPT-NEXT: %1 = shufflevector <4 x i32> %0, <4 x i32> <i32 poison, i32 1, i32 2, i32 3>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; OPT-NEXT: store <4 x i32> %1, <4 x i32> addrspace(5)* %tmp, align 16
-; OPT-NEXT: %2 = extractelement <4 x i32> %1, i32 %index
-; OPT-NEXT: store i32 %2, i32 addrspace(1)* %out, align 4
+; OPT: %0 = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index
+; OPT: store i32 %0, i32 addrspace(1)* %out, align 4
 
 ; GCN-LABEL: {{^}}vector_read_alloca_bitcast_assume:
 ; GCN-COUNT-4: buffer_store_dword
