@@ -4086,14 +4086,13 @@ Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
 
 Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
                                              ArrayRef<unsigned> ArgTyIDs) {
+  AttributeList Attrs = CB->getAttributes();
   for (unsigned i = 0; i != CB->arg_size(); ++i) {
     for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet,
                                      Attribute::InAlloca}) {
-      if (!CB->paramHasAttr(i, Kind) ||
-          CB->getParamAttr(i, Kind).getValueAsType())
+      if (!Attrs.hasParamAttr(i, Kind) ||
+          Attrs.getParamAttr(i, Kind).getValueAsType())
         continue;
-
-      CB->removeParamAttr(i, Kind);
 
       Type *PtrEltTy = getPtrElementTypeByID(ArgTyIDs[i]);
       if (!PtrEltTy)
@@ -4114,7 +4113,7 @@ Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
         llvm_unreachable("not an upgraded type attribute");
       }
 
-      CB->addParamAttr(i, NewAttr);
+      Attrs = Attrs.addParamAttribute(Context, i, NewAttr);
     }
   }
 
@@ -4125,12 +4124,13 @@ Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
       if (!CI.hasArg())
         continue;
 
-      if (CI.isIndirect && !CB->getParamElementType(ArgNo)) {
+      if (CI.isIndirect && !Attrs.getParamElementType(ArgNo)) {
         Type *ElemTy = getPtrElementTypeByID(ArgTyIDs[ArgNo]);
         if (!ElemTy)
           return error("Missing element type for inline asm upgrade");
-        CB->addParamAttr(
-            ArgNo, Attribute::get(Context, Attribute::ElementType, ElemTy));
+        Attrs = Attrs.addParamAttribute(
+            Context, ArgNo,
+            Attribute::get(Context, Attribute::ElementType, ElemTy));
       }
 
       ArgNo++;
@@ -4140,18 +4140,19 @@ Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
   switch (CB->getIntrinsicID()) {
   case Intrinsic::preserve_array_access_index:
   case Intrinsic::preserve_struct_access_index:
-    if (!CB->getParamElementType(0)) {
+    if (!Attrs.getParamElementType(0)) {
       Type *ElTy = getPtrElementTypeByID(ArgTyIDs[0]);
       if (!ElTy)
         return error("Missing element type for elementtype upgrade");
       Attribute NewAttr = Attribute::get(Context, Attribute::ElementType, ElTy);
-      CB->addParamAttr(0, NewAttr);
+      Attrs = Attrs.addParamAttribute(Context, 0, NewAttr);
     }
     break;
   default:
     break;
   }
 
+  CB->setAttributes(Attrs);
   return Error::success();
 }
 
