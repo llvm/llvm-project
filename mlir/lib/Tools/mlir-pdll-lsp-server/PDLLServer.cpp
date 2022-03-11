@@ -286,6 +286,13 @@ struct PDLDocument {
                                         const lsp::Position &completePos);
 
   //===--------------------------------------------------------------------===//
+  // Signature Help
+  //===--------------------------------------------------------------------===//
+
+  lsp::SignatureHelp getSignatureHelp(const lsp::URIForFile &uri,
+                                      const lsp::Position &helpPos);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -828,6 +835,154 @@ PDLDocument::getCodeCompletion(const lsp::URIForFile &uri,
 }
 
 //===----------------------------------------------------------------------===//
+// PDLDocument: Signature Help
+//===----------------------------------------------------------------------===//
+
+namespace {
+class LSPSignatureHelpContext : public CodeCompleteContext {
+public:
+  LSPSignatureHelpContext(SMLoc completeLoc, lsp::SignatureHelp &signatureHelp,
+                          ods::Context &odsContext)
+      : CodeCompleteContext(completeLoc), signatureHelp(signatureHelp),
+        odsContext(odsContext) {}
+
+  void codeCompleteCallSignature(const ast::CallableDecl *callable,
+                                 unsigned currentNumArgs) final {
+    signatureHelp.activeParameter = currentNumArgs;
+
+    lsp::SignatureInformation signatureInfo;
+    {
+      llvm::raw_string_ostream strOS(signatureInfo.label);
+      strOS << callable->getName()->getName() << "(";
+      auto formatParamFn = [&](const ast::VariableDecl *var) {
+        unsigned paramStart = strOS.str().size();
+        strOS << var->getName().getName() << ": " << var->getType();
+        unsigned paramEnd = strOS.str().size();
+        signatureInfo.parameters.emplace_back(lsp::ParameterInformation{
+            StringRef(strOS.str()).slice(paramStart, paramEnd).str(),
+            std::make_pair(paramStart, paramEnd), /*paramDoc*/ std::string()});
+      };
+      llvm::interleaveComma(callable->getInputs(), strOS, formatParamFn);
+      strOS << ") -> " << callable->getResultType();
+    }
+    signatureHelp.signatures.emplace_back(std::move(signatureInfo));
+  }
+
+  void
+  codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
+                                         unsigned currentNumOperands) final {
+    const ods::Operation *odsOp =
+        opName ? odsContext.lookupOperation(*opName) : nullptr;
+    codeCompleteOperationOperandOrResultSignature(
+        opName, odsOp, odsOp ? odsOp->getOperands() : llvm::None,
+        currentNumOperands, "operand", "Value");
+  }
+
+  void codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+                                             unsigned currentNumResults) final {
+    const ods::Operation *odsOp =
+        opName ? odsContext.lookupOperation(*opName) : nullptr;
+    codeCompleteOperationOperandOrResultSignature(
+        opName, odsOp, odsOp ? odsOp->getResults() : llvm::None,
+        currentNumResults, "result", "Type");
+  }
+
+  void codeCompleteOperationOperandOrResultSignature(
+      Optional<StringRef> opName, const ods::Operation *odsOp,
+      ArrayRef<ods::OperandOrResult> values, unsigned currentValue,
+      StringRef label, StringRef dataType) {
+    signatureHelp.activeParameter = currentValue;
+
+    // If we have ODS information for the operation, add in the ODS signature
+    // for the operation. We also verify that the current number of values is
+    // not more than what is defined in ODS, as this will result in an error
+    // anyways.
+    if (odsOp && currentValue < values.size()) {
+      lsp::SignatureInformation signatureInfo;
+
+      // Build the signature label.
+      {
+        llvm::raw_string_ostream strOS(signatureInfo.label);
+        strOS << "(";
+        auto formatFn = [&](const ods::OperandOrResult &value) {
+          unsigned paramStart = strOS.str().size();
+
+          strOS << value.getName() << ": ";
+
+          StringRef constraintDoc = value.getConstraint().getSummary();
+          std::string paramDoc;
+          switch (value.getVariableLengthKind()) {
+          case ods::VariableLengthKind::Single:
+            strOS << dataType;
+            paramDoc = constraintDoc.str();
+            break;
+          case ods::VariableLengthKind::Optional:
+            strOS << dataType << "?";
+            paramDoc = ("optional: " + constraintDoc).str();
+            break;
+          case ods::VariableLengthKind::Variadic:
+            strOS << dataType << "Range";
+            paramDoc = ("variadic: " + constraintDoc).str();
+            break;
+          }
+
+          unsigned paramEnd = strOS.str().size();
+          signatureInfo.parameters.emplace_back(lsp::ParameterInformation{
+              StringRef(strOS.str()).slice(paramStart, paramEnd).str(),
+              std::make_pair(paramStart, paramEnd), paramDoc});
+        };
+        llvm::interleaveComma(values, strOS, formatFn);
+        strOS << ")";
+      }
+      signatureInfo.documentation =
+          llvm::formatv("`op<{0}>` ODS {1} specification", *opName, label)
+              .str();
+      signatureHelp.signatures.emplace_back(std::move(signatureInfo));
+    }
+
+    // If there aren't any arguments yet, we also add the generic signature.
+    if (currentValue == 0 && (!odsOp || !values.empty())) {
+      lsp::SignatureInformation signatureInfo;
+      signatureInfo.label =
+          llvm::formatv("(<{0}s>: {1}Range)", label, dataType).str();
+      signatureInfo.documentation =
+          ("Generic operation " + label + " specification").str();
+      signatureInfo.parameters.emplace_back(lsp::ParameterInformation{
+          StringRef(signatureInfo.label).drop_front().drop_back().str(),
+          std::pair<unsigned, unsigned>(1, signatureInfo.label.size() - 1),
+          ("All of the " + label + "s of the operation.").str()});
+      signatureHelp.signatures.emplace_back(std::move(signatureInfo));
+    }
+  }
+
+private:
+  lsp::SignatureHelp &signatureHelp;
+  ods::Context &odsContext;
+};
+} // namespace
+
+lsp::SignatureHelp PDLDocument::getSignatureHelp(const lsp::URIForFile &uri,
+                                                 const lsp::Position &helpPos) {
+  SMLoc posLoc = helpPos.getAsSMLoc(sourceMgr);
+  if (!posLoc.isValid())
+    return lsp::SignatureHelp();
+
+  // Adjust the position one further to after the completion trigger token.
+  posLoc = SMLoc::getFromPointer(posLoc.getPointer() + 1);
+
+  // To perform code completion, we run another parse of the module with the
+  // code completion context provided.
+  ods::Context tmpODSContext;
+  lsp::SignatureHelp signatureHelp;
+  LSPSignatureHelpContext completeContext(posLoc, signatureHelp, tmpODSContext);
+
+  ast::Context tmpContext(tmpODSContext);
+  (void)parsePDLAST(tmpContext, sourceMgr, &completeContext);
+
+  return signatureHelp;
+}
+
+//===----------------------------------------------------------------------===//
 // PDLTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -883,6 +1038,8 @@ public:
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
   lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
                                         lsp::Position completePos);
+  lsp::SignatureHelp getSignatureHelp(const lsp::URIForFile &uri,
+                                      lsp::Position helpPos);
 
 private:
   /// Find the PDL document that contains the given position, and update the
@@ -1036,6 +1193,11 @@ lsp::CompletionList PDLTextFile::getCodeCompletion(const lsp::URIForFile &uri,
   return completionList;
 }
 
+lsp::SignatureHelp PDLTextFile::getSignatureHelp(const lsp::URIForFile &uri,
+                                                 lsp::Position helpPos) {
+  return getChunkFor(helpPos).document.getSignatureHelp(uri, helpPos);
+}
+
 PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -1122,4 +1284,12 @@ lsp::PDLLServer::getCodeCompletion(const URIForFile &uri,
   if (fileIt != impl->files.end())
     return fileIt->second->getCodeCompletion(uri, completePos);
   return CompletionList();
+}
+
+lsp::SignatureHelp lsp::PDLLServer::getSignatureHelp(const URIForFile &uri,
+                                                     const Position &helpPos) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->getSignatureHelp(uri, helpPos);
+  return SignatureHelp();
 }
