@@ -431,40 +431,40 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 /// the return type. Codegen doesn't care about them, and it makes ABI code a
 /// little easier to be able to assume that all parameter and return types are
 /// top-level unqualified.
-// static CanQualType GetReturnType(QualType RetTy) {
-//   return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
-// }
+static CanQualType GetReturnType(QualType RetTy) {
+  return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+}
 
 /// Arrange a call as unto a free function, except possibly with an additional
 /// number of formal parameters considered required.
-// static const CIRGenFunctionInfo &
-// arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
-//                             const CallArgList &args, const FunctionType *fnType,
-//                             unsigned numExtraRequiredArgs, bool chainCall) {
-//   assert(args.size() >= numExtraRequiredArgs);
-//   assert(!chainCall && "Chain call NYI");
+static const CIRGenFunctionInfo &
+arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
+                            const CallArgList &args, const FunctionType *fnType,
+                            unsigned numExtraRequiredArgs, bool chainCall) {
+  assert(args.size() >= numExtraRequiredArgs);
+  assert(!chainCall && "Chain call NYI");
 
-//   llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
 
-//   // In most cases, there are no optional arguments.
-//   RequiredArgs required = RequiredArgs::All;
+  // In most cases, there are no optional arguments.
+  RequiredArgs required = RequiredArgs::All;
 
-//   // if we have a variadic prototype, the required arguments are the extra
-//   // prefix plus the arguments in the prototype.
-//   auto *proto = dyn_cast<FunctionProtoType>(fnType);
-//   assert(proto && "Only FunctionProtoType supported so far");
-//   assert(dyn_cast<FunctionProtoType>(fnType) &&
-//          "Only FunctionProtoType supported so far");
-//   assert(!proto->isVariadic() && "Variadic NYI");
-//   assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
+  // if we have a variadic prototype, the required arguments are the extra
+  // prefix plus the arguments in the prototype.
+  auto *proto = dyn_cast<FunctionProtoType>(fnType);
+  assert(proto && "Only FunctionProtoType supported so far");
+  assert(dyn_cast<FunctionProtoType>(fnType) &&
+         "Only FunctionProtoType supported so far");
+  assert(!proto->isVariadic() && "Variadic NYI");
+  assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
 
-//   // FIXME: Kill copy.
-//   SmallVector<CanQualType, 16> argTypes;
-//   assert(args.size() == 0 && "Args NYI");
-//   return CGT.arrangeCIRFunctionInfo(
-//       GetReturnType(fnType->getReturnType()), /*instanceMethod=*/false,
-//       chainCall, argTypes, fnType->getExtInfo(), paramInfos, required);
-// }
+  // FIXME: Kill copy.
+  SmallVector<CanQualType, 16> argTypes;
+  assert(args.size() == 0 && "Args NYI");
+  return CGT.arrangeCIRFunctionInfo(
+      GetReturnType(fnType->getReturnType()), /*instanceMethod=*/false,
+      chainCall, argTypes, fnType->getExtInfo(), paramInfos, required);
+}
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType resultType, bool instanceMethod, bool chainCall,
@@ -594,4 +594,14 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
   SmallVector<CanQualType, 16> argTypes;
   return ::arrangeCIRFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
                                   FTP);
+}
+
+/// Figure out the rules for calling a function with the given formal type using
+/// the given arguments. The arguments are necessary because the function might
+/// be unprototyped, in which case it's target-dependent in crazy ways.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
+    const CallArgList &args, const FunctionType *fnType, bool ChainCall) {
+  assert(!ChainCall && "ChainCall NYI");
+  return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
+                                     ChainCall ? 1 : 0, ChainCall);
 }
