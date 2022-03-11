@@ -16,9 +16,9 @@
 #include "ABIInfo.h"
 #include "CIRGenFunctionInfo.h"
 
-#include "clang/Basic/ABI.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/ABI.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -66,6 +66,7 @@ class StructType;
 } // namespace mlir
 
 namespace cir {
+class CallArgList;
 class CIRGenCXXABI;
 class CIRGenModule;
 class CIRGenFunctionInfo;
@@ -89,6 +90,7 @@ class CIRGenTypes {
   llvm::FoldingSet<CIRGenFunctionInfo> FunctionInfos;
 
   llvm::SmallPtrSet<const CIRGenFunctionInfo *, 4> FunctionsBeingProcessed;
+
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
@@ -154,6 +156,10 @@ public:
   /// function pointer type.
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *FD);
+
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionCall(const CallArgList &Args,
+                          const clang::FunctionType *Ty, bool ChainCall);
 
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(clang::CanQual<clang::FunctionProtoType> Ty);
