@@ -59,7 +59,7 @@ by the :program:`llvm-ifs`:
 
   + ``Type``: Whether the symbol is an object, function, no-type, thread local storage, or unknown. Symbol types not explicitly supported are mapped as unknown to improve signal-to-noise ratio.
 
-  + ``Size``: The size of the symbol in question, doesn’t apply to functions, and is optional for NoType symbols.
+  + ``Size``: The size of the symbol in question, doesn't apply to functions, and is optional for NoType symbols.
 
   + ``Undefined``: Whether or not the symbol is defined in this shared object file.
 

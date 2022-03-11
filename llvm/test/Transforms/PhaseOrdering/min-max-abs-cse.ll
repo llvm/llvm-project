@@ -5,7 +5,9 @@
 ; In all tests, expect instcombine to canonicalize the select patterns
 ; for min/max/abs to allow CSE and subsequent simplification.
 
-; sub (smax a,b), (smax a,b) --> 0
+; TODO:
+; This should be reduced to 0, but we are missing some
+; fold(s) in instcombine.
 
 define i8 @smax_nsw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smax_nsw(

@@ -1,4 +1,3 @@
-; REQUIRES: system-windows
 ; RUN: opt -jmc-instrument -S < %s | FileCheck %s
 
 ; CHECK: $_JustMyCode_Default = comdat any

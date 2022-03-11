@@ -26,8 +26,11 @@ void test() {
 
 int main(int, char**) {
   test<int>();
+  test<int const>();
   test<A>();
+  test<A const>();
   test<int*>();
+  test<int const*>();
   test<int[]>();
   test<int[8]>();
 

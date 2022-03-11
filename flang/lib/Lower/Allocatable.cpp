@@ -666,3 +666,33 @@ fir::MutableBoxValue Fortran::lower::createMutableBox(
     fir::factory::disassociateMutableBox(builder, loc, box);
   return box;
 }
+
+//===----------------------------------------------------------------------===//
+// MutableBoxValue reading interface implementation
+//===----------------------------------------------------------------------===//
+
+static bool
+isArraySectionWithoutVectorSubscript(const Fortran::lower::SomeExpr &expr) {
+  return expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr) &&
+         !Fortran::evaluate::UnwrapWholeSymbolDataRef(expr) &&
+         !Fortran::evaluate::HasVectorSubscript(expr);
+}
+
+void Fortran::lower::associateMutableBox(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const fir::MutableBoxValue &box, const Fortran::lower::SomeExpr &source,
+    mlir::ValueRange lbounds, Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(source)) {
+    fir::factory::disassociateMutableBox(builder, loc, box);
+    return;
+  }
+  // The right hand side must not be evaluated in a temp.
+  // Array sections can be described by fir.box without making a temp.
+  // Otherwise, do not generate a fir.box to avoid having to later use a
+  // fir.rebox to implement the pointer association.
+  fir::ExtendedValue rhs = isArraySectionWithoutVectorSubscript(source)
+                               ? converter.genExprBox(source, stmtCtx, loc)
+                               : converter.genExprAddr(source, stmtCtx);
+  fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
+}

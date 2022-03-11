@@ -8,7 +8,6 @@ lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
 
 set(LLDB_PLUGINS
   lldbPluginProcessUtility
-  lldbPluginPlatformMacOSX
 )
 
 if(HAVE_LIBCOMPRESSION)

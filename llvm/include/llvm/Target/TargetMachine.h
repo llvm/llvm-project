@@ -18,7 +18,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
@@ -30,8 +29,6 @@
 namespace llvm {
 
 class AAManager;
-template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
-class PassManager;
 using ModulePassManager = PassManager<Module>;
 
 class Function;

@@ -409,6 +409,22 @@ define i32 @highmask_i64_mask64(i64 %val) {
   ret i32 %ret
 }
 
+define i64 @highmask_i64_mask64_extra_use(i64 %val) nounwind {
+; CHECK-LABEL: highmask_i64_mask64_extra_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    movq %rdi, %rcx # encoding: [0x48,0x89,0xf9]
+; CHECK-NEXT:    shrq $41, %rcx # encoding: [0x48,0xc1,0xe9,0x29]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    imulq %rdi, %rax # encoding: [0x48,0x0f,0xaf,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, -2199023255552
+  %cmp = icmp ne i64 %and, 0
+  %z = zext i1 %cmp to i64
+  %ret = mul i64 %z, %val
+  ret i64 %ret
+}
+
 define i32 @highmask_i64_mask32(i64 %val) {
 ; CHECK-LABEL: highmask_i64_mask32:
 ; CHECK:       # %bb.0:
@@ -421,6 +437,22 @@ define i32 @highmask_i64_mask32(i64 %val) {
   %cmp = icmp eq i64 %and, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
+}
+
+define i64 @highmask_i64_mask32_extra_use(i64 %val) nounwind {
+; CHECK-LABEL: highmask_i64_mask32_extra_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testq $-1048576, %rdi # encoding: [0x48,0xf7,0xc7,0x00,0x00,0xf0,0xff]
+; CHECK-NEXT:    # imm = 0xFFF00000
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    imulq %rdi, %rax # encoding: [0x48,0x0f,0xaf,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, -1048576
+  %cmp = icmp eq i64 %and, 0
+  %z = zext i1 %cmp to i64
+  %ret = mul i64 %z, %val
+  ret i64 %ret
 }
 
 define i32 @highmask_i64_mask8(i64 %val) {
@@ -449,6 +481,22 @@ define i32 @lowmask_i64_mask64(i64 %val) {
   ret i32 %ret
 }
 
+define i64 @lowmask_i64_mask64_extra_use(i64 %val) nounwind {
+; CHECK-LABEL: lowmask_i64_mask64_extra_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    movq %rdi, %rcx # encoding: [0x48,0x89,0xf9]
+; CHECK-NEXT:    shlq $16, %rcx # encoding: [0x48,0xc1,0xe1,0x10]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    imulq %rdi, %rax # encoding: [0x48,0x0f,0xaf,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, 281474976710655
+  %cmp = icmp eq i64 %and, 0
+  %z = zext i1 %cmp to i64
+  %ret = mul i64 %z, %val
+  ret i64 %ret
+}
+
 define i32 @lowmask_i64_mask32(i64 %val) {
 ; CHECK-LABEL: lowmask_i64_mask32:
 ; CHECK:       # %bb.0:
@@ -461,6 +509,22 @@ define i32 @lowmask_i64_mask32(i64 %val) {
   %cmp = icmp ne i64 %and, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
+}
+
+define i64 @lowmask_i64_mask32_extra_use(i64 %val) nounwind {
+; CHECK-LABEL: lowmask_i64_mask32_extra_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
+; CHECK-NEXT:    # imm = 0xFFFFF
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    imulq %rdi, %rax # encoding: [0x48,0x0f,0xaf,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %and = and i64 %val, 1048575
+  %cmp = icmp ne i64 %and, 0
+  %z = zext i1 %cmp to i64
+  %ret = mul i64 %z, %val
+  ret i64 %ret
 }
 
 define i32 @lowmask_i64_mask8(i64 %val) {
@@ -555,13 +619,13 @@ define i32 @pr42189(i16 signext %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x7FFF
-; CHECK-NEXT:    jne .LBB33_2 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB33_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    jne .LBB37_2 # encoding: [0x75,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB37_2-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
-; CHECK-NEXT:  .LBB33_2: # %if.end
+; CHECK-NEXT:  .LBB37_2: # %if.end
 ; CHECK-NEXT:    jmp f@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1

@@ -30,6 +30,19 @@ int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
 SmallVector<int64_t, 4> delinearize(ArrayRef<int64_t> strides,
                                     int64_t linearIndex);
 
+/// Apply the permutation defined by `permutation` to `inVec`.
+/// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
+/// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
+/// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
+template <typename T, unsigned N>
+void applyPermutationToVector(SmallVector<T, N> &inVec,
+                              ArrayRef<int64_t> permutation) {
+  SmallVector<T, N> auxVec(inVec.size());
+  for (const auto &en : enumerate(permutation))
+    auxVec[en.index()] = inVec[en.value()];
+  inVec = auxVec;
+}
+
 /// Helper that returns a subset of `arrayAttr` as a vector of int64_t.
 SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
                                        unsigned dropFront = 0,
