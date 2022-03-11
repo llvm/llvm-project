@@ -420,6 +420,14 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
       << "Hid default option that should be visable.";
 }
 
+TEST(CommandLineTest, SetMultiValues) {
+  StackOption<int> Option("option");
+  const char *args[] = {"prog", "-option=1", "-option=2"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(array_lengthof(args), args,
+                                          StringRef(), &llvm::nulls()));
+  EXPECT_EQ(Option, 2);
+}
+
 TEST(CommandLineTest, SetValueInSubcategories) {
   cl::ResetCommandLineParser();
 
