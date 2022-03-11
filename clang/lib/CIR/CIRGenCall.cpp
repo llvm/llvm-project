@@ -218,3 +218,159 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   return Builder.getFunctionType(ArgTypes,
                                  resultType ? resultType : mlir::TypeRange());
 }
+
+CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &CGF) const {
+  assert(!isVirtual() && "Virtual NYI");
+  return *this;
+}
+
+RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
+                                 const CIRGenCallee &Callee,
+                                 ReturnValueSlot ReturnValue,
+                                 const CallArgList &CallArgs,
+                                 mlir::func::CallOp &callOrInvoke,
+                                 bool IsMustTail, clang::SourceLocation Loc) {
+  // FIXME: We no longer need the types from CallArgs; lift up and simplify
+
+  assert(Callee.isOrdinary() || Callee.isVirtual());
+
+  // Handle struct-return functions by passing a pointer to the location that we
+  // would like to return info.
+  QualType RetTy = CallInfo.getReturnType();
+  const auto &RetAI = CallInfo.getReturnInfo();
+
+  const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
+
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  assert(FD && "Only functiondecl supported so far");
+  // We can only guarantee that a function is called from the correct
+  // context/function based on the appropriate target attributes, so only check
+  // in hte case where we have both always_inline and target since otherwise we
+  // could be making a conditional call after a check for the proper cpu
+  // features (and it won't cause code generation issues due to function based
+  // code generation).
+  assert(!TargetDecl->hasAttr<AlwaysInlineAttr>() && "NYI");
+  assert(!TargetDecl->hasAttr<TargetAttr>() && "NYI");
+
+  // Some architectures (such as x86-64) have the ABI changed based on
+  // attribute-target/features. Give them a chance to diagnose.
+  // TODO: support this eventually, just assume the trivial result for now
+  // !CGM.getTargetCIRGenInfo().checkFunctionCallABI(
+  //     CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl), FD, CallArgs);
+
+  // TODO: add DNEBUG code
+
+  // 1. Set up the arguments
+
+  // If we're using inalloca, insert the allocation after the stack save.
+  // FIXME: Do this earlier rather than hacking it in here!
+  Address ArgMemory = Address::invalid();
+  assert(!CallInfo.getArgStruct() && "NYI");
+
+  ClangToCIRArgMapping CIRFunctionArgs(CGM.getASTContext(), CallInfo);
+  SmallVector<mlir::Value, 16> CIRCallArgs(CIRFunctionArgs.totalCIRArgs());
+
+  // If the call returns a temporary with struct return, create a temporary
+  // alloca to hold the result, unless one is given to us.
+  assert(!RetAI.isIndirect() && !RetAI.isInAlloca() &&
+         !RetAI.isCoerceAndExpand() && "NYI");
+
+  // When passing arguments using temporary allocas, we need to add the
+  // appropriate lifetime markers. This vector keeps track of all the lifetime
+  // markers that need to be ended right after the call.
+  assert(CallArgs.size() == 0 &&
+         "Args not yet supported. When they are we'll need to consider "
+         "supporting temporary allocas for passed args");
+
+  // Translate all of the arguments as necessary to match the CIR lowering.
+  assert(CallInfo.arg_size() == CallArgs.size() &&
+         "Mismatch between function signature & arguments.");
+  unsigned ArgNo = 0;
+  CIRGenFunctionInfo::const_arg_iterator info_it = CallInfo.arg_begin();
+  for (CallArgList::const_iterator I = CallArgs.begin(), E = CallArgs.end();
+       I != E; ++I, ++info_it, ++ArgNo) {
+    assert(false && "Nothing to see here!");
+  }
+
+  const CIRGenCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);
+  mlir::FuncOp CalleePtr = ConcreteCallee.getFunctionPointer();
+
+  // If we're using inalloca, set up that argument.
+  assert(!ArgMemory.isValid() && "inalloca NYI");
+
+  // TODO: simplifyVariadicCallee
+
+  // 3. Perform the actual call.
+
+  // Deactivate any cleanups that we're supposed to do immediately before the
+  // call.
+  // TODO: do this
+
+  // TODO: Update the largest vector width if any arguments have vector types.
+  // TODO: Compute the calling convention and attributes.
+  assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
+
+  // TODO: InNoMergeAttributedStmt
+  // assert(!CurCodeDecl->hasAttr<FlattenAttr>() &&
+  //        !TargetDecl->hasAttr<NoInlineAttr>() && "NYI");
+
+  // TODO: isSEHTryScope
+
+  // TODO: currentFunctionUsesSEHTry
+  // TODO: isCleanupPadScope
+
+  // TODO: UnusedReturnSizePtr
+
+  assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
+
+  // TODO: alignment attributes
+
+  auto callLoc = CGM.getLoc(Loc);
+  auto theCall = CGM.getBuilder().create<mlir::func::CallOp>(callLoc, CalleePtr,
+                                                             CIRCallArgs);
+
+  if (callOrInvoke)
+    callOrInvoke = theCall;
+
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
+    assert(!FD->getAttr<CFGuardAttr>() && "NYI");
+  }
+
+  // TODO: set attributes on callop
+
+  // assert(!theCall.getResults().getType().front().isSignlessInteger() &&
+  //        "Vector NYI");
+
+  // TODO: LLVM models indirect calls via a null callee, how should we do this?
+
+  assert(!CGM.getLangOpts().ObjCAutoRefCount && "Not supported");
+
+  assert(!TargetDecl->hasAttr<NotTailCalledAttr>() && "NYI");
+
+  assert(!getDebugInfo() && "No debug info yet");
+
+  assert(!TargetDecl->hasAttr<ErrorAttr>() && "NYI");
+
+  // 4. Finish the call.
+
+  // If the call doesn't return, finish the basic block and clear the insertion
+  // point; this allows the rest of CIRGen to discard unreachable code.
+  // TODO: figure out how to support doesNotReturn
+
+  assert(!IsMustTail && "NYI");
+
+  // TODO: figure out writebacks? seems like ObjC only __autorelease
+
+  // TODO: cleanup argument memory at the end
+
+  // TODO: implement genuine returns
+
+  // TODO: implement assumed_aligned
+
+  // TODO: implement lifetime extensions
+
+  assert(RetTy.isDestructedType() != QualType::DK_nontrivial_c_struct && "NYI");
+
+  assert(theCall.getNumResults() == 0 && "Returns NYI");
+  return RValue::get(nullptr);
+}

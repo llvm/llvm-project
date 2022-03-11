@@ -15,6 +15,8 @@
 
 #include "clang/Basic/TargetInfo.h"
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+
 using namespace cir;
 using namespace clang;
 
@@ -165,4 +167,86 @@ RValue CIRGenFunction::buildAnyExpr(const Expr *E) {
     assert(0 && "not implemented");
   }
   llvm_unreachable("bad evaluation kind");
+}
+RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
+                                 const CIRGenCallee &OrigCallee,
+                                 const clang::CallExpr *E,
+                                 ReturnValueSlot ReturnValue,
+                                 mlir::Value Chain) {
+  // Get the actual function type. The callee type will always be a pointer to
+  // function type or a block pointer type.
+  assert(CalleeType->isFunctionPointerType() &&
+         "Call must have function pointer type!");
+
+  CalleeType = getContext().getCanonicalType(CalleeType);
+
+  auto PointeeType = cast<PointerType>(CalleeType)->getPointeeType();
+
+  CIRGenCallee Callee = OrigCallee;
+
+  if (getLangOpts().CPlusPlus)
+    assert(!SanOpts.has(SanitizerKind::Function) && "Sanitizers NYI");
+
+  const auto *FnType = cast<FunctionType>(PointeeType);
+
+  assert(!SanOpts.has(SanitizerKind::CFIICall) && "Sanitizers NYI");
+
+  CallArgList Args;
+
+  assert(!Chain && "FIX THIS");
+
+  // C++17 requires that we evaluate arguments to a call using assignment syntax
+  // right-to-left, and that we evaluate arguments to certain other operators
+  // left-to-right. Note that we allow this to override the order dictated by
+  // the calling convention on the MS ABI, which means that parameter
+  // destruction order is not necessarily reverse construction order.
+  // FIXME: Revisit this based on C++ committee response to unimplementability.
+  EvaluationOrder Order = EvaluationOrder::Default;
+  assert(!dyn_cast<CXXOperatorCallExpr>(E) && "Operators NYI");
+
+  buildCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
+                E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
+
+  const CIRGenFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
+      Args, FnType, /*ChainCall=*/Chain.getAsOpaquePointer());
+
+  // C99 6.5.2.2p6:
+  //   If the expression that denotes the called function has a type that does
+  //   not include a prototype, [the default argument promotions are performed].
+  //   If the number of arguments does not equal the number of parameters, the
+  //   behavior is undefined. If the function is defined with at type that
+  //   includes a prototype, and either the prototype ends with an ellipsis (,
+  //   ...) or the types of the arguments after promotion are not compatible
+  //   with the types of the parameters, the behavior is undefined. If the
+  //   function is defined with a type that does not include a prototype, and
+  //   the types of the arguments after promotion are not compatible with those
+  //   of the parameters after promotion, the behavior is undefined [except in
+  //   some trivial cases].
+  // That is, in the general case, we should assume that a call through an
+  // unprototyped function type works like a *non-variadic* call. The way we
+  // make this work is to cast to the exxact type fo the promoted arguments.
+  //
+  // Chain calls use the same code path to add the inviisble chain parameter to
+  // the function type.
+  assert(!isa<FunctionNoProtoType>(FnType) && "NYI");
+  // if (isa<FunctionNoProtoType>(FnType) || Chain) {
+  //   mlir::FunctionType CalleeTy = getTypes().GetFunctionType(FnInfo);
+  // int AS = Callee.getFunctionPointer()->getType()->getPointerAddressSpace();
+  // CalleeTy = CalleeTy->getPointerTo(AS);
+
+  // llvm::Value *CalleePtr = Callee.getFunctionPointer();
+  // CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");
+  // Callee.setFunctionPointer(CalleePtr);
+  // }
+
+  assert(!CGM.getLangOpts().HIP && "HIP NYI");
+
+  assert(!MustTailCall && "Must tail NYI");
+  mlir::func::CallOp callOP = nullptr;
+  RValue Call = buildCall(FnInfo, Callee, ReturnValue, Args, callOP,
+                          E == MustTailCall, E->getExprLoc());
+
+  assert(!getDebugInfo() && "Debug Info NYI");
+
+  return Call;
 }

@@ -28,8 +28,13 @@ namespace clang {
 class Expr;
 } // namespace clang
 
+namespace mlir {
+namespace func {
+class CallOp;
+}
+} // namespace mlir
+
 namespace cir {
-class CIRGenModule;
 
 // FIXME: for now we are reusing this from lib/Clang/CodeGenFunction.h, which
 // isn't available in the include dir. Same for getEvaluationKind below.
@@ -57,6 +62,14 @@ public:
   clang::QualType FnRetQualTy;
 
   CIRGenModule &CGM;
+
+  // CurFuncDecl - Holds the Decl for the current outermost non-closure context
+  const clang::Decl *CurFuncDecl;
+
+  // The CallExpr within the current statement that the musttail attribute
+  // applies to. nullptr if there is no 'musttail' on the current statement.
+  const clang::CallExpr *MustTailCall = nullptr;
+
   clang::ASTContext &getContext() const;
 
   /// Sanitizers enabled for this function.
@@ -126,6 +139,17 @@ public:
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> ArgRange,
       AbstractCallee AC = AbstractCallee(), unsigned ParamsToSkip = 0,
       EvaluationOrder Order = EvaluationOrder::Default);
+
+  /// buildCall - Generate a call of the given function, expecting the given
+  /// result type, and using the given argument list which specifies both the
+  /// LLVM arguments and the types they were derived from.
+  RValue buildCall(const CIRGenFunctionInfo &CallInfo,
+                   const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
+                   const CallArgList &Args, mlir::func::CallOp &callOrInvoke,
+                   bool IsMustTail, clang::SourceLocation Loc);
+  RValue buildCall(clang::QualType FnType, const CIRGenCallee &Callee,
+                   const clang::CallExpr *E, ReturnValueSlot returnValue,
+                   mlir::Value Chain = nullptr);
 
   CIRGenCallee buildCallee(const clang::Expr *E);
 
