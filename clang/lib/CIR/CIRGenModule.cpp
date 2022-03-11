@@ -1663,6 +1663,31 @@ mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
   return symbolTable.lookup(D);
 }
 
+mlir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD,
+                                             mlir::Type Ty, bool ForVTable,
+                                             bool DontDefer,
+                                             ForDefinition_t IsForDefinition) {
+  assert(!ForVTable && "NYI");
+  assert(!DontDefer && "NYI");
+
+  assert(!cast<FunctionDecl>(GD.getDecl())->isConsteval() &&
+         "consteval function should never be emitted");
+
+  assert(!Ty && "No code paths implemented that have this set yet");
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
+  Ty = getTypes().ConvertType(FD->getType());
+
+  assert(!dyn_cast<CXXDestructorDecl>(GD.getDecl()) && "NYI");
+
+  StringRef MangledName = getMangledName(GD);
+  auto F = GetOrCreateCIRFunction(MangledName, Ty, GD, ForVTable, DontDefer,
+                                  /*IsThunk=*/false, IsForDefinition);
+
+  assert(!langOpts.CUDA && "NYI");
+
+  return F;
+}
+
 static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
                                       const NamedDecl *ND,
                                       bool OmitMultiVersionMangling = false) {
@@ -1782,3 +1807,4 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 
   assert(false && "Incompmlete functions NYI");
 }
+

@@ -456,6 +456,14 @@ public:
 
   void verifyModule();
 
+  /// Return the address of the given function. If Ty is non-null, then this
+  /// function will use the specified type if it has to create it.
+  // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?
+  mlir::FuncOp
+  GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty = nullptr,
+                    bool ForVTable = false, bool Dontdefer = false,
+                    ForDefinition_t IsForDefinition = NotForDefinition);
+
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
