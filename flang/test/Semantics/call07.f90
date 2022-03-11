@@ -14,6 +14,9 @@ module m
   subroutine s03(p)
     real, pointer, intent(in) :: p(:)
   end subroutine
+  subroutine s04(p)
+    real, pointer :: p
+  end subroutine
 
   subroutine test
     !ERROR: CONTIGUOUS POINTER must be an array
@@ -30,6 +33,8 @@ module m
     call s03(a03) ! ok
     !ERROR: Actual argument associated with POINTER dummy argument 'p=' must also be POINTER unless INTENT(IN)
     call s02(a03)
+    !ERROR: Actual argument associated with POINTER dummy argument 'p=' must also be POINTER unless INTENT(IN)
+    call s04(a02(1))
     !ERROR: An array section with a vector subscript may not be a pointer target
     call s03(a03([1,2,4]))
     !ERROR: A coindexed object may not be a pointer target

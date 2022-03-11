@@ -309,29 +309,34 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
           dummyName);
     }
-    if (!IsArrayElement(actual) &&
-        !(actualType.type().category() == TypeCategory::Character &&
-            actualType.type().kind() == 1) &&
-        !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-        !dummyIsAssumedRank) {
-      messages.Say(
-          "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
-          dummyName);
-    }
-    if (actualIsPolymorphic) {
-      messages.Say(
-          "Polymorphic scalar may not be associated with a %s array"_err_en_US,
-          dummyName);
-    }
-    if (actualIsPointer) {
-      messages.Say(
-          "Scalar POINTER target may not be associated with a %s array"_err_en_US,
-          dummyName);
-    }
-    if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
-      messages.Say(
-          "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
-          dummyName);
+    bool actualIsArrayElement{IsArrayElement(actual)};
+    bool actualIsCKindCharacter{
+        actualType.type().category() == TypeCategory::Character &&
+        actualType.type().kind() == 1};
+    if (!actualIsCKindCharacter) {
+      if (!actualIsArrayElement &&
+          !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
+          !dummyIsAssumedRank) {
+        messages.Say(
+            "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
+      if (actualIsPolymorphic) {
+        messages.Say(
+            "Polymorphic scalar may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
+      if (actualIsArrayElement && actualLastSymbol &&
+          IsPointer(*actualLastSymbol)) {
+        messages.Say(
+            "Element of pointer array may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
+      if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
+        messages.Say(
+            "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
+            dummyName);
+      }
     }
   }
   if (actualLastObject && actualLastObject->IsCoarray() &&
