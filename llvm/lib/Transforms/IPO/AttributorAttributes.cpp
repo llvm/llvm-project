@@ -38,8 +38,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Value.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -867,6 +867,12 @@ struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
 /// A type to track pointer/struct usage and accesses for AAPointerInfo.
 struct AA::PointerInfo::State : public AbstractState {
 
+  ~State() {
+    // We do not delete the Accesses objects but need to destroy them still.
+    for (auto &It : AccessBins)
+      It.second->~Accesses();
+  }
+
   /// Return the best possible representable state.
   static State getBestState(const State &SIS) { return State(); }
 
@@ -878,8 +884,9 @@ struct AA::PointerInfo::State : public AbstractState {
   }
 
   State() = default;
-  State(const State &SIS) : AccessBins(SIS.AccessBins) {}
-  State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {}
+  State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {
+    SIS.AccessBins.clear();
+  }
 
   const State &getAssumed() const { return *this; }
 
@@ -1330,7 +1337,6 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     using namespace AA::PointerInfo;
-    State S = getState();
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value &AssociatedValue = getAssociatedValue();
 
@@ -6423,8 +6429,10 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         Changed = ChangeStatus::CHANGED;
         continue;
       } else {
-        if (APAlign->ugt(llvm::Value::MaximumAlignment) || !APAlign->isPowerOf2()) {
-          LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign << "\n");
+        if (APAlign->ugt(llvm::Value::MaximumAlignment) ||
+            !APAlign->isPowerOf2()) {
+          LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign
+                            << "\n");
           AI.Status = AllocationInfo::INVALID;
           Changed = ChangeStatus::CHANGED;
           continue;
