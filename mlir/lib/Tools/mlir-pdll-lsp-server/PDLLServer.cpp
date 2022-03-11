@@ -245,6 +245,27 @@ struct PDLDocument {
                         std::vector<lsp::Location> &references);
 
   //===--------------------------------------------------------------------===//
+  // Hover
+  //===--------------------------------------------------------------------===//
+
+  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                 const lsp::Position &hoverPos);
+  Optional<lsp::Hover> findHover(const ast::Decl *decl,
+                                 const SMRange &hoverRange);
+  lsp::Hover buildHoverForOpName(const ods::Operation *op,
+                                 const SMRange &hoverRange);
+  lsp::Hover buildHoverForVariable(const ast::VariableDecl *varDecl,
+                                   const SMRange &hoverRange);
+  lsp::Hover buildHoverForPattern(const ast::PatternDecl *patternDecl,
+                                  const SMRange &hoverRange);
+  lsp::Hover buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
+                                         const SMRange &hoverRange);
+  template <typename T>
+  lsp::Hover buildHoverForUserConstraintOrRewrite(StringRef typeName,
+                                                  const T *decl,
+                                                  const SMRange &hoverRange);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -321,6 +342,157 @@ void PDLDocument::findReferencesOf(const lsp::URIForFile &uri,
 }
 
 //===----------------------------------------------------------------------===//
+// PDLDocument: Hover
+//===----------------------------------------------------------------------===//
+
+Optional<lsp::Hover> PDLDocument::findHover(const lsp::URIForFile &uri,
+                                            const lsp::Position &hoverPos) {
+  SMLoc posLoc = hoverPos.getAsSMLoc(sourceMgr);
+  SMRange hoverRange;
+  const PDLIndexSymbol *symbol = index.lookup(posLoc, &hoverRange);
+  if (!symbol)
+    return llvm::None;
+
+  // Add hover for operation names.
+  if (const auto *op = symbol->definition.dyn_cast<const ods::Operation *>())
+    return buildHoverForOpName(op, hoverRange);
+  const auto *decl = symbol->definition.get<const ast::Decl *>();
+  return findHover(decl, hoverRange);
+}
+
+Optional<lsp::Hover> PDLDocument::findHover(const ast::Decl *decl,
+                                            const SMRange &hoverRange) {
+  // Add hover for variables.
+  if (const auto *varDecl = dyn_cast<ast::VariableDecl>(decl))
+    return buildHoverForVariable(varDecl, hoverRange);
+
+  // Add hover for patterns.
+  if (const auto *patternDecl = dyn_cast<ast::PatternDecl>(decl))
+    return buildHoverForPattern(patternDecl, hoverRange);
+
+  // Add hover for core constraints.
+  if (const auto *cst = dyn_cast<ast::CoreConstraintDecl>(decl))
+    return buildHoverForCoreConstraint(cst, hoverRange);
+
+  // Add hover for user constraints.
+  if (const auto *cst = dyn_cast<ast::UserConstraintDecl>(decl))
+    return buildHoverForUserConstraintOrRewrite("Constraint", cst, hoverRange);
+
+  // Add hover for user rewrites.
+  if (const auto *rewrite = dyn_cast<ast::UserRewriteDecl>(decl))
+    return buildHoverForUserConstraintOrRewrite("Rewrite", rewrite, hoverRange);
+
+  return llvm::None;
+}
+
+lsp::Hover PDLDocument::buildHoverForOpName(const ods::Operation *op,
+                                            const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    hoverOS << "**OpName**: `" << op->getName() << "`\n***\n"
+            << op->getSummary() << "\n***\n"
+            << op->getDescription();
+  }
+  return hover;
+}
+
+lsp::Hover PDLDocument::buildHoverForVariable(const ast::VariableDecl *varDecl,
+                                              const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    hoverOS << "**Variable**: `" << varDecl->getName().getName() << "`\n***\n"
+            << "Type: `" << varDecl->getType() << "`\n";
+  }
+  return hover;
+}
+
+lsp::Hover
+PDLDocument::buildHoverForPattern(const ast::PatternDecl *patternDecl,
+                                  const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    hoverOS << "**Pattern**";
+    if (const ast::Name *name = patternDecl->getName())
+      hoverOS << ": `" << name->getName() << "`";
+    hoverOS << "\n***\n";
+    if (Optional<uint16_t> benefit = patternDecl->getBenefit())
+      hoverOS << "Benefit: " << *benefit << "\n";
+    if (patternDecl->hasBoundedRewriteRecursion())
+      hoverOS << "HasBoundedRewriteRecursion\n";
+    hoverOS << "RootOp: `"
+            << patternDecl->getRootRewriteStmt()->getRootOpExpr()->getType()
+            << "`\n";
+  }
+  return hover;
+}
+
+lsp::Hover
+PDLDocument::buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
+                                         const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    hoverOS << "**Constraint**: `";
+    TypeSwitch<const ast::Decl *>(decl)
+        .Case([&](const ast::AttrConstraintDecl *) { hoverOS << "Attr"; })
+        .Case([&](const ast::OpConstraintDecl *opCst) {
+          hoverOS << "Op";
+          if (Optional<StringRef> name = opCst->getName())
+            hoverOS << "<" << name << ">";
+        })
+        .Case([&](const ast::TypeConstraintDecl *) { hoverOS << "Type"; })
+        .Case([&](const ast::TypeRangeConstraintDecl *) {
+          hoverOS << "TypeRange";
+        })
+        .Case([&](const ast::ValueConstraintDecl *) { hoverOS << "Value"; })
+        .Case([&](const ast::ValueRangeConstraintDecl *) {
+          hoverOS << "ValueRange";
+        });
+    hoverOS << "`\n";
+  }
+  return hover;
+}
+
+template <typename T>
+lsp::Hover PDLDocument::buildHoverForUserConstraintOrRewrite(
+    StringRef typeName, const T *decl, const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    hoverOS << "**" << typeName << "**: `" << decl->getName().getName()
+            << "`\n***\n";
+    ArrayRef<ast::VariableDecl *> inputs = decl->getInputs();
+    if (!inputs.empty()) {
+      hoverOS << "Parameters:\n";
+      for (const ast::VariableDecl *input : inputs)
+        hoverOS << "* " << input->getName().getName() << ": `"
+                << input->getType() << "`\n";
+      hoverOS << "***\n";
+    }
+    ast::Type resultType = decl->getResultType();
+    if (auto resultTupleTy = resultType.dyn_cast<ast::TupleType>()) {
+      if (resultTupleTy.empty())
+        return hover;
+
+      hoverOS << "Results:\n";
+      for (auto it : llvm::zip(resultTupleTy.getElementNames(),
+                               resultTupleTy.getElementTypes())) {
+        StringRef name = std::get<0>(it);
+        hoverOS << "* " << (name.empty() ? "" : (name + ": ")) << "`"
+                << std::get<1>(it) << "`\n";
+      }
+    } else {
+      hoverOS << "Results:\n* `" << resultType << "`\n";
+    }
+    hoverOS << "***\n";
+  }
+  return hover;
+}
+
+//===----------------------------------------------------------------------===//
 // PDLTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -371,6 +543,8 @@ public:
                       std::vector<lsp::Location> &locations);
   void findReferencesOf(const lsp::URIForFile &uri, lsp::Position pos,
                         std::vector<lsp::Location> &references);
+  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                 lsp::Position hoverPos);
 
 private:
   /// Find the PDL document that contains the given position, and update the
@@ -458,6 +632,17 @@ void PDLTextFile::findReferencesOf(const lsp::URIForFile &uri,
       chunk.adjustLocForChunkOffset(loc.range);
 }
 
+Optional<lsp::Hover> PDLTextFile::findHover(const lsp::URIForFile &uri,
+                                            lsp::Position hoverPos) {
+  PDLTextFileChunk &chunk = getChunkFor(hoverPos);
+  Optional<lsp::Hover> hoverInfo = chunk.document.findHover(uri, hoverPos);
+
+  // Adjust any locations within this file for the offset of this chunk.
+  if (chunk.lineOffset != 0 && hoverInfo && hoverInfo->range)
+    chunk.adjustLocForChunkOffset(*hoverInfo->range);
+  return hoverInfo;
+}
+
 PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -520,4 +705,12 @@ void lsp::PDLLServer::findReferencesOf(const URIForFile &uri,
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findReferencesOf(uri, pos, references);
+}
+
+Optional<lsp::Hover> lsp::PDLLServer::findHover(const URIForFile &uri,
+                                                const Position &hoverPos) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->findHover(uri, hoverPos);
+  return llvm::None;
 }
