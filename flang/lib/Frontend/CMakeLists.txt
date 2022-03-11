@@ -27,8 +27,6 @@ add_flang_library(flangFrontend
   FortranLower
   clangBasic
   clangDriver
-  LLVMAnalysis
-  LLVMTarget
   FIRDialect
   FIRSupport
   FIRBuilder
@@ -40,8 +38,10 @@ add_flang_library(flangFrontend
   ${dialect_libs}
 
   LINK_COMPONENTS
+  Analysis
   Option
   Support
+  Target
   FrontendOpenACC
   FrontendOpenMP
 )
