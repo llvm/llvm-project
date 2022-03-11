@@ -236,6 +236,24 @@ def testFlatSymbolRefAttr():
     print("default_get:", FlatSymbolRefAttr.get("foobar"))
 
 
+# CHECK-LABEL: TEST: testOpaqueAttr
+@run
+def testOpaqueAttr():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    oattr = OpaqueAttr(Attribute.parse("#pytest_dummy.dummyattr<>"))
+    # CHECK: oattr value: pytest_dummy
+    print("oattr value:", oattr.dialect_namespace)
+    # CHECK: oattr value: dummyattr<>
+    print("oattr value:", oattr.data)
+
+    # Test factory methods.
+    # CHECK: default_get: #foobar<"123">
+    print(
+        "default_get:",
+        OpaqueAttr.get("foobar", bytes("123", "utf-8"), NoneType.get()))
+
+
 # CHECK-LABEL: TEST: testStringAttr
 @run
 def testStringAttr():
