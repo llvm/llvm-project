@@ -2,6 +2,8 @@
 // RUN: -fallow-half-arguments-and-returns \
 // RUN:  -O1 -emit-llvm -o - %s 2>&1 | FileCheck %s
 
+// REQUIRES: aarch64-registered-target
+
 #include <arm_sve.h>
 
 // ADDITION
