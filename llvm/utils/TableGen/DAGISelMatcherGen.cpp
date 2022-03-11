@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DAGISelMatcher.h"
 #include "CodeGenDAGPatterns.h"
+#include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
+#include "DAGISelMatcher.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"

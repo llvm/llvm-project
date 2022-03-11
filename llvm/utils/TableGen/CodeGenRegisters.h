@@ -27,7 +27,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
 #include <cassert>

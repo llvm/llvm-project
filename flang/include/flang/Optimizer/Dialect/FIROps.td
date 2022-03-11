@@ -551,96 +551,6 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     }]
   >];
 
-  let parser = [{
-    mlir::OpAsmParser::OperandType selector;
-    mlir::Type type;
-    if (parseSelector(parser, result, selector, type))
-      return mlir::failure();
-
-    llvm::SmallVector<mlir::Attribute> ivalues;
-    llvm::SmallVector<mlir::Block *> dests;
-    llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
-    while (true) {
-      mlir::Attribute ivalue; // Integer or Unit
-      mlir::Block *dest;
-      llvm::SmallVector<mlir::Value> destArg;
-      mlir::NamedAttrList temp;
-      if (parser.parseAttribute(ivalue, "i", temp) ||
-          parser.parseComma() ||
-          parser.parseSuccessorAndUseList(dest, destArg))
-        return mlir::failure();
-      ivalues.push_back(ivalue);
-      dests.push_back(dest);
-      destArgs.push_back(destArg);
-      if (!parser.parseOptionalRSquare())
-        break;
-      if (parser.parseComma())
-        return mlir::failure();
-    }
-    auto &bld = parser.getBuilder();
-    result.addAttribute(getCasesAttr(), bld.getArrayAttr(ivalues));
-    llvm::SmallVector<int32_t> argOffs;
-    int32_t sumArgs = 0;
-    const auto count = dests.size();
-    for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
-      result.addSuccessors(dests[i]);
-      result.addOperands(destArgs[i]);
-      auto argSize = destArgs[i].size();
-      argOffs.push_back(argSize);
-      sumArgs += argSize;
-    }
-    result.addAttribute(getOperandSegmentSizeAttr(),
-                        bld.getI32VectorAttr({1, 0, sumArgs}));
-    result.addAttribute(getTargetOffsetAttr(), bld.getI32VectorAttr(argOffs));
-    return mlir::success();
-  }];
-
-  let printer = [{
-    p << ' ';
-    p.printOperand(getSelector());
-    p << " : " << getSelector().getType() << " [";
-    auto cases =
-        (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumConditions();
-    for (decltype(count) i = 0; i != count; ++i) {
-      if (i)
-        p << ", ";
-      auto &attr = cases[i];
-      if (auto intAttr = attr.dyn_cast_or_null<mlir::IntegerAttr>())
-        p << intAttr.getValue();
-      else
-        p.printAttribute(attr);
-      p << ", ";
-      printSuccessorAtIndex(p, i);
-    }
-    p << ']';
-    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(),
-        getCompareOffsetAttr(), getTargetOffsetAttr(),
-        getOperandSegmentSizeAttr()});
-  }];
-
-  let verifier = [{
-    if (!(getSelector().getType().isa<mlir::IntegerType>() ||
-          getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntegerType>()))
-      return emitOpError("must be an integer");
-    auto cases =
-        (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumDest();
-    if (count == 0)
-      return emitOpError("must have at least one successor");
-    if (getNumConditions() != count)
-      return emitOpError("number of cases and targets don't match");
-    if (targetOffsetSize() != count)
-      return emitOpError("incorrect number of successor operand groups");
-    for (decltype(count) i = 0; i != count; ++i) {
-      auto &attr = cases[i];
-      if (!(attr.isa<mlir::IntegerAttr>() || attr.isa<mlir::UnitAttr>()))
-        return emitOpError("invalid case alternative");
-    }
-    return mlir::success();
-  }];
-
   let extraClassDeclaration = extraSwitchClassDeclaration;
 }
 
@@ -663,6 +573,9 @@ def fir_SelectOp : fir_IntegralSwitchTerminatorOp<"select"> {
                         unit, ^bb5]
     ```
   }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
 }
 
 def fir_SelectRankOp : fir_IntegralSwitchTerminatorOp<"select_rank"> {
@@ -683,6 +596,8 @@ def fir_SelectRankOp : fir_IntegralSwitchTerminatorOp<"select_rank"> {
                              unit, ^bb5]
     ```
   }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
@@ -2103,9 +2018,8 @@ def FirRegionTerminator : SingleBlockImplicitTerminator<"ResultOp">;
 class region_Op<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
     !listconcat(traits, [FirRegionTerminator, RecursiveSideEffects])> {
-  let printer = "return ::print(p, *this);";
-  let verifier = "return ::verify(*this);";
-  let parser = "return ::parse$cppClass(parser, result);";
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def fir_DoLoopOp : region_Op<"do_loop",
@@ -2130,6 +2044,9 @@ def fir_DoLoopOp : region_Op<"do_loop",
     The above example iterates over the interval `[%l, %u]`. The unordered
     keyword indicates that the iterations can be executed in any order.
   }];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 
   let arguments = (ins
     Index:$lowerBound,

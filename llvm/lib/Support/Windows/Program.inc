@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
@@ -18,12 +19,12 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
-#include <psapi.h>
 #include <cstdio>
 #include <fcntl.h>
 #include <io.h>
 #include <malloc.h>
 #include <numeric>
+#include <psapi.h>
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only Win32 specific code

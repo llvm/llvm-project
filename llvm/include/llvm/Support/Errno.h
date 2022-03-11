@@ -15,7 +15,6 @@
 
 #include <cerrno>
 #include <string>
-#include <type_traits>
 
 namespace llvm {
 namespace sys {
