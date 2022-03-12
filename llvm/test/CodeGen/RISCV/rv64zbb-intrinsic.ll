@@ -31,7 +31,7 @@ define zeroext i32 @orcb32_zext(i32 zeroext %a) nounwind {
 ;
 ; RV64ZBP-LABEL: orcb32_zext:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    gorciw a0, a0, 7
+; RV64ZBP-NEXT:    orc.b a0, a0
 ; RV64ZBP-NEXT:    slli a0, a0, 32
 ; RV64ZBP-NEXT:    srli a0, a0, 32
 ; RV64ZBP-NEXT:    ret

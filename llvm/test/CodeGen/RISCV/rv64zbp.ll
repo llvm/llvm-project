@@ -853,7 +853,7 @@ define i32 @gorc16_rotl_i32(i32 %a) nounwind {
 ;
 ; RV64ZBP-LABEL: gorc16_rotl_i32:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    gorciw a0, a0, 16
+; RV64ZBP-NEXT:    orc16.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %rot = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
   %or = or i32 %rot, %a
@@ -871,7 +871,7 @@ define i32 @gorc16_rotr_i32(i32 %a) nounwind {
 ;
 ; RV64ZBP-LABEL: gorc16_rotr_i32:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    gorciw a0, a0, 16
+; RV64ZBP-NEXT:    orc16.w a0, a0
 ; RV64ZBP-NEXT:    ret
   %rot = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 16)
   %or = or i32 %rot, %a
@@ -1649,9 +1649,7 @@ define zeroext i32 @grev7_i32_zext(i32 zeroext %a) nounwind {
 ;
 ; RV64ZBP-LABEL: grev7_i32_zext:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 7
-; RV64ZBP-NEXT:    slli a0, a0, 32
-; RV64ZBP-NEXT:    srli a0, a0, 32
+; RV64ZBP-NEXT:    rev.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %and1 = shl i32 %a, 1
   %shl1 = and i32 %and1, -1431655766
@@ -2416,7 +2414,7 @@ define zeroext i16 @bswap_i16(i16 zeroext %a) nounwind {
 ;
 ; RV64ZBP-LABEL: bswap_i16:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 8
+; RV64ZBP-NEXT:    rev8.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %1
@@ -2470,7 +2468,7 @@ define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ;
 ; RV64ZBP-LABEL: bswap_i32_nosext:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 24
+; RV64ZBP-NEXT:    rev8.w a0, a0
 ; RV64ZBP-NEXT:    sw a0, 0(a1)
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
@@ -2544,7 +2542,7 @@ define zeroext i8 @bitreverse_i8(i8 zeroext %a) nounwind {
 ;
 ; RV64ZBP-LABEL: bitreverse_i8:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 7
+; RV64ZBP-NEXT:    rev.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %1
@@ -2583,7 +2581,7 @@ define zeroext i16 @bitreverse_i16(i16 zeroext %a) nounwind {
 ;
 ; RV64ZBP-LABEL: bitreverse_i16:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 15
+; RV64ZBP-NEXT:    rev.h a0, a0
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %1
@@ -2679,7 +2677,7 @@ define void @bitreverse_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ;
 ; RV64ZBP-LABEL: bitreverse_i32_nosext:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 31
+; RV64ZBP-NEXT:    rev.w a0, a0
 ; RV64ZBP-NEXT:    sw a0, 0(a1)
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i32 @llvm.bitreverse.i32(i32 %a)
@@ -2921,7 +2919,7 @@ define i32 @bitreverse_bswap_i32(i32 %a) {
 ;
 ; RV64ZBP-LABEL: bitreverse_bswap_i32:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    greviw a0, a0, 7
+; RV64ZBP-NEXT:    rev.b a0, a0
 ; RV64ZBP-NEXT:    ret
   %1 = call i32 @llvm.bitreverse.i32(i32 %a)
   %2 = call i32 @llvm.bswap.i32(i32 %1)

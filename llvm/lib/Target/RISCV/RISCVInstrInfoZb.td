@@ -919,8 +919,14 @@ def : PatGprGpr<int_riscv_xperm_h, XPERM_H>;
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def : PatGprGpr<riscv_grevw, GREVW>;
 def : PatGprGpr<riscv_gorcw, GORCW>;
-def : PatGprImm<riscv_grevw, GREVIW, uimm5>;
-def : PatGprImm<riscv_gorcw, GORCIW, uimm5>;
+
+// Select GREVIW/GORCIW when the immediate doesn't have bit 5 set and the result
+// is sign extended.
+// FIXME: Use binop_allwusers and doPeepholeSExtW instead?
+def : Pat<(i64 (sext_inreg (binop_oneuse<riscv_grev> GPR:$rs1, uimm5:$imm), i32)),
+          (GREVIW GPR:$rs1, uimm5:$imm)>;
+def : Pat<(i64 (sext_inreg (binop_oneuse<riscv_gorc> GPR:$rs1, uimm5:$imm), i32)),
+          (GORCIW GPR:$rs1, uimm5:$imm)>;
 
 def : PatGprGpr<riscv_shflw, SHFLW>;
 def : PatGprGpr<riscv_unshflw, UNSHFLW>;
