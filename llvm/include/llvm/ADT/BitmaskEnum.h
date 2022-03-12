@@ -77,7 +77,7 @@ namespace BitmaskEnumDetail {
 
 /// Get a bitmask with 1s in all places up to the high-order bit of E's largest
 /// value.
-template <typename E> std::underlying_type_t<E> Mask() {
+template <typename E> constexpr std::underlying_type_t<E> Mask() {
   // On overflow, NextPowerOf2 returns zero with the type uint64_t, so
   // subtracting 1 gives us the mask with all bits set, like we want.
   return NextPowerOf2(static_cast<std::underlying_type_t<E>>(
@@ -87,7 +87,7 @@ template <typename E> std::underlying_type_t<E> Mask() {
 
 /// Check that Val is in range for E, and return Val cast to E's underlying
 /// type.
-template <typename E> std::underlying_type_t<E> Underlying(E Val) {
+template <typename E> constexpr std::underlying_type_t<E> Underlying(E Val) {
   auto U = static_cast<std::underlying_type_t<E>>(Val);
   assert(U >= 0 && "Negative enum values are not allowed.");
   assert(U <= Mask<E>() && "Enum value too large (or largest val too small?)");
@@ -99,22 +99,22 @@ constexpr unsigned bitWidth(uint64_t Value) {
 }
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-E operator~(E Val) {
+constexpr E operator~(E Val) {
   return static_cast<E>(~Underlying(Val) & Mask<E>());
 }
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-E operator|(E LHS, E RHS) {
+constexpr E operator|(E LHS, E RHS) {
   return static_cast<E>(Underlying(LHS) | Underlying(RHS));
 }
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-E operator&(E LHS, E RHS) {
+constexpr E operator&(E LHS, E RHS) {
   return static_cast<E>(Underlying(LHS) & Underlying(RHS));
 }
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-E operator^(E LHS, E RHS) {
+constexpr E operator^(E LHS, E RHS) {
   return static_cast<E>(Underlying(LHS) ^ Underlying(RHS));
 }
 

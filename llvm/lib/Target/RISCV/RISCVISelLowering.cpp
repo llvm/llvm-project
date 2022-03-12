@@ -4748,7 +4748,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_zip:
   case Intrinsic::riscv_unzip: {
     // Lower to the SHFLI encoding for zip or the UNSHFLI encoding for unzip.
-    // For i32 the immdiate is 15. For i64 the immediate is 31.
+    // For i32 the immediate is 15. For i64 the immediate is 31.
     unsigned Opc =
         IntNo == Intrinsic::riscv_zip ? RISCVISD::SHFL : RISCVISD::UNSHFL;
     unsigned BitWidth = Op.getValueSizeInBits();
@@ -6800,7 +6800,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue NewOp1 =
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
     SDValue NewRes = DAG.getNode(RISCVISD::SHFL, DL, MVT::i64, NewOp0, NewOp1);
     // ReplaceNodeResults requires we maintain the same type for the return
     // value.

@@ -1205,14 +1205,18 @@ struct Attributor {
   /// \param Allowed If not null, a set limiting the attribute opportunities.
   /// \param DeleteFns Whether to delete functions.
   /// \param RewriteSignatures Whether to rewrite function signatures.
+  /// \param DefaultInitializeLiveInternals Whether to initialize default AAs
+  ///                                       for live internal functions.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater,
              DenseSet<const char *> *Allowed = nullptr, bool DeleteFns = true,
-             bool RewriteSignatures = true)
+             bool RewriteSignatures = true,
+             bool DefaultInitializeLiveInternals = true)
       : Allocator(InfoCache.Allocator), Functions(Functions),
         InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed),
         DeleteFns(DeleteFns), RewriteSignatures(RewriteSignatures),
-        MaxFixpointIterations(None), OREGetter(None), PassName("") {}
+        MaxFixpointIterations(None), OREGetter(None), PassName(""),
+        DefaultInitializeLiveInternals(DefaultInitializeLiveInternals) {}
 
   /// Constructor
   ///
@@ -1238,7 +1242,7 @@ struct Attributor {
         DeleteFns(DeleteFns), RewriteSignatures(RewriteSignatures),
         MaxFixpointIterations(MaxFixpointIterations),
         OREGetter(Optional<OptimizationRemarkGetter>(OREGetter)),
-        PassName(PassName) {}
+        PassName(PassName), DefaultInitializeLiveInternals(false) {}
 
   ~Attributor();
 
@@ -1348,8 +1352,6 @@ struct Attributor {
 
     // Initialize and update is allowed for code outside of the current function
     // set, but only if it is part of module slice we are allowed to look at.
-    // Only exception is AAIsDeadFunction whose initialization is prevented
-    // directly, since we don't to compute it twice.
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
       if (!getInfoCache().isInModuleSlice(*FnScope)) {
         AA.getState().indicatePessimisticFixpoint();
@@ -1502,7 +1504,8 @@ struct Attributor {
     assert(F.hasLocalLinkage() &&
            "Only local linkage is assumed dead initially.");
 
-    identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+    if (DefaultInitializeLiveInternals)
+      identifyDefaultAbstractAttributes(const_cast<Function &>(F));
   }
 
   /// Helper function to remove callsite.
@@ -1553,7 +1556,7 @@ struct Attributor {
   /// is used, e.g., to replace \p II with a call, after information was
   /// manifested.
   void registerInvokeWithDeadSuccessor(InvokeInst &II) {
-    InvokeWithDeadSuccessor.push_back(&II);
+    InvokeWithDeadSuccessor.insert(&II);
   }
 
   /// Record that \p I is deleted after information was manifested. This also
@@ -2022,7 +2025,7 @@ private:
   /// (\see registerFunctionSignatureRewrite) and return Changed if the module
   /// was altered.
   ChangeStatus
-  rewriteFunctionSignatures(SmallPtrSetImpl<Function *> &ModifiedFns);
+  rewriteFunctionSignatures(SmallSetVector<Function *, 8> &ModifiedFns);
 
   /// Check if the Attribute \p AA should be seeded.
   /// See getOrCreateAAFor.
@@ -2054,7 +2057,7 @@ private:
 
   /// Set of functions for which we modified the content such that it might
   /// impact the call graph.
-  SmallPtrSet<Function *, 8> CGModifiedFunctions;
+  SmallSetVector<Function *, 8> CGModifiedFunctions;
 
   /// Information about a dependence. If FromAA is changed ToAA needs to be
   /// updated as well.
@@ -2091,17 +2094,17 @@ private:
 
   /// Uses we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
-  DenseMap<Use *, Value *> ToBeChangedUses;
+  SmallMapVector<Use *, Value *, 32> ToBeChangedUses;
 
   /// Values we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
-  DenseMap<Value *, std::pair<Value *, bool>> ToBeChangedValues;
+  SmallMapVector<Value *, std::pair<Value *, bool>, 32> ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
-  SmallDenseSet<WeakVH, 16> ToBeChangedToUnreachableInsts;
+  SmallSetVector<WeakVH, 16> ToBeChangedToUnreachableInsts;
 
   /// Invoke instructions with at least a single dead successor block.
-  SmallVector<WeakVH, 16> InvokeWithDeadSuccessor;
+  SmallSetVector<WeakVH, 16> InvokeWithDeadSuccessor;
 
   /// A flag that indicates which stage of the process we are in. Initially, the
   /// phase is SEEDING. Phase is changed in `Attributor::run()`
@@ -2118,10 +2121,10 @@ private:
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
   ///{
-  SmallPtrSet<Function *, 8> ToBeDeletedFunctions;
-  SmallPtrSet<BasicBlock *, 8> ToBeDeletedBlocks;
   SmallPtrSet<BasicBlock *, 8> ManifestAddedBlocks;
-  SmallDenseSet<WeakVH, 8> ToBeDeletedInsts;
+  SmallSetVector<Function *, 8> ToBeDeletedFunctions;
+  SmallSetVector<BasicBlock *, 8> ToBeDeletedBlocks;
+  SmallSetVector<WeakVH, 8> ToBeDeletedInsts;
   ///}
 
   /// Callback to get an OptimizationRemarkEmitter from a Function *.
@@ -2133,6 +2136,13 @@ private:
 
   /// The name of the pass to emit remarks for.
   const char *PassName = "";
+
+  /// Flag to determine if we want to initialize all default AAs for an internal
+  /// function marked live.
+  /// TODO: This should probably be a callback, or maybe
+  /// identifyDefaultAbstractAttributes should be virtual, something to allow
+  /// customizable lazy initialization for internal functions.
+  const bool DefaultInitializeLiveInternals;
 
   friend AADepGraph;
   friend AttributorCallGraph;
