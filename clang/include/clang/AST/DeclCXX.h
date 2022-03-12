@@ -275,6 +275,14 @@ class CXXRecordDecl : public RecordDecl {
     SMF_All = 0x3f
   };
 
+public:
+  enum LambdaDependencyKind {
+    LDK_Unknown = 0,
+    LDK_AlwaysDependent,
+    LDK_NeverDependent,
+  };
+
+private:
   struct DefinitionData {
     #define FIELD(Name, Width, Merge) \
     unsigned Name : Width;
@@ -374,7 +382,7 @@ class CXXRecordDecl : public RecordDecl {
     /// lambda will have been created with the enclosing context as its
     /// declaration context, rather than function. This is an unfortunate
     /// artifact of having to parse the default arguments before.
-    unsigned Dependent : 1;
+    unsigned DependencyKind : 2;
 
     /// Whether this lambda is a generic lambda.
     unsigned IsGenericLambda : 1;
@@ -408,9 +416,9 @@ class CXXRecordDecl : public RecordDecl {
     /// The type of the call method.
     TypeSourceInfo *MethodTyInfo;
 
-    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, bool Dependent,
+    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, unsigned DK,
                          bool IsGeneric, LambdaCaptureDefault CaptureDefault)
-        : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric),
+        : DefinitionData(D), DependencyKind(DK), IsGenericLambda(IsGeneric),
           CaptureDefault(CaptureDefault), NumCaptures(0),
           NumExplicitCaptures(0), HasKnownInternalLinkage(0), ManglingNumber(0),
           MethodTyInfo(Info) {
@@ -547,7 +555,7 @@ public:
                                bool DelayTypeCreation = false);
   static CXXRecordDecl *CreateLambda(const ASTContext &C, DeclContext *DC,
                                      TypeSourceInfo *Info, SourceLocation Loc,
-                                     bool DependentLambda, bool IsGeneric,
+                                     unsigned DependencyKind, bool IsGeneric,
                                      LambdaCaptureDefault CaptureDefault);
   static CXXRecordDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
@@ -1774,7 +1782,17 @@ public:
   /// function declaration itself is dependent. This flag indicates when we
   /// know that the lambda is dependent despite that.
   bool isDependentLambda() const {
-    return isLambda() && getLambdaData().Dependent;
+    return isLambda() && getLambdaData().DependencyKind == LDK_AlwaysDependent;
+  }
+
+  bool isNeverDependentLambda() const {
+    return isLambda() && getLambdaData().DependencyKind == LDK_NeverDependent;
+  }
+
+  unsigned getLambdaDependencyKind() const {
+    if (!isLambda())
+      return LDK_Unknown;
+    return getLambdaData().DependencyKind;
   }
 
   TypeSourceInfo *getLambdaTypeInfo() const {

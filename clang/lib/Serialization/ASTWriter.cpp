@@ -5733,7 +5733,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   // Add lambda-specific data.
   if (Data.IsLambda) {
     auto &Lambda = D->getLambdaData();
-    Record->push_back(Lambda.Dependent);
+    Record->push_back(Lambda.DependencyKind);
     Record->push_back(Lambda.IsGenericLambda);
     Record->push_back(Lambda.CaptureDefault);
     Record->push_back(Lambda.NumCaptures);
