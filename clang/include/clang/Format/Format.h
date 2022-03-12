@@ -131,6 +131,10 @@ struct FormatStyle {
   };
   /// if not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
+  ///
+  /// NOTE: As of clang-format 15 this option only applied to arrays with equal
+  /// number of columns per row.
+  ///
   /// \version 13
   ArrayInitializerAlignmentStyle AlignArrayOfStructures;
 

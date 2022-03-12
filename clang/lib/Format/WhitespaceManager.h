@@ -196,8 +196,20 @@ private:
 
   struct CellDescriptions {
     SmallVector<CellDescription> Cells;
-    unsigned CellCount = 0;
+    SmallVector<unsigned> CellCounts;
     unsigned InitialSpaces = 0;
+
+    // Determine if every row in the the array
+    // has the same number of columns.
+    bool isRectangular() const {
+      if (CellCounts.empty())
+        return false;
+
+      for (auto NumberOfColumns : CellCounts)
+        if (NumberOfColumns != CellCounts[0])
+          return false;
+      return true;
+    }
   };
 
   /// Calculate \c IsTrailingComment, \c TokenLength for the last tokens
@@ -295,13 +307,15 @@ private:
   /// Get The maximum width of all columns to a given cell.
   template <typename I>
   unsigned getMaximumNetWidth(const I &CellStart, const I &CellStop,
-                              unsigned InitialSpaces,
-                              unsigned CellCount) const {
+                              unsigned InitialSpaces, unsigned CellCount,
+                              unsigned MaxRowCount) const {
     auto MaxNetWidth = getNetWidth(CellStart, CellStop, InitialSpaces);
     auto RowCount = 1U;
     auto Offset = std::distance(CellStart, CellStop);
     for (const auto *Next = CellStop->NextColumnElement; Next != nullptr;
          Next = Next->NextColumnElement) {
+      if (RowCount > MaxRowCount)
+        break;
       auto Start = (CellStart + RowCount * CellCount);
       auto End = Start + Offset;
       MaxNetWidth =
