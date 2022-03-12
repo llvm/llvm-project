@@ -13,13 +13,11 @@
 // entities would be non-deterministic. To prevent this, run the scans separately
 // and verify that the context hashes differ with a single FileCheck invocation.
 //
-// RUN: echo -%t > %t/result.json
-// RUN: clang-scan-deps -compilation-database %t/cdb_a.json -format experimental-full -j 1 >> %t/result.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_a.json -format experimental-full -j 1 >  %t/result.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_b.json -format experimental-full -j 1 >> %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -check-prefix=CHECK
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK
 
-// CHECK:      -[[PREFIX:.*]]
-// CHECK-NEXT: {
+// CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],

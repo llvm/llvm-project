@@ -10,31 +10,26 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb.json > %t.cdb
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
-// RUN: echo %t.dir > %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK,CHECK-NO-ABS %s
+// RUN:   -mode preprocess-minimized-sources > %t.result
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK,CHECK-NO-ABS %s
 //
-// RUN: echo %t.dir > %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
-// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK,CHECK-ABS %s
+// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources > %t.result
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK,CHECK-ABS %s
 //
-// RUN: echo %t.dir > %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
 // RUN:   -generate-modules-path-args -module-files-dir %t.dir/custom \
-// RUN:   -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK,CHECK-CUSTOM %s
+// RUN:   -mode preprocess-minimized-sources > %t.result
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK,CHECK-CUSTOM %s
 //
-// RUN: echo %t.dir > %t_clangcl.result
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources >> %t_clangcl.result
-// RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK,CHECK-NO-ABS %s
+// RUN:   -mode preprocess-minimized-sources > %t_clangcl.result
+// RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK,CHECK-NO-ABS %s
 
 #include "header.h"
 
-// CHECK: [[PREFIX:.*]]
-// CHECK-NEXT: {
+// CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [

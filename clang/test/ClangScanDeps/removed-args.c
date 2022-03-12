@@ -8,12 +8,10 @@
 // RUN: cp %S/Inputs/removed-args/* %t
 
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/removed-args/cdb.json.template > %t/cdb.json
-// RUN: echo -%t > %t/result.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full >> %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 //
-// CHECK:      -[[PREFIX:.*]]
-// CHECK-NEXT: {
+// CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
