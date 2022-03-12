@@ -3132,30 +3132,6 @@ void UnwrappedLineParser::parseConstraintExpression() {
         return;
       break;
 
-    case tok::identifier:
-      // We need to differentiate identifiers for a template deduction guide,
-      // variables, or function return types (the constraint expression has
-      // ended before that), and basically all other cases. But it's easier to
-      // check the other way around.
-      assert(FormatTok->Previous);
-      switch (FormatTok->Previous->Tok.getKind()) {
-      case tok::coloncolon:  // Nested identifier.
-      case tok::ampamp:      // Start of a function or variable for the
-      case tok::pipepipe:    // constraint expression.
-      case tok::kw_requires: // Initial identifier of a requires clause.
-      case tok::equal:       // Initial identifier of a concept declaration.
-        break;
-      default:
-        return;
-      }
-
-      // Read identifier with optional template declaration.
-      nextToken();
-      if (FormatTok->is(tok::less))
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
-      break;
-
     case tok::kw_const:
     case tok::semi:
     case tok::kw_class:
@@ -3232,7 +3208,34 @@ void UnwrappedLineParser::parseConstraintExpression() {
       break;
 
     default:
-      return;
+      if (!FormatTok->Tok.getIdentifierInfo()) {
+        // Identifiers are part of the default case, we check for more then
+        // tok::identifier to handle builtin type traits.
+        return;
+      }
+
+      // We need to differentiate identifiers for a template deduction guide,
+      // variables, or function return types (the constraint expression has
+      // ended before that), and basically all other cases. But it's easier to
+      // check the other way around.
+      assert(FormatTok->Previous);
+      switch (FormatTok->Previous->Tok.getKind()) {
+      case tok::coloncolon:  // Nested identifier.
+      case tok::ampamp:      // Start of a function or variable for the
+      case tok::pipepipe:    // constraint expression.
+      case tok::kw_requires: // Initial identifier of a requires clause.
+      case tok::equal:       // Initial identifier of a concept declaration.
+        break;
+      default:
+        return;
+      }
+
+      // Read identifier with optional template declaration.
+      nextToken();
+      if (FormatTok->is(tok::less))
+        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
+                        /*ClosingBraceKind=*/tok::greater);
+      break;
     }
   } while (!eof());
 }
