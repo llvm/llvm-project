@@ -87,8 +87,7 @@ serializeCompilerInvocation(const CompilerInvocation &CI) {
 }
 
 std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
+    std::function<StringRef(ModuleID)> LookupPCMPath) const {
   CompilerInvocation CI(BuildInvocation);
   FrontendOptions &FrontendOpts = CI.getFrontendOpts();
 
@@ -97,9 +96,8 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
   FrontendOpts.Inputs.emplace_back(ClangModuleMapFile, ModuleMapInputKind);
   FrontendOpts.OutputFile = std::string(LookupPCMPath(ID));
 
-  dependencies::detail::collectPCMPaths(ClangModuleDeps, LookupPCMPath,
-                                        LookupModuleDeps,
-                                        FrontendOpts.ModuleFiles);
+  for (ModuleID MID : ClangModuleDeps)
+    FrontendOpts.ModuleFiles.emplace_back(LookupPCMPath(MID));
 
   return serializeCompilerInvocation(CI);
 }
@@ -107,28 +105,6 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
 std::vector<std::string>
 ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
   return serializeCompilerInvocation(BuildInvocation);
-}
-
-void dependencies::detail::collectPCMPaths(
-    llvm::ArrayRef<ModuleID> Modules,
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &PCMPaths) {
-  llvm::StringSet<> AlreadyAdded;
-
-  std::function<void(llvm::ArrayRef<ModuleID>)> AddArgs =
-      [&](llvm::ArrayRef<ModuleID> Modules) {
-        for (const ModuleID &MID : Modules) {
-          if (!AlreadyAdded.insert(MID.ModuleName + MID.ContextHash).second)
-            continue;
-          const ModuleDeps &M = LookupModuleDeps(MID);
-          // Depth first traversal.
-          AddArgs(M.ClangModuleDeps);
-          PCMPaths.push_back(LookupPCMPath(MID).str());
-        }
-      };
-
-  AddArgs(Modules);
 }
 
 void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,

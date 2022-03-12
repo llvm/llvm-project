@@ -97,7 +97,6 @@
 // CHECK-PCH:              "-fno-implicit-modules",
 // CHECK-PCH-NEXT:         "-fno-implicit-module-maps",
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_1]]/ModCommon1-{{.*}}.pcm",
-// CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_2]]/ModCommon2-{{.*}}.pcm",
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_PCH]]/ModPCH-{{.*}}.pcm"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "file-deps": [
