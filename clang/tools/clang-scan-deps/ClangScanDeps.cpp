@@ -374,11 +374,11 @@ private:
     const ModuleDeps &MD = MDIt->second;
 
     StringRef Filename = llvm::sys::path::filename(MD.ImplicitModulePCMPath);
+    StringRef ModuleCachePath = llvm::sys::path::parent_path(
+        llvm::sys::path::parent_path(MD.ImplicitModulePCMPath));
 
-    SmallString<256> ExplicitPCMPath(
-        !ModuleFilesDir.empty()
-            ? ModuleFilesDir
-            : MD.BuildInvocation.getHeaderSearchOpts().ModuleCachePath);
+    SmallString<256> ExplicitPCMPath(!ModuleFilesDir.empty() ? ModuleFilesDir
+                                                             : ModuleCachePath);
     llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
     return std::string(ExplicitPCMPath);
   }
