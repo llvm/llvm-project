@@ -8,16 +8,14 @@
 // Scan dependencies of the PCH:
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_pch.json > %t/cdb.json
-// RUN: echo -%t > %t/result_pch.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build >> %t/result_pch.json
-// RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -check-prefix=CHECK-PCH
+// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_pch.json
+// RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // Check we didn't build the PCH during dependency scanning.
 // RUN: not cat %/t/pch.h.gch
 //
-// CHECK-PCH:      -[[PREFIX:.*]]
-// CHECK-PCH-NEXT: {
+// CHECK-PCH:      {
 // CHECK-PCH-NEXT:   "modules": [
 // CHECK-PCH-NEXT:     {
 // CHECK-PCH-NEXT:       "clang-module-deps": [],
@@ -26,6 +24,7 @@
 // CHECK-PCH-NEXT:         "-cc1"
 // CHECK-PCH:              "-emit-module"
 // CHECK-PCH:              "-fmodules"
+// CHECK-PCH-NOT:          "-fimplicit-module-maps"
 // CHECK-PCH:              "-fmodule-name=ModCommon1"
 // CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
@@ -43,6 +42,7 @@
 // CHECK-PCH-NEXT:         "-cc1"
 // CHECK-PCH:              "-emit-module"
 // CHECK-PCH:              "-fmodules"
+// CHECK-PCH-NOT:          "-fimplicit-module-maps"
 // CHECK-PCH:              "-fmodule-name=ModCommon2"
 // CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
@@ -66,6 +66,7 @@
 // CHECK-PCH:              "-emit-module"
 // CHECK-PCH:              "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_2]]/ModCommon2-{{.*}}.pcm"
 // CHECK-PCH:              "-fmodules"
+// CHECK-PCH-NOT:          "-fimplicit-module-maps"
 // CHECK-PCH:              "-fmodule-name=ModPCH"
 // CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
@@ -94,7 +95,6 @@
 // CHECK-PCH:              "-fno-implicit-modules",
 // CHECK-PCH-NEXT:         "-fno-implicit-module-maps",
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_1]]/ModCommon1-{{.*}}.pcm",
-// CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_2]]/ModCommon2-{{.*}}.pcm",
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_PCH]]/ModPCH-{{.*}}.pcm"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "file-deps": [
@@ -107,14 +107,13 @@
 
 // Explicitly build the PCH:
 //
-// RUN: tail -n +2 %t/result_pch.json > %t/result_pch_stripped.json
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
 // RUN:   --module-name=ModCommon1 > %t/mod_common_1.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
 // RUN:   --module-name=ModCommon2 > %t/mod_common_2.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
 // RUN:   --module-name=ModPCH > %t/mod_pch.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
 // RUN:   --tu-index=0 > %t/pch.rsp
 //
 // RUN: %clang @%t/mod_common_1.cc1.rsp
@@ -125,13 +124,11 @@
 // Scan dependencies of the TU:
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb.json
-// RUN: echo -%t > %t/result_tu.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build >> %t/result_tu.json
-// RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -check-prefix=CHECK-TU
+// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_tu.json
+// RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
 //
-// CHECK-TU:      -[[PREFIX:.*]]
-// CHECK-TU-NEXT: {
+// CHECK-TU:      {
 // CHECK-TU-NEXT:   "modules": [
 // CHECK-TU-NEXT:     {
 // CHECK-TU-NEXT:       "clang-module-deps": [],
@@ -139,6 +136,7 @@
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU-NEXT:         "-cc1",
 // CHECK-TU:              "-emit-module",
+// CHECK-TU-NOT:          "-fimplicit-module-maps",
 // CHECK-TU:              "-fmodule-name=ModTU",
 // CHECK-TU:              "-fno-implicit-modules",
 // CHECK-TU:            ],
@@ -175,10 +173,9 @@
 
 // Explicitly build the TU:
 //
-// RUN: tail -n +2 %t/result_tu.json > %t/result_tu_stripped.json
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu.json \
 // RUN:   --module-name=ModTU > %t/mod_tu.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu.json \
 // RUN:   --tu-index=0 > %t/tu.rsp
 //
 // RUN: %clang @%t/mod_tu.cc1.rsp
@@ -187,13 +184,11 @@
 // Scan dependencies of the TU that has common modules with the PCH:
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu_with_common.json > %t/cdb.json
-// RUN: echo -%t > %t/result_tu_with_common.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build >> %t/result_tu_with_common.json
-// RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' | FileCheck %s -check-prefix=CHECK-TU-WITH-COMMON
+// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_tu_with_common.json
+// RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU-WITH-COMMON
 //
-// CHECK-TU-WITH-COMMON:      -[[PREFIX:.*]]
-// CHECK-TU-WITH-COMMON-NEXT: {
+// CHECK-TU-WITH-COMMON:      {
 // CHECK-TU-WITH-COMMON-NEXT:   "modules": [
 // CHECK-TU-WITH-COMMON-NEXT:     {
 // CHECK-TU-WITH-COMMON-NEXT:       "clang-module-deps": [],
@@ -202,6 +197,7 @@
 // CHECK-TU-WITH-COMMON-NEXT:         "-cc1",
 // CHECK-TU-WITH-COMMON:              "-emit-module",
 // CHECK-TU-WITH-COMMON:              "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon1-{{.*}}.pcm",
+// CHECK-TU-WITH-COMMON-NOT:          "-fimplicit-module-maps",
 // CHECK-TU-WITH-COMMON:              "-fmodule-name=ModTUWithCommon",
 // CHECK-TU-WITH-COMMON:              "-fno-implicit-modules",
 // CHECK-TU-WITH-COMMON:            ],
@@ -239,10 +235,9 @@
 
 // Explicitly build the TU that has common modules with the PCH:
 //
-// RUN: tail -n +2 %t/result_tu_with_common.json > %t/result_tu_with_common_stripped.json
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_with_common_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_with_common.json \
 // RUN:   --module-name=ModTUWithCommon > %t/mod_tu_with_common.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_with_common_stripped.json \
+// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_with_common.json \
 // RUN:   --tu-index=0 > %t/tu_with_common.rsp
 //
 // RUN: %clang @%t/mod_tu_with_common.cc1.rsp

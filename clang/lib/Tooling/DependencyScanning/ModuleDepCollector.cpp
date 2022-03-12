@@ -50,10 +50,14 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
   CI.getLangOpts()->ImplicitModules = false;
+  CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
+  CI.getHeaderSearchOpts().ModuleCachePath.clear();
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
+
+  CI.getFrontendOpts().ModuleMapFiles = Deps.ModuleMapFileDeps;
 
   Optimize(CI);
 
@@ -84,8 +88,7 @@ serializeCompilerInvocation(const CompilerInvocation &CI) {
 }
 
 std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
+    std::function<StringRef(ModuleID)> LookupPCMPath) const {
   CompilerInvocation CI(BuildInvocation);
   FrontendOptions &FrontendOpts = CI.getFrontendOpts();
 
@@ -94,9 +97,8 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
   FrontendOpts.Inputs.emplace_back(ClangModuleMapFile, ModuleMapInputKind);
   FrontendOpts.OutputFile = std::string(LookupPCMPath(ID));
 
-  dependencies::detail::collectPCMAndModuleMapPaths(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps,
-      FrontendOpts.ModuleFiles, FrontendOpts.ModuleMapFiles);
+  for (ModuleID MID : ClangModuleDeps)
+    FrontendOpts.ModuleFiles.emplace_back(LookupPCMPath(MID));
 
   return serializeCompilerInvocation(CI);
 }
@@ -104,30 +106,6 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
 std::vector<std::string>
 ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
   return serializeCompilerInvocation(BuildInvocation);
-}
-
-void dependencies::detail::collectPCMAndModuleMapPaths(
-    llvm::ArrayRef<ModuleID> Modules,
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths) {
-  llvm::StringSet<> AlreadyAdded;
-
-  std::function<void(llvm::ArrayRef<ModuleID>)> AddArgs =
-      [&](llvm::ArrayRef<ModuleID> Modules) {
-        for (const ModuleID &MID : Modules) {
-          if (!AlreadyAdded.insert(MID.ModuleName + MID.ContextHash).second)
-            continue;
-          const ModuleDeps &M = LookupModuleDeps(MID);
-          // Depth first traversal.
-          AddArgs(M.ClangModuleDeps);
-          PCMPaths.push_back(LookupPCMPath(MID).str());
-          if (!M.ClangModuleMapFile.empty())
-            ModMapPaths.push_back(M.ClangModuleMapFile);
-        }
-      };
-
-  AddArgs(Modules);
 }
 
 void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
@@ -261,6 +239,42 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         }
         MD.FileDeps.insert(IF.getFile()->getName());
       });
+
+  // We usually don't need to list the module map files of our dependencies when
+  // building a module explicitly: their semantics will be deserialized from PCM
+  // files.
+  //
+  // However, some module maps loaded implicitly during the dependency scan can
+  // describe anti-dependencies. That happens when this module, let's call it
+  // M1, is marked as '[no_undeclared_includes]' and tries to access a header
+  // "M2/M2.h" from another module, M2, but doesn't have a 'use M2;'
+  // declaration. The explicit build needs the module map for M2 so that it
+  // knows that textually including "M2/M2.h" is not allowed.
+  // E.g., '__has_include("M2/M2.h")' should return false, but without M2's
+  // module map the explicit build would return true.
+  //
+  // An alternative approach would be to tell the explicit build what its
+  // textual dependencies are, instead of having it re-discover its
+  // anti-dependencies. For example, we could create and use an `-ivfs-overlay`
+  // with `fall-through: false` that explicitly listed the dependencies.
+  // However, that's more complicated to implement and harder to reason about.
+  if (M->NoUndeclaredIncludes) {
+    // We don't have a good way to determine which module map described the
+    // anti-dependency (let alone what's the corresponding top-level module
+    // map). We simply specify all the module maps in the order they were loaded
+    // during the implicit build during scan.
+    // TODO: Resolve this by serializing and only using Module::UndeclaredUses.
+    MDC.ScanInstance.getASTReader()->visitTopLevelModuleMaps(
+        *MF, [&](const FileEntry *FE) {
+          if (FE->getName().endswith("__inferred_module.map"))
+            return;
+          // The top-level modulemap of this module will be the input file. We
+          // don't need to specify it as a module map.
+          if (FE == ModuleMap)
+            return;
+          MD.ModuleMapFileDeps.push_back(FE->getName().str());
+        });
+  }
 
   // Add direct prebuilt module dependencies now, so that we can use them when
   // creating a CompilerInvocation and computing context hash for this

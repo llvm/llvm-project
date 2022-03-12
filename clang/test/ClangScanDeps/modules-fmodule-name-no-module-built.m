@@ -9,16 +9,14 @@
 // RUN: cp %S/Inputs/module.modulemap %t.dir/Inputs/module.modulemap
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/module_fmodule_name_cdb.json > %t.cdb
 
-// RUN: echo %t.dir > %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck --check-prefixes=CHECK %s
+// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources > %t.result
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
 
 #import "header3.h"
 #import "header.h"
 
-// CHECK: [[PREFIX:.*]]
-// CHECK-NEXT: {
+// CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": []
