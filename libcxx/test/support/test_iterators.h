@@ -46,7 +46,7 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
-#ifndef _LIBCPP_HAS_NO_CONCEPTS
+#if _LIBCPP_STD_VER > 17
    static_assert(std::output_iterator<cpp17_output_iterator<int*>, int>);
 #endif
 
@@ -83,7 +83,7 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
-#ifndef _LIBCPP_HAS_NO_CONCEPTS
+#if _LIBCPP_STD_VER > 17
    static_assert(std::input_iterator<cpp17_input_iterator<int*>>);
 #endif
 
@@ -482,7 +482,7 @@ private:
     const T *current_;
 };
 
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if TEST_STD_VER > 17
 
 template <class It>
 class cpp20_input_iterator
@@ -668,7 +668,7 @@ private:
     difference_type stride_displacement_ = 0;
 };
 
-#endif // TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // TEST_STD_VER > 17
 
 #if TEST_STD_VER > 17
 template <class It>

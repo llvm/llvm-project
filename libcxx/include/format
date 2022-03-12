@@ -160,12 +160,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-// TODO FMT Remove this once we require compilers with proper C++20 support.
-// If the compiler has no concepts support, the format header will be disabled.
-// Without concepts support enable_if needs to be used and that too much effort
-// to support compilers with partial C++20 support.
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-
 // TODO FMT Move the implementation in this file to its own granular headers.
 
 // TODO FMT Evaluate which templates should be external templates. This
@@ -550,7 +544,6 @@ formatted_size(locale __loc, wstring_view __fmt, const _Args&... __args) {
 
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD

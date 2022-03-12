@@ -31,7 +31,7 @@ void checkIteratorConcepts() {
   using It = path::iterator;
   using Traits = std::iterator_traits<It>;
   ASSERT_SAME_TYPE(path::const_iterator, It);
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if TEST_STD_VER > 17
   static_assert(std::bidirectional_iterator<It>);
 #endif
   ASSERT_SAME_TYPE(Traits::value_type, path);

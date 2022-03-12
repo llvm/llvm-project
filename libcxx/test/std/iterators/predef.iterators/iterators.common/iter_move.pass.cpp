@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // friend iter_rvalue_reference_t<I> iter_move(const common_iterator& i)
 //   noexcept(noexcept(ranges::iter_move(declval<const I&>())))

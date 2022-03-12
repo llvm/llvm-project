@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 
 // [expos.only.func]
 
@@ -44,7 +44,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr auto __synth_three_way =
 template <class _Tp, class _Up = _Tp>
 using __synth_three_way_result = decltype(std::__synth_three_way(declval<_Tp&>(), declval<_Up&>()));
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

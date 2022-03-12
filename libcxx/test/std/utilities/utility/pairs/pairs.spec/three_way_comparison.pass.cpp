@@ -12,7 +12,7 @@
 
 // template <class T1, class T2> bool operator<=>(const pair<T1,T2>&, const pair<T1,T2>&);
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, libcpp-no-concepts
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <cassert>
 #include <compare>

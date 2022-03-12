@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<input_iterator I>
 //   requires same_as<ITER_TRAITS(I), iterator_traits<I>>   // see [iterator.concepts.general]

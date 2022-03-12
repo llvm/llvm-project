@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, libcpp-no-concepts
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr auto synth-three-way = ...;
 //   via std::tuple<T>(t) <=> std::tuple<U>(u), which exposes its behavior most directly
