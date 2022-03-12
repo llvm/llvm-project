@@ -14,9 +14,11 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_THREADSANITIZER_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
+class Function;
+class FunctionPass;
+class Module;
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerLegacyPassPass();
 

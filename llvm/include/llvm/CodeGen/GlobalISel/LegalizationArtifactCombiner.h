@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
