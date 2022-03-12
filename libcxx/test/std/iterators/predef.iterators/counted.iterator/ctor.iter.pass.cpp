@@ -57,30 +57,6 @@ constexpr bool test() {
     assert(iter.count() == 8);
   }
 
-  {
-    const std::counted_iterator iter(cpp20_input_iterator<int*>{buffer}, 8);
-    assert(base(iter.base()) == buffer);
-    assert(iter.count() == 8);
-  }
-
-  {
-    const std::counted_iterator iter(forward_iterator<int*>{buffer}, 7);
-    assert(iter.base() == forward_iterator<int*>{buffer});
-    assert(iter.count() == 7);
-  }
-
-  {
-    const std::counted_iterator iter(contiguous_iterator<int*>{buffer}, 6);
-    assert(iter.base() == contiguous_iterator<int*>{buffer});
-    assert(iter.count() == 6);
-  }
-
-  {
-    const std::counted_iterator iter(InputOrOutputArchetype{buffer}, 8);
-    assert(iter.base().ptr == buffer);
-    assert(iter.count() == 8);
-  }
-
   return true;
 }
 
