@@ -25335,6 +25335,138 @@ TEST_F(FormatTest, UnderstandsDigraphs) {
   verifyFormat("#define A x%:%:y");
 }
 
+TEST_F(FormatTest, AlignArrayOfStructuresLeftAlignmentNonSquare) {
+  auto Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.AlignConsecutiveAssignments =
+      FormatStyle::AlignConsecutiveStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations =
+      FormatStyle::AlignConsecutiveStyle::ACS_Consecutive;
+
+  // The AlignArray code is incorrect for non square Arrays and can cause
+  // crashes, these tests assert that the array is not changed but will
+  // also act as regression tests for when it is properly fixed
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8}\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2, 3, 4, 5},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8}\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2, 3, 4, 5},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8, 9, 10, 11, 12}\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2, 3},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8, 9, 10, 11, 12}\n"
+               "};",
+               Style);
+
+  verifyFormat("S{\n"
+               "    {},\n"
+               "    {},\n"
+               "    {a, b}\n"
+               "};",
+               Style);
+  verifyFormat("S{\n"
+               "    {},\n"
+               "    {},\n"
+               "    {a, b},\n"
+               "};",
+               Style);
+  verifyFormat("void foo() {\n"
+               "  auto thing = test{\n"
+               "      {\n"
+               "       {13}, {something}, // A\n"
+               "      }\n"
+               "  };\n"
+               "}",
+               "void foo() {\n"
+               "  auto thing = test{\n"
+               "      {\n"
+               "       {13},\n"
+               "       {something}, // A\n"
+               "      }\n"
+               "  };\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
+  auto Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  Style.AlignConsecutiveAssignments =
+      FormatStyle::AlignConsecutiveStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations =
+      FormatStyle::AlignConsecutiveStyle::ACS_Consecutive;
+
+  // The AlignArray code is incorrect for non square Arrays and can cause
+  // crashes, these tests assert that the array is not changed but will
+  // also act as regression tests for when it is properly fixed
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8}\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2, 3, 4, 5},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8}\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2, 3, 4, 5},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8, 9, 10, 11, 12}\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo[] = {\n"
+               "    {1, 2, 3},\n"
+               "    {3, 4, 5},\n"
+               "    {6, 7, 8, 9, 10, 11, 12}\n"
+               "};",
+               Style);
+
+  verifyFormat("S{\n"
+               "    {},\n"
+               "    {},\n"
+               "    {a, b}\n"
+               "};",
+               Style);
+  verifyFormat("S{\n"
+               "    {},\n"
+               "    {},\n"
+               "    {a, b},\n"
+               "};",
+               Style);
+  verifyFormat("void foo() {\n"
+               "  auto thing = test{\n"
+               "      {\n"
+               "       {13}, {something}, // A\n"
+               "      }\n"
+               "  };\n"
+               "}",
+               "void foo() {\n"
+               "  auto thing = test{\n"
+               "      {\n"
+               "       {13},\n"
+               "       {something}, // A\n"
+               "      }\n"
+               "  };\n"
+               "}",
+               Style);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

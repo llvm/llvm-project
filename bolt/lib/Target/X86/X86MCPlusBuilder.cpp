@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86InstrRelaxTables.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -48,71 +49,7 @@ unsigned getShortBranchOpcode(unsigned Opcode) {
 }
 
 unsigned getShortArithOpcode(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return Opcode;
-
-  // IMUL
-  case X86::IMUL16rri:   return X86::IMUL16rri8;
-  case X86::IMUL16rmi:   return X86::IMUL16rmi8;
-  case X86::IMUL32rri:   return X86::IMUL32rri8;
-  case X86::IMUL32rmi:   return X86::IMUL32rmi8;
-  case X86::IMUL64rri32: return X86::IMUL64rri8;
-  case X86::IMUL64rmi32: return X86::IMUL64rmi8;
-
-  // OR
-  case X86::OR16ri:    return X86::OR16ri8;
-  case X86::OR16mi:    return X86::OR16mi8;
-  case X86::OR32ri:    return X86::OR32ri8;
-  case X86::OR32mi:    return X86::OR32mi8;
-  case X86::OR64ri32:  return X86::OR64ri8;
-  case X86::OR64mi32:  return X86::OR64mi8;
-
-  // AND
-  case X86::AND16ri:   return X86::AND16ri8;
-  case X86::AND16mi:   return X86::AND16mi8;
-  case X86::AND32ri:   return X86::AND32ri8;
-  case X86::AND32mi:   return X86::AND32mi8;
-  case X86::AND64ri32: return X86::AND64ri8;
-  case X86::AND64mi32: return X86::AND64mi8;
-
-  // XOR
-  case X86::XOR16ri:   return X86::XOR16ri8;
-  case X86::XOR16mi:   return X86::XOR16mi8;
-  case X86::XOR32ri:   return X86::XOR32ri8;
-  case X86::XOR32mi:   return X86::XOR32mi8;
-  case X86::XOR64ri32: return X86::XOR64ri8;
-  case X86::XOR64mi32: return X86::XOR64mi8;
-
-  // ADD
-  case X86::ADD16ri:   return X86::ADD16ri8;
-  case X86::ADD16mi:   return X86::ADD16mi8;
-  case X86::ADD32ri:   return X86::ADD32ri8;
-  case X86::ADD32mi:   return X86::ADD32mi8;
-  case X86::ADD64ri32: return X86::ADD64ri8;
-  case X86::ADD64mi32: return X86::ADD64mi8;
-
-  // SUB
-  case X86::SUB16ri:   return X86::SUB16ri8;
-  case X86::SUB16mi:   return X86::SUB16mi8;
-  case X86::SUB32ri:   return X86::SUB32ri8;
-  case X86::SUB32mi:   return X86::SUB32mi8;
-  case X86::SUB64ri32: return X86::SUB64ri8;
-  case X86::SUB64mi32: return X86::SUB64mi8;
-
-  // CMP
-  case X86::CMP16ri:   return X86::CMP16ri8;
-  case X86::CMP16mi:   return X86::CMP16mi8;
-  case X86::CMP32ri:   return X86::CMP32ri8;
-  case X86::CMP32mi:   return X86::CMP32mi8;
-  case X86::CMP64ri32: return X86::CMP64ri8;
-  case X86::CMP64mi32: return X86::CMP64mi8;
-
-  // PUSH
-  case X86::PUSHi32:    return X86::PUSH32i8;
-  case X86::PUSHi16:    return X86::PUSH16i8;
-  case X86::PUSH64i32:  return X86::PUSH64i8;
-  }
+  return X86::getShortOpcodeArith(Opcode);
 }
 
 bool isADD(unsigned Opcode) {
