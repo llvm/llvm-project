@@ -465,6 +465,21 @@ int main(int argc, char **argv) {
 
   const MCSchedModel &SM = STI->getSchedModel();
 
+  std::unique_ptr<mca::InstrPostProcess> IPP;
+  if (!DisableCustomBehaviour) {
+    // TODO: It may be a good idea to separate CB and IPP so that they can
+    // be used independently of each other. What I mean by this is to add
+    // an extra command-line arg --disable-ipp so that CB and IPP can be
+    // toggled without needing to toggle both of them together.
+    IPP = std::unique_ptr<mca::InstrPostProcess>(
+        TheTarget->createInstrPostProcess(*STI, *MCII));
+  }
+  if (!IPP) {
+    // If the target doesn't have its own IPP implemented (or the -disable-cb
+    // flag is set) then we use the base class (which does nothing).
+    IPP = std::make_unique<mca::InstrPostProcess>(*STI, *MCII);
+  }
+
   // Create an instruction builder.
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
@@ -498,16 +513,7 @@ int main(int argc, char **argv) {
     ArrayRef<MCInst> Insts = Region->getInstructions();
     mca::CodeEmitter CE(*STI, *MAB, *MCE, Insts);
 
-    std::unique_ptr<mca::InstrPostProcess> IPP;
-    if (!DisableCustomBehaviour) {
-      IPP = std::unique_ptr<mca::InstrPostProcess>(
-          TheTarget->createInstrPostProcess(*STI, *MCII));
-    }
-    if (!IPP)
-      // If the target doesn't have its own IPP implemented (or the
-      // -disable-cb flag is set) then we use the base class
-      // (which does nothing).
-      IPP = std::make_unique<mca::InstrPostProcess>(*STI, *MCII);
+    IPP->resetState();
 
     SmallVector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
