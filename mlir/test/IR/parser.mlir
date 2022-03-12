@@ -181,6 +181,12 @@ func @simpleCFGUsingBBArgs(i32, i64) {
 // CHECK: }
 }
 
+// CHECK-LABEL: func @block_label_empty_list
+func @block_label_empty_list() {
+^bb0():
+  return
+}
+
 // CHECK-LABEL: func @multiblock() {
 func @multiblock() {
   return     // CHECK:   return
