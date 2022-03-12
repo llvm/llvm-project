@@ -91,14 +91,12 @@ typedef struct {
   CXString ContextHash;
   CXStringSet *FileDeps;
   CXStringSet *ModuleDeps;
-  
+
   /**
-   * Additional arguments to append to the build of this file.
-   *
-   * This contains things like disabling implicit modules. This does not include
-   * the `-fmodule-file=` arguments that are needed.
+   * Full or additional arguments needed to build this file, excluding
+   * `-fmodule-file=`.
    */
-  CXStringSet *AdditionalArguments;
+  CXStringSet *BuildArguments;
 } CXFileDependencies;
 
 CINDEX_LINKAGE void
@@ -228,6 +226,19 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
  */
 CINDEX_LINKAGE CXFileDependencies *
 clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
+    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
+    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
+    void *Context, CXString *error);
+
+/**
+ * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v1,
+ * but \c BuildArguments of \c CXFileDependencies contains the full Clang
+ * command line, not just additional arguments, and \c BuildArguments of each
+ * \c CXModuleDependency now contain the necessary '-fmodule-map-file='
+ * arguments.
+ */
+CINDEX_LINKAGE CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *error);
