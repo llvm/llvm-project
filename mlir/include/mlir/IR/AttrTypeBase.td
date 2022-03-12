@@ -188,20 +188,20 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
 
   // Use the lowercased name as the keyword for parsing/printing. Specify only
   // if you want tblgen to generate declarations and/or definitions of
-  // the printer/parser.
+  // the printer/parser. If specified and the Attribute or Type contains
+  // parameters, `assemblyFormat` or `hasCustomAssemblyFormat` must also be
+  // specified.
   string mnemonic = ?;
 
-  // If 'mnemonic' specified,
-  //   If null, generate just the declarations.
-  //   If a non-empty code block, just use that code as the definition code.
-  //   Error if an empty code block.
-  code printer = ?;
-  code parser = ?;
-
   // Custom assembly format. Requires 'mnemonic' to be specified. Cannot be
-  // specified at the same time as either 'printer' or 'parser'. The generated
+  // specified at the same time as 'hasCustomAssemblyFormat'. The generated
   // printer requires 'genAccessors' to be true.
   string assemblyFormat = ?;
+  /// This field indicates that the attribute or type has a custom assembly format
+  /// implemented in C++. When set to `1` a `parse` and `print` method are generated
+  /// on the generated class. The attribute or type should implement these methods to
+  /// support the custom format.
+  bit hasCustomAssemblyFormat = 0;
 
   // If set, generate accessors for each parameter.
   bit genAccessors = 1;

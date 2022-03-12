@@ -42,6 +42,7 @@ def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
+  let hasCustomAssemblyFormat = 1;
 }
 
 def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {

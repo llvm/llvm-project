@@ -62,6 +62,30 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
     for (unsigned i = 0, e = parametersDag->getNumArgs(); i < e; ++i)
       parameters.push_back(AttrOrTypeParameter(parametersDag, i));
   }
+
+  // Verify the use of the mnemonic field.
+  bool hasCppFormat = hasCustomAssemblyFormat();
+  bool hasDeclarativeFormat = getAssemblyFormat().hasValue();
+  if (getMnemonic()) {
+    if (hasCppFormat && hasDeclarativeFormat) {
+      PrintFatalError(getLoc(), "cannot specify both 'assemblyFormat' "
+                                "and 'hasCustomAssemblyFormat'");
+    }
+    if (!parameters.empty() && !hasCppFormat && !hasDeclarativeFormat) {
+      PrintFatalError(getLoc(),
+                      "must specify either 'assemblyFormat' or "
+                      "'hasCustomAssemblyFormat' when 'mnemonic' is set");
+    }
+  } else if (hasCppFormat || hasDeclarativeFormat) {
+    PrintFatalError(getLoc(),
+                    "'assemblyFormat' or 'hasCustomAssemblyFormat' can only be "
+                    "used when 'mnemonic' is set");
+  }
+  // Assembly format requires accessors to be generated.
+  if (hasDeclarativeFormat && !genAccessors()) {
+    PrintFatalError(getLoc(),
+                    "'assemblyFormat' requires 'genAccessors' to be true");
+  }
 }
 
 Dialect AttrOrTypeDef::getDialect() const {
@@ -122,12 +146,8 @@ Optional<StringRef> AttrOrTypeDef::getMnemonic() const {
   return def->getValueAsOptionalString("mnemonic");
 }
 
-Optional<StringRef> AttrOrTypeDef::getPrinterCode() const {
-  return def->getValueAsOptionalString("printer");
-}
-
-Optional<StringRef> AttrOrTypeDef::getParserCode() const {
-  return def->getValueAsOptionalString("parser");
+bool AttrOrTypeDef::hasCustomAssemblyFormat() const {
+  return def->getValueAsBit("hasCustomAssemblyFormat");
 }
 
 Optional<StringRef> AttrOrTypeDef::getAssemblyFormat() const {
