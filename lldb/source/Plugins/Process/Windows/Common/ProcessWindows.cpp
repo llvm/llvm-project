@@ -18,6 +18,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -574,6 +575,10 @@ bool ProcessWindows::IsAlive() {
   default:
     return true;
   }
+}
+
+ArchSpec ProcessWindows::GetSystemArchitecture() {
+  return HostInfo::GetArchitecture();
 }
 
 size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,

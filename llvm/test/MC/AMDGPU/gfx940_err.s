@@ -31,6 +31,9 @@ v_mov_b64 v[2:3], v[4:5] dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWOR
 v_mov_b64_sdwa v[2:3], v[4:5]
 // GFX940: error: sdwa variant of this instruction is not supported
 
+buffer_invl2
+// GFX940: error: instruction not supported on this GPU
+
 global_load_dword v2, v[2:3], off glc
 // GFX940: error: invalid operand for instruction
 
@@ -47,4 +50,10 @@ buffer_atomic_swap v5, off, s[8:11], s3 glc
 // GFX940: error: invalid operand for instruction
 
 buffer_atomic_swap v5, off, s[8:11], s3 slc
+// GFX940: error: invalid operand for instruction
+
+buffer_wbl2 glc
+// GFX940: error: invalid operand for instruction
+
+buffer_wbl2 scc
 // GFX940: error: invalid operand for instruction

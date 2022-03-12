@@ -42,7 +42,7 @@ define internal i32 @test(i32* %X, i64* %Y) {
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    br label [[RETURN1:%.*]]
 ; IS__CGSCC____:       Return1:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 3
 ; IS__CGSCC____:       Return2:
 ; IS__CGSCC____-NEXT:    unreachable
 ;
@@ -63,7 +63,7 @@ define internal i32 @caller(i32* %A) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i64, align 8
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 3
 ;
   %B = alloca i64
   store i64 1, i64* %B

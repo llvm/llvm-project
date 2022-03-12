@@ -644,7 +644,7 @@ define i32* @not_captured_by_readonly_call_not_returned_either1(i32* %b, i32* re
 ; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
-; CHECK-NEXT:    ret i32* [[R]]
+; CHECK-NEXT:    ret i32* [[CALL]]
 ;
 entry:
   %call = call i32* @readonly_unknown(i32* %b, i32* %r) nounwind

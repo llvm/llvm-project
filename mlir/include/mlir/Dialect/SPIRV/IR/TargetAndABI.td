@@ -27,7 +27,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 // points in the generated SPIR-V module:
 // 1) WorkGroup Size.
 def SPV_EntryPointABIAttr : StructAttr<"EntryPointABIAttr", SPIRV_Dialect, [
-    StructFieldAttr<"local_size", I32ElementsAttr>
+    StructFieldAttr<"local_size", OptionalAttr<I32ElementsAttr>>
 ]>;
 
 def SPV_ExtensionArrayAttr : TypedArrayAttrBase<

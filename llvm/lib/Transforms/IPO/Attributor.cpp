@@ -1312,9 +1312,9 @@ bool Attributor::checkForAllUses(
         if (!Visited.insert(U).second)
           continue;
         SmallSetVector<Value *, 4> PotentialCopies;
-        if (AA::getPotentialCopiesOfStoredValue(*this, *SI, PotentialCopies,
-                                                QueryingAA,
-                                                UsedAssumedInformation)) {
+        if (AA::getPotentialCopiesOfStoredValue(
+                *this, *SI, PotentialCopies, QueryingAA, UsedAssumedInformation,
+                /* OnlyExact */ true)) {
           LLVM_DEBUG(dbgs() << "[Attributor] Value is stored, continue with "
                             << PotentialCopies.size()
                             << " potential copies instead!\n");
@@ -1796,6 +1796,9 @@ ChangeStatus Attributor::manifestAttributes() {
     if (!State.isValidState())
       continue;
 
+    if (AA->getCtxI() && !isRunOn(*AA->getAnchorScope()))
+      continue;
+
     // Skip dead code.
     bool UsedAssumedInformation = false;
     if (isAssumedDead(*AA, nullptr, UsedAssumedInformation,
@@ -1915,12 +1918,15 @@ ChangeStatus Attributor::cleanupIR() {
       NewV = Entry.first;
     } while (true);
 
+    Instruction *I = dyn_cast<Instruction>(U->getUser());
+    assert((!I || isRunOn(*I->getFunction())) &&
+           "Cannot replace an invoke outside the current SCC!");
+
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
-    if (auto *RI = dyn_cast<ReturnInst>(U->getUser())) {
+    if (auto *RI = dyn_cast_or_null<ReturnInst>(I)) {
       if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
-        if (CI->isMustTailCall() &&
-            (!ToBeDeletedInsts.count(CI) || !isRunOn(*CI->getCaller())))
+        if (CI->isMustTailCall() && !ToBeDeletedInsts.count(CI))
           return;
       // If we rewrite a return and the new value is not an argument, strip the
       // `returned` attribute as it is wrong now.
@@ -1930,8 +1936,8 @@ ChangeStatus Attributor::cleanupIR() {
     }
 
     // Do not perform call graph altering changes outside the SCC.
-    if (auto *CB = dyn_cast<CallBase>(U->getUser()))
-      if (CB->isCallee(U) && !isRunOn(*CB->getCaller()))
+    if (auto *CB = dyn_cast_or_null<CallBase>(I))
+      if (CB->isCallee(U))
         return;
 
     LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
@@ -2011,15 +2017,15 @@ ChangeStatus Attributor::cleanupIR() {
       }
     }
   for (Instruction *I : TerminatorsToFold) {
-    if (!isRunOn(*I->getFunction()))
-      continue;
+    assert(isRunOn(*I->getFunction()) &&
+           "Cannot replace a terminator outside the current SCC!");
     CGModifiedFunctions.insert(I->getFunction());
     ConstantFoldTerminator(I->getParent());
   }
   for (auto &V : ToBeChangedToUnreachableInsts)
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (!isRunOn(*I->getFunction()))
-        continue;
+      assert(isRunOn(*I->getFunction()) &&
+             "Cannot replace an instruction outside the current SCC!");
       CGModifiedFunctions.insert(I->getFunction());
       changeToUnreachable(I);
     }
@@ -2027,8 +2033,8 @@ ChangeStatus Attributor::cleanupIR() {
   for (auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
       if (auto *CB = dyn_cast<CallBase>(I)) {
-        if (!isRunOn(*I->getFunction()))
-          continue;
+        assert(isRunOn(*I->getFunction()) &&
+               "Cannot delete an instruction outside the current SCC!");
         if (!isa<IntrinsicInst>(CB))
           CGUpdater.removeCallSite(*CB);
       }
@@ -2043,9 +2049,7 @@ ChangeStatus Attributor::cleanupIR() {
     }
   }
 
-  llvm::erase_if(DeadInsts, [&](WeakTrackingVH I) {
-    return !I || !isRunOn(*cast<Instruction>(I)->getFunction());
-  });
+  llvm::erase_if(DeadInsts, [&](WeakTrackingVH I) { return !I; });
 
   LLVM_DEBUG({
     dbgs() << "[Attributor] DeadInsts size: " << DeadInsts.size() << "\n";
@@ -2599,6 +2603,9 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
               ARIs[OldArgNum]) {
         if (ARI->CalleeRepairCB)
           ARI->CalleeRepairCB(*ARI, *NewFn, NewFnArgIt);
+        if (ARI->ReplacementTypes.empty())
+          OldFnArgIt->replaceAllUsesWith(
+              PoisonValue::get(OldFnArgIt->getType()));
         NewFnArgIt += ARI->ReplacementTypes.size();
       } else {
         NewFnArgIt->takeName(&*OldFnArgIt);

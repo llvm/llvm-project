@@ -28,14 +28,23 @@ FAIL:
 }
 
 define internal i32 @foo(i1 %C) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; CHECK:       T:
-; CHECK-NEXT:    ret i32 undef
-; CHECK:       F:
-; CHECK-NEXT:    ret i32 undef
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
+; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT____:       T:
+; IS__TUNIT____-NEXT:    ret i32 undef
+; IS__TUNIT____:       F:
+; IS__TUNIT____-NEXT:    ret i32 undef
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
+; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC____:       T:
+; IS__CGSCC____-NEXT:    ret i32 52
+; IS__CGSCC____:       F:
+; IS__CGSCC____-NEXT:    ret i32 52
 ;
   br i1 %C, label %T, label %F
 

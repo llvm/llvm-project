@@ -71,6 +71,8 @@ public:
                           ThreadList &new_thread_list) override;
   bool IsAlive() override;
 
+  ArchSpec GetSystemArchitecture() override;
+
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override;
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,

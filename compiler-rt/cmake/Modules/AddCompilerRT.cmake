@@ -128,7 +128,7 @@ macro(set_output_name output name arch)
       if(COMPILER_RT_DEFAULT_TARGET_ONLY)
         set(triple "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
       else()
-        set(triple "${TARGET_TRIPLE}")
+        set(triple "${LLVM_TARGET_TRIPLE}")
       endif()
       # Except for baremetal, when using arch-suffixed runtime library names,
       # clang only looks for libraries named "arm" or "armhf", see

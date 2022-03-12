@@ -32,7 +32,7 @@ define internal i32 @wwrite(i64 %i) nounwind readnone {
 ; IS__CGSCC____-NEXT:    i64 10, label [[RETURN]]
 ; IS__CGSCC____-NEXT:    ]
 ; IS__CGSCC____:       sw.default:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 123
 ; IS__CGSCC____:       return:
 ; IS__CGSCC____-NEXT:    unreachable
 ;

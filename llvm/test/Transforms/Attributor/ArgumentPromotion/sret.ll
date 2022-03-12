@@ -9,15 +9,10 @@ target triple = "x86_64-pc-windows-msvc"
 
 define internal void @add({i32, i32}* %this, i32* sret(i32) %r) {
 ;
-; IS__TUNIT____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@add
-; IS__TUNIT____-SAME: ({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@add
-; IS__CGSCC____-SAME: ({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree nonnull readnone sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; CHECK-LABEL: define {{[^@]+}}@add
+; CHECK-SAME: ({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret void
 ;
   %ap = getelementptr {i32, i32}, {i32, i32}* %this, i32 0, i32 0
   %bp = getelementptr {i32, i32}, {i32, i32}* %this, i32 0, i32 1
@@ -38,7 +33,7 @@ define void @f() {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
+; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %r = alloca i32
@@ -52,5 +47,6 @@ define void @f() {
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
