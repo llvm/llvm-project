@@ -13,7 +13,7 @@ config.lldb_tools_dir = "@LLDB_TOOLS_DIR@"
 # Since it comes from the command line, it may have backslashes which
 # should not need to be escaped.
 config.lldb_lit_tools_dir = r"@LLDB_LIT_TOOLS_DIR@"
-config.target_triple = "@TARGET_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.swiftc = "@LLDB_SWIFTC@"
 config.lldb_enable_swift = @LLDB_ENABLE_SWIFT_SUPPORT@
