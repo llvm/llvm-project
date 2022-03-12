@@ -24,6 +24,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
@@ -125,7 +126,8 @@ public:
 
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
-      if (outputStream) {
+      if (outputStream && mlirMod) {
+        // runCIRToCIRPasses(mlirMod, mlirCtx.get());
         mlir::OpPrintingFlags flags;
         // FIXME: we cannot roundtrip prettyForm=true right now.
         flags.enableDebugInfo(/*prettyForm=*/false);

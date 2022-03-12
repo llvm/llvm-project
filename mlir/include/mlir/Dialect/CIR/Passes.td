@@ -11,6 +11,17 @@
 
 include "mlir/Pass/PassBase.td"
 
+def MergeCleanups : Pass<"cir-merge-cleanups"> {
+  let summary = "Remove unnecessary branches to cleanup blocks";
+  let description = [{
+    Canonicalize pass is too aggressive for CIR when the pipeline is
+    used for C/C++ analysis. This pass runs some rewrites for scopes,
+    merging some blocks and eliminating unnecessary control-flow.
+  }];
+  let constructor = "mlir::createMergeCleanupsPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def LifetimeCheck : Pass<"cir-lifetime-check"> {
   let summary = "Check lifetime safety and generate diagnostics";
   let description = [{
