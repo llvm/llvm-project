@@ -19,9 +19,8 @@ std::vector<std::string> FullDependencies::getCommandLine(
   std::vector<std::string> Ret = getCommandLineWithoutModulePaths();
 
   std::vector<std::string> PCMPaths;
-  std::vector<std::string> ModMapPaths;
-  dependencies::detail::collectPCMAndModuleMapPaths(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, PCMPaths, ModMapPaths);
+  dependencies::detail::collectPCMPaths(ClangModuleDeps, LookupPCMPath,
+                                        LookupModuleDeps, PCMPaths);
   for (const std::string &PCMPath : PCMPaths)
     Ret.push_back("-fmodule-file=" + PCMPath);
 

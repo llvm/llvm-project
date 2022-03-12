@@ -50,6 +50,7 @@
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
 // CHECK-ABS:          "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
 // CHECK-CUSTOM:       "-fmodule-file=[[PREFIX]]/custom/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
+// CHECK-NOT:          "-fimplicit-module-maps"
 // CHECK:              "-fmodule-name=header1"
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ],
@@ -66,6 +67,7 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=header1",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
@@ -83,6 +85,7 @@
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
 // CHECK:              "-fmodule-name=header2",
+// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H2_DINCLUDE]]",
