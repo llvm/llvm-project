@@ -503,7 +503,7 @@ void MCAsmStreamer::changeSection(MCSection *Section,
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
   } else {
-    Section->PrintSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
+    Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
                                   Subsection);
   }
 }

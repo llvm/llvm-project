@@ -25,7 +25,7 @@ void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
      << '\n';
 }
 
-void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
                                           const MCExpr *Subsection) const {
   if (getKind().isText()) {
@@ -120,7 +120,7 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   report_fatal_error("Printing for this SectionKind is unimplemented.");
 }
 
-bool MCSectionXCOFF::UseCodeAlign() const { return getKind().isText(); }
+bool MCSectionXCOFF::useCodeAlign() const { return getKind().isText(); }
 
 bool MCSectionXCOFF::isVirtualSection() const {
   // DWARF sections are always not virtual.

@@ -29,13 +29,13 @@ private:
       : MCSection(SV_GOFF, Name, K, nullptr) {}
 
 public:
-  void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             const MCExpr *Subsection) const override {
     OS << "\t.section\t\"" << getName() << "\"\n";
   }
 
-  bool UseCodeAlign() const override { return false; }
+  bool useCodeAlign() const override { return false; }
 
   bool isVirtualSection() const override { return false; }
 
