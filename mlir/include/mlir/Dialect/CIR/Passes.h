@@ -18,6 +18,7 @@
 namespace mlir {
 
 std::unique_ptr<Pass> createLifetimeCheckPass();
+std::unique_ptr<Pass> createMergeCleanupsPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

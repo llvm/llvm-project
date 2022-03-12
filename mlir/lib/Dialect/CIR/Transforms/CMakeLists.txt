@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRCIRTransforms
   LifetimeCheck.cpp
+  MergeCleanups.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/CIR
@@ -13,4 +14,5 @@ add_mlir_dialect_library(MLIRCIRTransforms
   MLIRIR
   MLIRCIR
   MLIRPass
+  MLIRTransformUtils
 )
