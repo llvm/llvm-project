@@ -15,7 +15,6 @@
 #define LLVM_CODEGEN_GLOBALISEL_COMBINER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 class MachineRegisterInfo;

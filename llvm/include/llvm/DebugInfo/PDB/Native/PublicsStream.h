@@ -9,20 +9,17 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PUBLICSSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PUBLICSSTREAM_H
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
-#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace msf {
+class MappedBlockStream;
+}
 namespace pdb {
-class DbiStream;
-struct GSIHashHeader;
-class PDBFile;
+struct PublicsStreamHeader;
+struct SectionOffset;
 
 class PublicsStream {
 public:

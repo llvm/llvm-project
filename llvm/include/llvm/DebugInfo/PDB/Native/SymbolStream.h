@@ -9,7 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 
 #include "llvm/Support/Error.h"
 
@@ -18,7 +18,6 @@ namespace msf {
 class MappedBlockStream;
 }
 namespace pdb {
-class PDBFile;
 
 class SymbolStream {
 public:
@@ -41,7 +40,7 @@ private:
   codeview::CVSymbolArray SymbolRecords;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 };
-}
+} // namespace pdb
 }
 
 #endif

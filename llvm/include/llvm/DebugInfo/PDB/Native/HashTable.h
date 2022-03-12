@@ -23,9 +23,6 @@
 
 namespace llvm {
 
-class BinaryStreamReader;
-class BinaryStreamWriter;
-
 namespace pdb {
 
 Error readSparseBitVector(BinaryStreamReader &Stream, SparseBitVector<> &V);

@@ -20,13 +20,11 @@
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -37,6 +35,12 @@
 #include <cstring>
 
 namespace llvm {
+namespace codeview {
+union DebugInfo;
+}
+namespace object {
+template <class ELFT> class ELFFile;
+}
 namespace symbolize {
 
 LLVMSymbolizer::LLVMSymbolizer() = default;
