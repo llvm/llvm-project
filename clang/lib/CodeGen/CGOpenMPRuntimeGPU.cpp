@@ -1060,9 +1060,11 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   int FlatAttr = 0;
   bool flatAttrEmitted = false;
   unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
-  // Sanitize the workgroup size received from the command line. This logic
-  // must be kept in sync with the amdgpu plugin
-  if (CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
+  // Sanitize the workgroup size received from the command line. Currently, we
+  // honor it only for SPMD kernels. This logic must be kept in sync with the
+  // amdgpu plugin
+  if (IsGeneric ||
+      CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
       CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
     CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
   unsigned DefaultWorkGroupSz =

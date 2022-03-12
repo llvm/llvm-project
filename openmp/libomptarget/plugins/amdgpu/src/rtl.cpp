@@ -1354,9 +1354,29 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
                    EnvironmentVariables Env, int ConstWGSize, int ExecutionMode,
                    int num_teams, int thread_limit, uint64_t loop_tripcount,
                    int DeviceNumTeams) {
+  if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD ||
+      ExecutionMode ==
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+    // ConstWGSize is used for communicating any command-line value to
+    // the plugin. ConstWGSize will either be the default workgroup
+    // size or a value set by CodeGen. If the kernel is SPMD, it means
+    // that the number of threads-per-group has not been adjusted by
+    // CodeGen. Since a generic mode may have been changed to
+    // generic_spmd by OpenMPOpt after adjustment of
+    // threads-per-group, we don't use ConstWGSize but instead start
+    // with the default for both generic and generic_spmd in the
+    // plugin so that any adjustment can be done again.
+    threadsPerGroup = ConstWGSize;
+  } else
+    threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
 
-  threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
-  num_groups = 0;
+  if (ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+    assert(loop_tripcount &&
+           "No loop exec mode needs a non-zero loop tripcount");
+    num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
+    return;
+  }
 
   int Max_Teams =
       Env.MaxTeamsDefault > 0 ? Env.MaxTeamsDefault : DeviceNumTeams;
@@ -1572,23 +1592,15 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
   int num_groups = 0;
+  int threadsPerGroup = 0;
 
-  int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
-
-  if (KernelInfo->ExecutionMode ==
-      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
-    assert(loop_tripcount &&
-           "No loop exec mode needs a non-zero loop tripcount");
-    num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
-  } else {
-    getLaunchVals(threadsPerGroup, num_groups, DeviceInfo.WarpSize[device_id],
-                  DeviceInfo.Env, KernelInfo->ConstWGSize,
-                  KernelInfo->ExecutionMode,
-                  num_teams,      // From run_region arg
-                  thread_limit,   // From run_region arg
-                  loop_tripcount, // From run_region arg
-                  DeviceInfo.NumTeams[KernelInfo->device_id]);
-  }
+  getLaunchVals(threadsPerGroup, num_groups, DeviceInfo.WarpSize[device_id],
+                DeviceInfo.Env, KernelInfo->ConstWGSize,
+                KernelInfo->ExecutionMode,
+                num_teams,      // From run_region arg
+                thread_limit,   // From run_region arg
+                loop_tripcount, // From run_region arg
+                DeviceInfo.NumTeams[KernelInfo->device_id]);
 
   if (print_kernel_trace >= LAUNCH) {
     // enum modes are SPMD, GENERIC, NONE 0,1,2
