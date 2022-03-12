@@ -51,6 +51,7 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
 
   CI.getLangOpts()->ImplicitModules = false;
   CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
+  CI.getHeaderSearchOpts().ModuleCachePath.clear();
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
