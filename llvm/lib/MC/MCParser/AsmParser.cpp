@@ -3470,9 +3470,9 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   // directive.
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
-  bool UseCodeAlign = Section->UseCodeAlign();
+  bool useCodeAlign = Section->useCodeAlign();
   if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&
-      ValueSize == 1 && UseCodeAlign) {
+      ValueSize == 1 && useCodeAlign) {
     getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
                                     MaxBytesToFill);
   } else {

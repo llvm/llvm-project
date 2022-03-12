@@ -903,7 +903,7 @@ void MipsTargetELFStreamer::finish() {
       unsigned Alignment = Section.getAlignment();
       if (Alignment) {
         OS.SwitchSection(&Section);
-        if (Section.UseCodeAlign())
+        if (Section.useCodeAlign())
           OS.emitCodeAlignment(Alignment, &STI, Alignment);
         else
           OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
