@@ -85,6 +85,10 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   llvm::StringSet<> FileDeps;
 
+  /// A collection of absolute paths to module map files that this module needs
+  /// to know about.
+  std::vector<std::string> ModuleMapFileDeps;
+
   /// A collection of prebuilt modular dependencies this module directly depends
   /// on, not including transitive dependencies.
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
@@ -122,13 +126,12 @@ struct ModuleDeps {
 };
 
 namespace detail {
-/// Collect the paths of PCM and module map files for the modules in \c Modules
-/// transitively.
-void collectPCMAndModuleMapPaths(
+/// Collect the paths of PCM for the modules in \c Modules transitively.
+void collectPCMPaths(
     llvm::ArrayRef<ModuleID> Modules,
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths);
+    std::vector<std::string> &PCMPaths);
 } // namespace detail
 
 class ModuleDepCollector;

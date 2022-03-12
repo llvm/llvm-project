@@ -26,6 +26,7 @@
 // CHECK-PCH-NEXT:         "-cc1"
 // CHECK-PCH:              "-emit-module"
 // CHECK-PCH:              "-fmodules"
+// CHECK-PCH-NOT:          "-fimplicit-module-maps"
 // CHECK-PCH:              "-fmodule-name=ModCommon1"
 // CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
@@ -43,6 +44,7 @@
 // CHECK-PCH-NEXT:         "-cc1"
 // CHECK-PCH:              "-emit-module"
 // CHECK-PCH:              "-fmodules"
+// CHECK-PCH-NOT:          "-fimplicit-module-maps"
 // CHECK-PCH:              "-fmodule-name=ModCommon2"
 // CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
@@ -66,6 +68,7 @@
 // CHECK-PCH:              "-emit-module"
 // CHECK-PCH:              "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_2]]/ModCommon2-{{.*}}.pcm"
 // CHECK-PCH:              "-fmodules"
+// CHECK-PCH-NOT:          "-fimplicit-module-maps"
 // CHECK-PCH:              "-fmodule-name=ModPCH"
 // CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
@@ -139,6 +142,7 @@
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU-NEXT:         "-cc1",
 // CHECK-TU:              "-emit-module",
+// CHECK-TU-NOT:          "-fimplicit-module-maps",
 // CHECK-TU:              "-fmodule-name=ModTU",
 // CHECK-TU:              "-fno-implicit-modules",
 // CHECK-TU:            ],
@@ -202,6 +206,7 @@
 // CHECK-TU-WITH-COMMON-NEXT:         "-cc1",
 // CHECK-TU-WITH-COMMON:              "-emit-module",
 // CHECK-TU-WITH-COMMON:              "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon1-{{.*}}.pcm",
+// CHECK-TU-WITH-COMMON-NOT:          "-fimplicit-module-maps",
 // CHECK-TU-WITH-COMMON:              "-fmodule-name=ModTUWithCommon",
 // CHECK-TU-WITH-COMMON:              "-fno-implicit-modules",
 // CHECK-TU-WITH-COMMON:            ],

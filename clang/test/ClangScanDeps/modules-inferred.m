@@ -25,6 +25,7 @@ inferred a = 0;
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=Inferred",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
