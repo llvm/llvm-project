@@ -45,7 +45,7 @@ DictionaryConfig::DictionaryConfig()
   // still used to name classes in the ObjC runtime.
 
   m_nativeStorageRoot_mangled =
-    ConstString("_TtCs22__RawDictionaryStorage");
+    ConstString("$ss22__RawDictionaryStorageCD");
   m_nativeStorageRoot_demangled =
     ConstString("Swift.__RawDictionaryStorage");
 

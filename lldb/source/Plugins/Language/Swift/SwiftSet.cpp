@@ -46,7 +46,7 @@ SetConfig::SetConfig()
   // still used to name classes in the ObjC runtime.
 
   m_nativeStorageRoot_mangled =
-    ConstString("_TtCs15__RawSetStorage");
+    ConstString("$ss15__RawSetStorageCD");
   m_nativeStorageRoot_demangled =
     ConstString("Swift.__RawSetStorage");
 
