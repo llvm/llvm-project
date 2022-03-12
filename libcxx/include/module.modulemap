@@ -294,6 +294,9 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_find              { private header "__algorithm/ranges_find.h" }
+      module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
+      module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
       module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
       module ranges_min_element       { private header "__algorithm/ranges_min_element.h" }
       module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }

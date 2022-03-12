@@ -66,6 +66,9 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/push_heap.h
+  __algorithm/ranges_find.h
+  __algorithm/ranges_find_if.h
+  __algorithm/ranges_find_if_not.h
   __algorithm/ranges_max_element.h
   __algorithm/ranges_min_element.h
   __algorithm/ranges_mismatch.h

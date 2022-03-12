@@ -2,9 +2,9 @@ Category,Algorithm,Assignee,CL,Complete
 Search,any_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
 Search,all_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
 Search,none_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
-Search,find,Christopher Di Bella,`D105456 <https://llvm.org/D105456>`_
-Search,find_if,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
-Search,find_if_not,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
+Search,find,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
+Search,find_if,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
+Search,find_if_not,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_first_of,Not assigned,n/a,Not started
 Search,adjacent_find,Not assigned,n/a,Not started
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`,Complete

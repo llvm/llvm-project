@@ -54,7 +54,7 @@ constexpr bool test(CPO& o, Args&&...) {
 
 int *p;
 int a[10];
-//auto odd = [](int x) { return x % 2 != 0; };
+auto odd = [](int x) { return x % 2 != 0; };
 //auto triple = [](int x) { return 3*x; };
 //auto plus = [](int x, int y) { return x == y; };
 //std::mt19937 g;
@@ -77,11 +77,11 @@ int a[10];
 //static_assert(test(std::ranges::equal_range, a, 42));
 //static_assert(test(std::ranges::fill, a, 42));
 //static_assert(test(std::ranges::fill_n, a, 10, 42));
-//static_assert(test(std::ranges::find, a, 42));
+static_assert(test(std::ranges::find, a, 42));
 //static_assert(test(std::ranges::find_end, a, a));
 //static_assert(test(std::ranges::find_first_of, a, a));
-//static_assert(test(std::ranges::find_if, a, odd));
-//static_assert(test(std::ranges::find_if_not, a, odd));
+static_assert(test(std::ranges::find_if, a, odd));
+static_assert(test(std::ranges::find_if_not, a, odd));
 //static_assert(test(std::ranges::for_each, a, odd));
 //static_assert(test(std::ranges::for_each_n, a, 10, odd));
 //static_assert(test(std::ranges::generate, a, 42));
