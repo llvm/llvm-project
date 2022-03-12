@@ -93,7 +93,7 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
     // Emit DWARF .file directives in the outermost scope.
     outputDwarfFileDirectives();
     OS << "\t.section";
-    Section->PrintSwitchToSection(*getStreamer().getContext().getAsmInfo(),
+    Section->printSwitchToSection(*getStreamer().getContext().getAsmInfo(),
                                   getStreamer().getContext().getTargetTriple(),
                                   OS, SubSection);
     // DWARF sections are enclosed into braces - emit the open one.
