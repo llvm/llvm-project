@@ -459,10 +459,6 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
     m_value_stride = value_type_stride ? *value_type_stride : 0;
     if (TypeSystemSwift *type_system =
             llvm::dyn_cast_or_null<TypeSystemSwift>(key_type.GetTypeSystem())) {
-      llvm::Optional<SwiftScratchContextReader> scratch_ctx_reader =
-          nativeStorage_sp->GetSwiftScratchContext();
-      if (!scratch_ctx_reader)
-        return;
       auto *runtime = SwiftLanguageRuntime::Get(m_process);
       if (!runtime)
         return;
