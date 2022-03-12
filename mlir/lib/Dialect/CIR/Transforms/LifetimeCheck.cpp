@@ -21,8 +21,6 @@ using namespace cir;
 namespace {
 struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   LifetimeCheckPass() = default;
-
-  // Prints the resultant operation statistics post iterating over the module.
   void runOnOperation() override;
 
   void checkOperation(Operation *op);
@@ -432,9 +430,7 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
     return;
   }
 
-  storeOp.dump();
-  // FIXME: asserts here should become remarks for non-implemented parts.
-  assert(0 && "not implemented");
+  // From here on, some uninterestring store (for now?)
 }
 
 void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
