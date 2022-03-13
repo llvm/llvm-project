@@ -1344,7 +1344,8 @@ bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
     if ((exprLeft.value().source.ToString() != variableName) &&
         (exprRight.value().source.ToString() != variableName)) {
       context_.Say(variable.GetSource(),
-          "Atomic update variable '%s' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct"_err_en_US,
+          "Atomic update variable '%s' not found in the RHS of the "
+          "assignment statement in an ATOMIC (UPDATE) construct"_err_en_US,
           variableName);
     }
     return common::HasMember<T, AllowedBinaryOperators>;
@@ -1368,7 +1369,8 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
                     name->source == "iand" || name->source == "ior" ||
                     name->source == "ieor")) {
               context_.Say(expr.source,
-                  "Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement"_err_en_US);
+                  "Invalid intrinsic procedure name in "
+                  "OpenMP ATOMIC (UPDATE) statement"_err_en_US);
             } else if (name) {
               bool foundMatch{false};
               if (auto varDesignatorIndirection =
@@ -1394,7 +1396,8 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
               }
               if (!foundMatch) {
                 context_.Say(expr.source,
-                    "Atomic update variable '%s' not found in the argument list of intrinsic procedure"_err_en_US,
+                    "Atomic update variable '%s' not found in the "
+                    "argument list of intrinsic procedure"_err_en_US,
                     var.GetSource().ToString());
               }
             }
@@ -1417,7 +1420,8 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
       numMemoryOrderClause++;
       if (numMemoryOrderClause > 1) {
         context_.Say(clause.source,
-            "More than one memory order clause not allowed on OpenMP Atomic construct"_err_en_US);
+            "More than one memory order clause not allowed on OpenMP "
+            "Atomic construct"_err_en_US);
         return;
       }
     }
@@ -1433,7 +1437,8 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
       numMemoryOrderClause++;
       if (numMemoryOrderClause > 1) {
         context_.Say(clause.source,
-            "More than one memory order clause not allowed on OpenMP Atomic construct"_err_en_US);
+            "More than one memory order clause not allowed on "
+            "OpenMP Atomic construct"_err_en_US);
         return;
       }
     }
@@ -1443,7 +1448,8 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
       numMemoryOrderClause++;
       if (numMemoryOrderClause > 1) {
         context_.Say(clause.source,
-            "More than one memory order clause not allowed on OpenMP Atomic construct"_err_en_US);
+            "More than one memory order clause not "
+            "allowed on OpenMP Atomic construct"_err_en_US);
         return;
       }
     }
