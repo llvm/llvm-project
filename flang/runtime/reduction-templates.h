@@ -44,8 +44,8 @@ inline void DoTotalReduction(const Descriptor &x, int dim,
     const Descriptor *mask, ACCUMULATOR &accumulator, const char *intrinsic,
     Terminator &terminator) {
   if (dim < 0 || dim > 1) {
-    terminator.Crash(
-        "%s: bad DIM=%d for argument with rank %d", intrinsic, dim, x.rank());
+    terminator.Crash("%s: bad DIM=%d for ARRAY argument with rank %d",
+        intrinsic, dim, x.rank());
   }
   SubscriptValue xAt[maxRank];
   x.GetLowerBounds(xAt);
@@ -166,7 +166,8 @@ static void CreatePartialReductionResult(Descriptor &result,
     TypeCode typeCode) {
   int xRank{x.rank()};
   if (dim < 1 || dim > xRank) {
-    terminator.Crash("%s: bad DIM=%d for rank %d", intrinsic, dim, xRank);
+    terminator.Crash(
+        "%s: bad DIM=%d for ARRAY with rank %d", intrinsic, dim, xRank);
   }
   int zeroBasedDim{dim - 1};
   SubscriptValue resultExtent[maxRank];
@@ -295,7 +296,7 @@ inline void TypedPartialNumericReduction(Descriptor &result,
         intrinsic);
     break;
   default:
-    terminator.Crash("%s: invalid type code %d", intrinsic, x.type().raw());
+    terminator.Crash("%s: bad type code %d", intrinsic, x.type().raw());
   }
 }
 
