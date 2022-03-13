@@ -4659,12 +4659,58 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
                                    DAG.getConstant(1, DL, XLenVT));
 
     // Double the VL since we halved SEW.
-    SDValue VL = getVLOperand(Op);
-    SDValue I32VL =
-        DAG.getNode(ISD::SHL, DL, XLenVT, VL, DAG.getConstant(1, DL, XLenVT));
+    SDValue AVL = getVLOperand(Op);
+    SDValue I32VL;
+
+    // Optimize for constant AVL
+    if (isa<ConstantSDNode>(AVL)) {
+      unsigned EltSize = VT.getScalarSizeInBits();
+      unsigned MinSize = VT.getSizeInBits().getKnownMinValue();
+
+      unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
+      unsigned MaxVLMAX =
+          RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+
+      unsigned VectorBitsMin = Subtarget.getRealMinVLen();
+      unsigned MinVLMAX =
+          RISCVTargetLowering::computeVLMAX(VectorBitsMin, EltSize, MinSize);
+
+      uint64_t AVLInt = cast<ConstantSDNode>(AVL)->getZExtValue();
+      if (AVLInt <= MinVLMAX) {
+        I32VL = DAG.getConstant(2 * AVLInt, DL, XLenVT);
+      } else if (AVLInt >= 2 * MaxVLMAX) {
+        // Just set vl to VLMAX in this situation
+        RISCVII::VLMUL Lmul = RISCVTargetLowering::getLMUL(I32VT);
+        SDValue LMUL = DAG.getConstant(Lmul, DL, XLenVT);
+        unsigned Sew = RISCVVType::encodeSEW(I32VT.getScalarSizeInBits());
+        SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
+        SDValue SETVLMAX = DAG.getTargetConstant(
+            Intrinsic::riscv_vsetvlimax_opt, DL, MVT::i32);
+        I32VL = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, SETVLMAX, SEW,
+                            LMUL);
+      } else {
+        // For AVL between (MinVLMAX, 2 * MaxVLMAX), the actual working vl
+        // is related to the hardware implementation.
+        // So let the following code handle
+      }
+    }
+    if (!I32VL) {
+      RISCVII::VLMUL Lmul = RISCVTargetLowering::getLMUL(VT);
+      SDValue LMUL = DAG.getConstant(Lmul, DL, XLenVT);
+      unsigned Sew = RISCVVType::encodeSEW(VT.getScalarSizeInBits());
+      SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
+      SDValue SETVL =
+          DAG.getTargetConstant(Intrinsic::riscv_vsetvli_opt, DL, MVT::i32);
+      // Using vsetvli instruction to get actually used length which related to
+      // the hardware implementation
+      SDValue VL = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, SETVL, AVL,
+                               SEW, LMUL);
+      I32VL =
+          DAG.getNode(ISD::SHL, DL, XLenVT, VL, DAG.getConstant(1, DL, XLenVT));
+    }
 
     MVT I32MaskVT = MVT::getVectorVT(MVT::i1, I32VT.getVectorElementCount());
-    SDValue I32Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, I32MaskVT, VL);
+    SDValue I32Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, I32MaskVT, I32VL);
 
     // Shift the two scalar parts in using SEW=32 slide1up/slide1down
     // instructions.
@@ -4704,10 +4750,11 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
     // TAMU
     if (Policy == RISCVII::TAIL_AGNOSTIC)
       return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, Mask, Vec, MaskedOff,
-                         VL);
+                         AVL);
     // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
     // It's fine because vmerge does not care mask policy.
-    return DAG.getNode(RISCVISD::VP_MERGE_VL, DL, VT, Mask, Vec, MaskedOff, VL);
+    return DAG.getNode(RISCVISD::VP_MERGE_VL, DL, VT, Mask, Vec, MaskedOff,
+                       AVL);
   }
   }
 
@@ -5606,7 +5653,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   unsigned MaxVLMAX = 0;
   unsigned VectorBitsMax = Subtarget.getMaxRVVVectorSizeInBits();
   if (VectorBitsMax != 0)
-    MaxVLMAX = ((VectorBitsMax / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
+    MaxVLMAX =
+        RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
 
   unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
   MVT IntVT = VecVT.changeVectorElementTypeToInteger();

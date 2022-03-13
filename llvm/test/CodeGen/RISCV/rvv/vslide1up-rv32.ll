@@ -874,6 +874,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
 define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v9, v8, a1
@@ -900,7 +901,8 @@ declare <vscale x 1 x i64> @llvm.riscv.vslide1up.mask.nxv1i64.i64(
 define <vscale x 1 x i64> @intrinsic_vslide1up_mask_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_mask_vx_nxv1i64_nxv1i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    vsetvli a3, a2, e64, m1, ta, mu
+; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v10, v9, a1
 ; CHECK-NEXT:    vslide1up.vx v9, v10, a0
@@ -927,6 +929,7 @@ declare <vscale x 2 x i64> @llvm.riscv.vslide1up.nxv2i64.i64(
 define <vscale x 2 x i64> @intrinsic_vslide1up_vx_nxv2i64_nxv2i64_i64(<vscale x 2 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_vx_nxv2i64_nxv2i64_i64:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v10, v8, a1
@@ -953,7 +956,8 @@ declare <vscale x 2 x i64> @llvm.riscv.vslide1up.mask.nxv2i64.i64(
 define <vscale x 2 x i64> @intrinsic_vslide1up_mask_vx_nxv2i64_nxv2i64_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, i64 %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_mask_vx_nxv2i64_nxv2i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    vsetvli a3, a2, e64, m2, ta, mu
+; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m2, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v12, v10, a1
 ; CHECK-NEXT:    vslide1up.vx v10, v12, a0
@@ -980,6 +984,7 @@ declare <vscale x 4 x i64> @llvm.riscv.vslide1up.nxv4i64.i64(
 define <vscale x 4 x i64> @intrinsic_vslide1up_vx_nxv4i64_nxv4i64_i64(<vscale x 4 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_vx_nxv4i64_nxv4i64_i64:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v12, v8, a1
@@ -1006,7 +1011,8 @@ declare <vscale x 4 x i64> @llvm.riscv.vslide1up.mask.nxv4i64.i64(
 define <vscale x 4 x i64> @intrinsic_vslide1up_mask_vx_nxv4i64_nxv4i64_i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, i64 %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_mask_vx_nxv4i64_nxv4i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    vsetvli a3, a2, e64, m4, ta, mu
+; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m4, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v16, v12, a1
 ; CHECK-NEXT:    vslide1up.vx v12, v16, a0
@@ -1033,6 +1039,7 @@ declare <vscale x 8 x i64> @llvm.riscv.vslide1up.nxv8i64.i64(
 define <vscale x 8 x i64> @intrinsic_vslide1up_vx_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_vx_nxv8i64_nxv8i64_i64:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64, m8, ta, mu
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v16, v8, a1
@@ -1059,7 +1066,8 @@ declare <vscale x 8 x i64> @llvm.riscv.vslide1up.mask.nxv8i64.i64(
 define <vscale x 8 x i64> @intrinsic_vslide1up_mask_vx_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, i64 %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1up_mask_vx_nxv8i64_nxv8i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    vsetvli a3, a2, e64, m8, ta, mu
+; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v24, v16, a1
 ; CHECK-NEXT:    vslide1up.vx v16, v24, a0
