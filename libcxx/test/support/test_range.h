@@ -13,7 +13,7 @@
 
 #include "test_iterators.h"
 
-#ifdef _LIBCPP_HAS_NO_CONCEPTS
+#if _LIBCPP_STD_VER < 17
 #error "test/support/test_range.h" can only be included in builds supporting ranges
 #endif
 

@@ -367,9 +367,6 @@ define void @ossfuzz34366() {
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete (%eax)
 ; X86-NEXT:    retl
 ;
@@ -378,8 +375,6 @@ define void @ossfuzz34366() {
 ; X64-NEXT:    movq (%rax), %rax
 ; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    andq %rax, %rcx
-; X64-NEXT:    orq %rax, %rcx
-; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    sete (%rax)
 ; X64-NEXT:    retq

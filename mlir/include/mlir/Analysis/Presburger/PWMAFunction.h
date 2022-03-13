@@ -17,7 +17,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 
 namespace mlir {
 namespace presburger {

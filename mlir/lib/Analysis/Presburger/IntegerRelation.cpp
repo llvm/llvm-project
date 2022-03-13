@@ -14,7 +14,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/LinearTransform.h"
-#include "mlir/Analysis/Presburger/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -52,28 +52,14 @@ void IntegerRelation::append(const IntegerRelation &other) {
   }
 }
 
-static IntegerPolyhedron createSetFromRelation(const IntegerRelation &rel) {
-  IntegerPolyhedron result(rel.getNumDimIds(), rel.getNumSymbolIds(),
-                           rel.getNumLocalIds());
-
-  for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i)
-    result.addInequality(rel.getInequality(i));
-  for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i)
-    result.addEquality(rel.getEquality(i));
-
-  return result;
-}
-
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   assert(PresburgerLocalSpace::isEqual(other) && "Spaces must be equal.");
-  return PresburgerSet(createSetFromRelation(*this))
-      .isEqual(PresburgerSet(createSetFromRelation(other)));
+  return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
   assert(PresburgerLocalSpace::isEqual(other) && "Spaces must be equal.");
-  return PresburgerSet(createSetFromRelation(*this))
-      .isSubsetOf(PresburgerSet(createSetFromRelation(other)));
+  return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
 }
 
 MaybeOptimum<SmallVector<Fraction, 8>>
