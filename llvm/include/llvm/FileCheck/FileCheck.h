@@ -14,14 +14,17 @@
 #define LLVM_FILECHECK_FILECHECK_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SMLoc.h"
 #include <bitset>
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace llvm {
+class MemoryBuffer;
+class SourceMgr;
+template <typename T> class SmallVectorImpl;
 
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {

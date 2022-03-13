@@ -1278,7 +1278,10 @@ def S_SLEEP : SOPP_Pseudo <"s_sleep", (ins i32imm:$simm16),
   let hasSideEffects = 1;
 }
 
-def S_SETPRIO : SOPP_Pseudo <"s_setprio" , (ins i16imm:$simm16), "$simm16">;
+def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_setprio timm:$simm16)]> {
+  let hasSideEffects = 1;
+}
 
 let Uses = [EXEC, M0] in {
 // FIXME: Should this be mayLoad+mayStore?

@@ -12,8 +12,8 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include <cstdint>
 #include <map>
 #include <set>
@@ -21,6 +21,8 @@
 namespace llvm {
 class raw_ostream;
 struct DWARFAddressRange;
+class DWARFUnit;
+class DWARFUnitVector;
 struct DWARFAttribute;
 class DWARFContext;
 class DWARFDataExtractor;

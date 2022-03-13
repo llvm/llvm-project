@@ -13,7 +13,6 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
 

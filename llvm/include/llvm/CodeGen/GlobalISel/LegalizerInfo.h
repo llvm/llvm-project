@@ -14,26 +14,26 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <tuple>
-#include <unordered_map>
 #include <utility>
 
 namespace llvm {
 
 extern cl::opt<bool> DisableGISelLegalityCheck;
 
+class MachineFunction;
+class raw_ostream;
 class LegalizerHelper;
 class MachineInstr;
 class MachineRegisterInfo;

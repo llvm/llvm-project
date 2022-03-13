@@ -9,7 +9,6 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
@@ -20,7 +19,6 @@
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 

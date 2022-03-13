@@ -3,7 +3,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"

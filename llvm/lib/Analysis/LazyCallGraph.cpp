@@ -9,7 +9,6 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +33,10 @@
 #include <string>
 #include <tuple>
 #include <utility>
+
+#ifdef EXPENSIVE_CHECKS
+#include "llvm/ADT/ScopeExit.h"
+#endif
 
 using namespace llvm;
 

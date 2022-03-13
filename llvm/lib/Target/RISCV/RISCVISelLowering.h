@@ -317,6 +317,11 @@ enum NodeType : unsigned {
 };
 } // namespace RISCVISD
 
+namespace RISCV {
+// We use 64 bits as the known part in the scalable vector types.
+static constexpr unsigned RVVBitsPerBlock = 64;
+} // namespace RISCV
+
 class RISCVTargetLowering : public TargetLowering {
   const RISCVSubtarget &Subtarget;
 
@@ -531,6 +536,15 @@ public:
                              Optional<CallingConv::ID> CC) const override;
 
   static RISCVII::VLMUL getLMUL(MVT VT);
+  inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
+                                      unsigned MinSize) {
+    // Original equation:
+    //   VLMAX = (VectorBits / EltSize) * LMUL
+    //   where LMUL = MinSize / RISCV::RVVBitsPerBlock
+    // The following equations have been reordered to prevent loss of precision
+    // when calculating fractional LMUL.
+    return ((VectorBits / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
+  };
   static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
@@ -671,12 +685,6 @@ private:
     return false;
   };
 };
-
-namespace RISCV {
-// We use 64 bits as the known part in the scalable vector types.
-static constexpr unsigned RVVBitsPerBlock = 64;
-} // namespace RISCV
-
 namespace RISCVVIntrinsicsTable {
 
 struct RISCVVIntrinsicInfo {

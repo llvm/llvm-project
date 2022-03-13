@@ -9,21 +9,15 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
-#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
 class BinaryStreamReader;
-
-namespace msf {
-class MappedBlockStream;
-}
 
 namespace pdb {
 

@@ -17,18 +17,19 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 
 namespace llvm {
 // Forward declarations.
+class AnalysisUsage;
+class GStore;
+class LegalizerInfo;
+class MachineBasicBlock;
+class MachineInstr;
+class TargetLowering;
+struct LegalityQuery;
 class MachineRegisterInfo;
 namespace GISelAddressing {
 /// Helper struct to store a base, index and offset that forms an address
