@@ -1877,6 +1877,13 @@ TEST_F(FormatTest, UnderstandsMacros) {
   verifyFormat("#define __except(x)");
   verifyFormat("#define __try(x)");
 
+  // https://llvm.org/PR54348.
+  verifyFormat(
+      "#define A"
+      "                                                                      "
+      "\\\n"
+      "  class & {}");
+
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
