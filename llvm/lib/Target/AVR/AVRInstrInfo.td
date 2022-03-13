@@ -194,6 +194,11 @@ def brtarget_13 : Operand<OtherVT> {
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
 }
 
+def rcalltarget_13 : Operand<i16> {
+  let PrintMethod = "printPCRelImm";
+  let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+}
+
 // The target of a 22 or 16-bit call/jmp instruction.
 def call_target : Operand<iPTR> {
   let EncoderMethod = "encodeCallTarget";
@@ -965,10 +970,8 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in {
 let isCall = 1 in {
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
-  let Uses = [SP] in def RCALLk : FBRk<1, (outs),
-                                       (ins brtarget_13
-                                        : $target),
-                                       "rcall\t$target", []>;
+  let Uses = [SP] in def RCALLk : FBRk<1, (outs), (ins rcalltarget_13:$k),
+                                       "rcall\t$k", [(AVRcall imm:$k)]>;
 
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
@@ -985,13 +988,10 @@ let isCall = 1 in {
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
   //
-  //: TODO: the imm field can be either 16 or 22 bits in devices with more
+  // TODO: the imm field can be either 16 or 22 bits in devices with more
   // than 64k of ROM, fix it once we support the largest devices.
-  let Uses = [SP] in def CALLk : F32BRk<0b111, (outs),
-                                        (ins call_target
-                                         : $k),
-                                        "call\t$k", [(AVRcall imm
-                                                      : $k)]>,
+  let Uses = [SP] in def CALLk : F32BRk<0b111, (outs), (ins call_target:$k),
+                                        "call\t$k", [(AVRcall imm:$k)]>,
       Requires<[HasJMPCALL]>;
 }
 
@@ -2457,8 +2457,12 @@ def : Pat<(adde i8
                      : $src2))>;
 
 // Calls.
-def : Pat<(AVRcall(i16 tglobaladdr : $dst)), (CALLk tglobaladdr : $dst)>;
-def : Pat<(AVRcall(i16 texternalsym : $dst)), (CALLk texternalsym : $dst)>;
+let Predicates = [HasJMPCALL] in {
+  def : Pat<(AVRcall(i16 tglobaladdr:$dst)), (CALLk tglobaladdr:$dst)>;
+  def : Pat<(AVRcall(i16 texternalsym:$dst)), (CALLk texternalsym:$dst)>;
+}
+def : Pat<(AVRcall(i16 tglobaladdr:$dst)), (RCALLk tglobaladdr:$dst)>;
+def : Pat<(AVRcall(i16 texternalsym:$dst)), (RCALLk texternalsym:$dst)>;
 
 // `anyext`
 def : Pat<(i16(anyext i8
