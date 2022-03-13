@@ -29,3 +29,8 @@ Example:
     std::shared_ptr<Foo> x(new Foo[10]); // no replacement in this case
     //                     ^ warning: shared pointer to non-array is initialized with array [bugprone-shared-ptr-array-mismatch]
   };
+
+This check partially covers the CERT C++ Coding Standard rule
+`MEM51-CPP. Properly deallocate dynamically allocated resources
+<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MEM51-CPP.+Properly+deallocate+dynamically+allocated+resources>`_
+However, only the ``std::shared_ptr`` case is detected by this check.
