@@ -23,7 +23,8 @@ std::int64_t RTNAME(LboundDim)(
     const Descriptor &array, int dim, const char *sourceFile, int line) {
   if (dim < 1 || dim > array.rank()) {
     Terminator terminator{sourceFile, line};
-    terminator.Crash("SIZE: bad DIM=%d", dim);
+    terminator.Crash(
+        "SIZE: bad DIM=%d for ARRAY with rank=%d", dim, array.rank());
   }
   const Dimension &dimension{array.GetDimension(dim - 1)};
   return static_cast<std::int64_t>(dimension.LowerBound());
@@ -68,7 +69,8 @@ std::int64_t RTNAME(SizeDim)(
     const Descriptor &array, int dim, const char *sourceFile, int line) {
   if (dim < 1 || dim > array.rank()) {
     Terminator terminator{sourceFile, line};
-    terminator.Crash("SIZE: bad DIM=%d", dim);
+    terminator.Crash(
+        "SIZE: bad DIM=%d for ARRAY with rank=%d", dim, array.rank());
   }
   const Dimension &dimension{array.GetDimension(dim - 1)};
   return static_cast<std::int64_t>(dimension.Extent());
