@@ -52086,6 +52086,16 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
+  // Peek through any zero-extend if we're only testing for a zero result.
+  if (Op.getOpcode() == ISD::ZERO_EXTEND && onlyZeroFlagUsed(SDValue(N, 0))) {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.getScalarSizeInBits() >= 8 &&
+        DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+      return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Src,
+                         DAG.getConstant(0, dl, SrcVT));
+  }
+
   // Look for a truncate.
   if (Op.getOpcode() != ISD::TRUNCATE)
     return SDValue();

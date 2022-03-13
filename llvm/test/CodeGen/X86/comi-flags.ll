@@ -13,9 +13,7 @@ define i32 @test_x86_sse_comieq_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i3
 ; SSE-NEXT:    comiss %xmm1, %xmm0
 ; SSE-NEXT:    setnp %cl
 ; SSE-NEXT:    sete %dl
-; SSE-NEXT:    andb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
+; SSE-NEXT:    testb %cl, %dl
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
@@ -25,9 +23,7 @@ define i32 @test_x86_sse_comieq_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i3
 ; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    setnp %cl
 ; AVX-NEXT:    sete %dl
-; AVX-NEXT:    andb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
+; AVX-NEXT:    testb %cl, %dl
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse.comieq.ss(<4 x float> %a0, <4 x float> %a1)
@@ -124,26 +120,18 @@ declare i32 @llvm.x86.sse.comilt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comineq_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse_comineq_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    movl %esi, %eax
 ; SSE-NEXT:    comiss %xmm1, %xmm0
-; SSE-NEXT:    setp %cl
-; SSE-NEXT:    setne %dl
-; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
-; SSE-NEXT:    cmovel %esi, %eax
+; SSE-NEXT:    cmovnel %edi, %eax
+; SSE-NEXT:    cmovpl %edi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_x86_sse_comineq_ss:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    movl %esi, %eax
 ; AVX-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-NEXT:    setp %cl
-; AVX-NEXT:    setne %dl
-; AVX-NEXT:    orb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
-; AVX-NEXT:    cmovel %esi, %eax
+; AVX-NEXT:    cmovnel %edi, %eax
+; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse.comineq.ss(<4 x float> %a0, <4 x float> %a1)
   %cmp = icmp ne i32 %call, 0
@@ -159,9 +147,7 @@ define i32 @test_x86_sse_ucomieq_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i
 ; SSE-NEXT:    ucomiss %xmm1, %xmm0
 ; SSE-NEXT:    setnp %cl
 ; SSE-NEXT:    sete %dl
-; SSE-NEXT:    andb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
+; SSE-NEXT:    testb %cl, %dl
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
@@ -171,9 +157,7 @@ define i32 @test_x86_sse_ucomieq_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i
 ; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    setnp %cl
 ; AVX-NEXT:    sete %dl
-; AVX-NEXT:    andb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
+; AVX-NEXT:    testb %cl, %dl
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %a0, <4 x float> %a1)
@@ -270,26 +254,18 @@ declare i32 @llvm.x86.sse.ucomilt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomineq_ss(<4 x float> %a0, <4 x float> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse_ucomineq_ss:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    movl %esi, %eax
 ; SSE-NEXT:    ucomiss %xmm1, %xmm0
-; SSE-NEXT:    setp %cl
-; SSE-NEXT:    setne %dl
-; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
-; SSE-NEXT:    cmovel %esi, %eax
+; SSE-NEXT:    cmovnel %edi, %eax
+; SSE-NEXT:    cmovpl %edi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_x86_sse_ucomineq_ss:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    movl %esi, %eax
 ; AVX-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-NEXT:    setp %cl
-; AVX-NEXT:    setne %dl
-; AVX-NEXT:    orb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
-; AVX-NEXT:    cmovel %esi, %eax
+; AVX-NEXT:    cmovnel %edi, %eax
+; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %a0, <4 x float> %a1)
   %cmp = icmp ne i32 %call, 0
@@ -309,9 +285,7 @@ define i32 @test_x86_sse2_comieq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2,
 ; SSE-NEXT:    comisd %xmm1, %xmm0
 ; SSE-NEXT:    setnp %cl
 ; SSE-NEXT:    sete %dl
-; SSE-NEXT:    andb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
+; SSE-NEXT:    testb %cl, %dl
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
@@ -321,9 +295,7 @@ define i32 @test_x86_sse2_comieq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2,
 ; AVX-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX-NEXT:    setnp %cl
 ; AVX-NEXT:    sete %dl
-; AVX-NEXT:    andb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
+; AVX-NEXT:    testb %cl, %dl
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.comieq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
@@ -420,26 +392,18 @@ declare i32 @llvm.x86.sse2.comilt.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comineq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse2_comineq_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    movl %esi, %eax
 ; SSE-NEXT:    comisd %xmm1, %xmm0
-; SSE-NEXT:    setp %cl
-; SSE-NEXT:    setne %dl
-; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
-; SSE-NEXT:    cmovel %esi, %eax
+; SSE-NEXT:    cmovnel %edi, %eax
+; SSE-NEXT:    cmovpl %edi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_x86_sse2_comineq_sd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    movl %esi, %eax
 ; AVX-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-NEXT:    setp %cl
-; AVX-NEXT:    setne %dl
-; AVX-NEXT:    orb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
-; AVX-NEXT:    cmovel %esi, %eax
+; AVX-NEXT:    cmovnel %edi, %eax
+; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.comineq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   %cmp = icmp ne i32 %call, 0
@@ -455,9 +419,7 @@ define i32 @test_x86_sse2_ucomieq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2
 ; SSE-NEXT:    ucomisd %xmm1, %xmm0
 ; SSE-NEXT:    setnp %cl
 ; SSE-NEXT:    sete %dl
-; SSE-NEXT:    andb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
+; SSE-NEXT:    testb %cl, %dl
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
@@ -467,9 +429,7 @@ define i32 @test_x86_sse2_ucomieq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2
 ; AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; AVX-NEXT:    setnp %cl
 ; AVX-NEXT:    sete %dl
-; AVX-NEXT:    andb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
+; AVX-NEXT:    testb %cl, %dl
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.ucomieq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
@@ -566,26 +526,18 @@ declare i32 @llvm.x86.sse2.ucomilt.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomineq_sd(<2 x double> %a0, <2 x double> %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: test_x86_sse2_ucomineq_sd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    movl %esi, %eax
 ; SSE-NEXT:    ucomisd %xmm1, %xmm0
-; SSE-NEXT:    setp %cl
-; SSE-NEXT:    setne %dl
-; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movzbl %dl, %ecx
-; SSE-NEXT:    testl %ecx, %ecx
-; SSE-NEXT:    cmovel %esi, %eax
+; SSE-NEXT:    cmovnel %edi, %eax
+; SSE-NEXT:    cmovpl %edi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_x86_sse2_ucomineq_sd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    movl %esi, %eax
 ; AVX-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-NEXT:    setp %cl
-; AVX-NEXT:    setne %dl
-; AVX-NEXT:    orb %cl, %dl
-; AVX-NEXT:    movzbl %dl, %ecx
-; AVX-NEXT:    testl %ecx, %ecx
-; AVX-NEXT:    cmovel %esi, %eax
+; AVX-NEXT:    cmovnel %edi, %eax
+; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
   %call = call i32 @llvm.x86.sse2.ucomineq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   %cmp = icmp ne i32 %call, 0
@@ -600,9 +552,7 @@ define void @PR38960_eq(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    comiss %xmm1, %xmm0
 ; SSE-NEXT:    setnp %al
 ; SSE-NEXT:    sete %cl
-; SSE-NEXT:    andb %al, %cl
-; SSE-NEXT:    movzbl %cl, %eax
-; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    testb %al, %cl
 ; SSE-NEXT:    je .LBB24_1
 ; SSE-NEXT:  # %bb.2: # %if.then
 ; SSE-NEXT:    jmp foo@PLT # TAILCALL
@@ -614,9 +564,7 @@ define void @PR38960_eq(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    setnp %al
 ; AVX-NEXT:    sete %cl
-; AVX-NEXT:    andb %al, %cl
-; AVX-NEXT:    movzbl %cl, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    testb %al, %cl
 ; AVX-NEXT:    je .LBB24_1
 ; AVX-NEXT:  # %bb.2: # %if.then
 ; AVX-NEXT:    jmp foo@PLT # TAILCALL
@@ -642,8 +590,6 @@ define void @PR38960_neq(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    setp %al
 ; SSE-NEXT:    setne %cl
 ; SSE-NEXT:    orb %al, %cl
-; SSE-NEXT:    movzbl %cl, %eax
-; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    je .LBB25_1
 ; SSE-NEXT:  # %bb.2: # %if.then
 ; SSE-NEXT:    jmp foo@PLT # TAILCALL
@@ -656,8 +602,6 @@ define void @PR38960_neq(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    setp %al
 ; AVX-NEXT:    setne %cl
 ; AVX-NEXT:    orb %al, %cl
-; AVX-NEXT:    movzbl %cl, %eax
-; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    je .LBB25_1
 ; AVX-NEXT:  # %bb.2: # %if.then
 ; AVX-NEXT:    jmp foo@PLT # TAILCALL
