@@ -886,6 +886,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64(
 define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %2, iXLen %3) nounwind {
 ; RV32-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, mu
 ; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, mu
 ; RV32-NEXT:    vmv1r.v v10, v8
@@ -917,6 +918,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(
 define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %2, iXLen %3) nounwind {
 ; RV32-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, mu
 ; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, mu
 ; RV32-NEXT:    vmv1r.v v10, v8
