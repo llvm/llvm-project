@@ -774,63 +774,66 @@ private:
   }
 
   bool parseBrace() {
-    if (CurrentToken) {
-      FormatToken *Left = CurrentToken->Previous;
-      Left->ParentBracket = Contexts.back().ContextKind;
+    if (!CurrentToken)
+      return true;
 
-      if (Contexts.back().CaretFound)
-        Left->setType(TT_ObjCBlockLBrace);
-      Contexts.back().CaretFound = false;
+    assert(CurrentToken->Previous);
+    FormatToken &OpeningBrace = *CurrentToken->Previous;
+    assert(OpeningBrace.is(tok::l_brace));
+    OpeningBrace.ParentBracket = Contexts.back().ContextKind;
 
-      ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
-      Contexts.back().ColonIsDictLiteral = true;
-      if (Left->is(BK_BracedInit))
-        Contexts.back().IsExpression = true;
-      if (Style.isJavaScript() && Left->Previous &&
-          Left->Previous->is(TT_JsTypeColon))
-        Contexts.back().IsExpression = false;
+    if (Contexts.back().CaretFound)
+      OpeningBrace.setType(TT_ObjCBlockLBrace);
+    Contexts.back().CaretFound = false;
 
-      unsigned CommaCount = 0;
-      while (CurrentToken) {
-        if (CurrentToken->is(tok::r_brace)) {
-          assert(Left->Optional == CurrentToken->Optional);
-          Left->MatchingParen = CurrentToken;
-          CurrentToken->MatchingParen = Left;
-          if (Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {
-            if (Left->ParentBracket == tok::l_brace &&
-                couldBeInStructArrayInitializer() && CommaCount > 0)
-              Contexts.back().InStructArrayInitializer = true;
-          }
-          next();
-          return true;
+    ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
+    Contexts.back().ColonIsDictLiteral = true;
+    if (OpeningBrace.is(BK_BracedInit))
+      Contexts.back().IsExpression = true;
+    if (Style.isJavaScript() && OpeningBrace.Previous &&
+        OpeningBrace.Previous->is(TT_JsTypeColon))
+      Contexts.back().IsExpression = false;
+
+    unsigned CommaCount = 0;
+    while (CurrentToken) {
+      if (CurrentToken->is(tok::r_brace)) {
+        assert(OpeningBrace.Optional == CurrentToken->Optional);
+        OpeningBrace.MatchingParen = CurrentToken;
+        CurrentToken->MatchingParen = &OpeningBrace;
+        if (Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {
+          if (OpeningBrace.ParentBracket == tok::l_brace &&
+              couldBeInStructArrayInitializer() && CommaCount > 0)
+            Contexts.back().InStructArrayInitializer = true;
         }
-        if (CurrentToken->isOneOf(tok::r_paren, tok::r_square))
-          return false;
-        updateParameterCount(Left, CurrentToken);
-        if (CurrentToken->isOneOf(tok::colon, tok::l_brace, tok::less)) {
-          FormatToken *Previous = CurrentToken->getPreviousNonComment();
-          if (Previous->is(TT_JsTypeOptionalQuestion))
-            Previous = Previous->getPreviousNonComment();
-          if ((CurrentToken->is(tok::colon) &&
-               (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
-              Style.Language == FormatStyle::LK_Proto ||
-              Style.Language == FormatStyle::LK_TextProto) {
-            Left->setType(TT_DictLiteral);
-            if (Previous->Tok.getIdentifierInfo() ||
-                Previous->is(tok::string_literal))
-              Previous->setType(TT_SelectorName);
-          }
-          if (CurrentToken->is(tok::colon) || Style.isJavaScript())
-            Left->setType(TT_DictLiteral);
-        }
-        if (CurrentToken->is(tok::comma)) {
-          if (Style.isJavaScript())
-            Left->overwriteFixedType(TT_DictLiteral);
-          ++CommaCount;
-        }
-        if (!consumeToken())
-          return false;
+        next();
+        return true;
       }
+      if (CurrentToken->isOneOf(tok::r_paren, tok::r_square))
+        return false;
+      updateParameterCount(&OpeningBrace, CurrentToken);
+      if (CurrentToken->isOneOf(tok::colon, tok::l_brace, tok::less)) {
+        FormatToken *Previous = CurrentToken->getPreviousNonComment();
+        if (Previous->is(TT_JsTypeOptionalQuestion))
+          Previous = Previous->getPreviousNonComment();
+        if ((CurrentToken->is(tok::colon) &&
+             (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
+            Style.Language == FormatStyle::LK_Proto ||
+            Style.Language == FormatStyle::LK_TextProto) {
+          OpeningBrace.setType(TT_DictLiteral);
+          if (Previous->Tok.getIdentifierInfo() ||
+              Previous->is(tok::string_literal))
+            Previous->setType(TT_SelectorName);
+        }
+        if (CurrentToken->is(tok::colon) || Style.isJavaScript())
+          OpeningBrace.setType(TT_DictLiteral);
+      }
+      if (CurrentToken->is(tok::comma)) {
+        if (Style.isJavaScript())
+          OpeningBrace.overwriteFixedType(TT_DictLiteral);
+        ++CommaCount;
+      }
+      if (!consumeToken())
+        return false;
     }
     return true;
   }
