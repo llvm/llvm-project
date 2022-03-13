@@ -47,8 +47,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
           VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
-          NewRecipe =
-              new VPWidenIntOrFpInductionRecipe(Phi, Start, *II, false, true);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, *II, false,
+                                                        true, SE);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -402,7 +402,7 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IV || IV->needsVectorIV())
+    if (!IV || !IV->needsScalarIV())
       continue;
 
     const InductionDescriptor &ID = IV->getInductionDescriptor();
@@ -430,6 +430,25 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       HeaderVPBB->insert(cast<VPRecipeBase>(Step->getDef()),
                          HeaderVPBB->getFirstNonPhi());
     }
-    IV->replaceAllUsesWith(Steps);
+
+    // If there are no vector users of IV, simply update all users to use Step
+    // instead.
+    if (!IV->needsVectorIV()) {
+      IV->replaceAllUsesWith(Steps);
+      continue;
+    }
+
+    // Otherwise only update scalar users of IV to use Step instead.
+    SmallVector<VPUser *> Users(IV->user_begin(), IV->user_end());
+    for (VPUser *U : Users) {
+      VPRecipeBase *R = cast<VPRecipeBase>(U);
+      if (!R->usesScalars(IV))
+        continue;
+      for (unsigned I = 0, E = R->getNumOperands(); I != E; I++) {
+        if (R->getOperand(I) != IV)
+          continue;
+        R->setOperand(I, Steps);
+      }
+    }
   }
 }
