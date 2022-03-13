@@ -206,6 +206,15 @@ public:
     return 0;
   }
   unsigned getMinVLen() const { return ZvlLen; }
+  unsigned getMaxVLen() const { return Zvl65536b; }
+  unsigned getRealMinVLen() const {
+    unsigned VLen = getMinRVVVectorSizeInBits();
+    return VLen == 0 ? getMinVLen() : VLen;
+  }
+  unsigned getRealMaxVLen() const {
+    unsigned VLen = getMaxRVVVectorSizeInBits();
+    return VLen == 0 ? getMaxVLen() : VLen;
+  }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
