@@ -138,7 +138,8 @@ private:
   /// analysis).
   unsigned numSymbols;
 
-  /// Total number of identifiers.
+  /// Number of identifers corresponding to locals (identifiers corresponding
+  /// to existentially quantified variables).
   unsigned numLocals;
 };
 
