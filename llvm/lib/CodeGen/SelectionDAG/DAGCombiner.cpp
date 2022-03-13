@@ -1075,6 +1075,25 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
       return SDValue();
     }
   }
+
+  // Check for repeated operand logic simplifications.
+  if (Opc == ISD::AND || Opc == ISD::OR) {
+    // (N00 & N01) & N00 --> N00 & N01
+    // (N00 & N01) & N01 --> N00 & N01
+    // (N00 | N01) | N00 --> N00 | N01
+    // (N00 | N01) | N01 --> N00 | N01
+    if (N1 == N00 || N1 == N01)
+      return N0;
+  }
+  if (Opc == ISD::XOR) {
+    // (N00 ^ N01) ^ N00 --> N01
+    if (N1 == N00)
+      return N01;
+    // (N00 ^ N01) ^ N01 --> N00
+    if (N1 == N01)
+      return N00;
+  }
+
   return SDValue();
 }
 
