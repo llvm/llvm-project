@@ -24041,9 +24041,9 @@ TEST_F(FormatTest, Concepts) {
   verifyFormat(
       "template <typename T> concept C = decltype([]() -> std::true_type {\n"
       "                                    return {};\n"
-      "                                  }())::value\n"
-      "                                  && requires(T t) { t.bar(); } &&\n"
-      "                                  sizeof(T) <= 8;",
+      "                                  }())::value &&\n"
+      "                                  requires(T t) { t.bar(); } && "
+      "sizeof(T) <= 8;",
       Style);
 
   verifyFormat("template <typename T> concept Semiregular =\n"

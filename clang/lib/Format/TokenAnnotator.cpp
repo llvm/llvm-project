@@ -421,8 +421,8 @@ private:
       if (CurrentToken->isOneOf(tok::r_square, tok::r_brace))
         return false;
 
-      if (CurrentToken->is(tok::l_brace))
-        OpeningParen.setType(TT_Unknown); // Not TT_ObjCBlockLParen
+      if (CurrentToken->is(tok::l_brace) && OpeningParen.is(TT_ObjCBlockLParen))
+        OpeningParen.setType(TT_Unknown);
       if (CurrentToken->is(tok::comma) && CurrentToken->Next &&
           !CurrentToken->Next->HasUnescapedNewline &&
           !CurrentToken->Next->isTrailingComment())
