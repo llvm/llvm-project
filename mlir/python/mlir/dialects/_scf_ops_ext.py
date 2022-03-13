@@ -64,3 +64,44 @@ class ForOp:
     To obtain the loop-carried operands, use `iter_args`.
     """
     return self.body.arguments[1:]
+
+
+class IfOp:
+  """Specialization for the SCF if op class."""
+
+  def __init__(self,
+               cond,
+               results_=[],
+               *,
+               hasElse=False,
+               loc=None,
+               ip=None):
+    """Creates an SCF `if` operation.
+
+    - `cond` is a MLIR value of 'i1' type to determine which regions of code will be executed.
+    - `hasElse` determines whether the if operation has the else branch.
+    """
+    operands = []
+    operands.append(cond)
+    results = []
+    results.extend(results_)
+    super().__init__(
+        self.build_generic(
+            regions=2,
+            results=results,
+            operands=operands,
+            loc=loc,
+            ip=ip))
+    self.regions[0].blocks.append(*[])
+    if hasElse:
+        self.regions[1].blocks.append(*[])
+
+  @property
+  def then_block(self):
+    """Returns the then block of the if operation."""
+    return self.regions[0].blocks[0]
+
+  @property
+  def else_block(self):
+    """Returns the else block of the if operation."""
+    return self.regions[1].blocks[0]
