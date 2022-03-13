@@ -9,14 +9,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MathExtras.h"
 
 #include <memory>
 

@@ -236,6 +236,9 @@ the configuration (without a prefix: ``Auto``).
   if not ``None``, when using initialization for an array of structs
   aligns the fields into columns.
 
+  NOTE: As of clang-format 15 this option only applied to arrays with equal
+  number of columns per row.
+
   Possible values:
 
   * ``AIAS_Left`` (in configuration: ``Left``)
@@ -603,7 +606,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlignOperands** (``OperandAlignmentStyle``) :versionbadge:`clang-format 12`
+**AlignOperands** (``OperandAlignmentStyle``) :versionbadge:`clang-format 3.5`
   If ``true``, horizontally align operands of binary and ternary
   expressions.
 
@@ -746,7 +749,7 @@ the configuration (without a prefix: ``Auto``).
                                               return;
                                             }
 
-**AllowShortEnumsOnASingleLine** (``Boolean``) :versionbadge:`clang-format 12`
+**AllowShortEnumsOnASingleLine** (``Boolean``) :versionbadge:`clang-format 11`
   Allow short enums on a single line.
 
   .. code-block:: c++
@@ -2603,7 +2606,7 @@ the configuration (without a prefix: ``Auto``).
        plop();                                  plop();
      }                                      }
 
-**IndentExternBlock** (``IndentExternBlockStyle``) :versionbadge:`clang-format 12`
+**IndentExternBlock** (``IndentExternBlockStyle``) :versionbadge:`clang-format 11`
   IndentExternBlockStyle is the type of indenting of extern blocks.
 
   Possible values:
@@ -2789,7 +2792,7 @@ the configuration (without a prefix: ``Auto``).
       --i;                                      --i;
     while (i);                                } while (i);
 
-**InsertTrailingCommas** (``TrailingCommaStyle``) :versionbadge:`clang-format 12`
+**InsertTrailingCommas** (``TrailingCommaStyle``) :versionbadge:`clang-format 11`
   If set to ``TCS_Wrapped`` will insert trailing commas in container
   literals (arrays and objects) that wrap across multiple lines.
   It is currently only available for JavaScript
@@ -3147,7 +3150,7 @@ the configuration (without a prefix: ``Auto``).
          [self onOperationDone];
      }];
 
-**ObjCBreakBeforeNestedBlockParam** (``Boolean``) :versionbadge:`clang-format 12`
+**ObjCBreakBeforeNestedBlockParam** (``Boolean``) :versionbadge:`clang-format 11`
   Break parameters list into lines when there is nested block
   parameters in a function call.
 
@@ -4355,7 +4358,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**WhitespaceSensitiveMacros** (``List of Strings``) :versionbadge:`clang-format 12`
+**WhitespaceSensitiveMacros** (``List of Strings``) :versionbadge:`clang-format 11`
   A vector of macros which are whitespace-sensitive and should not
   be touched.
 

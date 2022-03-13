@@ -131,6 +131,10 @@ struct FormatStyle {
   };
   /// if not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
+  ///
+  /// NOTE: As of clang-format 15 this option only applied to arrays with equal
+  /// number of columns per row.
+  ///
   /// \version 13
   ArrayInitializerAlignmentStyle AlignArrayOfStructures;
 
@@ -499,7 +503,7 @@ struct FormatStyle {
 
   /// If ``true``, horizontally align operands of binary and ternary
   /// expressions.
-  /// \version 12
+  /// \version 3.5
   OperandAlignmentStyle AlignOperands;
 
   /// If ``true``, aligns trailing comments.
@@ -562,7 +566,7 @@ struct FormatStyle {
   ///     B
   ///   } myEnum;
   /// \endcode
-  /// \version 12
+  /// \version 11
   bool AllowShortEnumsOnASingleLine;
 
   /// Different styles for merging short blocks containing at most one
@@ -987,7 +991,7 @@ struct FormatStyle {
   ///   //                        ^ inserted
   ///   ]
   /// \endcode
-  /// \version 12
+  /// \version 11
   TrailingCommaStyle InsertTrailingCommas;
 
   /// If ``false``, a function declaration's or function definition's
@@ -2355,7 +2359,7 @@ struct FormatStyle {
   /// \endcode
   ///
   /// For example: BOOST_PP_STRINGIZE
-  /// \version 12
+  /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
 
   tooling::IncludeStyle IncludeStyle;
@@ -2518,7 +2522,7 @@ struct FormatStyle {
   };
 
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
-  /// \version 12
+  /// \version 11
   IndentExternBlockStyle IndentExternBlock;
 
   /// Indent the requires clause in a template. This only applies when
@@ -2918,7 +2922,7 @@ struct FormatStyle {
   ///            }]
   ///    }
   /// \endcode
-  /// \version 12
+  /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
 
   /// Add a space in front of an Objective-C protocol list, i.e. use

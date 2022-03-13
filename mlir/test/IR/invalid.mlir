@@ -136,7 +136,7 @@ func @no_terminator() {   // expected-error {{empty block: expect at least a ter
 // -----
 
 func @block_no_rparen() {
-^bb42 (%bb42 : i32: // expected-error {{expected ')' to end argument list}}
+^bb42 (%bb42 : i32: // expected-error {{expected ')'}}
   return
 }
 
@@ -188,6 +188,12 @@ func @no_terminator() {
   %y = arith.constant 1 : i32  // expected-error {{block with no terminator}}
 }
 
+// -----
+
+func @no_block_arg_enclosing_parens() {
+^bb %x: i32 : // expected-error {{expected ':' after block name}}
+  return
+}
 
 // -----
 

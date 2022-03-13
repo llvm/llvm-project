@@ -13,7 +13,10 @@
 #ifndef LLVM_LIB_CODEGEN_SELECTIONDAG_SDNODEDBGVALUE_H
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_SDNODEDBGVALUE_H
 
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
 #include <utility>
 

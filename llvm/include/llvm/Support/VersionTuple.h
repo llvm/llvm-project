@@ -169,8 +169,8 @@ public:
     return !(X < Y);
   }
 
-  friend llvm::hash_code hash_value(const VersionTuple &VT) {
-    return llvm::hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
+  friend hash_code hash_value(const VersionTuple &VT) {
+    return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
   template <typename HasherT, llvm::support::endianness Endianness>

@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
-#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

@@ -1312,9 +1312,9 @@ bool Attributor::checkForAllUses(
         if (!Visited.insert(U).second)
           continue;
         SmallSetVector<Value *, 4> PotentialCopies;
-        if (AA::getPotentialCopiesOfStoredValue(*this, *SI, PotentialCopies,
-                                                QueryingAA,
-                                                UsedAssumedInformation)) {
+        if (AA::getPotentialCopiesOfStoredValue(
+                *this, *SI, PotentialCopies, QueryingAA, UsedAssumedInformation,
+                /* OnlyExact */ true)) {
           LLVM_DEBUG(dbgs() << "[Attributor] Value is stored, continue with "
                             << PotentialCopies.size()
                             << " potential copies instead!\n");

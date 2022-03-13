@@ -17,13 +17,20 @@
 #ifndef LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 #define LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 
-#include "llvm/IR/Module.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <memory>
 
 namespace llvm {
 
 class Function;
+class LLVMContext;
+class MemoryBuffer;
+class Module;
 class MIRParserImpl;
 class MachineModuleInfo;
 class SMDiagnostic;

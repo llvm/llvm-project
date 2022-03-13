@@ -11786,7 +11786,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   }
 
   assert(Section && "must have section to emit alignment");
-  if (Section->UseCodeAlign())
+  if (Section->useCodeAlign())
     getStreamer().emitCodeAlignment(2, &getSTI());
   else
     getStreamer().emitValueToAlignment(2);
@@ -11988,7 +11988,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (Section->UseCodeAlign())
+    if (Section->useCodeAlign())
       getStreamer().emitCodeAlignment(4, &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(4, 0, 1, 0);

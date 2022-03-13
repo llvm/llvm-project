@@ -9,7 +9,6 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
