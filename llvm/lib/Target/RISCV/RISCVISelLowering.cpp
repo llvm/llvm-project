@@ -6816,7 +6816,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case RISCVISD::GREV:
-  case RISCVISD::GORC: {
+  case RISCVISD::GORC:
+  case RISCVISD::SHFL: {
     MVT VT = N->getSimpleValueType(0);
     MVT XLenVT = Subtarget.getXLenVT();
     assert((VT == MVT::i16 || (VT == MVT::i32 && Subtarget.is64Bit())) &&
@@ -6833,21 +6834,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // ReplaceNodeResults requires we maintain the same type for the return
     // value.
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NewRes));
-    break;
-  }
-  case RISCVISD::SHFL: {
-    // There is no SHFLIW instruction, but we can just promote the operation.
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
-    assert(isa<ConstantSDNode>(N->getOperand(1)) && "Expected constant");
-    SDValue NewOp0 =
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
-    SDValue NewOp1 =
-        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
-    SDValue NewRes = DAG.getNode(RISCVISD::SHFL, DL, MVT::i64, NewOp0, NewOp1);
-    // ReplaceNodeResults requires we maintain the same type for the return
-    // value.
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
     break;
   }
   case ISD::BSWAP:
