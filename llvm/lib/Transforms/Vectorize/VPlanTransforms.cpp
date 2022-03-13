@@ -13,6 +13,7 @@
 
 #include "VPlanTransforms.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 
 using namespace llvm;
 
@@ -438,8 +439,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
     }
 
-    // Otherwise only update scalar users of IV to use Step instead.
-    SmallVector<VPUser *> Users(IV->user_begin(), IV->user_end());
+    // Otherwise only update scalar users of IV to use Step instead. Use
+    // SetVector to ensure the list of users doesn't contain duplicates.
+    SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
       VPRecipeBase *R = cast<VPRecipeBase>(U);
       if (!R->usesScalars(IV))
