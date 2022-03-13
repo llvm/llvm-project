@@ -822,7 +822,6 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
   ret i64 %tmp
 }
 
-; FIXME: Merge the away the two rev8s in the Zbkb code.
 define i16 @test_bswap_bitreverse_i16(i16 %a) nounwind {
 ; RV32I-LABEL: test_bswap_bitreverse_i16:
 ; RV32I:       # %bb.0:
@@ -926,20 +925,12 @@ define i16 @test_bswap_bitreverse_i16(i16 %a) nounwind {
 ;
 ; RV32ZBKB-LABEL: test_bswap_bitreverse_i16:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    rev8 a0, a0
-; RV32ZBKB-NEXT:    srli a0, a0, 16
-; RV32ZBKB-NEXT:    rev8 a0, a0
 ; RV32ZBKB-NEXT:    brev8 a0, a0
-; RV32ZBKB-NEXT:    srli a0, a0, 16
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bswap_bitreverse_i16:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    rev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 48
-; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 48
 ; RV64ZBKB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: test_bswap_bitreverse_i16:
@@ -956,7 +947,6 @@ define i16 @test_bswap_bitreverse_i16(i16 %a) nounwind {
   ret i16 %tmp2
 }
 
-; FIXME: Merge the away the two rev8s in the Zbkb code.
 define i32 @test_bswap_bitreverse_i32(i32 %a) nounwind {
 ; RV32I-LABEL: test_bswap_bitreverse_i32:
 ; RV32I:       # %bb.0:
@@ -1065,11 +1055,7 @@ define i32 @test_bswap_bitreverse_i32(i32 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: test_bswap_bitreverse_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    rev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 32
-; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 32
 ; RV64ZBKB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: test_bswap_bitreverse_i32:
@@ -1243,7 +1229,6 @@ define i64 @test_bswap_bitreverse_i64(i64 %a) nounwind {
   ret i64 %tmp2
 }
 
-; FIXME: Merge the away the two rev8s in the Zbkb code.
 define i16 @test_bitreverse_bswap_i16(i16 %a) nounwind {
 ; RV32I-LABEL: test_bitreverse_bswap_i16:
 ; RV32I:       # %bb.0:
@@ -1347,20 +1332,12 @@ define i16 @test_bitreverse_bswap_i16(i16 %a) nounwind {
 ;
 ; RV32ZBKB-LABEL: test_bitreverse_bswap_i16:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    rev8 a0, a0
-; RV32ZBKB-NEXT:    srli a0, a0, 16
-; RV32ZBKB-NEXT:    rev8 a0, a0
 ; RV32ZBKB-NEXT:    brev8 a0, a0
-; RV32ZBKB-NEXT:    srli a0, a0, 16
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_bswap_i16:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    rev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 48
-; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 48
 ; RV64ZBKB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: test_bitreverse_bswap_i16:
@@ -1377,7 +1354,6 @@ define i16 @test_bitreverse_bswap_i16(i16 %a) nounwind {
   ret i16 %tmp2
 }
 
-; FIXME: Merge the away the two rev8s in the Zbkb code.
 define i32 @test_bitreverse_bswap_i32(i32 %a) nounwind {
 ; RV32I-LABEL: test_bitreverse_bswap_i32:
 ; RV32I:       # %bb.0:
@@ -1486,11 +1462,7 @@ define i32 @test_bitreverse_bswap_i32(i32 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_bswap_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    rev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 32
-; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 32
 ; RV64ZBKB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: test_bitreverse_bswap_i32:
