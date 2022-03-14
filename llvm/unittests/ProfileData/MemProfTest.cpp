@@ -3,6 +3,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProfData.inc"

@@ -10,7 +10,7 @@ config.llvm_build_mode = "@LLVM_BUILD_MODE@"
 config.clang_obj_root = path(r"@CLANG_BINARY_DIR@")
 config.enable_shared = @ENABLE_SHARED@
 config.shlibdir = path(r"@SHLIBDIR@")
-config.target_triple = "@TARGET_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 
 # Support substitution of the tools_dir, libs_dirs, and build_mode with user
 # parameters. This is used when we can't determine the tool dir at

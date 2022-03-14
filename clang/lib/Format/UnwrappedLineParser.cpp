@@ -480,6 +480,10 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
   unsigned StatementCount = 0;
   bool SwitchLabelEncountered = false;
   do {
+    if (FormatTok->getType() == TT_AttributeMacro) {
+      nextToken();
+      continue;
+    }
     tok::TokenKind kind = FormatTok->Tok.getKind();
     if (FormatTok->getType() == TT_MacroBlockBegin)
       kind = tok::l_brace;
@@ -569,6 +573,8 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
         parseCSharpAttribute();
         break;
       }
+      if (handleCppAttributes())
+        break;
       LLVM_FALLTHROUGH;
     default:
       ParseDefault();
@@ -1390,9 +1396,11 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
     // e.g. "default void f() {}" in a Java interface.
     break;
   case tok::kw_case:
-    if (Style.isJavaScript() && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration) {
       // 'case: string' field declaration.
+      nextToken();
       break;
+    }
     parseCaseLabel();
     return;
   case tok::kw_try:
@@ -1812,6 +1820,12 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
       break;
     case tok::kw_new:
       parseNew();
+      break;
+    case tok::kw_case:
+      if (Style.isJavaScript() && Line->MustBeDeclaration)
+        // 'case: string' field declaration.
+        break;
+      parseCaseLabel();
       break;
     default:
       nextToken();
@@ -2376,17 +2390,24 @@ static void markOptionalBraces(FormatToken *LeftBrace) {
   RightBrace->Optional = true;
 }
 
+void UnwrappedLineParser::handleAttributes() {
+  // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
+  if (FormatTok->is(TT_AttributeMacro))
+    nextToken();
+  handleCppAttributes();
+}
+
+bool UnwrappedLineParser::handleCppAttributes() {
+  // Handle [[likely]] / [[unlikely]] attributes.
+  if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute()) {
+    parseSquare();
+    return true;
+  }
+  return false;
+}
+
 FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
                                                   bool KeepBraces) {
-  auto HandleAttributes = [this]() {
-    // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
-    if (FormatTok->is(TT_AttributeMacro))
-      nextToken();
-    // Handle [[likely]] / [[unlikely]] attributes.
-    if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
-      parseSquare();
-  };
-
   assert(FormatTok->is(tok::kw_if) && "'if' expected");
   nextToken();
   if (FormatTok->is(tok::exclaim))
@@ -2399,7 +2420,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     if (FormatTok->is(tok::l_paren))
       parseParens();
   }
-  HandleAttributes();
+  handleAttributes();
 
   bool NeedsUnwrappedLine = false;
   keepAncestorBraces();
@@ -2436,7 +2457,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       Kind = IfStmtKind::IfElse;
     }
     nextToken();
-    HandleAttributes();
+    handleAttributes();
     if (FormatTok->is(tok::l_brace)) {
       ElseLeftBrace = FormatTok;
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -3132,30 +3153,6 @@ void UnwrappedLineParser::parseConstraintExpression() {
         return;
       break;
 
-    case tok::identifier:
-      // We need to differentiate identifiers for a template deduction guide,
-      // variables, or function return types (the constraint expression has
-      // ended before that), and basically all other cases. But it's easier to
-      // check the other way around.
-      assert(FormatTok->Previous);
-      switch (FormatTok->Previous->Tok.getKind()) {
-      case tok::coloncolon:  // Nested identifier.
-      case tok::ampamp:      // Start of a function or variable for the
-      case tok::pipepipe:    // constraint expression.
-      case tok::kw_requires: // Initial identifier of a requires clause.
-      case tok::equal:       // Initial identifier of a concept declaration.
-        break;
-      default:
-        return;
-      }
-
-      // Read identifier with optional template declaration.
-      nextToken();
-      if (FormatTok->is(tok::less))
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
-      break;
-
     case tok::kw_const:
     case tok::semi:
     case tok::kw_class:
@@ -3232,7 +3229,34 @@ void UnwrappedLineParser::parseConstraintExpression() {
       break;
 
     default:
-      return;
+      if (!FormatTok->Tok.getIdentifierInfo()) {
+        // Identifiers are part of the default case, we check for more then
+        // tok::identifier to handle builtin type traits.
+        return;
+      }
+
+      // We need to differentiate identifiers for a template deduction guide,
+      // variables, or function return types (the constraint expression has
+      // ended before that), and basically all other cases. But it's easier to
+      // check the other way around.
+      assert(FormatTok->Previous);
+      switch (FormatTok->Previous->Tok.getKind()) {
+      case tok::coloncolon:  // Nested identifier.
+      case tok::ampamp:      // Start of a function or variable for the
+      case tok::pipepipe:    // constraint expression.
+      case tok::kw_requires: // Initial identifier of a requires clause.
+      case tok::equal:       // Initial identifier of a concept declaration.
+        break;
+      default:
+        return;
+      }
+
+      // Read identifier with optional template declaration.
+      nextToken();
+      if (FormatTok->is(tok::less))
+        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
+                        /*ClosingBraceKind=*/tok::greater);
+      break;
     }
   } while (!eof());
 }

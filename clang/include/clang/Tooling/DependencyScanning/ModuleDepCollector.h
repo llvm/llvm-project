@@ -85,6 +85,10 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   llvm::StringSet<> FileDeps;
 
+  /// A collection of absolute paths to module map files that this module needs
+  /// to know about.
+  std::vector<std::string> ModuleMapFileDeps;
+
   /// A collection of prebuilt modular dependencies this module directly depends
   /// on, not including transitive dependencies.
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
@@ -109,27 +113,13 @@ struct ModuleDeps {
   ///                      arguments and the "-o" argument. It needs to return
   ///                      a path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps This function is called to collect the full
-  ///                         transitive set of dependencies for this
-  ///                         compilation.
   std::vector<std::string> getCanonicalCommandLine(
-      std::function<StringRef(ModuleID)> LookupPCMPath,
-      std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
+      std::function<StringRef(ModuleID)> LookupPCMPath) const;
 
   /// Gets the canonical command line suitable for passing to clang, excluding
   /// "-fmodule-file=" and "-o" arguments.
   std::vector<std::string> getCanonicalCommandLineWithoutModulePaths() const;
 };
-
-namespace detail {
-/// Collect the paths of PCM and module map files for the modules in \c Modules
-/// transitively.
-void collectPCMAndModuleMapPaths(
-    llvm::ArrayRef<ModuleID> Modules,
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths);
-} // namespace detail
 
 class ModuleDepCollector;
 

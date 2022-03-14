@@ -55,7 +55,8 @@ public:
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
 class WorkGroupSizeConversion : public OpConversionPattern<gpu::BlockDimOp> {
 public:
-  using OpConversionPattern<gpu::BlockDimOp>::OpConversionPattern;
+  WorkGroupSizeConversion(TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern(typeConverter, context, /*benefit*/ 10) {}
 
   LogicalResult
   matchAndRewrite(gpu::BlockDimOp op, OpAdaptor adaptor,
@@ -159,6 +160,9 @@ LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     gpu::BlockDimOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
+  if (!workGroupSizeAttr)
+    return failure();
+
   auto val = workGroupSizeAttr
                  .getValues<int32_t>()[static_cast<int32_t>(op.dimension())];
   auto convertedType =
@@ -366,6 +370,7 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       GPUModuleEndConversion, GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
+      LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
       LaunchConfigConversion<gpu::ThreadIdOp,
                              spirv::BuiltIn::LocalInvocationId>,
       SingleDimLaunchConfigConversion<gpu::SubgroupIdOp,

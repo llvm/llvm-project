@@ -1205,14 +1205,18 @@ struct Attributor {
   /// \param Allowed If not null, a set limiting the attribute opportunities.
   /// \param DeleteFns Whether to delete functions.
   /// \param RewriteSignatures Whether to rewrite function signatures.
+  /// \param DefaultInitializeLiveInternals Whether to initialize default AAs
+  ///                                       for live internal functions.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater,
              DenseSet<const char *> *Allowed = nullptr, bool DeleteFns = true,
-             bool RewriteSignatures = true)
+             bool RewriteSignatures = true,
+             bool DefaultInitializeLiveInternals = true)
       : Allocator(InfoCache.Allocator), Functions(Functions),
         InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed),
         DeleteFns(DeleteFns), RewriteSignatures(RewriteSignatures),
-        MaxFixpointIterations(None), OREGetter(None), PassName("") {}
+        MaxFixpointIterations(None), OREGetter(None), PassName(""),
+        DefaultInitializeLiveInternals(DefaultInitializeLiveInternals) {}
 
   /// Constructor
   ///
@@ -1238,7 +1242,7 @@ struct Attributor {
         DeleteFns(DeleteFns), RewriteSignatures(RewriteSignatures),
         MaxFixpointIterations(MaxFixpointIterations),
         OREGetter(Optional<OptimizationRemarkGetter>(OREGetter)),
-        PassName(PassName) {}
+        PassName(PassName), DefaultInitializeLiveInternals(false) {}
 
   ~Attributor();
 
@@ -1348,8 +1352,6 @@ struct Attributor {
 
     // Initialize and update is allowed for code outside of the current function
     // set, but only if it is part of module slice we are allowed to look at.
-    // Only exception is AAIsDeadFunction whose initialization is prevented
-    // directly, since we don't to compute it twice.
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
       if (!getInfoCache().isInModuleSlice(*FnScope)) {
         AA.getState().indicatePessimisticFixpoint();
@@ -1502,7 +1504,8 @@ struct Attributor {
     assert(F.hasLocalLinkage() &&
            "Only local linkage is assumed dead initially.");
 
-    identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+    if (DefaultInitializeLiveInternals)
+      identifyDefaultAbstractAttributes(const_cast<Function &>(F));
   }
 
   /// Helper function to remove callsite.
@@ -2133,6 +2136,13 @@ private:
 
   /// The name of the pass to emit remarks for.
   const char *PassName = "";
+
+  /// Flag to determine if we want to initialize all default AAs for an internal
+  /// function marked live.
+  /// TODO: This should probably be a callback, or maybe
+  /// identifyDefaultAbstractAttributes should be virtual, something to allow
+  /// customizable lazy initialization for internal functions.
+  const bool DefaultInitializeLiveInternals;
 
   friend AADepGraph;
   friend AttributorCallGraph;

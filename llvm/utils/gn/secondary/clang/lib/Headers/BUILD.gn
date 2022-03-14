@@ -220,6 +220,8 @@ copy("Headers") {
     "vaesintrin.h",
     "varargs.h",
     "vecintrin.h",
+    "velintrin.h",
+    "velintrin_gen.h",
     "vpclmulqdqintrin.h",
     "waitpkgintrin.h",
     "wasm_simd128.h",

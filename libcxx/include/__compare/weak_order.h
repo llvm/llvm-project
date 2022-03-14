@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 
 // [cmp.alg]
 namespace __weak_order {
@@ -93,7 +93,7 @@ inline namespace __cpo {
     inline constexpr auto weak_order = __weak_order::__fn{};
 } // namespace __cpo
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

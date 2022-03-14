@@ -70,6 +70,8 @@ public:
 
   static std::chrono::seconds GetPacketTimeout();
 
+  ArchSpec GetSystemArchitecture() override;
+
   // Check if a given Process
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;

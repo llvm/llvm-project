@@ -185,31 +185,18 @@ define i1 @c7(i32* %q, i32 %bitno) {
 
 
 define i32 @nc1(i32* %q, i32* %p, i1 %b) {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@nc1
-; IS__TUNIT____-SAME: (i32* nofree [[Q:%.*]], i32* nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
-; IS__TUNIT____-NEXT:  e:
-; IS__TUNIT____-NEXT:    br label [[L:%.*]]
-; IS__TUNIT____:       l:
-; IS__TUNIT____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
-; IS__TUNIT____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
-; IS__TUNIT____-NEXT:    store i32 0, i32* [[P]], align 4
-; IS__TUNIT____-NEXT:    store i32* [[Y]], i32** @g, align 8
-; IS__TUNIT____-NEXT:    ret i32 [[VAL]]
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@nc1
-; IS__CGSCC____-SAME: (i32* nofree [[Q:%.*]], i32* nocapture nofree align 4 [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
-; IS__CGSCC____-NEXT:  e:
-; IS__CGSCC____-NEXT:    br label [[L:%.*]]
-; IS__CGSCC____:       l:
-; IS__CGSCC____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
-; IS__CGSCC____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
-; IS__CGSCC____-NEXT:    store i32 0, i32* [[P]], align 4
-; IS__CGSCC____-NEXT:    store i32* [[Y]], i32** @g, align 8
-; IS__CGSCC____-NEXT:    ret i32 [[VAL]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@nc1
+; CHECK-SAME: (i32* nofree [[Q:%.*]], i32* nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:  e:
+; CHECK-NEXT:    br label [[L:%.*]]
+; CHECK:       l:
+; CHECK-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32* [[Y]], i32** @g, align 8
+; CHECK-NEXT:    ret i32 [[VAL]]
 ;
 e:
   br label %l
@@ -227,7 +214,7 @@ l:
 define i32 @nc1_addrspace(i32* %q, i32 addrspace(1)* %p, i1 %b) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@nc1_addrspace
-; CHECK-SAME: (i32* nofree [[Q:%.*]], i32 addrspace(1)* nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: (i32* nofree [[Q:%.*]], i32 addrspace(1)* nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  e:
 ; CHECK-NEXT:    br label [[L:%.*]]
 ; CHECK:       l:

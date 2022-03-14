@@ -19,12 +19,17 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include <cassert>
 #include <memory>
 
 namespace llvm {
+class AnalysisUsage;
+class MachineFunction;
+class Module;
+class raw_ostream;
 
 template <>
 inline void DominatorTreeBase<MachineBasicBlock, false>::addRoot(

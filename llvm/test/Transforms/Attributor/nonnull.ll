@@ -248,16 +248,27 @@ exit:
 }
 
 define i8* @test6b(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@test6b
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call nonnull i8* @ret_nonnull()
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8* [ [[RET]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret i8* [[RET]]
+; IS________OPM-LABEL: define {{[^@]+}}@test6b
+; IS________OPM-SAME: (i1 [[C:%.*]]) {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[RET:%.*]] = call nonnull i8* @ret_nonnull()
+; IS________OPM-NEXT:    br label [[LOOP:%.*]]
+; IS________OPM:       loop:
+; IS________OPM-NEXT:    [[PHI:%.*]] = phi i8* [ [[RET]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
+; IS________OPM-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; IS________OPM:       exit:
+; IS________OPM-NEXT:    ret i8* [[PHI]]
+;
+; IS________NPM-LABEL: define {{[^@]+}}@test6b
+; IS________NPM-SAME: (i1 [[C:%.*]]) {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[RET:%.*]] = call nonnull i8* @ret_nonnull()
+; IS________NPM-NEXT:    br label [[LOOP:%.*]]
+; IS________NPM:       loop:
+; IS________NPM-NEXT:    [[PHI:%.*]] = phi i8* [ [[RET]], [[ENTRY:%.*]] ], [ [[RET]], [[LOOP]] ]
+; IS________NPM-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; IS________NPM:       exit:
+; IS________NPM-NEXT:    ret i8* [[RET]]
 ;
 entry:
   %ret = call i8* @ret_nonnull()
@@ -1014,7 +1025,7 @@ define internal i32* @g2() {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g2
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    ret i32* undef
+; IS__CGSCC____-NEXT:    ret i32* inttoptr (i64 4 to i32*)
 ;
   ret i32* inttoptr (i64 4 to i32*)
 }

@@ -28,9 +28,8 @@ bb1:
 }
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label [[BB1:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB1]]
+; CHECK-NEXT:    call void @outlined_ir_func_0()
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: @f2(

@@ -29,30 +29,28 @@ first:
 }
 ; CHECK-LABEL: @function1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[TEST:%.*]]
-; CHECK:       test:
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A:%.*]], i32* [[B:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: @function2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[TEST:%.*]]
-; CHECK:       test:
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A:%.*]], i32* [[B:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK: define internal void @outlined_ir_func_0(
 ; CHECK-NEXT:  newFuncRoot:
-; CHECK-NEXT:    br label [[TEST_TO_OUTLINE:%.*]]
-; CHECK:       test_to_outline:
+; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
+; CHECK:       entry_to_outline:
+; CHECK-NEXT:    br label [[TEST:%.*]]
+; CHECK:       test:
 ; CHECK-NEXT:    br label [[FIRST:%.*]]
 ; CHECK:       first:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 0, [[TEST_TO_OUTLINE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 0, [[TEST]] ]
 ; CHECK-NEXT:    store i32 2, i32* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[TMP1:%.*]], align 4
-; CHECK-NEXT:    br label [[TEST_AFTER_OUTLINE_EXITSTUB:%.*]]
-; CHECK:       test_after_outline.exitStub:
+; CHECK-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]
+; CHECK:       entry_after_outline.exitStub:
 ; CHECK-NEXT:    ret void
 ;
