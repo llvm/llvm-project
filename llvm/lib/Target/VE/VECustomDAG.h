@@ -24,6 +24,7 @@ namespace llvm {
 Optional<unsigned> getVVPOpcode(unsigned Opcode);
 
 bool isVVPBinaryOp(unsigned Opcode);
+bool isVVPReductionOp(unsigned Opcode);
 
 MVT splitVectorType(MVT VT);
 
@@ -106,6 +107,12 @@ SDValue getGatherScatterIndex(SDValue Op);
 
 SDValue getGatherScatterScale(SDValue Op);
 
+unsigned getScalarReductionOpcode(unsigned VVPOC, bool IsMask);
+
+// Whether this VP_REDUCE_*/ VECREDUCE_*/VVP_REDUCE_* SDNode has a start
+// parameter.
+bool hasReductionStartParam(unsigned VVPOC);
+
 /// } Node Properties
 
 enum class Packing {
@@ -171,6 +178,12 @@ public:
 
   SDValue getUNDEF(EVT VT) const { return DAG.getUNDEF(VT); }
   /// } getNode
+
+  /// Legalizing getNode {
+  SDValue getLegalReductionOpVVP(unsigned VVPOpcode, EVT ResVT, SDValue StartV,
+                                 SDValue VectorV, SDValue Mask, SDValue AVL,
+                                 SDNodeFlags Flags) const;
+  /// } Legalizing getNode
 
   /// Packing {
   SDValue getUnpack(EVT DestVT, SDValue Vec, PackElem Part, SDValue AVL) const;

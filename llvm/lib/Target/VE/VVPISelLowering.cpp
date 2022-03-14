@@ -56,7 +56,7 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     return lowerVVP_GATHER_SCATTER(Op, CDAG);
   }
 
-  EVT OpVecVT = Op.getValueType();
+  EVT OpVecVT = *getIdiomaticVectorType(Op.getNode());
   EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
   auto Packing = getTypePacking(LegalVecVT.getSimpleVT());
 
@@ -84,6 +84,14 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     return CDAG.getNode(VVPOpcode, LegalVecVT,
                         {Op->getOperand(0), Op->getOperand(1), Mask, AVL});
   }
+  if (isVVPReductionOp(VVPOpcode)) {
+    auto SrcHasStart = hasReductionStartParam(Op->getOpcode());
+    SDValue StartV = SrcHasStart ? Op->getOperand(0) : SDValue();
+    SDValue VectorV = Op->getOperand(SrcHasStart ? 1 : 0);
+    return CDAG.getLegalReductionOpVVP(VVPOpcode, Op.getValueType(), StartV,
+                                       VectorV, Mask, AVL, Op->getFlags());
+  }
+
   if (VVPOpcode == VEISD::VVP_SELECT) {
     auto Mask = Op->getOperand(0);
     auto OnTrue = Op->getOperand(1);
@@ -91,10 +99,11 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
   }
   if (VVPOpcode == VEISD::VVP_SETCC) {
+    EVT LegalResVT = getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     auto LHS = Op->getOperand(0);
     auto RHS = Op->getOperand(1);
     auto Pred = Op->getOperand(2);
-    return CDAG.getNode(VVPOpcode, LegalVecVT, {LHS, RHS, Pred, Mask, AVL});
+    return CDAG.getNode(VVPOpcode, LegalResVT, {LHS, RHS, Pred, Mask, AVL});
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }

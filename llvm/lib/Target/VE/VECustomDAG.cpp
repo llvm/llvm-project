@@ -138,6 +138,15 @@ bool isVVPBinaryOp(unsigned VVPOpcode) {
   return false;
 }
 
+bool isVVPReductionOp(unsigned Opcode) {
+  switch (Opcode) {
+#define ADD_REDUCE_VVP_OP(VVP_NAME, SDNAME) case VEISD::VVP_NAME:
+#include "VVPNodes.def"
+    return true;
+  }
+  return false;
+}
+
 // Return the AVL operand position for this VVP or VEC Op.
 Optional<int> getAVLPos(unsigned Opc) {
   // This is only available for VP SDNodes
@@ -235,8 +244,13 @@ Optional<EVT> getIdiomaticVectorType(SDNode *Op) {
   }
 
   // Translate to VVP where possible.
+  unsigned OriginalOC = OC;
   if (auto VVPOpc = getVVPOpcode(OC))
     OC = *VVPOpc;
+
+  if (isVVPReductionOp(OC))
+    return Op->getOperand(hasReductionStartParam(OriginalOC) ? 1 : 0)
+        .getValueType();
 
   switch (OC) {
   default:
@@ -318,6 +332,27 @@ SDValue getNodePassthru(SDValue Op) {
     return N->getPassThru();
 
   return SDValue();
+}
+
+bool hasReductionStartParam(unsigned OPC) {
+  // TODO: Ordered reduction opcodes.
+  if (ISD::isVPReduction(OPC))
+    return true;
+  return false;
+}
+
+unsigned getScalarReductionOpcode(unsigned VVPOC, bool IsMask) {
+  assert(!IsMask && "Mask reduction isel");
+
+  switch (VVPOC) {
+#define HANDLE_VVP_REDUCE_TO_SCALAR(VVP_RED_ISD, REDUCE_ISD)                   \
+  case VEISD::VVP_RED_ISD:                                                     \
+    return ISD::REDUCE_ISD;
+#include "VVPNodes.def"
+  default:
+    break;
+  }
+  llvm_unreachable("Cannot not scalarize this reduction Opcode!");
 }
 
 /// } Node Properties
@@ -497,6 +532,33 @@ SDValue VECustomDAG::getGatherScatterAddress(SDValue BasePtr, SDValue Scale,
   auto ResPtr =
       getNode(VEISD::VVP_ADD, IndexVT, {BaseBroadcast, ScaledIndex, Mask, AVL});
   return ResPtr;
+}
+
+SDValue VECustomDAG::getLegalReductionOpVVP(unsigned VVPOpcode, EVT ResVT,
+                                            SDValue StartV, SDValue VectorV,
+                                            SDValue Mask, SDValue AVL,
+                                            SDNodeFlags Flags) const {
+
+  // Optionally attach the start param with a scalar op (where it is
+  // unsupported).
+  bool scalarizeStartParam = StartV && !hasReductionStartParam(VVPOpcode);
+  bool IsMaskReduction = isMaskType(VectorV.getValueType());
+  assert(!IsMaskReduction && "TODO Implement");
+  auto AttachStartValue = [&](SDValue ReductionResV) {
+    if (!scalarizeStartParam)
+      return ReductionResV;
+    auto ScalarOC = getScalarReductionOpcode(VVPOpcode, IsMaskReduction);
+    return getNode(ScalarOC, ResVT, {StartV, ReductionResV});
+  };
+
+  // Fixup: Always Use sequential 'fmul' reduction.
+  if (!scalarizeStartParam && StartV) {
+    assert(hasReductionStartParam(VVPOpcode));
+    return AttachStartValue(
+        getNode(VVPOpcode, ResVT, {StartV, VectorV, Mask, AVL}, Flags));
+  } else
+    return AttachStartValue(
+        getNode(VVPOpcode, ResVT, {VectorV, Mask, AVL}, Flags));
 }
 
 } // namespace llvm
