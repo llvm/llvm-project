@@ -82,6 +82,7 @@ Changes to the AArch64 Backend
   "tune-cpu" attribute is absent it tunes according to the "target-cpu".
 * Fixed relocations against temporary symbols (e.g. in jump tables and
   constant pools) in large COFF object files.
+* Auto-vectorization now targets SVE by default when available.
 
 Changes to the ARM Backend
 --------------------------
