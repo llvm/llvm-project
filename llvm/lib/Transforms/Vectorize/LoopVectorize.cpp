@@ -622,7 +622,7 @@ protected:
   /// Emit a bypass check to see if all of the SCEV assumptions we've
   /// had to make are correct. Returns the block containing the checks or
   /// nullptr if no checks have been added.
-  BasicBlock *emitSCEVChecks(Loop *L, BasicBlock *Bypass);
+  BasicBlock *emitSCEVChecks(BasicBlock *Bypass);
 
   /// Emit bypass checks to check any memory assumptions we may have made.
   /// Returns the block containing the checks or nullptr if no checks have been
@@ -2077,7 +2077,7 @@ public:
   /// Adds the generated SCEVCheckBlock before \p LoopVectorPreHeader and
   /// adjusts the branches to branch to the vector preheader or \p Bypass,
   /// depending on the generated condition.
-  BasicBlock *emitSCEVChecks(Loop *L, BasicBlock *Bypass,
+  BasicBlock *emitSCEVChecks(BasicBlock *Bypass,
                              BasicBlock *LoopVectorPreHeader,
                              BasicBlock *LoopExitBlock) {
     if (!SCEVCheckCond)
@@ -3026,10 +3026,10 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
   LoopBypassBlocks.push_back(TCCheckBlock);
 }
 
-BasicBlock *InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
+BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
 
   BasicBlock *const SCEVCheckBlock =
-      RTChecks.emitSCEVChecks(L, Bypass, LoopVectorPreHeader, LoopExitBlock);
+      RTChecks.emitSCEVChecks(Bypass, LoopVectorPreHeader, LoopExitBlock);
   if (!SCEVCheckBlock)
     return nullptr;
 
@@ -3339,7 +3339,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
 
   // Generate the code to check any assumptions that we've made for SCEV
   // expressions.
-  emitSCEVChecks(Lp, LoopScalarPreHeader);
+  emitSCEVChecks(LoopScalarPreHeader);
 
   // Generate the code that checks in runtime if arrays overlap. We put the
   // checks into a separate block to make the more common case of few elements
@@ -7861,7 +7861,7 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
 
   // Generate the code to check any assumptions that we've made for SCEV
   // expressions.
-  EPI.SCEVSafetyCheck = emitSCEVChecks(Lp, LoopScalarPreHeader);
+  EPI.SCEVSafetyCheck = emitSCEVChecks(LoopScalarPreHeader);
 
   // Generate the code that checks at runtime if arrays overlap. We put the
   // checks into a separate block to make the more common case of few elements
