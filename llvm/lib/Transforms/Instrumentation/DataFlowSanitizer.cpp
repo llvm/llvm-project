@@ -478,12 +478,14 @@ class DataFlowSanitizer {
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
   bool isForceZeroLabels(const Function *F);
+  FunctionType *getTrampolineFunctionType(FunctionType *T);
   TransformedFunction getCustomFunctionType(FunctionType *T);
   WrapperKind getWrapperKind(Function *F);
   void addGlobalNameSuffix(GlobalValue *GV);
   Function *buildWrapperFunction(Function *F, StringRef NewFName,
                                  GlobalValue::LinkageTypes NewFLink,
                                  FunctionType *NewFT);
+  Constant *getOrBuildTrampolineFunction(FunctionType *FT, StringRef FName);
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
   void injectMetadataGlobals(Module &M);
@@ -790,6 +792,25 @@ DataFlowSanitizer::DataFlowSanitizer(
       SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
 }
 
+FunctionType *DataFlowSanitizer::getTrampolineFunctionType(FunctionType *T) {
+  assert(!T->isVarArg());
+  SmallVector<Type *, 4> ArgTypes;
+  ArgTypes.push_back(T->getPointerTo());
+  ArgTypes.append(T->param_begin(), T->param_end());
+  ArgTypes.append(T->getNumParams(), PrimitiveShadowTy);
+  Type *RetType = T->getReturnType();
+  if (!RetType->isVoidTy())
+    ArgTypes.push_back(PrimitiveShadowPtrTy);
+
+  if (shouldTrackOrigins()) {
+    ArgTypes.append(T->getNumParams(), OriginTy);
+    if (!RetType->isVoidTy())
+      ArgTypes.push_back(OriginPtrTy);
+  }
+
+  return FunctionType::get(T->getReturnType(), ArgTypes, false);
+}
+
 TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
   SmallVector<Type *, 4> ArgTypes;
 
@@ -801,8 +822,15 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
   for (unsigned I = 0, E = T->getNumParams(); I != E; ++I) {
     Type *ParamType = T->getParamType(I);
     FunctionType *FT;
-    ArgumentIndexMapping.push_back(ArgTypes.size());
-    ArgTypes.push_back(ParamType);
+    if (isa<PointerType>(ParamType) &&
+        (FT = dyn_cast<FunctionType>(ParamType->getPointerElementType()))) {
+      ArgumentIndexMapping.push_back(ArgTypes.size());
+      ArgTypes.push_back(getTrampolineFunctionType(FT)->getPointerTo());
+      ArgTypes.push_back(Type::getInt8PtrTy(*Ctx));
+    } else {
+      ArgumentIndexMapping.push_back(ArgTypes.size());
+      ArgTypes.push_back(ParamType);
+    }
   }
   for (unsigned I = 0, E = T->getNumParams(); I != E; ++I)
     ArgTypes.push_back(PrimitiveShadowTy);
@@ -1149,6 +1177,61 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
   }
 
   return NewF;
+}
+
+Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
+                                                          StringRef FName) {
+  FunctionType *FTT = getTrampolineFunctionType(FT);
+  FunctionCallee C = Mod->getOrInsertFunction(FName, FTT);
+  Function *F = dyn_cast<Function>(C.getCallee());
+  if (F && F->isDeclaration()) {
+    F->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
+    std::vector<Value *> Args;
+    Function::arg_iterator AI = F->arg_begin() + 1;
+    for (unsigned N = FT->getNumParams(); N != 0; ++AI, --N)
+      Args.push_back(&*AI);
+    CallInst *CI = CallInst::Create(FT, &*F->arg_begin(), Args, "", BB);
+    Type *RetType = FT->getReturnType();
+    ReturnInst *RI = RetType->isVoidTy() ? ReturnInst::Create(*Ctx, BB)
+                                         : ReturnInst::Create(*Ctx, CI, BB);
+
+    // F is called by a wrapped custom function with primitive shadows. So
+    // its arguments and return value need conversion.
+    DFSanFunction DFSF(*this, F, /*IsNativeABI=*/true,
+                       /*IsForceZeroLabels=*/false);
+    Function::arg_iterator ValAI = F->arg_begin(), ShadowAI = AI;
+    ++ValAI;
+    for (unsigned N = FT->getNumParams(); N != 0; ++ValAI, ++ShadowAI, --N) {
+      Value *Shadow =
+          DFSF.expandFromPrimitiveShadow(ValAI->getType(), &*ShadowAI, CI);
+      DFSF.ValShadowMap[&*ValAI] = Shadow;
+    }
+    Function::arg_iterator RetShadowAI = ShadowAI;
+    const bool ShouldTrackOrigins = shouldTrackOrigins();
+    if (ShouldTrackOrigins) {
+      ValAI = F->arg_begin();
+      ++ValAI;
+      Function::arg_iterator OriginAI = ShadowAI;
+      if (!RetType->isVoidTy())
+        ++OriginAI;
+      for (unsigned N = FT->getNumParams(); N != 0; ++ValAI, ++OriginAI, --N) {
+        DFSF.ValOriginMap[&*ValAI] = &*OriginAI;
+      }
+    }
+    DFSanVisitor(DFSF).visitCallInst(*CI);
+    if (!RetType->isVoidTy()) {
+      Value *PrimitiveShadow = DFSF.collapseToPrimitiveShadow(
+          DFSF.getShadow(RI->getReturnValue()), RI);
+      new StoreInst(PrimitiveShadow, &*RetShadowAI, RI);
+      if (ShouldTrackOrigins) {
+        Value *Origin = DFSF.getOrigin(RI->getReturnValue());
+        new StoreInst(Origin, &*std::prev(F->arg_end()), RI);
+      }
+    }
+  }
+
+  return cast<Constant>(C.getCallee());
 }
 
 // Initialize DataFlowSanitizer runtime functions and declare them in the module
@@ -2822,7 +2905,20 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
     for (unsigned N = FT->getNumParams(); N != 0; ++I, --N) {
       Type *T = (*I)->getType();
       FunctionType *ParamFT;
-      Args.push_back(*I);
+      if (isa<PointerType>(T) &&
+          (ParamFT = dyn_cast<FunctionType>(T->getPointerElementType()))) {
+        std::string TName = "dfst";
+        TName += utostr(FT->getNumParams() - N);
+        TName += "$";
+        TName += F.getName();
+        Constant *Trampoline =
+            DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
+        Args.push_back(Trampoline);
+        Args.push_back(
+            IRB.CreateBitCast(*I, Type::getInt8PtrTy(*DFSF.DFS.Ctx)));
+      } else {
+        Args.push_back(*I);
+      }
     }
 
     // Adds shadow arguments.
