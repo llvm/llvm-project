@@ -138,8 +138,6 @@ Error UdtRecordCompleter::visitKnownMember(
   clang::QualType member_type =
       m_ast_builder.GetOrCreateType(PdbTypeSymId(static_data_member.Type));
 
-  m_ast_builder.CompleteType(member_type);
-
   CompilerType member_ct = m_ast_builder.ToCompilerType(member_type);
 
   lldb::AccessType access =
@@ -149,7 +147,7 @@ Error UdtRecordCompleter::visitKnownMember(
 
   // Static constant members may be a const[expr] declaration.
   // Query the symbol's value as the variable initializer if valid.
-  if (member_ct.IsConst()) {
+  if (member_ct.IsConst() && member_ct.IsCompleteType()) {
     std::string qual_name = decl->getQualifiedNameAsString();
 
     auto results =
