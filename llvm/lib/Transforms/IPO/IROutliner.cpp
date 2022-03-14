@@ -16,8 +16,9 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/PassManager.h"
@@ -679,6 +680,18 @@ static void moveFunctionData(Function &Old, Function &New,
       if (!isa<CallInst>(&Val)) {
         // Remove the debug information for outlined functions.
         Val.setDebugLoc(DebugLoc());
+
+        // Loop info metadata may contain line locations. Update them to have no
+        // value in the new subprogram since the outlined code could be from
+        // several locations.
+        auto updateLoopInfoLoc = [&New](Metadata *MD) -> Metadata * {
+          if (DISubprogram *SP = New.getSubprogram())
+            if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+              return DILocation::get(New.getContext(), Loc->getLine(),
+                                     Loc->getColumn(), SP, nullptr);
+          return MD;
+        };
+        updateLoopMetadataDebugLocations(Val, updateLoopInfoLoc);
         continue;
       }
 
