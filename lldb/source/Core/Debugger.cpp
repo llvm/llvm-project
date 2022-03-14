@@ -1069,9 +1069,12 @@ bool Debugger::CheckTopIOHandlerTypes(IOHandler::Type top_type,
 }
 
 void Debugger::PrintAsync(const char *s, size_t len, bool is_stdout) {
-  lldb_private::StreamFile &stream =
-      is_stdout ? GetOutputStream() : GetErrorStream();
-  m_io_handler_stack.PrintAsync(&stream, s, len);
+  bool printed = m_io_handler_stack.PrintAsync(s, len, is_stdout);
+  if (!printed) {
+    lldb::StreamFileSP stream =
+        is_stdout ? m_output_stream_sp : m_error_stream_sp;
+    stream->Write(s, len);
+  }
 }
 
 ConstString Debugger::GetTopIOHandlerControlSequence(char ch) {

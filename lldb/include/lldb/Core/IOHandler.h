@@ -163,10 +163,7 @@ public:
 
   void WaitForPop();
 
-  virtual void PrintAsync(Stream *stream, const char *s, size_t len) {
-    stream->Write(s, len);
-    stream->Flush();
-  }
+  virtual void PrintAsync(const char *s, size_t len, bool is_stdout);
 
 protected:
   Debugger &m_debugger;
@@ -415,7 +412,7 @@ public:
 
   uint32_t GetCurrentLineIndex() const;
 
-  void PrintAsync(Stream *stream, const char *s, size_t len) override;
+  void PrintAsync(const char *s, size_t len, bool is_stdout) override;
 
 private:
 #if LLDB_ENABLE_LIBEDIT
@@ -558,7 +555,7 @@ public:
     return m_repl_enabled;
   }
 
-  void PrintAsync(Stream *stream, const char *s, size_t len);
+  bool PrintAsync(const char *s, size_t len, bool is_stdout);
 
 protected:
   void UpdateREPLIsActive() {
