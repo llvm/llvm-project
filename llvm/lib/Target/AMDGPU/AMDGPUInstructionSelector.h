@@ -173,10 +173,14 @@ private:
   selectVOP3Mods_nnan(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
-  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
+  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI,
+                      bool IsDOT = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PMods(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;

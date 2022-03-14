@@ -1,4 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX906
+; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
+; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX940
+; RUN: llc -march=amdgcn -mcpu=gfx940 -global-isel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX940
 ; RUN: llc -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
@@ -6,7 +8,7 @@ declare i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 %clamp)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot2_clamp:
-; GFX906: v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
+; GFX9:   v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_clamp(
     i32 addrspace(1)* %r,
@@ -23,7 +25,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot2_no_clamp:
-; GFX906: v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX9:   v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_no_clamp(
     i32 addrspace(1)* %r,
@@ -41,6 +43,7 @@ entry:
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot2_op_sel:
 ; GFX906: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
+; GFX940: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}}{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_op_sel(
     i32 addrspace(1)* %r,
