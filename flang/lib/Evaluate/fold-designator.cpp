@@ -50,7 +50,7 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
   if (auto type{DynamicType::From(array)}) {
     if (auto extents{GetConstantExtents(context_, array)}) {
       if (auto bytes{ToInt64(type->MeasureSizeInBytes(context_, true))}) {
-        Shape lbs{GetLowerBounds(context_, x.base())};
+        Shape lbs{GetLBOUNDs(context_, x.base())};
         if (auto lowerBounds{AsConstantExtents(context_, lbs)}) {
           std::optional<OffsetSymbol> result;
           if (!x.base().IsSymbol() &&
@@ -206,7 +206,7 @@ static std::optional<ArrayRef> OffsetToArrayRef(FoldingContext &context,
     NamedEntity &&entity, const Shape &shape, const DynamicType &elementType,
     ConstantSubscript &offset) {
   auto extents{AsConstantExtents(context, shape)};
-  Shape lbs{GetLowerBounds(context, entity)};
+  Shape lbs{GetRawLowerBounds(context, entity)};
   auto lower{AsConstantExtents(context, lbs)};
   auto elementBytes{ToInt64(elementType.MeasureSizeInBytes(context, true))};
   if (!extents || !lower || !elementBytes || *elementBytes <= 0) {
