@@ -19176,6 +19176,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "     {init1, init2, init3, init4}}\n"
                "};",
                Style);
+  // TODO: Fix the indentations below when this option is fully functional.
+  verifyFormat("int a[][] = {\n"
+               "    {\n"
+               "     {0, 2}, //\n"
+               " {1, 2}  //\n"
+               "    }\n"
+               "};",
+               Style);
   Style.ColumnLimit = 100;
   EXPECT_EQ(
       "test demo[] = {\n"
