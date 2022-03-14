@@ -239,6 +239,58 @@ TEST(YAMLIO, TestSequenceMapWriteAndRead) {
 }
 
 //
+// Test reading the entire struct as an enum.
+//
+
+struct FooBarEnum {
+  int Foo;
+  int Bar;
+  bool operator==(const FooBarEnum &R) const {
+    return Foo == R.Foo && Bar == R.Bar;
+  }
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<FooBarEnum> {
+  static void enumInput(IO &io, FooBarEnum &Val) {
+    io.enumCase(Val, "OnlyFoo", FooBarEnum({1, 0}));
+    io.enumCase(Val, "OnlyBar", FooBarEnum({0, 1}));
+  }
+  static void mapping(IO &io, FooBarEnum &Val) {
+    io.mapOptional("Foo", Val.Foo);
+    io.mapOptional("Bar", Val.Bar);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+TEST(YAMLIO, TestMapEnumRead) {
+  FooBarEnum Doc;
+  {
+    Input Yin("OnlyFoo");
+    Yin >> Doc;
+    EXPECT_FALSE(Yin.error());
+    EXPECT_EQ(Doc.Foo, 1);
+    EXPECT_EQ(Doc.Bar, 0);
+  }
+  {
+    Input Yin("OnlyBar");
+    Yin >> Doc;
+    EXPECT_FALSE(Yin.error());
+    EXPECT_EQ(Doc.Foo, 0);
+    EXPECT_EQ(Doc.Bar, 1);
+  }
+  {
+    Input Yin("{Foo: 3, Bar: 5}");
+    Yin >> Doc;
+    EXPECT_FALSE(Yin.error());
+    EXPECT_EQ(Doc.Foo, 3);
+    EXPECT_EQ(Doc.Bar, 5);
+  }
+}
+
+//
 // Test YAML filename handling.
 //
 static void testErrorFilename(const llvm::SMDiagnostic &Error, void *) {

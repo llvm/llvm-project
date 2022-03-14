@@ -551,6 +551,34 @@ you can specialize on the class pointer.  Examples:
       }
     };
 
+There are circumstances where we want to allow the entire mapping to be
+read as an enumeration.  For example, say some configuration option
+started as an enumeration.  Then it got more complex so it is now a
+mapping.  But it is necessary to support the old configuration files.
+In that case, add a function ``enumInput`` like for
+``ScalarEnumerationTraits::enumeration``.  Examples:
+
+.. code-block:: c++
+
+    struct FooBarEnum {
+      int Foo;
+      int Bar;
+      bool operator==(const FooBarEnum &R) const {
+        return Foo == R.Foo && Bar == R.Bar;
+      }
+    };
+
+    template <> struct MappingTraits<FooBarEnum> {
+      static void enumInput(IO &io, FooBarEnum &Val) {
+        io.enumCase(Val, "OnlyFoo", FooBarEnum({1, 0}));
+        io.enumCase(Val, "OnlyBar", FooBarEnum({0, 1}));
+      }
+      static void mapping(IO &io, FooBarEnum &Val) {
+        io.mapOptional("Foo", Val.Foo);
+        io.mapOptional("Bar", Val.Bar);
+      }
+    };
+
 
 No Normalization
 ----------------
