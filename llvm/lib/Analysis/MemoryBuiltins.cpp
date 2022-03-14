@@ -338,12 +338,7 @@ Value *llvm::getAllocAlignment(const CallBase *V,
   if (FnData.hasValue() && FnData->AlignParam >= 0) {
     return V->getOperand(FnData->AlignParam);
   }
-  unsigned AllocAlignParam;
-  if (V->getAttributes().hasAttrSomewhere(Attribute::AllocAlign,
-                                          &AllocAlignParam)) {
-    return V->getOperand(AllocAlignParam-1);
-  }
-  return nullptr;
+  return V->getArgOperandWithAttribute(Attribute::AllocAlign);
 }
 
 /// When we're compiling N-bit code, and the user uses parameters that are

@@ -14,11 +14,10 @@ entry:
   ret i8* %call
 }
 
-; BUG: we don't check the declaration, only the callsite. This will be fixed in the next change.
 define i8* @widen_align_from_allocalign() {
 ; CHECK-LABEL: @widen_align_from_allocalign(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 16 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 64 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
 entry:
@@ -27,10 +26,12 @@ entry:
   ret i8* %call
 }
 
+; BUG: we shouldn't narrow this alignment since we already had a stronger
+; constraint, but we do.
 define i8* @dont_narrow_align_from_allocalign() {
 ; CHECK-LABEL: @dont_narrow_align_from_allocalign(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 16 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 8 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
 entry:
@@ -59,7 +60,7 @@ define i8* @allocalign_disappears() {
 ; CHECK-INLINE-NEXT:    ret i8* [[CALL_I]]
 ;
 ; CHECK-NOINLINE-LABEL: @allocalign_disappears(
-; CHECK-NOINLINE-NEXT:    [[CALL:%.*]] = tail call i8* @my_aligned_alloc_3(i32 42, i32 128)
+; CHECK-NOINLINE-NEXT:    [[CALL:%.*]] = tail call align 128 i8* @my_aligned_alloc_3(i32 42, i32 128)
 ; CHECK-NOINLINE-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @my_aligned_alloc_3(i32 42, i32 128)

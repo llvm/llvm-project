@@ -1826,7 +1826,13 @@ public:
 
   /// If one of the arguments has the 'returned' attribute, returns its
   /// operand value. Otherwise, return nullptr.
-  Value *getReturnedArgOperand() const;
+  Value *getReturnedArgOperand() const {
+    return getArgOperandWithAttribute(Attribute::Returned);
+  }
+
+  /// If one of the arguments has the specified attribute, returns its
+  /// operand value. Otherwise, return nullptr.
+  Value *getArgOperandWithAttribute(Attribute::AttrKind Kind) const;
 
   /// Return true if the call should not be treated as a call to a
   /// builtin.
