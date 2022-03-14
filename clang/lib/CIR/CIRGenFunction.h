@@ -151,6 +151,9 @@ public:
                    const clang::CallExpr *E, ReturnValueSlot returnValue,
                    mlir::Value Chain = nullptr);
 
+  RValue buildCallExpr(const clang::CallExpr *E,
+                       ReturnValueSlot ReturnValue = ReturnValueSlot());
+
   CIRGenCallee buildCallee(const clang::Expr *E);
 
   /// buildAnyExpr - Emit code to compute the specified expression which can

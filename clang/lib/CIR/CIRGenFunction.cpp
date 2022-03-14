@@ -168,6 +168,22 @@ RValue CIRGenFunction::buildAnyExpr(const Expr *E) {
   }
   llvm_unreachable("bad evaluation kind");
 }
+
+RValue CIRGenFunction::buildCallExpr(const clang::CallExpr *E,
+                                     ReturnValueSlot ReturnValue) {
+  assert(!E->getCallee()->getType()->isBlockPointerType() && "ObjC Blocks NYI");
+  assert(!dyn_cast<CXXMemberCallExpr>(E) && "NYI");
+  assert(!dyn_cast<CUDAKernelCallExpr>(E) && "CUDA NYI");
+  assert(!dyn_cast<CXXOperatorCallExpr>(E) && "NYI");
+
+  CIRGenCallee callee = buildCallee(E->getCallee());
+
+  assert(!callee.isBuiltin() && "builtins NYI");
+  assert(!callee.isPsuedoDestructor() && "NYI");
+
+  return buildCall(E->getCallee()->getType(), callee, E, ReturnValue);
+}
+
 RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
                                  const CIRGenCallee &OrigCallee,
                                  const clang::CallExpr *E,
