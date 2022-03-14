@@ -73,8 +73,8 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
-  // When x < -150 or nan
-  if (unlikely(xbits.uintval() > 0xc316'0000U)) {
+  // When x =< -150 or nan
+  if (unlikely(xbits.uintval() >= 0xc316'0000U)) {
     // exp(-Inf) = 0
     if (xbits.is_inf())
       return 0.0f;
