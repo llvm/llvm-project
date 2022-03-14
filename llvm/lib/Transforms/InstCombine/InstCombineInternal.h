@@ -353,7 +353,8 @@ private:
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should
   /// already be inserted into the function.
-  Value *foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd);
+  Value *foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd,
+                          bool IsLogicalSelect = false);
 
   Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
                                        Instruction *CxtI, bool IsAnd,

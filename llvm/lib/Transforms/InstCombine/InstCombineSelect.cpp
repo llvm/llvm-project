@@ -2605,13 +2605,29 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // Folding select to and/or i1 isn't poison safe in general. impliesPoison
     // checks whether folding it does not convert a well-defined value into
     // poison.
-    if (match(TrueVal, m_One()) && impliesPoison(FalseVal, CondVal)) {
-      // Change: A = select B, true, C --> A = or B, C
-      return BinaryOperator::CreateOr(CondVal, FalseVal);
+    if (match(TrueVal, m_One())) {
+      if (impliesPoison(FalseVal, CondVal)) {
+        // Change: A = select B, true, C --> A = or B, C
+        return BinaryOperator::CreateOr(CondVal, FalseVal);
+      }
+
+      if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
+        if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
+          if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
+                                          /*IsSelectLogical*/ true))
+            return replaceInstUsesWith(SI, V);
     }
-    if (match(FalseVal, m_Zero()) && impliesPoison(TrueVal, CondVal)) {
-      // Change: A = select B, C, false --> A = and B, C
-      return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    if (match(FalseVal, m_Zero())) {
+      if (impliesPoison(TrueVal, CondVal)) {
+        // Change: A = select B, C, false --> A = and B, C
+        return BinaryOperator::CreateAnd(CondVal, TrueVal);
+      }
+
+      if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
+        if (auto *RHS = dyn_cast<FCmpInst>(TrueVal))
+          if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
+                                          /*IsSelectLogical*/ true))
+            return replaceInstUsesWith(SI, V);
     }
 
     auto *One = ConstantInt::getTrue(SelType);
