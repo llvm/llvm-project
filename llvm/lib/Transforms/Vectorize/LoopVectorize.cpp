@@ -3271,7 +3271,6 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   // Get ready to start creating new instructions into the vectorized body.
   assert(LoopVectorPreHeader == L->getLoopPreheader() &&
          "Inconsistent vector loop preheader");
-  Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
