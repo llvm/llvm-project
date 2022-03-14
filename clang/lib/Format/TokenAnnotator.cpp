@@ -824,8 +824,10 @@ private:
               Previous->is(tok::string_literal))
             Previous->setType(TT_SelectorName);
         }
-        if (CurrentToken->is(tok::colon) || Style.isJavaScript())
+        if (CurrentToken->is(tok::colon) && OpeningBrace.is(TT_Unknown))
           OpeningBrace.setType(TT_DictLiteral);
+        else if (Style.isJavaScript())
+          OpeningBrace.overwriteFixedType(TT_DictLiteral);
       }
       if (CurrentToken->is(tok::comma)) {
         if (Style.isJavaScript())
