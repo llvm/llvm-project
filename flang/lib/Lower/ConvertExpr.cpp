@@ -4031,20 +4031,41 @@ public:
 
   template <int KIND>
   CC genarr(const Fortran::evaluate::ComplexComponent<KIND> &x) {
-    TODO(getLoc(), "");
+    TODO(getLoc(), "ComplexComponent<KIND>");
   }
 
   template <typename T>
   CC genarr(const Fortran::evaluate::Parentheses<T> &x) {
-    TODO(getLoc(), "");
+    mlir::Location loc = getLoc();
+    if (isReferentiallyOpaque()) {
+      // Context is a call argument in, for example, an elemental procedure
+      // call. TODO: all array arguments should use array_load, array_access,
+      // array_amend, and INTENT(OUT), INTENT(INOUT) arguments should have
+      // array_merge_store ops.
+      TODO(loc, "parentheses on argument in elemental call");
+    }
+    auto f = genarr(x.left());
+    return [=](IterSpace iters) -> ExtValue {
+      auto val = f(iters);
+      mlir::Value base = fir::getBase(val);
+      auto newBase =
+          builder.create<fir::NoReassocOp>(loc, base.getType(), base);
+      return fir::substBase(val, newBase);
+    };
   }
-
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Integer, KIND>> &x) {
-    TODO(getLoc(), "");
+    mlir::Location loc = getLoc();
+    auto f = genarr(x.left());
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value val = fir::getBase(f(iters));
+      mlir::Type ty =
+          converter.genType(Fortran::common::TypeCategory::Integer, KIND);
+      mlir::Value zero = builder.createIntegerConstant(loc, ty, 0);
+      return builder.create<mlir::arith::SubIOp>(loc, zero, val);
+    };
   }
-
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Real, KIND>> &x) {
@@ -4057,7 +4078,11 @@ public:
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Complex, KIND>> &x) {
-    TODO(getLoc(), "");
+    mlir::Location loc = getLoc();
+    auto f = genarr(x.left());
+    return [=](IterSpace iters) -> ExtValue {
+      return builder.create<fir::NegcOp>(loc, fir::getBase(f(iters)));
+    };
   }
 
   //===--------------------------------------------------------------------===//
@@ -4100,7 +4125,15 @@ public:
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
       const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &x) {
-    TODO(getLoc(), "genarr Power<Fortran::evaluate::Type<TC, KIND>>");
+    mlir::Location loc = getLoc();
+    mlir::Type ty = converter.genType(TC, KIND);
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value lhs = fir::getBase(lf(iters));
+      mlir::Value rhs = fir::getBase(rf(iters));
+      return Fortran::lower::genPow(builder, loc, ty, lhs, rhs);
+    };
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
@@ -4909,14 +4942,67 @@ public:
     TODO(getLoc(), "genarr StructureConstructor");
   }
 
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Not<KIND> &x) {
-    TODO(getLoc(), "genarr Not");
-  }
+  //===--------------------------------------------------------------------===//
+  // LOCICAL operators (.NOT., .AND., .EQV., etc.)
+  //===--------------------------------------------------------------------===//
 
   template <int KIND>
+  CC genarr(const Fortran::evaluate::Not<KIND> &x) {
+    mlir::Location loc = getLoc();
+    mlir::IntegerType i1Ty = builder.getI1Type();
+    auto lambda = genarr(x.left());
+    mlir::Value truth = builder.createBool(loc, true);
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value logical = fir::getBase(lambda(iters));
+      mlir::Value val = builder.createConvert(loc, i1Ty, logical);
+      return builder.create<mlir::arith::XOrIOp>(loc, val, truth);
+    };
+  }
+  template <typename OP, typename A>
+  CC createBinaryBoolOp(const A &x) {
+    mlir::Location loc = getLoc();
+    mlir::IntegerType i1Ty = builder.getI1Type();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value left = fir::getBase(lf(iters));
+      mlir::Value right = fir::getBase(rf(iters));
+      mlir::Value lhs = builder.createConvert(loc, i1Ty, left);
+      mlir::Value rhs = builder.createConvert(loc, i1Ty, right);
+      return builder.create<OP>(loc, lhs, rhs);
+    };
+  }
+  template <typename OP, typename A>
+  CC createCompareBoolOp(mlir::arith::CmpIPredicate pred, const A &x) {
+    mlir::Location loc = getLoc();
+    mlir::IntegerType i1Ty = builder.getI1Type();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value left = fir::getBase(lf(iters));
+      mlir::Value right = fir::getBase(rf(iters));
+      mlir::Value lhs = builder.createConvert(loc, i1Ty, left);
+      mlir::Value rhs = builder.createConvert(loc, i1Ty, right);
+      return builder.create<OP>(loc, pred, lhs, rhs);
+    };
+  }
+  template <int KIND>
   CC genarr(const Fortran::evaluate::LogicalOperation<KIND> &x) {
-    TODO(getLoc(), "genarr LogicalOperation");
+    switch (x.logicalOperator) {
+    case Fortran::evaluate::LogicalOperator::And:
+      return createBinaryBoolOp<mlir::arith::AndIOp>(x);
+    case Fortran::evaluate::LogicalOperator::Or:
+      return createBinaryBoolOp<mlir::arith::OrIOp>(x);
+    case Fortran::evaluate::LogicalOperator::Eqv:
+      return createCompareBoolOp<mlir::arith::CmpIOp>(
+          mlir::arith::CmpIPredicate::eq, x);
+    case Fortran::evaluate::LogicalOperator::Neqv:
+      return createCompareBoolOp<mlir::arith::CmpIOp>(
+          mlir::arith::CmpIPredicate::ne, x);
+    case Fortran::evaluate::LogicalOperator::Not:
+      llvm_unreachable(".NOT. handled elsewhere");
+    }
+    llvm_unreachable("unhandled case");
   }
 
   //===--------------------------------------------------------------------===//
