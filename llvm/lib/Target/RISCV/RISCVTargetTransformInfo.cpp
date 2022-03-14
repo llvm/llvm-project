@@ -217,6 +217,64 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
+InstructionCost
+RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                     bool IsUnsigned,
+                                     TTI::TargetCostKind CostKind) {
+  // FIXME: Only supporting fixed vectors for now.
+  if (!isa<FixedVectorType>(Ty))
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+
+  if (!ST->useRVVForFixedLengthVectors())
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+
+  // Skip if scalar size of Ty is bigger than ELEN.
+  if (Ty->getScalarSizeInBits() > ST->getMaxELENForFixedLengthVectors())
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+
+  // IR Reduction is composed by two vmv and one rvv reduction instruction.
+  InstructionCost BaseCost = 2;
+  unsigned VL = cast<FixedVectorType>(Ty)->getNumElements();
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
+}
+
+InstructionCost
+RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *VTy,
+                                         Optional<FastMathFlags> FMF,
+                                         TTI::TargetCostKind CostKind) {
+  // FIXME: Only supporting fixed vectors for now.
+  if (!isa<FixedVectorType>(VTy))
+    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+
+  // FIXME: Do not support i1 and/or reduction now.
+  if (VTy->getElementType()->isIntegerTy(1))
+    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+
+  if (!ST->useRVVForFixedLengthVectors())
+    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+
+  // Skip if scalar size of VTy is bigger than ELEN.
+  if (VTy->getScalarSizeInBits() > ST->getMaxELENForFixedLengthVectors())
+    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD && "Invalid opcode");
+
+  if (ISD != ISD::ADD && ISD != ISD::OR && ISD != ISD::XOR && ISD != ISD::AND &&
+      ISD != ISD::FADD)
+    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+
+  // IR Reduction is composed by two vmv and one rvv reduction instruction.
+  InstructionCost BaseCost = 2;
+  unsigned VL = cast<FixedVectorType>(VTy)->getNumElements();
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, VTy);
+
+  if (TTI::requiresOrderedReduction(FMF))
+    return (LT.first - 1) + BaseCost + VL;
+  return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
+}
+
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::UnrollingPreferences &UP,
                                            OptimizationRemarkEmitter *ORE) {
