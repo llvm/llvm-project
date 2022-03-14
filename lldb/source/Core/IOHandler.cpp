@@ -122,14 +122,18 @@ void IOHandler::SetPopped(bool b) { m_popped.SetValue(b, eBroadcastOnChange); }
 
 void IOHandler::WaitForPop() { m_popped.WaitForValueEqualTo(true); }
 
-void IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len) {
-  if (stream) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    if (m_top)
-      m_top->PrintAsync(stream, s, len);
-    else
-      stream->Write(s, len);
-  }
+void IOHandler::PrintAsync(const char *s, size_t len, bool is_stdout) {
+  lldb::StreamFileSP stream = is_stdout ? m_output_sp : m_error_sp;
+  stream->Write(s, len);
+  stream->Flush();
+}
+
+bool IOHandlerStack::PrintAsync(const char *s, size_t len, bool is_stdout) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_top)
+    return false;
+  m_top->PrintAsync(s, len, is_stdout);
+  return true;
 }
 
 IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
@@ -612,11 +616,12 @@ void IOHandlerEditline::GotEOF() {
 #endif
 }
 
-void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
+void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 #if LLDB_ENABLE_LIBEDIT
-  if (m_editline_up)
-    m_editline_up->PrintAsync(stream, s, len);
-  else
+  if (m_editline_up) {
+    lldb::StreamFileSP stream = is_stdout ? m_output_sp : m_error_sp;
+    m_editline_up->PrintAsync(stream.get(), s, len);
+  } else
 #endif
   {
 #ifdef _WIN32
@@ -633,7 +638,7 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
       SetConsoleCursorPosition(console_handle, coord);
     }
 #endif
-    IOHandler::PrintAsync(stream, s, len);
+    IOHandler::PrintAsync(s, len, is_stdout);
 #ifdef _WIN32
     if (prompt)
       IOHandler::PrintAsync(GetOutputStreamFileSP().get(), prompt,
