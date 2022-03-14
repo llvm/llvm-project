@@ -141,6 +141,7 @@ public:
 
   bool includeInDynsym() const;
   uint8_t computeBinding() const;
+  bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
 
   bool isUndefined() const { return symbolKind == UndefinedKind; }
