@@ -78,7 +78,7 @@
 ; CHECK-O: Running pass: GlobalDCEPass
 ; CHECK-O: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
-; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-O: Running pass: RecomputeGlobalsAAPass
 ; CHECK-O: Running pass: Float2IntPass on main
 ; CHECK-O: Running pass: LowerConstantIntrinsicsPass on main
 ; CHECK-O: Running pass: LoopSimplifyPass on main
