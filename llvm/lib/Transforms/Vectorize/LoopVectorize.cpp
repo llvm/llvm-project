@@ -927,7 +927,7 @@ protected:
   /// Emits an iteration count bypass check after the main vector loop has
   /// finished to see if there are any iterations left to execute by either
   /// the vector epilogue or the scalar epilogue.
-  BasicBlock *emitMinimumVectorEpilogueIterCountCheck(Loop *L,
+  BasicBlock *emitMinimumVectorEpilogueIterCountCheck(
                                                       BasicBlock *Bypass,
                                                       BasicBlock *Insert);
   void printDebugTracesAtStart() override;
@@ -7981,7 +7981,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   LoopVectorPreHeader =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, "vec.epilog.ph");
-  emitMinimumVectorEpilogueIterCountCheck(Lp, LoopScalarPreHeader,
+  emitMinimumVectorEpilogueIterCountCheck(LoopScalarPreHeader,
                                           VecEpilogueIterationCountCheck);
 
   // Adjust the control flow taking the state info from the main loop
@@ -8071,7 +8071,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
 
 BasicBlock *
 EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
-    Loop *L, BasicBlock *Bypass, BasicBlock *Insert) {
+    BasicBlock *Bypass, BasicBlock *Insert) {
 
   assert(EPI.TripCount &&
          "Expected trip count to have been safed in the first pass.");
