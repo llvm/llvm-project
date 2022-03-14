@@ -508,6 +508,12 @@ bool LoadStoreOpt::addStoreToCandidate(GStore &StoreMI,
   if (StoreMI.getMemSizeInBits() != ValueTy.getSizeInBits())
     return false;
 
+  // Avoid adding volatile or ordered stores to the candidate. We already have a
+  // check for this in instMayAlias() but that only get's called later between
+  // potential aliasing hazards.
+  if (!StoreMI.isSimple())
+    return false;
+
   Register StoreAddr = StoreMI.getPointerReg();
   auto BIO = getPointerInfo(StoreAddr, *MRI);
   Register StoreBase = BIO.BaseReg;
