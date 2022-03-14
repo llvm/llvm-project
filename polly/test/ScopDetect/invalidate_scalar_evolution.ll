@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze  < %s | FileCheck %s -check-prefix=PHI
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=PHI
 
 ; void f(long A[], long N) {
 ;   long i;

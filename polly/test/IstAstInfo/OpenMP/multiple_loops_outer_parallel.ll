@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-ast -polly-parallel -polly-parallel-force -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
+; RUN: opt %loadPolly -polly-print-ast -polly-parallel -polly-parallel-force -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -print-polyhedral-info -polly-check-parallel -disable-output < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;       void jd(int *A) {
 ; CHECK:  #pragma omp parallel for

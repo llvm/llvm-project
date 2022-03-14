@@ -1,16 +1,16 @@
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine-branches \
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches \
 ; RUN:     -polly-invariant-load-hoisting=true \
 ; RUN:     -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine \
+; RUN:     -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadPolly -polly-allow-nonaffine \
 ; RUN:     -polly-invariant-load-hoisting=true \
 ; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=ALL
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine \
+; RUN:     -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=ALL
+; RUN: opt %loadPolly -polly-allow-nonaffine \
 ; RUN:     -polly-invariant-load-hoisting=true \
 ; RUN:     -polly-process-unprofitable=false \
 ; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=PROFIT
+; RUN:     -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=PROFIT
 ;
 ; Negative test for INNERMOST.
 ; At the moment we will optimistically assume A[i] in the conditional before the inner

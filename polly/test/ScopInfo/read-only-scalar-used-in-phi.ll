@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops \
-; RUN: < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    float foo(float sum, float A[]) {
 ;

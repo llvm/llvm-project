@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
-; RUN: < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-scops -polly-allow-modref-calls \
+; RUN:     -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -basic-aa -polly-codegen -disable-output \
-; RUN: -polly-allow-modref-calls < %s
+; RUN:     -polly-allow-modref-calls < %s
 ;
 ; Verify that we model the read access of the gcread intrinsic
 ; correctly, thus that A is read by it but B is not.

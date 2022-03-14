@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -polly-print-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; #define Ni 1056

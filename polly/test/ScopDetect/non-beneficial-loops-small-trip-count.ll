@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-detect \
-; RUN:   -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; CHECK-NOT: Valid
 ;

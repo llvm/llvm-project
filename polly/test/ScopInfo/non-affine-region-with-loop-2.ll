@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-allow-nonaffine-loops -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-allow-nonaffine-loops -polly-codegen -analyze
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-allow-nonaffine-loops -polly-print-scops -polly-codegen -disable-output < %s | FileCheck %s
 ;
 ; CHECK:    Stmt_loop3
 ; CHECK:            Domain :=

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -polly-simplify -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -polly-print-simplify -disable-output < %s | FileCheck %s
 ;
 ; %tmp5 must keep the Value WRITE MemoryAccess, because as an incoming value of
 ; %tmp4, it is an "external use".

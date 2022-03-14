@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void pos(float *A, long n) {
 ;      for (long i = 0; i < 100; i++)

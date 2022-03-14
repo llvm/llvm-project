@@ -196,6 +196,9 @@ public:
   void printScop(raw_ostream &OS, Scop &S) const override;
 };
 
+llvm::Pass *createIslAstInfoWrapperPassPass();
+llvm::Pass *createIslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS);
+
 struct IslAstPrinterPass : public PassInfoMixin<IslAstPrinterPass> {
   IslAstPrinterPass(raw_ostream &OS) : OS(OS) {}
 
@@ -205,5 +208,10 @@ struct IslAstPrinterPass : public PassInfoMixin<IslAstPrinterPass> {
   raw_ostream &OS;
 };
 } // namespace polly
+
+namespace llvm {
+void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
+void initializeIslAstInfoPrinterLegacyPassPass(llvm::PassRegistry &);
+} // namespace llvm
 
 #endif // POLLY_ISLAST_H

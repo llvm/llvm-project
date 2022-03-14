@@ -35,11 +35,6 @@
 #include <cstddef>
 #include <forward_list>
 
-namespace llvm {
-void initializeScopInfoRegionPassPass(PassRegistry &);
-void initializeScopInfoWrapperPassPass(PassRegistry &);
-} // end namespace llvm
-
 namespace polly {
 using llvm::AnalysisInfoMixin;
 using llvm::ArrayRef;
@@ -2718,6 +2713,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
+llvm::Pass *createScopInfoPrinterLegacyRegionPass(raw_ostream &OS);
+
 class ScopInfo {
 public:
   using RegionToScopMapTy = MapVector<Region *, std::unique_ptr<Scop>>;
@@ -2822,6 +2819,15 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
+
+llvm::Pass *createScopInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS);
 } // end namespace polly
+
+namespace llvm {
+void initializeScopInfoRegionPassPass(PassRegistry &);
+void initializeScopInfoPrinterLegacyRegionPassPass(PassRegistry &);
+void initializeScopInfoWrapperPassPass(PassRegistry &);
+void initializeScopInfoPrinterLegacyFunctionPassPass(PassRegistry &);
+} // end namespace llvm
 
 #endif // POLLY_SCOPINFO_H

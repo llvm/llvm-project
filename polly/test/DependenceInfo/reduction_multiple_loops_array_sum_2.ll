@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-dependences -analyze -basic-aa < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -basic-aa -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }

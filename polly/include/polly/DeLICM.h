@@ -29,6 +29,7 @@ class raw_ostream;
 namespace polly {
 /// Create a new DeLICM pass instance.
 llvm::Pass *createDeLICMWrapperPass();
+llvm::Pass *createDeLICMPrinterLegacyPass(llvm::raw_ostream &OS);
 
 struct DeLICMPass : llvm::PassInfoMixin<DeLICMPass> {
   DeLICMPass() {}
@@ -62,6 +63,7 @@ bool isConflicting(isl::union_set ExistingOccupied,
 
 namespace llvm {
 void initializeDeLICMWrapperPassPass(llvm::PassRegistry &);
+void initializeDeLICMPrinterLegacyPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif /* POLLY_DELICM_H */
