@@ -334,7 +334,7 @@ static Value allocDenseTensor(ConversionPatternRewriter &rewriter, Location loc,
   }
   Value mem = rewriter.create<memref::AllocOp>(loc, memTp, dynamicSizes);
   Value zero = constantZero(rewriter, loc, elemTp);
-  rewriter.create<linalg::FillOp>(loc, zero, mem);
+  rewriter.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{mem});
   return mem;
 }
 
@@ -749,10 +749,12 @@ public:
     // introduces an O(N) operation into the computation, but this reset
     // operation is amortized over the innermost loops for the access
     // pattern expansion.
-    rewriter.create<linalg::FillOp>(loc, constantZero(rewriter, loc, eltType),
-                                    values);
-    rewriter.create<linalg::FillOp>(loc, constantZero(rewriter, loc, boolType),
-                                    filled);
+    rewriter.create<linalg::FillOp>(
+        loc, ValueRange{constantZero(rewriter, loc, eltType)},
+        ValueRange{values});
+    rewriter.create<linalg::FillOp>(
+        loc, ValueRange{constantZero(rewriter, loc, boolType)},
+        ValueRange{filled});
     // Replace expansion op with these buffers and initial index.
     assert(op.getNumResults() == 4);
     rewriter.replaceOp(op, {values, filled, indices, zero});

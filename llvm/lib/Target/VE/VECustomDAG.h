@@ -24,6 +24,7 @@ namespace llvm {
 Optional<unsigned> getVVPOpcode(unsigned Opcode);
 
 bool isVVPBinaryOp(unsigned Opcode);
+bool isVVPReductionOp(unsigned Opcode);
 
 MVT splitVectorType(MVT VT);
 
@@ -102,6 +103,16 @@ SDValue getStoredValue(SDValue Op);
 
 SDValue getNodePassthru(SDValue Op);
 
+SDValue getGatherScatterIndex(SDValue Op);
+
+SDValue getGatherScatterScale(SDValue Op);
+
+unsigned getScalarReductionOpcode(unsigned VVPOC, bool IsMask);
+
+// Whether this VP_REDUCE_*/ VECREDUCE_*/VVP_REDUCE_* SDNode has a start
+// parameter.
+bool hasReductionStartParam(unsigned VVPOC);
+
 /// } Node Properties
 
 enum class Packing {
@@ -168,6 +179,12 @@ public:
   SDValue getUNDEF(EVT VT) const { return DAG.getUNDEF(VT); }
   /// } getNode
 
+  /// Legalizing getNode {
+  SDValue getLegalReductionOpVVP(unsigned VVPOpcode, EVT ResVT, SDValue StartV,
+                                 SDValue VectorV, SDValue Mask, SDValue AVL,
+                                 SDNodeFlags Flags) const;
+  /// } Legalizing getNode
+
   /// Packing {
   SDValue getUnpack(EVT DestVT, SDValue Vec, PackElem Part, SDValue AVL) const;
   SDValue getPack(EVT DestVT, SDValue LoVec, SDValue HiVec, SDValue AVL) const;
@@ -193,6 +210,11 @@ public:
   SDValue getSplitPtrOffset(SDValue Ptr, SDValue ByteStride,
                             PackElem Part) const;
   SDValue getSplitPtrStride(SDValue PackStride) const;
+  SDValue getGatherScatterAddress(SDValue BasePtr, SDValue Scale, SDValue Index,
+                                  SDValue Mask, SDValue AVL) const;
+  EVT getVectorVT(EVT ElemVT, unsigned NumElems) const {
+    return EVT::getVectorVT(*DAG.getContext(), ElemVT, NumElems);
+  }
 };
 
 } // namespace llvm

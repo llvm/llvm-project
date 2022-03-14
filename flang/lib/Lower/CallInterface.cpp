@@ -836,6 +836,8 @@ private:
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj)) {
       // Pass as fir.box
+      if (isValueAttr)
+        TODO(loc, "assumed shape dummy argument with VALUE attribute");
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
       addPassedArg(PassEntityBy::Box, entity, characteristics);
     } else if (dynamicType.category() ==

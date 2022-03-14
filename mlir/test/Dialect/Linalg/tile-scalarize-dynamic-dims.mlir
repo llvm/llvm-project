@@ -43,7 +43,7 @@ func @tiled_and_peeled_matmul(%arg0: tensor<257x259xf32>, %arg1: tensor<259x258x
   %cst = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
   %c32 = arith.constant 32 : index
-  %0 = linalg.fill(%cst, %arg2) : f32, tensor<257x258xf32> -> tensor<257x258xf32>
+  %0 = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<257x258xf32>) -> tensor<257x258xf32>
   %1 = scf.for %arg3 = %c0 to %c257 step %c64 iter_args(%arg4 = %0) -> (tensor<257x258xf32>) {
     %2 = affine.min #map0(%arg3)
     %3 = tensor.extract_slice %arg0[%arg3, 0] [%2, 259] [1, 1] : tensor<257x259xf32> to tensor<?x259xf32>

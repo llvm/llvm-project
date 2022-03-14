@@ -257,7 +257,7 @@ func @read_of_matching_insert_slice_source(
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
 
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
@@ -289,7 +289,7 @@ func @read_of_matching_insert_slice_source_interleaved(
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
 
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
@@ -301,7 +301,7 @@ func @read_of_matching_insert_slice_source_interleaved(
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %5 = linalg.fill(%cst, %4) : f32, tensor<?xf32> -> tensor<?xf32>
+  %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<?xf32>) -> tensor<?xf32>
 
   %3 = vector.transfer_read %1[%idx2], %cst2 : tensor<?xf32>, vector<5xf32>
 
@@ -501,7 +501,7 @@ func @nested_extract_slice_and_insert(
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "false", "none", "none"]}
   %sA = tensor.extract_slice %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssA = tensor.extract_slice %sA[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
-  %FA = linalg.fill(%f0, %ssA) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
+  %FA = linalg.fill ins(%f0 : f32) outs(%ssA : tensor<4x4xf32>) -> tensor<4x4xf32>
   %rsA = tensor.insert_slice %FA into %sA[0, 0][4, 4][1, 1] : tensor<4x4xf32> into tensor<?x?xf32>
   %rA = tensor.insert_slice %rsA into %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
@@ -524,7 +524,7 @@ func @nested_extract_slice_and_insert(
   %sB = tensor.extract_slice %B[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssB = tensor.extract_slice %sB[0, 0][4, %idx][1, 1] : tensor<?x?xf32> to tensor<4x?xf32>
   %sssB = tensor.extract_slice %ssB[0, 0][4, 4][1, 1] : tensor<4x?xf32> to tensor<4x4xf32>
-  %FB = linalg.fill(%f0, %sssB) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
+  %FB = linalg.fill ins(%f0 : f32) outs(%sssB : tensor<4x4xf32>) -> tensor<4x4xf32>
   %rssB = tensor.insert_slice %FB into %ssB[0, 0][4, 4][1, 1] : tensor<4x4xf32> into tensor<4x?xf32>
   %rsB = tensor.insert_slice %rssB into %sB[0, 0][4, %idx][1, 1] : tensor<4x?xf32> into tensor<?x?xf32>
   %rB = tensor.insert_slice %rsB into %B[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
@@ -547,7 +547,7 @@ func @nested_extract_slice_and_insert(
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
   %sC = tensor.extract_slice %C[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssC = tensor.extract_slice %sC[0, 0][%sz1, 4][1, 1] : tensor<?x?xf32> to tensor<?x4xf32>
-  %FC = linalg.fill(%f0, %ssC) : f32, tensor<?x4xf32> -> tensor<?x4xf32>
+  %FC = linalg.fill ins(%f0 : f32) outs(%ssC : tensor<?x4xf32>) -> tensor<?x4xf32>
   %rsC = tensor.insert_slice %FC into %sC[0, 0][%sz2, 4][1, 1] : tensor<?x4xf32> into tensor<?x?xf32>
   %rC = tensor.insert_slice %rsC into %C[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
@@ -689,12 +689,12 @@ func @dependence_through_call(%I : tensor<64xf32> {linalg.inplaceable = true}) {
   // cannot bufferize inplace.
   //     CHECK: fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
-  %A = linalg.fill(%f1, %I) : f32, tensor<64xf32> -> tensor<64xf32>
+  %A = linalg.fill ins(%f1 : f32) outs(%I : tensor<64xf32>) -> tensor<64xf32>
 
   // 1. Bufferizes inplace: no alias to %A is yet possible.
   //     CHECK: fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %B = linalg.fill(%f2, %I) : f32, tensor<64xf32> -> tensor<64xf32>
+  %B = linalg.fill ins(%f2 : f32) outs(%I : tensor<64xf32>) -> tensor<64xf32>
 
   call @foo(%A) : (tensor<64xf32>) -> ()
   call @foo(%B) : (tensor<64xf32>) -> ()
@@ -725,12 +725,12 @@ func @read_dependence_through_scf_and_call(
   // bufferize inplace.
   //     CHECK: fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
-  %A = linalg.fill(%f1, %I) : f32, tensor<64xf32> -> tensor<64xf32>
+  %A = linalg.fill ins(%f1 : f32) outs(%I : tensor<64xf32>) -> tensor<64xf32>
 
   // 4. Bufferizes inplace: no alias to %A is yet possible.
   //     CHECK: fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %B = linalg.fill(%f2, %I) : f32, tensor<64xf32> -> tensor<64xf32>
+  %B = linalg.fill ins(%f2 : f32) outs(%I : tensor<64xf32>) -> tensor<64xf32>
 
   // 3. Does not read or write, bufferizes inplace.
   //      CHECK: scf.for
@@ -750,12 +750,12 @@ func @read_dependence_through_scf_and_call(
   // cannot bufferize inplace.
   //     CHECK: fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
-  %A2 = linalg.fill(%f1, %I2) : f32, tensor<64xf32> -> tensor<64xf32>
+  %A2 = linalg.fill ins(%f1 : f32) outs(%I2 : tensor<64xf32>) -> tensor<64xf32>
 
   // 1. Bufferizes inplace: no alias to %A2 is yet possible.
   //     CHECK: fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %B2 = linalg.fill(%f2, %I2) : f32, tensor<64xf32> -> tensor<64xf32>
+  %B2 = linalg.fill ins(%f2 : f32) outs(%I2 : tensor<64xf32>) -> tensor<64xf32>
 
   call @bar(%A2) : (tensor<64xf32>) -> ()
   call @bar(%B2) : (tensor<64xf32>) -> ()
@@ -800,8 +800,8 @@ builtin.func @matmul_on_tensors(
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
-  %8 = linalg.fill(%cst_0, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-  %11 = linalg.fill(%cst_1, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  %8 = linalg.fill ins(%cst_0 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
+  %11 = linalg.fill ins(%cst_1 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
 
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
@@ -838,7 +838,7 @@ builtin.func @matmul_on_tensors(
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %8 = linalg.fill(%cst_0, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  %8 = linalg.fill ins(%cst_0 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
   %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
   %10 = vector.transfer_write %9, %8[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
 
@@ -846,7 +846,7 @@ builtin.func @matmul_on_tensors(
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %11 = linalg.fill(%cst_1, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  %11 = linalg.fill ins(%cst_1 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
   %12 = vector.transfer_read %arg1[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
   %13 = vector.transfer_write %12, %11[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
 
@@ -891,7 +891,7 @@ func @insert_slice_chain(
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]
-  %0 = linalg.fill(%cst, %arg2) : f32, tensor<62x90xf32> -> tensor<62x90xf32>
+  %0 = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<62x90xf32>) -> tensor<62x90xf32>
 
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]

@@ -222,7 +222,7 @@ func @generalize_pooling_nhwc_sum_i32(%input : tensor<1x4x16x1xi32>, %shape: ten
 // -----
 
 func @generalize_fill_0d(%value: f64, %O: tensor<f32>) -> tensor<f32> {
-  %0 = linalg.fill_tensor ins(%value: f64) outs(%O : tensor<f32>) -> tensor<f32>
+  %0 = linalg.fill ins(%value: f64) outs(%O : tensor<f32>) -> tensor<f32>
   return %0: tensor<f32>
 }
 
@@ -236,7 +236,7 @@ func @generalize_fill_0d(%value: f64, %O: tensor<f32>) -> tensor<f32> {
 // -----
 
 func @generalize_fill_2d(%value: f64, %O: memref<16x32xf32>) {
-  linalg.fill_tensor ins(%value: f64) outs(%O : memref<16x32xf32>)
+  linalg.fill ins(%value: f64) outs(%O : memref<16x32xf32>)
   return
 }
 

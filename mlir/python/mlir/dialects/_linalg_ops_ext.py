@@ -20,22 +20,6 @@ def isa(cls: Type, ty: Type):
     return False
 
 
-class FillOp:
-  """Extends the linalg.fill op."""
-
-  def __init__(self, output: Value, value: Value, *, loc=None, ip=None):
-    results = []
-    if isa(RankedTensorType, output.type):
-      results = [output.type]
-    op = self.build_generic(
-        results=results,
-        operands=[_get_op_result_or_value(o) for o in [value, output]],
-        attributes=None,
-        loc=loc,
-        ip=ip)
-    OpView.__init__(self, op)
-    fill_builtin_region(self.operation)
-
 class InitTensorOp:
   """Extends the linalg.init_tensor op."""
 
