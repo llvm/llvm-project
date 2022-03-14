@@ -69,10 +69,11 @@ public:
   bool isImaginary : 1;     // 1.0i
   bool isFloat16 : 1;       // 1.0f16
   bool isFloat128 : 1;      // 1.0q
-  uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
-
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
+  bool isBitInt : 1;        // 1wb, 1uwb (C2x)
+  uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
+
 
   bool isFixedPointLiteral() const {
     return (saw_period || saw_exponent) && saw_fixed_point_suffix;
@@ -119,6 +120,13 @@ public:
   /// occurred when calculating the integral part of the scaled integer or
   /// calculating the digit sequence of the exponent.
   bool GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale);
+
+  /// Get the digits that comprise the literal. This excludes any prefix or
+  /// suffix associated with the literal.
+  StringRef getLiteralDigits() const {
+    assert(!hadError && "cannot reliably get the literal digits with an error");
+    return StringRef(DigitsBegin, SuffixBegin - DigitsBegin);
+  }
 
 private:
 

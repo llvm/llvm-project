@@ -1506,6 +1506,11 @@ public:
   /// equivalent of the string given by \p str.
   static unsigned getBitsNeeded(StringRef str, uint8_t radix);
 
+  /// Get the bits that are sufficient to represent the string value. This may
+  /// over estimate the amount of bits required, but it does not require
+  /// parsing the value in the string.
+  static unsigned getSufficientBitsNeeded(StringRef Str, uint8_t Radix);
+
   /// The APInt version of the countLeadingZeros functions in
   ///   MathExtras.h.
   ///
