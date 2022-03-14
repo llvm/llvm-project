@@ -11,12 +11,12 @@
 // template <size_t I, class T, size_t N> T& get(array<T, N>& a);
 
 // Prevent -Warray-bounds from issuing a diagnostic when testing with clang verify.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Warray-bounds"
-#endif
+// ADDITIONAL_COMPILE_FLAGS: -Wno-array-bounds
 
 #include <array>
 #include <cassert>
+
+#include "test_macros.h"
 
 int main(int, char**)
 {

@@ -196,14 +196,9 @@ Times GetSymlinkTimes(path const& p) {
 namespace {
 
 // In some configurations, the comparison is tautological and the test is valid.
-// We disable the warning so that we can actually test it regardless. Also, that
-// diagnostic is pretty new, so also don't fail if old clang does not support it
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-warning-option"
-#pragma clang diagnostic ignored "-Wunknown-pragmas"
-#pragma clang diagnostic ignored "-Wtautological-constant-compare"
-#endif
+// We disable the warning so that we can actually test it regardless.
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wtautological-constant-compare")
 
 static const bool SupportsNegativeTimes = [] {
   using namespace std::chrono;
@@ -368,9 +363,7 @@ inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
   return true;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+TEST_DIAGNOSTIC_POP
 
 // Create a sub-second duration using the smallest period the filesystem supports.
 file_time_type::duration SubSec(long long val) {

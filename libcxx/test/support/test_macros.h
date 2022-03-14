@@ -23,11 +23,6 @@
 #include <ciso646>
 #endif
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-#endif
-
 #define TEST_STRINGIZE_IMPL(x) #x
 #define TEST_STRINGIZE(x) TEST_STRINGIZE_IMPL(x)
 
@@ -398,8 +393,30 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_INCOMPLETE_RANGES
 #endif
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
+#if defined(TEST_COMPILER_CLANG)
+#  define TEST_DIAGNOSTIC_PUSH _Pragma("clang diagnostic push")
+#  define TEST_DIAGNOSTIC_POP _Pragma("clang diagnostic pop")
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str) _Pragma(TEST_STRINGIZE(clang diagnostic ignored str))
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#elif defined(TEST_COMPILER_GCC)
+#  define TEST_DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
+#  define TEST_DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str) _Pragma(TEST_STRINGIZE(GCC diagnostic ignored str))
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#elif defined(TEST_COMPILER_MSVC)
+#  define TEST_DIAGNOSTIC_PUSH _Pragma("warning(push)")
+#  define TEST_DIAGNOSTIC_POP _Pragma("warning(pop)")
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num) _Pragma(TEST_STRINGIZE(warning(disable: num)))
+#else
+#  define TEST_DIAGNOSTIC_PUSH
+#  define TEST_DIAGNOSTIC_POP
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

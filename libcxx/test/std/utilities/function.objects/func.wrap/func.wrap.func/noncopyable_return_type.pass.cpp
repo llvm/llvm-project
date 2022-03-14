@@ -24,9 +24,8 @@
 #include "test_macros.h"
 
 // Prevent warning on the `const NonCopyable()` function type.
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#endif
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wignored-qualifiers")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wignored-qualifiers")
 
 struct NonCopyable {
     NonCopyable() = default;

@@ -24,9 +24,7 @@
 #include "test_macros.h"
 
 // Ignore warning about std::numeric_limits comparisons being tautological.
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#endif
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wtype-limits")
 
 struct short_container {
     uint16_t size() const { return 60000; } // not noexcept

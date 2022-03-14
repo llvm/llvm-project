@@ -14,12 +14,6 @@
 
 #include "test_macros.h"
 
-// As of 1/10/2015 clang emits a -Wnonnull warnings even if the warning occurs
-// in an unevaluated context. For this reason we manually suppress the warning.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wnonnull"
-#endif
-
 #ifndef EXIT_FAILURE
 #error EXIT_FAILURE not defined
 #endif
@@ -58,10 +52,8 @@ template <class T>
 struct has_abs : decltype(has_abs_imp<T>(0)) {};
 
 void test_abs() {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wabsolute-value"
-#endif
+    TEST_DIAGNOSTIC_PUSH
+    TEST_CLANG_DIAGNOSTIC_IGNORED("-Wabsolute-value")
     static_assert((std::is_same<decltype(std::abs((float)0)), float>::value), "");
     static_assert((std::is_same<decltype(std::abs((double)0)), double>::value), "");
     static_assert(
@@ -88,9 +80,7 @@ void test_abs() {
     static_assert(!has_abs<unsigned long long>::value, "");
     static_assert(!has_abs<size_t>::value, "");
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+    TEST_DIAGNOSTIC_POP
 
     assert(std::abs(-1.) == 1);
 }
