@@ -25,7 +25,7 @@ static llvm::ManagedStatic<llvm::SignpostEmitter> g_api_signposts;
 
 Instrumenter::Instrumenter(llvm::StringRef pretty_func,
                            std::string &&pretty_args)
-    : m_pretty_func(pretty_func), m_local_boundary(false) {
+    : m_pretty_func(pretty_func) {
   if (!g_global_boundary) {
     g_global_boundary = true;
     m_local_boundary = true;

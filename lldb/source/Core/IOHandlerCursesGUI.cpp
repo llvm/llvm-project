@@ -341,7 +341,7 @@ public:
 
 protected:
   StringList m_text;
-  int m_first_visible_line;
+  int m_first_visible_line = 0;
 };
 
 // A surface is an abstraction for something than can be drawn on. The surface
@@ -352,7 +352,7 @@ class Surface {
 public:
   enum class Type { Window, Pad };
 
-  Surface(Surface::Type type) : m_type(type), m_window(nullptr) {}
+  Surface(Surface::Type type) : m_type(type) {}
 
   WINDOW *get() { return m_window; }
 
@@ -555,7 +555,7 @@ public:
 
 protected:
   Type m_type;
-  WINDOW *m_window;
+  WINDOW *m_window = nullptr;
 };
 
 class Pad : public Surface {
@@ -1076,8 +1076,7 @@ typedef std::unique_ptr<FieldDelegate> FieldDelegateUP;
 class TextFieldDelegate : public FieldDelegate {
 public:
   TextFieldDelegate(const char *label, const char *content, bool required)
-      : m_label(label), m_required(required), m_cursor_position(0),
-        m_first_visibile_char(0) {
+      : m_label(label), m_required(required) {
     if (content)
       m_content = content;
   }
@@ -1325,9 +1324,9 @@ protected:
   std::string m_content;
   // The cursor position in the content string itself. Can be in the range
   // [0, GetContentLength()].
-  int m_cursor_position;
+  int m_cursor_position = 0;
   // The index of the first visible character in the content.
-  int m_first_visibile_char;
+  int m_first_visibile_char = 0;
   // Optional error message. If empty, field is considered to have no error.
   std::string m_error;
 };
@@ -1515,7 +1514,7 @@ public:
   ChoicesFieldDelegate(const char *label, int number_of_visible_choices,
                        std::vector<std::string> choices)
       : m_label(label), m_number_of_visible_choices(number_of_visible_choices),
-        m_choices(choices), m_choice(0), m_first_visibile_choice(0) {}
+        m_choices(choices) {}
 
   // Choices fields are drawn as titles boxses of a number of visible choices.
   // The rest of the choices become visible as the user scroll. The selected
@@ -1623,9 +1622,9 @@ protected:
   int m_number_of_visible_choices;
   std::vector<std::string> m_choices;
   // The index of the selected choice.
-  int m_choice;
+  int m_choice = 0;
   // The index of the first visible choice in the field.
-  int m_first_visibile_choice;
+  int m_first_visibile_choice = 0;
 };
 
 class PlatformPluginFieldDelegate : public ChoicesFieldDelegate {
@@ -1707,7 +1706,7 @@ public:
 template <class T> class ListFieldDelegate : public FieldDelegate {
 public:
   ListFieldDelegate(const char *label, T default_field)
-      : m_label(label), m_default_field(default_field), m_selection_index(0),
+      : m_label(label), m_default_field(default_field),
         m_selection_type(SelectionType::NewButton) {}
 
   // Signify which element is selected. If a field or a remove button is
@@ -2011,7 +2010,7 @@ protected:
   // created though a copy.
   T m_default_field;
   std::vector<T> m_fields;
-  int m_selection_index;
+  int m_selection_index = 0;
   // See SelectionType class enum.
   SelectionType m_selection_type;
 };
@@ -2465,9 +2464,7 @@ typedef std::shared_ptr<FormDelegate> FormDelegateSP;
 
 class FormWindowDelegate : public WindowDelegate {
 public:
-  FormWindowDelegate(FormDelegateSP &delegate_sp)
-      : m_delegate_sp(delegate_sp), m_selection_index(0),
-        m_first_visible_line(0) {
+  FormWindowDelegate(FormDelegateSP &delegate_sp) : m_delegate_sp(delegate_sp) {
     assert(m_delegate_sp->GetNumberOfActions() > 0);
     if (m_delegate_sp->GetNumberOfFields() > 0)
       m_selection_type = SelectionType::Field;
@@ -2856,11 +2853,11 @@ public:
 protected:
   FormDelegateSP m_delegate_sp;
   // The index of the currently selected SelectionType.
-  int m_selection_index;
+  int m_selection_index = 0;
   // See SelectionType class enum.
   SelectionType m_selection_type;
   // The first visible line from the pad.
-  int m_first_visible_line;
+  int m_first_visible_line = 0;
 };
 
 ///////////////////////////
@@ -3670,8 +3667,7 @@ typedef std::shared_ptr<SearcherDelegate> SearcherDelegateSP;
 class SearcherWindowDelegate : public WindowDelegate {
 public:
   SearcherWindowDelegate(SearcherDelegateSP &delegate_sp)
-      : m_delegate_sp(delegate_sp), m_text_field("Search", "", false),
-        m_selected_match(0), m_first_visible_match(0) {
+      : m_delegate_sp(delegate_sp), m_text_field("Search", "", false) {
     ;
   }
 
@@ -3811,9 +3807,9 @@ protected:
   SearcherDelegateSP m_delegate_sp;
   TextFieldDelegate m_text_field;
   // The index of the currently selected match.
-  int m_selected_match;
+  int m_selected_match = 0;
   // The index of the first visible match.
-  int m_first_visible_match;
+  int m_first_visible_match = 0;
 };
 
 //////////////////////////////
@@ -4266,8 +4262,7 @@ HandleCharResult Menu::WindowDelegateHandleChar(Window &window, int key) {
 
 class Application {
 public:
-  Application(FILE *in, FILE *out)
-      : m_window_sp(), m_screen(nullptr), m_in(in), m_out(out) {}
+  Application(FILE *in, FILE *out) : m_window_sp(), m_in(in), m_out(out) {}
 
   ~Application() {
     m_window_delegates.clear();
@@ -4475,7 +4470,7 @@ public:
 protected:
   WindowSP m_window_sp;
   WindowDelegates m_window_delegates;
-  SCREEN *m_screen;
+  SCREEN *m_screen = nullptr;
   FILE *m_in;
   FILE *m_out;
   bool m_update_screen = false;
@@ -4619,9 +4614,8 @@ typedef std::shared_ptr<TreeDelegate> TreeDelegateSP;
 class TreeItem {
 public:
   TreeItem(TreeItem *parent, TreeDelegate &delegate, bool might_have_children)
-      : m_parent(parent), m_delegate(delegate), m_user_data(nullptr),
-        m_identifier(0), m_row_idx(-1), m_children(),
-        m_might_have_children(might_have_children), m_is_expanded(false) {
+      : m_parent(parent), m_delegate(delegate), m_children(),
+        m_might_have_children(might_have_children) {
     if (m_parent == nullptr)
       m_is_expanded = m_delegate.TreeDelegateExpandRootByDefault();
   }
@@ -4816,23 +4810,21 @@ public:
 protected:
   TreeItem *m_parent;
   TreeDelegate &m_delegate;
-  void *m_user_data;
-  uint64_t m_identifier;
+  void *m_user_data = nullptr;
+  uint64_t m_identifier = 0;
   std::string m_text;
-  int m_row_idx; // Zero based visible row index, -1 if not visible or for the
-                 // root item
+  int m_row_idx = -1; // Zero based visible row index, -1 if not visible or for
+                      // the root item
   std::vector<TreeItem> m_children;
   bool m_might_have_children;
-  bool m_is_expanded;
+  bool m_is_expanded = false;
 };
 
 class TreeWindowDelegate : public WindowDelegate {
 public:
   TreeWindowDelegate(Debugger &debugger, const TreeDelegateSP &delegate_sp)
       : m_debugger(debugger), m_delegate_sp(delegate_sp),
-        m_root(nullptr, *delegate_sp, true), m_selected_item(nullptr),
-        m_num_rows(0), m_selected_row_idx(0), m_first_visible_row(0),
-        m_min_x(0), m_min_y(0), m_max_x(0), m_max_y(0) {}
+        m_root(nullptr, *delegate_sp, true) {}
 
   int NumVisibleRows() const { return m_max_y - m_min_y; }
 
@@ -4992,14 +4984,14 @@ protected:
   Debugger &m_debugger;
   TreeDelegateSP m_delegate_sp;
   TreeItem m_root;
-  TreeItem *m_selected_item;
-  int m_num_rows;
-  int m_selected_row_idx;
-  int m_first_visible_row;
-  int m_min_x;
-  int m_min_y;
-  int m_max_x;
-  int m_max_y;
+  TreeItem *m_selected_item = nullptr;
+  int m_num_rows = 0;
+  int m_selected_row_idx = 0;
+  int m_first_visible_row = 0;
+  int m_min_x = 0;
+  int m_min_y = 0;
+  int m_max_x = 0;
+  int m_max_y = 0;
 };
 
 // A tree delegate that just draws the text member of the tree item, it doesn't
@@ -5071,8 +5063,7 @@ protected:
 class ThreadTreeDelegate : public TreeDelegate {
 public:
   ThreadTreeDelegate(Debugger &debugger)
-      : TreeDelegate(), m_debugger(debugger), m_tid(LLDB_INVALID_THREAD_ID),
-        m_stop_id(UINT32_MAX) {
+      : TreeDelegate(), m_debugger(debugger) {
     FormatEntity::Parse("thread #${thread.index}: tid = ${thread.id}{, stop "
                         "reason = ${thread.stop-reason}}",
                         m_format);
@@ -5161,16 +5152,15 @@ public:
 protected:
   Debugger &m_debugger;
   std::shared_ptr<FrameTreeDelegate> m_frame_delegate_sp;
-  lldb::user_id_t m_tid;
-  uint32_t m_stop_id;
+  lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
+  uint32_t m_stop_id = UINT32_MAX;
   FormatEntity::Entry m_format;
 };
 
 class ThreadsTreeDelegate : public TreeDelegate {
 public:
   ThreadsTreeDelegate(Debugger &debugger)
-      : TreeDelegate(), m_thread_delegate_sp(), m_debugger(debugger),
-        m_stop_id(UINT32_MAX), m_update_selection(false) {
+      : TreeDelegate(), m_thread_delegate_sp(), m_debugger(debugger) {
     FormatEntity::Parse("process ${process.id}{, name = ${process.name}}",
                         m_format);
   }
@@ -5280,8 +5270,8 @@ public:
 protected:
   std::shared_ptr<ThreadTreeDelegate> m_thread_delegate_sp;
   Debugger &m_debugger;
-  uint32_t m_stop_id;
-  bool m_update_selection;
+  uint32_t m_stop_id = UINT32_MAX;
+  bool m_update_selection = false;
   FormatEntity::Entry m_format;
 };
 
@@ -5523,9 +5513,7 @@ class ValueObjectListDelegate : public WindowDelegate {
 public:
   ValueObjectListDelegate() : m_rows() {}
 
-  ValueObjectListDelegate(ValueObjectList &valobj_list)
-      : m_rows(), m_selected_row(nullptr), m_selected_row_idx(0),
-        m_first_visible_row(0), m_num_rows(0), m_max_x(0), m_max_y(0) {
+  ValueObjectListDelegate(ValueObjectList &valobj_list) : m_rows() {
     SetValues(valobj_list);
   }
 
@@ -5882,8 +5870,7 @@ protected:
 class FrameVariablesWindowDelegate : public ValueObjectListDelegate {
 public:
   FrameVariablesWindowDelegate(Debugger &debugger)
-      : ValueObjectListDelegate(), m_debugger(debugger),
-        m_frame_block(nullptr) {}
+      : ValueObjectListDelegate(), m_debugger(debugger) {}
 
   ~FrameVariablesWindowDelegate() override = default;
 
@@ -5944,7 +5931,7 @@ public:
 
 protected:
   Debugger &m_debugger;
-  Block *m_frame_block;
+  Block *m_frame_block = nullptr;
 };
 
 class RegistersWindowDelegate : public ValueObjectListDelegate {
@@ -6198,7 +6185,7 @@ static const char *CursesKeyToCString(int ch) {
 
 HelpDialogDelegate::HelpDialogDelegate(const char *text,
                                        KeyHelp *key_help_array)
-    : m_text(), m_first_visible_line(0) {
+    : m_text() {
   if (text && text[0]) {
     m_text.SplitIntoLines(text);
     m_text.AppendString("");
@@ -6762,11 +6749,7 @@ class SourceFileWindowDelegate : public WindowDelegate {
 public:
   SourceFileWindowDelegate(Debugger &debugger)
       : WindowDelegate(), m_debugger(debugger), m_sc(), m_file_sp(),
-        m_disassembly_scope(nullptr), m_disassembly_sp(), m_disassembly_range(),
-        m_title(), m_tid(LLDB_INVALID_THREAD_ID), m_line_width(4),
-        m_selected_line(0), m_pc_line(0), m_stop_id(0), m_frame_idx(UINT32_MAX),
-        m_first_visible_line(0), m_first_visible_column(0), m_min_x(0),
-        m_min_y(0), m_max_x(0), m_max_y(0) {}
+        m_disassembly_sp(), m_disassembly_range(), m_title() {}
 
   ~SourceFileWindowDelegate() override = default;
 
@@ -7524,22 +7507,22 @@ protected:
   Debugger &m_debugger;
   SymbolContext m_sc;
   SourceManager::FileSP m_file_sp;
-  SymbolContextScope *m_disassembly_scope;
+  SymbolContextScope *m_disassembly_scope = nullptr;
   lldb::DisassemblerSP m_disassembly_sp;
   AddressRange m_disassembly_range;
   StreamString m_title;
-  lldb::user_id_t m_tid;
-  int m_line_width;
-  uint32_t m_selected_line; // The selected line
-  uint32_t m_pc_line;       // The line with the PC
-  uint32_t m_stop_id;
-  uint32_t m_frame_idx;
-  int m_first_visible_line;
-  int m_first_visible_column;
-  int m_min_x;
-  int m_min_y;
-  int m_max_x;
-  int m_max_y;
+  lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
+  int m_line_width = 4;
+  uint32_t m_selected_line = 0; // The selected line
+  uint32_t m_pc_line = 0;       // The line with the PC
+  uint32_t m_stop_id = 0;
+  uint32_t m_frame_idx = UINT32_MAX;
+  int m_first_visible_line = 0;
+  int m_first_visible_column = 0;
+  int m_min_x = 0;
+  int m_min_y = 0;
+  int m_max_x = 0;
+  int m_max_y = 0;
 };
 
 DisplayOptions ValueObjectListDelegate::g_options = {true};

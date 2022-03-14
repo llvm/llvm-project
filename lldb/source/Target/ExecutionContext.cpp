@@ -398,21 +398,18 @@ ExecutionContextRef::ExecutionContextRef()
     : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {}
 
 ExecutionContextRef::ExecutionContextRef(const ExecutionContext *exe_ctx)
-    : m_target_wp(), m_process_wp(), m_thread_wp(),
-      m_tid(LLDB_INVALID_THREAD_ID), m_stack_id() {
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
   if (exe_ctx)
     *this = *exe_ctx;
 }
 
 ExecutionContextRef::ExecutionContextRef(const ExecutionContext &exe_ctx)
-    : m_target_wp(), m_process_wp(), m_thread_wp(),
-      m_tid(LLDB_INVALID_THREAD_ID), m_stack_id() {
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
   *this = exe_ctx;
 }
 
 ExecutionContextRef::ExecutionContextRef(Target *target, bool adopt_selected)
-    : m_target_wp(), m_process_wp(), m_thread_wp(),
-      m_tid(LLDB_INVALID_THREAD_ID), m_stack_id() {
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
   SetTargetPtr(target, adopt_selected);
 }
 

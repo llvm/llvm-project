@@ -41,7 +41,7 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PseudoTerminal), m_resume_count(0),
+      m_file_actions(), m_pty(new PseudoTerminal),
       m_scripted_process_class_name(), m_scripted_process_dictionary_sp() {
   if (stdin_file_spec) {
     FileAction file_action;

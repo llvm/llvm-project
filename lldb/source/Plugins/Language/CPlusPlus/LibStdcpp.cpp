@@ -53,7 +53,7 @@ public:
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
-  lldb::addr_t m_pair_address;
+  lldb::addr_t m_pair_address = 0;
   CompilerType m_pair_type;
   lldb::ValueObjectSP m_pair_sp;
 };
@@ -77,8 +77,8 @@ public:
 
 LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_address(0),
-      m_pair_type(), m_pair_sp() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_type(),
+      m_pair_sp() {
   if (valobj_sp)
     Update();
 }

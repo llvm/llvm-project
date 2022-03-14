@@ -1214,7 +1214,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : m_requested_save_core_style(eSaveCoreUnspecified) {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -1250,7 +1250,7 @@ public:
     }
 
     // Instance variables to hold the values for command options.
-    SaveCoreStyle m_requested_save_core_style;
+    SaveCoreStyle m_requested_save_core_style = eSaveCoreUnspecified;
     std::string m_requested_plugin_name;
   };
 

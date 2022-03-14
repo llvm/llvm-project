@@ -181,7 +181,7 @@ AppleObjCDeclVendor::GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa) {
 
 class ObjCRuntimeMethodType {
 public:
-  ObjCRuntimeMethodType(const char *types) : m_is_valid(false) {
+  ObjCRuntimeMethodType(const char *types) {
     const char *cursor = types;
     enum ParserState { Start = 0, InType, InPos } state = Start;
     const char *type = nullptr;
@@ -391,7 +391,7 @@ private:
   typedef std::vector<std::string> TypeVector;
 
   TypeVector m_type_vector;
-  bool m_is_valid;
+  bool m_is_valid = false;
 };
 
 bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {

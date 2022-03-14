@@ -656,8 +656,7 @@ public:
 
   StopInfoWatchpoint(Thread &thread, break_id_t watch_id,
                      lldb::addr_t watch_hit_addr)
-      : StopInfo(thread, watch_id), m_should_stop(false),
-        m_should_stop_is_valid(false), m_watch_hit_addr(watch_hit_addr) {}
+      : StopInfo(thread, watch_id), m_watch_hit_addr(watch_hit_addr) {}
 
   ~StopInfoWatchpoint() override = default;
 
@@ -931,8 +930,8 @@ protected:
   }
 
 private:
-  bool m_should_stop;
-  bool m_should_stop_is_valid;
+  bool m_should_stop = false;
+  bool m_should_stop_is_valid = false;
   lldb::addr_t m_watch_hit_addr;
 };
 
@@ -1122,8 +1121,7 @@ private:
 
 class StopInfoExec : public StopInfo {
 public:
-  StopInfoExec(Thread &thread)
-      : StopInfo(thread, LLDB_INVALID_UID), m_performed_action(false) {}
+  StopInfoExec(Thread &thread) : StopInfo(thread, LLDB_INVALID_UID) {}
 
   ~StopInfoExec() override = default;
 
@@ -1149,7 +1147,7 @@ protected:
       thread_sp->GetProcess()->DidExec();
   }
 
-  bool m_performed_action;
+  bool m_performed_action = false;
 };
 
 // StopInfoFork
@@ -1157,8 +1155,8 @@ protected:
 class StopInfoFork : public StopInfo {
 public:
   StopInfoFork(Thread &thread, lldb::pid_t child_pid, lldb::tid_t child_tid)
-      : StopInfo(thread, child_pid), m_performed_action(false),
-        m_child_pid(child_pid), m_child_tid(child_tid) {}
+      : StopInfo(thread, child_pid), m_child_pid(child_pid),
+        m_child_tid(child_tid) {}
 
   ~StopInfoFork() override = default;
 
@@ -1179,7 +1177,7 @@ protected:
       thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
   }
 
-  bool m_performed_action;
+  bool m_performed_action = false;
 
 private:
   lldb::pid_t m_child_pid;
@@ -1191,8 +1189,8 @@ private:
 class StopInfoVFork : public StopInfo {
 public:
   StopInfoVFork(Thread &thread, lldb::pid_t child_pid, lldb::tid_t child_tid)
-      : StopInfo(thread, child_pid), m_performed_action(false),
-        m_child_pid(child_pid), m_child_tid(child_tid) {}
+      : StopInfo(thread, child_pid), m_child_pid(child_pid),
+        m_child_tid(child_tid) {}
 
   ~StopInfoVFork() override = default;
 
@@ -1213,7 +1211,7 @@ protected:
       thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
   }
 
-  bool m_performed_action;
+  bool m_performed_action = false;
 
 private:
   lldb::pid_t m_child_pid;
@@ -1224,8 +1222,7 @@ private:
 
 class StopInfoVForkDone : public StopInfo {
 public:
-  StopInfoVForkDone(Thread &thread)
-      : StopInfo(thread, 0), m_performed_action(false) {}
+  StopInfoVForkDone(Thread &thread) : StopInfo(thread, 0) {}
 
   ~StopInfoVForkDone() override = default;
 
@@ -1246,7 +1243,7 @@ protected:
       thread_sp->GetProcess()->DidVForkDone();
   }
 
-  bool m_performed_action;
+  bool m_performed_action = false;
 };
 
 } // namespace lldb_private

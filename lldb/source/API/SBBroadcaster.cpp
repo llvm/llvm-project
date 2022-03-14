@@ -19,7 +19,7 @@ using namespace lldb_private;
 SBBroadcaster::SBBroadcaster() { LLDB_INSTRUMENT_VA(this); }
 
 SBBroadcaster::SBBroadcaster(const char *name)
-    : m_opaque_sp(new Broadcaster(nullptr, name)), m_opaque_ptr(nullptr) {
+    : m_opaque_sp(new Broadcaster(nullptr, name)) {
   LLDB_INSTRUMENT_VA(this, name);
 
   m_opaque_ptr = m_opaque_sp.get();

@@ -31,19 +31,18 @@ Symbol::Symbol()
       m_is_weak(false), m_type(eSymbolTypeInvalid), m_mangled(),
       m_addr_range() {}
 
-Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type, bool external,
-               bool is_debug, bool is_trampoline, bool is_artificial,
-               const lldb::SectionSP &section_sp, addr_t offset, addr_t size,
-               bool size_is_valid, bool contains_linker_annotations,
-               uint32_t flags)
-    : SymbolContextScope(), m_uid(symID), m_type_data(0),
-      m_type_data_resolved(false), m_is_synthetic(is_artificial),
-      m_is_debug(is_debug), m_is_external(external), m_size_is_sibling(false),
+Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
+               bool external, bool is_debug, bool is_trampoline,
+               bool is_artificial, const lldb::SectionSP &section_sp,
+               addr_t offset, addr_t size, bool size_is_valid,
+               bool contains_linker_annotations, uint32_t flags)
+    : SymbolContextScope(), m_uid(symID), m_type_data_resolved(false),
+      m_is_synthetic(is_artificial), m_is_debug(is_debug),
+      m_is_external(external), m_size_is_sibling(false),
       m_size_is_synthesized(false), m_size_is_valid(size_is_valid || size > 0),
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
-      m_is_weak(false), m_type(type),
-      m_mangled(name),
+      m_is_weak(false), m_type(type), m_mangled(name),
       m_addr_range(section_sp, offset, size), m_flags(flags) {}
 
 Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
@@ -51,9 +50,9 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
                bool is_artificial, const AddressRange &range,
                bool size_is_valid, bool contains_linker_annotations,
                uint32_t flags)
-    : SymbolContextScope(), m_uid(symID), m_type_data(0),
-      m_type_data_resolved(false), m_is_synthetic(is_artificial),
-      m_is_debug(is_debug), m_is_external(external), m_size_is_sibling(false),
+    : SymbolContextScope(), m_uid(symID), m_type_data_resolved(false),
+      m_is_synthetic(is_artificial), m_is_debug(is_debug),
+      m_is_external(external), m_size_is_sibling(false),
       m_size_is_synthesized(false),
       m_size_is_valid(size_is_valid || range.GetByteSize() > 0),
       m_demangled_is_synthesized(false),

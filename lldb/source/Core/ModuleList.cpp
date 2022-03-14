@@ -182,8 +182,7 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
 
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}
 
-ModuleList::ModuleList(const ModuleList &rhs)
-    : m_modules(), m_modules_mutex(), m_notifier(nullptr) {
+ModuleList::ModuleList(const ModuleList &rhs) : m_modules(), m_modules_mutex() {
   std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex);
   std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex);
   m_modules = rhs.m_modules;

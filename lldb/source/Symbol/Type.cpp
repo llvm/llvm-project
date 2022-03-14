@@ -146,7 +146,7 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
            const Declaration &decl, const CompilerType &compiler_type,
            ResolveState compiler_type_resolve_state, uint32_t opaque_payload)
     : std::enable_shared_from_this<Type>(), UserID(uid), m_name(name),
-      m_symbol_file(symbol_file), m_context(context), m_encoding_type(nullptr),
+      m_symbol_file(symbol_file), m_context(context),
       m_encoding_uid(encoding_uid), m_encoding_uid_type(encoding_uid_type),
       m_decl(decl), m_compiler_type(compiler_type),
       m_compiler_type_resolve_state(compiler_type ? compiler_type_resolve_state

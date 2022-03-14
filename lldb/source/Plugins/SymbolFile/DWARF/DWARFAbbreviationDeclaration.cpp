@@ -22,8 +22,7 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() : m_attributes() {}
 
 DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration(dw_tag_t tag,
                                                            uint8_t has_children)
-    : m_code(InvalidCode), m_tag(tag), m_has_children(has_children),
-      m_attributes() {}
+    : m_tag(tag), m_has_children(has_children), m_attributes() {}
 
 llvm::Expected<DWARFEnumState>
 DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,

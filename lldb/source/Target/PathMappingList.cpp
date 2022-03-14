@@ -40,12 +40,10 @@ std::string NormalizePath(llvm::StringRef path) {
 PathMappingList::PathMappingList() : m_pairs() {}
 
 PathMappingList::PathMappingList(ChangedCallback callback, void *callback_baton)
-    : m_pairs(), m_callback(callback), m_callback_baton(callback_baton),
-      m_mod_id(0) {}
+    : m_pairs(), m_callback(callback), m_callback_baton(callback_baton) {}
 
 PathMappingList::PathMappingList(const PathMappingList &rhs)
-    : m_pairs(rhs.m_pairs), m_callback(nullptr), m_callback_baton(nullptr),
-      m_mod_id(0) {}
+    : m_pairs(rhs.m_pairs) {}
 
 const PathMappingList &PathMappingList::operator=(const PathMappingList &rhs) {
   if (this != &rhs) {

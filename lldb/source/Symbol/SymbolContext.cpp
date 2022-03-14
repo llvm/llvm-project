@@ -31,7 +31,7 @@ SymbolContext::SymbolContext() : target_sp(), module_sp(), line_entry() {}
 SymbolContext::SymbolContext(const ModuleSP &m, CompileUnit *cu, Function *f,
                              Block *b, LineEntry *le, Symbol *s)
     : target_sp(), module_sp(m), comp_unit(cu), function(f), block(b),
-      line_entry(), symbol(s), variable(nullptr) {
+      line_entry(), symbol(s) {
   if (le)
     line_entry = *le;
 }
@@ -40,14 +40,13 @@ SymbolContext::SymbolContext(const TargetSP &t, const ModuleSP &m,
                              CompileUnit *cu, Function *f, Block *b,
                              LineEntry *le, Symbol *s)
     : target_sp(t), module_sp(m), comp_unit(cu), function(f), block(b),
-      line_entry(), symbol(s), variable(nullptr) {
+      line_entry(), symbol(s) {
   if (le)
     line_entry = *le;
 }
 
 SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
-    : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
-      block(nullptr), line_entry(), symbol(nullptr), variable(nullptr) {
+    : target_sp(), module_sp(), line_entry() {
   sc_scope->CalculateSymbolContext(this);
 }
 

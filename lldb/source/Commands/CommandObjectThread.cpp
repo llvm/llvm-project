@@ -2184,8 +2184,7 @@ public:
             nullptr,
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
-                eCommandProcessMustBeTraced),
-        m_create_repeat_command_just_invoked(false) {}
+                eCommandProcessMustBeTraced) {}
 
   ~CommandObjectTraceDumpInstructions() override = default;
 
@@ -2253,7 +2252,7 @@ protected:
 
   // Repeat command helpers
   std::string m_repeat_command;
-  bool m_create_repeat_command_just_invoked;
+  bool m_create_repeat_command_just_invoked = false;
   std::map<lldb::tid_t, std::unique_ptr<TraceInstructionDumper>> m_dumpers;
 };
 

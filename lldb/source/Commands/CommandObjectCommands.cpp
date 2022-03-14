@@ -1076,7 +1076,7 @@ public:
                               std::string funct, std::string help,
                               ScriptedCommandSynchronicity synch)
       : CommandObjectRaw(interpreter, name), m_function_name(funct),
-        m_synchro(synch), m_fetched_help_long(false) {
+        m_synchro(synch) {
     if (!help.empty())
       SetHelp(help);
     else {
@@ -1139,7 +1139,7 @@ protected:
 private:
   std::string m_function_name;
   ScriptedCommandSynchronicity m_synchro;
-  bool m_fetched_help_long;
+  bool m_fetched_help_long = false;
 };
 
 class CommandObjectScriptingObject : public CommandObjectRaw {

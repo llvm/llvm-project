@@ -88,8 +88,7 @@ class AddMacroState {
 
 public:
   AddMacroState(const FileSpec &current_file, const uint32_t current_file_line)
-      : m_state(CURRENT_FILE_NOT_YET_PUSHED), m_current_file(current_file),
-        m_current_file_line(current_file_line) {}
+      : m_current_file(current_file), m_current_file_line(current_file_line) {}
 
   void StartFile(const FileSpec &file) {
     m_file_stack.push_back(file);
@@ -127,7 +126,7 @@ public:
 
 private:
   std::vector<FileSpec> m_file_stack;
-  State m_state;
+  State m_state = CURRENT_FILE_NOT_YET_PUSHED;
   FileSpec m_current_file;
   uint32_t m_current_file_line;
 };

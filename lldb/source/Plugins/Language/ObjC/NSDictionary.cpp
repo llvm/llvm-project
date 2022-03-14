@@ -133,10 +133,10 @@ private:
   };
 
   ExecutionContextRef m_exe_ctx_ref;
-  uint8_t m_ptr_size;
-  lldb::ByteOrder m_order;
-  DataDescriptor_32 *m_data_32;
-  DataDescriptor_64 *m_data_64;
+  uint8_t m_ptr_size = 8;
+  lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
+  DataDescriptor_32 *m_data_32 = nullptr;
+  DataDescriptor_64 *m_data_64 = nullptr;
   lldb::addr_t m_data_ptr;
   CompilerType m_pair_type;
   std::vector<DictionaryItemDescriptor> m_children;
@@ -196,8 +196,8 @@ private:
   };
 
   ExecutionContextRef m_exe_ctx_ref;
-  uint8_t m_ptr_size;
-  lldb::ByteOrder m_order;
+  uint8_t m_ptr_size = 8;
+  lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
 
   CFBasicHash m_hashtable;
 
@@ -250,8 +250,8 @@ private:
   };
 
   ExecutionContextRef m_exe_ctx_ref;
-  uint8_t m_ptr_size;
-  lldb::ByteOrder m_order;
+  uint8_t m_ptr_size = 8;
+  lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
   D32 *m_data_32;
   D64 *m_data_64;
   CompilerType m_pair_type;
@@ -301,10 +301,10 @@ namespace Foundation1100 {
     };
     
     ExecutionContextRef m_exe_ctx_ref;
-    uint8_t m_ptr_size;
-    lldb::ByteOrder m_order;
-    DataDescriptor_32 *m_data_32;
-    DataDescriptor_64 *m_data_64;
+    uint8_t m_ptr_size = 8;
+    lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
+    DataDescriptor_32 *m_data_32 = nullptr;
+    DataDescriptor_64 *m_data_64 = nullptr;
     CompilerType m_pair_type;
     std::vector<DictionaryItemDescriptor> m_children;
   };
@@ -592,9 +592,7 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
 
 lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
     NSDictionaryISyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
-      m_order(lldb::eByteOrderInvalid), m_data_32(nullptr), m_data_64(nullptr),
-      m_pair_type() {}
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_type() {}
 
 lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
     ~NSDictionaryISyntheticFrontEnd() {
@@ -738,8 +736,8 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
 
 lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
     NSCFDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
-      m_order(lldb::eByteOrderInvalid), m_hashtable(), m_pair_type() {}
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_hashtable(),
+      m_pair_type() {}
 
 size_t lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
@@ -1060,11 +1058,10 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
 }
 
 template <typename D32, typename D64>
-lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
+lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32, D64>::
     GenericNSDictionaryMSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
-      m_order(lldb::eByteOrderInvalid), m_data_32(nullptr), m_data_64(nullptr),
-      m_pair_type() {}
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(),
+      m_data_32(nullptr), m_data_64(nullptr), m_pair_type() {}
 
 template <typename D32, typename D64>
 lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
@@ -1227,12 +1224,9 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
   return dict_item.valobj_sp;
 }
 
-lldb_private::formatters::Foundation1100::
-  NSDictionaryMSyntheticFrontEnd::
+lldb_private::formatters::Foundation1100::NSDictionaryMSyntheticFrontEnd::
     NSDictionaryMSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
-      m_order(lldb::eByteOrderInvalid), m_data_32(nullptr), m_data_64(nullptr),
-      m_pair_type() {}
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_type() {}
 
 lldb_private::formatters::Foundation1100::
   NSDictionaryMSyntheticFrontEnd::~NSDictionaryMSyntheticFrontEnd() {

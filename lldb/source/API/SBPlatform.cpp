@@ -48,8 +48,7 @@ struct PlatformConnectOptions {
 // PlatformShellCommand
 struct PlatformShellCommand {
   PlatformShellCommand(llvm::StringRef shell_interpreter,
-                       llvm::StringRef shell_command)
-      : m_status(0), m_signo(0) {
+                       llvm::StringRef shell_command) {
     if (!shell_interpreter.empty())
       m_shell = shell_interpreter.str();
 

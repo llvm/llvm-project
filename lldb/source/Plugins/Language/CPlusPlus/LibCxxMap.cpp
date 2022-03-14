@@ -192,11 +192,11 @@ private:
 
   void GetValueOffset(const lldb::ValueObjectSP &node);
 
-  ValueObject *m_tree;
-  ValueObject *m_root_node;
+  ValueObject *m_tree = nullptr;
+  ValueObject *m_root_node = nullptr;
   CompilerType m_element_type;
-  uint32_t m_skip_size;
-  size_t m_count;
+  uint32_t m_skip_size = UINT32_MAX;
+  size_t m_count = UINT32_MAX;
   std::map<size_t, MapIterator> m_iterators;
 };
 } // namespace formatters
@@ -204,9 +204,7 @@ private:
 
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     LibcxxStdMapSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_tree(nullptr),
-      m_root_node(nullptr), m_element_type(), m_skip_size(UINT32_MAX),
-      m_count(UINT32_MAX), m_iterators() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type(), m_iterators() {
   if (valobj_sp)
     Update();
 }
