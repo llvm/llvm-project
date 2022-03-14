@@ -31,6 +31,10 @@
 #else
 #include <io.h>
 #endif
+
+#ifdef __MVS__
+#include "llvm/Support/AutoConvert.h"
+#endif
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
