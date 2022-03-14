@@ -72,7 +72,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_VERSION_SUFFIX=git",
     "Python3_EXECUTABLE=$python_path",
     "TARGETS_TO_BUILD=$llvm_targets_to_build_string",
-    "TARGET_TRIPLE=$llvm_target_triple",
+    "LLVM_TARGET_TRIPLE=$llvm_target_triple",
 
     "LLVM_LIBCXX_USED=0",
 

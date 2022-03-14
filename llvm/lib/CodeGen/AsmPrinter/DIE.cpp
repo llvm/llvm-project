@@ -13,21 +13,15 @@
 #include "llvm/CodeGen/DIE.h"
 #include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
-#include "DwarfUnit.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -204,6 +198,7 @@ const DIE *DIE::getUnitDie() const {
   const DIE *p = this;
   while (p) {
     if (p->getTag() == dwarf::DW_TAG_compile_unit ||
+        p->getTag() == dwarf::DW_TAG_skeleton_unit ||
         p->getTag() == dwarf::DW_TAG_type_unit)
       return p;
     p = p->getParent();

@@ -5,19 +5,15 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" -e "s|FRAMEWORKS|%/S/Inputs/frameworks|g" \
 // RUN:   %/S/Inputs/modules_inferred_cdb.json > %t.cdb
 //
-// RUN: echo -%t.dir > %t.result
-// RUN: echo -%S >> %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources >> %t.result
-// RUN: cat %t.result | sed -e 's/\\\\/\//g' -e 's/\\/\//g' | FileCheck --check-prefixes=CHECK %s
+// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources > %t.result
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t.dir -DSOURCEDIR=%/S --check-prefixes=CHECK
 
 #include <Inferred/Inferred.h>
 
 inferred a = 0;
 
-// CHECK: -[[PREFIX:.*]]
-// CHECK-NEXT: -[[SOURCEDIR:.*]]
-// CHECK-NEXT: {
+// CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
@@ -25,6 +21,7 @@ inferred a = 0;
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=Inferred",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],

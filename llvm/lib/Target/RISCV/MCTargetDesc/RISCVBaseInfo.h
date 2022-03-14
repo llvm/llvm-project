@@ -377,6 +377,11 @@ inline static unsigned decodeVSEW(unsigned VSEW) {
   return 1 << (VSEW + 3);
 }
 
+inline static unsigned encodeSEW(unsigned SEW) {
+  assert(isValidSEW(SEW) && "Unexpected SEW value");
+  return Log2_32(SEW) - 3;
+}
+
 inline static unsigned getSEW(unsigned VType) {
   unsigned VSEW = (VType >> 3) & 0x7;
   return decodeVSEW(VSEW);

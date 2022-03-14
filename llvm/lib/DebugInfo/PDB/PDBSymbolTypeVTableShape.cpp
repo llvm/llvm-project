@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 
-#include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 
 using namespace llvm;

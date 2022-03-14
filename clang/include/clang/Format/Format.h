@@ -131,21 +131,123 @@ struct FormatStyle {
   };
   /// if not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
+  ///
+  /// NOTE: As of clang-format 15 this option only applied to arrays with equal
+  /// number of columns per row.
+  ///
   /// \version 13
   ArrayInitializerAlignmentStyle AlignArrayOfStructures;
 
-  /// Styles for alignment of consecutive tokens. Tokens can be assignment signs
-  /// (see
-  /// ``AlignConsecutiveAssignments``), bitfield member separators (see
-  /// ``AlignConsecutiveBitFields``), names in declarations (see
-  /// ``AlignConsecutiveDeclarations``) or macro definitions (see
-  /// ``AlignConsecutiveMacros``).
-  enum AlignConsecutiveStyle {
-    ACS_None,
-    ACS_Consecutive,
-    ACS_AcrossEmptyLines,
-    ACS_AcrossComments,
-    ACS_AcrossEmptyLinesAndComments
+  /// Alignment options.
+  ///
+  /// They can also be read as a whole for compatibility. The choices are:
+  /// - None
+  /// - Consecutive
+  /// - AcrossEmptyLines
+  /// - AcrossComments
+  /// - AcrossEmptyLinesAndComments
+  ///
+  /// For example, to align across empty lines and not across comments, either
+  /// of these work.
+  /// \code
+  ///   AlignConsecutiveMacros: AcrossEmptyLines
+  ///
+  ///   AlignConsecutiveMacros:
+  ///     Enabled: true
+  ///     AcrossEmptyLines: true
+  ///     AcrossComments: false
+  /// \endcode
+  struct AlignConsecutiveStyle {
+    /// Whether aligning is enabled.
+    /// \code
+    ///   #define SHORT_NAME       42
+    ///   #define LONGER_NAME      0x007f
+    ///   #define EVEN_LONGER_NAME (2)
+    ///   #define foo(x)           (x * x)
+    ///   #define bar(y, z)        (y + z)
+    ///
+    ///   int a            = 1;
+    ///   int somelongname = 2;
+    ///   double c         = 3;
+    ///
+    ///   int aaaa : 1;
+    ///   int b    : 12;
+    ///   int ccc  : 8;
+    ///
+    ///   int         aaaa = 12;
+    ///   float       b = 23;
+    ///   std::string ccc;
+    /// \endcode
+    bool Enabled;
+    /// Whether to align across empty lines.
+    /// \code
+    ///   true:
+    ///   int a            = 1;
+    ///   int somelongname = 2;
+    ///   double c         = 3;
+    ///
+    ///   int d            = 3;
+    ///
+    ///   false:
+    ///   int a            = 1;
+    ///   int somelongname = 2;
+    ///   double c         = 3;
+    ///
+    ///   int d = 3;
+    /// \endcode
+    bool AcrossEmptyLines;
+    /// Whether to align across comments.
+    /// \code
+    ///   true:
+    ///   int d    = 3;
+    ///   /* A comment. */
+    ///   double e = 4;
+    ///
+    ///   false:
+    ///   int d = 3;
+    ///   /* A comment. */
+    ///   double e = 4;
+    /// \endcode
+    bool AcrossComments;
+    /// Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    /// like ``+=`` are aligned along with ``=``.
+    /// \code
+    ///   true:
+    ///   a   &= 2;
+    ///   bbb  = 2;
+    ///
+    ///   false:
+    ///   a &= 2;
+    ///   bbb = 2;
+    /// \endcode
+    bool AlignCompound;
+    /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    /// operators are left-padded to the same length as long ones in order to
+    /// put all assignment operators to the right of the left hand side.
+    /// \code
+    ///   true:
+    ///   a   >>= 2;
+    ///   bbb   = 2;
+    ///
+    ///   a     = 2;
+    ///   bbb >>= 2;
+    ///
+    ///   false:
+    ///   a >>= 2;
+    ///   bbb = 2;
+    ///
+    ///   a     = 2;
+    ///   bbb >>= 2;
+    /// \endcode
+    bool PadOperators;
+    bool operator==(const AlignConsecutiveStyle &R) const {
+      return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
+             AcrossComments == R.AcrossComments &&
+             AlignCompound == R.AlignCompound && PadOperators == R.PadOperators;
+    }
+    bool operator!=(const AlignConsecutiveStyle &R) const {
+      return !(*this == R);
+    }
   };
 
   /// Style of aligning consecutive macro definitions.
@@ -158,67 +260,8 @@ struct FormatStyle {
   ///   #define foo(x)           (x * x)
   ///   #define bar(y, z)        (y + z)
   /// \endcode
-  ///
-  /// Possible values:
-  ///
-  /// * ``ACS_None`` (in configuration: ``None``)
-  ///    Do not align macro definitions on consecutive lines.
-  ///
-  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
-  ///    Align macro definitions on consecutive lines. This will result in
-  ///    formattings like:
-  ///    \code
-  ///      #define SHORT_NAME       42
-  ///      #define LONGER_NAME      0x007f
-  ///      #define EVEN_LONGER_NAME (2)
-  ///
-  ///      #define foo(x) (x * x)
-  ///      /* some comment */
-  ///      #define bar(y, z) (y + z)
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
-  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
-  ///    \code
-  ///      #define SHORT_NAME       42
-  ///      #define LONGER_NAME      0x007f
-  ///      #define EVEN_LONGER_NAME (2)
-  ///
-  ///      #define foo(x)           (x * x)
-  ///      /* some comment */
-  ///      #define bar(y, z) (y + z)
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments, e.g.
-  ///    \code
-  ///      #define SHORT_NAME       42
-  ///      #define LONGER_NAME      0x007f
-  ///      #define EVEN_LONGER_NAME (2)
-  ///
-  ///      #define foo(x)    (x * x)
-  ///      /* some comment */
-  ///      #define bar(y, z) (y + z)
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLinesAndComments``
-  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
-  ///
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments and empty lines, e.g.
-  ///    \code
-  ///      #define SHORT_NAME       42
-  ///      #define LONGER_NAME      0x007f
-  ///      #define EVEN_LONGER_NAME (2)
-  ///
-  ///      #define foo(x)           (x * x)
-  ///      /* some comment */
-  ///      #define bar(y, z)        (y + z)
-  ///    \endcode
   /// \version 9
   AlignConsecutiveStyle AlignConsecutiveMacros;
-
   /// Style of aligning consecutive assignments.
   ///
   /// ``Consecutive`` will result in formattings like:
@@ -227,68 +270,9 @@ struct FormatStyle {
   ///   int somelongname = 2;
   ///   double c         = 3;
   /// \endcode
-  ///
-  /// Possible values:
-  ///
-  /// * ``ACS_None`` (in configuration: ``None``)
-  ///    Do not align assignments on consecutive lines.
-  ///
-  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
-  ///    Align assignments on consecutive lines. This will result in
-  ///    formattings like:
-  ///    \code
-  ///      int a            = 1;
-  ///      int somelongname = 2;
-  ///      double c         = 3;
-  ///
-  ///      int d = 3;
-  ///      /* A comment. */
-  ///      double e = 4;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
-  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
-  ///    \code
-  ///      int a            = 1;
-  ///      int somelongname = 2;
-  ///      double c         = 3;
-  ///
-  ///      int d            = 3;
-  ///      /* A comment. */
-  ///      double e = 4;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments, e.g.
-  ///    \code
-  ///      int a            = 1;
-  ///      int somelongname = 2;
-  ///      double c         = 3;
-  ///
-  ///      int d    = 3;
-  ///      /* A comment. */
-  ///      double e = 4;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLinesAndComments``
-  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
-  ///
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments and empty lines, e.g.
-  ///    \code
-  ///      int a            = 1;
-  ///      int somelongname = 2;
-  ///      double c         = 3;
-  ///
-  ///      int d            = 3;
-  ///      /* A comment. */
-  ///      double e         = 4;
-  ///    \endcode
   /// \version 3.8
   AlignConsecutiveStyle AlignConsecutiveAssignments;
-
-  /// Style of aligning consecutive bit field.
+  /// Style of aligning consecutive bit fields.
   ///
   /// ``Consecutive`` will align the bitfield separators of consecutive lines.
   /// This will result in formattings like:
@@ -297,67 +281,8 @@ struct FormatStyle {
   ///   int b    : 12;
   ///   int ccc  : 8;
   /// \endcode
-  ///
-  /// Possible values:
-  ///
-  /// * ``ACS_None`` (in configuration: ``None``)
-  ///    Do not align bit fields on consecutive lines.
-  ///
-  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
-  ///    Align bit fields on consecutive lines. This will result in
-  ///    formattings like:
-  ///    \code
-  ///      int aaaa : 1;
-  ///      int b    : 12;
-  ///      int ccc  : 8;
-  ///
-  ///      int d : 2;
-  ///      /* A comment. */
-  ///      int ee : 3;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
-  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
-  ///    \code
-  ///      int aaaa : 1;
-  ///      int b    : 12;
-  ///      int ccc  : 8;
-  ///
-  ///      int d    : 2;
-  ///      /* A comment. */
-  ///      int ee : 3;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments, e.g.
-  ///    \code
-  ///      int aaaa : 1;
-  ///      int b    : 12;
-  ///      int ccc  : 8;
-  ///
-  ///      int d  : 2;
-  ///      /* A comment. */
-  ///      int ee : 3;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLinesAndComments``
-  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
-  ///
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments and empty lines, e.g.
-  ///    \code
-  ///      int aaaa : 1;
-  ///      int b    : 12;
-  ///      int ccc  : 8;
-  ///
-  ///      int d    : 2;
-  ///      /* A comment. */
-  ///      int ee   : 3;
-  ///    \endcode
   /// \version 11
   AlignConsecutiveStyle AlignConsecutiveBitFields;
-
   /// Style of aligning consecutive declarations.
   ///
   /// ``Consecutive`` will align the declaration names of consecutive lines.
@@ -367,64 +292,6 @@ struct FormatStyle {
   ///   float       b = 23;
   ///   std::string ccc;
   /// \endcode
-  ///
-  /// Possible values:
-  ///
-  /// * ``ACS_None`` (in configuration: ``None``)
-  ///    Do not align bit declarations on consecutive lines.
-  ///
-  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
-  ///    Align declarations on consecutive lines. This will result in
-  ///    formattings like:
-  ///    \code
-  ///      int         aaaa = 12;
-  ///      float       b = 23;
-  ///      std::string ccc;
-  ///
-  ///      int a = 42;
-  ///      /* A comment. */
-  ///      bool c = false;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
-  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
-  ///    \code
-  ///      int         aaaa = 12;
-  ///      float       b = 23;
-  ///      std::string ccc;
-  ///
-  ///      int         a = 42;
-  ///      /* A comment. */
-  ///      bool c = false;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments, e.g.
-  ///    \code
-  ///      int         aaaa = 12;
-  ///      float       b = 23;
-  ///      std::string ccc;
-  ///
-  ///      int  a = 42;
-  ///      /* A comment. */
-  ///      bool c = false;
-  ///    \endcode
-  ///
-  /// * ``ACS_AcrossEmptyLinesAndComments``
-  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
-  ///
-  ///    Same as ACS_Consecutive, but also spans over lines only containing
-  ///    comments and empty lines, e.g.
-  ///    \code
-  ///      int         aaaa = 12;
-  ///      float       b = 23;
-  ///      std::string ccc;
-  ///
-  ///      int         a = 42;
-  ///      /* A comment. */
-  ///      bool        c = false;
-  ///    \endcode
   /// \version 3.8
   AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
@@ -499,7 +366,7 @@ struct FormatStyle {
 
   /// If ``true``, horizontally align operands of binary and ternary
   /// expressions.
-  /// \version 12
+  /// \version 3.5
   OperandAlignmentStyle AlignOperands;
 
   /// If ``true``, aligns trailing comments.
@@ -562,7 +429,7 @@ struct FormatStyle {
   ///     B
   ///   } myEnum;
   /// \endcode
-  /// \version 12
+  /// \version 11
   bool AllowShortEnumsOnASingleLine;
 
   /// Different styles for merging short blocks containing at most one
@@ -987,7 +854,7 @@ struct FormatStyle {
   ///   //                        ^ inserted
   ///   ]
   /// \endcode
-  /// \version 12
+  /// \version 11
   TrailingCommaStyle InsertTrailingCommas;
 
   /// If ``false``, a function declaration's or function definition's
@@ -2355,7 +2222,7 @@ struct FormatStyle {
   /// \endcode
   ///
   /// For example: BOOST_PP_STRINGIZE
-  /// \version 12
+  /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
 
   tooling::IncludeStyle IncludeStyle;
@@ -2518,7 +2385,7 @@ struct FormatStyle {
   };
 
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
-  /// \version 12
+  /// \version 11
   IndentExternBlockStyle IndentExternBlock;
 
   /// Indent the requires clause in a template. This only applies when
@@ -2918,7 +2785,7 @@ struct FormatStyle {
   ///            }]
   ///    }
   /// \endcode
-  /// \version 12
+  /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
 
   /// Add a space in front of an Objective-C protocol list, i.e. use

@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A
+; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS
 
@@ -51,6 +52,7 @@ define amdgpu_kernel void @dpp64_rcp_unsupported_ctl(i64 addrspace(1)* %arg, i64
 
 ; GCN-LABEL: {{^}}dpp64_div:
 ; GCN:               global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],
+; DPPMOV64:          v_mov_b64_dpp v[{{[0-9:]+}}], [[V]] row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 ; GFX90A-COUNT-2:    v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_newbcast:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 ; GFX10PLUS-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_share:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 ; GCN:               v_div_scale_f64

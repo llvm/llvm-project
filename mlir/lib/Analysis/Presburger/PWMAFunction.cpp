@@ -28,7 +28,7 @@ static SmallVector<int64_t, 8> subtract(ArrayRef<int64_t> vecA,
 
 PresburgerSet PWMAFunction::getDomain() const {
   PresburgerSet domain =
-      PresburgerSet::getEmptySet(getNumDimIds(), getNumSymbolIds());
+      PresburgerSet::getEmpty(getNumDimIds(), getNumSymbolIds());
   for (const MultiAffineFunction &piece : pieces)
     domain.unionInPlace(piece.getDomain());
   return domain;

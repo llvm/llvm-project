@@ -15,7 +15,7 @@ define internal i32 @test(%T* %p) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    ret i32 42
 ;
 entry:
   %a.gep = getelementptr %T, %T* %p, i64 0, i32 3

@@ -219,7 +219,7 @@ parseSourceFile(llvm::StringRef filename, llvm::SourceMgr &sourceMgr,
                 MLIRContext *context) {
   return parseSourceFile<ModuleOp>(filename, sourceMgr, context);
 }
-[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
+[[deprecated("use parseSourceString<ModuleOp>")]] inline OwningOpRef<ModuleOp>
 parseSourceString(llvm::StringRef moduleStr, MLIRContext *context) {
   return parseSourceString<ModuleOp>(moduleStr, context);
 }

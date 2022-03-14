@@ -10,16 +10,16 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTOR_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
-#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
+template <typename T> struct VarStreamArrayExtractor;
 
 namespace pdb {
-
+struct ModuleInfoHeader;
+struct SectionContrib;
 class DbiModuleDescriptor {
   friend class DbiStreamBuilder;
 

@@ -57,9 +57,11 @@ exit:
 define internal i32 @fn1(i32 %p1) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn1
-; IS__CGSCC____-SAME: (i32 [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[P1]], 0
+; IS__CGSCC____-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[P1]], i32 [[P1]]
+; IS__CGSCC____-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %tobool = icmp ne i32 %p1, 0
@@ -93,8 +95,7 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
-; IS__CGSCC____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    store i32 undef, i32* [[P]], align 4
 ; IS__CGSCC____-NEXT:    br label [[FOR_COND1]]
 ; IS__CGSCC____:       exit:
 ; IS__CGSCC____-NEXT:    ret void
@@ -118,9 +119,11 @@ exit:
 define internal i32 @fn0(i32 %p1) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn0
-; IS__CGSCC____-SAME: (i32 [[P1:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[P1]], 0
+; IS__CGSCC____-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[P1]], i32 [[P1]]
+; IS__CGSCC____-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %tobool = icmp ne i32 %p1, 0

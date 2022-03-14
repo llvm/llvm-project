@@ -122,7 +122,7 @@ struct std::formatter<status, CharT> {
 
 private:
   void throw_format_error(const char* s) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     throw std::format_error(s);
 #else
     (void)s;

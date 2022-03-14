@@ -24,7 +24,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 template<class _Tp, class... _Up>
 struct _IsSameAsAny : _Or<_IsSame<_Tp, _Up>...> {};
 
@@ -101,7 +101,7 @@ bool in_range(_Up __u) noexcept
   return _VSTD::cmp_less_equal(__u, numeric_limits<_Tp>::max()) &&
          _VSTD::cmp_greater_equal(__u, numeric_limits<_Tp>::min());
 }
-#endif
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

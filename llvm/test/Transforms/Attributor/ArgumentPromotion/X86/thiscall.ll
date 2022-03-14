@@ -36,13 +36,21 @@ entry:
 
 ; This is here to ensure @internalfun is live.
 define void @exportedfun(%struct.a* %a) {
-; CHECK-LABEL: define {{[^@]+}}@exportedfun
-; CHECK-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]]) {
-; CHECK-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; CHECK-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone undef, <{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
-; CHECK-NEXT:    call void @llvm.stackrestore(i8* nofree [[INALLOCA_SAVE]])
-; CHECK-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@exportedfun
+; IS__TUNIT____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]]) {
+; IS__TUNIT____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; IS__TUNIT____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
+; IS__TUNIT____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone undef, <{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; IS__TUNIT____-NEXT:    call void @llvm.stackrestore(i8* nofree [[INALLOCA_SAVE]])
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@exportedfun
+; IS__CGSCC____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]]) {
+; IS__CGSCC____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
+; IS__CGSCC____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone [[A]], <{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; IS__CGSCC____-NEXT:    call void @llvm.stackrestore(i8* nofree [[INALLOCA_SAVE]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   %inalloca.save = tail call i8* @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.a }>, align 4
@@ -57,5 +65,5 @@ declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR1]] = { willreturn }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { willreturn }
 ;.

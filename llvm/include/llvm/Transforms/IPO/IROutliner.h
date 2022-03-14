@@ -51,6 +51,7 @@
 struct OutlinableGroup;
 
 namespace llvm {
+using namespace CallingConv;
 using namespace IRSimilarity;
 
 class Module;
@@ -372,6 +373,25 @@ private:
       // the call in outlined functions.
       if (CI.canReturnTwice())
         return false;
+      // TODO: Update the outliner to capture whether the outlined function
+      // needs these extra attributes.
+
+      // Functions marked with the swifttailcc and tailcc calling conventions
+      // require special handling when outlining musttail functions.  The
+      // calling convention must be passed down to the outlined function as
+      // well. Further, there is special handling for musttail calls as well,
+      // requiring a return call directly after.  For now, the outliner does not
+      // support this.
+      bool IsTailCC = CI.getCallingConv() == CallingConv::SwiftTail ||
+                      CI.getCallingConv() == CallingConv::Tail;
+      if (IsTailCC && !EnableMustTailCalls)
+        return false;
+      if (CI.isMustTailCall() && !EnableMustTailCalls)
+        return false;
+      // The outliner can only handle musttail items if it is also accompanied
+      // by the tailcc or swifttailcc calling convention.
+      if (CI.isMustTailCall() && !IsTailCC)
+        return false;
       return true;
     }
     // TODO: Handle FreezeInsts.  Since a frozen value could be frozen inside
@@ -397,6 +417,9 @@ private:
     // The flag variable that marks whether we should allow intrinsics
     // instructions to be outlined.
     bool EnableIntrinsics = false;
+
+    // The flag variable that marks whether we should allow musttail calls.
+    bool EnableMustTailCalls = false;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.

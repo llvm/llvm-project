@@ -28,7 +28,9 @@
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
+#ifdef EXPENSIVE_CHECKS
 #include "llvm/IR/StructuralHash.h"
+#endif
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

@@ -213,6 +213,7 @@ define void @f7_1(i32* %ptr, i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@f7_1
 ; CHECK-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
+; CHECK-NEXT:    [[PTR_0:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
@@ -976,7 +977,7 @@ f:
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { argmemonly nofree norecurse nosync nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR5]] = { argmemonly nofree nosync nounwind writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR6:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nosync nounwind writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nounwind writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree nosync nounwind writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR9]] = { willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR10]] = { nounwind }
@@ -987,7 +988,7 @@ f:
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR4]] = { argmemonly nofree nosync nounwind writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR5:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nosync nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nofree nosync nounwind writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR8]] = { willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nounwind }

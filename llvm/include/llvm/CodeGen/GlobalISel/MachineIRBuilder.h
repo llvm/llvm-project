@@ -13,19 +13,26 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 #define LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 
-#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
 
 // Forward declarations.
+class APInt;
+class BlockAddress;
+class Constant;
+class ConstantFP;
+class ConstantInt;
+class DataLayout;
+class GISelCSEInfo;
+class GlobalValue;
+class TargetRegisterClass;
 class MachineFunction;
 class MachineInstr;
 class TargetInstrInfo;

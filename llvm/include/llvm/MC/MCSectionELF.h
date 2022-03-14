@@ -67,7 +67,7 @@ private:
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
-  bool ShouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
+  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
   unsigned getType() const { return Type; }
   unsigned getFlags() const { return Flags; }
@@ -76,10 +76,10 @@ public:
   const MCSymbolELF *getGroup() const { return Group.getPointer(); }
   bool isComdat() const { return Group.getInt(); }
 
-  void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             const MCExpr *Subsection) const override;
-  bool UseCodeAlign() const override;
+  bool useCodeAlign() const override;
   bool isVirtualSection() const override;
   StringRef getVirtualSectionKind() const override;
 

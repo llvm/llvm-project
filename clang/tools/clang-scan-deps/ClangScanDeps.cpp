@@ -298,10 +298,7 @@ public:
 
     ID.CommandLine = GenerateModulesPathArgs
                          ? FD.getCommandLine(
-                               [&](ModuleID MID) { return lookupPCMPath(MID); },
-                               [&](ModuleID MID) -> const ModuleDeps & {
-                                 return lookupModuleDeps(MID);
-                               })
+                               [&](ModuleID MID) { return lookupPCMPath(MID); })
                          : FD.getCommandLineWithoutModulePaths();
 
     Inputs.push_back(std::move(ID));
@@ -336,10 +333,7 @@ public:
           {"command-line",
            GenerateModulesPathArgs
                ? MD.getCanonicalCommandLine(
-                     [&](ModuleID MID) { return lookupPCMPath(MID); },
-                     [&](ModuleID MID) -> const ModuleDeps & {
-                       return lookupModuleDeps(MID);
-                     })
+                     [&](ModuleID MID) { return lookupPCMPath(MID); })
                : MD.getCanonicalCommandLineWithoutModulePaths()},
       };
       OutModules.push_back(std::move(O));
@@ -369,27 +363,25 @@ private:
   StringRef lookupPCMPath(ModuleID MID) {
     auto PCMPath = PCMPaths.insert({MID, ""});
     if (PCMPath.second)
-      PCMPath.first->second = constructPCMPath(lookupModuleDeps(MID));
+      PCMPath.first->second = constructPCMPath(MID);
     return PCMPath.first->second;
   }
 
   /// Construct a path for the explicitly built PCM.
-  std::string constructPCMPath(const ModuleDeps &MD) const {
-    StringRef Filename = llvm::sys::path::filename(MD.ImplicitModulePCMPath);
+  std::string constructPCMPath(ModuleID MID) const {
+    auto MDIt = Modules.find(IndexedModuleID{MID, 0});
+    assert(MDIt != Modules.end());
+    const ModuleDeps &MD = MDIt->second;
 
-    SmallString<256> ExplicitPCMPath(
-        !ModuleFilesDir.empty()
-            ? ModuleFilesDir
-            : MD.BuildInvocation.getHeaderSearchOpts().ModuleCachePath);
+    StringRef Filename = llvm::sys::path::filename(MD.ImplicitModulePCMPath);
+    StringRef ModuleCachePath = llvm::sys::path::parent_path(
+        llvm::sys::path::parent_path(MD.ImplicitModulePCMPath));
+
+    SmallString<256> ExplicitPCMPath(!ModuleFilesDir.empty() ? ModuleFilesDir
+                                                             : ModuleCachePath);
     llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
     return std::string(ExplicitPCMPath);
   }
-
-  const ModuleDeps &lookupModuleDeps(ModuleID MID) {
-    auto I = Modules.find(IndexedModuleID{MID, 0});
-    assert(I != Modules.end());
-    return I->second;
-  };
 
   struct IndexedModuleID {
     ModuleID ID;
