@@ -21,3 +21,21 @@ define void @caller() {
   call void @callee(i32 42, i32 24)
   ret void
 }
+
+define internal i16 @callee2(i16 %p1, i16 %p2) {
+; CHECK-LABEL: define {{[^@]+}}@callee2
+; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) {
+; CHECK-NEXT:    ret i16 [[P2]]
+;
+  ret i16 %p2
+}
+
+define i16 @caller2(i16 %a) {
+; CHECK-LABEL: define {{[^@]+}}@caller2
+; CHECK-SAME: (i16 [[A:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 @callee2(i16 [[A]], i32 42)
+; CHECK-NEXT:    ret i16 [[CALL]]
+;
+  %call = call i16 @callee2(i16 %a, i32 42)
+  ret i16 %call
+}
