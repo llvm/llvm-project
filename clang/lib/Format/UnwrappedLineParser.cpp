@@ -3511,7 +3511,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   // (this would still leave us with an ambiguity between template function
   // and class declarations).
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
-    while (!eof()) {
+    do {
       if (FormatTok->is(tok::l_brace)) {
         calculateBraceTypes(/*ExpectClassBody=*/true);
         if (!tryToParseBracedList())
@@ -3525,6 +3525,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())
             break;
+        } else {
+          parseSquare();
+          continue;
         }
       }
       if (FormatTok->is(tok::semi))
@@ -3536,7 +3539,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         break;
       }
       nextToken();
-    }
+    } while (!eof());
   }
 
   auto GetBraceType = [](const FormatToken &RecordTok) {
