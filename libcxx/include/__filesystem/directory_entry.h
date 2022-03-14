@@ -249,7 +249,7 @@ public:
 private:
   friend class directory_iterator;
   friend class recursive_directory_iterator;
-  friend class __dir_stream;
+  friend class _LIBCPP_HIDDEN __dir_stream;
 
   enum _CacheType : unsigned char {
     _Empty,
