@@ -641,8 +641,7 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
     IOHandler::PrintAsync(s, len, is_stdout);
 #ifdef _WIN32
     if (prompt)
-      IOHandler::PrintAsync(GetOutputStreamFileSP().get(), prompt,
-                            strlen(prompt));
+      IOHandler::PrintAsync(prompt, strlen(prompt), is_stdout);
 #endif
   }
 }
