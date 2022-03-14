@@ -1,4 +1,4 @@
-# REQUIRES: system-linux
+# REQUIRES: native && system-linux
 # RUN: %clang_host -g %S/Inputs/sigchld.c -o %t
 # RUN: %lldb %t -b -s %s | FileCheck %s
 
