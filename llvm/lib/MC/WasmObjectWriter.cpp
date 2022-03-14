@@ -931,25 +931,29 @@ void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
   for (const wasm::WasmGlobal &Global : Globals) {
     encodeULEB128(Global.Type.Type, W->OS);
     W->OS << char(Global.Type.Mutable);
-    W->OS << char(Global.InitExpr.Opcode);
-    switch (Global.Type.Type) {
-    case wasm::WASM_TYPE_I32:
-      encodeSLEB128(0, W->OS);
-      break;
-    case wasm::WASM_TYPE_I64:
-      encodeSLEB128(0, W->OS);
-      break;
-    case wasm::WASM_TYPE_F32:
-      writeI32(0);
-      break;
-    case wasm::WASM_TYPE_F64:
-      writeI64(0);
-      break;
-    case wasm::WASM_TYPE_EXTERNREF:
-      writeValueType(wasm::ValType::EXTERNREF);
-      break;
-    default:
-      llvm_unreachable("unexpected type");
+    if (Global.InitExpr.Extended) {
+      llvm_unreachable("extected init expressions not supported");
+    } else {
+      W->OS << char(Global.InitExpr.Inst.Opcode);
+      switch (Global.Type.Type) {
+      case wasm::WASM_TYPE_I32:
+        encodeSLEB128(0, W->OS);
+        break;
+      case wasm::WASM_TYPE_I64:
+        encodeSLEB128(0, W->OS);
+        break;
+      case wasm::WASM_TYPE_F32:
+        writeI32(0);
+        break;
+      case wasm::WASM_TYPE_F64:
+        writeI64(0);
+        break;
+      case wasm::WASM_TYPE_EXTERNREF:
+        writeValueType(wasm::ValType::EXTERNREF);
+        break;
+      default:
+        llvm_unreachable("unexpected type");
+      }
     }
     W->OS << char(wasm::WASM_OPCODE_END);
   }
@@ -1658,21 +1662,22 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           wasm::WasmGlobal Global;
           Global.Type = WS.getGlobalType();
           Global.Index = NumGlobalImports + Globals.size();
+          Global.InitExpr.Extended = false;
           switch (Global.Type.Type) {
           case wasm::WASM_TYPE_I32:
-            Global.InitExpr.Opcode = wasm::WASM_OPCODE_I32_CONST;
+            Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
             break;
           case wasm::WASM_TYPE_I64:
-            Global.InitExpr.Opcode = wasm::WASM_OPCODE_I64_CONST;
+            Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I64_CONST;
             break;
           case wasm::WASM_TYPE_F32:
-            Global.InitExpr.Opcode = wasm::WASM_OPCODE_F32_CONST;
+            Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_F32_CONST;
             break;
           case wasm::WASM_TYPE_F64:
-            Global.InitExpr.Opcode = wasm::WASM_OPCODE_F64_CONST;
+            Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_F64_CONST;
             break;
           case wasm::WASM_TYPE_EXTERNREF:
-            Global.InitExpr.Opcode = wasm::WASM_OPCODE_REF_NULL;
+            Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_REF_NULL;
             break;
           default:
             llvm_unreachable("unexpected type");
