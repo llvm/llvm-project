@@ -76,6 +76,7 @@ TYPE_PARSER(recovery(
                 construct<ExecutionPartConstruct>(
                     statement(indirect(dataStmt))),
                 extension<LanguageFeature::ExecutionPartNamelist>(
+                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
                     construct<ExecutionPartConstruct>(
                         statement(indirect(Parser<NamelistStmt>{})))),
                 obsoleteExecutionPartConstruct))),
