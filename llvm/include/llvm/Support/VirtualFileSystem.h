@@ -910,8 +910,9 @@ public:
 
   std::vector<llvm::StringRef> getRoots() const;
 
-  void dump(raw_ostream &OS) const;
-  void dumpEntry(raw_ostream &OS, Entry *E, int NumSpaces = 0) const;
+  void print(raw_ostream &OS) const;
+  void printEntry(raw_ostream &OS, Entry *E, int NumSpaces = 0) const;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
 #endif
