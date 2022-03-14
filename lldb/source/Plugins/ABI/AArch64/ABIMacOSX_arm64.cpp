@@ -590,9 +590,10 @@ static bool LoadValueFromConsecutiveGPRRegisters(
   } else {
     const RegisterInfo *reg_info = nullptr;
     if (is_return_value) {
-      // We are assuming we are decoding this immediately after returning from
-      // a function call and that the address of the structure is in x8
-      reg_info = reg_ctx->GetRegisterInfoByName("x8", 0);
+      // The Darwin arm64 ABI doesn't write the return location back to x8
+      // before returning from the function the way the x86_64 ABI does.  So
+      // we can't reconstruct stack based returns on exit from the function:
+      return false;
     } else {
       // We are assuming we are stopped at the first instruction in a function
       // and that the ABI is being respected so all parameters appear where

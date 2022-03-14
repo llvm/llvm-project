@@ -394,6 +394,9 @@ public:
     const char *
     GetTriple ();
 
+    const char *
+    GetABIName();
+
     %feature("docstring", "
     Architecture data byte width accessor
 
