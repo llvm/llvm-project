@@ -145,13 +145,8 @@ void TrieNode::writeTo(uint8_t *buf) const {
   }
 }
 
-TrieNode::~TrieNode() {
-  for (TrieNode *node : nodes)
-    delete node;
-}
-
 TrieNode *TrieBuilder::makeNode() {
-  auto *node = new TrieNode();
+  auto *node = make<TrieNode>();
   nodes.emplace_back(node);
   return node;
 }
