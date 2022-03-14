@@ -29,10 +29,10 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
   %rhs = memref.alloc() : memref<4x8xf32>
   %O0 = memref.alloc() : memref<4x8xf32>
   %O1 = memref.alloc() : memref<4x8xf32>
-  linalg.fill(%v1, %lhs) : f32, memref<f32>
-  linalg.fill(%v2, %rhs) : f32, memref<4x8xf32>
-  linalg.fill(%v0, %O0) : f32, memref<4x8xf32>
-  linalg.fill(%v0, %O1) : f32, memref<4x8xf32>
+  linalg.fill ins(%v1 : f32) outs(%lhs : memref<f32>)
+  linalg.fill ins(%v2 : f32) outs(%rhs : memref<4x8xf32>)
+  linalg.fill ins(%v0 : f32) outs(%O0 : memref<4x8xf32>)
+  linalg.fill ins(%v0 : f32) outs(%O1 : memref<4x8xf32>)
 
   call @elemwise_exp_add_on_buffers(%lhs, %rhs, %O0) :
     (memref<f32>, memref<4x8xf32>, memref<4x8xf32>) -> ()
@@ -60,10 +60,10 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
   %B = memref.alloc() : memref<16x8xf32>
   %C0 = memref.alloc() : memref<4x8xf32>
   %C1 = memref.alloc() : memref<4x8xf32>
-  linalg.fill(%v1, %A) : i8, memref<4x16xi8>
-  linalg.fill(%v2, %B) : f32, memref<16x8xf32>
-  linalg.fill(%v0, %C0) : f32, memref<4x8xf32>
-  linalg.fill(%v0, %C1) : f32, memref<4x8xf32>
+  linalg.fill ins(%v1 : i8) outs(%A : memref<4x16xi8>)
+  linalg.fill ins(%v2 : f32) outs(%B : memref<16x8xf32>)
+  linalg.fill ins(%v0 : f32) outs(%C0 : memref<4x8xf32>)
+  linalg.fill ins(%v0 : f32) outs(%C1 : memref<4x8xf32>)
 
   call @matmul_signed_on_buffers(%A, %B, %C0) :
     (memref<4x16xi8>, memref<16x8xf32>, memref<4x8xf32>) -> ()
@@ -137,9 +137,9 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   %input = memref.alloc() : memref<1x4x16x1xf64>
   %filter = memref.alloc() : memref<2x2x1xf64>
   %output = memref.alloc() : memref<1x2x4x1xi32>
-  linalg.fill(%v1, %input) : f64, memref<1x4x16x1xf64>
-  linalg.fill(%v2, %filter) : f64, memref<2x2x1xf64>
-  linalg.fill(%v0, %output) : i32, memref<1x2x4x1xi32>
+  linalg.fill ins(%v1 : f64) outs(%input : memref<1x4x16x1xf64>)
+  linalg.fill ins(%v2 : f64) outs(%filter : memref<2x2x1xf64>)
+  linalg.fill ins(%v0 : i32) outs(%output : memref<1x2x4x1xi32>)
 
   call @conv_on_buffers(%input, %filter, %output) :
     (memref<1x4x16x1xf64>, memref<2x2x1xf64>, memref<1x2x4x1xi32>) -> ()
@@ -163,9 +163,9 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   %input = memref.alloc() : memref<1x4x16x1xf64>
   %shape = memref.alloc() : memref<2x2xf64>
   %output = memref.alloc() : memref<1x2x4x1xi32>
-  linalg.fill(%v1, %input) : f64, memref<1x4x16x1xf64>
-  linalg.fill(%v1, %shape) : f64, memref<2x2xf64>
-  linalg.fill(%v0, %output) : i32, memref<1x2x4x1xi32>
+  linalg.fill ins(%v1 : f64) outs(%input : memref<1x4x16x1xf64>)
+  linalg.fill ins(%v1 : f64) outs(%shape : memref<2x2xf64>)
+  linalg.fill ins(%v0 : i32) outs(%output : memref<1x2x4x1xi32>)
 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -368,15 +368,15 @@ def test_fill_builtin():
 
       @builtin.FuncOp.from_py_func(f32, MemRefType.get([], i32))
       def fill_0d_on_buffers(value, out):
-        linalg.fill_tensor(value, outs=[out])
+        linalg.fill(value, outs=[out])
 
       @builtin.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
       def fill_1d_on_buffers(value, out):
-        linalg.fill_tensor(value, outs=[out])
+        linalg.fill(value, outs=[out])
 
       @builtin.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
       def fill_2d_on_buffers(value, out):
-        linalg.fill_tensor(value, outs=[out])
+        linalg.fill(value, outs=[out])
 
     execution_engine = ExecutionEngine(transform(module, fill_boiler))
 
@@ -403,15 +403,15 @@ def test_fill_generic():
 
       @builtin.FuncOp.from_py_func(f32, MemRefType.get([], i32))
       def fill_0d_on_buffers(value, out):
-        linalg.fill_tensor(value, outs=[out], emit_generic=True)
+        linalg.fill(value, outs=[out], emit_generic=True)
 
       @builtin.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
       def fill_1d_on_buffers(value, out):
-        linalg.fill_tensor(value, outs=[out], emit_generic=True)
+        linalg.fill(value, outs=[out], emit_generic=True)
 
       @builtin.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
       def fill_2d_on_buffers(value, out):
-        linalg.fill_tensor(value, outs=[out], emit_generic=True)
+        linalg.fill(value, outs=[out], emit_generic=True)
 
     execution_engine = ExecutionEngine(transform(module, fill_boiler))
 

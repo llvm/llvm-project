@@ -167,10 +167,10 @@ func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
 func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0.0 : f32
   // CHECK: %[[ALLOC:.*]] = memref.alloc
-  // CHECK: linalg.fill(%cst, %[[ALLOC]]) : f32, memref<?xf32>
+  // CHECK: linalg.fill ins(%cst : f32) outs(%[[ALLOC]] : memref<?xf32>)
   // CHECK: %[[TENSOR:.*]] = bufferization.to_tensor %[[ALLOC]] : memref<?xf32>
   // CHECK: return %[[TENSOR]]
-  %0 = linalg.fill(%c0, %arg0) : f32, tensor<?xf32> -> tensor<?xf32>
+  %0 = linalg.fill ins(%c0 : f32) outs(%arg0 : tensor<?xf32>) -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
 

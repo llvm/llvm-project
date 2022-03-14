@@ -16,7 +16,7 @@ func @buffer_forwarding_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]
-  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
 
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "false", "none"]
@@ -43,7 +43,7 @@ func @buffer_forwarding_no_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = t
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]
-  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
 
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none"]
