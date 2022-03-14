@@ -7,13 +7,11 @@
 
 namespace __dfsan {
 
-DFsanThread *DFsanThread::Create(void *start_routine_trampoline,
-                                 thread_callback_t start_routine, void *arg,
+DFsanThread *DFsanThread::Create(thread_callback_t start_routine, void *arg,
                                  bool track_origins) {
   uptr PageSize = GetPageSizeCached();
   uptr size = RoundUpTo(sizeof(DFsanThread), PageSize);
   DFsanThread *thread = (DFsanThread *)MmapOrDie(size, __func__);
-  thread->start_routine_trampoline_ = start_routine_trampoline;
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
   thread->track_origins_ = track_origins;
@@ -74,23 +72,15 @@ thread_return_t DFsanThread::ThreadStart() {
     return 0;
   }
 
-  CHECK(start_routine_trampoline_);
+  // The only argument is void* arg.
+  //
+  // We have never supported propagating the pointer arg as tainted,
+  // __dfsw_pthread_create/__dfso_pthread_create ignore the taint label.
+  // Note that the bytes pointed-to (probably the much more common case)
+  // can still have taint labels attached to them.
+  dfsan_clear_thread_local_state();
 
-  typedef void *(*thread_callback_trampoline_t)(void *, void *, dfsan_label,
-                                                dfsan_label *);
-  typedef void *(*thread_callback_origin_trampoline_t)(
-      void *, void *, dfsan_label, dfsan_label *, dfsan_origin, dfsan_origin *);
-
-  dfsan_label ret_label;
-  if (!track_origins_)
-    return ((thread_callback_trampoline_t)
-                start_routine_trampoline_)((void *)start_routine_, arg_, 0,
-                                           &ret_label);
-
-  dfsan_origin ret_origin;
-  return ((thread_callback_origin_trampoline_t)
-              start_routine_trampoline_)((void *)start_routine_, arg_, 0,
-                                         &ret_label, 0, &ret_origin);
+  return start_routine_(arg_);
 }
 
 DFsanThread::StackBounds DFsanThread::GetStackBounds() const {
