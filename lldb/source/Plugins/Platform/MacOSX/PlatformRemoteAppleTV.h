@@ -40,7 +40,8 @@ public:
 
   llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures(
+      const lldb_private::ArchSpec &process_host_arch) override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;

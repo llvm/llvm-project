@@ -138,7 +138,8 @@ llvm::StringRef PlatformRemoteAppleBridge::GetDescriptionStatic() {
   return "Remote BridgeOS platform plug-in.";
 }
 
-std::vector<ArchSpec> PlatformRemoteAppleBridge::GetSupportedArchitectures() {
+std::vector<ArchSpec> PlatformRemoteAppleBridge::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
   return {ArchSpec("arm64-apple-bridgeos")};
 }
 

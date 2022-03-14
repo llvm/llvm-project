@@ -132,7 +132,9 @@ Status RemoteAwarePlatform::ResolveExecutable(
       // if we can find a match that way
       StreamString arch_names;
       llvm::ListSeparator LS;
-      for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      ArchSpec process_host_arch;
+      for (const ArchSpec &arch :
+           GetSupportedArchitectures(process_host_arch)) {
         resolved_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr, nullptr);

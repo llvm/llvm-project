@@ -125,7 +125,8 @@ PlatformSP PlatformRemoteMacOSX::CreateInstance(bool force,
   return PlatformSP();
 }
 
-std::vector<ArchSpec> PlatformRemoteMacOSX::GetSupportedArchitectures() {
+std::vector<ArchSpec>
+PlatformRemoteMacOSX::GetSupportedArchitectures(const ArchSpec &host_info) {
   // macOS for ARM64 support both native and translated x86_64 processes
   std::vector<ArchSpec> result;
   ARMGetSupportedArchitectures(result, llvm::Triple::MacOSX);

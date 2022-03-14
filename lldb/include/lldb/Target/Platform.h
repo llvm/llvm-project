@@ -95,7 +95,9 @@ public:
   static lldb::PlatformSP GetHostPlatform();
 
   static lldb::PlatformSP
-  GetPlatformForArchitecture(const ArchSpec &arch, ArchSpec *platform_arch_ptr);
+  GetPlatformForArchitecture(const ArchSpec &arch,
+                             const ArchSpec &process_host_arch = {},
+                             ArchSpec *platform_arch_ptr = nullptr);
 
   static const char *GetHostPlatformName();
 
@@ -107,6 +109,7 @@ public:
   static lldb::PlatformSP Create(ConstString name, Status &error);
 
   static lldb::PlatformSP Create(const ArchSpec &arch,
+                                 const ArchSpec &process_host_arch,
                                  ArchSpec *platform_arch_ptr, Status &error);
 
   /// Augments the triple either with information from platform or the host
@@ -310,7 +313,8 @@ public:
 
   /// Get the platform's supported architectures in the order in which they
   /// should be searched.
-  virtual std::vector<ArchSpec> GetSupportedArchitectures() = 0;
+  virtual std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
@@ -332,6 +336,7 @@ public:
   /// Lets a platform answer if it is compatible with a given architecture and
   /// the target triple contained within.
   virtual bool IsCompatibleArchitecture(const ArchSpec &arch,
+                                        const ArchSpec &process_host_arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr);
 

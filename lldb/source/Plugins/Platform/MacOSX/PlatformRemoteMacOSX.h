@@ -42,7 +42,8 @@ public:
                   const lldb_private::UUID *uuid_ptr,
                   lldb_private::FileSpec &local_file) override;
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures(
+      const lldb_private::ArchSpec &process_host_arch) override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;

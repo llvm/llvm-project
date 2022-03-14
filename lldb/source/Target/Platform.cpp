@@ -314,8 +314,9 @@ PlatformSP Platform::Create(ConstString name, Status &error) {
   return platform_sp;
 }
 
-PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
-                            Status &error) {
+PlatformSP Platform::Create(const ArchSpec &arch,
+                            const ArchSpec &process_host_arch,
+                            ArchSpec *platform_arch_ptr, Status &error) {
   lldb::PlatformSP platform_sp;
   if (arch.IsValid()) {
     // Scope for locker
@@ -323,15 +324,15 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
       // First try exact arch matches across all platforms already created
       std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
       for (const auto &platform_sp : GetPlatformList()) {
-        if (platform_sp->IsCompatibleArchitecture(arch, true,
+        if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch, true,
                                                   platform_arch_ptr))
           return platform_sp;
       }
 
       // Next try compatible arch matches across all platforms already created
       for (const auto &platform_sp : GetPlatformList()) {
-        if (platform_sp->IsCompatibleArchitecture(arch, false,
-                                                  platform_arch_ptr))
+        if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                                  false, platform_arch_ptr))
           return platform_sp;
       }
     }
@@ -345,7 +346,7 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
       if (create_callback) {
         platform_sp = create_callback(false, &arch);
         if (platform_sp &&
-            platform_sp->IsCompatibleArchitecture(arch, true,
+            platform_sp->IsCompatibleArchitecture(arch, process_host_arch, true,
                                                   platform_arch_ptr)) {
           std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
           GetPlatformList().push_back(platform_sp);
@@ -360,8 +361,8 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
       if (create_callback) {
         platform_sp = create_callback(false, &arch);
         if (platform_sp &&
-            platform_sp->IsCompatibleArchitecture(arch, false,
-                                                  platform_arch_ptr)) {
+            platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                                  false, platform_arch_ptr)) {
           std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
           GetPlatformList().push_back(platform_sp);
           return platform_sp;
@@ -845,7 +846,9 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
       // architectures that we should be using (in the correct order) and see
       // if we can find a match that way
       ModuleSpec arch_module_spec(module_spec);
-      for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      ArchSpec process_host_arch;
+      for (const ArchSpec &arch :
+           GetSupportedArchitectures(process_host_arch)) {
         arch_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(arch_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr,
@@ -892,7 +895,8 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
     // correct order) and see if we can find a match that way
     StreamString arch_names;
     llvm::ListSeparator LS;
-    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+    ArchSpec process_host_arch;
+    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
       resolved_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           module_search_paths_ptr, nullptr,
@@ -990,7 +994,7 @@ ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
 
   ArchSpec compatible_arch;
   ArchSpec raw_arch(triple);
-  if (!IsCompatibleArchitecture(raw_arch, false, &compatible_arch))
+  if (!IsCompatibleArchitecture(raw_arch, {}, false, &compatible_arch))
     return raw_arch;
 
   if (!compatible_arch.IsValid())
@@ -1202,11 +1206,13 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
 lldb::PlatformSP
 Platform::GetPlatformForArchitecture(const ArchSpec &arch,
+                                     const ArchSpec &process_host_arch,
                                      ArchSpec *platform_arch_ptr) {
   lldb::PlatformSP platform_sp;
   Status error;
   if (arch.IsValid())
-    platform_sp = Platform::Create(arch, platform_arch_ptr, error);
+    platform_sp =
+        Platform::Create(arch, process_host_arch, platform_arch_ptr, error);
   return platform_sp;
 }
 
@@ -1226,6 +1232,7 @@ Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
+                                        const ArchSpec &process_host_arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr) {
   // If the architecture is invalid, we must answer true...
@@ -1233,7 +1240,8 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
     ArchSpec platform_arch;
     auto match = exact_arch_match ? &ArchSpec::IsExactMatch
                                   : &ArchSpec::IsCompatibleMatch;
-    for (const ArchSpec &platform_arch : GetSupportedArchitectures()) {
+    for (const ArchSpec &platform_arch :
+         GetSupportedArchitectures(process_host_arch)) {
       if ((arch.*match)(platform_arch)) {
         if (compatible_arch_ptr)
           *compatible_arch_ptr = platform_arch;
@@ -1571,8 +1579,10 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
                                        bool *did_create_ptr) {
   // Get module information from a target.
   ModuleSpec resolved_module_spec;
+  ArchSpec process_host_arch;
   bool got_module_spec = false;
   if (process) {
+    process_host_arch = process->GetSystemArchitecture();
     // Try to get module information from the process
     if (process->GetModuleSpec(module_spec.GetFileSpec(),
                                module_spec.GetArchitecture(),
@@ -1590,7 +1600,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     // architectures that we should be using (in the correct order) and see if
     // we can find a match that way
     ModuleSpec arch_module_spec(module_spec);
-    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
       arch_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
                                           nullptr, nullptr);

@@ -128,9 +128,10 @@ PlatformLinux::PlatformLinux(bool is_host)
   }
 }
 
-std::vector<ArchSpec> PlatformLinux::GetSupportedArchitectures() {
+std::vector<ArchSpec>
+PlatformLinux::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetSupportedArchitectures();
+    return m_remote_platform_sp->GetSupportedArchitectures(process_host_arch);
   return m_supported_architectures;
 }
 

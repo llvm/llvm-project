@@ -39,7 +39,8 @@ public:
   // lldb_private::PluginInterface functions
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures(
+      const lldb_private::ArchSpec &process_host_arch) override;
 
 protected:
   bool CheckLocalSharedCache() const override;

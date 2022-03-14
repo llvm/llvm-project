@@ -106,7 +106,8 @@ PlatformSP PlatformQemuUser::CreateInstance(bool force, const ArchSpec *arch) {
   return nullptr;
 }
 
-std::vector<ArchSpec> PlatformQemuUser::GetSupportedArchitectures() {
+std::vector<ArchSpec>
+PlatformQemuUser::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
   llvm::Triple triple = HostInfo::GetArchitecture().GetTriple();
   triple.setEnvironment(llvm::Triple::UnknownEnvironment);
   triple.setArchName(GetGlobalProperties().GetArchitecture());

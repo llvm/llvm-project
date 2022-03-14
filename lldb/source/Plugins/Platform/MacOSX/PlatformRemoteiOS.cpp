@@ -134,7 +134,8 @@ llvm::StringRef PlatformRemoteiOS::GetDescriptionStatic() {
 PlatformRemoteiOS::PlatformRemoteiOS()
     : PlatformRemoteDarwinDevice() {}
 
-std::vector<ArchSpec> PlatformRemoteiOS::GetSupportedArchitectures() {
+std::vector<ArchSpec> PlatformRemoteiOS::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
   std::vector<ArchSpec> result;
   ARMGetSupportedArchitectures(result, llvm::Triple::IOS);
   return result;

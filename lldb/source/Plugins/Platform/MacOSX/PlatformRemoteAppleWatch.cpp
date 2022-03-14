@@ -144,7 +144,8 @@ llvm::StringRef PlatformRemoteAppleWatch::GetDescriptionStatic() {
 PlatformRemoteAppleWatch::PlatformRemoteAppleWatch()
     : PlatformRemoteDarwinDevice() {}
 
-std::vector<ArchSpec> PlatformRemoteAppleWatch::GetSupportedArchitectures() {
+std::vector<ArchSpec>
+PlatformRemoteAppleWatch::GetSupportedArchitectures(const ArchSpec &host_info) {
   ArchSpec system_arch(GetSystemArchitecture());
 
   const ArchSpec::Core system_core = system_arch.GetCore();

@@ -43,7 +43,8 @@ public:
 
   void GetStatus(Stream &strm) override;
 
-  std::vector<ArchSpec> GetSupportedArchitectures() override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
   uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
 

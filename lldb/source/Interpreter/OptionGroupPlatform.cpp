@@ -23,8 +23,8 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
   if (!m_platform_name.empty()) {
     platform_sp = Platform::Create(ConstString(m_platform_name.c_str()), error);
     if (platform_sp) {
-      if (platform_arch.IsValid() &&
-          !platform_sp->IsCompatibleArchitecture(arch, false, &platform_arch)) {
+      if (platform_arch.IsValid() && !platform_sp->IsCompatibleArchitecture(
+                                         arch, {}, false, &platform_arch)) {
         error.SetErrorStringWithFormatv("platform '{0}' doesn't support '{1}'",
                                         platform_sp->GetPluginName(),
                                         arch.GetTriple().getTriple());
@@ -33,7 +33,7 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
       }
     }
   } else if (arch.IsValid()) {
-    platform_sp = Platform::Create(arch, &platform_arch, error);
+    platform_sp = Platform::Create(arch, {}, &platform_arch, error);
   }
 
   if (platform_sp) {

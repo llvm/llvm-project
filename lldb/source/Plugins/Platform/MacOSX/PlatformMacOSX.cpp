@@ -133,7 +133,8 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   return {};
 }
 
-std::vector<ArchSpec> PlatformMacOSX::GetSupportedArchitectures() {
+std::vector<ArchSpec>
+PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
   std::vector<ArchSpec> result;
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
   // macOS for ARM64 support both native and translated x86_64 processes
