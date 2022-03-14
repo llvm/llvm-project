@@ -77,6 +77,15 @@ public:
     }
   }
 
+  mlir::Value VisitCallExpr(const CallExpr *E) {
+    assert(!E->getCallReturnType(CGF.getContext())->isReferenceType() && "NYI");
+
+    auto V = CGF.buildCallExpr(E).getScalarVal();
+
+    // TODO: buildLValueAlignmentAssumption
+    return V;
+  }
+
   mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
     assert(!llvm::isa<MemberPointerType>(E->getType()) && "not implemented");
     return CGM.buildLValue(E->getSubExpr()).getPointer();
