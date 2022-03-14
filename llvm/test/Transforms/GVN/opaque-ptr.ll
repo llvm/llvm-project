@@ -103,3 +103,37 @@ join:
   %v = load i32, ptr %gep
   ret i32 %v
 }
+
+define i32 @select_pre(ptr %px, ptr %py) {
+; CHECK-LABEL: @select_pre(
+; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[PY:%.*]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[PX:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[T2]], [[T3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[T3]], i32 [[T2]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[PX]], ptr [[PY]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t2 = load i32, ptr %py, align 4
+  %t3 = load i32, ptr %px, align 4
+  %cmp = icmp slt i32 %t2, %t3
+  %select = select i1 %cmp, ptr %px, ptr %py
+  %r = load i32, ptr %select, align 4
+  ret i32 %r
+}
+
+define i64 @select_pre_different_types(ptr %px, ptr %py) {
+; CHECK-LABEL: @select_pre_different_types(
+; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[PY:%.*]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[PX:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[T2]], [[T3]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[PX]], ptr [[PY]]
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[SELECT]], align 4
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %t2 = load i32, ptr %py, align 4
+  %t3 = load i32, ptr %px, align 4
+  %cmp = icmp slt i32 %t2, %t3
+  %select = select i1 %cmp, ptr %px, ptr %py
+  %r = load i64, ptr %select, align 4
+  ret i64 %r
+}
