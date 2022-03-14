@@ -85,8 +85,6 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Counter overflow";
     case sampleprof_error::ostream_seek_unsupported:
       return "Ostream does not support seek";
-    case sampleprof_error::compress_failed:
-      return "Compress failure";
     case sampleprof_error::uncompress_failed:
       return "Uncompress failure";
     case sampleprof_error::zlib_unavailable:

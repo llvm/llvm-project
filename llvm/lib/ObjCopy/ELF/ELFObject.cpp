@@ -548,13 +548,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
 Expected<CompressedSection>
 CompressedSection::create(const SectionBase &Sec,
                           DebugCompressionType CompressionType) {
-  Error Err = Error::success();
-  CompressedSection Section(Sec, CompressionType, Err);
-
-  if (Err)
-    return std::move(Err);
-
-  return Section;
+  return CompressedSection(Sec, CompressionType);
 }
 Expected<CompressedSection>
 CompressedSection::create(ArrayRef<uint8_t> CompressedData,
@@ -564,20 +558,12 @@ CompressedSection::create(ArrayRef<uint8_t> CompressedData,
 }
 
 CompressedSection::CompressedSection(const SectionBase &Sec,
-                                     DebugCompressionType CompressionType,
-                                     Error &OutErr)
+                                     DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-  ErrorAsOutParameter EAO(&OutErr);
-
-  if (Error Err = zlib::compress(
-          StringRef(reinterpret_cast<const char *>(OriginalData.data()),
-                    OriginalData.size()),
-          CompressedData)) {
-    OutErr = createStringError(llvm::errc::invalid_argument,
-                               "'" + Name + "': " + toString(std::move(Err)));
-    return;
-  }
+  zlib::compress(StringRef(reinterpret_cast<const char *>(OriginalData.data()),
+                           OriginalData.size()),
+                 CompressedData);
 
   size_t ChdrSize;
   if (CompressionType == DebugCompressionType::GNU) {
