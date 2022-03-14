@@ -268,6 +268,12 @@ struct TestVectorUnrollingPatterns
                         return success(isa<arith::AddFOp, vector::FMAOp,
                                            vector::MultiDimReductionOp>(op));
                       }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{2})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<vector::ReductionOp>(op));
+                      }));
 
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =

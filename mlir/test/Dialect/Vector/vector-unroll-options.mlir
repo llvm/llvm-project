@@ -106,3 +106,23 @@ func @vector_multi_reduction(%v : vector<4x6xf32>) -> vector<4xf32> {
 //       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[A1]], %[[V0]] {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[A3]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   return %[[V2]] : vector<4xf32>
+
+// CHECK-LABEL: func @vector_reduction(
+//  CHECK-SAME:     %[[v:.*]]: vector<8xf32>
+//       CHECK:   %[[s0:.*]] = vector.extract_strided_slice %[[v]] {offsets = [0], sizes = [2]
+//       CHECK:   %[[r0:.*]] = vector.reduction <add>, %[[s0]]
+//       CHECK:   %[[s1:.*]] = vector.extract_strided_slice %[[v]] {offsets = [2], sizes = [2]
+//       CHECK:   %[[r1:.*]] = vector.reduction <add>, %[[s1]]
+//       CHECK:   %[[add1:.*]] = arith.addf %[[r0]], %[[r1]]
+//       CHECK:   %[[s2:.*]] = vector.extract_strided_slice %[[v]] {offsets = [4], sizes = [2]
+//       CHECK:   %[[r2:.*]] = vector.reduction <add>, %[[s2]]
+//       CHECK:   %[[add2:.*]] = arith.addf %[[add1]], %[[r2]]
+//       CHECK:   %[[s3:.*]] = vector.extract_strided_slice %[[v]] {offsets = [6], sizes = [2]
+//       CHECK:   %[[r3:.*]] = vector.reduction <add>, %[[s3]]
+//       CHECK:   %[[add3:.*]] = arith.addf %[[add2]], %[[r3]]
+//       CHECK:   return %[[add3]]
+func @vector_reduction(%v : vector<8xf32>) -> f32 {
+  %0 = vector.reduction <add>, %v : vector<8xf32> into f32
+  return %0 : f32
+}
+
