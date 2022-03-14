@@ -1163,7 +1163,6 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
   Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
   Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
   Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
-  Mapper.InstClassifier.EnableMustTailCalls = EnableMustTailCalls;
 
   populateMapper(Modules, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
@@ -1177,7 +1176,6 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
   Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
   Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
   Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
-  Mapper.InstClassifier.EnableMustTailCalls = EnableMustTailCalls;
 
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> IntegerMapping;
@@ -1199,8 +1197,7 @@ IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
-                                        MatchCallsByName, !DisableIntrinsics,
-                                        false));
+                                        MatchCallsByName, !DisableIntrinsics));
   return false;
 }
 
@@ -1218,8 +1215,7 @@ AnalysisKey IRSimilarityAnalysis::Key;
 IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
                                                  ModuleAnalysisManager &) {
   auto IRSI = IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
-                                     MatchCallsByName, !DisableIntrinsics,
-                                     false);
+                                     MatchCallsByName, !DisableIntrinsics);
   IRSI.findSimilarity(M);
   return IRSI;
 }
