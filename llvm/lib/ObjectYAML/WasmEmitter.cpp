@@ -483,7 +483,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     ++ExpectedIndex;
     writeUint8(OS, Global.Type);
     writeUint8(OS, Global.Mutable);
-    writeInitExpr(OS, Global.InitExpr);
+    writeInitExpr(OS, Global.Init);
   }
 }
 

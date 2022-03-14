@@ -83,7 +83,7 @@ struct Global {
   uint32_t Index;
   ValueType Type;
   bool Mutable;
-  InitExpr InitExpr;
+  InitExpr Init;
 };
 
 struct Import {
