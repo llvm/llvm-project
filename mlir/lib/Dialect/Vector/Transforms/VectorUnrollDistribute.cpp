@@ -631,13 +631,60 @@ struct TransferWriteInsertPattern
   }
 };
 
+struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
+  UnrollReductionPattern(MLIRContext *context,
+                         const vector::UnrollVectorOptions &options)
+      : OpRewritePattern<vector::ReductionOp>(context, /*benefit=*/1),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::ReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    Optional<SmallVector<int64_t, 4>> targetShape =
+        getTargetShape(options, reductionOp);
+    if (!targetShape)
+      return failure();
+    SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
+    int64_t ratio = (*shapeRatio(originalSize, *targetShape))[0];
+
+    // Create unrolled vector reduction.
+    Location loc = reductionOp.getLoc();
+    Value accumulator = nullptr;
+    for (int64_t i = 0; i < ratio; ++i) {
+      SmallVector<int64_t> offsets =
+          getVectorOffset(originalSize, *targetShape, i);
+      SmallVector<int64_t> strides(offsets.size(), 1);
+      Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, reductionOp.vector(), offsets, *targetShape, strides);
+      Operation *newOp = cloneOpWithOperandsAndTypes(
+          rewriter, loc, reductionOp, slicedOperand, reductionOp.getType());
+      Value result = newOp->getResult(0);
+
+      if (!accumulator) {
+        // This is the first reduction.
+        accumulator = result;
+      } else {
+        // On subsequent reduction, combine with the accumulator.
+        accumulator = makeArithReduction(rewriter, loc, reductionOp.kind(),
+                                         accumulator, result);
+      }
+    }
+
+    rewriter.replaceOp(reductionOp, accumulator);
+    return success();
+  }
+
+private:
+  const vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options) {
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
-               UnrollMultiReductionPattern>(patterns.getContext(), options);
+               UnrollReductionPattern, UnrollMultiReductionPattern>(
+      patterns.getContext(), options);
 }
 
 void mlir::vector::populatePropagateVectorDistributionPatterns(

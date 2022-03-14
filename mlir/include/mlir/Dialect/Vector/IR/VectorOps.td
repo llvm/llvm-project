@@ -266,7 +266,9 @@ def Vector_ContractionOp :
 def Vector_ReductionOp :
   Vector_Op<"reduction", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface,
+                               ["getShapeForUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind, AnyVector:$vector,
                    Optional<AnyType>:$acc)>,
     Results<(outs AnyType:$dest)> {
