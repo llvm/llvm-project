@@ -383,6 +383,19 @@ static bool hasOutsideUser(Instruction &I, Loop &OrigLoop) {
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // Check if \p R is used outside the loop, if required.
+  // TODO: Remove once live-outs are modeled in VPlan.
+  auto HasUsersOutsideLoop = [&OrigLoop](VPRecipeBase &R) {
+    // Exit values for induction recipes are generated independent of the
+    // recipes, expect for truncated inductions. Hence there is no need to check
+    // for users outside the loop for them.
+    if (isa<VPScalarIVStepsRecipe>(&R) ||
+        (isa<VPWidenIntOrFpInductionRecipe>(&R) &&
+         !isa<TruncInst>(R.getUnderlyingInstr())))
+      return false;
+    return R.getUnderlyingInstr() &&
+           hasOutsideUser(*R.getUnderlyingInstr(), OrigLoop);
+  };
   // Remove dead recipes in header block. The recipes in the block are processed
   // in reverse order, to catch chains of dead recipes.
   // TODO: Remove dead recipes across whole plan.
@@ -390,9 +403,7 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
     if (R.mayHaveSideEffects() ||
         any_of(R.definedValues(),
                [](VPValue *V) { return V->getNumUsers() > 0; }) ||
-        (!isa<VPWidenIntOrFpInductionRecipe>(&R) &&
-         !isa<VPScalarIVStepsRecipe>(&R) && R.getUnderlyingInstr() &&
-         hasOutsideUser(*R.getUnderlyingInstr(), OrigLoop)))
+        HasUsersOutsideLoop(R))
       continue;
     R.eraseFromParent();
   }
