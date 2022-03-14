@@ -57,6 +57,7 @@ class Process;
 class Stream;
 class SymbolContext;
 class Target;
+class ProgressEventData;
 
 namespace repro {
 class DataRecorder;
@@ -83,39 +84,6 @@ public:
   /// Get the public broadcaster for this debugger.
   Broadcaster &GetBroadcaster() { return m_broadcaster; }
   const Broadcaster &GetBroadcaster() const { return m_broadcaster; }
-
-  class ProgressEventData : public EventData {
-
-  public:
-    ProgressEventData(uint64_t progress_id, const std::string &message,
-                      uint64_t completed, uint64_t total,
-                      bool debugger_specific)
-        : m_message(message), m_id(progress_id), m_completed(completed),
-          m_total(total), m_debugger_specific(debugger_specific) {}
-
-    static ConstString GetFlavorString();
-
-    ConstString GetFlavor() const override;
-
-    void Dump(Stream *s) const override;
-
-    static const ProgressEventData *
-    GetEventDataFromEvent(const Event *event_ptr);
-    uint64_t GetID() const { return m_id; }
-    uint64_t GetCompleted() const { return m_completed; }
-    uint64_t GetTotal() const { return m_total; }
-    const std::string &GetMessage() const { return m_message; }
-    bool IsDebuggerSpecific() const { return m_debugger_specific; }
-
-  private:
-    std::string m_message;
-    const uint64_t m_id;
-    uint64_t m_completed;
-    const uint64_t m_total;
-    const bool m_debugger_specific;
-    ProgressEventData(const ProgressEventData &) = delete;
-    const ProgressEventData &operator=(const ProgressEventData &) = delete;
-  };
 
   ~Debugger() override;
 
@@ -445,7 +413,7 @@ protected:
                              uint64_t completed, uint64_t total,
                              llvm::Optional<lldb::user_id_t> debugger_id);
 
-  void PrintProgress(const Debugger::ProgressEventData &data);
+  void PrintProgress(const ProgressEventData &data);
 
   bool StartEventHandlerThread();
 

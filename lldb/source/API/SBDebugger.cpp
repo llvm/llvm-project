@@ -35,6 +35,7 @@
 #include "lldb/API/SBTypeSynthetic.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamFile.h"
@@ -152,8 +153,8 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
                                              uint64_t &total,
                                              bool &is_debugger_specific) {
   LLDB_INSTRUMENT_VA(event);
-  const Debugger::ProgressEventData *progress_data =
-      Debugger::ProgressEventData::GetEventDataFromEvent(event.get());
+  const ProgressEventData *progress_data =
+      ProgressEventData::GetEventDataFromEvent(event.get());
   if (progress_data == nullptr)
     return nullptr;
   progress_id = progress_data->GetID();

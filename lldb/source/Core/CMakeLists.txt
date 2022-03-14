@@ -27,6 +27,7 @@ add_lldb_library(lldbCore
   Communication.cpp
   DataFileCache.cpp
   Debugger.cpp
+  DebuggerEvents.cpp
   Declaration.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
