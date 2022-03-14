@@ -65,7 +65,8 @@ public:
                                lldb_private::Target &target,
                                lldb_private::Status &error) override;
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures(
+      const lldb_private::ArchSpec &process_host_arch) override;
 
   lldb_private::Status ResolveExecutable(
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
