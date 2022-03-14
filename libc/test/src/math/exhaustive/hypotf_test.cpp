@@ -18,7 +18,7 @@ using FPBits = __llvm_libc::fputil::FPBits<float>;
 namespace mpfr = __llvm_libc::testing::mpfr;
 
 struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  void check(uint32_t start, uint32_t stop,
+  bool check(uint32_t start, uint32_t stop,
              mpfr::RoundingMode rounding) override {
     // Range of the second input: [2^37, 2^48).
     constexpr uint32_t Y_START = (37U + 127U) << 23;
@@ -26,13 +26,14 @@ struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
 
     mpfr::ForceRoundingMode r(rounding);
     uint32_t xbits = start;
+    bool result = true;
     do {
       float x = float(FPBits(xbits));
       uint32_t ybits = Y_START;
       do {
         float y = float(FPBits(ybits));
-        EXPECT_FP_EQ(__llvm_libc::fputil::hypot(x, y),
-                     __llvm_libc::hypotf(x, y));
+        result &= EXPECT_FP_EQ(__llvm_libc::fputil::hypot(x, y),
+                               __llvm_libc::hypotf(x, y));
         // Using MPFR will be much slower.
         // mpfr::BinaryInput<float> input{x, y};
         // EXPECT_MPFR_MATCH(mpfr::Operation::Hypot, input,
@@ -40,6 +41,7 @@ struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
         //                   rounding);
       } while (ybits++ < Y_STOP);
     } while (xbits++ < stop);
+    return result;
   }
 };
 
