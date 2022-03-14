@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-ast -analyze < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
 ; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
 ; This test case verifies that we create correct code even if two OpenMP loops

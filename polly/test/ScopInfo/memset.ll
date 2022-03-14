@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-differing-element-types -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-differing-element-types -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -S -polly-allow-differing-element-types -polly-codegen < %s | FileCheck --check-prefix=IR %s
 ;
 ; CHECK:         Arrays {

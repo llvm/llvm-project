@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; To forward %val, B[j] cannot be reused in bodyC because it is overwritten
 ; between. Verify that instead the alternative C[j] is used.

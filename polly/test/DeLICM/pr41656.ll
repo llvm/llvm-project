@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; llvm.org/PR41656
 ;

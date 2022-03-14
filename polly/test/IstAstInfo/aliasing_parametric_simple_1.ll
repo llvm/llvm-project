@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output %s | FileCheck %s
 ;
 ;    void jd(int *A, int *B, int c) {
 ;      for (int i = 0; i < 1024; i++)

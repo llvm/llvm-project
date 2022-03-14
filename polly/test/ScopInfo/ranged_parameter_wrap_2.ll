@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Check that the context is built fast and does not explode due to us
 ; combining a large number of non-convex ranges. Instead, after a certain

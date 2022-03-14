@@ -823,3 +823,49 @@ INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
 INITIALIZE_PASS_END(IslAstInfoWrapperPass, "polly-ast",
                     "Polly - Generate an AST from the SCoP (isl)", false, false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from IslAstInfoWrapperPass.
+class IslAstInfoPrinterLegacyPass : public ScopPass {
+public:
+  static char ID;
+
+  IslAstInfoPrinterLegacyPass() : IslAstInfoPrinterLegacyPass(outs()) {}
+  explicit IslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    IslAstInfoWrapperPass &P = getAnalysis<IslAstInfoWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
+       << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<IslAstInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char IslAstInfoPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createIslAstInfoPrinterLegacyPass(raw_ostream &OS) {
+  return new IslAstInfoPrinterLegacyPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(IslAstInfoPrinterLegacyPass, "polly-print-ast",
+                      "Polly - Print the AST from a SCoP (isl)", false, false);
+INITIALIZE_PASS_DEPENDENCY(IslAstInfoWrapperPass);
+INITIALIZE_PASS_END(IslAstInfoPrinterLegacyPass, "polly-print-ast",
+                    "Polly - Print the AST from a SCoP (isl)", false, false)

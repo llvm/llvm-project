@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-simplify -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-simplify -polly-optree -disable-output < %s | FileCheck %s -match-full-lines
 
 ; llvm.org/PR47098
 ; Use-after-free by reference to Stmt remaining in InstStmtMap after removing it has been removed by Scop::simplifyScop.

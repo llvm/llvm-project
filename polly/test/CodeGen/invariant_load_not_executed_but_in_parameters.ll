@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
 ;
 ; Check that this does not crash as the invariant load is not executed (thus
 ; not preloaded) but still referenced by one of the parameters.

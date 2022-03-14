@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-print-instructions \
-; RUN:     < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-print-instructions -disable-output < %s | FileCheck %s
 
 ; CHECK: Statements {
 ; CHECK: 	Stmt_bb46

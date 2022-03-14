@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze < %s
+; RUN: opt %loadPolly -polly-ast -disable-output < %s
 
 ;int bar1();
 ;int bar2();

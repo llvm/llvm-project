@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

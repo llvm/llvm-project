@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
 ; RUN: -polly-target-2nd-cache-level-associativity=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 < %s \
-; RUN: | FileCheck %s
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;    /* C := A * B + C */
 ;    /* Elements of the matrices A, B, C have the float type. */

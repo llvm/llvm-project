@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Verify only the incoming scalar x is modeled as a read in the non-affine
 ; region.

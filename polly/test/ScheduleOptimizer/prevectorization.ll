@@ -1,14 +1,6 @@
-; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
-; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=polly \
-; RUN: -polly-ast -analyze < %s | FileCheck %s
-; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
-; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine \
-; RUN: -polly-ast -analyze < %s | FileCheck %s
-
-; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
-; RUN: -polly-vectorizer=polly -polly-pattern-matching-based-opts=false \
-; RUN: -polly-ast -analyze -polly-prevect-width=16 < %s | \
-; RUN: FileCheck %s -check-prefix=VEC16
+; RUN: opt -S %loadPolly -basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=polly                         -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadPolly -basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine                     -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadPolly -basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=polly -polly-prevect-width=16 -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=VEC16
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

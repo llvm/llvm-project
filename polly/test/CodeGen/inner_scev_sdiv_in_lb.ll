@@ -1,7 +1,5 @@
-; RUN: opt %loadPolly \
-; RUN:     -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly \
-; RUN:      -S -polly-codegen < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; CHECK: [N] -> { Stmt_bb11[i0, i1] : i0 < N and i1 >= 0 and 3i1 <= -3 + i0 };
 ; CODEGEN: polly

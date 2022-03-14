@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Error blocks are skipped during SCoP detection. We skip them during
 ; SCoP formation too as they might contain instructions we can not handle.

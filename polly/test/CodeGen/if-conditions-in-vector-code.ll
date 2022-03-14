@@ -1,8 +1,5 @@
-; RUN: opt %loadPolly -analyze -polly-ast -polly-vectorizer=polly < %s | \
-; RUN:     FileCheck %s -check-prefix=AST
-
-; RUN: opt %loadPolly -polly-codegen -polly-vectorizer=polly -S < %s | \
-; RUN:     FileCheck %s
+; RUN: opt %loadPolly -polly-vectorizer=polly -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadPolly -polly-vectorizer=polly -polly-codegen -S < %s | FileCheck %s
 ;
 ;    void foo(float *A) {
 ;      for (long i = 0; i < 16; i++) {

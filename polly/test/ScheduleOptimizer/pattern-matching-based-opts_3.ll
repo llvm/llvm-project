@@ -1,19 +1,19 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-size=0 \
+; RUN: -polly-target-1st-cache-level-size=0 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: < %s 2>&1 | FileCheck %s
+; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s 2>&1 | FileCheck %s
 
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
 ; RUN: -polly-target-2nd-cache-level-associativity=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 < %s 2>&1 \
-; RUN: | FileCheck %s --check-prefix=EXTRACTION-OF-MACRO-KERNEL
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=EXTRACTION-OF-MACRO-KERNEL
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)

@@ -1,5 +1,5 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
-; RUN:     < %s 2>&1 | FileCheck %s
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Low complexity assumption: {  : false }
 ;

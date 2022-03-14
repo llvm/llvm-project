@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::Value
 ;

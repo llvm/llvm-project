@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; See http://research.microsoft.com/pubs/151917/divmodnote-letter.pdf

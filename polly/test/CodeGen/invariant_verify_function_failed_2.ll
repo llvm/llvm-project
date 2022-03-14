@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -S -polly-scops -analyze \
-; RUN:   -polly-invariant-load-hoisting=true %s \
-; RUN: | FileCheck %s -check-prefix=SCOPS
+; RUN: opt %loadPolly -S -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s -check-prefix=SCOPS
 ; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; Check we generate valid code.

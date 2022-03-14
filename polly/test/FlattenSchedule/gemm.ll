@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-flatten-schedule -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-flatten-schedule -disable-output < %s | FileCheck %s
 ;
 ; dgemm kernel
 ; C := alpha*A*B + beta*C

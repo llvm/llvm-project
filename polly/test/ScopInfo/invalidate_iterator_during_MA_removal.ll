@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
 ;
 ; Check that no invalidated iterator is accessed while elements from
 ; the list of MemoryAccesses are removed.

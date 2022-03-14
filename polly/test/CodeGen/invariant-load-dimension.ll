@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly < %s -analyze -polly-scops -polly-process-unprofitable -polly-invariant-load-hoisting | FileCheck %s -check-prefix=SCOPS
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOPS
 ; RUN: opt %loadPolly -S < %s -polly-codegen -polly-process-unprofitable -polly-invariant-load-hoisting | FileCheck %s -check-prefix=CODEGEN
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n8:16:32-S64"

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops -polly-invariant-load-hoisting=true %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
 ; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; The offset of the %tmp1 load wrt. to %buff (62 bytes) is not divisible

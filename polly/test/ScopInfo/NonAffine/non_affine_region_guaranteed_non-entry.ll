@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -polly-scops -analyze \
-; RUN:                -polly-allow-nonaffine-loops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-detect -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving
 ; the loop). The current implementation of deriving their domain derives

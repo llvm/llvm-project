@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -verify-dom-info -analyze < %s
+; RUN: opt %loadPolly -polly-codegen -verify-dom-info -disable-output < %s
 
 ; Verify that the DominatorTree is preserved correctly for the inserted
 ; %polly.stmt.exit.exit block, which serves as new exit block for the generated

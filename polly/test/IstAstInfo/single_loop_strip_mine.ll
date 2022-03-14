@@ -1,8 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-ast -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -polly-import-jscop \
-; RUN:   -polly-ast-print-accesses \
-; RUN:   -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s \
-; RUN:   -check-prefix=CHECK-VECTOR
+; RUN: opt %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-import-jscop -polly-ast-print-accesses -polly-ast-detect-parallel -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=CHECK-VECTOR
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i] = B[i];

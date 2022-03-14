@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
-; RUN: -polly-invariant-load-hoisting=true \
-; RUN:     < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-print-scops \
+; RUN:     -polly-invariant-load-hoisting=true \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Low complexity assumption:
 ;

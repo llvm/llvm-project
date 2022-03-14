@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze  -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
 ; XFAIL: *
 
 ;int bar1();

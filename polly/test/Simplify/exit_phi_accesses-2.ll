@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-simplify -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -polly-print-simplify -disable-output < %s | FileCheck %s
 ;
 ; The use of %sum.next by %phi counts as an escaping use.
 ; Don't remove the scalar write of %sum.next.

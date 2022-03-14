@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; The minimal dependence distance of the innermost loop should be 1 instead of 250.
 ; CHECK:    #pragma minimal dependence distance: 1

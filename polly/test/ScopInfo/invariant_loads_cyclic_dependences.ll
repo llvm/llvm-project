@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Negative test. If we assume UB[*V] to be invariant we get a cyclic
 ; dependence in the invariant loads that needs to be resolved by

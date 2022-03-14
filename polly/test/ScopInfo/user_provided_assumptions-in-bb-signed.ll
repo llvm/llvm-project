@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Context:
 ; CHECK-NEXT: [n] -> {  : -9223372036854775808 <= n <= 100 }

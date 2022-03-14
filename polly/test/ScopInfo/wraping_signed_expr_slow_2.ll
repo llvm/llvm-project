@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; This checks that the no-wraps checks will be computed fast as some example
 ; already showed huge slowdowns even though the inbounds and nsw flags were

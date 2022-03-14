@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; The constraint that r2 has to be bigger than r1 is implicitly containted in
 ; the domain, hence we do not want to see it explicitly.

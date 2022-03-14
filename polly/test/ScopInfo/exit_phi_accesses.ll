@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; Check that PHI nodes only create PHI access and nothing else (e.g. unnecessary
 ; SCALAR accesses). In this case, for a PHI in the exit node, hence there is no

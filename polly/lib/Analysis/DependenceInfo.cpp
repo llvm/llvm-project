@@ -927,6 +927,55 @@ INITIALIZE_PASS_END(DependenceInfo, "polly-dependences",
                     "Polly - Calculate dependences", false, false)
 
 //===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from DependenceAnalysis.
+class DependenceInfoPrinterLegacyPass : public ScopPass {
+public:
+  static char ID;
+
+  DependenceInfoPrinterLegacyPass() : DependenceInfoPrinterLegacyPass(outs()) {}
+
+  explicit DependenceInfoPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    DependenceInfo &P = getAnalysis<DependenceInfo>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for "
+       << "region: '" << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<DependenceInfo>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char DependenceInfoPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createDependenceInfoPrinterLegacyPass(raw_ostream &OS) {
+  return new DependenceInfoPrinterLegacyPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(DependenceInfoPrinterLegacyPass,
+                      "polly-print-dependences", "Polly - Print dependences",
+                      false, false);
+INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
+INITIALIZE_PASS_END(DependenceInfoPrinterLegacyPass, "polly-print-dependences",
+                    "Polly - Print dependences", false, false)
+
+//===----------------------------------------------------------------------===//
+
 const Dependences &
 DependenceInfoWrapperPass::getDependences(Scop *S,
                                           Dependences::AnalysisLevel Level) {
@@ -983,3 +1032,53 @@ INITIALIZE_PASS_END(
     DependenceInfoWrapperPass, "polly-function-dependences",
     "Polly - Calculate dependences for all the SCoPs of a function", false,
     false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from DependenceInfoWrapperPass.
+class DependenceInfoPrinterLegacyFunctionPass : public FunctionPass {
+public:
+  static char ID;
+
+  DependenceInfoPrinterLegacyFunctionPass()
+      : DependenceInfoPrinterLegacyFunctionPass(outs()) {}
+
+  explicit DependenceInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS)
+      : FunctionPass(ID), OS(OS) {}
+
+  bool runOnFunction(Function &F) override {
+    DependenceInfoWrapperPass &P = getAnalysis<DependenceInfoWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for function '"
+       << F.getName() << "':\n";
+    P.print(OS);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    FunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<DependenceInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char DependenceInfoPrinterLegacyFunctionPass::ID = 0;
+} // namespace
+
+Pass *polly::createDependenceInfoPrinterLegacyFunctionPass(raw_ostream &OS) {
+  return new DependenceInfoPrinterLegacyFunctionPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(
+    DependenceInfoPrinterLegacyFunctionPass, "polly-print-function-dependences",
+    "Polly - Print dependences for all the SCoPs of a function", false, false);
+INITIALIZE_PASS_DEPENDENCY(DependenceInfoWrapperPass);
+INITIALIZE_PASS_END(DependenceInfoPrinterLegacyFunctionPass,
+                    "polly-print-function-dependences",
+                    "Polly - Print dependences for all the SCoPs of a function",
+                    false, false)

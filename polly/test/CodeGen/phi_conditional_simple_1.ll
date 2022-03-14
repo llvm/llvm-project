@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-ast < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
 ; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
 ;
 ;    void jd(int *A, int c) {

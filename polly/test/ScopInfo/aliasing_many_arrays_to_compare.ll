@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-print-scops -disable-output \
 ; RUN:                < %s | FileCheck %s --check-prefix=FOUND
-; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-print-scops -disable-output \
 ; RUN:                -polly-rtc-max-arrays-per-group=3 < %s | FileCheck %s \
 ; RUN:                --check-prefix=IGNORED
 ;

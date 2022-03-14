@@ -50,6 +50,7 @@ llvm::SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt);
 ///
 /// @return The Simplify pass.
 llvm::Pass *createSimplifyWrapperPass(int CallNo = 0);
+llvm::Pass *createSimplifyPrinterLegacyPass(llvm::raw_ostream &OS);
 
 struct SimplifyPass : public PassInfoMixin<SimplifyPass> {
   SimplifyPass(int CallNo = 0) : CallNo(CallNo) {}
@@ -76,6 +77,7 @@ private:
 
 namespace llvm {
 void initializeSimplifyWrapperPassPass(llvm::PassRegistry &);
+void initializeSimplifyPrinterLegacyPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif /* POLLY_TRANSFORM_SIMPLIFY_H */

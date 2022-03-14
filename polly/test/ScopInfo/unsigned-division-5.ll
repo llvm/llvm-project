@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void f(int *A, unsigned N) {
 ;      for (unsigned i = 0; i < N; i++)

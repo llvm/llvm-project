@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-import-jscop \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-import-jscop \
+; RUN:                -disable-output < %s | FileCheck %s
 
 ; RUN: opt %loadPolly -polly-import-jscop \
 ; RUN:                -polly-codegen -S < %s \

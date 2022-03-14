@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void f(float a[100][100]) {
 ;      float x;

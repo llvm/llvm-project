@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Move operand tree without duplicating values used multiple times.
 ;

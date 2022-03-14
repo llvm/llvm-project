@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -disable-output < %s
 
 ; CHECK: Valid Region for Scop: bb10 => bb16
 

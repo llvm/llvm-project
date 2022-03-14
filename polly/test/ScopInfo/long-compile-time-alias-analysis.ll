@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
 
 ; Verify that the compilation of this test case does not take infinite time.
 ; At some point Polly tried to model this test case and got stuck in

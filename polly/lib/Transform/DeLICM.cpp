@@ -1457,9 +1457,45 @@ public:
 };
 
 char DeLICMWrapperPass::ID;
+
+/// Print result from DeLICMWrapperPass.
+class DeLICMPrinterLegacyPass : public ScopPass {
+public:
+  static char ID;
+
+  DeLICMPrinterLegacyPass() : DeLICMPrinterLegacyPass(outs()){};
+  explicit DeLICMPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    DeLICMWrapperPass &P = getAnalysis<DeLICMWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
+       << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<DeLICMWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char DeLICMPrinterLegacyPass::ID = 0;
 } // anonymous namespace
 
 Pass *polly::createDeLICMWrapperPass() { return new DeLICMWrapperPass(); }
+
+llvm::Pass *polly::createDeLICMPrinterLegacyPass(llvm::raw_ostream &OS) {
+  return new DeLICMPrinterLegacyPass(OS);
+}
 
 llvm::PreservedAnalyses polly::DeLICMPass::run(Scop &S,
                                                ScopAnalysisManager &SAM,
@@ -1495,3 +1531,9 @@ INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
                     false, false)
+
+INITIALIZE_PASS_BEGIN(DeLICMPrinterLegacyPass, "polly-print-delicm",
+                      "Polly - Print DeLICM/DePRE", false, false)
+INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
+INITIALIZE_PASS_END(DeLICMPrinterLegacyPass, "polly-print-delicm",
+                    "Polly - Print DeLICM/DePRE", false, false)

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Use %phi instead of the normal %add; that is, the last last iteration will
 ; be ignored such the %phi cannot be written to A[3] in %body.

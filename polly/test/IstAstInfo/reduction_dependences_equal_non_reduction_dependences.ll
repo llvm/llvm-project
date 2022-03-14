@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; This loopnest contains a reduction which imposes the same dependences as the
 ; accesses to the array A. We need to ensure we do __not__ parallelize anything

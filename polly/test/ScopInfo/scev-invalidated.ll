@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Region: %if.then6---%return
 ;

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-print-instructions -disable-output < %s | FileCheck %s
 ;
 ; Verify that we remove the ignored intrinsics from the instruction list.
 ;

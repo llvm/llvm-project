@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 ;
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving

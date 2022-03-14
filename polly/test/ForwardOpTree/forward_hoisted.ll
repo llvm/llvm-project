@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Move %val to %bodyB, so %bodyA can be removed (by -polly-simplify).
 ; This involves making the load-hoisted %val1 to be made available in %bodyB.

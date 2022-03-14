@@ -1,5 +1,5 @@
 ; RUN: opt %loadPolly -polly-detect-full-functions -polly-scop-inliner \
-; RUN: -polly-scops -analyze < %s | FileCheck %s
+; RUN: -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; Check that we get the 2 nested loops by inlining `to_be_inlined` into
 ; `inline_site`.

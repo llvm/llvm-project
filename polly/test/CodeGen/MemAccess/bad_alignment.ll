@@ -1,4 +1,4 @@
-; RUN: not --crash opt %loadPolly -polly-import-jscop -analyze 2>&1 < %s | FileCheck %s
+; RUN: not --crash opt %loadPolly -polly-import-jscop -disable-output 2>&1 < %s | FileCheck %s
 ;
 ; Check that we do not allow to access elements not accessed before because the
 ; alignment information would become invalid.

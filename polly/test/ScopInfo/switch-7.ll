@@ -1,6 +1,6 @@
 
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
 ;
 ;    void f(int *A, int c, int N) {
 ;      switch (c) {

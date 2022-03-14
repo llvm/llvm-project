@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-opt-isl -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-opt-isl -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s
 
 ; This could theoretically be fused by adjusting the offset of the second loop by %k (instead of relying on schedule dimensions).
 

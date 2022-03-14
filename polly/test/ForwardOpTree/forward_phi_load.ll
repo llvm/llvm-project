@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Rematerialize a load.
 ;

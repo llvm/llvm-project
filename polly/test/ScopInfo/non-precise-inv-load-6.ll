@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Check that we model the execution context correctly.
 ;

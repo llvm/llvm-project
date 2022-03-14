@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops -polly-ignore-aliasing \
+; RUN: opt %loadPolly -disable-output -polly-print-scops -polly-ignore-aliasing \
 ; RUN:    < %s | FileCheck %s
 
 ; CHECK: Assumed Context:

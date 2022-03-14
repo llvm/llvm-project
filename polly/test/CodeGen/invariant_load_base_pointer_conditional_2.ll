@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
 ; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true --polly-overflow-tracking=always < %s | FileCheck %s --check-prefix=IRA
 ;

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
 
 ; The load is a required invariant load and at the same time used in a store.
 ; Polly used to add two MemoryAccesses for it which caused an assertion to fail.

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -tbaa -polly-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -tbaa -polly-print-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing \
+; RUN:                -disable-output < %s | FileCheck %s
 ;
 ; Note: The order of the invariant accesses is important because A is the
 ;       base pointer of tmp3 and we will generate code in the same order as

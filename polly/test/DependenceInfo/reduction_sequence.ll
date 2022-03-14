@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
 
 ;    void manyreductions(long *A) {
 ;      for (long i = 0; i < 1024; i++)

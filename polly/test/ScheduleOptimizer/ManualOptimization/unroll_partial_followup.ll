@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-ast -analyze < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s --check-prefix=OPT --match-full-lines
+; RUN: opt %loadPolly -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST --match-full-lines
 ; RUN: opt %loadPolly -polly-opt-isl -polly-codegen -simplifycfg -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; Partial unroll by a factor of 4.
@@ -37,20 +38,20 @@ return:
 !8 = !{!"llvm.loop.id", !"This-is-the-unrolled-loop"}
 
 
-; CHECK-LABEL: Printing analysis 'Polly - Optimize schedule of SCoP' for region: 'for => return' in function 'func':
-; CHECK:       domain: "[n] -> { Stmt_body[i0] : 0 <= i0 < n }"
-; CHECKL         mark: "Loop with Metadata"
-; CHECK:           schedule: "[n] -> [{ Stmt_body[i0] -> [(i0 - (i0) mod 4)] }]"
-; CHECK:             sequence:
-; CHECK-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (i0) mod 4 = 0 }"
-; CHECK-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (-1 + i0) mod 4 = 0 }"
-; CHECK-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (2 + i0) mod 4 = 0 }"
-; CHECK-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (1 + i0) mod 4 = 0 }"
+; OPT-LABEL: Printing analysis 'Polly - Optimize schedule of SCoP' for region: 'for => return' in function 'func':
+; OPT:       domain: "[n] -> { Stmt_body[i0] : 0 <= i0 < n }"
+; OPT:         mark: "Loop with Metadata"
+; OPT:           schedule: "[n] -> [{ Stmt_body[i0] -> [(i0 - (i0) mod 4)] }]"
+; OPT:             sequence:
+; OPT-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (i0) mod 4 = 0 }"
+; OPT-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (-1 + i0) mod 4 = 0 }"
+; OPT-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (2 + i0) mod 4 = 0 }"
+; OPT-NEXT:        - filter: "[n] -> { Stmt_body[i0] : (1 + i0) mod 4 = 0 }"
 
 
-; CHECK-LABEL: Printing analysis 'Polly - Generate an AST of the SCoP (isl)'for => return' in function 'func':
-; CHECK:       // Loop with Metadata
-; CHECK-NEXT:  for (int c0 = 0; c0 < n; c0 += 4) {
+; AST-LABEL: Printing analysis 'Polly - Generate an AST of the SCoP (isl)'for => return' in function 'func':
+; AST:       // Loop with Metadata
+; AST-NEXT:  for (int c0 = 0; c0 < n; c0 += 4) {
 
 
 ; CODEGEN: br i1 %polly.loop_cond, label %polly.loop_header, label %polly.exiting, !llvm.loop ![[LOOPID:[0-9]+]]

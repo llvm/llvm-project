@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-ast -analyze < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
 ; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S < %s | FileCheck %s -check-prefix=IR
 
 ; Make sure we correctly forward the reference to 'A' to the OpenMP subfunction.

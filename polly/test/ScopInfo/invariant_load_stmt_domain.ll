@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 
 ; This test case verifies that the statement domain of the invariant access
 ; is the universe. In earlier versions of Polly, we accidentally computed an

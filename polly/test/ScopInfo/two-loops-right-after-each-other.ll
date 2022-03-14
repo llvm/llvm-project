@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN: < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_loop_1

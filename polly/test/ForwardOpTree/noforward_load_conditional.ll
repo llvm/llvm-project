@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; B[j] is overwritten by at least one statement between the
 ; definition of %val and its use. Hence, it cannot be forwarded.

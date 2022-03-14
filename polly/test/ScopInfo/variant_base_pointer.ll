@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-ignore-aliasing -polly-invariant-load-hoisting=true -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-ignore-aliasing -polly-invariant-load-hoisting=true -polly-codegen -analyze < %s
+; RUN: opt %loadPolly -polly-ignore-aliasing -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-ignore-aliasing -polly-invariant-load-hoisting=true -polly-codegen -disable-output < %s
 ;
 ; %tmp is added to the list of required hoists by -polly-scops and just
 ; assumed to be hoisted. Only -polly-scops recognizes it to be unhoistable

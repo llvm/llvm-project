@@ -1,10 +1,5 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false \
-; RUN: \
-; RUN: -polly-detect -analyze < %s | FileCheck %s
-
-; RUN: opt %loadPolly -polly-process-unprofitable=true \
-; RUN: \
-; RUN: -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-process-unprofitable=true -polly-print-detect -disable-output < %s | FileCheck %s
 
 ; CHECK: Valid Region for Scop:
 

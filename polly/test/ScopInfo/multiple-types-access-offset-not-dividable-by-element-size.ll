@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -pass-remarks-analysis="polly-scops" \
-; RUN: -polly-allow-differing-element-types \
-; RUN:                -analyze < %s  2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -pass-remarks-analysis="polly-scops" \
+; RUN:     -polly-allow-differing-element-types \
+; RUN:     -disable-output < %s  2>&1 | FileCheck %s
 ;
 ;    // For the following accesses the offset expression from the base pointer
 ;    // is not always a multiple of the type size.

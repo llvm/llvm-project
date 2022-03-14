@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-canonicalize -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
+; RUN: opt %loadPolly -polly-canonicalize -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -print-polyhedral-info -polly-check-parallel -disable-output < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;        void f(int *restrict A, int *restrict sum) {
 ; CHECK:   #pragma minimal dependence distance: 1
