@@ -287,6 +287,17 @@ void Target::Destroy() {
   m_suppress_stop_hooks = false;
 }
 
+llvm::StringRef Target::GetABIName() const {
+  lldb::ABISP abi_sp;
+  if (m_process_sp)
+    abi_sp = m_process_sp->GetABI();
+  if (!abi_sp)
+    abi_sp = ABI::FindPlugin(ProcessSP(), GetArchitecture());
+  if (abi_sp)
+      return abi_sp->GetPluginName();
+  return {};
+}
+
 BreakpointList &Target::GetBreakpointList(bool internal) {
   if (internal)
     return m_internal_breakpoint_list;

@@ -969,6 +969,9 @@ public:
   ModuleIsExcludedForUnconstrainedSearches(const lldb::ModuleSP &module_sp);
 
   const ArchSpec &GetArchitecture() const { return m_arch.GetSpec(); }
+  
+  /// Returns the name of the target's ABI plugin.
+  llvm::StringRef GetABIName() const;
 
   /// Set the architecture for this target.
   ///

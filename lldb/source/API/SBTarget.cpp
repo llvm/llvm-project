@@ -1588,6 +1588,18 @@ const char *SBTarget::GetTriple() {
   return nullptr;
 }
 
+const char *SBTarget::GetABIName() {
+  LLDB_INSTRUMENT_VA(this);
+  
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    std::string abi_name(target_sp->GetABIName().str());
+    ConstString const_name(abi_name.c_str());
+    return const_name.GetCString();
+  }
+  return nullptr;
+}
+
 uint32_t SBTarget::GetDataByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
