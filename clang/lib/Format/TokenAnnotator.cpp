@@ -211,32 +211,34 @@ private:
   bool parseParens(bool LookForDecls = false) {
     if (!CurrentToken)
       return false;
-    FormatToken *Left = CurrentToken->Previous;
-    assert(Left && "Unknown previous token");
-    FormatToken *PrevNonComment = Left->getPreviousNonComment();
-    Left->ParentBracket = Contexts.back().ContextKind;
+    assert(CurrentToken->Previous && "Unknown previous token");
+    FormatToken &OpeningParen = *CurrentToken->Previous;
+    assert(OpeningParen.is(tok::l_paren));
+    FormatToken *PrevNonComment = OpeningParen.getPreviousNonComment();
+    OpeningParen.ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::l_paren, 1);
 
     // FIXME: This is a bit of a hack. Do better.
     Contexts.back().ColonIsForRangeExpr =
         Contexts.size() == 2 && Contexts[0].ColonIsForRangeExpr;
 
-    if (Left->Previous && Left->Previous->is(TT_UntouchableMacroFunc)) {
-      Left->Finalized = true;
+    if (OpeningParen.Previous &&
+        OpeningParen.Previous->is(TT_UntouchableMacroFunc)) {
+      OpeningParen.Finalized = true;
       return parseUntouchableParens();
     }
 
     bool StartsObjCMethodExpr = false;
-    if (FormatToken *MaybeSel = Left->Previous) {
+    if (FormatToken *MaybeSel = OpeningParen.Previous) {
       // @selector( starts a selector.
       if (MaybeSel->isObjCAtKeyword(tok::objc_selector) && MaybeSel->Previous &&
           MaybeSel->Previous->is(tok::at))
         StartsObjCMethodExpr = true;
     }
 
-    if (Left->is(TT_OverloadedOperatorLParen)) {
+    if (OpeningParen.is(TT_OverloadedOperatorLParen)) {
       // Find the previous kw_operator token.
-      FormatToken *Prev = Left;
+      FormatToken *Prev = &OpeningParen;
       while (!Prev->is(tok::kw_operator)) {
         Prev = Prev->Previous;
         assert(Prev && "Expect a kw_operator prior to the OperatorLParen!");
@@ -255,54 +257,58 @@ private:
       // type X = (...);
       // export type X = (...);
       Contexts.back().IsExpression = false;
-    } else if (Left->Previous &&
-               (Left->Previous->isOneOf(tok::kw_static_assert, tok::kw_while,
-                                        tok::l_paren, tok::comma) ||
-                Left->Previous->isIf() ||
-                Left->Previous->is(TT_BinaryOperator))) {
+    } else if (OpeningParen.Previous &&
+               (OpeningParen.Previous->isOneOf(tok::kw_static_assert,
+                                               tok::kw_while, tok::l_paren,
+                                               tok::comma) ||
+                OpeningParen.Previous->isIf() ||
+                OpeningParen.Previous->is(TT_BinaryOperator))) {
       // static_assert, if and while usually contain expressions.
       Contexts.back().IsExpression = true;
-    } else if (Style.isJavaScript() && Left->Previous &&
-               (Left->Previous->is(Keywords.kw_function) ||
-                (Left->Previous->endsSequence(tok::identifier,
-                                              Keywords.kw_function)))) {
+    } else if (Style.isJavaScript() && OpeningParen.Previous &&
+               (OpeningParen.Previous->is(Keywords.kw_function) ||
+                (OpeningParen.Previous->endsSequence(tok::identifier,
+                                                     Keywords.kw_function)))) {
       // function(...) or function f(...)
       Contexts.back().IsExpression = false;
-    } else if (Style.isJavaScript() && Left->Previous &&
-               Left->Previous->is(TT_JsTypeColon)) {
+    } else if (Style.isJavaScript() && OpeningParen.Previous &&
+               OpeningParen.Previous->is(TT_JsTypeColon)) {
       // let x: (SomeType);
       Contexts.back().IsExpression = false;
-    } else if (isLambdaParameterList(Left)) {
+    } else if (isLambdaParameterList(&OpeningParen)) {
       // This is a parameter list of a lambda expression.
       Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&
-               (!Left->Previous || !Left->Previous->is(tok::identifier))) {
+               (!OpeningParen.Previous ||
+                !OpeningParen.Previous->is(tok::identifier))) {
       Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
       Contexts.back().IsExpression = false;
-    } else if (Left->Previous && Left->Previous->is(TT_ForEachMacro)) {
+    } else if (OpeningParen.Previous &&
+               OpeningParen.Previous->is(TT_ForEachMacro)) {
       // The first argument to a foreach macro is a declaration.
       Contexts.back().IsForEachMacro = true;
       Contexts.back().IsExpression = false;
-    } else if (Left->Previous && Left->Previous->MatchingParen &&
-               Left->Previous->MatchingParen->is(TT_ObjCBlockLParen)) {
+    } else if (OpeningParen.Previous && OpeningParen.Previous->MatchingParen &&
+               OpeningParen.Previous->MatchingParen->is(TT_ObjCBlockLParen)) {
       Contexts.back().IsExpression = false;
     } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
       bool IsForOrCatch =
-          Left->Previous && Left->Previous->isOneOf(tok::kw_for, tok::kw_catch);
+          OpeningParen.Previous &&
+          OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
       Contexts.back().IsExpression = !IsForOrCatch;
     }
 
     // Infer the role of the l_paren based on the previous token if we haven't
     // detected one one yet.
-    if (PrevNonComment && Left->is(TT_Unknown)) {
+    if (PrevNonComment && OpeningParen.is(TT_Unknown)) {
       if (PrevNonComment->is(tok::kw___attribute)) {
-        Left->setType(TT_AttributeParen);
+        OpeningParen.setType(TT_AttributeParen);
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof, tok::kw__Atomic,
                                          tok::kw___underlying_type)) {
-        Left->setType(TT_TypeDeclarationParen);
+        OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
         if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
           Contexts.back().IsExpression = true;
@@ -311,7 +317,7 @@ private:
 
     if (StartsObjCMethodExpr) {
       Contexts.back().ColonIsObjCMethodExpr = true;
-      Left->setType(TT_ObjCMethodExpr);
+      OpeningParen.setType(TT_ObjCMethodExpr);
     }
 
     // MightBeFunctionType and ProbablyFunctionType are used for
@@ -328,7 +334,7 @@ private:
     bool HasMultipleLines = false;
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
-        Left->Previous && Left->Previous->is(tok::kw_for);
+        OpeningParen.Previous && OpeningParen.Previous->is(tok::kw_for);
     FormatToken *PossibleObjCForInToken = nullptr;
     while (CurrentToken) {
       // LookForDecls is set when "if (" has been seen. Check for
@@ -358,21 +364,23 @@ private:
       if (CurrentToken->Previous->is(TT_BinaryOperator))
         Contexts.back().IsExpression = true;
       if (CurrentToken->is(tok::r_paren)) {
-        if (Left->isNot(TT_CppCastLParen) && MightBeFunctionType &&
+        if (OpeningParen.isNot(TT_CppCastLParen) && MightBeFunctionType &&
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
              (CurrentToken->Next->is(tok::l_square) && Line.MustBeDeclaration)))
-          Left->setType(Left->Next->is(tok::caret) ? TT_ObjCBlockLParen
-                                                   : TT_FunctionTypeLParen);
-        Left->MatchingParen = CurrentToken;
-        CurrentToken->MatchingParen = Left;
+          OpeningParen.setType(OpeningParen.Next->is(tok::caret)
+                                   ? TT_ObjCBlockLParen
+                                   : TT_FunctionTypeLParen);
+        OpeningParen.MatchingParen = CurrentToken;
+        CurrentToken->MatchingParen = &OpeningParen;
 
         if (CurrentToken->Next && CurrentToken->Next->is(tok::l_brace) &&
-            Left->Previous && Left->Previous->is(tok::l_paren)) {
+            OpeningParen.Previous && OpeningParen.Previous->is(tok::l_paren)) {
           // Detect the case where macros are used to generate lambdas or
           // function bodies, e.g.:
           //   auto my_lambda = MACRO((Type *type, int i) { .. body .. });
-          for (FormatToken *Tok = Left; Tok != CurrentToken; Tok = Tok->Next)
+          for (FormatToken *Tok = &OpeningParen; Tok != CurrentToken;
+               Tok = Tok->Next)
             if (Tok->is(TT_BinaryOperator) &&
                 Tok->isOneOf(tok::star, tok::amp, tok::ampamp))
               Tok->setType(TT_PointerOrReference);
@@ -386,23 +394,26 @@ private:
           }
         }
 
-        if (Left->is(TT_AttributeParen))
+        if (OpeningParen.is(TT_AttributeParen))
           CurrentToken->setType(TT_AttributeParen);
-        if (Left->is(TT_TypeDeclarationParen))
+        if (OpeningParen.is(TT_TypeDeclarationParen))
           CurrentToken->setType(TT_TypeDeclarationParen);
-        if (Left->Previous && Left->Previous->is(TT_JavaAnnotation))
+        if (OpeningParen.Previous &&
+            OpeningParen.Previous->is(TT_JavaAnnotation))
           CurrentToken->setType(TT_JavaAnnotation);
-        if (Left->Previous && Left->Previous->is(TT_LeadingJavaAnnotation))
+        if (OpeningParen.Previous &&
+            OpeningParen.Previous->is(TT_LeadingJavaAnnotation))
           CurrentToken->setType(TT_LeadingJavaAnnotation);
-        if (Left->Previous && Left->Previous->is(TT_AttributeSquare))
+        if (OpeningParen.Previous &&
+            OpeningParen.Previous->is(TT_AttributeSquare))
           CurrentToken->setType(TT_AttributeSquare);
 
         if (!HasMultipleLines)
-          Left->setPackingKind(PPK_Inconclusive);
+          OpeningParen.setPackingKind(PPK_Inconclusive);
         else if (HasMultipleParametersOnALine)
-          Left->setPackingKind(PPK_BinPacked);
+          OpeningParen.setPackingKind(PPK_BinPacked);
         else
-          Left->setPackingKind(PPK_OnePerLine);
+          OpeningParen.setPackingKind(PPK_OnePerLine);
 
         next();
         return true;
@@ -411,7 +422,7 @@ private:
         return false;
 
       if (CurrentToken->is(tok::l_brace))
-        Left->setType(TT_Unknown); // Not TT_ObjCBlockLParen
+        OpeningParen.setType(TT_Unknown); // Not TT_ObjCBlockLParen
       if (CurrentToken->is(tok::comma) && CurrentToken->Next &&
           !CurrentToken->Next->HasUnescapedNewline &&
           !CurrentToken->Next->isTrailingComment())
@@ -443,7 +454,7 @@ private:
       FormatToken *Tok = CurrentToken;
       if (!consumeToken())
         return false;
-      updateParameterCount(Left, Tok);
+      updateParameterCount(&OpeningParen, Tok);
       if (CurrentToken && CurrentToken->HasUnescapedNewline)
         HasMultipleLines = true;
     }
