@@ -42,18 +42,18 @@ func @main() -> () {
     %f10 = arith.constant 10.00000e+00 : f32
 
     %V = memref.cast %A : memref<10x3xf32, 0> to memref<?x?xf32>
-    linalg.fill(%f10, %V) : f32, memref<?x?xf32, 0>
+    linalg.fill ins(%f10 : f32) outs(%V : memref<?x?xf32, 0>)
     %U = memref.cast %A : memref<10x3xf32, 0> to memref<*xf32>
     call @print_memref_f32(%U) : (memref<*xf32>) -> ()
 
     %V2 = memref.cast %U : memref<*xf32> to memref<?x?xf32>
-    linalg.fill(%f5, %V2) : f32, memref<?x?xf32, 0>
+    linalg.fill ins(%f5 : f32) outs(%V2 : memref<?x?xf32, 0>)
     %U2 = memref.cast %V2 : memref<?x?xf32, 0> to memref<*xf32>
     call @print_memref_f32(%U2) : (memref<*xf32>) -> ()
 
     %V3 = memref.cast %V2 : memref<?x?xf32> to memref<*xf32>
     %V4 = memref.cast %V3 : memref<*xf32> to memref<?x?xf32>
-    linalg.fill(%f2, %V4) : f32, memref<?x?xf32, 0>
+    linalg.fill ins(%f2 : f32) outs(%V4 : memref<?x?xf32, 0>)
     %U3 = memref.cast %V2 : memref<?x?xf32> to memref<*xf32>
     call @print_memref_f32(%U3) : (memref<*xf32>) -> ()
 
@@ -79,7 +79,7 @@ func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface
 func @return_two_var_memref_caller() {
   %0 = memref.alloca() : memref<4x3xf32>
   %c0f32 = arith.constant 1.0 : f32
-  linalg.fill(%c0f32, %0) : f32, memref<4x3xf32>
+  linalg.fill ins(%c0f32 : f32) outs(%0 : memref<4x3xf32>)
   %1:2 = call @return_two_var_memref(%0) : (memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>)
   call @print_memref_f32(%1#0) : (memref<*xf32>) -> ()
   call @print_memref_f32(%1#1) : (memref<*xf32>) -> ()
@@ -94,7 +94,7 @@ func @return_two_var_memref_caller() {
 func @return_var_memref_caller() {
   %0 = memref.alloca() : memref<4x3xf32>
   %c0f32 = arith.constant 1.0 : f32
-  linalg.fill(%c0f32, %0) : f32, memref<4x3xf32>
+  linalg.fill ins(%c0f32 : f32) outs(%0 : memref<4x3xf32>)
   %1 = call @return_var_memref(%0) : (memref<4x3xf32>) -> memref<*xf32>
   call @print_memref_f32(%1) : (memref<*xf32>) -> ()
   return

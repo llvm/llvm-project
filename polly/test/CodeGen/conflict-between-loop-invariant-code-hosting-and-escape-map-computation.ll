@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-process-unprofitable -analyze -polly-codegen < %s
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-codegen -disable-output < %s
 ;
 ; CHECK: store i32 %tmp14_p_scalar_, i32* %tmp14.s2a
 ; CHECK: %tmp14.final_reload = load i32, i32* %tmp14.s2a

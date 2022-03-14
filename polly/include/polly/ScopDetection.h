@@ -56,8 +56,6 @@
 
 namespace llvm {
 class AAResults;
-
-void initializeScopDetectionWrapperPassPass(PassRegistry &);
 } // namespace llvm
 
 namespace polly {
@@ -658,11 +656,18 @@ struct ScopDetectionWrapperPass : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
   bool runOnFunction(Function &F) override;
-  void print(raw_ostream &OS, const Module *) const override;
+  void print(raw_ostream &OS, const Module *M = nullptr) const override;
   //@}
 
   ScopDetection &getSD() const { return *Result; }
 };
+
+llvm::Pass *createScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS);
 } // namespace polly
+
+namespace llvm {
+void initializeScopDetectionWrapperPassPass(llvm::PassRegistry &);
+void initializeScopDetectionPrinterLegacyPassPass(llvm::PassRegistry &);
+} // namespace llvm
 
 #endif // POLLY_SCOPDETECTION_H

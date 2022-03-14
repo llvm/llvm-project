@@ -498,10 +498,10 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "generic-to-nvvm",      "expandmemcmp",
       "loop-reduce",          "lower-amx-type",
       "pre-amx-config",       "lower-amx-intrinsics",
-      "polyhedral-info",      "replace-with-veclib",
-      "jmc-instrument",       "dot-regions",
-      "dot-regions-only",     "view-regions",
-      "view-regions-only"};
+      "polyhedral-info",      "print-polyhedral-info",
+      "replace-with-veclib",  "jmc-instrument",
+      "dot-regions",          "dot-regions-only",
+      "view-regions",         "view-regions-only"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;

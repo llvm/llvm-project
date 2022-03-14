@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -disable-output < %s
 ;
 ; void or(float *A, long n, long m) {
 ;   for (long i = 0; i < 100; i++) {

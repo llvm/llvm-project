@@ -9,6 +9,7 @@
 #include "lldb/Core/Debugger.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
@@ -1284,36 +1285,6 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<StreamCallback>(log_callback, baton);
 }
 
-ConstString Debugger::ProgressEventData::GetFlavorString() {
-  static ConstString g_flavor("Debugger::ProgressEventData");
-  return g_flavor;
-}
-
-ConstString Debugger::ProgressEventData::GetFlavor() const {
-  return Debugger::ProgressEventData::GetFlavorString();
-}
-
-void Debugger::ProgressEventData::Dump(Stream *s) const {
-  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
-  if (m_completed == 0 || m_completed == m_total)
-    s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
-  else
-    s->PutCString(", type = update");
-  // If m_total is UINT64_MAX, there is no progress to report, just "start"
-  // and "end". If it isn't we will show the completed and total amounts.
-  if (m_total != UINT64_MAX)
-    s->Printf(", progress = %" PRIu64 " of %" PRIu64, m_completed, m_total);
-}
-
-const Debugger::ProgressEventData *
-Debugger::ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
-  if (event_ptr)
-    if (const EventData *event_data = event_ptr->GetData())
-      if (event_data->GetFlavor() == ProgressEventData::GetFlavorString())
-        return static_cast<const ProgressEventData *>(event_ptr->GetData());
-  return nullptr;
-}
-
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
                                   const std::string &message,
                                   uint64_t completed, uint64_t total,
@@ -1322,9 +1293,9 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
   const uint32_t event_type = Debugger::eBroadcastBitProgress;
   if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
     return;
-  EventSP event_sp(new Event(event_type, new Debugger::ProgressEventData(
-                                             progress_id, message, completed,
-                                             total, is_debugger_specific)));
+  EventSP event_sp(new Event(
+      event_type, new ProgressEventData(progress_id, message, completed, total,
+                                        is_debugger_specific)));
   debugger.GetBroadcaster().BroadcastEvent(event_sp);
 }
 
@@ -1752,8 +1723,7 @@ lldb::thread_result_t Debugger::IOHandlerThread() {
 }
 
 void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
-  auto *data =
-      Debugger::ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  auto *data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   if (!data)
     return;
 

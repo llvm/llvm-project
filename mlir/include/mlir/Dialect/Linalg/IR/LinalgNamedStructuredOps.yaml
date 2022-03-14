@@ -2908,8 +2908,8 @@ structured_op: !LinalgStructuredOpConfig
               scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: fill_tensor
-  cpp_class_name: FillTensorOp
+  name: fill
+  cpp_class_name: FillOp
   doc: |-
     Fills the output tensor with the given value.
 

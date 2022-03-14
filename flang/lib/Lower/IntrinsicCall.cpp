@@ -234,6 +234,8 @@ struct IntrinsicLibrary {
   /// if the argument is an integer, into llvm intrinsics if the argument is
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -315,6 +317,7 @@ struct IntrinsicHandler {
 };
 
 constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
+constexpr auto asAddr = Fortran::lower::LowerIntrinsicArgAs::Addr;
 constexpr auto asBox = Fortran::lower::LowerIntrinsicArgAs::Box;
 constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
 using I = IntrinsicLibrary;
@@ -333,12 +336,18 @@ static constexpr bool handleDynamicOptional = true;
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
+    {"aimag", &I::genAimag},
+    {"all",
+     &I::genAll,
+     {{{"mask", asAddr}, {"dim", asValue}}},
+     /*isElemental=*/false},
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
     {"char", &I::genChar},
     {"iand", &I::genIand},
+    {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"sum",
      &I::genSum,
      {{{"array", asBox},
@@ -1054,6 +1063,60 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
     return genRuntimeCall("hypot", resultType, args);
   }
   llvm_unreachable("unexpected type in ABS argument");
+}
+
+// AIMAG
+mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  return fir::factory::Complex{builder, loc}.extractComplexPart(
+      args[0], true /* isImagPart */);
+}
+
+// ALL
+fir::ExtendedValue
+IntrinsicLibrary::genAll(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 2);
+  // Handle required mask argument
+  mlir::Value mask = builder.createBox(loc, args[0]);
+
+  fir::BoxValue maskArry = builder.createBox(loc, args[0]);
+  int rank = maskArry.rank();
+  assert(rank >= 1);
+
+  // Handle optional dim argument
+  bool absentDim = isAbsent(args[1]);
+  mlir::Value dim =
+      absentDim ? builder.createIntegerConstant(loc, builder.getIndexType(), 1)
+                : fir::getBase(args[1]);
+
+  if (rank == 1 || absentDim)
+    return builder.createConvert(loc, resultType,
+                                 fir::runtime::genAll(builder, loc, mask, dim));
+
+  // else use the result descriptor AllDim() intrinsic
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+
+  mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genAllDescriptor(builder, loc, resultIrBox, mask, dim);
+  return fir::factory::genMutableBoxRead(builder, loc, resultMutableBox)
+      .match(
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
+            return box;
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            fir::emitFatalError(loc, "Invalid result for ALL");
+          });
 }
 
 // ASSOCIATED

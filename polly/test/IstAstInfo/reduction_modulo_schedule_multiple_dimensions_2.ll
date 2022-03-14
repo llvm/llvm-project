@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; Verify that the outer dimension doesnt't carry reduction dependences
 ;

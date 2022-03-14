@@ -117,31 +117,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_EnumLBrace);
 }
 
-TEST_F(TokenAnnotatorTest, UnderstandsDefaultedAndDeletedFunctions) {
-  auto Tokens = annotate("auto operator<=>(const T &) const & = default;");
-  EXPECT_EQ(Tokens.size(), 14u) << Tokens;
-  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
-
-  Tokens = annotate("template <typename T> void F(T) && = delete;");
-  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
-  EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_PointerOrReference);
-}
-
-TEST_F(TokenAnnotatorTest, UnderstandsVariables) {
-  auto Tokens =
-      annotate("inline bool var = is_integral_v<int> && is_signed_v<int>;");
-  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
-  EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_BinaryOperator);
-}
-
-TEST_F(TokenAnnotatorTest, UnderstandsVariableTemplates) {
-  auto Tokens =
-      annotate("template <typename T> "
-               "inline bool var = is_integral_v<int> && is_signed_v<int>;");
-  EXPECT_EQ(Tokens.size(), 20u) << Tokens;
-  EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_BinaryOperator);
-}
-
 TEST_F(TokenAnnotatorTest, UnderstandsLBracesInMacroDefinition) {
   auto Tokens = annotate("#define BEGIN NS {");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
@@ -356,6 +331,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
   EXPECT_TOKEN(Tokens[29], tok::kw_requires,
                TT_RequiresClauseInARequiresExpression);
+
+  // Invalid Code, but we don't want to crash. See http://llvm.org/PR54350.
+  Tokens = annotate("bool r10 = requires (struct new_struct { int x; } s) { "
+                    "requires true; };");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_RequiresExpressionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
@@ -592,6 +575,16 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
+  auto Tokens = annotate("__asm{\n"
+                         "a:\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_InlineASMBrace);
+  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_InlineASMBrace);
 }
 
 } // namespace

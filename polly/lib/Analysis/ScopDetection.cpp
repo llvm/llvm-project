@@ -2043,3 +2043,50 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass);
 INITIALIZE_PASS_END(ScopDetectionWrapperPass, "polly-detect",
                     "Polly - Detect static control parts (SCoPs)", false, false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from ScopDetectionWrapperPass.
+class ScopDetectionPrinterLegacyPass : public FunctionPass {
+public:
+  static char ID;
+
+  ScopDetectionPrinterLegacyPass() : ScopDetectionPrinterLegacyPass(outs()) {}
+
+  explicit ScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS)
+      : FunctionPass(ID), OS(OS) {}
+
+  bool runOnFunction(Function &F) override {
+    ScopDetectionWrapperPass &P = getAnalysis<ScopDetectionWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for function '"
+       << F.getName() << "':\n";
+    P.print(OS);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    FunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<ScopDetectionWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char ScopDetectionPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createScopDetectionPrinterLegacyPass(raw_ostream &OS) {
+  return new ScopDetectionPrinterLegacyPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(ScopDetectionPrinterLegacyPass, "polly-print-detect",
+                      "Polly - Print static control parts (SCoPs)", false,
+                      false);
+INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
+INITIALIZE_PASS_END(ScopDetectionPrinterLegacyPass, "polly-print-detect",
+                    "Polly - Print static control parts (SCoPs)", false, false)

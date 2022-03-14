@@ -20,7 +20,7 @@ func @main() {
   %c4 = arith.constant 4.0 : f32
 
   %A = memref.alloc() : memref<4xf32>
-  linalg.fill(%c0, %A) : f32, memref<4xf32>
+  linalg.fill ins(%c0 : f32) outs(%A : memref<4xf32>)
 
   %U = memref.cast %A :  memref<4xf32> to memref<*xf32>
   call @print_memref_f32(%U): (memref<*xf32>) -> ()

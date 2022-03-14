@@ -1,6 +1,6 @@
-; RUN: opt -S %loadPolly -basic-aa -polly-dependences -analyze -polly-dependences-analysis-type=value-based < %s | FileCheck %s -check-prefix=VALUE
-; RUN: opt -S %loadPolly -basic-aa -polly-dependences -analyze -polly-dependences-analysis-type=memory-based < %s | FileCheck %s -check-prefix=MEMORY
-; RUN: opt -S %loadPolly -basic-aa -polly-dependences -analyze -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise < %s | FileCheck %s -check-prefix=VALUE_ACCESS
+; RUN: opt -S %loadPolly -basic-aa -polly-print-dependences -polly-dependences-analysis-type=value-based -disable-output < %s | FileCheck %s -check-prefix=VALUE
+; RUN: opt -S %loadPolly -basic-aa -polly-print-dependences -polly-dependences-analysis-type=memory-based -disable-output < %s | FileCheck %s -check-prefix=MEMORY
+; RUN: opt -S %loadPolly -basic-aa -polly-print-dependences -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s -check-prefix=VALUE_ACCESS
 
 ; VALUE-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'sequential_writes':
 ; VALUE-NEXT:      RAW dependences:

@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-use-llvm-names -polly-scops \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \

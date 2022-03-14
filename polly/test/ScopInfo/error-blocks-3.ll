@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops  -polly-detect-keep-going -polly-allow-nonaffine < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-detect-keep-going -polly-allow-nonaffine -disable-output < %s | FileCheck %s
 ;
 ; TODO: FIXME: Investigate why "-polly-detect-keep-going" is needed to detect
 ;              this SCoP. That flag should not make a difference.

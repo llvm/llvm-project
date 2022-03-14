@@ -173,11 +173,11 @@ func @pad_multiple(%arg0: tensor<64x64xf32>,
 
   // Check both fill operations are padded by the same pad tensor operation.
   //      FILL:  %[[T0:.*]] = tensor.pad
-  //      FILL:  %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
-  //      FILL:  %[[T2:.*]] = linalg.fill(%{{.*}}, %[[T1]])
+  //      FILL:  %[[T1:.*]] = linalg.fill ins(%{{.*}}{{.*}}outs(%[[T0]]
+  //      FILL:  %[[T2:.*]] = linalg.fill ins(%{{.*}}{{.*}}outs(%[[T1]]
   //      FILL:  = tensor.extract_slice %[[T2]]
-  %1 = linalg.fill(%cst, %0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
-  %2 = linalg.fill(%cst, %1) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %2 : tensor<?x?xf32>
 }
 
@@ -198,15 +198,15 @@ func @compose_padding(%arg0: tensor<64x64xf32>,
   // MATMUL-SAME:                                     [0, 0]
   // MATMUL-SAME:                                     [%[[SIZE]], %[[SIZE]]]
   //      MATMUL:  %[[T1:.*]] = tensor.pad %[[T0]]
-  //      MATMUL:  %[[T2:.*]] = linalg.fill(%{{.*}}, %[[T1]]
-  //      MATMUL:  %[[T3:.*]] = linalg.fill(%{{.*}}, %[[T2]]
+  //      MATMUL:  %[[T2:.*]] = linalg.fill ins(%{{.*}}{{.*}}outs(%[[T1]]
+  //      MATMUL:  %[[T3:.*]] = linalg.fill ins(%{{.*}}{{.*}}outs(%[[T2]]
   %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
   %1 = tensor.pad %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  
+    ^bb0(%arg3: index, %arg4: index):
       tensor.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
-  %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
-  %3 = linalg.fill(%cst, %2) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<64x64xf32>) -> tensor<64x64xf32>
+  %3 = linalg.fill ins(%cst : f32) outs(%2 : tensor<64x64xf32>) -> tensor<64x64xf32>
   %4 = tensor.extract_slice %3[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
 
   // Check there are no additional pad tensor operations.
@@ -234,10 +234,10 @@ func @different_padding_values(%arg0: tensor<64x64xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
   %1 = tensor.pad %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  
+    ^bb0(%arg3: index, %arg4: index):
       tensor.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
-  %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<64x64xf32>) -> tensor<64x64xf32>
   %4 = tensor.extract_slice %2[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
 
   // Different padding values prevent composing the paddings (42.0 vs. 0.0).
@@ -259,10 +259,10 @@ func @different_padding_dynamic_sizes(%arg0: tensor<64x64xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0] [%iv0, %iv0] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
   %1 = tensor.pad %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  
+    ^bb0(%arg3: index, %arg4: index):
       tensor.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
-  %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<64x64xf32>) -> tensor<64x64xf32>
   %4 = tensor.extract_slice %2[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
 
   // Different dynamic sizes prevent composing the paddings (%iv0 vs %size).
@@ -284,10 +284,10 @@ func @different_padding_dynamic_rank(%arg0: tensor<64x64x1xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0, 0] [%size, %size, 1] [1, 1, 1] : tensor<64x64x1xf32> to tensor<?x?xf32>
   %1 = tensor.pad %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  
+    ^bb0(%arg3: index, %arg4: index):
       tensor.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
-  %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<64x64xf32>) -> tensor<64x64xf32>
   %3 = tensor.extract_slice %2[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
 
   // Different dynamic ranks prevent composing the paddings ([%size, %size, 1] vs [%size, %size]).
@@ -309,10 +309,10 @@ func @different_padding_static_sizes(%arg0: tensor<62x62xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<62x62xf32> to tensor<?x?xf32>
   %1 = tensor.pad %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  
+    ^bb0(%arg3: index, %arg4: index):
       tensor.yield %cst : f32
   } : tensor<?x?xf32> to tensor<62x62xf32>
-  %2 = linalg.fill(%cst, %1) : f32, tensor<62x62xf32> -> tensor<62x62xf32>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<62x62xf32>) -> tensor<62x62xf32>
   %4 = tensor.extract_slice %2[0, 0] [%size, %size] [1, 1] : tensor<62x62xf32> to tensor<?x?xf32>
 
   // Different static sizes prevent composing the paddings (62 vs 64 derived from #map0).
@@ -340,8 +340,8 @@ func @scalar_operand(%arg0: f32,
   %1 = tensor.extract_slice %arg1[0, 0] [4, %0] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
 
   // Check only the fill output operand is padded.
-  //      FILL:   %[[T6:.*]] = linalg.fill(%[[ARG0]], %[[T1]]
-  %2 = linalg.fill(%arg0, %1) : f32, tensor<4x?xf32> -> tensor<4x?xf32>
+  //      FILL:   %[[T6:.*]] = linalg.fill ins(%[[ARG0]]{{.*}}outs(%[[T1]]
+  %2 = linalg.fill ins(%arg0 : f32) outs(%1 : tensor<4x?xf32>) -> tensor<4x?xf32>
   %3 = tensor.insert_slice %2 into %arg1[0, 0] [4, %0] [1, 1] : tensor<4x?xf32> into tensor<24x12xf32>
   return %3 : tensor<24x12xf32>
 }
@@ -466,9 +466,9 @@ func @rank_reducing(%arg0: tensor<1x64x1x64xf32>,
 
   // Check the fill is padded despite the rank-reducing slice operation.
   //      FILL:  %[[T0:.*]] = tensor.pad
-  //      FILL:  %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
+  //      FILL:  %[[T1:.*]] = linalg.fill ins(%{{.*}}{{.*}}outs(%[[T0]]
   // FILL-SAME:    tensor<1x64x64xf32>
   //      FILL:  = tensor.extract_slice %[[T1]]
-  %1 = linalg.fill(%cst, %0) : f32, tensor<1x?x?xf32> -> tensor<1x?x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<1x?x?xf32>) -> tensor<1x?x?xf32>
   return %1 : tensor<1x?x?xf32>
 }

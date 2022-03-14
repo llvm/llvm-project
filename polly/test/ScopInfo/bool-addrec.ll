@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-ast -polly-process-unprofitable < %s | FileCheck %s
+; RUN: opt %loadPolly -disable-output -polly-print-ast -polly-process-unprofitable < %s | FileCheck %s
 
 ; CHECK:      for (int c0 = 0; c0 <= 19999; c0 += 1) {
 ; CHECK-NEXT:   if (c0 % 2 == 0)

@@ -568,6 +568,232 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   mapSymbolAttributes(converter, var, symMap, stmtCtx);
 }
 
+/// Cast an alias address (variable part of an equivalence) to fir.ptr so that
+/// the optimizer is conservative and avoids doing copy elision in assignment
+/// involving equivalenced variables.
+/// TODO: Represent the equivalence aliasing constraint in another way to avoid
+/// pessimizing array assignments involving equivalenced variables.
+static mlir::Value castAliasToPointer(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Type aliasType,
+                                      mlir::Value aliasAddr) {
+  return builder.createConvert(loc, fir::PointerType::get(aliasType),
+                               aliasAddr);
+}
+
+//===--------------------------------------------------------------===//
+// COMMON blocks instantiation
+//===--------------------------------------------------------------===//
+
+/// Does any member of the common block has an initializer ?
+static bool
+commonBlockHasInit(const Fortran::semantics::MutableSymbolVector &cmnBlkMems) {
+  for (const Fortran::semantics::MutableSymbolRef &mem : cmnBlkMems) {
+    if (const auto *memDet =
+            mem->detailsIf<Fortran::semantics::ObjectEntityDetails>())
+      if (memDet->init())
+        return true;
+  }
+  return false;
+}
+
+/// Build a tuple type for a common block based on the common block
+/// members and the common block size.
+/// This type is only needed to build common block initializers where
+/// the initial value is the collection of the member initial values.
+static mlir::TupleType getTypeOfCommonWithInit(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::semantics::MutableSymbolVector &cmnBlkMems,
+    std::size_t commonSize) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  llvm::SmallVector<mlir::Type> members;
+  std::size_t counter = 0;
+  for (const Fortran::semantics::MutableSymbolRef &mem : cmnBlkMems) {
+    if (const auto *memDet =
+            mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      if (mem->offset() > counter) {
+        fir::SequenceType::Shape len = {
+            static_cast<fir::SequenceType::Extent>(mem->offset() - counter)};
+        mlir::IntegerType byteTy = builder.getIntegerType(8);
+        auto memTy = fir::SequenceType::get(len, byteTy);
+        members.push_back(memTy);
+        counter = mem->offset();
+      }
+      if (memDet->init()) {
+        mlir::Type memTy = converter.genType(*mem);
+        members.push_back(memTy);
+        counter = mem->offset() + mem->size();
+      }
+    }
+  }
+  if (counter < commonSize) {
+    fir::SequenceType::Shape len = {
+        static_cast<fir::SequenceType::Extent>(commonSize - counter)};
+    mlir::IntegerType byteTy = builder.getIntegerType(8);
+    auto memTy = fir::SequenceType::get(len, byteTy);
+    members.push_back(memTy);
+  }
+  return mlir::TupleType::get(builder.getContext(), members);
+}
+
+/// Common block members may have aliases. They are not in the common block
+/// member list from the symbol. We need to know about these aliases if they
+/// have initializer to generate the common initializer.
+/// This function takes care of adding aliases with initializer to the member
+/// list.
+static Fortran::semantics::MutableSymbolVector
+getCommonMembersWithInitAliases(const Fortran::semantics::Symbol &common) {
+  const auto &commonDetails =
+      common.get<Fortran::semantics::CommonBlockDetails>();
+  auto members = commonDetails.objects();
+
+  // The number and size of equivalence and common is expected to be small, so
+  // no effort is given to optimize this loop of complexity equivalenced
+  // common members * common members
+  for (const Fortran::semantics::EquivalenceSet &set :
+       common.owner().equivalenceSets())
+    for (const Fortran::semantics::EquivalenceObject &obj : set) {
+      if (!obj.symbol.test(Fortran::semantics::Symbol::Flag::CompilerCreated)) {
+        if (const auto &details =
+                obj.symbol
+                    .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+          const Fortran::semantics::Symbol *com =
+              FindCommonBlockContaining(obj.symbol);
+          if (!details->init() || com != &common)
+            continue;
+          // This is an alias with an init that belongs to the list
+          if (std::find(members.begin(), members.end(), obj.symbol) ==
+              members.end())
+            members.emplace_back(obj.symbol);
+        }
+      }
+    }
+  return members;
+}
+
+/// Define a global for a common block if it does not already exist in the
+/// mlir module.
+/// There is no "declare" version since there is not a
+/// scope that owns common blocks more that the others. All scopes using
+/// a common block attempts to define it with common linkage.
+static fir::GlobalOp
+defineCommonBlock(Fortran::lower::AbstractConverter &converter,
+                  const Fortran::semantics::Symbol &common) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  std::string commonName = Fortran::lower::mangle::mangleName(common);
+  fir::GlobalOp global = builder.getNamedGlobal(commonName);
+  if (global)
+    return global;
+  Fortran::semantics::MutableSymbolVector cmnBlkMems =
+      getCommonMembersWithInitAliases(common);
+  mlir::Location loc = converter.genLocation(common.name());
+  mlir::IndexType idxTy = builder.getIndexType();
+  mlir::StringAttr linkage = builder.createCommonLinkage();
+  if (!common.name().size() || !commonBlockHasInit(cmnBlkMems)) {
+    // A blank (anonymous) COMMON block must always be initialized to zero.
+    // A named COMMON block sans initializers is also initialized to zero.
+    // mlir::Vector types must have a strictly positive size, so at least
+    // temporarily, force a zero size COMMON block to have one byte.
+    const auto sz = static_cast<fir::SequenceType::Extent>(
+        common.size() > 0 ? common.size() : 1);
+    fir::SequenceType::Shape shape = {sz};
+    mlir::IntegerType i8Ty = builder.getIntegerType(8);
+    auto commonTy = fir::SequenceType::get(shape, i8Ty);
+    auto vecTy = mlir::VectorType::get(sz, i8Ty);
+    mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
+    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
+    return builder.createGlobal(loc, commonTy, commonName, linkage, init);
+  }
+
+  // Named common with initializer, sort members by offset before generating
+  // the type and initializer.
+  std::sort(cmnBlkMems.begin(), cmnBlkMems.end(),
+            [](auto &s1, auto &s2) { return s1->offset() < s2->offset(); });
+  mlir::TupleType commonTy =
+      getTypeOfCommonWithInit(converter, cmnBlkMems, common.size());
+  auto initFunc = [&](fir::FirOpBuilder &builder) {
+    mlir::Value cb = builder.create<fir::UndefOp>(loc, commonTy);
+    unsigned tupIdx = 0;
+    std::size_t offset = 0;
+    LLVM_DEBUG(llvm::dbgs() << "block {\n");
+    for (const Fortran::semantics::MutableSymbolRef &mem : cmnBlkMems) {
+      if (const auto *memDet =
+              mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+        if (mem->offset() > offset) {
+          ++tupIdx;
+          offset = mem->offset();
+        }
+        if (memDet->init()) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "offset: " << mem->offset() << " is " << *mem << '\n');
+          Fortran::lower::StatementContext stmtCtx;
+          auto initExpr = memDet->init().value();
+          fir::ExtendedValue initVal =
+              Fortran::semantics::IsPointer(*mem)
+                  ? Fortran::lower::genInitialDataTarget(
+                        converter, loc, converter.genType(*mem), initExpr)
+                  : genInitializerExprValue(converter, loc, initExpr, stmtCtx);
+          mlir::IntegerAttr offVal = builder.getIntegerAttr(idxTy, tupIdx);
+          mlir::Value castVal = builder.createConvert(
+              loc, commonTy.getType(tupIdx), fir::getBase(initVal));
+          cb = builder.create<fir::InsertValueOp>(loc, commonTy, cb, castVal,
+                                                  builder.getArrayAttr(offVal));
+          ++tupIdx;
+          offset = mem->offset() + mem->size();
+        }
+      }
+    }
+    LLVM_DEBUG(llvm::dbgs() << "}\n");
+    builder.create<fir::HasValueOp>(loc, cb);
+  };
+  // create the global object
+  return builder.createGlobal(loc, commonTy, commonName,
+                              /*isConstant=*/false, initFunc);
+}
+/// The COMMON block is a global structure. `var` will be at some offset
+/// within the COMMON block. Adds the address of `var` (COMMON + offset) to
+/// the symbol map.
+static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
+                              const Fortran::semantics::Symbol &common,
+                              const Fortran::lower::pft::Variable &var,
+                              Fortran::lower::SymMap &symMap) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const Fortran::semantics::Symbol &varSym = var.getSymbol();
+  mlir::Location loc = converter.genLocation(varSym.name());
+
+  mlir::Value commonAddr;
+  if (Fortran::lower::SymbolBox symBox = symMap.lookupSymbol(common))
+    commonAddr = symBox.getAddr();
+  if (!commonAddr) {
+    // introduce a local AddrOf and add it to the map
+    fir::GlobalOp global = defineCommonBlock(converter, common);
+    commonAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                               global.getSymbol());
+
+    symMap.addSymbol(common, commonAddr);
+  }
+  std::size_t byteOffset = varSym.GetUltimate().offset();
+  mlir::IntegerType i8Ty = builder.getIntegerType(8);
+  mlir::Type i8Ptr = builder.getRefType(i8Ty);
+  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
+  mlir::Value base = builder.createConvert(loc, seqTy, commonAddr);
+  mlir::Value offs =
+      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
+  auto varAddr = builder.create<fir::CoordinateOp>(loc, i8Ptr, base,
+                                                   mlir::ValueRange{offs});
+  mlir::Type symType = converter.genType(var.getSymbol());
+  mlir::Value local;
+  if (Fortran::semantics::FindEquivalenceSet(var.getSymbol()) != nullptr)
+    local = castAliasToPointer(builder, loc, symType, varAddr);
+  else
+    local = builder.createConvert(loc, builder.getRefType(symType), varAddr);
+  Fortran::lower::StatementContext stmtCtx;
+  mapSymbolAttributes(converter, var, symMap, stmtCtx, local);
+}
+
+//===--------------------------------------------------------------===//
+// Lower Variables specification expressions and attributes
+//===--------------------------------------------------------------===//
+
 /// Helper to decide if a dummy argument must be tracked in an BoxValue.
 static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
                             mlir::Value dummyArg) {
@@ -1197,9 +1423,10 @@ void Fortran::lower::defineModuleVariable(
     TODO(loc, "defineModuleVariable aggregateStore");
   }
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  if (Fortran::semantics::FindCommonBlockContaining(var.getSymbol())) {
-    const mlir::Location loc = converter.genLocation(sym.name());
-    TODO(loc, "defineModuleVariable common block");
+  if (const Fortran::semantics::Symbol *common =
+          Fortran::semantics::FindCommonBlockContaining(var.getSymbol())) {
+    // Define common block containing the variable.
+    defineCommonBlock(converter, *common);
   } else if (var.isAlias()) {
     // Do nothing. Mapping will be done on user side.
   } else {
@@ -1216,9 +1443,10 @@ void Fortran::lower::instantiateVariable(AbstractConverter &converter,
   const mlir::Location loc = converter.genLocation(sym.name());
   if (var.isAggregateStore()) {
     TODO(loc, "instantiateVariable AggregateStore");
-  } else if (Fortran::semantics::FindCommonBlockContaining(
-                 var.getSymbol().GetUltimate())) {
-    TODO(loc, "instantiateVariable Common");
+  } else if (const Fortran::semantics::Symbol *common =
+                 Fortran::semantics::FindCommonBlockContaining(
+                     var.getSymbol().GetUltimate())) {
+    instantiateCommon(converter, *common, var, symMap);
   } else if (var.isAlias()) {
     TODO(loc, "instantiateVariable Alias");
   } else if (var.isGlobal()) {

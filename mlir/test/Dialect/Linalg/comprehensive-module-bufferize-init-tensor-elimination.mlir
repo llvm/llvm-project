@@ -23,8 +23,8 @@ func @buffer_forwarding_conflict(
   //     CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
   %a = linalg.init_tensor[%sz] : tensor<?xf32>
 
-  //     CHECK: linalg.fill({{.*}}, %[[EXTRACT_SLICE_ALLOC]]) : f32, memref<?xf32>
-  %f = linalg.fill(%f0, %a) : f32, tensor<?xf32> -> tensor<?xf32>
+  //     CHECK: linalg.fill ins({{.*}} : f32) outs(%[[EXTRACT_SLICE_ALLOC]] : memref<?xf32>)
+  %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: memref.copy %[[FUNC_ARG]], %[[ALLOC]] : memref<?xf32> to memref<?xf32>
   //     CHECK: %[[SV0_ALLOC:.*]] = memref.subview %[[ALLOC]][0] [%[[sz]]] [1] : memref<?xf32> to memref<?xf32>
@@ -54,8 +54,8 @@ func @buffer_forwarding_no_conflict(
   // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
   %a = linalg.init_tensor[%sz] : tensor<?xf32>
 
-  // CHECK: linalg.fill({{.*}}, %[[T_SUBVIEW]]) : f32, memref<?xf32
-  %f = linalg.fill(%f0, %a) : f32, tensor<?xf32> -> tensor<?xf32>
+  // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW]] : memref<?xf32
+  %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
   // Self-copy canonicalizes away later.
   %r1 = tensor.insert_slice %f into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
@@ -81,8 +81,8 @@ func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?x
     %iv_i32 = arith.index_cast %iv : index to i32
     %f = arith.sitofp %iv_i32 : i32 to f32
 
-    // CHECK: linalg.fill(%{{.*}}, %[[subview]])
-    %filled = linalg.fill(%f, %blank) : f32, tensor<5xf32> -> tensor<5xf32>
+    // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[subview]]
+    %filled = linalg.fill ins(%f : f32) outs(%blank : tensor<5xf32>) -> tensor<5xf32>
 
     // CHECK-NOT: memref.copy
     %inserted = tensor.insert_slice %filled into %bb[%iv][5][1] : tensor<5xf32> into tensor<?xf32>
@@ -111,8 +111,8 @@ func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
     %iv_i32 = arith.index_cast %iv : index to i32
     %f = arith.sitofp %iv_i32 : i32 to f32
 
-    // CHECK: linalg.fill(%{{.*}}, %[[subview]])
-    %filled = linalg.fill(%f, %blank) : f32, tensor<5xf32> -> tensor<5xf32>
+    // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[subview]]
+    %filled = linalg.fill ins(%f : f32) outs(%blank : tensor<5xf32>) -> tensor<5xf32>
 
     // CHECK-NOT: memref.copy
     %inserted = tensor.insert_slice %filled into %bb[%idx][5][1] : tensor<5xf32> into tensor<?xf32>

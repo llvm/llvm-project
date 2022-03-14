@@ -51,6 +51,9 @@ void writeMemArg(raw_ostream &os, uint32_t alignment, uint64_t offset);
 
 void writeInitExpr(raw_ostream &os, const llvm::wasm::WasmInitExpr &initExpr);
 
+void writeInitExprMVP(raw_ostream &os,
+                      const llvm::wasm::WasmInitExprMVP &initExpr);
+
 void writeLimits(raw_ostream &os, const llvm::wasm::WasmLimits &limits);
 
 void writeGlobalType(raw_ostream &os, const llvm::wasm::WasmGlobalType &type);

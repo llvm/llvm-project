@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -polly-allow-nonaffine -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -polly-allow-nonaffine -disable-output < %s | FileCheck %s
 
 ;#include <stdio.h>
 ;#include <stdlib.h>

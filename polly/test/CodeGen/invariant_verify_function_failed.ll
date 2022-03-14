@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; This crashed at some point as the pointer returned by the call
 ; to @__errno_location is invariant and defined in the SCoP but not

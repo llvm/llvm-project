@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-scops  \
-; RUN: -polly-acc-dump-code -analyze \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-acc-dump-code -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
 ; RUN: -polly-acc-dump-code -polly-stmt-granularity=bb \
