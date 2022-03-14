@@ -593,10 +593,20 @@ void BPFAbstractMemberAccess::GetStorageBitRange(DIDerivedType *MemberTy,
                                                  uint32_t &EndBitOffset) {
   uint32_t MemberBitSize = MemberTy->getSizeInBits();
   uint32_t MemberBitOffset = MemberTy->getOffsetInBits();
+
+  if (RecordAlignment > 8) {
+    // If the Bits are within an aligned 8-byte, set the RecordAlignment
+    // to 8, other report the fatal error.
+    if (MemberBitOffset / 64 != (MemberBitOffset + MemberBitSize) / 64)
+      report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info, "
+                         "requiring too big alignment");
+    RecordAlignment = Align(8);
+  }
+
   uint32_t AlignBits = RecordAlignment.value() * 8;
-  if (RecordAlignment > 8 || MemberBitSize > AlignBits)
+  if (MemberBitSize > AlignBits)
     report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info, "
-                       "requiring too big alignment");
+                       "bitfield size greater than record alignment");
 
   StartBitOffset = MemberBitOffset & ~(AlignBits - 1);
   if ((StartBitOffset + AlignBits) < (MemberBitOffset + MemberBitSize))
