@@ -476,6 +476,7 @@ add_entrypoint_object(
   HDRS
     ../expf.h
   DEPENDS
+    .common_constants
     libc.src.__support.FPUtil.fputil
     libc.include.math
   COMPILE_OPTIONS
@@ -502,9 +503,11 @@ add_entrypoint_object(
   HDRS
     ../expm1f.h
   DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.fputil
     libc.include.math
-    libc.src.math.expf
-    libc.src.math.fabsf
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(

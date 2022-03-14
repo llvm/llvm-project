@@ -54,15 +54,12 @@ TEST(LlvmLibcExpm1fTest, Overflow) {
 TEST(LlvmLibcExpm1fTest, Underflow) {
   errno = 0;
   EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(float(FPBits(0xff7fffffU))));
-  EXPECT_MATH_ERRNO(ERANGE);
 
   float x = float(FPBits(0xc2cffff8U));
   EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(x));
-  EXPECT_MATH_ERRNO(ERANGE);
 
   x = float(FPBits(0xc2d00008U));
   EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(x));
-  EXPECT_MATH_ERRNO(ERANGE);
 }
 
 // Test with inputs which are the borders of underflow/overflow but still
@@ -72,19 +69,28 @@ TEST(LlvmLibcExpm1fTest, Borderline) {
 
   errno = 0;
   x = float(FPBits(0x42affff8U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                 __llvm_libc::expm1f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0x42b00008U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                 __llvm_libc::expm1f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0xc2affff8U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                 __llvm_libc::expm1f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = float(FPBits(0xc2b00008U));
-  ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.0);
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                 __llvm_libc::expm1f(x), 0.5);
+  EXPECT_MATH_ERRNO(0);
+
+  x = float(FPBits(0x3dc252ddU));
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                 __llvm_libc::expm1f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
 }
 
@@ -104,6 +110,7 @@ TEST(LlvmLibcExpm1fTest, InFloatRange) {
     // wider precision.
     if (isnan(result) || isinf(result) || errno != 0)
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 2.2);
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                   __llvm_libc::expm1f(x), 0.5);
   }
 }
