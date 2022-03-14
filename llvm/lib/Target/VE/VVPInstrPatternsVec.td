@@ -94,6 +94,41 @@ defm : VectorLoad<v256i64, i64, v256i1, "VGT",    "VLD">;
 defm : VectorLoad<v256f32, i64, v256i1, "VGTU",   "VLDU">;
 defm : VectorLoad<v256i32, i64, v256i1, "VGTLZX", "VLDLZX">;
 
+// Vector Gather and scatter
+multiclass VectorGather<ValueType DataVT,
+    ValueType PtrVT, ValueType MaskVT,
+    string GTPrefix> {
+  // Unmasked.
+  def : Pat<(DataVT (vvp_gather
+               PtrVT:$addr, (MaskVT true_mask), i32:$avl)),
+            (!cast<Instruction>(GTPrefix#"vizl") $addr, 0, 0, $avl)>;
+  // Masked.
+  def : Pat<(DataVT (vvp_gather PtrVT:$addr, MaskVT:$mask, i32:$avl)),
+            (!cast<Instruction>(GTPrefix#"vizml") $addr, 0, 0, $mask, $avl)>;
+}
+
+defm : VectorGather<v256f64, v256i64, v256i1, "VGT">;
+defm : VectorGather<v256i64, v256i64, v256i1, "VGT">;
+defm : VectorGather<v256f32, v256i64, v256i1, "VGTU">;
+defm : VectorGather<v256i32, v256i64, v256i1, "VGTLZX">;
+
+multiclass VectorScatter<ValueType DataVT,
+    ValueType PtrVT, ValueType MaskVT,
+    string SCPrefix> {
+  // Unmasked.
+  def : Pat<(vvp_scatter
+               DataVT:$data, PtrVT:$addr, (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(SCPrefix#"vizvl") $addr, 0, 0, $data, $avl)>; 
+  // Masked.
+  def : Pat<(vvp_scatter
+               DataVT:$data, PtrVT:$addr, MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(SCPrefix#"vizvml") $addr, 0, 0, $data, $mask, $avl)>;
+}
+
+defm : VectorScatter<v256f64, v256i64, v256i1, "VSC">;
+defm : VectorScatter<v256i64, v256i64, v256i1, "VSC">;
+defm : VectorScatter<v256f32, v256i64, v256i1, "VSCU">;
+defm : VectorScatter<v256i32, v256i64, v256i1, "VSCL">;
 
 
 multiclass Binary_rv<SDPatternOperator OpNode,

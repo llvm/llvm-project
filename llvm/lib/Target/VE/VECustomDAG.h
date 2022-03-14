@@ -102,6 +102,10 @@ SDValue getStoredValue(SDValue Op);
 
 SDValue getNodePassthru(SDValue Op);
 
+SDValue getGatherScatterIndex(SDValue Op);
+
+SDValue getGatherScatterScale(SDValue Op);
+
 /// } Node Properties
 
 enum class Packing {
@@ -193,6 +197,11 @@ public:
   SDValue getSplitPtrOffset(SDValue Ptr, SDValue ByteStride,
                             PackElem Part) const;
   SDValue getSplitPtrStride(SDValue PackStride) const;
+  SDValue getGatherScatterAddress(SDValue BasePtr, SDValue Scale, SDValue Index,
+                                  SDValue Mask, SDValue AVL) const;
+  EVT getVectorVT(EVT ElemVT, unsigned NumElems) const {
+    return EVT::getVectorVT(*DAG.getContext(), ElemVT, NumElems);
+  }
 };
 
 } // namespace llvm

@@ -36,6 +36,23 @@ def SDTStoreVVP: SDTypeProfile<0, 5, [
   IsVLVT<4>
 ]>;
 
+// vvp_scatter(chain, data, addr, mask, avl)
+def SDTScatterVVP: SDTypeProfile<0, 4, [
+  SDTCisVec<0>,
+  SDTCisVec<1>,
+  SDTCisVec<2>,
+  SDTCisSameNumEltsAs<0, 2>,
+  IsVLVT<3>
+]>;
+
+// vvp_gather(chain, addr, mask, avl)
+def SDTGatherVVP: SDTypeProfile<1, 3, [
+  SDTCisVec<0>,
+  SDTCisVec<1>,
+  SDTCisSameNumEltsAs<0, 2>,
+  IsVLVT<3>
+]>;
+
 // Binary Operators {
 
 // BinaryOp(x,y,mask,vl)
@@ -119,6 +136,11 @@ def c_vvp_fmul  : vvp_commutative<vvp_fmul>;
 def vvp_fdiv    : SDNode<"VEISD::VVP_FDIV",  SDTFPBinOpVVP>;
 
 // } Binary Operators
+
+def vvp_scatter : SDNode<"VEISD::VVP_SCATTER",  SDTScatterVVP,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def vvp_gather  : SDNode<"VEISD::VVP_GATHER",  SDTGatherVVP,
+                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 def vvp_load    : SDNode<"VEISD::VVP_LOAD",  SDTLoadVVP,
                          [SDNPHasChain, SDNPMayLoad, SDNPMemOperand ]>;

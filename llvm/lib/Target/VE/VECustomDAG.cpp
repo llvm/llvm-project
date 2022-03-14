@@ -277,6 +277,22 @@ SDValue getLoadStoreStride(SDValue Op, VECustomDAG &CDAG) {
   return SDValue();
 }
 
+SDValue getGatherScatterIndex(SDValue Op) {
+  if (auto *N = dyn_cast<MaskedGatherScatterSDNode>(Op.getNode()))
+    return N->getIndex();
+  if (auto *N = dyn_cast<VPGatherScatterSDNode>(Op.getNode()))
+    return N->getIndex();
+  return SDValue();
+}
+
+SDValue getGatherScatterScale(SDValue Op) {
+  if (auto *N = dyn_cast<MaskedGatherScatterSDNode>(Op.getNode()))
+    return N->getScale();
+  if (auto *N = dyn_cast<VPGatherScatterSDNode>(Op.getNode()))
+    return N->getScale();
+  return SDValue();
+}
+
 SDValue getStoredValue(SDValue Op) {
   switch (Op->getOpcode()) {
   case VEISD::VVP_STORE:
@@ -288,12 +304,19 @@ SDValue getStoredValue(SDValue Op) {
     return StoreN->getValue();
   if (auto *StoreN = dyn_cast<VPStoreSDNode>(Op.getNode()))
     return StoreN->getValue();
+  if (auto *StoreN = dyn_cast<MaskedScatterSDNode>(Op.getNode()))
+    return StoreN->getValue();
+  if (auto *StoreN = dyn_cast<VPScatterSDNode>(Op.getNode()))
+    return StoreN->getValue();
   return SDValue();
 }
 
 SDValue getNodePassthru(SDValue Op) {
   if (auto *N = dyn_cast<MaskedLoadSDNode>(Op.getNode()))
     return N->getPassThru();
+  if (auto *N = dyn_cast<MaskedGatherSDNode>(Op.getNode()))
+    return N->getPassThru();
+
   return SDValue();
 }
 
@@ -448,6 +471,32 @@ SDValue VECustomDAG::getSplitPtrStride(SDValue PackStride) const {
   if (auto ConstBytes = dyn_cast<ConstantSDNode>(PackStride))
     return getConstant(2 * ConstBytes->getSExtValue(), MVT::i64);
   return getNode(ISD::SHL, MVT::i64, {PackStride, getConstant(1, MVT::i32)});
+}
+
+SDValue VECustomDAG::getGatherScatterAddress(SDValue BasePtr, SDValue Scale,
+                                             SDValue Index, SDValue Mask,
+                                             SDValue AVL) const {
+  EVT IndexVT = Index.getValueType();
+
+  // Apply scale.
+  SDValue ScaledIndex;
+  if (!Scale || isOneConstant(Scale))
+    ScaledIndex = Index;
+  else {
+    SDValue ScaleBroadcast = getBroadcast(IndexVT, Scale, AVL);
+    ScaledIndex =
+        getNode(VEISD::VVP_MUL, IndexVT, {Index, ScaleBroadcast, Mask, AVL});
+  }
+
+  // Add basePtr.
+  if (isNullConstant(BasePtr))
+    return ScaledIndex;
+
+  // re-constitute pointer vector (basePtr + index * scale)
+  SDValue BaseBroadcast = getBroadcast(IndexVT, BasePtr, AVL);
+  auto ResPtr =
+      getNode(VEISD::VVP_ADD, IndexVT, {BaseBroadcast, ScaledIndex, Mask, AVL});
+  return ResPtr;
 }
 
 } // namespace llvm
