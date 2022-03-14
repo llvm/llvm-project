@@ -464,6 +464,7 @@ private:
   void visitAnnotationMetadata(MDNode *Annotation);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
+  void visitAccessGroupMetadata(const MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -4477,6 +4478,24 @@ void Verifier::visitAliasScopeListMetadata(const MDNode *MD) {
   }
 }
 
+void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
+  auto IsValidAccessScope = [](const MDNode *MD) {
+    return MD->getNumOperands() == 0 && MD->isDistinct();
+  };
+
+  // It must be either an access scope itself...
+  if (IsValidAccessScope(MD))
+    return;
+
+  // ...or a list of access scopes.
+  for (const MDOperand &Op : MD->operands()) {
+    const MDNode *OpMD = dyn_cast<MDNode>(Op);
+    Assert(OpMD != nullptr, "Access scope list must consist of MDNodes", MD);
+    Assert(IsValidAccessScope(OpMD),
+           "Access scope list contains invalid access scope", MD);
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -4640,6 +4659,9 @@ void Verifier::visitInstruction(Instruction &I) {
     visitAliasScopeListMetadata(MD);
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alias_scope))
     visitAliasScopeListMetadata(MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_access_group))
+    visitAccessGroupMetadata(MD);
 
   if (MDNode *AlignMD = I.getMetadata(LLVMContext::MD_align)) {
     Assert(I.getType()->isPointerTy(), "align applies only to pointer types",
