@@ -191,7 +191,7 @@ func @test_vectorize_scalar_input(%A : memref<8x16xf32>, %arg0 : f32) {
 func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
   //       CHECK: %[[V:.*]] = vector.broadcast {{.*}} : f32 to vector<8x16xf32>
   //       CHECK: vector.transfer_write %[[V]], {{.*}} : vector<8x16xf32>, memref<8x16xf32>
-  linalg.fill(%arg0, %A) : f32, memref<8x16xf32>
+  linalg.fill ins(%arg0 : f32) outs(%A : memref<8x16xf32>)
   return
 }
 
@@ -202,7 +202,7 @@ func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
   // CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[val:.*]]: f32)
   //      CHECK:   %[[VEC:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
   //      CHECK:   vector.transfer_write %[[VEC]], %[[M]][] : vector<f32>, memref<f32>
-  linalg.fill(%arg0, %A) : f32, memref<f32>
+  linalg.fill ins(%arg0 : f32) outs(%A : memref<f32>)
   return
 }
 
@@ -590,7 +590,7 @@ func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6
 //       CHECK:   %[[V4:.*]] = arith.addi %[[DIM3]], %[[C3]] : index
 //       CHECK:   %[[V5:.*]] = arith.addi %[[V4]], %[[C2]] : index
 //       CHECK:   %[[INIT:.*]] = linalg.init_tensor [6, %[[V1]], %[[V2]], %[[V5]]] : tensor<6x?x?x?xf32>
-//       CHECK:   %[[FILL:.*]] = linalg.fill(%{{.*}}, %[[INIT]]) : f32, tensor<6x?x?x?xf32> -> tensor<6x?x?x?xf32>
+//       CHECK:   %[[FILL:.*]] = linalg.fill ins(%{{.*}} : f32) outs(%[[INIT]] : tensor<6x?x?x?xf32>) -> tensor<6x?x?x?xf32>
 //       CHECK:   %[[SRCDIM:.*]] = tensor.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
 //       CHECK:   %[[RESULT:.*]] = tensor.insert_slice %[[SRC]] into %[[FILL]][2, %[[LOW]], 3, 3] [1, 2, 2, %[[SRCDIM]]] [1, 1, 1, 1] : tensor<1x2x2x?xf32> into tensor<6x?x?x?xf32>
 //       CHECK:   return %[[RESULT]]
@@ -833,7 +833,7 @@ func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant -3.40282e+38 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
-  %fill = linalg.fill(%ident, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %fill = linalg.fill ins(%ident : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -858,7 +858,7 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %maxf32 = arith.constant 3.40282e+38 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
-  %fill = linalg.fill(%maxf32, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %fill = linalg.fill ins(%maxf32 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -881,7 +881,7 @@ func @red_mul_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant 1.0 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
-  %fill = linalg.fill(%ident, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %fill = linalg.fill ins(%ident : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -904,7 +904,7 @@ func @red_or_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant false
   %init = linalg.init_tensor [4] : tensor<4xi1>
-  %fill = linalg.fill(%ident, %init) : i1, tensor<4xi1> -> tensor<4xi1>
+  %fill = linalg.fill ins(%ident : i1) outs(%init : tensor<4xi1>) -> tensor<4xi1>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -927,7 +927,7 @@ func @red_and_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant true
   %init = linalg.init_tensor [4] : tensor<4xi1>
-  %fill = linalg.fill(%ident, %init) : i1, tensor<4xi1> -> tensor<4xi1>
+  %fill = linalg.fill ins(%ident : i1) outs(%init : tensor<4xi1>) -> tensor<4xi1>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -950,7 +950,7 @@ func @red_xor_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant false
   %init = linalg.init_tensor [4] : tensor<4xi1>
-  %fill = linalg.fill(%ident, %init) : i1, tensor<4xi1> -> tensor<4xi1>
+  %fill = linalg.fill ins(%ident : i1) outs(%init : tensor<4xi1>) -> tensor<4xi1>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -974,7 +974,7 @@ func @explicit_broadcast(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> tens
   // CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<4x4xf32>, tensor<4x4xf32>
   %c0 = arith.constant 0.0 : f32
   %init = linalg.init_tensor [4, 4] : tensor<4x4xf32>
-  %fill = linalg.fill(%c0, %init) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
+  %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<4x4xf32>) -> tensor<4x4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0, 0)>,
                                           affine_map<(d0, d1) -> (d0, d1)>],
@@ -1003,7 +1003,7 @@ func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> 
   // CHECK: vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
   %c0 = arith.constant 0.0 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
-  %fill = linalg.fill(%c0, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0, 0)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1034,7 +1034,7 @@ func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
 
   //      CHECK: %[[f:.*]] = vector.transfer_write %[[vF0]], %[[init]][]
   // CHECK-SAME:   : vector<f32>, tensor<f32>
-  %1 = linalg.fill(%f0, %0) : f32, tensor<f32> -> tensor<f32>
+  %1 = linalg.fill ins(%f0 : f32) outs(%0 : tensor<f32>) -> tensor<f32>
   //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
   // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
   //      CHECK: %[[f0:.*]] = vector.extractelement %[[vF0]][] : vector<f32>

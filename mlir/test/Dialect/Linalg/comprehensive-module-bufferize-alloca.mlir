@@ -11,8 +11,8 @@ func @init_and_dot(%a: tensor<64xf32>, %b: tensor<64xf32>, %c: tensor<f32>) -> t
   // CHECK-NEXT:   %[[C0:.*]] = arith.constant 0{{.*}} : f32
   %v0 = arith.constant 0.0 : f32
 
-  // CHECK-NEXT:   linalg.fill(%[[C0]], %[[C]]) : f32, memref<f32, #[[$DYN_0D_MAP]]>
-  %d = linalg.fill(%v0, %c) : f32, tensor<f32> -> tensor<f32>
+  // CHECK-NEXT:   linalg.fill ins(%[[C0]] : f32) outs(%[[C]] : memref<f32, #[[$DYN_0D_MAP]]>)
+  %d = linalg.fill ins(%v0 : f32) outs(%c : tensor<f32>) -> tensor<f32>
 
   // CHECK-NEXT:   linalg.dot ins(%[[A]], %[[B]] : memref<64xf32, #[[$DYN_1D_MAP]]>, memref<64xf32, #[[$DYN_1D_MAP]]>) outs(%[[C]] : memref<f32, #[[$DYN_0D_MAP]]>)
   %e = linalg.dot ins(%a, %b : tensor<64xf32>,tensor<64xf32>)
@@ -41,12 +41,12 @@ func @main() {
   %B = linalg.init_tensor [64] : tensor<64xf32>
   %C = linalg.init_tensor [] : tensor<f32>
 
-  // CHECK-NEXT:   linalg.fill(%[[C1]], %[[A]]) : f32, memref<64xf32>
-  // CHECK-NEXT:   linalg.fill(%[[C2]], %[[B]]) : f32, memref<64xf32>
-  // CHECK-NEXT:   linalg.fill(%[[C0]], %[[C]]) : f32, memref<f32>
-  %AA = linalg.fill(%v1, %A) : f32, tensor<64xf32> -> tensor<64xf32>
-  %BB = linalg.fill(%v2, %B) : f32, tensor<64xf32> -> tensor<64xf32>
-  %CC = linalg.fill(%v0, %C) : f32, tensor<f32> -> tensor<f32>
+  // CHECK-NEXT:   linalg.fill ins(%[[C1]] : f32) outs(%[[A]] : memref<64xf32>)
+  // CHECK-NEXT:   linalg.fill ins(%[[C2]] : f32) outs(%[[B]] : memref<64xf32>)
+  // CHECK-NEXT:   linalg.fill ins(%[[C0]] : f32) outs(%[[C]] : memref<f32>)
+  %AA = linalg.fill ins(%v1 : f32) outs(%A : tensor<64xf32>) -> tensor<64xf32>
+  %BB = linalg.fill ins(%v2 : f32) outs(%B : tensor<64xf32>) -> tensor<64xf32>
+  %CC = linalg.fill ins(%v0 : f32) outs(%C : tensor<f32>) -> tensor<f32>
 
   // CHECK-NEXT:   call @init_and_dot(%[[cA]], %[[cB]], %[[cC]])
   %res = call @init_and_dot(%AA, %BB, %CC) :

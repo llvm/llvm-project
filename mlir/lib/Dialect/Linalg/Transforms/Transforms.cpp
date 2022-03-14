@@ -783,8 +783,10 @@ PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
       loc, resultShapedType.getShape(), resultShapedType.getElementType());
 
   // Initialize tensor with the pad value
-  Value tmpTensor =
-      rewriter.create<linalg::FillOp>(loc, padValue, initTensor).result();
+  Value tmpTensor = rewriter
+                        .create<linalg::FillOp>(loc, ValueRange{padValue},
+                                                ValueRange{initTensor})
+                        .result();
 
   // Copy original contents into new tensor
   // Uses linalg.generic, but could be done with tensor.insert_slice

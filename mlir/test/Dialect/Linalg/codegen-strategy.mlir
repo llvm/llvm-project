@@ -68,7 +68,7 @@ func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<7
   //        CHECK-FUSE:  %[[CST:.*]] = arith.constant dense<0.000000e+00>
   //        CHECK-FUSE:  vector.transfer_write %[[CST]]
   %cst = arith.constant 0.0 : f32
-  %0 = linalg.fill(%cst, %arg0) : f32, tensor<72x72xf32> -> tensor<72x72xf32>
+  %0 = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<72x72xf32>) -> tensor<72x72xf32>
 
   // Check the matmul is padded and vectorized despite the empty anchor op string.
   //        CHECK-FUSE:  vector.outerproduct
@@ -81,7 +81,7 @@ func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<7
 //         CHECK-DECOMP: func @conv(
 func @conv(%arg0: tensor<8x18x17x32xf32>, %arg1: tensor<3x3x32x64xf32>, %arg2: tensor<8x16x15x64xf32>) -> tensor<8x16x15x64xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %0 = linalg.fill(%cst, %arg2) : f32, tensor<8x16x15x64xf32> -> tensor<8x16x15x64xf32>
+  %0 = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<8x16x15x64xf32>) -> tensor<8x16x15x64xf32>
 
   // Check the conv is padded by a rank-reducing vector transfer op pair.
   //        CHECK-DECOMP:  vector.transfer_read {{.*}}: tensor<1x1x?x8xf32>, vector<1x8x8xf32>

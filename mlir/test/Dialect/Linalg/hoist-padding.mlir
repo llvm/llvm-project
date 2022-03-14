@@ -377,7 +377,7 @@ func @tile_and_fuse(%arg0: tensor<12x6xf32>,
     ^bb0(%arg5: index, %arg6: index):
       tensor.yield %cst : f32
     } : tensor<?x24xf32> to tensor<5x24xf32>
-    %5 = linalg.fill(%cst, %4) : f32, tensor<5x24xf32> -> tensor<5x24xf32>
+    %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<5x24xf32>) -> tensor<5x24xf32>
     %6 = tensor.extract_slice %5[0, 0] [%1, 24] [1, 1] : tensor<5x24xf32> to tensor<?x24xf32>
 
     // Check the first input operand is hoisted by one loop nest.

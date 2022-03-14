@@ -52,7 +52,7 @@ func @add_d(%arga: tensor<32xf32, #DV>, %argb: f32, %argx: tensor<32xf32>) -> te
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_7:.*]] = memref.alloc() : memref<32xf32>
-// CHECK:           linalg.fill(%[[VAL_3]], %[[VAL_7]]) : f32, memref<32xf32>
+// CHECK:           linalg.fill ins(%[[VAL_3]] : f32) outs(%[[VAL_7]] : memref<32xf32>)
 // CHECK:           scf.for %[[VAL_8:.*]] = %[[VAL_4]] to %[[VAL_2]] step %[[VAL_5]] {
 // CHECK:             %[[VAL_9:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_8]]] : memref<?xf32>
 // CHECK:             %[[VAL_10:.*]] = arith.addf %[[VAL_9]], %[[VAL_1]] : f32

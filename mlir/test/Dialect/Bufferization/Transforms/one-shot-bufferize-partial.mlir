@@ -148,9 +148,9 @@ func @unknown_op_may_read(%v: vector<5xf32>)
   // CHECK: %[[m1_casted:.*]] = memref.cast %[[m1]] : memref<10xf32> to memref<10xf32, #[[$MAP3]]>
   %t1 = linalg.init_tensor [10] : tensor<10xf32>
 
-  // CHECK: linalg.fill(%{{.*}}, %[[m1]])
+  // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[m1]]
   // CHECK: %[[filled_tensor:.*]] = bufferization.to_tensor %[[m1_casted]]
-  %filled = linalg.fill(%cst, %t1) : f32, tensor<10xf32> -> tensor<10xf32>
+  %filled = linalg.fill ins(%cst : f32) outs(%t1 : tensor<10xf32>) -> tensor<10xf32>
 
   // The transfer_write is out-of-place because "dummy_op" may read.
   // CHECK: memref.copy %[[m1]], %[[alloc]]

@@ -491,7 +491,7 @@ class _StructOpInfo:
       ir_type = _mlir_type_from_taco_type(self.dst_dtype)
       tensor = linalg.InitTensorOp(self.dst_dims, ir_type).result
       zero = arith.ConstantOp(ir_type, 0.0)
-      return linalg.FillOp(output=tensor, value=zero).results[0]
+      return linalg.fill(zero, outs=[tensor])
 
     # Initialize the sparse tensor.
     mlir_type = _mlir_tensor_type(self.dst_dtype, self.dst_dims,

@@ -65,22 +65,22 @@ def testFill():
       # CHECK-LABEL: func @fill_tensor
       #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<12x?xf32>
       #  CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}} : f32
-      #  CHECK-NEXT: %[[RES:.*]] = linalg.fill(%[[CST]], %[[OUT]]) : f32, tensor<12x?xf32> -> tensor<12x?xf32>
+      #  CHECK-NEXT: %[[RES:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[OUT]] : tensor<12x?xf32>) -> tensor<12x?xf32>
       #  CHECK-NEXT: return %[[RES]] : tensor<12x?xf32>
       @builtin.FuncOp.from_py_func(RankedTensorType.get((12, -1), f32))
       def fill_tensor(out):
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
-        return linalg.FillOp(output=out, value=zero).result
+        return linalg.fill(zero, outs=[out])
 
       # CHECK-LABEL: func @fill_buffer
       #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>
       #  CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}} : f32
-      #  CHECK-NEXT: linalg.fill(%[[CST]], %[[OUT]]) : f32, memref<12x?xf32>
+      #  CHECK-NEXT: linalg.fill ins(%[[CST]] : f32) outs(%[[OUT]] : memref<12x?xf32>)
       #  CHECK-NEXT: return
       @builtin.FuncOp.from_py_func(MemRefType.get((12, -1), f32))
       def fill_buffer(out):
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
-        linalg.FillOp(output=out, value=zero)
+        linalg.fill(zero, outs=[out])
 
   print(module)
 
@@ -179,9 +179,9 @@ def testOpResultFromOtherOp():
       def pass_an_op_directly(arg0, arg1):
         one = arith.ConstantOp(F32Type.get(), 1.0)
         # CHECK: %[[LHS:.*]] = linalg.fill
-        lhs = linalg.FillOp(arg0, one)
+        lhs = linalg.fill(one, outs=[arg0])
         # CHECK: %[[RHS:.*]] = linalg.fill
-        rhs = linalg.FillOp(arg1, one)
+        rhs = linalg.fill(one, outs=[arg1])
         # CHECK: %[[INIT:.*]] = linalg.init_tensor
         init = linalg.InitTensorOp([4, 8], f32)
         # CHECK: linalg.matmul

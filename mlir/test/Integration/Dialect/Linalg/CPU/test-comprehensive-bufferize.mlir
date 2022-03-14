@@ -14,7 +14,7 @@ func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f
   %cst = arith.constant 0.000000e+00 : f32
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
-  %0 = linalg.fill(%cst, %arg2) : f32, tensor<f32> -> tensor<f32>
+  %0 = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<f32>) -> tensor<f32>
   %1 = affine.apply #map0(%c0, %c64)[%c2]
   %2 = linalg.init_tensor [%1, 2] : tensor<?x2xf32>
   %3 = scf.for %arg3 = %c0 to %c64 step %c2 iter_args(%arg4 = %2) -> (tensor<?x2xf32>) {
@@ -83,9 +83,9 @@ func @main() {
   %A = linalg.init_tensor [64] : tensor<64xf32>
   %B = linalg.init_tensor [64] : tensor<64xf32>
   %C = linalg.init_tensor [] : tensor<f32>
-  %AA = linalg.fill(%v1, %A) : f32, tensor<64xf32> -> tensor<64xf32>
-  %BB = linalg.fill(%v2, %B) : f32, tensor<64xf32> -> tensor<64xf32>
-  %CC = linalg.fill(%v0, %C) : f32, tensor<f32> -> tensor<f32>
+  %AA = linalg.fill ins(%v1 : f32) outs(%A : tensor<64xf32>) -> tensor<64xf32>
+  %BB = linalg.fill ins(%v2 : f32) outs(%B : tensor<64xf32>) -> tensor<64xf32>
+  %CC = linalg.fill ins(%v0 : f32) outs(%C : tensor<f32>) -> tensor<f32>
 
   %res = call @init_and_dot(%AA, %BB, %CC) :
     (tensor<64xf32>, tensor<64xf32>, tensor<f32>) -> tensor<f32>

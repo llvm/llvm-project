@@ -934,7 +934,7 @@ func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> ten
     linalg.yield %arg2 : f32
   } -> tensor<?x?xf32>
   %6 = linalg.init_tensor [%arg1] : tensor<?xf32>
-  %7 = linalg.fill(%cst, %6) : f32, tensor<?xf32> -> tensor<?xf32>
+  %7 = linalg.fill ins(%cst : f32) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
   %8 = linalg.generic {
     indexing_maps = [#map2, #map3],
     iterator_types = ["parallel", "reduction"]

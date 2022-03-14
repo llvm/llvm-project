@@ -156,7 +156,7 @@ func @conv_1d_nwc_wcf(%input: memref<?x?x?xf32>, %filter: memref<?x?x?xf32>, %ou
 // -----
 
 func @generalize_fill(%output: memref<?x?xf32>, %value : f32) {
-  linalg.fill(%value, %output) : f32, memref<?x?xf32>
+  linalg.fill ins(%value : f32) outs(%output : memref<?x?xf32>)
   return
 }
 

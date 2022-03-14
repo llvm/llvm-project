@@ -4,7 +4,7 @@ module {
   func @basic_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                      %arg2: memref<?x?xf32>) {
     %cst = arith.constant 0.000000e+00 : f32
-    linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
+    linalg.fill ins(%cst : f32) outs(%arg2 : memref<?x?xf32>)
     linalg.matmul {__internal_linalg_transform__ = "basic_fusion"}
       ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg2 : memref<?x?xf32>)
@@ -28,8 +28,9 @@ module {
 //  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
 //  CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
 //  CHECK-DAG:   %[[CST:.+]] = arith.constant 0.0{{.*}} : f32
-//  CHECK-DAG:   linalg.fill(%[[CST]], %[[ARG2]])
+//  CHECK-DAG:   linalg.fill
 // CHECK-SAME:   __internal_linalg_transform__ = "after_basic_fusion_original"
+// CHECK-SAME:   ins(%[[CST]]{{.*}}outs(%[[ARG2]]
 //  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
 //  CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG1]], %[[C1]]
 //      CHECK:   scf.parallel (%[[IV0:.+]], %[[IV1:.+]]) =
@@ -51,8 +52,9 @@ module {
 //      CHECK:     %[[TILE_N_3:.+]] = affine.min #[[MAP5]](%[[IV1]])[%[[N_2]], %[[N]]]
 //      CHECK:     %[[SV3_2:.+]] = memref.subview %[[ARG2]][%[[IV0]], %[[IV1]]]
 // CHECK-SAME:       [%[[TILE_M_3]], %[[TILE_N_3]]]
-//      CHECK:     linalg.fill(%[[CST]], %[[SV3_2]])
+//      CHECK:     linalg.fill
 // CHECK-SAME:       __internal_linalg_transform__ = "after_basic_fusion_producer"
+// CHECK-SAME:       ins(%[[CST]]{{.*}}outs(%[[SV3_2]]
 //      CHECK:     scf.for %[[IV2:.+]] = %[[C0]] to %[[K]] step %[[C16]] {
 //      CHECK:       %[[TILE_K:.+]] = affine.min #[[MAP3]](%[[IV2]])[%[[K]]]
 //      CHECK:       %[[SV4:.+]] = memref.subview %[[SV1]][0, %[[IV2]]]
@@ -250,7 +252,7 @@ module {
     %c64 = arith.constant 64 : index
     %c16 = arith.constant 16 : index
     %cst = arith.constant 0.000000e+00 : f32
-    linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
+    linalg.fill ins(%cst : f32) outs(%arg2 : memref<?x?xf32>)
     %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
     %1 = memref.dim %arg1, %c1 : memref<?x?xf32>
     %2 = memref.dim %arg0, %c1 : memref<?x?xf32>
@@ -285,7 +287,7 @@ module {
   func @basic_conv_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                           %arg2: memref<?x?xf32>) {
     %cst = arith.constant 0.000000e+00 : f32
-    linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
+    linalg.fill ins(%cst : f32) outs(%arg2 : memref<?x?xf32>)
     linalg.conv_2d {__internal_linalg_transform__ = "basic_fusion"}
       ins(%arg1, %arg0 : memref<?x?xf32>, memref<?x?xf32>) outs(%arg2 : memref<?x?xf32>)
     return

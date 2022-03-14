@@ -685,7 +685,7 @@ func @fill_and_conv(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memre
   %c3 = arith.constant 3 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  linalg.fill(%cst, %arg0) : f32, memref<?x?xf32>
+  linalg.fill ins(%cst : f32) outs(%arg0 : memref<?x?xf32>)
   %2 = memref.dim %arg1, %c0 : memref<?x?xf32>
   %3 = memref.dim %arg1, %c1 : memref<?x?xf32>
   %4 = memref.dim %arg2, %c0 : memref<?x?xf32>

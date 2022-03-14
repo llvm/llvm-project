@@ -369,16 +369,7 @@ func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
   // expected-error @+1 {{expected the number of results (0) to be equal to the number of output tensors (1)}}
-  linalg.fill(%arg2, %0) : f32, tensor<?x?xf32>
-}
-
-// -----
-
-func @illegal_fill_memref_with_return(%arg0 : memref<?x?xf32>, %arg1 : f32) -> tensor<?x?xf32>
-{
-  // expected-error @+1 {{op expected the number of results (1) to be equal to the number of output tensors (0)}}
-  %0 = linalg.fill(%arg1, %arg0) : f32, memref<?x?xf32> -> tensor<?x?xf32>
-  return %0 : tensor<?x?xf32>
+  linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>)
 }
 
 // -----
@@ -387,7 +378,7 @@ func @illegal_fill_memref_with_tensor_return
   (%arg0 : memref<?x?xf32>, %arg1 : f32) -> tensor<?x?xf32>
 {
   // expected-error @+1 {{expected the number of results (1) to be equal to the number of output tensors (0)}}
-  %0 = linalg.fill(%arg1, %arg0) : f32, memref<?x?xf32> -> tensor<?x?xf32>
+  %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 
@@ -396,8 +387,8 @@ func @illegal_fill_memref_with_tensor_return
 func @illegal_fill_tensor_with_memref_return
   (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
-  // expected-error @+1 {{op result #0 must be ranked tensor of any type values, but got 'memref<?x?xf32>'}}
-  %0 = linalg.fill(%arg1, %arg0) : f32, tensor<?x?xf32> -> memref<?x?xf32>
+  // expected-error @+1 {{result #0 must be ranked tensor of any type values, but got 'memref<?x?xf32>'}}
+  %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : tensor<?x?xf32>) -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 

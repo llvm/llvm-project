@@ -694,7 +694,7 @@ func @test_transpose_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
 func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [4]
   // CHECK: [[CST0:%.+]] = arith.constant 0.0
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST0]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins([[ARG0]] : tensor<5x4xf32>) outs([[FILL]] : tensor<4xf32>)
   // CHECK: ^bb0(%arg1: f32, %arg2: f32)
   // CHECK:   [[RES:%.+]] = arith.addf %arg1, %arg2 : f32
@@ -704,7 +704,7 @@ func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
 
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [5]
   // CHECK: [[CST0:%.+]] = arith.constant 0.0
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST0]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP2]]], iterator_types = ["parallel", "reduction"]} ins([[ARG0]] : tensor<5x4xf32>) outs([[FILL]] : tensor<5xf32>)
   // CHECK: ^bb0(%arg1: f32, %arg2: f32)
   // CHECK:   [[RES:%.+]] = arith.addf %arg1, %arg2 : f32
@@ -745,7 +745,7 @@ func @reduce_float_dyn(%arg0: tensor<?x5x4xf32>) -> () {
   // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[C0]]
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DYN]], 4]
   // CHECK: %[[CST0:.+]] = arith.constant 0.0
-  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CST0]], %[[INIT]])
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST0]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "reduction", "parallel"]} ins(%arg0 : tensor<?x5x4xf32>) outs(%[[FILL]] : tensor<?x4xf32>)
   // CHECK: ^bb0(%arg1: f32, %arg2: f32)
   // CHECK:   %[[RES:.+]] = arith.addf %arg1, %arg2 : f32
@@ -767,7 +767,7 @@ func @reduce_float_dyn_nonzero_batch(%arg0: tensor<5x?x4xf32>) -> () {
   // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[C1]]
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [5, %[[DYN]]]
   // CHECK: %[[CST1:.+]] = arith.constant 1.0
-  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CST1]], %[[INIT]])
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST1]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "reduction"]} ins(%arg0 : tensor<5x?x4xf32>) outs(%[[FILL]] : tensor<5x?xf32>)
   // CHECK: ^bb0(%arg1: f32, %arg2: f32)
   // CHECK:   %[[RES:.+]] = arith.mulf %arg1, %arg2 : f32
@@ -789,7 +789,7 @@ func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
   // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[C0]]
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DYN]]]
   // CHECK: %[[CMIN:.+]] = arith.constant -3.40282347E+38
-  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CMIN]], %[[INIT]])
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CMIN]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%[[FILL]] : tensor<?xf32>)
   // CHECK: ^bb0(%arg1: f32, %arg2: f32)
   // CHECK:   %[[CMP:.+]] = arith.cmpf ogt, %arg1, %arg2 : f32
@@ -811,7 +811,7 @@ func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
 func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [4]
   // CHECK: [[CST0:%.+]] = arith.constant 0
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST0]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins([[ARG0]] : tensor<5x4xi32>) outs([[FILL]] : tensor<4xi32>)
   // CHECK: ^bb0(%arg1: i32, %arg2: i32)
   // CHECK:   [[RES:%.+]] = arith.addi %arg1, %arg2 : i32
@@ -821,7 +821,7 @@ func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
 
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [5]
   // CHECK: [[CST0:%.+]] = arith.constant 0
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST0]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP2]]], iterator_types = ["parallel", "reduction"]} ins([[ARG0]] : tensor<5x4xi32>) outs([[FILL]] : tensor<5xi32>)
   // CHECK: ^bb0(%arg1: i32, %arg2: i32)
   // CHECK:   [[RES:%.+]] = arith.addi %arg1, %arg2 : i32
@@ -861,7 +861,7 @@ func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
 func @reduce_bool(%arg0: tensor<5x4xi1>) -> () {
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [4]
   // CHECK: [[CST0:%.+]] = arith.constant true
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST0]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins([[ARG0]] : tensor<5x4xi1>) outs([[FILL]] : tensor<4xi1>)
   // CHECK: ^bb0(%arg1: i1, %arg2: i1)
   // CHECK:   [[RES:%.+]] = arith.andi %arg1, %arg2 : i1
@@ -889,7 +889,7 @@ func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
   // CHECK: [[IDX1:%.+]] = arith.constant 1 : index
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [11, 1]
   // CHECK: [[CST:%.+]] = arith.constant 0.0
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST]]{{.*}}outs([[INIT]]
   // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %arg0 into [[FILL]][0, 0] [5, 1] [1, 1]
   // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %arg1 into [[INSERT0]][5, 0] [6, 1] [1, 1]
   %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<5x1xf32>, tensor<6x1xf32>)  -> (tensor<11x1xf32>)
@@ -901,7 +901,7 @@ func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
   // CHECK: [[IDX1:%.+]] = arith.constant 1 : index
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [5, 2]
   // CHECK: [[CST:%.+]] = arith.constant 0.0
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CST]], [[INIT]])
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST]]{{.*}}outs([[INIT]]
   // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %arg0 into [[FILL]][0, 0] [5, 1] [1, 1]
   // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %arg0 into [[INSERT0]][0, 1] [5, 1] [1, 1]
   %1 = "tosa.concat"(%arg0, %arg0) { axis = 1 : i64} : (tensor<5x1xf32>, tensor<5x1xf32>)  -> (tensor<5x2xf32>)
@@ -922,7 +922,7 @@ func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -> () 
   // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[IDX1_2]]
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [11, %[[DYN]]]
   // CHECK: %[[CST:.+]] = arith.constant 0.0
-  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CST]], %[[INIT]])
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %arg0 into %[[FILL]][0, 0] [5, %[[SIZE]]] [1, 1]
   // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %arg1 into %[[INSERT0]][5, 0] [6, %[[SIZE]]] [1, 1]
   %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<5x?xf32>, tensor<6x?xf32>)  -> (tensor<11x?xf32>)
@@ -943,7 +943,7 @@ func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> () {
   // CHECK: %[[IDX1:.+]] = arith.constant 1 : index
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DYN]], 3]
   // CHECK: %[[CST:.+]] = arith.constant 0.0
-  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CST]], %[[INIT]])
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[DYN1:.+]] = tensor.dim %arg0, %[[AXIS]]
   // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %arg0 into %[[FILL]][0, 0] [%[[DYN1]], 3] [1, 1]
   // CHECK: %[[SUM:.+]]  = arith.addi %[[OFFSET]], %[[DYN1]]
@@ -1330,10 +1330,10 @@ func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
 func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK: [[IDX_INIT:%.+]] = linalg.init_tensor [2]
   // CHECK: [[IDX_MIN:%.+]] = arith.constant 0 : i32
-  // CHECK: [[IDX_FILL:%.+]] = linalg.fill([[IDX_MIN]], [[IDX_INIT]])
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_MIN]]{{.*}}outs([[IDX_INIT]]
   // CHECK: [[VAL_INIT:%.+]] = linalg.init_tensor [2]
   // CHECK: [[VAL_MIN:%.+]] = arith.constant -2147483648
-  // CHECK: [[VAL_FILL:%.+]] = linalg.fill([[VAL_MIN]], [[VAL_INIT]])
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]]{{.*}}outs([[VAL_INIT]]
   // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins(%arg0 : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<2xi32>, tensor<2xi32>)
   // CHECK:   [[IDX:%.+]] = linalg.index 0
   // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]]
@@ -1345,10 +1345,10 @@ func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
 
   // CHECK: [[IDX_INIT:%.+]] = linalg.init_tensor [3]
   // CHECK: [[IDX_MIN:%.+]] = arith.constant 0 : i32
-  // CHECK: [[IDX_FILL:%.+]] = linalg.fill([[IDX_MIN]], [[IDX_INIT]])
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_MIN]]{{.*}}outs([[IDX_INIT]]
   // CHECK: [[VAL_INIT:%.+]] = linalg.init_tensor [3]
   // CHECK: [[VAL_MIN:%.+]] = arith.constant -2147483648
-  // CHECK: [[VAL_FILL:%.+]] = linalg.fill([[VAL_MIN]], [[VAL_INIT]])
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]]{{.*}}outs([[VAL_INIT]]
   // CHECK: linalg.generic {indexing_maps = [#map0, #map2, #map2], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
   // CHECK:   [[IDX:%.+]] = linalg.index 1
   // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]]
@@ -1380,10 +1380,10 @@ func @argmax_dyn_non_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[CST1]]
   // CHECK: %[[IDX_INIT:.+]] = linalg.init_tensor [%[[DYN]]]
   // CHECK: %[[IDX_MIN:.+]] = arith.constant 0 : i32
-  // CHECK: %[[IDX_FILL:.+]] = linalg.fill(%[[IDX_MIN]], %[[IDX_INIT]])
+  // CHECK: %[[IDX_FILL:.+]] = linalg.fill ins(%[[IDX_MIN]]{{.*}}outs(%[[IDX_INIT]]
   // CHECK: %[[VAL_INIT:.+]] = linalg.init_tensor [%[[DYN]]]
   // CHECK: %[[VAL_MIN:.+]] = arith.constant -2147483648
-  // CHECK: %[[VAL_FILL:.+]] = linalg.fill(%[[VAL_MIN]], %[[VAL_INIT]])
+  // CHECK: %[[VAL_FILL:.+]] = linalg.fill ins(%[[VAL_MIN]]{{.*}}outs(%[[VAL_INIT]]
   // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins(%arg0 : tensor<3x?xi32>) outs(%[[IDX_FILL]], %[[VAL_FILL]] : tensor<?xi32>, tensor<?xi32>)
   // CHECK:   %[[IDX:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[IDX]]
@@ -1403,10 +1403,10 @@ func @argmax_dyn_non_axis(%arg0 : tensor<3x?xi32>) -> () {
 func @argmax_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK: %[[IDX_INIT:.+]] = linalg.init_tensor [3]
   // CHECK: %[[IDX_MIN:.+]] = arith.constant 0 : i32
-  // CHECK: %[[IDX_FILL:.+]] = linalg.fill(%[[IDX_MIN]], %[[IDX_INIT]])
+  // CHECK: %[[IDX_FILL:.+]] = linalg.fill ins(%[[IDX_MIN]]{{.*}}outs(%[[IDX_INIT]]
   // CHECK: %[[VAL_INIT:.+]] = linalg.init_tensor [3]
   // CHECK: %[[VAL_MIN:.+]] = arith.constant -2147483648
-  // CHECK: %[[VAL_FILL:.+]] = linalg.fill(%[[VAL_MIN]], %[[VAL_INIT]])
+  // CHECK: %[[VAL_FILL:.+]] = linalg.fill ins(%[[VAL_MIN]]{{.*}}outs(%[[VAL_INIT]]
   // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<3x?xi32>) outs(%[[IDX_FILL]], %[[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
   // CHECK:   %[[IDX:.+]] = linalg.index 1
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[IDX]]

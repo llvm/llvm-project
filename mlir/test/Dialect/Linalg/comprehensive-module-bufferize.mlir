@@ -40,8 +40,8 @@ func @fill_inplace(
 
   /// Inplaceable, no alloc
   // CHECK-NOT: alloc
-  //     CHECK: linalg.fill(%[[F0]], %[[A]]) : f32, memref<?xf32, #[[$map_1d_dyn]]>
-  %r = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
+  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, #[[$map_1d_dyn]]>)
+  %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: return
   // CHECK-NOT: tensor
@@ -78,8 +78,8 @@ func @not_inplace(
 
   //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, #[[$map_1d_dyn]]>
   //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 128 : i64} : memref<?xf32>
-  //     CHECK: linalg.fill(%[[F0]], %[[ALLOC]]) : f32, memref<?xf32>
-  %r = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
+  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
+  %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK:  dealloc %[[ALLOC]] : memref<?xf32>
   //     CHECK:  return %[[ALLOC]] : memref<?xf32>
@@ -101,8 +101,8 @@ func @not_inplace(
 
   /// Cross-op multiple uses of %A, the first op which has interfering reads must alloc.
   //       CHECK: %[[ALLOC:.*]] = memref.alloc
-  //       CHECK: linalg.fill({{.*}}, %[[ALLOC]]
-  %f = linalg.fill(%f0, %A) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
+  //       CHECK: linalg.fill ins({{.*}}{{.*}}outs(%[[ALLOC]]
+  %f = linalg.fill ins(%f0 : f32) outs(%A : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   /// The second op has no interfering reads and can reuse.
   //   CHECK-NOT: alloc
@@ -240,8 +240,8 @@ func @insert_slice_fun(
   %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   /// Overwrite A inplace.
-  //      CHECK: linalg.fill({{.*}}, %[[A]]
-  %r1 = linalg.fill(%f0, %r0) : f32, tensor<?xf32> -> tensor<?xf32>
+  //      CHECK: linalg.fill ins({{.*}}{{.*}}outs(%[[A]]
+  %r1 = linalg.fill ins(%f0 : f32) outs(%r0 : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: return
   // CHECK-NOT: tensor
@@ -262,8 +262,8 @@ func @insert_slice_fun(
 {
   %f0 = arith.constant 0.0 : f32
 
-  //      CHECK: linalg.fill({{.*}}, %[[A]]
-  %r0 = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
+  //      CHECK: linalg.fill ins({{.*}}{{.*}}outs(%[[A]]
+  %r0 = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
   //  CHECK-NOT: alloc
   //      CHECK: %[[SV_A:.*]] = memref.subview %[[A]]
@@ -581,8 +581,8 @@ func @init_and_dot(%a: tensor<64xf32>, %b: tensor<64xf32>, %c: tensor<f32>) -> t
   // CHECK-NEXT:   %[[C0:.*]] = arith.constant 0{{.*}} : f32
   %v0 = arith.constant 0.0 : f32
 
-  // CHECK-NEXT:   linalg.fill(%[[C0]], %[[C]]) : f32, memref<f32, #[[$DYN_0D_MAP]]>
-  %d = linalg.fill(%v0, %c) : f32, tensor<f32> -> tensor<f32>
+  // CHECK-NEXT:   linalg.fill ins(%[[C0]] : f32) outs(%[[C]] : memref<f32, #[[$DYN_0D_MAP]]>)
+  %d = linalg.fill ins(%v0 : f32) outs(%c : tensor<f32>) -> tensor<f32>
 
   // CHECK-NEXT:   linalg.dot ins(%[[A]], %[[B]] : memref<64xf32, #[[$DYN_1D_MAP]]>, memref<64xf32, #[[$DYN_1D_MAP]]>) outs(%[[C]] : memref<f32, #[[$DYN_0D_MAP]]>)
   %e = linalg.dot ins(%a, %b : tensor<64xf32>,tensor<64xf32>)
@@ -611,12 +611,12 @@ func @main() {
   %B = linalg.init_tensor [64] : tensor<64xf32>
   %C = linalg.init_tensor [] : tensor<f32>
 
-  // CHECK-NEXT:   linalg.fill(%[[C1]], %[[A]]) : f32, memref<64xf32>
-  // CHECK-NEXT:   linalg.fill(%[[C2]], %[[B]]) : f32, memref<64xf32>
-  // CHECK-NEXT:   linalg.fill(%[[C0]], %[[C]]) : f32, memref<f32>
-  %AA = linalg.fill(%v1, %A) : f32, tensor<64xf32> -> tensor<64xf32>
-  %BB = linalg.fill(%v2, %B) : f32, tensor<64xf32> -> tensor<64xf32>
-  %CC = linalg.fill(%v0, %C) : f32, tensor<f32> -> tensor<f32>
+  // CHECK-NEXT:   linalg.fill ins(%[[C1]] : f32) outs(%[[A]] : memref<64xf32>)
+  // CHECK-NEXT:   linalg.fill ins(%[[C2]] : f32) outs(%[[B]] : memref<64xf32>)
+  // CHECK-NEXT:   linalg.fill ins(%[[C0]] : f32) outs(%[[C]] : memref<f32>)
+  %AA = linalg.fill ins(%v1 : f32) outs(%A : tensor<64xf32>) -> tensor<64xf32>
+  %BB = linalg.fill ins(%v2 : f32) outs(%B : tensor<64xf32>) -> tensor<64xf32>
+  %CC = linalg.fill ins(%v0 : f32) outs(%C : tensor<f32>) -> tensor<f32>
 
   // CHECK-NEXT:   call @init_and_dot(%[[cA]], %[[cB]], %[[cC]])
   %res = call @init_and_dot(%AA, %BB, %CC) :
@@ -730,8 +730,8 @@ func @matmul(
         tensor<128x192xf32> to tensor<8x16xf32>
 
       // linalg.fill is inplace.
-      // CHECK: linalg.fill(%{{.*}}, %[[ALLOC]]) : f32, memref<8x16xf32>
-      %5 = linalg.fill(%cst, %4) : f32, tensor<8x16xf32> -> tensor<8x16xf32>
+      // CHECK: linalg.fill ins(%{{.*}} : f32) outs(%[[ALLOC]] : memref<8x16xf32>)
+      %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<8x16xf32>) -> tensor<8x16xf32>
 
       // CHECK: scf.for %[[K:.*]] =
       %6 = scf.for %arg7 = %c0 to %c256 step %c32 iter_args(%arg8 = %5) -> (tensor<8x16xf32>) {
@@ -800,7 +800,7 @@ func @dominance_violation_bug_1(
 
   %sA = tensor.extract_slice %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssA = tensor.extract_slice %sA[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
-  %FA = linalg.fill(%f0, %ssA) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
+  %FA = linalg.fill ins(%f0 : f32) outs(%ssA : tensor<4x4xf32>) -> tensor<4x4xf32>
   %rsA = tensor.insert_slice %FA into %sA[0, 0][4, 4][1, 1] : tensor<4x4xf32> into tensor<?x?xf32>
   %rA = tensor.insert_slice %rsA into %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 

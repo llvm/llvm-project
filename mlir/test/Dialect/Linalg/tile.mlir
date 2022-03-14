@@ -254,35 +254,35 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
 //       TILE-234:    linalg.dot ins(%[[sAi]], %[[sBi]]{{.*}} outs(
 
 func @fill_static(%arg0: memref<127x99xf32>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<127x99xf32>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<127x99xf32>)
   return
 }
 // TILE-2-LABEL: func @fill_static
 //       TILE-2:   for
 //   TILE-2-NOT:   for
 //       TILE-2:       memref.subview{{.*}} : memref<127x99xf32>
-//       TILE-2:       linalg.fill{{.*}} : f32, memref<?x99xf32, #[[$stride_99_1_layout_map]]>
+//       TILE-2:       linalg.fill{{.*}} : memref<?x99xf32, #[[$stride_99_1_layout_map]]>
 
 // TILE-02-LABEL: func @fill_static
 //       TILE-02:   for
 //   TILE-02-NOT:   for
 //       TILE-02:       memref.subview{{.*}} : memref<127x99xf32>
-//       TILE-02:       linalg.fill{{.*}} : f32, memref<127x?xf32, #[[$stride_99_1_layout_map]]>
+//       TILE-02:       linalg.fill{{.*}} : memref<127x?xf32, #[[$stride_99_1_layout_map]]>
 
 // TILE-002-LABEL: func @fill_static
 //   TILE-002-NOT:   for
-//       TILE-002:     linalg.fill{{.*}} f32, memref<127x99xf32>
+//       TILE-002:     linalg.fill{{.*}} : memref<127x99xf32>
 
 // TILE-234-LABEL: func @fill_static
 //       TILE-234:   for
 //       TILE-234:     for
 //   TILE-234-NOT:   for
 //       TILE-234:       memref.subview{{.*}} : memref<127x99xf32>
-//       TILE-234:       linalg.fill{{.*}} : f32, memref<?x3xf32, #[[$stride_99_1_layout_map]]>
+//       TILE-234:       linalg.fill{{.*}} : memref<?x3xf32, #[[$stride_99_1_layout_map]]>
 
 
 func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<?x?xf32, offset: ?, strides: [?, 1]>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?xf32, offset: ?, strides: [?, 1]>)
   return
 }
 // TILE-2-LABEL: func @fill
@@ -318,7 +318,7 @@ func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memre
   linalg.generic #pointwise_2d_trait
     ins(%arg0, %arg1 : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>)
     outs(%arg2 : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):   
+  ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):
     %4 = arith.addf %arg4, %arg5 : f32
     linalg.yield %4 : f32
   }
