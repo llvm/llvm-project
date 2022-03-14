@@ -53,8 +53,6 @@ def SDTGatherVVP: SDTypeProfile<1, 3, [
   IsVLVT<3>
 ]>;
 
-// Binary Operators {
-
 // BinaryOp(x,y,mask,vl)
 def SDTIntBinOpVVP : SDTypeProfile<1, 4, [     // vp_add, vp_and, etc.
   SDTCisSameAs<0, 1>,
@@ -93,6 +91,15 @@ def SDTSetCCVVP : SDTypeProfile<1, 5, [        // vp_setcc
   SDTCisInt<4>,
   SDTCisSameNumEltsAs<0, 4>,
   IsVLVT<5>
+]>;
+
+// vvp_reduce(vector, mask, vl)
+def SDTReduceVVP : SDTypeProfile<1, 3, [
+  SDTCisVec<1>,
+  SDTCisInt<2>,
+  SDTCisVec<2>,
+  SDTCisSameNumEltsAs<1,2>,
+  IsVLVT<3>
 ]>;
 
 
@@ -135,8 +142,6 @@ def vvp_fmul    : SDNode<"VEISD::VVP_FMUL",  SDTFPBinOpVVP>;
 def c_vvp_fmul  : vvp_commutative<vvp_fmul>;
 def vvp_fdiv    : SDNode<"VEISD::VVP_FDIV",  SDTFPBinOpVVP>;
 
-// } Binary Operators
-
 def vvp_scatter : SDNode<"VEISD::VVP_SCATTER",  SDTScatterVVP,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def vvp_gather  : SDNode<"VEISD::VVP_GATHER",  SDTGatherVVP,
@@ -146,6 +151,15 @@ def vvp_load    : SDNode<"VEISD::VVP_LOAD",  SDTLoadVVP,
                          [SDNPHasChain, SDNPMayLoad, SDNPMemOperand ]>;
 def vvp_store   : SDNode<"VEISD::VVP_STORE", SDTStoreVVP,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Reductions
+
+// int reductions
+def vvp_reduce_add          : SDNode<"VEISD::VVP_REDUCE_ADD", SDTReduceVVP>;
+def vvp_reduce_and          : SDNode<"VEISD::VVP_REDUCE_AND", SDTReduceVVP>;
+def vvp_reduce_or           : SDNode<"VEISD::VVP_REDUCE_OR",  SDTReduceVVP>;
+def vvp_reduce_xor          : SDNode<"VEISD::VVP_REDUCE_XOR", SDTReduceVVP>;
+def vvp_reduce_smax         : SDNode<"VEISD::VVP_REDUCE_SMAX", SDTReduceVVP>;
 
 
 def vvp_select : SDNode<"VEISD::VVP_SELECT", SDTSelectVVP>;

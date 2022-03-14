@@ -434,3 +434,36 @@ defm : Set_CC<v256f64,"VFMKL","VFCMPD",cond,fcond2cc>;
 defm : Set_CC<v256i32,"VFMKW","VCMPUW",CCUIOp,icond2cc>;
 defm : Set_CC<v256i32,"VFMKW","VCMPSWZX",CCSIOp,icond2cc>;
 defm : Set_CC<v256f32,"VFMKS","VFCMPS",cond,fcond2cc>;
+
+multiclass Reduce_GenericInt<ValueType VectorVT,
+    RegisterClass ResRC, ValueType ResVT,
+    string VVPRedOp, string RedInstName> {
+  // Unmasked.
+  def : Pat <(ResVT (!cast<SDPatternOperator>("vvp_reduce_"#VVPRedOp)
+                VectorVT:$vx, (v256i1 true_mask), i32:$vl)),
+             (COPY_TO_REGCLASS
+               (!cast<Instruction>("LVSvi")
+                 (!cast<Instruction>(RedInstName#"vl") $vx, $vl), 0),
+                 ResRC)>;
+
+  // Masked.
+  def : Pat <(ResVT (!cast<SDPatternOperator>("vvp_reduce_"#VVPRedOp)
+                VectorVT:$vx, v256i1:$vm, i32:$vl)),
+             (COPY_TO_REGCLASS
+                (!cast<Instruction>("LVSvi")
+                   (!cast<Instruction>(RedInstName#"vml") $vx, $vm, $vl), 0),
+                   ResRC)>;
+}
+
+multiclass IntReduce_ShortLong<ValueType VectorVT,
+    RegisterClass ResRC, ValueType ResVT,
+    string SumSuffix, string MinMaxSuffix> {
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "or",  "VROR">;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "and", "VRAND">;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "xor", "VRXOR">;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "add", "VSUM"#SumSuffix>;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "smax", "VRMAX"#MinMaxSuffix>;
+}
+
+defm: IntReduce_ShortLong<v256i64, I64, i64, "L","SLFST">;
+defm: IntReduce_ShortLong<v256i32, I32, i32, "WSX","SWFSTSX">;

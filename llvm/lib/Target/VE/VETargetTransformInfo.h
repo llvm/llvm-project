@@ -61,6 +61,25 @@ class VETTIImpl : public BasicTTIImplBase<VETTIImpl> {
 
   bool enableVPU() const { return getST()->enableVPU(); }
 
+  static bool isSupportedReduction(Intrinsic::ID ReductionID) {
+#define VEC_VP_CASE(SUFFIX)                                                    \
+  case Intrinsic::vp_reduce_##SUFFIX:                                          \
+  case Intrinsic::vector_reduce_##SUFFIX:
+
+    switch (ReductionID) {
+      VEC_VP_CASE(add)
+      VEC_VP_CASE(and)
+      VEC_VP_CASE(or)
+      VEC_VP_CASE(xor)
+      VEC_VP_CASE(smax)
+      return true;
+
+    default:
+      return false;
+    }
+#undef VEC_VP_CASE
+  }
+
 public:
   explicit VETTIImpl(const VETargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -127,6 +146,12 @@ public:
     return isVectorLaneType(*getLaneType(DataType));
   }
   // } Load & Store
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const {
+    if (!enableVPU())
+      return true;
+    return !isSupportedReduction(II->getIntrinsicID());
+  }
 };
 
 } // namespace llvm
