@@ -1095,25 +1095,38 @@ static hash_code encodePHINodeData(PHINodeData &PND) {
 ///
 /// \param Region - The region that \p PN is an output for.
 /// \param PN - The PHINode we are analyzing.
+/// \param Blocks - The blocks for the region we are analyzing.
 /// \param AggArgIdx - The argument \p PN will be stored into.
 /// \returns An optional holding the assigned canonical number, or None if
 /// there is some attribute of the PHINode blocking it from being used.
 static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
-                                           PHINode *PN, unsigned AggArgIdx) {
+                                           PHINode *PN,
+                                           DenseSet<BasicBlock *> &Blocks,
+                                           unsigned AggArgIdx) {
   OutlinableGroup &Group = *Region.Parent;
   IRSimilarityCandidate &Cand = *Region.Candidate;
   BasicBlock *PHIBB = PN->getParent();
   CanonList PHIGVNs;
-  for (Value *Incoming : PN->incoming_values()) {
-    // If we cannot find a GVN, this means that the input to the PHINode is
-    // not included in the region we are trying to analyze, meaning, that if
-    // it was outlined, we would be adding an extra input.  We ignore this
-    // case for now, and so ignore the region.
+  Value *Incoming;
+  BasicBlock *IncomingBlock;
+  for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
+    Incoming = PN->getIncomingValue(Idx);
+    IncomingBlock = PN->getIncomingBlock(Idx);
+    // If we cannot find a GVN, and the incoming block is included in the region
+    // this means that the input to the PHINode is not included in the region we
+    // are trying to analyze, meaning, that if it was outlined, we would be
+    // adding an extra input.  We ignore this case for now, and so ignore the
+    // region.
     Optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN.hasValue()) {
+    if (!OGVN.hasValue() && (Blocks.find(IncomingBlock) != Blocks.end())) {
       Region.IgnoreRegion = true;
       return None;
     }
+
+    // If the incoming block isn't in the region, we don't have to worry about
+    // this incoming value.
+    if (Blocks.find(IncomingBlock) == Blocks.end())
+      continue;
 
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = OGVN.getValue();
@@ -1259,9 +1272,9 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
 
       // If two PHINodes have the same canonical values, but different aggregate
       // argument locations, then they will have distinct Canonical Values.
-      GVN = getGVNForPHINode(Region, PN, AggArgIdx);
+      GVN = getGVNForPHINode(Region, PN, BlocksInRegion, AggArgIdx);
       if (!GVN.hasValue())
-        return; 
+        return;
     } else {
       // If we do not have a PHINode we use the global value numbering for the
       // output value, to find the canonical number to add to the set of stored
