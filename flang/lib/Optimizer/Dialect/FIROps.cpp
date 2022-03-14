@@ -1321,7 +1321,8 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
 
 mlir::ParseResult fir::GlobalOp::verifyValidLinkage(StringRef linkage) {
   // Supporting only a subset of the LLVM linkage types for now
-  static const char *validNames[] = {"common", "internal", "linkonce", "weak"};
+  static const char *validNames[] = {"common", "internal", "linkonce",
+                                     "linkonce_odr", "weak"};
   return mlir::success(llvm::is_contained(validNames, linkage));
 }
 

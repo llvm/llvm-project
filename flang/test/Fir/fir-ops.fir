@@ -432,6 +432,15 @@ fir.global @global_derived : !fir.type<minez(f:i32)> {
   fir.has_value %0 : !fir.type<minez>
 }
 
+// CHECK-LABEL: fir.global linkonce_odr @global_linkonce_odr : i32 {
+// CHECK: [[VAL_130:%.*]] = arith.constant 1 : i32
+// CHECK: fir.has_value [[VAL_130]] : i32
+// CHECK: }
+fir.global linkonce_odr @global_linkonce_odr : i32 {
+  %0 = arith.constant 1 : i32
+  fir.has_value %0 : i32
+}
+
 // CHECK-LABEL: fir.dispatch_table @dispatch_tbl {
 // CHECK: fir.dt_entry "method", @method_impl
 // CHECK: }
