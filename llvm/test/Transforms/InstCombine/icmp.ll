@@ -1527,6 +1527,104 @@ define i1 @icmp_mul0_ne0(i32 %x) {
   ret i1 %cmp
 }
 
+define i1 @icmp_add20_eq_add57(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_add20_eq_add57(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 37
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add i32 %x, 20
+  %2 = add i32 %y, 57
+  %cmp = icmp eq i32 %1, %2
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_add20_eq_add57_splat(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_add20_eq_add57_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[Y:%.*]], <i32 37, i32 37>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add <2 x i32> %x, <i32 20, i32 20>
+  %2 = add <2 x i32> %y, <i32 57, i32 57>
+  %cmp = icmp eq <2 x i32> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_add20_eq_add57_undef(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_add20_eq_add57_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[Y:%.*]], <i32 37, i32 37>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add <2 x i32> %x, <i32 20, i32 20>
+  %2 = add <2 x i32> %y, <i32 57, i32 undef>
+  %cmp = icmp eq <2 x i32> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_add20_eq_add57_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_add20_eq_add57_vec_nonsplat(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 20, i32 19>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[Y:%.*]], <i32 57, i32 58>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add <2 x i32> %x, <i32 20, i32 19>
+  %2 = add <2 x i32> %y, <i32 57, i32 58>
+  %cmp = icmp eq <2 x i32> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define i1 @icmp_sub57_ne_sub20(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_sub57_ne_sub20(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -37
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add i32 %x, -57
+  %2 = add i32 %y, -20
+  %cmp = icmp ne i32 %1, %2
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_sub57_ne_sub20_splat(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_sub57_ne_sub20_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 -37, i32 -37>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add <2 x i32> %x, <i32 -57, i32 -57>
+  %2 = add <2 x i32> %y, <i32 -20, i32 -20>
+  %cmp = icmp ne <2 x i32> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_sub57_ne_sub20_vec_undef(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_sub57_ne_sub20_vec_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 -37, i32 -37>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add <2 x i32> %x, <i32 -57, i32 undef>
+  %2 = add <2 x i32> %y, <i32 -20, i32 undef>
+  %cmp = icmp ne <2 x i32> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_sub57_ne_sub20_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_sub57_ne_sub20_vec_nonsplat(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 -57, i32 -58>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[Y:%.*]], <i32 -20, i32 -21>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add <2 x i32> %x, <i32 -57, i32 -58>
+  %2 = add <2 x i32> %y, <i32 -20, i32 -21>
+  %cmp = icmp ne <2 x i32> %1, %2
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_sub1_sge(i32 %x, i32 %y) {
 ; CHECK-LABEL: @icmp_sub1_sge(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]

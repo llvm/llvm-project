@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 
 template <class _Tp>
 using __with_reference = _Tp&;
@@ -41,7 +41,7 @@ concept __dereferenceable = requires(_Tp& __t) {
 template<__dereferenceable _Tp>
 using iter_reference_t = decltype(*declval<_Tp&>());
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 template <class _Iter>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits;
@@ -139,7 +139,7 @@ public:
     static const bool value = sizeof(__test<_Tp>(nullptr)) == 1;
 };
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 
 // The `cpp17-*-iterator` exposition-only concepts are easily confused with the Cpp17*Iterator tables,
 // so they've been banished to a namespace that makes it obvious they have a niche use-case.
@@ -362,7 +362,7 @@ struct iterator_traits : __iterator_traits<_Ip> {
   using __primary_template = iterator_traits;
 };
 
-#else // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#else // _LIBCPP_STD_VER > 17
 
 template <class _Iter, bool> struct __iterator_traits {};
 
@@ -399,10 +399,10 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits
 
   using __primary_template = iterator_traits;
 };
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 template<class _Tp>
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 requires is_object_v<_Tp>
 #endif
 struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
