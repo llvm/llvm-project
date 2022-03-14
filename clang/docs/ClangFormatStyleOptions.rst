@@ -1212,6 +1212,14 @@ the configuration (without a prefix: ``Auto``).
 
   Nested configuration flags:
 
+  Precise control over the wrapping of braces.
+
+  .. code-block:: c++
+
+    # Should be declared this way:
+    BreakBeforeBraces: Custom
+    BraceWrapping:
+        AfterClass: true
 
   * ``bool AfterCaseLabel`` Wrap case labels.
 
@@ -3992,6 +4000,15 @@ the configuration (without a prefix: ``Auto``).
 
   Nested configuration flags:
 
+  Precise control over the spacing before parentheses.
+
+  .. code-block:: c++
+
+    # Should be declared this way:
+    SpaceBeforeParens: Custom
+    SpaceBeforeParensOptions:
+      AfterControlStatements: true
+      AfterFunctionDefinitionName: true
 
   * ``bool AfterControlStatements`` If ``true``, put space betwee control statement keywords
     (for/if/while...) and opening parentheses.
@@ -4221,6 +4238,7 @@ the configuration (without a prefix: ``Auto``).
 
   Nested configuration flags:
 
+  Control of spaces within a single line comment
 
   * ``unsigned Minimum`` The minimum number of spaces at the start of the comment.
 
