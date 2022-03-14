@@ -698,7 +698,7 @@ bool Instruction::mayHaveSideEffects() const {
 
 bool Instruction::isSafeToRemove() const {
   return (!isa<CallInst>(this) || !this->mayHaveSideEffects()) &&
-         !this->isTerminator();
+         !this->isTerminator() && !this->isEHPad();
 }
 
 bool Instruction::willReturn() const {
