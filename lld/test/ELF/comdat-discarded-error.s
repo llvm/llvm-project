@@ -11,6 +11,7 @@
 # CHECK-NEXT: >>> defined in {{.*}}3.o
 # CHECK-NEXT: >>> section group signature: foo
 # CHECK-NEXT: >>> prevailing definition is in {{.*}}2.o
+# CHECK-NEXT: >>> or the symbol in the prevailing group {{.*}}
 # CHECK-NEXT: >>> referenced by {{.*}}1.o:(.text+0x1)
 
 # CHECK:      error: relocation refers to a discarded section: .text.foo
