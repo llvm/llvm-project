@@ -37,7 +37,7 @@ class TestPaths(TestBase):
         shlib_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeLLDBShlibDir).GetDirectory()
         if lldbplatformutil.getHostPlatform() == 'windows':
             filenames = ['liblldb.dll']
-        elif lldbplatformutil.getHostPlatform() == 'darwin':
+        elif lldbplatformutil.getHostPlatform() == 'macosx':
             filenames = ['LLDB', 'liblldb.dylib']
         else:
             filenames = ['liblldb.so']

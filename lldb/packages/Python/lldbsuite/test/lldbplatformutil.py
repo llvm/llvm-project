@@ -57,12 +57,7 @@ def _run_adb_command(cmd, device_id):
 
 
 def target_is_android():
-    if not hasattr(target_is_android, 'result'):
-        triple = lldb.selected_platform.GetTriple()
-        match = re.match(".*-.*-.*-android", triple)
-        target_is_android.result = match is not None
-    return target_is_android.result
-
+    return configuration.lldb_platform_name == "remote-android"
 
 def android_device_api():
     if not hasattr(android_device_api, 'result'):
@@ -115,7 +110,7 @@ def getHostPlatform():
     elif sys.platform.startswith('win32') or sys.platform.startswith('cygwin'):
         return 'windows'
     elif sys.platform.startswith('darwin'):
-        return 'darwin'
+        return 'macosx'
     elif sys.platform.startswith('freebsd'):
         return 'freebsd'
     elif sys.platform.startswith('netbsd'):
@@ -139,18 +134,16 @@ def getPlatform():
             platform = 'ios'
         return platform
 
-    # Use the triple to determine the platform if set.
-    triple = lldb.selected_platform.GetTriple()
-    if triple:
-        platform = triple.split('-')[2]
-        if platform.startswith('freebsd'):
-            platform = 'freebsd'
-        elif platform.startswith('netbsd'):
-            platform = 'netbsd'
-        return platform
-
-    # It still might be an unconnected remote platform.
-    return ''
+    platform = configuration.lldb_platform_name
+    if platform is None:
+        platform = "host"
+    if platform == "qemu-user":
+        platform = "host"
+    if platform == "host":
+        return getHostPlatform()
+    if platform.startswith("remote-"):
+        return platform[7:]
+    return platform
 
 
 def platformIsDarwin():

@@ -822,9 +822,9 @@ def checkObjcSupport():
         configuration.skip_categories.append("objc")
 
 def checkDebugInfoSupport():
-    import lldb
+    from lldbsuite.test import lldbplatformutil
 
-    platform = lldb.selected_platform.GetTriple().split('-')[2]
+    platform = lldbplatformutil.getPlatform()
     compiler = configuration.compiler
     for cat in test_categories.debug_info_categories:
         if cat in configuration.categories_list:
@@ -840,14 +840,14 @@ def checkDebugServerSupport():
     skip_msg = "Skipping %s tests, as they are not compatible with remote testing on this platform"
     if lldbplatformutil.platformIsDarwin():
         configuration.skip_categories.append("llgs")
-        if lldb.remote_platform:
+        if configuration.lldb_platform_name:
             # <rdar://problem/34539270>
             configuration.skip_categories.append("debugserver")
             if configuration.verbose:
                 print(skip_msg%"debugserver");
     else:
         configuration.skip_categories.append("debugserver")
-        if lldb.remote_platform and lldbplatformutil.getPlatform() == "windows":
+        if configuration.lldb_platform_name and lldbplatformutil.getPlatform() == "windows":
             configuration.skip_categories.append("llgs")
             if configuration.verbose:
                 print(skip_msg%"lldb-server");
@@ -881,7 +881,16 @@ def run_suite():
     import lldb
     lldb.SBDebugger.Initialize()
 
+    checkLibcxxSupport()
+    checkLibstdcxxSupport()
+    checkWatchpointSupport()
+    checkDebugInfoSupport()
+    checkDebugServerSupport()
+    checkObjcSupport()
+    checkForkVForkSupport()
+
     # Use host platform by default.
+    lldb.remote_platform = None
     lldb.selected_platform = lldb.SBPlatform.GetHostPlatform()
 
     # Now we can also import lldbutil
@@ -937,14 +946,6 @@ def run_suite():
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
     lldbutil.mkdir_p(configuration.test_build_dir)
-
-    checkLibcxxSupport()
-    checkLibstdcxxSupport()
-    checkWatchpointSupport()
-    checkDebugInfoSupport()
-    checkDebugServerSupport()
-    checkObjcSupport()
-    checkForkVForkSupport()
 
     print("Skipping the following test categories: {}".format(configuration.skip_categories))
 
