@@ -446,8 +446,8 @@ func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
 //    %[[V:.*]] = memref.alloca(%[[S]]) : memref<?xf64>
 //    %[[F:.*]] = memref.alloca(%[[S]]) : memref<?xi1>
 //    %[[A:.*]] = memref.alloca(%[[S]]) : memref<?xindex>
-//    linalg.fill(%{{.*}}, %[[V]]) : f64, memref<?xf64>
-//    linalg.fill(%{{.*}}, %[[F]]) : i1, memref<?xi1>
+//    linalg.fill ins(%{{.*}} : f64) outs(%[[V]] : memref<?xf64>)
+//    linalg.fill ins(%{{.*}} : i1) outs(%[[F]] : memref<?xi1>)
 //       CHECK: return
 func @sparse_expansion() {
   %c = arith.constant 8 : index

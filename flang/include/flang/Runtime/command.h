@@ -28,7 +28,8 @@ std::int32_t RTNAME(ArgumentCount)();
 // optional.
 // Return a STATUS as described in the standard.
 std::int32_t RTNAME(GetCommand)(const Descriptor *command = nullptr,
-    const Descriptor *length = nullptr, const Descriptor *errmsg = nullptr);
+    const Descriptor *length = nullptr, const Descriptor *errmsg = nullptr,
+    const char *sourceFile = nullptr, int line = 0);
 
 // 16.9.83 GET_COMMAND_ARGUMENT
 // We're breaking up the interface into several different functions, since most

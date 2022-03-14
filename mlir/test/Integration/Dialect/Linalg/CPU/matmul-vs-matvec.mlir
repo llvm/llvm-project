@@ -12,7 +12,7 @@ func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %x = memref.dim %A, %c0 : memref<?x?xf32>
   %y = memref.dim %B, %c1 : memref<?x?xf32>
   %C = memref.alloc(%x, %y) : memref<?x?xf32>
-  linalg.fill(%f0, %C) : f32, memref<?x?xf32>
+  linalg.fill ins(%f0 : f32) outs(%C : memref<?x?xf32>)
   linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
                 outs(%C: memref<?x?xf32>)
   return %C : memref<?x?xf32>
@@ -26,7 +26,7 @@ func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %x = memref.dim %A, %c1 : memref<?x?xf32>
   %n = memref.dim %B, %c1 : memref<?x?xf32>
   %C = memref.alloc(%m, %n) : memref<?x?xf32>
-  linalg.fill(%f0, %C) : f32, memref<?x?xf32>
+  linalg.fill ins(%f0 : f32) outs(%C : memref<?x?xf32>)
   scf.for %i = %c0 to %n step %c1 {
     %b = memref.subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
     %c = memref.subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
@@ -46,8 +46,8 @@ func @main() {
   %val2 = arith.constant 17.0 : f32
   %A = memref.alloc(%m, %x) : memref<?x?xf32>
   %B = memref.alloc(%x, %n) : memref<?x?xf32>
-  linalg.fill(%val1, %A) : f32, memref<?x?xf32>
-  linalg.fill(%val2, %B) : f32, memref<?x?xf32>
+  linalg.fill ins(%val1 : f32) outs(%A : memref<?x?xf32>)
+  linalg.fill ins(%val2 : f32) outs(%B : memref<?x?xf32>)
   memref.store %val1, %B[%c0, %c0] : memref<?x?xf32>
   %C1 = call @matmul(%A, %B) : (memref<?x?xf32>, memref<?x?xf32>) -> memref<?x?xf32>
   %C2 = call @matvec(%A, %B) : (memref<?x?xf32>, memref<?x?xf32>) -> memref<?x?xf32>

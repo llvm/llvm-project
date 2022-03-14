@@ -214,8 +214,10 @@ public:
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
         loc, filteredDims, resultTy.getShape(), resultETy);
     Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
-    Value zeroTensor =
-        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
+    Value zeroTensor = rewriter
+                           .create<linalg::FillOp>(loc, ValueRange{zero},
+                                                   ValueRange{initTensor})
+                           .result();
 
     // Extract the attributes for convolution.
     llvm::SmallVector<int64_t> stride, dilation;
@@ -401,8 +403,10 @@ public:
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
         loc, dynamicDims, linalgConvTy.getShape(), resultETy);
     Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
-    Value zeroTensor =
-        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
+    Value zeroTensor = rewriter
+                           .create<linalg::FillOp>(loc, ValueRange{zero},
+                                                   ValueRange{initTensor})
+                           .result();
 
     Value biasInitTensor = rewriter.create<linalg::InitTensorOp>(
         loc, dynamicDims, resultTy.getShape(), resultETy);
@@ -493,8 +497,10 @@ public:
     Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
     auto initTensor = rewriter.create<linalg::InitTensorOp>(
         loc, filteredDims, outputTy.getShape(), outputTy.getElementType());
-    Value zeroTensor =
-        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
+    Value zeroTensor = rewriter
+                           .create<linalg::FillOp>(loc, ValueRange{zero},
+                                                   ValueRange{initTensor})
+                           .result();
     if (!op.quantization_info()) {
       rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
           op, TypeRange{op.getType()}, ValueRange{adaptor.a(), adaptor.b()},
@@ -567,8 +573,10 @@ public:
     // When quantized, the input elemeny type is not the same as the output
     Attribute resultZeroAttr = rewriter.getZeroAttr(outputETy);
     Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
-    Value zeroTensor =
-        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
+    Value zeroTensor = rewriter
+                           .create<linalg::FillOp>(loc, ValueRange{zero},
+                                                   ValueRange{initTensor})
+                           .result();
 
     SmallVector<int64_t> permutation{1, 0};
     auto permutationAttr = DenseIntElementsAttr::get(
@@ -700,7 +708,10 @@ public:
         loc, dynamicDims, resultTy.getShape(), resultTy.getElementType());
 
     Value filledInitTensor =
-        rewriter.create<linalg::FillOp>(loc, initialValue, initTensor).result();
+        rewriter
+            .create<linalg::FillOp>(loc, ValueRange{initialValue},
+                                    ValueRange{initTensor})
+            .result();
 
     Value fakeWindowDims =
         rewriter.create<linalg::InitTensorOp>(loc, kernel, resultETy);
@@ -759,7 +770,9 @@ public:
         loc, dynamicDims, accTy.getShape(), accETy);
 
     Value filledInitTensor =
-        rewriter.create<linalg::FillOp>(loc, initialValue, poolInitTensor)
+        rewriter
+            .create<linalg::FillOp>(loc, ValueRange{initialValue},
+                                    ValueRange{poolInitTensor})
             .result();
 
     Value fakeWindowDims =
