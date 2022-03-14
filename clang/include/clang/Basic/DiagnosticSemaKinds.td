@@ -4117,7 +4117,7 @@ def warn_attribute_noescape_non_pointer : Warning<
   InGroup<IgnoredAttributes>;
 def warn_function_stmt_attribute_precedence : Warning<
   "statement attribute %0 has higher precedence than function attribute "
-  "'%select{always_inline|flatten}1'">,
+  "'%select{always_inline|flatten|noinline}1'">,
   InGroup<IgnoredAttributes>;
 def note_declared_nonnull : Note<
   "declared %select{'returns_nonnull'|'nonnull'}0 here">;
