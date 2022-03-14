@@ -179,6 +179,10 @@ struct CachingVPExpander {
   Value *expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                             VPIntrinsic &VPI);
 
+  /// \brief Lower this VP comparison to a call to an unpredicated comparison.
+  Value *expandPredicationInComparison(IRBuilder<> &Builder,
+                                       VPCmpIntrinsic &PI);
+
   /// \brief Query TTI and expand the vector predication in \p P accordingly.
   Value *expandPredication(VPIntrinsic &PI);
 
@@ -462,6 +466,24 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
   return NewMemoryInst;
 }
 
+Value *CachingVPExpander::expandPredicationInComparison(IRBuilder<> &Builder,
+                                                        VPCmpIntrinsic &VPI) {
+  assert((maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam()) &&
+         "Implicitly dropping %evl in non-speculatable operator!");
+
+  auto OC = *VPI.getFunctionalOpcode();
+  assert(OC == Instruction::ICmp || OC == Instruction::FCmp);
+
+  Value *Op0 = VPI.getOperand(0);
+  Value *Op1 = VPI.getOperand(1);
+  auto Pred = VPI.getPredicate();
+
+  auto *NewCmp = Builder.CreateCmp(Pred, Op0, Op1);
+
+  replaceOperation(*NewCmp, VPI);
+  return NewCmp;
+}
+
 void CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
   LLVM_DEBUG(dbgs() << "Discard EVL parameter in " << VPI << "\n");
 
@@ -537,6 +559,9 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
 
   if (auto *VPRI = dyn_cast<VPReductionIntrinsic>(&VPI))
     return expandPredicationInReduction(Builder, *VPRI);
+
+  if (auto *VPCmp = dyn_cast<VPCmpIntrinsic>(&VPI))
+    return expandPredicationInComparison(Builder, *VPCmp);
 
   switch (VPI.getIntrinsicID()) {
   default:
