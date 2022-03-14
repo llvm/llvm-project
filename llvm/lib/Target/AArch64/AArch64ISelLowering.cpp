@@ -14410,11 +14410,56 @@ performFirstTrueTestVectorCombine(SDNode *N,
   return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::FIRST_ACTIVE);
 }
 
+// Materialize : Idx = (add (mul vscale, NumEls), -1)
+//               i1 = extract_vector_elt t37, Constant:i64<Idx>
+//     ... into: "ptrue p, all" + PTEST
+static SDValue
+performLastTrueTestVectorCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  // Make sure PTEST is legal types.
+  if (!Subtarget->hasSVE() || DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue SetCC = N->getOperand(0);
+  EVT OpVT = SetCC.getValueType();
+
+  if (!OpVT.isScalableVector() || OpVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  // Idx == (add (mul vscale, NumEls), -1)
+  SDValue Idx = N->getOperand(1);
+  if (Idx.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  SDValue VS = Idx.getOperand(0);
+  if (VS.getOpcode() != ISD::VSCALE)
+    return SDValue();
+
+  unsigned NumEls = OpVT.getVectorElementCount().getKnownMinValue();
+  if (VS.getConstantOperandVal(0) != NumEls)
+    return SDValue();
+
+  // Restricted the DAG combine to only cases where we're extracting from a
+  // flag-setting operation
+  auto *CI = dyn_cast<ConstantSDNode>(Idx.getOperand(1));
+  if (!CI || !CI->isAllOnes() || SetCC.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Pg = getPTrue(DAG, SDLoc(N), OpVT, AArch64SVEPredPattern::all);
+  return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::LAST_ACTIVE);
+}
+
 static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
   if (SDValue Res = performFirstTrueTestVectorCombine(N, DCI, Subtarget))
+    return Res;
+  if (SDValue Res = performLastTrueTestVectorCombine(N, DCI, Subtarget))
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
