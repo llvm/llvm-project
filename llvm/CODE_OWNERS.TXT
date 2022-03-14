@@ -161,8 +161,8 @@ N: Dylan McKay
 E: me@dylanmckay.io
 D: AVR Backend
 
-N: Simon Moll
-E: simon.moll@emea.nec.com
+N: Kazushi Marukawa
+E: marukawa@nec.com
 D: VE Backend
 
 N: Tim Northover
