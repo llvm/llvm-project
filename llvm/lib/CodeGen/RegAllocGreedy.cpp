@@ -998,7 +998,6 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
                                              const AllocationOrder &Order) {
   BlockFrequency GlobalCost = 0;
   const BitVector &LiveBundles = Cand.LiveBundles;
-  Register VirtRegToSplit = SA->getParent().reg();
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (unsigned I = 0; I != UseBlocks.size(); ++I) {
     const SplitAnalysis::BlockInfo &BI = UseBlocks[I];
