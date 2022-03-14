@@ -1,5 +1,5 @@
 ; RUN: opt %loadPolly -polly-print-simplify -disable-output < %s | FileCheck -match-full-lines %s
-; RUN: opt %loadPolly "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck -match-full-lines %s
 ;
 ; Do not remove overwrites when the value is read before.
 ;
