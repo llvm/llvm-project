@@ -49,6 +49,11 @@ public:
   /// scheduling model.
   virtual void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
                                       const MCInst &MCI) {}
+
+  // The resetState() method gets invoked at the beginning of each code region
+  // so that targets that override this function can clear any state that they
+  // have left from the previous code region.
+  virtual void resetState() {}
 };
 
 /// Class which can be overriden by targets to enforce instruction

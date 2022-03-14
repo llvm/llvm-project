@@ -78,7 +78,6 @@ bool DispatchStage::canDispatch(const InstRef &IR) const {
 Error DispatchStage::dispatch(InstRef IR) {
   assert(!CarryOver && "Cannot dispatch another instruction!");
   Instruction &IS = *IR.getInstruction();
-  const InstrDesc &Desc = IS.getDesc();
   const unsigned NumMicroOps = IS.getNumMicroOps();
   if (NumMicroOps > DispatchWidth) {
     assert(AvailableEntries == DispatchWidth);
@@ -91,7 +90,7 @@ Error DispatchStage::dispatch(InstRef IR) {
   }
 
   // Check if this instructions ends the dispatch group.
-  if (Desc.EndGroup)
+  if (IS.getEndGroup())
     AvailableEntries = 0;
 
   // Check if this is an optimizable reg-reg move or an XCHG-like instruction.
@@ -164,7 +163,7 @@ bool DispatchStage::isAvailable(const InstRef &IR) const {
   if (Required > AvailableEntries)
     return false;
 
-  if (Desc.BeginGroup && AvailableEntries != DispatchWidth)
+  if (Inst.getBeginGroup() && AvailableEntries != DispatchWidth)
     return false;
 
   // The dispatch logic doesn't internally buffer instructions.  It only accepts
