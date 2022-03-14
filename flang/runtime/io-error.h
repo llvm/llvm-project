@@ -36,7 +36,15 @@ public:
     flags_ = hasIoStat | hasErr | hasEnd | hasEor | hasIoMsg;
   }
 
-  bool InError() const { return ioStat_ != IostatOk; }
+  bool InError() const {
+    return ioStat_ != IostatOk || pendingError_ != IostatOk;
+  }
+
+  // For I/O statements that detect fatal errors in their
+  // Begin...() API routines before it is known whether they
+  // have error handling control list items.  Such statements
+  // have an ErroneousIoStatementState with a pending error.
+  void SetPendingError(int iostat) { pendingError_ = iostat; }
 
   void SignalError(int iostatOrErrno, const char *msg, ...);
   void SignalError(int iostatOrErrno);
@@ -49,6 +57,7 @@ public:
   void SignalErrno(); // SignalError(errno)
   void SignalEnd(); // input only; EOF on internal write is an error
   void SignalEor(); // non-advancing input only; EOR on write is an error
+  void SignalPendingError();
 
   int GetIoStat() const { return ioStat_; }
   bool GetIoMsg(char *, std::size_t);
@@ -64,6 +73,7 @@ private:
   std::uint8_t flags_{0};
   int ioStat_{IostatOk};
   OwningPtr<char> ioMsg_;
+  int pendingError_{IostatOk};
 };
 
 } // namespace Fortran::runtime::io

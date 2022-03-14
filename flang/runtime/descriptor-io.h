@@ -372,6 +372,10 @@ static bool UnformattedDescriptorIO(
 
 template <Direction DIR>
 static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  if (handler.InError()) {
+    return false;
+  }
   if (!io.get_if<IoDirectionState<DIR>>()) {
     io.GetIoErrorHandler().Crash(
         "DescriptorIO() called for wrong I/O direction");
@@ -385,7 +389,6 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
   if (!io.get_if<FormattedIoStatementState<DIR>>()) {
     return UnformattedDescriptorIO<DIR>(io, descriptor);
   }
-  IoErrorHandler &handler{io.GetIoErrorHandler()};
   if (auto catAndKind{descriptor.type().GetCategoryAndKind()}) {
     TypeCategory cat{catAndKind->first};
     int kind{catAndKind->second};
