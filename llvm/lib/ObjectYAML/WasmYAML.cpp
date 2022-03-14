@@ -418,7 +418,7 @@ void MappingTraits<WasmYAML::Global>::mapping(IO &IO,
   IO.mapRequired("Index", Global.Index);
   IO.mapRequired("Type", Global.Type);
   IO.mapRequired("Mutable", Global.Mutable);
-  IO.mapRequired("InitExpr", Global.InitExpr);
+  IO.mapRequired("InitExpr", Global.Init);
 }
 
 void MappingTraits<WasmYAML::InitExpr>::mapping(IO &IO,

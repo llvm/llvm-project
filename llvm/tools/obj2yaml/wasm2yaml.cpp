@@ -298,11 +298,11 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         G.Index = Global.Index;
         G.Type = Global.Type.Type;
         G.Mutable = Global.Type.Mutable;
-        G.InitExpr.Extended = Global.InitExpr.Extended;
+        G.Init.Extended = Global.InitExpr.Extended;
         if (Global.InitExpr.Extended) {
-          G.InitExpr.Body = Global.InitExpr.Body;
+          G.Init.Body = Global.InitExpr.Body;
         } else {
-          G.InitExpr.Inst = Global.InitExpr.Inst;
+          G.Init.Inst = Global.InitExpr.Inst;
         }
         GlobalSec->Globals.push_back(G);
       }
