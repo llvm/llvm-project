@@ -50,7 +50,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
 
-static cl::opt<bool> ScalarizeVariableInsertExtract(
+static cl::opt<bool> ClScalarizeVariableInsertExtract(
     "scalarize-variable-insert-extract", cl::init(true), cl::Hidden,
     cl::desc("Allow the scalarizer pass to scalarize "
              "insertelement/extractelement with variable index"));
@@ -58,9 +58,9 @@ static cl::opt<bool> ScalarizeVariableInsertExtract(
 // This is disabled by default because having separate loads and stores
 // makes it more likely that the -combiner-alias-analysis limits will be
 // reached.
-static cl::opt<bool>
-    ScalarizeLoadStore("scalarize-load-store", cl::init(false), cl::Hidden,
-                       cl::desc("Allow the scalarizer pass to scalarize loads and store"));
+static cl::opt<bool> ClScalarizeLoadStore(
+    "scalarize-load-store", cl::init(false), cl::Hidden,
+    cl::desc("Allow the scalarizer pass to scalarize loads and store"));
 
 namespace {
 
@@ -186,10 +186,23 @@ struct VectorLayout {
   uint64_t ElemSize = 0;
 };
 
+template <typename T>
+T getWithDefaultOverride(const cl::opt<T> &ClOption,
+                         const llvm::Optional<T> &DefaultOverride) {
+  return ClOption.getNumOccurrences() ? ClOption
+                                      : DefaultOverride.getValueOr(ClOption);
+}
+
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
-  ScalarizerVisitor(unsigned ParallelLoopAccessMDKind, DominatorTree *DT)
-    : ParallelLoopAccessMDKind(ParallelLoopAccessMDKind), DT(DT) {
+  ScalarizerVisitor(unsigned ParallelLoopAccessMDKind, DominatorTree *DT,
+                    ScalarizerPassOptions Options)
+      : ParallelLoopAccessMDKind(ParallelLoopAccessMDKind), DT(DT),
+        ScalarizeVariableInsertExtract(
+            getWithDefaultOverride(ClScalarizeVariableInsertExtract,
+                                   Options.ScalarizeVariableInsertExtract)),
+        ScalarizeLoadStore(getWithDefaultOverride(ClScalarizeLoadStore,
+                                                  Options.ScalarizeLoadStore)) {
   }
 
   bool visit(Function &F);
@@ -235,6 +248,9 @@ private:
   unsigned ParallelLoopAccessMDKind;
 
   DominatorTree *DT;
+
+  const bool ScalarizeVariableInsertExtract;
+  const bool ScalarizeLoadStore;
 };
 
 class ScalarizerLegacyPass : public FunctionPass {
@@ -334,7 +350,7 @@ bool ScalarizerLegacyPass::runOnFunction(Function &F) {
   unsigned ParallelLoopAccessMDKind =
       M.getContext().getMDKindID("llvm.mem.parallel_loop_access");
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  ScalarizerVisitor Impl(ParallelLoopAccessMDKind, DT);
+  ScalarizerVisitor Impl(ParallelLoopAccessMDKind, DT, ScalarizerPassOptions());
   return Impl.visit(F);
 }
 
@@ -983,7 +999,7 @@ PreservedAnalyses ScalarizerPass::run(Function &F, FunctionAnalysisManager &AM) 
   unsigned ParallelLoopAccessMDKind =
       M.getContext().getMDKindID("llvm.mem.parallel_loop_access");
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  ScalarizerVisitor Impl(ParallelLoopAccessMDKind, DT);
+  ScalarizerVisitor Impl(ParallelLoopAccessMDKind, DT, Options);
   bool Changed = Impl.visit(F);
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
