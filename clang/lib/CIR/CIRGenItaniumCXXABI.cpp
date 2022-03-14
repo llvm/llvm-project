@@ -137,6 +137,10 @@ bool CIRGenItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
 CIRGenCXXABI *cir::CreateCIRGenItaniumCXXABI(CIRGenModule &CGM) {
   switch (CGM.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
+  case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::AppleARM64:
+    // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
+    // from ARMCXXABI. We'll have to follow suit.
     return new CIRGenItaniumCXXABI(CGM);
 
   default:
