@@ -27,21 +27,6 @@ pdl.pattern @rewrite_with_args : benefit(1) {
 
 // -----
 
-pdl.pattern @rewrite_with_params : benefit(1) {
-  %root = operation
-  rewrite %root with "rewriter"["I am param"]
-}
-
-// -----
-
-pdl.pattern @rewrite_with_args_and_params : benefit(1) {
-  %input = operand
-  %root = operation(%input : !pdl.value)
-  rewrite %root with "rewriter"["I am param"](%input : !pdl.value)
-}
-
-// -----
-
 pdl.pattern @rewrite_multi_root_optimal : benefit(2) {
   %input1 = operand
   %input2 = operand
@@ -52,7 +37,7 @@ pdl.pattern @rewrite_multi_root_optimal : benefit(2) {
   %op2 = operation(%input2 : !pdl.value) -> (%type : !pdl.type)
   %val2 = result 0 of %op2
   %root2 = operation(%val1, %val2 : !pdl.value, !pdl.value)
-  rewrite with "rewriter"["I am param"](%root1, %root2 : !pdl.operation, !pdl.operation)
+  rewrite with "rewriter"(%root1, %root2 : !pdl.operation, !pdl.operation)
 }
 
 // -----
@@ -67,7 +52,7 @@ pdl.pattern @rewrite_multi_root_forced : benefit(2) {
   %op2 = operation(%input2 : !pdl.value) -> (%type : !pdl.type)
   %val2 = result 0 of %op2
   %root2 = operation(%val1, %val2 : !pdl.value, !pdl.value)
-  rewrite %root1 with "rewriter"["I am param"](%root2 : !pdl.operation)
+  rewrite %root1 with "rewriter"(%root2 : !pdl.operation)
 }
 
 // -----

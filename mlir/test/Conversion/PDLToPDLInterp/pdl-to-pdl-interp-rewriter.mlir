@@ -6,11 +6,11 @@
 module @external {
   // CHECK: module @rewriters
   // CHECK:   func @pdl_generated_rewriter(%[[ROOT:.*]]: !pdl.operation, %[[INPUT:.*]]: !pdl.value)
-  // CHECK:     pdl_interp.apply_rewrite "rewriter" [true](%[[ROOT]], %[[INPUT]] : !pdl.operation, !pdl.value)
+  // CHECK:     pdl_interp.apply_rewrite "rewriter"(%[[ROOT]], %[[INPUT]] : !pdl.operation, !pdl.value)
   pdl.pattern : benefit(1) {
     %input = operand
     %root = operation "foo.op"(%input : !pdl.value)
-    rewrite %root with "rewriter"[true](%input : !pdl.value)
+    rewrite %root with "rewriter"(%input : !pdl.value)
   }
 }
 
@@ -191,13 +191,13 @@ module @replace_with_no_results {
 module @apply_native_rewrite {
   // CHECK: module @rewriters
   // CHECK:   func @pdl_generated_rewriter(%[[ROOT:.*]]: !pdl.operation)
-  // CHECK:     %[[TYPE:.*]] = pdl_interp.apply_rewrite "functor" [true](%[[ROOT]] : !pdl.operation) : !pdl.type
+  // CHECK:     %[[TYPE:.*]] = pdl_interp.apply_rewrite "functor"(%[[ROOT]] : !pdl.operation) : !pdl.type
   // CHECK:     pdl_interp.create_operation "foo.op" -> (%[[TYPE]] : !pdl.type)
   pdl.pattern : benefit(1) {
     %type = type
     %root = operation "foo.op" -> (%type : !pdl.type)
     rewrite %root {
-      %newType = apply_native_rewrite "functor"[true](%root : !pdl.operation) : !pdl.type
+      %newType = apply_native_rewrite "functor"(%root : !pdl.operation) : !pdl.type
       %newOp = operation "foo.op" -> (%newType : !pdl.type)
     }
   }

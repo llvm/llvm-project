@@ -425,10 +425,6 @@ LogicalResult RewriteOp::verifyRegions() {
     return emitOpError() << "expected no external arguments when the "
                             "rewrite is specified inline";
   }
-  if (externalConstParams()) {
-    return emitOpError() << "expected no external constant parameters when "
-                            "the rewrite is specified inline";
-  }
 
   return success();
 }

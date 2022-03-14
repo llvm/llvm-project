@@ -263,7 +263,6 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
                                     PredicateBuilder &builder,
                                     DenseMap<Value, Position *> &inputs) {
   OperandRange arguments = op.args();
-  ArrayAttr parameters = op.constParamsAttr();
 
   std::vector<Position *> allPositions;
   allPositions.reserve(arguments.size());
@@ -274,7 +273,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
                                     comparePosDepth);
   PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.name(), allPositions, parameters);
+      builder.getConstraint(op.name(), allPositions);
   predList.emplace_back(pos, pred);
 }
 

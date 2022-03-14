@@ -64,7 +64,7 @@ module @constraints {
   // CHECK-DAG:   %[[INPUT:.*]] = pdl_interp.get_operand 0 of %[[ROOT]]
   // CHECK-DAG:   %[[INPUT1:.*]] = pdl_interp.get_operand 1 of %[[ROOT]]
   // CHECK-DAG:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
-  // CHECK:       pdl_interp.apply_constraint "multi_constraint" [true](%[[INPUT]], %[[INPUT1]], %[[RESULT]]
+  // CHECK:       pdl_interp.apply_constraint "multi_constraint"(%[[INPUT]], %[[INPUT1]], %[[RESULT]]
 
   pdl.pattern : benefit(1) {
     %input0 = operand
@@ -72,7 +72,7 @@ module @constraints {
     %root = operation(%input0, %input1 : !pdl.value, !pdl.value)
     %result0 = result 0 of %root
 
-    pdl.apply_native_constraint "multi_constraint"[true](%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
+    pdl.apply_native_constraint "multi_constraint"(%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
     rewrite %root with "rewriter"
   }
 }
@@ -393,11 +393,11 @@ module @predicate_ordering {
   // CHECK:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
   // CHECK-NEXT: pdl_interp.is_not_null %[[RESULT]]
   // CHECK:   %[[RESULT_TYPE:.*]] = pdl_interp.get_value_type of %[[RESULT]]
-  // CHECK: pdl_interp.apply_constraint "typeConstraint" [](%[[RESULT_TYPE]]
+  // CHECK: pdl_interp.apply_constraint "typeConstraint"(%[[RESULT_TYPE]]
 
   pdl.pattern : benefit(1) {
     %resultType = type
-    pdl.apply_native_constraint "typeConstraint"[](%resultType : !pdl.type)
+    pdl.apply_native_constraint "typeConstraint"(%resultType : !pdl.type)
     %root = operation -> (%resultType : !pdl.type)
     rewrite %root with "rewriter"
   }

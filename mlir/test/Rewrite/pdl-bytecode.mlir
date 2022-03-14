@@ -90,7 +90,7 @@ module @patterns {
   module @rewriters {
     pdl_interp.func @success(%root : !pdl.operation) {
       %operand = pdl_interp.get_operand 0 of %root
-      pdl_interp.apply_rewrite "rewriter"[42](%root, %operand : !pdl.operation, !pdl.value)
+      pdl_interp.apply_rewrite "rewriter"(%root, %operand : !pdl.operation, !pdl.value)
       pdl_interp.finalize
     }
   }
@@ -99,7 +99,7 @@ module @patterns {
 // CHECK-LABEL: test.apply_rewrite_1
 // CHECK: %[[INPUT:.*]] = "test.op_input"
 // CHECK-NOT: "test.op"
-// CHECK: "test.success"(%[[INPUT]]) {constantParams = [42]}
+// CHECK: "test.success"(%[[INPUT]])
 module @ir attributes { test.apply_rewrite_1 } {
   %input = "test.op_input"() : () -> i32
   "test.op"(%input) : (i32) -> ()

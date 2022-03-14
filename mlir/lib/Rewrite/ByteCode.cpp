@@ -757,8 +757,7 @@ void Generator::generate(pdl_interp::ApplyConstraintOp op,
                          ByteCodeWriter &writer) {
   assert(constraintToMemIndex.count(op.getName()) &&
          "expected index for constraint function");
-  writer.append(OpCode::ApplyConstraint, constraintToMemIndex[op.getName()],
-                op.getConstParamsAttr());
+  writer.append(OpCode::ApplyConstraint, constraintToMemIndex[op.getName()]);
   writer.appendPDLValueList(op.getArgs());
   writer.append(op.getSuccessors());
 }
@@ -766,8 +765,7 @@ void Generator::generate(pdl_interp::ApplyRewriteOp op,
                          ByteCodeWriter &writer) {
   assert(externalRewriterToMemIndex.count(op.getName()) &&
          "expected index for rewrite function");
-  writer.append(OpCode::ApplyRewrite, externalRewriterToMemIndex[op.getName()],
-                op.getConstParamsAttr());
+  writer.append(OpCode::ApplyRewrite, externalRewriterToMemIndex[op.getName()]);
   writer.appendPDLValueList(op.getArgs());
 
   ResultRange results = op.getResults();
@@ -1333,37 +1331,33 @@ public:
 void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
   LLVM_DEBUG(llvm::dbgs() << "Executing ApplyConstraint:\n");
   const PDLConstraintFunction &constraintFn = constraintFunctions[read()];
-  ArrayAttr constParams = read<ArrayAttr>();
   SmallVector<PDLValue, 16> args;
   readList<PDLValue>(args);
 
   LLVM_DEBUG({
     llvm::dbgs() << "  * Arguments: ";
     llvm::interleaveComma(args, llvm::dbgs());
-    llvm::dbgs() << "\n  * Parameters: " << constParams << "\n";
   });
 
   // Invoke the constraint and jump to the proper destination.
-  selectJump(succeeded(constraintFn(args, constParams, rewriter)));
+  selectJump(succeeded(constraintFn(args, rewriter)));
 }
 
 void ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
   LLVM_DEBUG(llvm::dbgs() << "Executing ApplyRewrite:\n");
   const PDLRewriteFunction &rewriteFn = rewriteFunctions[read()];
-  ArrayAttr constParams = read<ArrayAttr>();
   SmallVector<PDLValue, 16> args;
   readList<PDLValue>(args);
 
   LLVM_DEBUG({
     llvm::dbgs() << "  * Arguments: ";
     llvm::interleaveComma(args, llvm::dbgs());
-    llvm::dbgs() << "\n  * Parameters: " << constParams << "\n";
   });
 
   // Execute the rewrite function.
   ByteCodeField numResults = read();
   ByteCodeRewriteResultList results(numResults);
-  rewriteFn(args, constParams, rewriter, results);
+  rewriteFn(args, rewriter, results);
 
   assert(results.getResults().size() == numResults &&
          "native PDL rewrite function returned unexpected number of results");

@@ -431,9 +431,8 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   }
   case Predicates::ConstraintQuestion: {
     auto *cstQuestion = cast<ConstraintQuestion>(question);
-    builder.create<pdl_interp::ApplyConstraintOp>(
-        loc, cstQuestion->getName(), args, cstQuestion->getParams(), success,
-        failure);
+    builder.create<pdl_interp::ApplyConstraintOp>(loc, cstQuestion->getName(),
+                                                  args, success, failure);
     break;
   }
   default:
@@ -644,8 +643,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
     auto mappedArgs = llvm::map_range(rewriter.externalArgs(), mapRewriteValue);
     args.append(mappedArgs.begin(), mappedArgs.end());
     builder.create<pdl_interp::ApplyRewriteOp>(
-        rewriter.getLoc(), /*resultTypes=*/TypeRange(), rewriteName, args,
-        rewriter.externalConstParamsAttr());
+        rewriter.getLoc(), /*resultTypes=*/TypeRange(), rewriteName, args);
   } else {
     // Otherwise this is a dag rewriter defined using PDL operations.
     for (Operation &rewriteOp : *rewriter.getBody()) {
@@ -678,8 +676,8 @@ void PatternLowering::generateRewriter(
     arguments.push_back(mapRewriteValue(argument));
   auto interpOp = builder.create<pdl_interp::ApplyRewriteOp>(
       rewriteOp.getLoc(), rewriteOp.getResultTypes(), rewriteOp.nameAttr(),
-      arguments, rewriteOp.constParamsAttr());
-  for (auto it : llvm::zip(rewriteOp.results(), interpOp.getResults()))
+      arguments);
+  for (auto it : llvm::zip(rewriteOp.getResults(), interpOp.getResults()))
     rewriteValues[std::get<0>(it)] = std::get<1>(it);
 }
 

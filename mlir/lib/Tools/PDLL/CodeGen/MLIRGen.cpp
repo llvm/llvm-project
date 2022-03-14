@@ -200,9 +200,9 @@ void CodeGen::genImpl(const ast::CompoundStmt *stmt) {
 static void checkAndNestUnderRewriteOp(OpBuilder &builder, Value rootExpr,
                                        Location loc) {
   if (isa<pdl::PatternOp>(builder.getInsertionBlock()->getParentOp())) {
-    pdl::RewriteOp rewrite = builder.create<pdl::RewriteOp>(
-        loc, rootExpr, /*name=*/StringAttr(),
-        /*externalArgs=*/ValueRange(), /*externalConstParams=*/ArrayAttr());
+    pdl::RewriteOp rewrite =
+        builder.create<pdl::RewriteOp>(loc, rootExpr, /*name=*/StringAttr(),
+                                       /*externalArgs=*/ValueRange());
     builder.createBlock(&rewrite.body());
   }
 }
@@ -564,14 +564,8 @@ SmallVector<Value> CodeGen::genConstraintOrRewriteCall(const T *decl,
     } else {
       resultTypes.push_back(genType(declResultType));
     }
-
-    // FIXME: We currently do not have a modeling for the "constant params"
-    // support PDL provides. We should either figure out a modeling for this, or
-    // refactor the support within PDL to be something a bit more reasonable for
-    // what we need as a frontend.
-    Operation *pdlOp = builder.create<PDLOpT>(loc, resultTypes,
-                                              decl->getName().getName(), inputs,
-                                              /*params=*/ArrayAttr());
+    Operation *pdlOp = builder.create<PDLOpT>(
+        loc, resultTypes, decl->getName().getName(), inputs);
     return pdlOp->getResults();
   }
 

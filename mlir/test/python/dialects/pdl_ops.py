@@ -54,34 +54,6 @@ def test_rewrite_with_args():
     RewriteOp(root, "rewriter", args=[input])
 
 # CHECK: module  {
-# CHECK:   pdl.pattern @rewrite_with_params : benefit(1)  {
-# CHECK:     %0 = operation
-# CHECK:     rewrite %0 with "rewriter" ["I am param"]
-# CHECK:   }
-# CHECK: }
-@constructAndPrintInModule
-def test_rewrite_with_params():
-  pattern = PatternOp(1, "rewrite_with_params")
-  with InsertionPoint(pattern.body):
-    op = OperationOp()
-    RewriteOp(op, "rewriter", params=[StringAttr.get("I am param")])
-
-# CHECK: module  {
-# CHECK:   pdl.pattern @rewrite_with_args_and_params : benefit(1)  {
-# CHECK:     %0 = operand
-# CHECK:     %1 = operation(%0 : !pdl.value)
-# CHECK:     rewrite %1 with "rewriter" ["I am param"](%0 : !pdl.value)
-# CHECK:   }
-# CHECK: }
-@constructAndPrintInModule
-def test_rewrite_with_args_and_params():
-  pattern = PatternOp(1, "rewrite_with_args_and_params")
-  with InsertionPoint(pattern.body):
-    input = OperandOp()
-    root = OperationOp(args=[input])
-    RewriteOp(root, "rewriter", params=[StringAttr.get("I am param")], args=[input])
-
-# CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_multi_root_optimal : benefit(1)  {
 # CHECK:     %0 = operand
 # CHECK:     %1 = operand
@@ -92,7 +64,7 @@ def test_rewrite_with_args_and_params():
 # CHECK:     %6 = operation(%1 : !pdl.value)  -> (%2 : !pdl.type)
 # CHECK:     %7 = result 0 of %6
 # CHECK:     %8 = operation(%4, %7 : !pdl.value, !pdl.value)
-# CHECK:     rewrite with "rewriter" ["I am param"](%5, %8 : !pdl.operation, !pdl.operation)
+# CHECK:     rewrite with "rewriter"(%5, %8 : !pdl.operation, !pdl.operation)
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -108,7 +80,7 @@ def test_rewrite_multi_root_optimal():
     op2 = OperationOp(args=[input2], types=[ty])
     val2 = ResultOp(op2, 0)
     root2 = OperationOp(args=[val1, val2])
-    RewriteOp(name="rewriter", params=[StringAttr.get("I am param")], args=[root1, root2])
+    RewriteOp(name="rewriter", args=[root1, root2])
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_multi_root_forced : benefit(1)  {
@@ -121,7 +93,7 @@ def test_rewrite_multi_root_optimal():
 # CHECK:     %6 = operation(%1 : !pdl.value)  -> (%2 : !pdl.type)
 # CHECK:     %7 = result 0 of %6
 # CHECK:     %8 = operation(%4, %7 : !pdl.value, !pdl.value)
-# CHECK:     rewrite %5 with "rewriter" ["I am param"](%8 : !pdl.operation)
+# CHECK:     rewrite %5 with "rewriter"(%8 : !pdl.operation)
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -137,7 +109,7 @@ def test_rewrite_multi_root_forced():
     op2 = OperationOp(args=[input2], types=[ty])
     val2 = ResultOp(op2, 0)
     root2 = OperationOp(args=[val1, val2])
-    RewriteOp(root1, name="rewriter", params=[StringAttr.get("I am param")], args=[root2])
+    RewriteOp(root1, name="rewriter", args=[root2])
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_add_body : benefit(1)  {
@@ -303,7 +275,7 @@ def test_operation_results():
 # CHECK: module  {
 # CHECK:   pdl.pattern : benefit(1)  {
 # CHECK:     %0 = type
-# CHECK:     apply_native_constraint "typeConstraint" [](%0 : !pdl.type)
+# CHECK:     apply_native_constraint "typeConstraint"(%0 : !pdl.type)
 # CHECK:     %1 = operation  -> (%0 : !pdl.type)
 # CHECK:     rewrite %1 with "rewrite"
 # CHECK:   }
@@ -313,6 +285,6 @@ def test_apply_native_constraint():
   pattern = PatternOp(1)
   with InsertionPoint(pattern.body):
     resultType = TypeOp()
-    ApplyNativeConstraintOp("typeConstraint", args=[resultType], params=[])
+    ApplyNativeConstraintOp("typeConstraint", args=[resultType])
     root = OperationOp(types=[resultType])
     RewriteOp(root, name="rewrite")
