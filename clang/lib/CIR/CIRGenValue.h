@@ -214,6 +214,100 @@ public:
   clang::Qualifiers &getQuals() { return Quals; }
 };
 
+/// An aggregate value slot.
+class AggValueSlot {
+  /// The address.
+  Address Addr;
+
+  // Qualifiers
+  clang::Qualifiers Quals;
+
+  /// This is set to true if the tail padding of this slot might overlap another
+  /// object that may have already been initialized (and whose value must be
+  /// preserved by this initialization). If so, we may only store up to the
+  /// dsize of the type. Otherwise we can widen stores to the size of the type.
+  bool OverlapFlag : 1;
+
+  /// DestructedFlags - This is set to true if some external code is responsible
+  /// for setting up a destructor for the slot. Otherwise the code which
+  /// constructs it shoudl push the appropriate cleanup.
+  // bool DestructedFlag : 1;
+
+  /// If is set to true, sanitizer checks are already generated for this address
+  /// or not required. For instance, if this address represents an object
+  /// created in 'new' expression, sanitizer checks for memory is made as a part
+  /// of 'operator new' emission and object constructor should not generate
+  /// them.
+  bool SanitizerCheckedFlag : 1;
+
+  // TODO: Add the rest of these things
+
+  AggValueSlot(Address Addr, clang::Qualifiers Quals, bool DestructedFlag,
+               bool ObjCGCFlag, bool ZeroedFlag, bool AliasedFlag,
+               bool OverlapFlag, bool SanitizerCheckedFlag)
+      : Addr(Addr), Quals(Quals)
+  // ,DestructedFlag(DestructedFlag)
+  // ,ObjCGCFlag(ObjCGCFlag)
+  // ,ZeroedFlag(ZeroedFlag)
+  // ,AliasedFlag(AliasedFlag)
+  // ,OverlapFlag(OverlapFlag)
+  // ,SanitizerCheckedFlag(SanitizerCheckedFlag)
+  {}
+
+public:
+  enum IsAliased_t { IsNotAliased, IsAliased };
+  enum IsDestructed_t { IsNotDestructed, IsDestructed };
+  enum IsZeroed_t { IsNotZeroed, IsZeroed };
+  enum Overlap_t { DoesNotOverlap, MayOverlap };
+  enum NeedsGCBarriers_t { DoesNotNeedGCBarriers, NeedsGCBarriers };
+  enum IsSanitizerChecked_t { IsNotSanitizerChecked, IsSanitizerChecked };
+
+  /// ignored - Returns an aggregate value slot indicating that the aggregate
+  /// value is being ignored.
+  static AggValueSlot ignored() {
+    return forAddr(Address::invalid(), clang::Qualifiers(), IsNotDestructed,
+                   DoesNotNeedGCBarriers, IsNotAliased, DoesNotOverlap);
+  }
+
+  /// forAddr - Make a slot for an aggregate value.
+  ///
+  /// \param quals - The qualifiers that dictate how the slot should be
+  ///   initialized. Only 'volatile' and the Objective-C lifetime qualifiers
+  ///   matter.
+  ///
+  /// \param isDestructed - true if something else is responsible for calling
+  ///   destructors on this object
+  /// \param needsGC - true fi the slot is potentially located somewhere that
+  ///   ObjC GC calls should be emitted for
+  static AggValueSlot
+  forAddr(Address addr, clang::Qualifiers quals, IsDestructed_t isDestructed,
+          NeedsGCBarriers_t needsGC, IsAliased_t isAliased,
+          Overlap_t mayOverlap, IsZeroed_t isZeroed = IsNotZeroed,
+          IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
+    return AggValueSlot(addr, quals, isDestructed, needsGC, isZeroed, isAliased,
+                        mayOverlap, isChecked);
+  }
+
+  static AggValueSlot
+  forLValue(const LValue &LV, IsDestructed_t isDestructed,
+            NeedsGCBarriers_t needsGC, IsAliased_t isAliased,
+            Overlap_t mayOverlap, IsZeroed_t isZeroed = IsNotZeroed,
+            IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
+    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, needsGC,
+                   isAliased, mayOverlap, isZeroed, isChecked);
+  }
+
+  clang::Qualifiers getQualifiers() const { return Quals; }
+
+  Address getAddress() const { return Addr; }
+
+  bool isIgnored() const { return !Addr.isValid(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(OverlapFlag); }
+
+  bool isSanitizerChecked() const { return SanitizerCheckedFlag; }
+};
+
 } // namespace cir
 
 #endif
