@@ -31,8 +31,8 @@ using ::testing::UnorderedElementsAre;
 
 // FIXME: Move header definitions in separate file(s).
 static constexpr char StdTypeTraitsHeader[] = R"(
-#ifndef TYPE_TRAITS_H
-#define TYPE_TRAITS_H
+#ifndef STD_TYPE_TRAITS_H
+#define STD_TYPE_TRAITS_H
 
 namespace std {
 
@@ -128,6 +128,9 @@ struct remove_cv<const volatile T> {
 };
 
 template <class T>
+using remove_cv_t = typename remove_cv<T>::type;
+
+template <class T>
 struct decay {
  private:
   typedef typename remove_reference<T>::type U;
@@ -139,9 +142,196 @@ struct decay {
                            typename remove_cv<U>::type>::type>::type type;
 };
 
+template <bool B, class T = void>
+struct enable_if {};
+
+template <class T>
+struct enable_if<true, T> {
+  typedef T type;
+};
+
+template <bool B, class T = void>
+using enable_if_t = typename enable_if<B, T>::type;
+
+template <class T, class U>
+struct is_same : false_type {};
+
+template <class T>
+struct is_same<T, T> : true_type {};
+
+template <class T>
+struct is_void : is_same<void, typename remove_cv<T>::type> {};
+
+namespace detail {
+
+template <class T>
+auto try_add_rvalue_reference(int) -> type_identity<T&&>;
+template <class T>
+auto try_add_rvalue_reference(...) -> type_identity<T>;
+
+}  // namespace detail
+
+template <class T>
+struct add_rvalue_reference : decltype(detail::try_add_rvalue_reference<T>(0)) {
+};
+
+template <class T>
+typename add_rvalue_reference<T>::type declval() noexcept;
+
+namespace detail {
+
+template <class T>
+auto test_returnable(int)
+    -> decltype(void(static_cast<T (*)()>(nullptr)), true_type{});
+template <class>
+auto test_returnable(...) -> false_type;
+
+template <class From, class To>
+auto test_implicitly_convertible(int)
+    -> decltype(void(declval<void (&)(To)>()(declval<From>())), true_type{});
+template <class, class>
+auto test_implicitly_convertible(...) -> false_type;
+
+}  // namespace detail
+
+template <class From, class To>
+struct is_convertible
+    : integral_constant<bool,
+                        (decltype(detail::test_returnable<To>(0))::value &&
+                         decltype(detail::test_implicitly_convertible<From, To>(
+                             0))::value) ||
+                            (is_void<From>::value && is_void<To>::value)> {};
+
+template <class From, class To>
+inline constexpr bool is_convertible_v = is_convertible<From, To>::value;
+
+template <class...>
+using void_t = void;
+
+template <class, class T, class... Args>
+struct is_constructible_ : false_type {};
+
+template <class T, class... Args>
+struct is_constructible_<void_t<decltype(T(declval<Args>()...))>, T, Args...>
+    : true_type {};
+
+template <class T, class... Args>
+using is_constructible = is_constructible_<void_t<>, T, Args...>;
+
+template <class T, class... Args>
+inline constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
+
+template <class _Tp>
+struct __uncvref {
+  typedef typename remove_cv<typename remove_reference<_Tp>::type>::type type;
+};
+
+template <class _Tp>
+using __uncvref_t = typename __uncvref<_Tp>::type;
+
+template <bool _Val>
+using _BoolConstant = integral_constant<bool, _Val>;
+
+template <class _Tp, class _Up>
+using _IsSame = _BoolConstant<__is_same(_Tp, _Up)>;
+
+template <class _Tp, class _Up>
+using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
+
+template <bool>
+struct _MetaBase;
+template <>
+struct _MetaBase<true> {
+  template <class _Tp, class _Up>
+  using _SelectImpl = _Tp;
+  template <template <class...> class _FirstFn, template <class...> class,
+            class... _Args>
+  using _SelectApplyImpl = _FirstFn<_Args...>;
+  template <class _First, class...>
+  using _FirstImpl = _First;
+  template <class, class _Second, class...>
+  using _SecondImpl = _Second;
+  template <class _Result, class _First, class... _Rest>
+  using _OrImpl =
+      typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::
+          template _OrImpl<_First, _Rest...>;
+};
+
+template <>
+struct _MetaBase<false> {
+  template <class _Tp, class _Up>
+  using _SelectImpl = _Up;
+  template <template <class...> class, template <class...> class _SecondFn,
+            class... _Args>
+  using _SelectApplyImpl = _SecondFn<_Args...>;
+  template <class _Result, class...>
+  using _OrImpl = _Result;
+};
+
+template <bool _Cond, class _IfRes, class _ElseRes>
+using _If = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
+
+template <class... _Rest>
+using _Or = typename _MetaBase<sizeof...(_Rest) !=
+                               0>::template _OrImpl<false_type, _Rest...>;
+
+template <bool _Bp, class _Tp = void>
+using __enable_if_t = typename enable_if<_Bp, _Tp>::type;
+
+template <class...>
+using __expand_to_true = true_type;
+template <class... _Pred>
+__expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
+template <class...>
+false_type __and_helper(...);
+template <class... _Pred>
+using _And = decltype(__and_helper<_Pred...>(0));
+
+struct __check_tuple_constructor_fail {
+  static constexpr bool __enable_explicit_default() { return false; }
+  static constexpr bool __enable_implicit_default() { return false; }
+  template <class...>
+  static constexpr bool __enable_explicit() {
+    return false;
+  }
+  template <class...>
+  static constexpr bool __enable_implicit() {
+    return false;
+  }
+};
+
 } // namespace std
 
-#endif // TYPE_TRAITS_H
+#endif // STD_TYPE_TRAITS_H
+)";
+
+static constexpr char AbslTypeTraitsHeader[] = R"(
+#ifndef ABSL_TYPE_TRAITS_H
+#define ABSL_TYPE_TRAITS_H
+
+#include "std_type_traits.h"
+
+namespace absl {
+
+template <typename... Ts>
+struct conjunction : std::true_type {};
+
+template <typename T, typename... Ts>
+struct conjunction<T, Ts...>
+    : std::conditional<T::value, conjunction<Ts...>, T>::type {};
+
+template <typename T>
+struct conjunction<T> : T {};
+
+template <typename T>
+struct negation : std::integral_constant<bool, !T::value> {};
+
+template <bool B, typename T = void>
+using enable_if_t = typename std::enable_if<B, T>::type;
+
+} // namespace absl
+
+#endif // ABSL_TYPE_TRAITS_H
 )";
 
 static constexpr char StdUtilityHeader[] = R"(
@@ -184,39 +374,152 @@ static constexpr char StdOptionalHeader[] = R"(
 
 namespace std {
 
-template <typename T>
-class optional {
+struct in_place_t {};
+constexpr in_place_t in_place;
+
+struct nullopt_t {
+  constexpr explicit nullopt_t() {}
+};
+constexpr nullopt_t nullopt;
+
+template <class _Tp>
+struct __optional_destruct_base {
+  constexpr void reset() noexcept;
+};
+
+template <class _Tp>
+struct __optional_storage_base : __optional_destruct_base<_Tp> {
+  constexpr bool has_value() const noexcept;
+};
+
+template <typename _Tp>
+class optional : private __optional_storage_base<_Tp> {
+  using __base = __optional_storage_base<_Tp>;
+
  public:
-  constexpr optional() noexcept;
+  using value_type = _Tp;
 
-  const T& operator*() const&;
-  T& operator*() &;
-  const T&& operator*() const&&;
-  T&& operator*() &&;
+ private:
+  struct _CheckOptionalArgsConstructor {
+    template <class _Up>
+    static constexpr bool __enable_implicit() {
+      return is_constructible_v<_Tp, _Up&&> && is_convertible_v<_Up&&, _Tp>;
+    }
 
-  const T* operator->() const;
-  T* operator->();
+    template <class _Up>
+    static constexpr bool __enable_explicit() {
+      return is_constructible_v<_Tp, _Up&&> && !is_convertible_v<_Up&&, _Tp>;
+    }
+  };
+  template <class _Up>
+  using _CheckOptionalArgsCtor =
+      _If<_IsNotSame<__uncvref_t<_Up>, in_place_t>::value &&
+              _IsNotSame<__uncvref_t<_Up>, optional>::value,
+          _CheckOptionalArgsConstructor, __check_tuple_constructor_fail>;
+  template <class _QualUp>
+  struct _CheckOptionalLikeConstructor {
+    template <class _Up, class _Opt = optional<_Up>>
+    using __check_constructible_from_opt =
+        _Or<is_constructible<_Tp, _Opt&>, is_constructible<_Tp, _Opt const&>,
+            is_constructible<_Tp, _Opt&&>, is_constructible<_Tp, _Opt const&&>,
+            is_convertible<_Opt&, _Tp>, is_convertible<_Opt const&, _Tp>,
+            is_convertible<_Opt&&, _Tp>, is_convertible<_Opt const&&, _Tp>>;
+    template <class _Up, class _QUp = _QualUp>
+    static constexpr bool __enable_implicit() {
+      return is_convertible<_QUp, _Tp>::value &&
+             !__check_constructible_from_opt<_Up>::value;
+    }
+    template <class _Up, class _QUp = _QualUp>
+    static constexpr bool __enable_explicit() {
+      return !is_convertible<_QUp, _Tp>::value &&
+             !__check_constructible_from_opt<_Up>::value;
+    }
+  };
 
-  const T& value() const&;
-  T& value() &;
-  const T&& value() const&&;
-  T&& value() &&;
+  template <class _Up, class _QualUp>
+  using _CheckOptionalLikeCtor =
+      _If<_And<_IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>>::value,
+          _CheckOptionalLikeConstructor<_QualUp>,
+          __check_tuple_constructor_fail>;
+
+ public:
+  constexpr optional() noexcept {}
+  constexpr optional(const optional&) = default;
+  constexpr optional(optional&&) = default;
+  constexpr optional(nullopt_t) noexcept {}
+
+  template <
+      class _InPlaceT, class... _Args,
+      class = enable_if_t<_And<_IsSame<_InPlaceT, in_place_t>,
+                             is_constructible<value_type, _Args...>>::value>>
+  constexpr explicit optional(_InPlaceT, _Args&&... __args);
+
+  template <class _Up, class... _Args,
+            class = enable_if_t<is_constructible_v<
+                value_type, initializer_list<_Up>&, _Args...>>>
+  constexpr explicit optional(in_place_t, initializer_list<_Up> __il,
+                              _Args&&... __args);
+
+  template <
+      class _Up = value_type,
+      enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(),
+                int> = 0>
+  constexpr optional(_Up&& __v);
+
+  template <
+      class _Up,
+      enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(),
+                int> = 0>
+  constexpr explicit optional(_Up&& __v);
+
+  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::
+                                     template __enable_implicit<_Up>(),
+                                 int> = 0>
+  constexpr optional(const optional<_Up>& __v);
+
+  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::
+                                     template __enable_explicit<_Up>(),
+                                 int> = 0>
+  constexpr explicit optional(const optional<_Up>& __v);
+
+  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
+                                     template __enable_implicit<_Up>(),
+                                 int> = 0>
+  constexpr optional(optional<_Up>&& __v);
+
+  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::
+                                     template __enable_explicit<_Up>(),
+                                 int> = 0>
+  constexpr explicit optional(optional<_Up>&& __v);
+
+  const _Tp& operator*() const&;
+  _Tp& operator*() &;
+  const _Tp&& operator*() const&&;
+  _Tp&& operator*() &&;
+
+  const _Tp* operator->() const;
+  _Tp* operator->();
+
+  const _Tp& value() const&;
+  _Tp& value() &;
+  const _Tp&& value() const&&;
+  _Tp&& value() &&;
 
   template <typename U>
-  constexpr T value_or(U&& v) const&;
+  constexpr _Tp value_or(U&& v) const&;
   template <typename U>
-  T value_or(U&& v) &&;
+  _Tp value_or(U&& v) &&;
 
   template <typename... Args>
-  T& emplace(Args&&... args);
+  _Tp& emplace(Args&&... args);
 
   template <typename U, typename... Args>
-  T& emplace(std::initializer_list<U> ilist, Args&&... args);
+  _Tp& emplace(std::initializer_list<U> ilist, Args&&... args);
 
-  void reset() noexcept;
+  using __base::reset;
 
   constexpr explicit operator bool() const noexcept;
-  constexpr bool has_value() const noexcept;
+  using __base::has_value;
 };
 
 template <typename T>
@@ -233,16 +536,135 @@ constexpr optional<T> make_optional(std::initializer_list<U> il,
 )";
 
 static constexpr char AbslOptionalHeader[] = R"(
+#include "absl_type_traits.h"
 #include "std_initializer_list.h"
 #include "std_type_traits.h"
 #include "std_utility.h"
 
 namespace absl {
 
+struct nullopt_t {
+  constexpr explicit nullopt_t() {}
+};
+constexpr nullopt_t nullopt;
+
+struct in_place_t {};
+constexpr in_place_t in_place;
+
+template <typename T>
+class optional;
+
+namespace optional_internal {
+
+// Whether T is constructible or convertible from optional<U>.
+template <typename T, typename U>
+struct is_constructible_convertible_from_optional
+    : std::integral_constant<
+          bool, std::is_constructible<T, optional<U>&>::value ||
+                    std::is_constructible<T, optional<U>&&>::value ||
+                    std::is_constructible<T, const optional<U>&>::value ||
+                    std::is_constructible<T, const optional<U>&&>::value ||
+                    std::is_convertible<optional<U>&, T>::value ||
+                    std::is_convertible<optional<U>&&, T>::value ||
+                    std::is_convertible<const optional<U>&, T>::value ||
+                    std::is_convertible<const optional<U>&&, T>::value> {};
+
+}  // namespace optional_internal
+
 template <typename T>
 class optional {
  public:
   constexpr optional() noexcept;
+
+  constexpr optional(nullopt_t) noexcept;
+
+  optional(const optional&) = default;
+
+  optional(optional&&) = default;
+
+  template <typename InPlaceT, typename... Args,
+            absl::enable_if_t<absl::conjunction<
+                std::is_same<InPlaceT, in_place_t>,
+                std::is_constructible<T, Args&&...>>::value>* = nullptr>
+  constexpr explicit optional(InPlaceT, Args&&... args);
+
+  template <typename U, typename... Args,
+            typename = typename std::enable_if<std::is_constructible<
+                T, std::initializer_list<U>&, Args&&...>::value>::type>
+  constexpr explicit optional(in_place_t, std::initializer_list<U> il,
+                              Args&&... args);
+
+  template <
+      typename U = T,
+      typename std::enable_if<
+          absl::conjunction<absl::negation<std::is_same<
+                                in_place_t, typename std::decay<U>::type>>,
+                            absl::negation<std::is_same<
+                                optional<T>, typename std::decay<U>::type>>,
+                            std::is_convertible<U&&, T>,
+                            std::is_constructible<T, U&&>>::value,
+          bool>::type = false>
+  constexpr optional(U&& v);
+
+  template <
+      typename U = T,
+      typename std::enable_if<
+          absl::conjunction<absl::negation<std::is_same<
+                                in_place_t, typename std::decay<U>::type>>,
+                            absl::negation<std::is_same<
+                                optional<T>, typename std::decay<U>::type>>,
+                            absl::negation<std::is_convertible<U&&, T>>,
+                            std::is_constructible<T, U&&>>::value,
+          bool>::type = false>
+  explicit constexpr optional(U&& v);
+
+  template <typename U,
+            typename std::enable_if<
+                absl::conjunction<
+                    absl::negation<std::is_same<T, U>>,
+                    std::is_constructible<T, const U&>,
+                    absl::negation<
+                        optional_internal::
+                            is_constructible_convertible_from_optional<T, U>>,
+                    std::is_convertible<const U&, T>>::value,
+                bool>::type = false>
+  optional(const optional<U>& rhs);
+
+  template <typename U,
+            typename std::enable_if<
+                absl::conjunction<
+                    absl::negation<std::is_same<T, U>>,
+                    std::is_constructible<T, const U&>,
+                    absl::negation<
+                        optional_internal::
+                            is_constructible_convertible_from_optional<T, U>>,
+                    absl::negation<std::is_convertible<const U&, T>>>::value,
+                bool>::type = false>
+  explicit optional(const optional<U>& rhs);
+
+  template <
+      typename U,
+      typename std::enable_if<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>, std::is_constructible<T, U&&>,
+              absl::negation<
+                  optional_internal::is_constructible_convertible_from_optional<
+                      T, U>>,
+              std::is_convertible<U&&, T>>::value,
+          bool>::type = false>
+  optional(optional<U>&& rhs);
+
+  template <
+      typename U,
+      typename std::enable_if<
+          absl::conjunction<
+              absl::negation<std::is_same<T, U>>, std::is_constructible<T, U&&>,
+              absl::negation<
+                  optional_internal::is_constructible_convertible_from_optional<
+                      T, U>>,
+              absl::negation<std::is_convertible<U&&, T>>>::value,
+          bool>::type = false>
+  explicit optional(optional<U>&& rhs);
 
   const T& operator*() const&;
   T& operator*() &;
@@ -294,10 +716,107 @@ static constexpr char BaseOptionalHeader[] = R"(
 
 namespace base {
 
+struct in_place_t {};
+constexpr in_place_t in_place;
+
+struct nullopt_t {
+  constexpr explicit nullopt_t() {}
+};
+constexpr nullopt_t nullopt;
+
+template <typename T>
+class Optional;
+
+namespace internal {
+
+template <typename T>
+using RemoveCvRefT = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template <typename T, typename U>
+struct IsConvertibleFromOptional
+    : std::integral_constant<
+          bool, std::is_constructible<T, Optional<U>&>::value ||
+                    std::is_constructible<T, const Optional<U>&>::value ||
+                    std::is_constructible<T, Optional<U>&&>::value ||
+                    std::is_constructible<T, const Optional<U>&&>::value ||
+                    std::is_convertible<Optional<U>&, T>::value ||
+                    std::is_convertible<const Optional<U>&, T>::value ||
+                    std::is_convertible<Optional<U>&&, T>::value ||
+                    std::is_convertible<const Optional<U>&&, T>::value> {};
+
+}  // namespace internal
+
 template <typename T>
 class Optional {
  public:
-  constexpr Optional() noexcept;
+  using value_type = T;
+
+  constexpr Optional() = default;
+  constexpr Optional(const Optional& other) noexcept = default;
+  constexpr Optional(Optional&& other) noexcept = default;
+
+  constexpr Optional(nullopt_t);
+
+  template <typename U,
+            typename std::enable_if<
+                std::is_constructible<T, const U&>::value &&
+                    !internal::IsConvertibleFromOptional<T, U>::value &&
+                    std::is_convertible<const U&, T>::value,
+                bool>::type = false>
+  Optional(const Optional<U>& other) noexcept;
+
+  template <typename U,
+            typename std::enable_if<
+                std::is_constructible<T, const U&>::value &&
+                    !internal::IsConvertibleFromOptional<T, U>::value &&
+                    !std::is_convertible<const U&, T>::value,
+                bool>::type = false>
+  explicit Optional(const Optional<U>& other) noexcept;
+
+  template <typename U,
+            typename std::enable_if<
+                std::is_constructible<T, U&&>::value &&
+                    !internal::IsConvertibleFromOptional<T, U>::value &&
+                    std::is_convertible<U&&, T>::value,
+                bool>::type = false>
+  Optional(Optional<U>&& other) noexcept;
+
+  template <typename U,
+            typename std::enable_if<
+                std::is_constructible<T, U&&>::value &&
+                    !internal::IsConvertibleFromOptional<T, U>::value &&
+                    !std::is_convertible<U&&, T>::value,
+                bool>::type = false>
+  explicit Optional(Optional<U>&& other) noexcept;
+
+  template <class... Args>
+  constexpr explicit Optional(in_place_t, Args&&... args);
+
+  template <class U, class... Args,
+            class = typename std::enable_if<std::is_constructible<
+                value_type, std::initializer_list<U>&, Args...>::value>::type>
+  constexpr explicit Optional(in_place_t, std::initializer_list<U> il,
+                              Args&&... args);
+
+  template <
+      typename U = value_type,
+      typename std::enable_if<
+          std::is_constructible<T, U&&>::value &&
+              !std::is_same<internal::RemoveCvRefT<U>, in_place_t>::value &&
+              !std::is_same<internal::RemoveCvRefT<U>, Optional<T>>::value &&
+              std::is_convertible<U&&, T>::value,
+          bool>::type = false>
+  constexpr Optional(U&& value);
+
+  template <
+      typename U = value_type,
+      typename std::enable_if<
+          std::is_constructible<T, U&&>::value &&
+              !std::is_same<internal::RemoveCvRefT<U>, in_place_t>::value &&
+              !std::is_same<internal::RemoveCvRefT<U>, Optional<T>>::value &&
+              !std::is_convertible<U&&, T>::value,
+          bool>::type = false>
+  constexpr explicit Optional(U&& value);
 
   const T& operator*() const&;
   T& operator*() &;
@@ -389,6 +908,7 @@ private:
     Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
     Headers.emplace_back("std_utility.h", StdUtilityHeader);
     Headers.emplace_back("std_optional.h", StdOptionalHeader);
+    Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
     Headers.emplace_back("absl_optional.h", AbslOptionalHeader);
     Headers.emplace_back("base_optional.h", BaseOptionalHeader);
     Headers.emplace_back("unchecked_optional_access_test.h", R"(
@@ -595,6 +1115,250 @@ TEST_P(UncheckedOptionalAccessTest, DefaultConstructor) {
       UnorderedElementsAre(Pair("check", "unsafe: input.cc:6:7")));
 }
 
+TEST_P(UncheckedOptionalAccessTest, NulloptConstructor) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt($ns::nullopt);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:6:7")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, InPlaceConstructor) {
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt($ns::in_place, 3);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    void target() {
+      $ns::$optional<Foo> opt($ns::in_place);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      explicit Foo(int, bool);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt($ns::in_place, 3, false);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      explicit Foo(std::initializer_list<int>);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt($ns::in_place, {3});
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, ValueConstructor) {
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt(21);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = $ns::$optional<int>(21);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<$ns::$optional<int>> opt(Make<$ns::$optional<int>>());
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct MyString {
+      MyString(const char*);
+    };
+
+    void target() {
+      $ns::$optional<MyString> opt("foo");
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Bar> opt(Make<Foo>());
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      explicit Foo(int);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt(3);
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConvertibleOptionalConstructor) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Bar> opt(Make<$ns::$optional<Foo>>());
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:12:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      explicit Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Bar> opt(Make<$ns::$optional<Foo>>());
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:12:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt1 = $ns::nullopt;
+      $ns::$optional<Bar> opt2(opt1);
+      opt2.value();
+      /*[[check]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:13:7")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt1(Make<Foo>());
+      $ns::$optional<Bar> opt2(opt1);
+      opt2.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      explicit Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt1(Make<Foo>());
+      $ns::$optional<Bar> opt2(opt1);
+      opt2.value();
+      /*[[check]]*/
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+}
+
 TEST_P(UncheckedOptionalAccessTest, MakeOptional) {
   ExpectLatticeChecksFor(R"(
     #include "unchecked_optional_access_test.h"
@@ -698,21 +1462,21 @@ TEST_P(UncheckedOptionalAccessTest, Reset) {
       R"(
     #include "unchecked_optional_access_test.h"
 
-    void target() {
-      $ns::$optional<int> *opt;
-      *opt = $ns::make_optional(0);
-      opt->reset();
-      opt->value();
-      /*[[check]]*/
+    void target($ns::$optional<int> &opt) {
+      if (opt.has_value()) {
+        opt.reset();
+        opt.value();
+        /*[[check]]*/
+      }
     }
   )",
-      UnorderedElementsAre(Pair("check", "unsafe: input.cc:8:7")));
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:7:9")));
 
   // FIXME: Add tests that call `reset` in conditional branches.
 }
 
 // FIXME: Add support for:
-// - constructors (copy, move, non-standard)
+// - constructors (copy, move)
 // - assignment operators (default, copy, move, non-standard)
 // - swap
 // - invalidation (passing optional by non-const reference/pointer)

@@ -70,28 +70,24 @@ using MatchSwitch = std::function<void(const Stmt &, ASTContext &, State &)>;
 /// \endcode
 template <typename State> class MatchSwitchBuilder {
 public:
-  // An action is triggered by the match of a pattern against the input
-  // statement. For generality, actions take both the matched statement and the
-  // set of bindings produced by the match.
-  using Action = std::function<void(
-      const Stmt *, const ast_matchers::MatchFinder::MatchResult &, State &)>;
-
-  MatchSwitchBuilder &&CaseOf(ast_matchers::internal::Matcher<Stmt> M,
-                              Action A) && {
-    Matchers.push_back(std::move(M));
-    Actions.push_back(std::move(A));
-    return std::move(*this);
-  }
-
-  // Convenience function for the common case, where bound nodes are not
-  // needed. `Node` should be a subclass of `Stmt`.
+  /// Registers an action that will be triggered by the match of a pattern
+  /// against the input statement.
+  ///
+  /// Requirements:
+  ///
+  ///  `Node` should be a subclass of `Stmt`.
   template <typename Node>
-  MatchSwitchBuilder &&CaseOf(ast_matchers::internal::Matcher<Stmt> M,
-                              void (*Action)(const Node *, State &)) && {
+  MatchSwitchBuilder &&
+  CaseOf(ast_matchers::internal::Matcher<Stmt> M,
+         std::function<void(const Node *,
+                            const ast_matchers::MatchFinder::MatchResult &,
+                            State &)>
+             A) && {
     Matchers.push_back(std::move(M));
-    Actions.push_back([Action](const Stmt *Stmt,
-                               const ast_matchers::MatchFinder::MatchResult &,
-                               State &S) { Action(cast<Node>(Stmt), S); });
+    Actions.push_back(
+        [A = std::move(A)](const Stmt *Stmt,
+                           const ast_matchers::MatchFinder::MatchResult &R,
+                           State &S) { A(cast<Node>(Stmt), R, S); });
     return std::move(*this);
   }
 
@@ -146,7 +142,9 @@ private:
   }
 
   std::vector<ast_matchers::internal::DynTypedMatcher> Matchers;
-  std::vector<Action> Actions;
+  std::vector<std::function<void(
+      const Stmt *, const ast_matchers::MatchFinder::MatchResult &, State &)>>
+      Actions;
 };
 } // namespace dataflow
 } // namespace clang

@@ -88,6 +88,7 @@ MATCHER_P(Holds, m,
 }
 
 void TransferSetTrue(const DeclRefExpr *,
+                     const ast_matchers::MatchFinder::MatchResult &,
                      TransferState<BooleanLattice> &State) {
   State.Lattice = BooleanLattice(true);
 }
@@ -107,9 +108,10 @@ public:
     using namespace ast_matchers;
     TransferSwitch =
         MatchSwitchBuilder<TransferState<BooleanLattice>>()
-            .CaseOf(declRefExpr(to(varDecl(hasName("X")))), TransferSetTrue)
-            .CaseOf(callExpr(callee(functionDecl(hasName("Foo")))),
-                    TransferSetFalse)
+            .CaseOf<DeclRefExpr>(declRefExpr(to(varDecl(hasName("X")))),
+                                 TransferSetTrue)
+            .CaseOf<Stmt>(callExpr(callee(functionDecl(hasName("Foo")))),
+                          TransferSetFalse)
             .Build();
   }
 
