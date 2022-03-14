@@ -75,13 +75,25 @@ struct PreambleData {
 using PreambleParsedCallback = std::function<void(ASTContext &, Preprocessor &,
                                                   const CanonicalIncludes &)>;
 
+/// Timings and statistics from the premble build. Unlike PreambleData, these
+/// do not need to be stored for later, but can be useful for logging, metrics,
+/// etc.
+struct PreambleBuildStats {
+  /// Total wall time it took to build preamble, in seconds.
+  double TotalBuildTime;
+  /// Time spent in filesystem operations during the build, in seconds.
+  double FileSystemTime;
+};
+
 /// Build a preamble for the new inputs unless an old one can be reused.
 /// If \p PreambleCallback is set, it will be run on top of the AST while
 /// building the preamble.
+/// If Stats is not non-null, build statistics will be exported there.
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
-              PreambleParsedCallback PreambleCallback);
+              PreambleParsedCallback PreambleCallback,
+              PreambleBuildStats *Stats = nullptr);
 
 /// Returns true if \p Preamble is reusable for \p Inputs. Note that it will
 /// return true when some missing headers are now available.
