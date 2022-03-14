@@ -907,8 +907,8 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       // explicitly do not support the suffix in C++ as an extension because a
       // library-based UDL that resolves to a library type may be more
       // appropriate there.
-      if (!LangOpts.CPlusPlus && (s[0] == 'w' && s[1] == 'b') ||
-          (s[0] == 'W' && s[1] == 'B')) {
+      if (!LangOpts.CPlusPlus && ((s[0] == 'w' && s[1] == 'b') ||
+          (s[0] == 'W' && s[1] == 'B'))) {
         isBitInt = true;
         HasSize = true;
         ++s; // Skip both characters (2nd char skipped on continue).
