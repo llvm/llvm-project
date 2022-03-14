@@ -1916,7 +1916,10 @@ private:
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
-    TODO(toLocation(), "FormatStmt lowering");
+    // do nothing.
+
+    // FORMAT statements have no semantics. They may be lowered if used by a
+    // data transfer statement.
   }
 
   void genFIR(const Fortran::parser::PauseStmt &stmt) {
