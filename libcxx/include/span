@@ -170,7 +170,25 @@ struct __is_std_span : false_type {};
 template <class _Tp, size_t _Sz>
 struct __is_std_span<span<_Tp, _Sz>> : true_type {};
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if defined(_LIBCPP_HAS_NO_CONCEPTS) || defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+// This is a temporary workaround until we ship <ranges> -- we've unfortunately been
+// shipping <span> before its API was finalized, and we used to provide a constructor
+// from container types that had the requirements below. To avoid breaking code that
+// has started relying on the range-based constructor until we ship all of <ranges>,
+// we emulate the constructor requirements like this.
+template <class _Range, class _ElementType, class = void>
+struct __span_compatible_range : false_type { };
+
+template <class _Range, class _ElementType>
+struct __span_compatible_range<_Range, _ElementType, void_t<
+    enable_if_t<!__is_std_span<remove_cvref_t<_Range>>::value>,
+    enable_if_t<!__is_std_array<remove_cvref_t<_Range>>::value>,
+    enable_if_t<!is_array_v<remove_cvref_t<_Range>>>,
+    decltype(data(declval<_Range>())),
+    decltype(size(declval<_Range>())),
+    enable_if_t<is_convertible_v<remove_pointer_t<decltype(data(declval<_Range&>()))>(*)[], _ElementType(*)[]>>
+>> : true_type { };
+#else
 template <class _Range, class _ElementType>
 concept __span_compatible_range =
   ranges::contiguous_range<_Range> &&
@@ -248,7 +266,22 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(const array<_OtherElementType, _Extent>& __arr) noexcept : __data{__arr.data()} {}
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if defined(_LIBCPP_HAS_NO_CONCEPTS) || defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+    template <class _Container, class = enable_if_t<
+        __span_compatible_range<_Container, element_type>::value
+    >>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr explicit span(_Container& __c) : __data{std::data(__c)} {
+      _LIBCPP_ASSERT(std::size(__c) == _Extent, "size mismatch in span's constructor (range)");
+    }
+    template <class _Container, class = enable_if_t<
+        __span_compatible_range<const _Container, element_type>::value
+    >>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr explicit span(const _Container& __c) : __data{std::data(__c)} {
+      _LIBCPP_ASSERT(std::size(__c) == _Extent, "size mismatch in span's constructor (range)");
+    }
+#else
     template <__span_compatible_range<element_type> _Range>
     _LIBCPP_INLINE_VISIBILITY
     constexpr explicit span(_Range&& __r) : __data{ranges::data(__r)} {
@@ -434,7 +467,18 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(const array<_OtherElementType, _Sz>& __arr) noexcept : __data{__arr.data()}, __size{_Sz} {}
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if defined(_LIBCPP_HAS_NO_CONCEPTS) || defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+    template <class _Container, class = enable_if_t<
+        __span_compatible_range<_Container, element_type>::value
+    >>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr span(_Container& __c) : __data(std::data(__c)), __size{std::size(__c)} {}
+    template <class _Container, class = enable_if_t<
+        __span_compatible_range<const _Container, element_type>::value
+    >>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr span(const _Container& __c) : __data(std::data(__c)), __size{std::size(__c)} {}
+#else
     template <__span_compatible_range<element_type> _Range>
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(_Range&& __r) : __data(ranges::data(__r)), __size{ranges::size(__r)} {}
