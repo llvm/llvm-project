@@ -212,6 +212,10 @@ public:
 
   mlir::StringAttr createLinkOnceLinkage() { return getStringAttr("linkonce"); }
 
+  mlir::StringAttr createLinkOnceODRLinkage() {
+    return getStringAttr("linkonce_odr");
+  }
+
   mlir::StringAttr createWeakLinkage() { return getStringAttr("weak"); }
 
   /// Get a function by name. If the function exists in the current module, it
