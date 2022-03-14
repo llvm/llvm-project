@@ -560,6 +560,18 @@ struct IRInstructionMapper {
         return Illegal;
       if (!F && !IsIndirectCall)
         return Illegal;
+      // Functions marked with the swifttailcc and tailcc calling conventions
+      // require special handling when outlining musttail functions.  The
+      // calling convention must be passed down to the outlined function as
+      // well. Further, there is special handling for musttail calls as well,
+      // requiring a return call directly after.  For now, the outliner does not
+      // support this, so we do not handle matching this case either.
+      if ((CI.getCallingConv() == CallingConv::SwiftTail ||
+           CI.getCallingConv() == CallingConv::Tail) &&
+          !EnableMustTailCalls)
+        return Illegal;
+      if (CI.isMustTailCall() && !EnableMustTailCalls)
+        return Illegal;
       return Legal;
     }
     // TODO: We do not current handle similarity that changes the control flow.
@@ -581,6 +593,10 @@ struct IRInstructionMapper {
     // Flag that lets the classifier know whether we should allow intrinsics to
     // be checked for similarity.
     bool EnableIntrinsics = false;
+  
+    // Flag that lets the classifier know whether we should allow tail calls to
+    // be checked for similarity.
+    bool EnableMustTailCalls = false;
   };
 
   /// Maps an Instruction to a member of InstrType.
@@ -968,11 +984,13 @@ public:
   IRSimilarityIdentifier(bool MatchBranches = true,
                          bool MatchIndirectCalls = true,
                          bool MatchCallsWithName = false,
-                         bool MatchIntrinsics = true)
+                         bool MatchIntrinsics = true,
+                         bool MatchMustTailCalls = true)
       : Mapper(&InstDataAllocator, &InstDataListAllocator),
         EnableBranches(MatchBranches), EnableIndirectCalls(MatchIndirectCalls),
         EnableMatchingCallsByName(MatchCallsWithName),
-        EnableIntrinsics(MatchIntrinsics) {}
+        EnableIntrinsics(MatchIntrinsics),
+        EnableMustTailCalls(MatchMustTailCalls) {}
 
 private:
   /// Map the instructions in the module to unsigned integers, using mapping
@@ -1064,6 +1082,10 @@ private:
   /// The flag variable that marks whether we should check intrinsics for
   /// similarity.
   bool EnableIntrinsics = true;
+
+  // The flag variable that marks whether we should allow tailcalls
+  // to be checked for similarity.
+  bool EnableMustTailCalls = false;
 
   /// The SimilarityGroups found with the most recent run of \ref
   /// findSimilarity. None if there is no recent run.
