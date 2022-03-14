@@ -51,8 +51,7 @@ Status::Status(std::error_code EC)
                                                       : eErrorTypeGeneric),
       m_string(EC.message()) {}
 
-Status::Status(const char *format, ...)
-    : m_code(0), m_type(eErrorTypeInvalid), m_string() {
+Status::Status(const char *format, ...) : m_string() {
   va_list args;
   va_start(args, format);
   SetErrorToGenericError();

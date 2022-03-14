@@ -281,8 +281,7 @@ extern \"C\" void * __lldb_objc_find_implementation_for_selector (void *object, 
 
 AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::VTableRegion(
     AppleObjCVTables *owner, lldb::addr_t header_addr)
-    : m_valid(true), m_owner(owner), m_header_addr(header_addr),
-      m_code_start_addr(0), m_code_end_addr(0), m_next_region(0) {
+    : m_valid(true), m_owner(owner), m_header_addr(header_addr) {
   SetUpRegion();
 }
 

@@ -263,11 +263,10 @@ constexpr Definition g_root = Entry::DefinitionWithChildren(
 
 FormatEntity::Entry::Entry(llvm::StringRef s)
     : string(s.data(), s.size()), printf_format(), children(),
-      type(Type::String), fmt(lldb::eFormatDefault), number(0), deref(false) {}
+      type(Type::String) {}
 
 FormatEntity::Entry::Entry(char ch)
-    : string(1, ch), printf_format(), children(), type(Type::String),
-      fmt(lldb::eFormatDefault), number(0), deref(false) {}
+    : string(1, ch), printf_format(), children(), type(Type::String) {}
 
 void FormatEntity::Entry::AppendChar(char ch) {
   if (children.empty() || children.back().type != Entry::Type::String)

@@ -138,7 +138,7 @@ class CommandObjectMemoryTagWrite : public CommandObjectParsed {
 public:
   class OptionGroupTagWrite : public OptionGroup {
   public:
-    OptionGroupTagWrite() : m_end_addr(LLDB_INVALID_ADDRESS) {}
+    OptionGroupTagWrite() {}
 
     ~OptionGroupTagWrite() override = default;
 
@@ -168,7 +168,7 @@ public:
       m_end_addr = LLDB_INVALID_ADDRESS;
     }
 
-    lldb::addr_t m_end_addr;
+    lldb::addr_t m_end_addr = LLDB_INVALID_ADDRESS;
   };
 
   CommandObjectMemoryTagWrite(CommandInterpreter &interpreter)

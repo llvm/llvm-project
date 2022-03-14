@@ -25,7 +25,7 @@ using namespace lldb_private;
 Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order,
                bool colors)
     : m_flags(flags), m_addr_size(addr_size), m_byte_order(byte_order),
-      m_indent_level(0), m_forwarder(*this, colors) {}
+      m_forwarder(*this, colors) {}
 
 Stream::Stream(bool colors)
     : m_flags(0), m_byte_order(endian::InlHostByteOrder()),
