@@ -11,7 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
 // Use generated BUILTIN definitions
 #include "clang/Basic/BuiltinsVEVL.gen.def"
 
 #undef BUILTIN
+#undef TARGET_BUILTIN
