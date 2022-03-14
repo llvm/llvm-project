@@ -165,8 +165,8 @@ static void verifyInstructionEliminated(const InstRef &IR) {
 
   // Ensure that instructions eliminated at register renaming stage are in a
   // consistent state.
-  const InstrDesc &Desc = Inst.getDesc();
-  assert(!Desc.MayLoad && !Desc.MayStore && "Cannot eliminate a memory op!");
+  assert(!Inst.getMayLoad() && !Inst.getMayStore() &&
+         "Cannot eliminate a memory op!");
 }
 #endif
 

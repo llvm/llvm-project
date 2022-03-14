@@ -303,47 +303,6 @@ private:
 //===----------------------------------------------------------------------===//
 // FillOp
 //===----------------------------------------------------------------------===//
-void FillOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                           ArrayRef<NamedAttribute> attrs) {
-  assert(block.getNumArguments() == 2 && "FillOp regionBuilder expects 2 args");
-  b.create<linalg::YieldOp>(block.getArgument(0));
-}
-
-void FillOp::build(OpBuilder &builder, OperationState &result, Value value,
-                   Value output) {
-  build(builder, result, output.getType().dyn_cast<RankedTensorType>(), value,
-        output);
-  fillStructuredOpRegion<FillOp>(
-      builder, *result.regions.front(), TypeRange{value.getType()},
-      TypeRange{output.getType()}, result.attributes.getAttrs(), {});
-}
-
-ParseResult parseFillOpRegion(OpAsmParser &parser, Region &r, Type valueType,
-                              Type outputType) {
-  OpBuilder opBuilder(parser.getContext());
-  fillStructuredOpRegion<FillOp>(opBuilder, r, TypeRange{valueType},
-                                 TypeRange{outputType}, {});
-  return success();
-}
-
-/// FillOp region is elided when printing.
-void printFillOpRegion(OpAsmPrinter &, Operation *, Region &, Type, Type) {}
-
-LogicalResult FillOp::verify() {
-  OpOperand *output = getOutputOperand(0);
-  Type fillType = value().getType();
-  if (getElementTypeOrSelf(output->get()) != fillType)
-    return emitOpError("expects fill type to match view elemental type");
-  return success();
-}
-
-void FillOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  if (output().getType().isa<MemRefType>())
-    effects.emplace_back(MemoryEffects::Write::get(), output(),
-                         SideEffects::DefaultResource::get());
-}
 
 namespace {
 
@@ -364,7 +323,8 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
     auto newInit = rewriter.create<TensorReshapeOp>(
         loc, reshapeOp.getResultType(), oldFill.output(),
         reshapeOp.reassociation());
-    rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, oldFill.value(), newInit);
+    rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, ValueRange{oldFill.value()},
+                                        ValueRange{newInit});
 
     return success();
   }
@@ -400,8 +360,8 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
     auto newInitOp = rewriter.create<InitTensorOp>(
         padOp.getLoc(), reifiedShape.front(), staticShape,
         oldResultType.getElementType());
-    auto newFillOp =
-        rewriter.create<FillOp>(fillOp.getLoc(), padValue, newInitOp);
+    auto newFillOp = rewriter.create<FillOp>(
+        fillOp.getLoc(), ValueRange{padValue}, ValueRange{newInitOp});
     rewriter.replaceOpWithNewOp<tensor::CastOp>(padOp, oldResultType,
                                                 newFillOp.result());
 
@@ -516,10 +476,6 @@ void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
            FoldInsertPadIntoFill>(context);
 }
-
-// TODO: Add the FillOp patterns when transitioning to the OpDSL FillOp.
-void FillTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                               MLIRContext *context) {}
 
 //===----------------------------------------------------------------------===//
 // GenericOps
@@ -875,6 +831,11 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<DeduplicateGenericOpInputs, EraseIdentityGenericOp>(context);
+}
+
+LogicalResult GenericOp::fold(ArrayRef<Attribute>,
+                              SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1642,20 +1603,13 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     resultTypes[resultNumber] = resultType;
     Operation *newOp = linalgOp.clone(rewriter, loc, resultTypes, newOperands);
 
-    if (!resultValue.hasOneUse()) {
-      SmallVector<Value> results(newOp->result_begin(), newOp->result_end());
-      // Create a tensor.cast operation back to the original type.
-      Value castBack = rewriter.create<tensor::CastOp>(
-          loc, resultValue.getType(), newOp->getResult(resultNumber));
-      results[resultNumber] = castBack;
-      // Replace all uses except the use in the cast op that is matched by the
-      // pattern. Note that this cast is from a more static shape to a more
-      // dynamic shape. These are expected to be pulled into their consumers.
-      rewriter.replaceOpWithIf(linalgOp, results,
-                               [&castOp](OpOperand &use) -> bool {
-                                 return use.getOwner() != castOp.getOperation();
-                               });
-    }
+    // Create a tensor.cast operation back to the original type.
+    Value castBack = rewriter.create<tensor::CastOp>(
+        loc, resultValue.getType(), newOp->getResult(resultNumber));
+
+    SmallVector<Value> results(newOp->result_begin(), newOp->result_end());
+    results[resultNumber] = castBack;
+    rewriter.replaceOp(linalgOp, results);
     rewriter.replaceOp(castOp, newOp->getResult(resultNumber));
     return success();
   }
@@ -1818,15 +1772,6 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
 };
 
 } // namespace
-
-#define LINALGOP_FOLDERS(XXX)                                                  \
-  LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \
-                          SmallVectorImpl<OpFoldResult> &) {                   \
-    return foldMemRefCast(*this);                                              \
-  }
-
-LINALGOP_FOLDERS(FillOp)
-LINALGOP_FOLDERS(GenericOp)
 
 // All named ops canonicalizers and folders are auto-generated in the
 // .cpp.inc.

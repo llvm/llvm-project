@@ -572,6 +572,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   LLVM_DEBUG(dbgs() << "\n\t\tOpcode Name= " << MCII.getName(Opcode) << '\n');
   LLVM_DEBUG(dbgs() << "\t\tSchedClassID=" << SchedClassID << '\n');
+  LLVM_DEBUG(dbgs() << "\t\tOpcode=" << Opcode << '\n');
 
   // Create a new empty descriptor.
   std::unique_ptr<InstrDesc> ID = std::make_unique<InstrDesc>();
@@ -592,13 +593,6 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
     WithColor::note() << "program counter updates are ignored.\n";
     FirstReturnInst = false;
   }
-
-  ID->MayLoad = MCDesc.mayLoad();
-  ID->MayStore = MCDesc.mayStore();
-  ID->HasSideEffects = MCDesc.hasUnmodeledSideEffects();
-  ID->BeginGroup = SCDesc.BeginGroup;
-  ID->EndGroup = SCDesc.EndGroup;
-  ID->RetireOOO = SCDesc.RetireOOO;
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
   computeMaxLatency(*ID, MCDesc, SCDesc, STI);
@@ -646,6 +640,17 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   const InstrDesc &D = *DescOrErr;
   std::unique_ptr<Instruction> NewIS =
       std::make_unique<Instruction>(D, MCI.getOpcode());
+
+  const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
+  const MCSchedClassDesc &SCDesc =
+      *STI.getSchedModel().getSchedClassDesc(D.SchedClassID);
+
+  NewIS->setMayLoad(MCDesc.mayLoad());
+  NewIS->setMayStore(MCDesc.mayStore());
+  NewIS->setHasSideEffects(MCDesc.hasUnmodeledSideEffects());
+  NewIS->setBeginGroup(SCDesc.BeginGroup);
+  NewIS->setEndGroup(SCDesc.EndGroup);
+  NewIS->setRetireOOO(SCDesc.RetireOOO);
 
   // Check if this is a dependency breaking instruction.
   APInt Mask;

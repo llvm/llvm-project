@@ -166,7 +166,7 @@ func @dot_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf3
 //       CHECKPARALLEL:   store %[[res]], %{{.*}}[] : memref<f32>
 
 func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<?xf32, offset: ?, strides: [1]>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?xf32, offset: ?, strides: [1]>)
   return
 }
 // CHECK-LABEL: func @fill_view(
@@ -180,7 +180,7 @@ func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
 //       CHECKPARALLEL:     store %{{.*}}, %{{.*}}[%{{.*}}] : memref<?xf32, #[[$strided1D]]>
 
 func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<f32>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<f32>)
   return
 }
 // CHECK-LABEL: func @fill_view0(%{{.*}}: memref<f32>, %{{.*}}: f32) {
@@ -190,7 +190,7 @@ func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
 //       CHECKPARALLEL:   store %{{.*}}, %{{.*}}[] : memref<f32>
 
 func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
   return
 }
 // CHECK-LABEL: func @fill_view3(

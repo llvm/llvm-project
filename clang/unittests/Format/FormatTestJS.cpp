@@ -2699,7 +2699,7 @@ TEST_F(FormatTestJS, NumericSeparators) {
 
 TEST_F(FormatTestJS, AlignConsecutiveDeclarations) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations.Enabled = true;
   verifyFormat("let    letVariable = 5;\n"
                "double constVariable = 10;",
                Style);
@@ -2736,7 +2736,7 @@ TEST_F(FormatTestJS, AlignConsecutiveDeclarations) {
 TEST_F(FormatTestJS, AlignConsecutiveAssignments) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
 
-  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveAssignments.Enabled = true;
   verifyFormat("let letVariable      = 5;\n"
                "double constVariable = 10;",
                Style);
@@ -2772,8 +2772,8 @@ TEST_F(FormatTestJS, AlignConsecutiveAssignments) {
 
 TEST_F(FormatTestJS, AlignConsecutiveAssignmentsAndDeclarations) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
-  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveAssignments.Enabled = true;
   verifyFormat("let    letVariable   = 5;\n"
                "double constVariable = 10;",
                Style);

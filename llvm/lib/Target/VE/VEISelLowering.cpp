@@ -332,6 +332,14 @@ void VETargetLowering::initVPUActions() {
 
     for (unsigned MemOpc : {ISD::MLOAD, ISD::MSTORE, ISD::LOAD, ISD::STORE})
       setOperationAction(MemOpc, VT, Custom);
+
+    const ISD::NodeType IntReductionOCs[] = {
+        ISD::VECREDUCE_ADD,  ISD::VECREDUCE_MUL,  ISD::VECREDUCE_AND,
+        ISD::VECREDUCE_OR,   ISD::VECREDUCE_XOR,  ISD::VECREDUCE_SMIN,
+        ISD::VECREDUCE_SMAX, ISD::VECREDUCE_UMIN, ISD::VECREDUCE_UMAX};
+
+    for (unsigned IntRedOpc : IntReductionOCs)
+      setOperationAction(IntRedOpc, VT, Custom);
   }
 }
 

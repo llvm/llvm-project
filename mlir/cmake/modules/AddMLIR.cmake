@@ -5,7 +5,6 @@ function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
 # Declare a dialect in the include directory

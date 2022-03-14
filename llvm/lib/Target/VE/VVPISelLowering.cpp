@@ -51,9 +51,12 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   case VEISD::VVP_LOAD:
   case VEISD::VVP_STORE:
     return lowerVVP_LOAD_STORE(Op, CDAG);
-  };
+  case VEISD::VVP_GATHER:
+  case VEISD::VVP_SCATTER:
+    return lowerVVP_GATHER_SCATTER(Op, CDAG);
+  }
 
-  EVT OpVecVT = Op.getValueType();
+  EVT OpVecVT = *getIdiomaticVectorType(Op.getNode());
   EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
   auto Packing = getTypePacking(LegalVecVT.getSimpleVT());
 
@@ -81,6 +84,14 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     return CDAG.getNode(VVPOpcode, LegalVecVT,
                         {Op->getOperand(0), Op->getOperand(1), Mask, AVL});
   }
+  if (isVVPReductionOp(VVPOpcode)) {
+    auto SrcHasStart = hasReductionStartParam(Op->getOpcode());
+    SDValue StartV = SrcHasStart ? Op->getOperand(0) : SDValue();
+    SDValue VectorV = Op->getOperand(SrcHasStart ? 1 : 0);
+    return CDAG.getLegalReductionOpVVP(VVPOpcode, Op.getValueType(), StartV,
+                                       VectorV, Mask, AVL, Op->getFlags());
+  }
+
   if (VVPOpcode == VEISD::VVP_SELECT) {
     auto Mask = Op->getOperand(0);
     auto OnTrue = Op->getOperand(1);
@@ -88,10 +99,11 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
   }
   if (VVPOpcode == VEISD::VVP_SETCC) {
+    EVT LegalResVT = getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     auto LHS = Op->getOperand(0);
     auto RHS = Op->getOperand(1);
     auto Pred = Op->getOperand(2);
-    return CDAG.getNode(VVPOpcode, LegalVecVT, {LHS, RHS, Pred, Mask, AVL});
+    return CDAG.getNode(VVPOpcode, LegalResVT, {LHS, RHS, Pred, Mask, AVL});
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }
@@ -233,6 +245,54 @@ SDValue VETargetLowering::splitPackedLoadStore(SDValue Op,
                                     PartOps[(int)PackElem::Hi], UpperPartAVL);
 
   return CDAG.getMergeValues({PackedVals, FusedChains});
+}
+
+SDValue VETargetLowering::lowerVVP_GATHER_SCATTER(SDValue Op,
+                                                  VECustomDAG &CDAG) const {
+  EVT DataVT = *getIdiomaticVectorType(Op.getNode());
+  auto Packing = getTypePacking(DataVT);
+  MVT LegalDataVT =
+      getLegalVectorType(Packing, DataVT.getVectorElementType().getSimpleVT());
+
+  SDValue AVL = getAnnotatedNodeAVL(Op).first;
+  SDValue Index = getGatherScatterIndex(Op);
+  SDValue BasePtr = getMemoryPtr(Op);
+  SDValue Mask = getNodeMask(Op);
+  SDValue Chain = getNodeChain(Op);
+  SDValue Scale = getGatherScatterScale(Op);
+  SDValue PassThru = getNodePassthru(Op);
+  SDValue StoredValue = getStoredValue(Op);
+  if (PassThru && PassThru->isUndef())
+    PassThru = SDValue();
+
+  bool IsScatter = (bool)StoredValue;
+
+  // TODO: Infer lower AVL from mask.
+  if (!AVL)
+    AVL = CDAG.getConstant(DataVT.getVectorNumElements(), MVT::i32);
+
+  // Default to the all-true mask.
+  if (!Mask)
+    Mask = CDAG.getConstantMask(Packing, true);
+
+  SDValue AddressVec =
+      CDAG.getGatherScatterAddress(BasePtr, Scale, Index, Mask, AVL);
+  if (IsScatter)
+    return CDAG.getNode(VEISD::VVP_SCATTER, MVT::Other,
+                        {Chain, StoredValue, AddressVec, Mask, AVL});
+
+  // Gather.
+  SDValue NewLoadV = CDAG.getNode(VEISD::VVP_GATHER, {LegalDataVT, MVT::Other},
+                                  {Chain, AddressVec, Mask, AVL});
+
+  if (!PassThru)
+    return NewLoadV;
+
+  // TODO: Use vvp_select
+  SDValue DataV = CDAG.getNode(VEISD::VVP_SELECT, LegalDataVT,
+                               {NewLoadV, PassThru, Mask, AVL});
+  SDValue NewLoadChainV = SDValue(NewLoadV.getNode(), 1);
+  return CDAG.getMergeValues({DataV, NewLoadChainV});
 }
 
 SDValue VETargetLowering::legalizeInternalLoadStoreOp(SDValue Op,
