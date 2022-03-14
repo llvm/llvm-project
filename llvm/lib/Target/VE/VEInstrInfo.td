@@ -875,14 +875,14 @@ multiclass BCRm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
 //   e.g. LCR
 let hasSideEffects = 1 in
 multiclass LOADCRm<string opcStr, bits<8>opc, RegisterClass RC> {
-  def rr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$sy),
+  def rr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cy = 0 in def ri : RR<opc, (outs RC:$sx), (ins RC:$sz, simm7:$sy),
+  let cy = 0 in def ir : RR<opc, (outs RC:$sx), (ins simm7:$sy, RC:$sz),
                             !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cz = 0 in def zr : RR<opc, (outs RC:$sx), (ins zero:$sz, RC:$sy),
+  let cz = 0 in def rz : RR<opc, (outs RC:$sx), (ins RC:$sy, zero:$sz),
                             !strconcat(opcStr, " $sx, $sy, $sz")>;
   let cy = 0, cz = 0 in
-  def zi : RR<opc, (outs RC:$sx), (ins zero:$sz, simm7:$sy),
+  def iz : RR<opc, (outs RC:$sx), (ins simm7:$sy, zero:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
 }
 
@@ -890,16 +890,30 @@ multiclass LOADCRm<string opcStr, bits<8>opc, RegisterClass RC> {
 //   e.g. SCR
 let hasSideEffects = 1 in
 multiclass STORECRm<string opcStr, bits<8>opc, RegisterClass RC> {
-  def rr : RR<opc, (outs), (ins RC:$sz, RC:$sy, RC:$sx),
+  def rrr : RR<opc, (outs), (ins RC:$sy, RC:$sz, RC:$sx),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cy = 0 in def ri : RR<opc, (outs), (ins RC:$sz, simm7:$sy, RC:$sx),
-                            !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cz = 0 in def zr : RR<opc, (outs), (ins zero:$sz, RC:$sy, RC:$sx),
-                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def irr : RR<opc, (outs), (ins simm7:$sy, RC:$sz, RC:$sx),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def rzr : RR<opc, (outs), (ins RC:$sy, zero:$sz, RC:$sx),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
   let cy = 0, cz = 0 in
-  def zi : RR<opc, (outs), (ins zero:$sz, simm7:$sy, RC:$sx),
-              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  def izr : RR<opc, (outs), (ins simm7:$sy, zero:$sz, RC:$sx),
+               !strconcat(opcStr, " $sx, $sy, $sz")>;
 }
+
+let hasSideEffects = 1, Constraints = "$sx = $sx_in", DisableEncoding = "$sx_in" in
+multiclass TSCRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def rrr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz, RC:$sx_in),
+               !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def irr : RR<opc, (outs RC:$sx), (ins simm7:$sy, RC:$sz, RC:$sx_in),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def rzr : RR<opc, (outs RC:$sx), (ins RC:$sy, zero:$sz, RC:$sx_in),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def izr : RR<opc, (outs RC:$sx), (ins simm7:$sy, zero:$sz, RC:$sx_in),
+               !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
 
 // Multiclass for communication register instructions.
 //   e.g. FIDCR
@@ -1528,7 +1542,7 @@ defm LCR : LOADCRm<"lcr", 0x40, I64>;
 defm SCR : STORECRm<"scr", 0x50, I64>;
 
 // Section 8.19.11 - TSCR (Test & Set Communication Register)
-defm TSCR : LOADCRm<"tscr", 0x41, I64>;
+defm TSCR : TSCRm<"tscr", 0x41, I64>;
 
 // Section 8.19.12 - FIDCR (Fetch & Increment/Decrement CR)
 defm FIDCR : FIDCRm<"fidcr", 0x51, I64>;
