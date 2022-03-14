@@ -140,6 +140,11 @@ CIRGenCXXABI *cir::CreateCIRGenItaniumCXXABI(CIRGenModule &CGM) {
     assert(CGM.getASTContext().getTargetInfo().getTriple().getArch() !=
                llvm::Triple::le32 &&
            "le32 NYI");
+    LLVM_FALLTHROUGH;
+  case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::AppleARM64:
+    // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
+    // from ARMCXXABI. We'll have to follow suit.
     return new CIRGenItaniumCXXABI(CGM);
 
   default:

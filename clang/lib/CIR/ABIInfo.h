@@ -13,6 +13,7 @@
 
 namespace cir {
 
+class ABIArgInfo;
 class CIRGenCXXABI;
 class CIRGenFunctionInfo;
 class CIRGenTypes;

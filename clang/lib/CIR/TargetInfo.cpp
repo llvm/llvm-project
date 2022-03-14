@@ -10,6 +10,69 @@
 using namespace cir;
 using namespace clang;
 
+static bool testIfIsVoidTy(QualType Ty) {
+  const auto *BT = Ty->getAs<BuiltinType>();
+  if (!BT)
+    return false;
+
+  BuiltinType::Kind k = BT->getKind();
+  return k == BuiltinType::Void;
+}
+
+//===----------------------------------------------------------------------===//
+// AArch64 ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class AArch64ABIInfo : public ABIInfo {
+public:
+  enum ABIKind { AAPCS = 0, DarwinPCS, Win64 };
+
+private:
+  ABIKind Kind;
+
+public:
+  AArch64ABIInfo(CIRGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {}
+
+private:
+  ABIKind getABIKind() const { return Kind; }
+  bool isDarwinPCS() const { return Kind == DarwinPCS; }
+
+  ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadic) const;
+  ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadic,
+                                  unsigned CallingConvention) const;
+
+  void computeInfo(CIRGenFunctionInfo &FI) const override {
+    // Top leevl CIR has unlimited arguments and return types. Lowering for ABI
+    // specific concerns should happen during a lowering phase. Assume
+    // everything is direct for now.
+    for (CIRGenFunctionInfo::arg_iterator it = FI.arg_begin(),
+                                          ie = FI.arg_end();
+         it != ie; ++it) {
+      if (testIfIsVoidTy(it->type))
+        it->info = ABIArgInfo::getIgnore();
+      else
+        it->info = ABIArgInfo::getDirect(CGT.ConvertType(it->type));
+    }
+    auto RetTy = FI.getReturnType();
+    if (testIfIsVoidTy(RetTy))
+      FI.getReturnInfo() = ABIArgInfo::getIgnore();
+    else
+      FI.getReturnInfo() = ABIArgInfo::getDirect(CGT.ConvertType(RetTy));
+
+    return;
+  }
+};
+
+class AArch64TargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AArch64TargetCIRGenInfo(CIRGenTypes &CGT, AArch64ABIInfo::ABIKind Kind)
+      : TargetCIRGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {}
+};
+
+} // namespace
+
 namespace {
 
 /// The AVX ABI leel for X86 targets.
@@ -112,15 +175,6 @@ clang::ASTContext &ABIInfo::getContext() const { return CGT.getContext(); }
 ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
                                             unsigned freeIntRegs) const {
   assert(false && "NYI");
-}
-
-static bool testIfIsVoidTy(QualType Ty) {
-  const auto *BT = Ty->getAs<BuiltinType>();
-  if (!BT)
-    return false;
-
-  BuiltinType::Kind k = BT->getKind();
-  return k == BuiltinType::Void;
 }
 
 void X86_64ABIInfo::computeInfo(CIRGenFunctionInfo &FI) const {
@@ -423,6 +477,15 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   switch (Triple.getArch()) {
   default:
     assert(false && "Target not yet supported!");
+  case llvm::Triple::aarch64: {
+    AArch64ABIInfo::ABIKind Kind = AArch64ABIInfo::AAPCS;
+    assert(getTarget().getABI() == "aapcs" ||
+           getTarget().getABI() == "darwinpcs" &&
+               "Only Darwin supported for aarch64");
+    Kind = AArch64ABIInfo::DarwinPCS;
+    return SetCIRGenInfo(new AArch64TargetCIRGenInfo(genTypes, Kind));
+  }
+
   case llvm::Triple::x86_64: {
     StringRef ABI = getTarget().getABI();
     X86AVXABILevel AVXLevel = (ABI == "avx512" ? X86AVXABILevel::AVX512

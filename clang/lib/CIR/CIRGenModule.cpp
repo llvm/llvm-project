@@ -79,6 +79,8 @@ using llvm::StringRef;
 static CIRGenCXXABI *createCXXABI(CIRGenModule &CGM) {
   switch (CGM.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
+  case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::AppleARM64:
     return CreateCIRGenItaniumCXXABI(CGM);
   default:
     llvm_unreachable("invalid C++ ABI kind");
