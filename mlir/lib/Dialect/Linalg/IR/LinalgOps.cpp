@@ -1642,20 +1642,13 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     resultTypes[resultNumber] = resultType;
     Operation *newOp = linalgOp.clone(rewriter, loc, resultTypes, newOperands);
 
-    if (!resultValue.hasOneUse()) {
-      SmallVector<Value> results(newOp->result_begin(), newOp->result_end());
-      // Create a tensor.cast operation back to the original type.
-      Value castBack = rewriter.create<tensor::CastOp>(
-          loc, resultValue.getType(), newOp->getResult(resultNumber));
-      results[resultNumber] = castBack;
-      // Replace all uses except the use in the cast op that is matched by the
-      // pattern. Note that this cast is from a more static shape to a more
-      // dynamic shape. These are expected to be pulled into their consumers.
-      rewriter.replaceOpWithIf(linalgOp, results,
-                               [&castOp](OpOperand &use) -> bool {
-                                 return use.getOwner() != castOp.getOperation();
-                               });
-    }
+    // Create a tensor.cast operation back to the original type.
+    Value castBack = rewriter.create<tensor::CastOp>(
+        loc, resultValue.getType(), newOp->getResult(resultNumber));
+
+    SmallVector<Value> results(newOp->result_begin(), newOp->result_end());
+    results[resultNumber] = castBack;
+    rewriter.replaceOp(linalgOp, results);
     rewriter.replaceOp(castOp, newOp->getResult(resultNumber));
     return success();
   }

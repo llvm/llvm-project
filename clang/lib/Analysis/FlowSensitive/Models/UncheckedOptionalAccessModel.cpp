@@ -11,6 +11,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
+#include <memory>
+#include <utility>
 
 namespace clang {
 namespace dataflow {
@@ -39,6 +41,21 @@ static auto isOptionalMemberCallWithName(llvm::StringRef MemberName) {
 static auto isOptionalOperatorCallWithName(llvm::StringRef OperatorName) {
   return cxxOperatorCallExpr(hasOverloadedOperatorName(OperatorName),
                              callee(cxxMethodDecl(ofClass(optionalClass()))));
+}
+
+static auto isMakeOptionalCall() {
+  return callExpr(
+      callee(functionDecl(hasAnyName(
+          "std::make_optional", "base::make_optional", "absl::make_optional"))),
+      hasOptionalType());
+}
+
+/// Creates a symbolic value for an `optional` value using `HasValueVal` as the
+/// symbolic value of its "has_value" property.
+StructValue &createOptionalValue(Environment &Env, BoolValue &HasValueVal) {
+  auto OptionalVal = std::make_unique<StructValue>();
+  OptionalVal->setProperty("has_value", HasValueVal);
+  return Env.takeOwnership(std::move(OptionalVal));
 }
 
 /// Returns the symbolic value that represents the "has_value" property of the
@@ -75,6 +92,13 @@ static void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
   State.Lattice.getSourceLocations().insert(ObjectExpr->getBeginLoc());
 }
 
+void transferMakeOptionalCall(const CallExpr *E, LatticeTransferState &State) {
+  auto &Loc = State.Env.createStorageLocation(*E);
+  State.Env.setStorageLocation(*E, Loc);
+  State.Env.setValue(
+      Loc, createOptionalValue(State.Env, State.Env.getBoolLiteralValue(true)));
+}
+
 static void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
                                          LatticeTransferState &State) {
   if (auto *OptionalVal = cast_or_null<StructValue>(
@@ -89,12 +113,35 @@ static void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
   }
 }
 
+void transferEmplaceCall(const CXXMemberCallExpr *E,
+                         LatticeTransferState &State) {
+  if (auto *OptionalLoc = State.Env.getStorageLocation(
+          *E->getImplicitObjectArgument(), SkipPast::ReferenceThenPointer)) {
+    State.Env.setValue(
+        *OptionalLoc,
+        createOptionalValue(State.Env, State.Env.getBoolLiteralValue(true)));
+  }
+}
+
+void transferResetCall(const CXXMemberCallExpr *E,
+                       LatticeTransferState &State) {
+  if (auto *OptionalLoc = State.Env.getStorageLocation(
+          *E->getImplicitObjectArgument(), SkipPast::ReferenceThenPointer)) {
+    State.Env.setValue(
+        *OptionalLoc,
+        createOptionalValue(State.Env, State.Env.getBoolLiteralValue(false)));
+  }
+}
+
 static auto buildTransferMatchSwitch() {
   return MatchSwitchBuilder<LatticeTransferState>()
       // Attach a symbolic "has_value" state to optional values that we see for
       // the first time.
       .CaseOf(expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
               initializeOptionalReference)
+
+      // make_optional
+      .CaseOf(isMakeOptionalCall(), transferMakeOptionalCall)
 
       // optional::value
       .CaseOf(
@@ -114,6 +161,16 @@ static auto buildTransferMatchSwitch() {
       // optional::has_value
       .CaseOf(isOptionalMemberCallWithName("has_value"),
               transferOptionalHasValueCall)
+
+      // optional::operator bool
+      .CaseOf(isOptionalMemberCallWithName("operator bool"),
+              transferOptionalHasValueCall)
+
+      // optional::emplace
+      .CaseOf(isOptionalMemberCallWithName("emplace"), transferEmplaceCall)
+
+      // optional::reset
+      .CaseOf(isOptionalMemberCallWithName("reset"), transferResetCall)
 
       .Build();
 }

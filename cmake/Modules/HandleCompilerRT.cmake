@@ -54,8 +54,12 @@ function(find_compiler_rt_library name variable)
     get_property(cxx_flags CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
     string(REPLACE " " ";" cxx_flags "${cxx_flags}")
     list(APPEND clang_command ${cxx_flags})
+    set(cmd_prefix "")
+    if(MSVC AND ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+      set(cmd_prefix "/clang:")
+    endif()
     execute_process(
-      COMMAND ${clang_command} "--rtlib=compiler-rt" "-print-libgcc-file-name"
+      COMMAND ${clang_command} "${cmd_prefix}--rtlib=compiler-rt" "${cmd_prefix}-print-libgcc-file-name"
       RESULT_VARIABLE had_error
       OUTPUT_VARIABLE library_file
     )
@@ -72,7 +76,7 @@ function(find_compiler_rt_library name variable)
       set(dirname "${resource_dir}/lib/darwin")
     endif()
     get_filename_component(basename ${library_file} NAME)
-    if(basename MATCHES "libclang_rt\.([a-z0-9_\-]+)\.a")
+    if(basename MATCHES ".*clang_rt\.([a-z0-9_\-]+)\.(a|lib)")
       set(from_name ${CMAKE_MATCH_1})
       get_component_name(${CMAKE_MATCH_1} to_name)
       string(REPLACE "${from_name}" "${to_name}" basename "${basename}")
@@ -90,7 +94,7 @@ function(find_compiler_rt_library name variable)
     # path and then checking if the resultant path exists. The result of
     # this check is also cached by cache_compiler_rt_library.
     set(library_file "${COMPILER_RT_LIBRARY_builtins_${target}}")
-    if(library_file MATCHES ".*libclang_rt\.([a-z0-9_\-]+)\.a")
+    if(library_file MATCHES ".*clang_rt\.([a-z0-9_\-]+)\.(a|lib)")
       set(from_name ${CMAKE_MATCH_0})
       get_component_name(${name} to_name)
       string(REPLACE "${from_name}" "${to_name}" library_file "${library_file}")

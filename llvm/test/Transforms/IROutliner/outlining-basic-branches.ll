@@ -10,12 +10,12 @@ entry:
 next:
   br label %next2
 next2:
-  br label %next
+  br label %next3
 next3:
   %a = alloca i32, align 4
   br label %next4
 next4:
-  br label %next3
+  br label %next5
 next5:
   br label %next6
 next6:
@@ -25,15 +25,11 @@ next6:
 
 ; CHECK-LABEL: @outline_outputs1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[NEXT:%.*]]
-; CHECK:       next:
 ; CHECK-NEXT:    call void @outlined_ir_func_0()
-; CHECK-NEXT:    br label [[NEXT]]
+; CHECK-NEXT:    br label [[NEXT3:%.*]]
 ; CHECK:       next3:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @outlined_ir_func_0()
-; CHECK-NEXT:    br label [[NEXT3:%.*]]
-; CHECK:       next5:
 ; CHECK-NEXT:    br label [[NEXT6:%.*]]
 ; CHECK:       next6:
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -41,12 +37,14 @@ next6:
 ;
 ;
 ; CHECK: define internal void @outlined_ir_func_0(
-; CHECK:  newFuncRoot:
-; CHECK-NEXT:    br label [[NEXT_TO_OUTLINE:%.*]]
-; CHECK:       next_to_outline:
+; CHECK-NEXT:  newFuncRoot:
+; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
+; CHECK:       entry_to_outline:
+; CHECK-NEXT:    br label [[NEXT:%.*]]
+; CHECK:       next:
 ; CHECK-NEXT:    br label [[NEXT2:%.*]]
 ; CHECK:       next2:
-; CHECK-NEXT:    br label [[NEXT_EXITSTUB:%.*]]
-; CHECK:       next.exitStub:
+; CHECK-NEXT:    br label [[NEXT3_EXITSTUB:%.*]]
+; CHECK:       next3.exitStub:
 ; CHECK-NEXT:    ret void
 ;
