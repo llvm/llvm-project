@@ -236,6 +236,7 @@ struct IntrinsicLibrary {
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -339,6 +340,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"aimag", &I::genAimag},
     {"all",
      &I::genAll,
+     {{{"mask", asAddr}, {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"any",
+     &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
     {"associated",
@@ -1116,6 +1121,52 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
           },
           [&](const auto &) -> fir::ExtendedValue {
             fir::emitFatalError(loc, "Invalid result for ALL");
+          });
+}
+
+// ANY
+fir::ExtendedValue
+IntrinsicLibrary::genAny(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 2);
+  // Handle required mask argument
+  mlir::Value mask = builder.createBox(loc, args[0]);
+
+  fir::BoxValue maskArry = builder.createBox(loc, args[0]);
+  int rank = maskArry.rank();
+  assert(rank >= 1);
+
+  // Handle optional dim argument
+  bool absentDim = isAbsent(args[1]);
+  mlir::Value dim =
+      absentDim ? builder.createIntegerConstant(loc, builder.getIndexType(), 1)
+                : fir::getBase(args[1]);
+
+  if (rank == 1 || absentDim)
+    return builder.createConvert(loc, resultType,
+                                 fir::runtime::genAny(builder, loc, mask, dim));
+
+  // else use the result descriptor AnyDim() intrinsic
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+
+  mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genAnyDescriptor(builder, loc, resultIrBox, mask, dim);
+  return fir::factory::genMutableBoxRead(builder, loc, resultMutableBox)
+      .match(
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
+            return box;
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            fir::emitFatalError(loc, "Invalid result for ANY");
           });
 }
 
