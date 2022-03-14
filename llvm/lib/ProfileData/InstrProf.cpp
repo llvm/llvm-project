@@ -467,12 +467,8 @@ Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
   }
 
   SmallString<128> CompressedNameStrings;
-  Error E = zlib::compress(StringRef(UncompressedNameStrings),
-                           CompressedNameStrings, zlib::BestSizeCompression);
-  if (E) {
-    consumeError(std::move(E));
-    return make_error<InstrProfError>(instrprof_error::compress_failed);
-  }
+  zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
+                 zlib::BestSizeCompression);
 
   return WriteStringToResult(CompressedNameStrings.size(),
                              CompressedNameStrings);
