@@ -715,7 +715,7 @@ def pooling_ndhwc_min(I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD,
 
 
 @linalg_structured_op
-def fill_tensor(value=ScalarDef(T1), O=TensorDef(U, output=True)):
+def fill(value=ScalarDef(T1), O=TensorDef(U, output=True)):
   """Fills the output tensor with the given value.
 
   Works for arbitrary ranked output tensors since the operation performs scalar

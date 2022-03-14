@@ -1512,6 +1512,29 @@ public:
       }
       return Cost;
     }
+    case Intrinsic::get_active_lane_mask: {
+      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
+      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
+
+      // If we're not expanding the intrinsic then we assume this is cheap
+      // to implement.
+      if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgType)) {
+        std::pair<InstructionCost, MVT> LT =
+            getTLI()->getTypeLegalizationCost(DL, RetTy);
+        return LT.first;
+      }
+
+      // Create the expanded types that will be used to calculate the uadd_sat
+      // operation.
+      Type *ExpRetTy = VectorType::get(
+          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
+      IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
+      InstructionCost Cost =
+          thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
+                                          CmpInst::ICMP_ULT, CostKind);
+      return Cost;
+    }
     }
 
     // Assume that we need to scalarize this intrinsic.

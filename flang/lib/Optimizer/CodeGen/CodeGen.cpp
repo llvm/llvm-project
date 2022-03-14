@@ -2647,6 +2647,8 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
         return mlir::LLVM::Linkage::Internal;
       if (name == "linkonce")
         return mlir::LLVM::Linkage::Linkonce;
+      if (name == "linkonce_odr")
+        return mlir::LLVM::Linkage::LinkonceODR;
       if (name == "common")
         return mlir::LLVM::Linkage::Common;
       if (name == "weak")

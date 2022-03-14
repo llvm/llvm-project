@@ -94,6 +94,41 @@ defm : VectorLoad<v256i64, i64, v256i1, "VGT",    "VLD">;
 defm : VectorLoad<v256f32, i64, v256i1, "VGTU",   "VLDU">;
 defm : VectorLoad<v256i32, i64, v256i1, "VGTLZX", "VLDLZX">;
 
+// Vector Gather and scatter
+multiclass VectorGather<ValueType DataVT,
+    ValueType PtrVT, ValueType MaskVT,
+    string GTPrefix> {
+  // Unmasked.
+  def : Pat<(DataVT (vvp_gather
+               PtrVT:$addr, (MaskVT true_mask), i32:$avl)),
+            (!cast<Instruction>(GTPrefix#"vizl") $addr, 0, 0, $avl)>;
+  // Masked.
+  def : Pat<(DataVT (vvp_gather PtrVT:$addr, MaskVT:$mask, i32:$avl)),
+            (!cast<Instruction>(GTPrefix#"vizml") $addr, 0, 0, $mask, $avl)>;
+}
+
+defm : VectorGather<v256f64, v256i64, v256i1, "VGT">;
+defm : VectorGather<v256i64, v256i64, v256i1, "VGT">;
+defm : VectorGather<v256f32, v256i64, v256i1, "VGTU">;
+defm : VectorGather<v256i32, v256i64, v256i1, "VGTLZX">;
+
+multiclass VectorScatter<ValueType DataVT,
+    ValueType PtrVT, ValueType MaskVT,
+    string SCPrefix> {
+  // Unmasked.
+  def : Pat<(vvp_scatter
+               DataVT:$data, PtrVT:$addr, (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(SCPrefix#"vizvl") $addr, 0, 0, $data, $avl)>; 
+  // Masked.
+  def : Pat<(vvp_scatter
+               DataVT:$data, PtrVT:$addr, MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(SCPrefix#"vizvml") $addr, 0, 0, $data, $mask, $avl)>;
+}
+
+defm : VectorScatter<v256f64, v256i64, v256i1, "VSC">;
+defm : VectorScatter<v256i64, v256i64, v256i1, "VSC">;
+defm : VectorScatter<v256f32, v256i64, v256i1, "VSCU">;
+defm : VectorScatter<v256i32, v256i64, v256i1, "VSCL">;
 
 
 multiclass Binary_rv<SDPatternOperator OpNode,
@@ -399,3 +434,36 @@ defm : Set_CC<v256f64,"VFMKL","VFCMPD",cond,fcond2cc>;
 defm : Set_CC<v256i32,"VFMKW","VCMPUW",CCUIOp,icond2cc>;
 defm : Set_CC<v256i32,"VFMKW","VCMPSWZX",CCSIOp,icond2cc>;
 defm : Set_CC<v256f32,"VFMKS","VFCMPS",cond,fcond2cc>;
+
+multiclass Reduce_GenericInt<ValueType VectorVT,
+    RegisterClass ResRC, ValueType ResVT,
+    string VVPRedOp, string RedInstName> {
+  // Unmasked.
+  def : Pat <(ResVT (!cast<SDPatternOperator>("vvp_reduce_"#VVPRedOp)
+                VectorVT:$vx, (v256i1 true_mask), i32:$vl)),
+             (COPY_TO_REGCLASS
+               (!cast<Instruction>("LVSvi")
+                 (!cast<Instruction>(RedInstName#"vl") $vx, $vl), 0),
+                 ResRC)>;
+
+  // Masked.
+  def : Pat <(ResVT (!cast<SDPatternOperator>("vvp_reduce_"#VVPRedOp)
+                VectorVT:$vx, v256i1:$vm, i32:$vl)),
+             (COPY_TO_REGCLASS
+                (!cast<Instruction>("LVSvi")
+                   (!cast<Instruction>(RedInstName#"vml") $vx, $vm, $vl), 0),
+                   ResRC)>;
+}
+
+multiclass IntReduce_ShortLong<ValueType VectorVT,
+    RegisterClass ResRC, ValueType ResVT,
+    string SumSuffix, string MinMaxSuffix> {
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "or",  "VROR">;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "and", "VRAND">;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "xor", "VRXOR">;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "add", "VSUM"#SumSuffix>;
+  defm: Reduce_GenericInt<VectorVT, ResRC, ResVT, "smax", "VRMAX"#MinMaxSuffix>;
+}
+
+defm: IntReduce_ShortLong<v256i64, I64, i64, "L","SLFST">;
+defm: IntReduce_ShortLong<v256i32, I32, i32, "WSX","SWFSTSX">;
