@@ -158,7 +158,6 @@ bool DispatchStage::isAvailable(const InstRef &IR) const {
 
   const Instruction &Inst = *IR.getInstruction();
   unsigned NumMicroOps = Inst.getNumMicroOps();
-  const InstrDesc &Desc = Inst.getDesc();
   unsigned Required = std::min(NumMicroOps, DispatchWidth);
   if (Required > AvailableEntries)
     return false;
