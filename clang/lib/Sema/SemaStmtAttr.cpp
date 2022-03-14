@@ -217,14 +217,13 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   NoInlineAttr NIA(S.Context, A);
-  CallExprFinder CEF(S, St);
-
   if (!NIA.isClangNoInline()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::noinline]]";
     return nullptr;
   }
 
+  CallExprFinder CEF(S, St);
   if (!CEF.foundCallExpr()) {
     S.Diag(St->getBeginLoc(), diag::warn_attribute_ignored_no_calls_in_stmt)
         << A;
