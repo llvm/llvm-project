@@ -97,17 +97,17 @@ define i32 @varargs_func_6_xxx(i32 %arg_1_xxx, i32 %arg_2_xxx, ...) nounwind uwt
   ret i32 6
 }
 
-declare noalias i8* @malloc(i32)
+declare noalias i8* @malloc(i64)
 declare void @free(i8* nocapture)
 
 define void @dont_rename_lib_funcs() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i8* @malloc(i32 23)
+; CHECK-NEXT:    [[TMP:%.*]] = call i8* @malloc(i64 23)
 ; CHECK-NEXT:    call void @free(i8* [[TMP]])
 ; CHECK-NEXT:    ret void
 ;
-  %x = call i8* @malloc(i32 23)
+  %x = call i8* @malloc(i64 23)
   call void @free(i8* %x)
   ret void
 }

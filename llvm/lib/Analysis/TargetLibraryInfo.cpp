@@ -1110,9 +1110,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_system:
     return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
   case LibFunc___kmpc_alloc_shared:
+    return NumParams == 1 && FTy.getReturnType()->isPointerTy();
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
-    return (NumParams == 1 && FTy.getReturnType()->isPointerTy());
+    return NumParams == 1 && FTy.getParamType(0)->isIntegerTy(SizeTBits) &&
+           FTy.getReturnType()->isPointerTy();
   case LibFunc_memcmp:
     return NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
            FTy.getParamType(0)->isPointerTy() &&
