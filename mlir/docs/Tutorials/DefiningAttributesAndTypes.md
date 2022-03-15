@@ -558,6 +558,8 @@ Attribute and type assembly formats have the following directives:
     mnemonic.
 *   `struct`: generate a "struct-like" parser and printer for a list of
     key-value pairs.
+*   `custom`: dispatch a call to user-define parser and printer functions
+*   `ref`: in a custom directive, references a previously bound variable
 
 #### `params` Directive
 
@@ -649,3 +651,44 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
+
+#### `custom` and `ref` directive
+
+The `custom` directive is used to dispatch calls to user-defined printer and
+parser functions. For example, suppose we had the following type:
+
+```tablegen
+let parameters = (ins "int":$foo, "int":$bar);
+let assemblyFormat = "custom<Foo>($foo) custom<Bar>($bar, ref($foo))";
+```
+
+The `custom` directive `custom<Foo>($foo)` will in the parser and printer
+respectively generate calls to:
+
+```c++
+LogicalResult parseFoo(AsmParser &parser, FailureOr<int> &foo);
+void printFoo(AsmPrinter &printer, int foo);
+```
+
+A previously bound variable can be passed as a parameter to a `custom` directive
+by wrapping it in a `ref` directive. In the previous example, `$foo` is bound by
+the first directive. The second directive references it and expects the
+following printer and parser signatures:
+
+```c++
+LogicalResult parseBar(AsmParser &parser, FailureOr<int> &bar, int foo);
+void printBar(AsmPrinter &printer, int bar, int foo);
+```
+
+More complex C++ types can be used with the `custom` directive. The only caveat
+is that the parameter for the parser must use the storage type of the parameter.
+For example, `StringRefParameter` expects the parser and printer signatures as:
+
+```c++
+LogicalResult parseStringParam(AsmParser &parser,
+                               FailureOr<std::string> &value);
+void printStringParam(AsmPrinter &printer, StringRef value);
+```
+
+The custom parser is considered to have failed if it returns failure or if any
+bound parameters have failure values afterwards.

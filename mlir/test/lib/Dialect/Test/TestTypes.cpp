@@ -209,6 +209,59 @@ unsigned TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomType
+//===----------------------------------------------------------------------===//
+
+static LogicalResult parseCustomTypeA(AsmParser &parser,
+                                      FailureOr<int> &a_result) {
+  a_result.emplace();
+  return parser.parseInteger(*a_result);
+}
+
+static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
+
+static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
+                                      FailureOr<Optional<int>> &b_result) {
+  if (a < 0)
+    return success();
+  for (int i : llvm::seq(0, a))
+    if (failed(parser.parseInteger(i)))
+      return failure();
+  b_result.emplace(0);
+  return parser.parseInteger(**b_result);
+}
+
+static void printCustomTypeB(AsmPrinter &printer, int a, Optional<int> b) {
+  if (a < 0)
+    return;
+  printer << ' ';
+  for (int i : llvm::seq(0, a))
+    printer << i << ' ';
+  printer << *b;
+}
+
+static LogicalResult parseFooString(AsmParser &parser,
+                                    FailureOr<std::string> &foo) {
+  std::string result;
+  if (parser.parseString(&result))
+    return failure();
+  foo = std::move(result);
+  return success();
+}
+
+static void printFooString(AsmPrinter &printer, StringRef foo) {
+  printer << '"' << foo << '"';
+}
+
+static LogicalResult parseBarString(AsmParser &parser, StringRef foo) {
+  return parser.parseKeyword(foo);
+}
+
+static void printBarString(AsmPrinter &printer, StringRef foo) {
+  printer << ' ' << foo;
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 

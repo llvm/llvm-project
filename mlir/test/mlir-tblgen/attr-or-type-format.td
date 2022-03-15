@@ -499,3 +499,27 @@ def TypeI : TestType<"TestK"> {
   let mnemonic = "type_k";
   let assemblyFormat = "$a";
 }
+
+// TYPE: ::mlir::Type TestLType::parse
+// TYPE:   auto odsCustomLoc = odsParser.getCurrentLocation()
+// TYPE:   auto odsCustomResult = parseA(odsParser,
+// TYPE-NEXT: _result_a
+// TYPE:   if (::mlir::failed(odsCustomResult)) return {}
+// TYPE:   if (::mlir::failed(_result_a))
+// TYPE-NEXT: odsParser.emitError(odsCustomLoc,
+// TYPE:   auto odsCustomResult = parseB(odsParser,
+// TYPE-NEXT: _result_b
+// TYPE-NEXT: *_result_a
+
+// TYPE: void TestLType::print
+// TYPE:   printA(odsPrinter
+// TYPE-NEXT: getA()
+// TYPE:   printB(odsPrinter
+// TYPE-NEXT: getB()
+// TYPE-NEXT: getA()
+
+def TypeJ : TestType<"TestL"> {
+  let parameters = (ins "int":$a, OptionalParameter<"Attribute">:$b);
+  let mnemonic = "type_j";
+  let assemblyFormat = "custom<A>($a) custom<B>($b, ref($a))";
+}

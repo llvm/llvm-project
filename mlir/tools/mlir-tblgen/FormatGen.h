@@ -338,6 +338,22 @@ private:
   std::vector<FormatElement *> arguments;
 };
 
+/// This class represents a reference directive. This directive can be used to
+/// reference but not bind a previously bound variable or format object. Its
+/// current only use is to pass variables as arguments to the custom directive.
+class RefDirective : public DirectiveElementBase<DirectiveElement::Ref> {
+public:
+  /// Create a reference directive with the single referenced child.
+  RefDirective(FormatElement *arg) : arg(arg) {}
+
+  /// Get the reference argument.
+  FormatElement *getArg() const { return arg; }
+
+private:
+  /// The referenced argument.
+  FormatElement *arg;
+};
+
 /// This class represents a group of elements that are optionally emitted based
 /// on an optional variable "anchor" and a group of elements that are emitted
 /// when the anchor element is not present.

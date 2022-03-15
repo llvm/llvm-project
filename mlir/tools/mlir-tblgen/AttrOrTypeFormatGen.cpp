@@ -199,6 +199,8 @@ private:
   void genParamsParser(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a `struct` directive.
   void genStructParser(StructDirective *el, FmtContext &ctx, MethodBody &os);
+  /// Generate the parser code for a `custom` directive.
+  void genCustomParser(CustomDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for an optional group.
   void genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
                               MethodBody &os);
@@ -218,6 +220,8 @@ private:
   void genParamsPrinter(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a `struct` directive.
   void genStructPrinter(StructDirective *el, FmtContext &ctx, MethodBody &os);
+  /// Generate the printer code for a `custom` directive.
+  void genCustomPrinter(CustomDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for an optional group.
   void genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                MethodBody &os);
@@ -313,6 +317,8 @@ void DefFormat::genElementParser(FormatElement *el, FmtContext &ctx,
     return genParamsParser(params, ctx, os);
   if (auto *strct = dyn_cast<StructDirective>(el))
     return genStructParser(strct, ctx, os);
+  if (auto *custom = dyn_cast<CustomDirective>(el))
+    return genCustomParser(custom, ctx, os);
   if (auto *optional = dyn_cast<OptionalElement>(el))
     return genOptionalGroupParser(optional, ctx, os);
   if (isa<WhitespaceElement>(el))
@@ -566,6 +572,47 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
   os.unindent() << "}\n";
 }
 
+void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
+                                MethodBody &os) {
+  os << "{\n";
+  os.indent();
+
+  // Bound variables are passed directly to the parser as `FailureOr<T> &`.
+  // Referenced variables are passed as `T`. The custom parser fails if it
+  // returns failure or if any of the required parameters failed.
+  os << tgfmt("auto odsCustomLoc = $_parser.getCurrentLocation();\n", &ctx);
+  os << "(void)odsCustomLoc;\n";
+  os << tgfmt("auto odsCustomResult = parse$0($_parser", &ctx, el->getName());
+  os.indent();
+  for (FormatElement *arg : el->getArguments()) {
+    os << ",\n";
+    FormatElement *param;
+    if (auto *ref = dyn_cast<RefDirective>(arg)) {
+      os << "*";
+      param = ref->getArg();
+    } else {
+      param = arg;
+    }
+    os << "_result_" << cast<ParameterElement>(param)->getName();
+  }
+  os.unindent() << ");\n";
+  os << "if (::mlir::failed(odsCustomResult)) return {};\n";
+  for (FormatElement *arg : el->getArguments()) {
+    if (auto *param = dyn_cast<ParameterElement>(arg)) {
+      if (param->isOptional())
+        continue;
+      os << formatv("if (::mlir::failed(_result_{0})) {{\n", param->getName());
+      os.indent() << tgfmt("$_parser.emitError(odsCustomLoc, ", &ctx)
+                  << "\"custom parser failed to parse parameter '"
+                  << param->getName() << "'\");\n";
+      os << "return {};\n";
+      os.unindent() << "}\n";
+    }
+  }
+
+  os.unindent() << "}\n";
+}
+
 void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
                                        MethodBody &os) {
   ArrayRef<FormatElement *> elements =
@@ -634,6 +681,8 @@ void DefFormat::genElementPrinter(FormatElement *el, FmtContext &ctx,
     return genParamsPrinter(params, ctx, os);
   if (auto *strct = dyn_cast<StructDirective>(el))
     return genStructPrinter(strct, ctx, os);
+  if (auto *custom = dyn_cast<CustomDirective>(el))
+    return genCustomPrinter(custom, ctx, os);
   if (auto *var = dyn_cast<ParameterElement>(el))
     return genVariablePrinter(var, ctx, os);
   if (auto *optional = dyn_cast<OptionalElement>(el))
@@ -746,6 +795,21 @@ void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
       });
 }
 
+void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
+                                 MethodBody &os) {
+  os << tgfmt("print$0($_printer", &ctx, el->getName());
+  os.indent();
+  for (FormatElement *arg : el->getArguments()) {
+    FormatElement *param = arg;
+    if (auto *ref = dyn_cast<RefDirective>(arg))
+      param = ref->getArg();
+    os << ",\n"
+       << getParameterAccessorName(cast<ParameterElement>(param)->getName())
+       << "()";
+  }
+  os.unindent() << ");\n";
+}
+
 void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
   FormatElement *anchor = el->getAnchor();
@@ -805,9 +869,7 @@ protected:
   /// Verify the elements of a custom directive.
   LogicalResult
   verifyCustomDirectiveArguments(SMLoc loc,
-                                 ArrayRef<FormatElement *> arguments) override {
-    return emitError(loc, "'custom' not supported (yet)");
-  }
+                                 ArrayRef<FormatElement *> arguments) override;
   /// Verify the elements of an optional group.
   LogicalResult
   verifyOptionalGroupElements(SMLoc loc, ArrayRef<FormatElement *> elements,
@@ -822,11 +884,13 @@ protected:
 
 private:
   /// Parse a `params` directive.
-  FailureOr<FormatElement *> parseParamsDirective(SMLoc loc);
+  FailureOr<FormatElement *> parseParamsDirective(SMLoc loc, Context ctx);
   /// Parse a `qualified` directive.
   FailureOr<FormatElement *> parseQualifiedDirective(SMLoc loc, Context ctx);
   /// Parse a `struct` directive.
-  FailureOr<FormatElement *> parseStructDirective(SMLoc loc);
+  FailureOr<FormatElement *> parseStructDirective(SMLoc loc, Context ctx);
+  /// Parse a `ref` directive.
+  FailureOr<FormatElement *> parseRefDirective(SMLoc loc, Context ctx);
 
   /// Attribute or type tablegen def.
   const AttrOrTypeDef &def;
@@ -859,6 +923,12 @@ LogicalResult DefFormatParser::verify(SMLoc loc,
                             "cannot be followed by a comma literal");
     }
   }
+  return success();
+}
+
+LogicalResult DefFormatParser::verifyCustomDirectiveArguments(
+    SMLoc loc, ArrayRef<FormatElement *> arguments) {
+  // Arguments are fully verified by the parser context.
   return success();
 }
 
@@ -915,9 +985,18 @@ DefFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
                      def.getName() + " has no parameter named '" + name + "'");
   }
   auto idx = std::distance(params.begin(), it);
-  if (seenParams.test(idx))
-    return emitError(loc, "duplicate parameter '" + name + "'");
-  seenParams.set(idx);
+
+  if (ctx != RefDirectiveContext) {
+    // Check that the variable has not already been bound.
+    if (seenParams.test(idx))
+      return emitError(loc, "duplicate parameter '" + name + "'");
+    seenParams.set(idx);
+
+    // Otherwise, to be referenced, a variable must have been bound.
+  } else if (!seenParams.test(idx)) {
+    return emitError(loc, "parameter '" + name +
+                              "' must be bound before it is referenced");
+  }
 
   return create<ParameterElement>(*it);
 }
@@ -930,14 +1009,13 @@ DefFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
   case FormatToken::kw_qualified:
     return parseQualifiedDirective(loc, ctx);
   case FormatToken::kw_params:
-    return parseParamsDirective(loc);
+    return parseParamsDirective(loc, ctx);
   case FormatToken::kw_struct:
-    if (ctx != TopLevelContext) {
-      return emitError(
-          loc,
-          "`struct` may only be used in the top-level section of the format");
-    }
-    return parseStructDirective(loc);
+    return parseStructDirective(loc, ctx);
+  case FormatToken::kw_ref:
+    return parseRefDirective(loc, ctx);
+  case FormatToken::kw_custom:
+    return parseCustomDirective(loc, ctx);
 
   default:
     return emitError(loc, "unsupported directive kind");
@@ -961,10 +1039,18 @@ DefFormatParser::parseQualifiedDirective(SMLoc loc, Context ctx) {
   return var;
 }
 
-FailureOr<FormatElement *> DefFormatParser::parseParamsDirective(SMLoc loc) {
-  // Collect all of the attribute's or type's parameters.
+FailureOr<FormatElement *> DefFormatParser::parseParamsDirective(SMLoc loc,
+                                                                 Context ctx) {
+  // It doesn't make sense to allow references to all parameters in a custom
+  // directive because parameters are the only things that can be bound.
+  if (ctx != TopLevelContext && ctx != StructDirectiveContext) {
+    return emitError(loc, "`params` can only be used at the top-level context "
+                          "or within a `struct` directive");
+  }
+
+  // Collect all of the attribute's or type's parameters and ensure that none of
+  // the parameters have already been captured.
   std::vector<ParameterElement *> vars;
-  // Ensure that none of the parameters have already been captured.
   for (const auto &it : llvm::enumerate(def.getParameters())) {
     if (seenParams.test(it.index())) {
       return emitError(loc, "`params` captures duplicate parameter: " +
@@ -976,7 +1062,11 @@ FailureOr<FormatElement *> DefFormatParser::parseParamsDirective(SMLoc loc) {
   return create<ParamsDirective>(std::move(vars));
 }
 
-FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc) {
+FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc,
+                                                                 Context ctx) {
+  if (ctx != TopLevelContext)
+    return emitError(loc, "`struct` can only be used at the top-level context");
+
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before `struct` argument list")))
     return failure();
@@ -1010,6 +1100,22 @@ FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc) {
     return failure();
 
   return create<StructDirective>(std::move(vars));
+}
+
+FailureOr<FormatElement *> DefFormatParser::parseRefDirective(SMLoc loc,
+                                                              Context ctx) {
+  if (ctx != CustomDirectiveContext)
+    return emitError(loc, "`ref` is only allowed inside custom directives");
+
+  // Parse the child parameter element.
+  FailureOr<FormatElement *> child;
+  if (failed(parseToken(FormatToken::l_paren, "expected '('")) ||
+      failed(child = parseElement(RefDirectiveContext)) ||
+      failed(parseToken(FormatToken::r_paren, "expeced ')'")))
+    return failure();
+
+  // Only parameter elements are allowed to be parsed under a `ref` directive.
+  return create<RefDirective>(*child);
 }
 
 //===----------------------------------------------------------------------===//
