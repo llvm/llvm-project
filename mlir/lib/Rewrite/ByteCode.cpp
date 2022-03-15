@@ -36,15 +36,15 @@ using namespace mlir::detail;
 PDLByteCodePattern PDLByteCodePattern::create(pdl_interp::RecordMatchOp matchOp,
                                               ByteCodeAddr rewriterAddr) {
   SmallVector<StringRef, 8> generatedOps;
-  if (ArrayAttr generatedOpsAttr = matchOp.generatedOpsAttr())
+  if (ArrayAttr generatedOpsAttr = matchOp.getGeneratedOpsAttr())
     generatedOps =
         llvm::to_vector<8>(generatedOpsAttr.getAsValueRange<StringAttr>());
 
-  PatternBenefit benefit = matchOp.benefit();
+  PatternBenefit benefit = matchOp.getBenefit();
   MLIRContext *ctx = matchOp.getContext();
 
   // Check to see if this is pattern matches a specific operation type.
-  if (Optional<StringRef> rootKind = matchOp.rootKind())
+  if (Optional<StringRef> rootKind = matchOp.getRootKind())
     return PDLByteCodePattern(rewriterAddr, *rootKind, benefit, ctx,
                               generatedOps);
   return PDLByteCodePattern(rewriterAddr, MatchAnyOpTypeTag(), benefit, ctx,
@@ -755,22 +755,22 @@ void Generator::generate(Operation *op, ByteCodeWriter &writer) {
 
 void Generator::generate(pdl_interp::ApplyConstraintOp op,
                          ByteCodeWriter &writer) {
-  assert(constraintToMemIndex.count(op.name()) &&
+  assert(constraintToMemIndex.count(op.getName()) &&
          "expected index for constraint function");
-  writer.append(OpCode::ApplyConstraint, constraintToMemIndex[op.name()],
-                op.constParamsAttr());
-  writer.appendPDLValueList(op.args());
+  writer.append(OpCode::ApplyConstraint, constraintToMemIndex[op.getName()],
+                op.getConstParamsAttr());
+  writer.appendPDLValueList(op.getArgs());
   writer.append(op.getSuccessors());
 }
 void Generator::generate(pdl_interp::ApplyRewriteOp op,
                          ByteCodeWriter &writer) {
-  assert(externalRewriterToMemIndex.count(op.name()) &&
+  assert(externalRewriterToMemIndex.count(op.getName()) &&
          "expected index for rewrite function");
-  writer.append(OpCode::ApplyRewrite, externalRewriterToMemIndex[op.name()],
-                op.constParamsAttr());
-  writer.appendPDLValueList(op.args());
+  writer.append(OpCode::ApplyRewrite, externalRewriterToMemIndex[op.getName()],
+                op.getConstParamsAttr());
+  writer.appendPDLValueList(op.getArgs());
 
-  ResultRange results = op.results();
+  ResultRange results = op.getResults();
   writer.append(ByteCodeField(results.size()));
   for (Value result : results) {
     // In debug mode we also record the expected kind of the result, so that we
@@ -786,46 +786,48 @@ void Generator::generate(pdl_interp::ApplyRewriteOp op,
   }
 }
 void Generator::generate(pdl_interp::AreEqualOp op, ByteCodeWriter &writer) {
-  Value lhs = op.lhs();
+  Value lhs = op.getLhs();
   if (lhs.getType().isa<pdl::RangeType>()) {
     writer.append(OpCode::AreRangesEqual);
     writer.appendPDLValueKind(lhs);
-    writer.append(op.lhs(), op.rhs(), op.getSuccessors());
+    writer.append(op.getLhs(), op.getRhs(), op.getSuccessors());
     return;
   }
 
-  writer.append(OpCode::AreEqual, lhs, op.rhs(), op.getSuccessors());
+  writer.append(OpCode::AreEqual, lhs, op.getRhs(), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::BranchOp op, ByteCodeWriter &writer) {
   writer.append(OpCode::Branch, SuccessorRange(op.getOperation()));
 }
 void Generator::generate(pdl_interp::CheckAttributeOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::AreEqual, op.attribute(), op.constantValue(),
+  writer.append(OpCode::AreEqual, op.getAttribute(), op.getConstantValue(),
                 op.getSuccessors());
 }
 void Generator::generate(pdl_interp::CheckOperandCountOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::CheckOperandCount, op.operation(), op.count(),
-                static_cast<ByteCodeField>(op.compareAtLeast()),
+  writer.append(OpCode::CheckOperandCount, op.getInputOp(), op.getCount(),
+                static_cast<ByteCodeField>(op.getCompareAtLeast()),
                 op.getSuccessors());
 }
 void Generator::generate(pdl_interp::CheckOperationNameOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::CheckOperationName, op.operation(),
-                OperationName(op.name(), ctx), op.getSuccessors());
+  writer.append(OpCode::CheckOperationName, op.getInputOp(),
+                OperationName(op.getName(), ctx), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::CheckResultCountOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::CheckResultCount, op.operation(), op.count(),
-                static_cast<ByteCodeField>(op.compareAtLeast()),
+  writer.append(OpCode::CheckResultCount, op.getInputOp(), op.getCount(),
+                static_cast<ByteCodeField>(op.getCompareAtLeast()),
                 op.getSuccessors());
 }
 void Generator::generate(pdl_interp::CheckTypeOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::AreEqual, op.value(), op.type(), op.getSuccessors());
+  writer.append(OpCode::AreEqual, op.getValue(), op.getType(),
+                op.getSuccessors());
 }
 void Generator::generate(pdl_interp::CheckTypesOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::CheckTypes, op.value(), op.types(), op.getSuccessors());
+  writer.append(OpCode::CheckTypes, op.getValue(), op.getTypes(),
+                op.getSuccessors());
 }
 void Generator::generate(pdl_interp::ContinueOp op, ByteCodeWriter &writer) {
   assert(curLoopLevel > 0 && "encountered pdl_interp.continue at top level");
@@ -834,85 +836,85 @@ void Generator::generate(pdl_interp::ContinueOp op, ByteCodeWriter &writer) {
 void Generator::generate(pdl_interp::CreateAttributeOp op,
                          ByteCodeWriter &writer) {
   // Simply repoint the memory index of the result to the constant.
-  getMemIndex(op.attribute()) = getMemIndex(op.value());
+  getMemIndex(op.getAttribute()) = getMemIndex(op.getValue());
 }
 void Generator::generate(pdl_interp::CreateOperationOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::CreateOperation, op.operation(),
-                OperationName(op.name(), ctx));
-  writer.appendPDLValueList(op.operands());
+  writer.append(OpCode::CreateOperation, op.getResultOp(),
+                OperationName(op.getName(), ctx));
+  writer.appendPDLValueList(op.getInputOperands());
 
   // Add the attributes.
-  OperandRange attributes = op.attributes();
+  OperandRange attributes = op.getInputAttributes();
   writer.append(static_cast<ByteCodeField>(attributes.size()));
-  for (auto it : llvm::zip(op.attributeNames(), op.attributes()))
+  for (auto it : llvm::zip(op.getInputAttributeNames(), attributes))
     writer.append(std::get<0>(it), std::get<1>(it));
-  writer.appendPDLValueList(op.types());
+  writer.appendPDLValueList(op.getInputResultTypes());
 }
 void Generator::generate(pdl_interp::CreateTypeOp op, ByteCodeWriter &writer) {
   // Simply repoint the memory index of the result to the constant.
-  getMemIndex(op.result()) = getMemIndex(op.value());
+  getMemIndex(op.getResult()) = getMemIndex(op.getValue());
 }
 void Generator::generate(pdl_interp::CreateTypesOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::CreateTypes, op.result(),
-                getRangeStorageIndex(op.result()), op.value());
+  writer.append(OpCode::CreateTypes, op.getResult(),
+                getRangeStorageIndex(op.getResult()), op.getValue());
 }
 void Generator::generate(pdl_interp::EraseOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::EraseOp, op.operation());
+  writer.append(OpCode::EraseOp, op.getInputOp());
 }
 void Generator::generate(pdl_interp::ExtractOp op, ByteCodeWriter &writer) {
   OpCode opCode =
-      TypeSwitch<Type, OpCode>(op.result().getType())
+      TypeSwitch<Type, OpCode>(op.getResult().getType())
           .Case([](pdl::OperationType) { return OpCode::ExtractOp; })
           .Case([](pdl::ValueType) { return OpCode::ExtractValue; })
           .Case([](pdl::TypeType) { return OpCode::ExtractType; })
           .Default([](Type) -> OpCode {
             llvm_unreachable("unsupported element type");
           });
-  writer.append(opCode, op.range(), op.index(), op.result());
+  writer.append(opCode, op.getRange(), op.getIndex(), op.getResult());
 }
 void Generator::generate(pdl_interp::FinalizeOp op, ByteCodeWriter &writer) {
   writer.append(OpCode::Finalize);
 }
 void Generator::generate(pdl_interp::ForEachOp op, ByteCodeWriter &writer) {
   BlockArgument arg = op.getLoopVariable();
-  writer.append(OpCode::ForEach, getRangeStorageIndex(op.values()), arg);
+  writer.append(OpCode::ForEach, getRangeStorageIndex(op.getValues()), arg);
   writer.appendPDLValueKind(arg.getType());
-  writer.append(curLoopLevel, op.successor());
+  writer.append(curLoopLevel, op.getSuccessor());
   ++curLoopLevel;
   if (curLoopLevel > maxLoopLevel)
     maxLoopLevel = curLoopLevel;
-  generate(&op.region(), writer);
+  generate(&op.getRegion(), writer);
   --curLoopLevel;
 }
 void Generator::generate(pdl_interp::GetAttributeOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::GetAttribute, op.attribute(), op.operation(),
-                op.nameAttr());
+  writer.append(OpCode::GetAttribute, op.getAttribute(), op.getInputOp(),
+                op.getNameAttr());
 }
 void Generator::generate(pdl_interp::GetAttributeTypeOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::GetAttributeType, op.result(), op.value());
+  writer.append(OpCode::GetAttributeType, op.getResult(), op.getValue());
 }
 void Generator::generate(pdl_interp::GetDefiningOpOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::GetDefiningOp, op.operation());
-  writer.appendPDLValue(op.value());
+  writer.append(OpCode::GetDefiningOp, op.getInputOp());
+  writer.appendPDLValue(op.getValue());
 }
 void Generator::generate(pdl_interp::GetOperandOp op, ByteCodeWriter &writer) {
-  uint32_t index = op.index();
+  uint32_t index = op.getIndex();
   if (index < 4)
     writer.append(static_cast<OpCode>(OpCode::GetOperand0 + index));
   else
     writer.append(OpCode::GetOperandN, index);
-  writer.append(op.operation(), op.value());
+  writer.append(op.getInputOp(), op.getValue());
 }
 void Generator::generate(pdl_interp::GetOperandsOp op, ByteCodeWriter &writer) {
-  Value result = op.value();
-  Optional<uint32_t> index = op.index();
+  Value result = op.getValue();
+  Optional<uint32_t> index = op.getIndex();
   writer.append(OpCode::GetOperands,
                 index.getValueOr(std::numeric_limits<uint32_t>::max()),
-                op.operation());
+                op.getInputOp());
   if (result.getType().isa<pdl::RangeType>())
     writer.append(getRangeStorageIndex(result));
   else
@@ -920,19 +922,19 @@ void Generator::generate(pdl_interp::GetOperandsOp op, ByteCodeWriter &writer) {
   writer.append(result);
 }
 void Generator::generate(pdl_interp::GetResultOp op, ByteCodeWriter &writer) {
-  uint32_t index = op.index();
+  uint32_t index = op.getIndex();
   if (index < 4)
     writer.append(static_cast<OpCode>(OpCode::GetResult0 + index));
   else
     writer.append(OpCode::GetResultN, index);
-  writer.append(op.operation(), op.value());
+  writer.append(op.getInputOp(), op.getValue());
 }
 void Generator::generate(pdl_interp::GetResultsOp op, ByteCodeWriter &writer) {
-  Value result = op.value();
-  Optional<uint32_t> index = op.index();
+  Value result = op.getValue();
+  Optional<uint32_t> index = op.getIndex();
   writer.append(OpCode::GetResults,
                 index.getValueOr(std::numeric_limits<uint32_t>::max()),
-                op.operation());
+                op.getInputOp());
   if (result.getType().isa<pdl::RangeType>())
     writer.append(getRangeStorageIndex(result));
   else
@@ -940,71 +942,71 @@ void Generator::generate(pdl_interp::GetResultsOp op, ByteCodeWriter &writer) {
   writer.append(result);
 }
 void Generator::generate(pdl_interp::GetUsersOp op, ByteCodeWriter &writer) {
-  Value operations = op.operations();
+  Value operations = op.getOperations();
   ByteCodeField rangeIndex = getRangeStorageIndex(operations);
   writer.append(OpCode::GetUsers, operations, rangeIndex);
-  writer.appendPDLValue(op.value());
+  writer.appendPDLValue(op.getValue());
 }
 void Generator::generate(pdl_interp::GetValueTypeOp op,
                          ByteCodeWriter &writer) {
   if (op.getType().isa<pdl::RangeType>()) {
-    Value result = op.result();
+    Value result = op.getResult();
     writer.append(OpCode::GetValueRangeTypes, result,
-                  getRangeStorageIndex(result), op.value());
+                  getRangeStorageIndex(result), op.getValue());
   } else {
-    writer.append(OpCode::GetValueType, op.result(), op.value());
+    writer.append(OpCode::GetValueType, op.getResult(), op.getValue());
   }
 }
 
 void Generator::generate(pdl_interp::InferredTypesOp op,
                          ByteCodeWriter &writer) {
   // InferType maps to a null type as a marker for inferring result types.
-  getMemIndex(op.type()) = getMemIndex(Type());
+  getMemIndex(op.getResult()) = getMemIndex(Type());
 }
 void Generator::generate(pdl_interp::IsNotNullOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::IsNotNull, op.value(), op.getSuccessors());
+  writer.append(OpCode::IsNotNull, op.getValue(), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::RecordMatchOp op, ByteCodeWriter &writer) {
   ByteCodeField patternIndex = patterns.size();
   patterns.emplace_back(PDLByteCodePattern::create(
-      op, rewriterToAddr[op.rewriter().getLeafReference().getValue()]));
+      op, rewriterToAddr[op.getRewriter().getLeafReference().getValue()]));
   writer.append(OpCode::RecordMatch, patternIndex,
-                SuccessorRange(op.getOperation()), op.matchedOps());
-  writer.appendPDLValueList(op.inputs());
+                SuccessorRange(op.getOperation()), op.getMatchedOps());
+  writer.appendPDLValueList(op.getInputs());
 }
 void Generator::generate(pdl_interp::ReplaceOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::ReplaceOp, op.operation());
-  writer.appendPDLValueList(op.replValues());
+  writer.append(OpCode::ReplaceOp, op.getInputOp());
+  writer.appendPDLValueList(op.getReplValues());
 }
 void Generator::generate(pdl_interp::SwitchAttributeOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::SwitchAttribute, op.attribute(), op.caseValuesAttr(),
-                op.getSuccessors());
+  writer.append(OpCode::SwitchAttribute, op.getAttribute(),
+                op.getCaseValuesAttr(), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::SwitchOperandCountOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::SwitchOperandCount, op.operation(), op.caseValuesAttr(),
-                op.getSuccessors());
+  writer.append(OpCode::SwitchOperandCount, op.getInputOp(),
+                op.getCaseValuesAttr(), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::SwitchOperationNameOp op,
                          ByteCodeWriter &writer) {
-  auto cases = llvm::map_range(op.caseValuesAttr(), [&](Attribute attr) {
+  auto cases = llvm::map_range(op.getCaseValuesAttr(), [&](Attribute attr) {
     return OperationName(attr.cast<StringAttr>().getValue(), ctx);
   });
-  writer.append(OpCode::SwitchOperationName, op.operation(), cases,
+  writer.append(OpCode::SwitchOperationName, op.getInputOp(), cases,
                 op.getSuccessors());
 }
 void Generator::generate(pdl_interp::SwitchResultCountOp op,
                          ByteCodeWriter &writer) {
-  writer.append(OpCode::SwitchResultCount, op.operation(), op.caseValuesAttr(),
-                op.getSuccessors());
+  writer.append(OpCode::SwitchResultCount, op.getInputOp(),
+                op.getCaseValuesAttr(), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::SwitchTypeOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::SwitchType, op.value(), op.caseValuesAttr(),
+  writer.append(OpCode::SwitchType, op.getValue(), op.getCaseValuesAttr(),
                 op.getSuccessors());
 }
 void Generator::generate(pdl_interp::SwitchTypesOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::SwitchTypes, op.value(), op.caseValuesAttr(),
+  writer.append(OpCode::SwitchTypes, op.getValue(), op.getCaseValuesAttr(),
                 op.getSuccessors());
 }
 

@@ -32,8 +32,8 @@ template <typename OpT>
 static LogicalResult verifySwitchOp(OpT op) {
   // Verify that the number of case destinations matches the number of case
   // values.
-  size_t numDests = op.cases().size();
-  size_t numValues = op.caseValues().size();
+  size_t numDests = op.getCases().size();
+  size_t numValues = op.getCaseValues().size();
   if (numDests != numValues) {
     return op.emitOpError(
                "expected number of cases to match the number of case "
@@ -140,23 +140,23 @@ ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void ForEachOp::print(OpAsmPrinter &p) {
   BlockArgument arg = getLoopVariable();
-  p << ' ' << arg << " : " << arg.getType() << " in " << values() << ' ';
-  p.printRegion(region(), /*printEntryBlockArgs=*/false);
+  p << ' ' << arg << " : " << arg.getType() << " in " << getValues() << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs());
   p << " -> ";
-  p.printSuccessor(successor());
+  p.printSuccessor(getSuccessor());
 }
 
 LogicalResult ForEachOp::verify() {
   // Verify that the operation has exactly one argument.
-  if (region().getNumArguments() != 1)
+  if (getRegion().getNumArguments() != 1)
     return emitOpError("requires exactly one argument");
 
   // Verify that the loop variable and the operand (value range)
   // have compatible types.
   BlockArgument arg = getLoopVariable();
   Type rangeType = pdl::RangeType::get(arg.getType());
-  if (rangeType != values().getType())
+  if (rangeType != getValues().getType())
     return emitOpError("operand must be a range of loop variable type");
 
   return success();

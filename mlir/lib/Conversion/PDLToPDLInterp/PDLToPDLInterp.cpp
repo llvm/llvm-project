@@ -281,11 +281,11 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
     value = foreach.getLoopVariable();
 
     // Create the continuation block.
-    Block *continueBlock = builder.createBlock(&foreach.region());
+    Block *continueBlock = builder.createBlock(&foreach.getRegion());
     builder.create<pdl_interp::ContinueOp>(loc);
     failureBlockStack.push_back(continueBlock);
 
-    currentBlock = &foreach.region().front();
+    currentBlock = &foreach.getRegion().front();
     break;
   }
   case Predicates::OperandPos: {
@@ -679,7 +679,7 @@ void PatternLowering::generateRewriter(
   auto interpOp = builder.create<pdl_interp::ApplyRewriteOp>(
       rewriteOp.getLoc(), rewriteOp.getResultTypes(), rewriteOp.nameAttr(),
       arguments, rewriteOp.constParamsAttr());
-  for (auto it : llvm::zip(rewriteOp.results(), interpOp.results()))
+  for (auto it : llvm::zip(rewriteOp.results(), interpOp.getResults()))
     rewriteValues[std::get<0>(it)] = std::get<1>(it);
 }
 
