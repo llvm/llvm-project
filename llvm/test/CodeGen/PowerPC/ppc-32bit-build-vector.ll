@@ -10,26 +10,27 @@ define dso_local fastcc void @BuildVectorICE() unnamed_addr {
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    stwu 1, -64(1)
 ; 32BIT-NEXT:    .cfi_def_cfa_offset 64
-; 32BIT-NEXT:    lxvw4x 34, 0, 3
-; 32BIT-NEXT:    li 3, 0
-; 32BIT-NEXT:    addi 4, 1, 16
-; 32BIT-NEXT:    addi 5, 1, 32
+; 32BIT-NEXT:    li 3, .LCPI0_0@l
+; 32BIT-NEXT:    lis 4, .LCPI0_0@ha
+; 32BIT-NEXT:    addi 5, 1, 16
 ; 32BIT-NEXT:    addi 6, 1, 48
 ; 32BIT-NEXT:    li 7, 0
+; 32BIT-NEXT:    lxvw4x 34, 0, 3
+; 32BIT-NEXT:    lxvw4x 35, 4, 3
+; 32BIT-NEXT:    li 3, 0
+; 32BIT-NEXT:    addi 4, 1, 32
 ; 32BIT-NEXT:    .p2align 4
 ; 32BIT-NEXT:  .LBB0_1: # %while.body
 ; 32BIT-NEXT:    #
-; 32BIT-NEXT:    stw 7, 16(1)
 ; 32BIT-NEXT:    stw 3, 32(1)
-; 32BIT-NEXT:    lxvw4x 0, 0, 4
-; 32BIT-NEXT:    lxvw4x 1, 0, 5
-; 32BIT-NEXT:    xxsldwi 0, 1, 0, 1
-; 32BIT-NEXT:    xxspltw 1, 1, 0
-; 32BIT-NEXT:    xxsldwi 35, 0, 1, 3
-; 32BIT-NEXT:    vadduwm 3, 2, 3
-; 32BIT-NEXT:    xxspltw 36, 35, 1
-; 32BIT-NEXT:    vadduwm 3, 3, 4
-; 32BIT-NEXT:    stxvw4x 35, 0, 6
+; 32BIT-NEXT:    stw 7, 16(1)
+; 32BIT-NEXT:    lxvw4x 36, 0, 4
+; 32BIT-NEXT:    lxvw4x 37, 0, 5
+; 32BIT-NEXT:    vperm 4, 5, 4, 3
+; 32BIT-NEXT:    vadduwm 4, 2, 4
+; 32BIT-NEXT:    xxspltw 37, 36, 1
+; 32BIT-NEXT:    vadduwm 4, 4, 5
+; 32BIT-NEXT:    stxvw4x 36, 0, 6
 ; 32BIT-NEXT:    lwz 7, 48(1)
 ; 32BIT-NEXT:    b .LBB0_1
 ;
