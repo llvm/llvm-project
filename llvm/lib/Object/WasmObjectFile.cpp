@@ -1474,6 +1474,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
                                             object_error::parse_failed);
 
     if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) {
+      Segment.Offset.Extended = false;
       Segment.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
       Segment.Offset.Inst.Value.Int32 = 0;
     } else {
