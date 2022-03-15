@@ -63,6 +63,12 @@ void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
 mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
                           mlir::Value pointer, mlir::Value target);
 
+void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
+                   mlir::Value imageDistinct);
+void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
+void genRandomSeed(fir::FirOpBuilder &, mlir::Location, int argIndex,
+                   mlir::Value argBox);
+
 } // namespace lower
 } // namespace Fortran
 

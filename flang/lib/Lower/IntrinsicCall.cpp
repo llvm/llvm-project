@@ -455,6 +455,9 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
+  void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
+  void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -463,7 +466,9 @@ struct IntrinsicLibrary {
   /// generate the related code.
   using ElementalGenerator = decltype(&IntrinsicLibrary::genAbs);
   using ExtendedGenerator = decltype(&IntrinsicLibrary::genSum);
-  using Generator = std::variant<ElementalGenerator, ExtendedGenerator>;
+  using SubroutineGenerator = decltype(&IntrinsicLibrary::genRandomInit);
+  using Generator =
+      std::variant<ElementalGenerator, ExtendedGenerator, SubroutineGenerator>;
 
   template <typename GeneratorType>
   fir::ExtendedValue
@@ -490,6 +495,8 @@ struct IntrinsicLibrary {
                               llvm::ArrayRef<mlir::Value> args);
   mlir::Value invokeGenerator(ExtendedGenerator generator,
                               mlir::Type resultType,
+                              llvm::ArrayRef<mlir::Value> args);
+  mlir::Value invokeGenerator(SubroutineGenerator generator,
                               llvm::ArrayRef<mlir::Value> args);
 
   /// Add clean-up for \p temp to the current statement context;
@@ -614,6 +621,17 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
+    {"random_init",
+     &I::genRandomInit,
+     {{{"repeatable", asValue}, {"image_distinct", asValue}}},
+     /*isElemental=*/false},
+    {"random_number",
+     &I::genRandomNumber,
+     {{{"harvest", asBox}}},
+     /*isElemental=*/false},
+    {"random_seed",
+     &I::genRandomSeed,
+     {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
      /*isElemental=*/false},
     {"sum",
      &I::genSum,
@@ -1051,6 +1069,21 @@ IntrinsicLibrary::genElementalCall<IntrinsicLibrary::ExtendedGenerator>(
   return std::invoke(generator, *this, resultType, args);
 }
 
+template <>
+fir::ExtendedValue
+IntrinsicLibrary::genElementalCall<IntrinsicLibrary::SubroutineGenerator>(
+    SubroutineGenerator generator, llvm::StringRef name, mlir::Type resultType,
+    llvm::ArrayRef<fir::ExtendedValue> args, bool outline) {
+  for (const fir::ExtendedValue &arg : args)
+    if (!arg.getUnboxed() && !arg.getCharBox())
+      // fir::emitFatalError(loc, "nonscalar intrinsic argument");
+      crashOnMissingIntrinsic(loc, name);
+  if (outline)
+    return outlineInExtendedWrapper(generator, name, resultType, args);
+  std::invoke(generator, *this, args);
+  return mlir::Value();
+}
+
 static fir::ExtendedValue
 invokeHandler(IntrinsicLibrary::ElementalGenerator generator,
               const IntrinsicHandler &handler,
@@ -1076,6 +1109,22 @@ invokeHandler(IntrinsicLibrary::ExtendedGenerator generator,
     return lib.outlineInExtendedWrapper(generator, handler.name, *resultType,
                                         args);
   return std::invoke(generator, lib, *resultType, args);
+}
+
+static fir::ExtendedValue
+invokeHandler(IntrinsicLibrary::SubroutineGenerator generator,
+              const IntrinsicHandler &handler,
+              llvm::Optional<mlir::Type> resultType,
+              llvm::ArrayRef<fir::ExtendedValue> args, bool outline,
+              IntrinsicLibrary &lib) {
+  if (handler.isElemental)
+    return lib.genElementalCall(generator, handler.name, mlir::Type{}, args,
+                                outline);
+  if (outline)
+    return lib.outlineInExtendedWrapper(generator, handler.name, resultType,
+                                        args);
+  std::invoke(generator, lib, args);
+  return mlir::Value{};
 }
 
 fir::ExtendedValue
@@ -1145,6 +1194,16 @@ IntrinsicLibrary::invokeGenerator(ExtendedGenerator generator,
   return toValue(extendedResult, builder, loc);
 }
 
+mlir::Value
+IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  llvm::SmallVector<fir::ExtendedValue> extendedArgs;
+  for (mlir::Value arg : args)
+    extendedArgs.emplace_back(toExtendedValue(arg, builder, loc));
+  std::invoke(generator, *this, extendedArgs);
+  return {};
+}
+
 template <typename GeneratorType>
 mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
                                           llvm::StringRef name,
@@ -1184,12 +1243,17 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
 
     IntrinsicLibrary localLib{*localBuilder, localLoc};
 
-    assert(funcType.getNumResults() == 1 &&
-           "expect one result for intrinsic function wrapper type");
-    mlir::Type resultType = funcType.getResult(0);
-    auto result =
-        localLib.invokeGenerator(generator, resultType, localArguments);
-    localBuilder->create<mlir::func::ReturnOp>(localLoc, result);
+    if constexpr (std::is_same_v<GeneratorType, SubroutineGenerator>) {
+      localLib.invokeGenerator(generator, localArguments);
+      localBuilder->create<mlir::func::ReturnOp>(localLoc);
+    } else {
+      assert(funcType.getNumResults() == 1 &&
+             "expect one result for intrinsic function wrapper type");
+      mlir::Type resultType = funcType.getResult(0);
+      auto result =
+          localLib.invokeGenerator(generator, resultType, localArguments);
+      localBuilder->create<mlir::func::ReturnOp>(localLoc, result);
+    }
   } else {
     // Wrapper was already built, ensure it has the sought type
     assert(function.getType() == funcType &&
@@ -1735,6 +1799,31 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
       builder, loc, boxType, mold->nonDeferredLenParams());
   builder.create<fir::StoreOp>(loc, box, boxStorage);
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
+}
+
+// RANDOM_INIT
+void IntrinsicLibrary::genRandomInit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  Fortran::lower::genRandomInit(builder, loc, fir::getBase(args[0]),
+                                fir::getBase(args[1]));
+}
+
+// RANDOM_NUMBER
+void IntrinsicLibrary::genRandomNumber(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  Fortran::lower::genRandomNumber(builder, loc, fir::getBase(args[0]));
+}
+
+// RANDOM_SEED
+void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  for (int i = 0; i < 3; ++i)
+    if (isPresent(args[i])) {
+      Fortran::lower::genRandomSeed(builder, loc, i, fir::getBase(args[i]));
+      return;
+    }
+  Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
 }
 
 // SUM
