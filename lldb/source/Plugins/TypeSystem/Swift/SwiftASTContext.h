@@ -757,7 +757,7 @@ public:
   /// unit as well as any imports from previous expression evaluations.
   static bool GetImplicitImports(
       SwiftASTContext &swift_ast_context, SymbolContext &sc,
-      ExecutionContextScope &exe_scope, lldb::StackFrameWP &stack_frame_wp,
+      ExecutionContextScope &exe_scope, lldb::ProcessSP process_sp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
           &modules,
       Status &error);
@@ -767,25 +767,24 @@ public:
   static bool CacheUserImports(SwiftASTContext &swift_ast_context,
                                SymbolContext &sc,
                                ExecutionContextScope &exe_scope,
-                               lldb::StackFrameWP &stack_frame_wp,
+                               lldb::ProcessSP process_sp,
                                swift::SourceFile &source_file, Status &error);
 
   /// Retrieve/import the modules imported by the compilation
   /// unit. Early-exists with false if there was an import failure.
   bool GetCompileUnitImports(
-      SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+      SymbolContext &sc, lldb::ProcessSP process_sp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
           &modules,
       Status &error);
 
   /// Perform all the implicit imports for the current frame.
-  void PerformCompileUnitImports(SymbolContext &sc,
-                                 lldb::StackFrameWP &stack_frame_wp,
+  void PerformCompileUnitImports(SymbolContext &sc, lldb::ProcessSP process_sp,
                                  Status &error);
 
 protected:
   bool GetCompileUnitImportsImpl(
-      SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+      SymbolContext &sc, lldb::ProcessSP process_sp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
           *modules,
       Status &error);

@@ -1305,8 +1305,11 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   Status implicit_import_error;
   llvm::SmallVector<swift::AttributedImport<swift::ImportedModule>, 16>
       additional_imports;
+  lldb::ProcessSP process_sp;
+  if (lldb::StackFrameSP this_frame_sp = stack_frame_wp.lock())
+    process_sp = this_frame_sp->CalculateProcess();
   if (!SwiftASTContext::GetImplicitImports(swift_ast_context, sc, exe_scope,
-                                           stack_frame_wp, additional_imports,
+                                           process_sp, additional_imports,
                                            implicit_import_error)) {
     const char *msg = implicit_import_error.AsCString();
     if (!msg)
@@ -1455,12 +1458,12 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
     Status auto_import_error;
     if (!SwiftASTContext::CacheUserImports(swift_ast_context, sc, exe_scope,
-                                           stack_frame_wp, *source_file,
+                                           process_sp, *source_file,
                                            auto_import_error)) {
-          const char *msg = auto_import_error.AsCString();
-          if (!msg)
-            msg = "error status positive, but import still failed";
-          return make_error<ModuleImportError>(msg, /*explicit=*/true);
+      const char *msg = auto_import_error.AsCString();
+      if (!msg)
+        msg = "error status positive, but import still failed";
+      return make_error<ModuleImportError>(msg, /*explicit=*/true);
     }
   }
 

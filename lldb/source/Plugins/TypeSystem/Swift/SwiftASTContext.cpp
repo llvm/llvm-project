@@ -8078,7 +8078,7 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
 
 static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
                                         SwiftASTContext &swift_ast_context,
-                                        lldb::StackFrameWP &stack_frame_wp,
+                                        lldb::ProcessSP process_sp,
                                         Status &error) {
   LLDB_SCOPED_TIMER();
   if (!module.path.size())
@@ -8090,22 +8090,16 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
              "Importing module %s", toplevel.AsCString());
   swift::ModuleDecl *swift_module = nullptr;
-  lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
-
   auto *clangimporter = swift_ast_context.GetClangImporter();
   swift::ModuleDecl *imported_header_module =
       clangimporter ? clangimporter->getImportedHeaderModule() : nullptr;
   if (imported_header_module &&
       toplevel.GetStringRef() == imported_header_module->getName().str())
     swift_module = imported_header_module;
-  else if (this_frame_sp) {
-    lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
-    if (process_sp)
-      swift_module =
-          swift_ast_context.FindAndLoadModule(module, *process_sp.get(), error);
-    else
-      swift_module = swift_ast_context.GetModule(module, error);
-  } else
+  else if (process_sp)
+    swift_module =
+        swift_ast_context.FindAndLoadModule(module, *process_sp.get(), error);
+  else
     swift_module = swift_ast_context.GetModule(module, error);
 
   if (swift_module && IsDWARFImported(*swift_module)) {
@@ -8150,12 +8144,12 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
 
 bool SwiftASTContext::GetImplicitImports(
     SwiftASTContext &swift_ast_context, SymbolContext &sc,
-    ExecutionContextScope &exe_scope, lldb::StackFrameWP &stack_frame_wp,
+    ExecutionContextScope &exe_scope, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
   LLDB_SCOPED_TIMER();
-  if (!swift_ast_context.GetCompileUnitImports(sc, stack_frame_wp, modules,
+  if (!swift_ast_context.GetCompileUnitImports(sc, process_sp, modules,
                                                error)) {
     return false;
   }
@@ -8180,7 +8174,7 @@ bool SwiftASTContext::GetImplicitImports(
     SourceModule module_info;
     module_info.path.emplace_back(module_pair.first());
     auto *module =
-        LoadOneModule(module_info, swift_ast_context, stack_frame_wp, error);
+        LoadOneModule(module_info, swift_ast_context, process_sp, error);
     if (!module)
       return false;
 
@@ -8193,7 +8187,7 @@ bool SwiftASTContext::GetImplicitImports(
 bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
                                        SymbolContext &sc,
                                        ExecutionContextScope &exe_scope,
-                                       lldb::StackFrameWP &stack_frame_wp,
+                                       lldb::ProcessSP process_sp,
                                        swift::SourceFile &source_file,
                                        Status &error) {
   llvm::SmallString<1> m_description;
@@ -8214,8 +8208,7 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
         LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
-        if (!LoadOneModule(module_info, swift_ast_context, stack_frame_wp,
-                           error))
+        if (!LoadOneModule(module_info, swift_ast_context, process_sp, error))
           return false;
 
         // How do we tell we are in REPL or playground mode?
@@ -8228,16 +8221,16 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
 }
 
 bool SwiftASTContext::GetCompileUnitImports(
-    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+    SymbolContext &sc, ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
-  return GetCompileUnitImportsImpl(sc, stack_frame_wp, &modules, error);
+  return GetCompileUnitImportsImpl(sc, process_sp, &modules, error);
 }
 
 void SwiftASTContext::PerformCompileUnitImports(
-    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp, Status &error) {
-  GetCompileUnitImportsImpl(sc, stack_frame_wp, nullptr, error);
+    SymbolContext &sc, lldb::ProcessSP process_sp, Status &error) {
+  GetCompileUnitImportsImpl(sc, process_sp, nullptr, error);
 }
 
 static std::pair<Module *, lldb::user_id_t>
@@ -8246,7 +8239,7 @@ GetCUSignature(CompileUnit &compile_unit) {
 }
 
 bool SwiftASTContext::GetCompileUnitImportsImpl(
-    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+    SymbolContext &sc, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         *modules,
     Status &error) {
@@ -8270,7 +8263,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   SourceModule swift_module;
   swift_module.path.emplace_back("Swift");
   auto *stdlib =
-      LoadOneModule(swift_module, *this, stack_frame_wp, error);
+      LoadOneModule(swift_module, *this, process_sp, error);
   if (!stdlib)
     return false;
 
@@ -8291,7 +8284,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
       continue;
 
     auto *loaded_module =
-        LoadOneModule(module, *this, stack_frame_wp, error);
+        LoadOneModule(module, *this, process_sp, error);
     if (!loaded_module)
       return false;
 

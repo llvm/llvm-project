@@ -1321,9 +1321,10 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
 void TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
     SymbolContext &sc) {
   Status error;
-  lldb::StackFrameWP stack_frame;
+  // FIXME: this is uninitialized!
+  lldb::ProcessSP process_sp;
   if (m_swift_ast_context_initialized)
-    GetSwiftASTContext()->PerformCompileUnitImports(sc, stack_frame, error);
+    GetSwiftASTContext()->PerformCompileUnitImports(sc, process_sp, error);
   else
     m_initial_symbol_context = std::make_unique<SymbolContext>(sc);
 }
@@ -1382,9 +1383,10 @@ TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext() const {
 
   if (m_initial_symbol_context) {
     Status error;
-    lldb::StackFrameWP stack_frame;
+    // FIXME: not initialized!
+    lldb::ProcessSP process_sp;
     m_swift_ast_context->PerformCompileUnitImports(*m_initial_symbol_context,
-                                                   stack_frame, error);
+                                                   process_sp, error);
     m_initial_symbol_context.reset();
   }
 
