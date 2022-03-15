@@ -22,13 +22,11 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// mlir-translate tool driver
+// Translation Parser
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-mlir::mlirTranslateMain(int argc, char **argv, llvm::StringRef toolName,
-                        const DialectRegistry &extraDialects,
-                        llvm::function_ref<void(MLIRContext &)> customization) {
+LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
+                                      llvm::StringRef toolName) {
 
   static llvm::cl::opt<std::string> inputFilename(
       llvm::cl::Positional, llvm::cl::desc("<input file>"),
@@ -82,22 +80,8 @@ mlir::mlirTranslateMain(int argc, char **argv, llvm::StringRef toolName,
   auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
                            raw_ostream &os) {
     MLIRContext context;
-
-    // If the client wanted to register additional dialects, go ahead and add
-    // them to our context.
-    context.appendDialectRegistry(extraDialects);
-
-    // If a customization callback was provided, apply it to the MLIRContext.
-    // This could add dialects to the registry or change context defaults.
-    if (customization)
-      customization(context);
-
-    // If command line flags were used to customize the context, apply their
-    // settings.
-    if (allowUnregisteredDialects.getNumOccurrences())
-      context.allowUnregisteredDialects(allowUnregisteredDialects);
+    context.allowUnregisteredDialects(allowUnregisteredDialects);
     context.printOpOnDiagnostic(!verifyDiagnostics);
-
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
