@@ -104,5 +104,18 @@ TYPED_TEST(GlobListTest, Complex) {
   EXPECT_TRUE(Filter.contains("asdfqwEasdf"));
 }
 
+TYPED_TEST(GlobListTest, NewlineCharactersAsSeparators) {
+  TypeParam Filter("a*  \n b,\n-c*,dd");
+
+  EXPECT_FALSE(Filter.contains(""));
+  EXPECT_TRUE(Filter.contains("aaa"));
+  EXPECT_TRUE(Filter.contains("b"));
+  EXPECT_FALSE(Filter.contains("c"));
+  EXPECT_FALSE(Filter.contains("ccc"));
+  EXPECT_FALSE(Filter.contains("d"));
+  EXPECT_TRUE(Filter.contains("dd"));
+  EXPECT_FALSE(Filter.contains("ddd"));
+}
+
 } // namespace tidy
 } // namespace clang
