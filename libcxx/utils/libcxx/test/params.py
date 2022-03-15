@@ -125,6 +125,7 @@ DEFAULT_PARAMETERS = [
             help="The debugging level to enable in the test suite.",
             actions=lambda debugLevel: [] if debugLevel == '' else filter(None, [
               AddFeature('debug_level={}'.format(debugLevel)),
+              AddCompileFlag('-Wno-macro-redefined'),
               AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel)),
               AddFeature('LIBCXX-DEBUG-FIXME') if debugLevel == '1' else None
             ])),
