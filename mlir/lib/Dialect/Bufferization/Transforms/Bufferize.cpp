@@ -306,14 +306,21 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Bufferize ops top-to-bottom. When creating a new op, we should ideally
   // know the exact memref type of all operands. Otherwise, we have to use a
   // memref type with a fully dynamic layout map, which has to canonicalize
-  // away.
-  // Moreover, if "fullyDynamicLayoutMaps = false", we may otherwise have to
-  // insert buffer copies to fold ("finalize") to_memref(to_tensor(x)) ops with
-  // non-cast-compatible layout maps.
+  // away. This is less efficient.
+  //
+  // Note: If "fullyDynamicLayoutMaps = false", we may have to insert buffer
+  // copies to fold ("finalize") to_memref(to_tensor(x)) ops with non-cast-
+  // compatible layout maps when doing a traversal other than top-to-bottom.
+  // There are currently no canonicalization patterns to fold these away.
   GreedyRewriteConfig config;
   config.useTopDownTraversal = true;
 
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+  // TODO: Perform a preorder walk instead of the greedy pattern rewriter. This
+  // would be more efficient because every bufferization pattern is guaranteed
+  // to apply only a single time (otherwise, an assertion would be triggered).
+  // However, there are restrictions wrt. erasing ops during a preorder walk,
+  // which would likely require a larger refactoring.
+  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
     return failure();
 
   return checkBufferizationResult(op, state.getOptions());
