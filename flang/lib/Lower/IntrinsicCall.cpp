@@ -197,6 +197,33 @@ genProdOrSum(FN func, FD funcDim, mlir::Type resultType,
                     args[1], mask, rank);
 }
 
+/// Process calls to DotProduct
+template <typename FN>
+static fir::ExtendedValue
+genDotProd(FN func, mlir::Type resultType, fir::FirOpBuilder &builder,
+           mlir::Location loc, Fortran::lower::StatementContext *stmtCtx,
+           llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 2);
+
+  // Handle required vector arguments
+  mlir::Value vectorA = fir::getBase(args[0]);
+  mlir::Value vectorB = fir::getBase(args[1]);
+
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(vectorA.getType())
+                         .cast<fir::SequenceType>()
+                         .getEleTy();
+  if (fir::isa_complex(eleTy)) {
+    mlir::Value result = builder.createTemporary(loc, eleTy);
+    func(builder, loc, vectorA, vectorB, result);
+    return builder.create<fir::LoadOp>(loc, result);
+  }
+
+  auto resultBox = builder.create<fir::AbsentOp>(
+      loc, fir::BoxType::get(builder.getI1Type()));
+  return func(builder, loc, vectorA, vectorB, resultBox);
+}
+
 // TODO error handling -> return a code or directly emit messages ?
 struct IntrinsicLibrary {
 
@@ -240,6 +267,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genDotProduct(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
@@ -351,6 +380,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
     {"char", &I::genChar},
+    {"dot_product",
+     &I::genDotProduct,
+     {{{"vector_a", asBox}, {"vector_b", asBox}}},
+     /*isElemental=*/false},
     {"iand", &I::genIand},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"sum",
@@ -1224,6 +1257,14 @@ IntrinsicLibrary::genChar(mlir::Type type,
   mlir::Value len =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
   return fir::CharBoxValue{cast, len};
+}
+
+// DOT_PRODUCT
+fir::ExtendedValue
+IntrinsicLibrary::genDotProduct(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genDotProd(fir::runtime::genDotProduct, resultType, builder, loc,
+                    stmtCtx, args);
 }
 
 // IAND
