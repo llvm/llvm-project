@@ -235,6 +235,8 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
     in.rebase->addEntry(isec, offset);
     if (defined->isExternalWeakDef())
       in.weakBinding->addEntry(sym, isec, offset, addend);
+    else if (defined->interposable)
+      in.binding->addEntry(sym, isec, offset, addend);
   } else {
     // Undefined symbols are filtered out in scanRelocations(); we should never
     // get here
@@ -420,6 +422,7 @@ static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
 static int16_t ordinalForSymbol(const Symbol &sym) {
   if (const auto *dysym = dyn_cast<DylibSymbol>(&sym))
     return ordinalForDylibSymbol(*dysym);
+  assert(cast<Defined>(&sym)->interposable);
   return BIND_SPECIAL_DYLIB_FLAT_LOOKUP;
 }
 
