@@ -13,23 +13,29 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-LABEL: intrinsics1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -176(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
-; CHECK-NEXT:    stdu r1, -176(r1)
-; CHECK-NEXT:    # kill: def $v5 killed $v5 killed $vsrp18 def $vsrp18
-; CHECK-NEXT:    # kill: def $v4 killed $v4 killed $vsrp18 def $vsrp18
-; CHECK-NEXT:    # kill: def $v3 killed $v3 killed $vsrp17 def $vsrp17
-; CHECK-NEXT:    # kill: def $v2 killed $v2 killed $vsrp17 def $vsrp17
-; CHECK-NEXT:    xxlor vs0, v2, v2
-; CHECK-NEXT:    xxlor vs1, v3, v3
-; CHECK-NEXT:    stxvp vsp34, 128(r1) # 32-byte Folded Spill
-; CHECK-NEXT:    xxlor vs2, v4, v4
-; CHECK-NEXT:    xxlor vs3, v5, v5
+; CHECK-NEXT:    .cfi_offset v28, -80
+; CHECK-NEXT:    .cfi_offset v29, -64
+; CHECK-NEXT:    .cfi_offset v30, -48
+; CHECK-NEXT:    .cfi_offset v31, -32
+; CHECK-NEXT:    stxv v28, 96(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    stxv v29, 112(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    vmr v29, v3
+; CHECK-NEXT:    vmr v28, v2
+; CHECK-NEXT:    xxlor vs0, v28, v28
+; CHECK-NEXT:    stxv v30, 128(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    stxv v31, 144(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    vmr v31, v5
+; CHECK-NEXT:    vmr v30, v4
+; CHECK-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    xxlor vs1, v29, v29
+; CHECK-NEXT:    xxlor vs2, v30, v30
+; CHECK-NEXT:    xxlor vs3, v31, v31
 ; CHECK-NEXT:    ld r30, 272(r1)
-; CHECK-NEXT:    stxvp vsp36, 96(r1) # 32-byte Folded Spill
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-NEXT:    xxmfacc acc0
@@ -39,17 +45,19 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    lxvp vsp0, 64(r1)
 ; CHECK-NEXT:    lxvp vsp2, 32(r1)
 ; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    lxvp vsp34, 128(r1) # 32-byte Folded Reload
-; CHECK-NEXT:    lxvp vsp36, 96(r1) # 32-byte Folded Reload
-; CHECK-NEXT:    xvf16ger2pp acc0, v2, v4
+; CHECK-NEXT:    xvf16ger2pp acc0, v28, v30
+; CHECK-NEXT:    lxv v31, 144(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv v30, 128(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv v29, 112(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv v28, 96(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r30)
 ; CHECK-NEXT:    stxv vs1, 32(r30)
 ; CHECK-NEXT:    stxv vs2, 16(r30)
 ; CHECK-NEXT:    stxv vs3, 0(r30)
+; CHECK-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi r1, r1, 176
 ; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
@@ -61,17 +69,23 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    .cfi_def_cfa_offset 256
 ; CHECK-BE-NEXT:    .cfi_offset lr, 16
 ; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    .cfi_offset v28, -80
+; CHECK-BE-NEXT:    .cfi_offset v29, -64
+; CHECK-BE-NEXT:    .cfi_offset v30, -48
+; CHECK-BE-NEXT:    .cfi_offset v31, -32
+; CHECK-BE-NEXT:    stxv v28, 176(r1) # 16-byte Folded Spill
+; CHECK-BE-NEXT:    stxv v29, 192(r1) # 16-byte Folded Spill
+; CHECK-BE-NEXT:    vmr v29, v3
+; CHECK-BE-NEXT:    vmr v28, v2
+; CHECK-BE-NEXT:    xxlor vs0, v28, v28
+; CHECK-BE-NEXT:    stxv v30, 208(r1) # 16-byte Folded Spill
+; CHECK-BE-NEXT:    stxv v31, 224(r1) # 16-byte Folded Spill
+; CHECK-BE-NEXT:    vmr v31, v5
+; CHECK-BE-NEXT:    vmr v30, v4
 ; CHECK-BE-NEXT:    std r30, 240(r1) # 8-byte Folded Spill
-; CHECK-BE-NEXT:    # kill: def $v5 killed $v5 killed $vsrp18 def $vsrp18
-; CHECK-BE-NEXT:    # kill: def $v4 killed $v4 killed $vsrp18 def $vsrp18
-; CHECK-BE-NEXT:    # kill: def $v3 killed $v3 killed $vsrp17 def $vsrp17
-; CHECK-BE-NEXT:    # kill: def $v2 killed $v2 killed $vsrp17 def $vsrp17
-; CHECK-BE-NEXT:    xxlor vs0, v2, v2
-; CHECK-BE-NEXT:    xxlor vs1, v3, v3
-; CHECK-BE-NEXT:    stxvp vsp34, 208(r1) # 32-byte Folded Spill
-; CHECK-BE-NEXT:    xxlor vs2, v4, v4
-; CHECK-BE-NEXT:    xxlor vs3, v5, v5
-; CHECK-BE-NEXT:    stxvp vsp36, 176(r1) # 32-byte Folded Spill
+; CHECK-BE-NEXT:    xxlor vs1, v29, v29
+; CHECK-BE-NEXT:    xxlor vs2, v30, v30
+; CHECK-BE-NEXT:    xxlor vs3, v31, v31
 ; CHECK-BE-NEXT:    ld r30, 368(r1)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
@@ -83,9 +97,11 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    lxvp vsp0, 112(r1)
 ; CHECK-BE-NEXT:    lxvp vsp2, 144(r1)
 ; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    lxvp vsp34, 208(r1) # 32-byte Folded Reload
-; CHECK-BE-NEXT:    lxvp vsp36, 176(r1) # 32-byte Folded Reload
-; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
+; CHECK-BE-NEXT:    xvf16ger2pp acc0, v28, v30
+; CHECK-BE-NEXT:    lxv v31, 224(r1) # 16-byte Folded Reload
+; CHECK-BE-NEXT:    lxv v30, 208(r1) # 16-byte Folded Reload
+; CHECK-BE-NEXT:    lxv v29, 192(r1) # 16-byte Folded Reload
+; CHECK-BE-NEXT:    lxv v28, 176(r1) # 16-byte Folded Reload
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r30)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r30)

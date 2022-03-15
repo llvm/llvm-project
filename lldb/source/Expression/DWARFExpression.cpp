@@ -1297,7 +1297,7 @@ bool DWARFExpression::Evaluate(
         addr_t load_addr = *maybe_load_addr;
 
         if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
-          uint8_t addr_bytes[size];
+          uint8_t addr_bytes[8];
           Status error;
 
           if (exe_ctx->GetTargetRef().ReadMemory(
@@ -1306,7 +1306,7 @@ bool DWARFExpression::Evaluate(
             ObjectFile *objfile = module_sp->GetObjectFile();
 
             stack.back().GetScalar() = DerefSizeExtractDataHelper(
-                addr_bytes, sizeof(addr_bytes), objfile->GetByteOrder(), size);
+                addr_bytes, size, objfile->GetByteOrder(), size);
             stack.back().ClearContext();
             break;
           } else {

@@ -23,6 +23,7 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> AlignBlocks;
 extern cl::opt<bool> PreserveBlocksAlignment;
+extern cl::opt<unsigned> AlignFunctions;
 
 cl::opt<unsigned>
 AlignBlocksMinSize("align-blocks-min-size",
@@ -41,13 +42,6 @@ AlignBlocksThreshold("align-blocks-threshold",
   cl::init(800),
   cl::ZeroOrMore,
   cl::Hidden,
-  cl::cat(BoltOptCategory));
-
-cl::opt<unsigned>
-AlignFunctions("align-functions",
-  cl::desc("align functions at a given value (relocation mode)"),
-  cl::init(64),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 cl::opt<unsigned>
