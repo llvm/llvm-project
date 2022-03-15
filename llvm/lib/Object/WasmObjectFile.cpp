@@ -1535,6 +1535,7 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
       if (Error Err = readInitExpr(Segment.Data.Offset, Ctx))
         return Err;
     } else {
+      Segment.Data.Offset.Extended = false;
       Segment.Data.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
       Segment.Data.Offset.Inst.Value.Int32 = 0;
     }
