@@ -16,9 +16,9 @@
 namespace mlir {
 namespace bufferization {
 
-class AnalysisBufferizationState;
+struct OneShotBufferizationOptions;
 class BufferizationAliasInfo;
-struct AnalysisBufferizationOptions;
+class OneShotAnalysisState;
 
 /// PostAnalysisStepFns can be registered with `BufferizationOptions` and are
 /// executed after the analysis, but before bufferization. They can be used to
@@ -26,14 +26,14 @@ struct AnalysisBufferizationOptions;
 /// must keep `aliasInfo` consistent. Newly created operations and operations
 /// that should be re-analyzed must be added to `newOps`.
 using PostAnalysisStepFn = std::function<LogicalResult(
-    Operation *, BufferizationState &, BufferizationAliasInfo &,
+    Operation *, AnalysisState &, BufferizationAliasInfo &,
     SmallVector<Operation *> &)>;
 
 using PostAnalysisStepList = SmallVector<PostAnalysisStepFn>;
 
 /// Options for analysis-enabled bufferization.
-struct AnalysisBufferizationOptions : public BufferizationOptions {
-  AnalysisBufferizationOptions() = default;
+struct OneShotBufferizationOptions : public BufferizationOptions {
+  OneShotBufferizationOptions() = default;
 
   /// Register a "post analysis" step. Such steps are executed after the
   /// analysis, but before bufferization.
@@ -68,7 +68,7 @@ public:
 
   /// Set the inPlace bufferization spec to true.
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
-  void bufferizeInPlace(OpOperand &operand, BufferizationState &state);
+  void bufferizeInPlace(OpOperand &operand, AnalysisState &state);
 
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpOperand &operand);
@@ -135,14 +135,14 @@ private:
 /// State for analysis-enabled bufferization. This class keeps track of alias
 /// (via BufferizationAliasInfo) to decide if tensor OpOperands should bufferize
 /// in-place.
-class AnalysisBufferizationState : public BufferizationState {
+class OneShotAnalysisState : public AnalysisState {
 public:
-  AnalysisBufferizationState(Operation *op,
-                             const AnalysisBufferizationOptions &options);
+  OneShotAnalysisState(Operation *op,
+                       const OneShotBufferizationOptions &options);
 
-  AnalysisBufferizationState(const AnalysisBufferizationState &) = delete;
+  OneShotAnalysisState(const OneShotAnalysisState &) = delete;
 
-  virtual ~AnalysisBufferizationState() = default;
+  virtual ~OneShotAnalysisState() = default;
 
   /// Return a reference to the BufferizationAliasInfo.
   BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }
@@ -161,11 +161,11 @@ private:
 
 /// Analyze `op` and its nested ops. Bufferization decisions are stored in
 /// `state`.
-LogicalResult analyzeOp(Operation *op, AnalysisBufferizationState &state);
+LogicalResult analyzeOp(Operation *op, OneShotAnalysisState &state);
 
 /// Run One-Shot Bufferize on the given op: Analysis + Bufferization
 LogicalResult runOneShotBufferize(Operation *op,
-                                  const AnalysisBufferizationOptions &options);
+                                  const OneShotBufferizationOptions &options);
 
 } // namespace bufferization
 } // namespace mlir

@@ -40,13 +40,12 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
 }
 
 multiclass VOP3PInst<string OpName, VOPProfile P,
-                     SDPatternOperator node = null_frag, bit HasExplicitClamp = 0> {
+                     SDPatternOperator node = null_frag, bit IsDOT = 0> {
   def NAME : VOP3P_Pseudo<OpName, P,
                           !if (P.HasModifiers,
-                               getVOP3PModPat<P, node, HasExplicitClamp>.ret,
+                               getVOP3PModPat<P, node, IsDOT, IsDOT>.ret,
                                getVOP3Pat<P, node>.ret)>;
 }
-
 
 // Non-packed instructions that use the VOP3P encoding.
 // VOP3 neg/abs and VOP3P opsel/opsel_hi modifiers are allowed.

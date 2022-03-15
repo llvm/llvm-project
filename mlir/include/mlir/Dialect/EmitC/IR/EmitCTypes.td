@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_EMITC_IR_EMITCTYPES
 #define MLIR_DIALECT_EMITC_IR_EMITCTYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -41,6 +42,7 @@ def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
+  let hasCustomAssemblyFormat = 1;
 }
 
 def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {

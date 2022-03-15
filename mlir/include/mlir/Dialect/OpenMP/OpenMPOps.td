@@ -308,9 +308,53 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Simd construct [2.9.3.1] 
+//===----------------------------------------------------------------------===//
+
+def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
+                         AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
+ let summary = "simd loop construct";
+  let description = [{
+    The simd construct can be applied to a loop to indicate that the loop can be 
+    transformed into a SIMD loop (that is, multiple iterations of the loop can 
+    be executed concurrently using SIMD instructions).. The lower and upper 
+    bounds specify a half-open range: the range includes the lower bound but 
+    does not include the upper bound.
+
+    The body region can contain any number of blocks. The region is terminated
+    by "omp.yield" instruction without operands.
+    ```
+    omp.simdloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) 
+                                      step (%c1, %c1) {
+      // block operations
+      omp.yield
+    }
+    ``` 
+  }];
+
+  // TODO: Add other clauses
+  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
+             Variadic<IntLikeType>:$upperBound,
+             Variadic<IntLikeType>:$step);
+ 
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// Returns the number of loops in the simd loop nest.
+    unsigned getNumLoops() { return lowerBound().size(); }
+
+  }];
+ 
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1; 
+}
+
+
 def YieldOp : OpenMP_Op<"yield",
     [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WsLoopOp", "ReductionDeclareOp", "AtomicUpdateOp"]>]> {
+     ParentOneOf<["WsLoopOp", "ReductionDeclareOp", 
+     "AtomicUpdateOp", "SimdLoopOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and

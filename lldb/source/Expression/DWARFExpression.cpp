@@ -943,6 +943,80 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 }
 } // namespace
 
+/// Helper function to move common code used to resolve a file address and turn
+/// into a load address.
+///
+/// \param exe_ctx Pointer to the execution context
+/// \param module_sp shared_ptr contains the module if we have one
+/// \param error_ptr pointer to Status object if we have one
+/// \param dw_op_type C-style string used to vary the error output
+/// \param file_addr the file address we are trying to resolve and turn into a
+///                  load address
+/// \param so_addr out parameter, will be set to load addresss or section offset
+/// \param check_sectionoffset bool which determines if having a section offset
+///                            but not a load address is considerd a success
+/// \returns llvm::Optional containing the load address if resolving and getting
+///          the load address succeed or an empty Optinal otherwise. If
+///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
+///          success if so_addr.IsSectionOffset() is true.
+static llvm::Optional<lldb::addr_t>
+ResolveAndLoadFileAddress(ExecutionContext *exe_ctx, lldb::ModuleSP module_sp,
+                          Status *error_ptr, const char *dw_op_type,
+                          lldb::addr_t file_addr, Address &so_addr,
+                          bool check_sectionoffset = false) {
+  if (!module_sp) {
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat(
+          "need module to resolve file address for %s", dw_op_type);
+    return {};
+  }
+
+  if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
+    if (error_ptr)
+      error_ptr->SetErrorString("failed to resolve file address in module");
+    return {};
+  }
+
+  addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+
+  if (load_addr == LLDB_INVALID_ADDRESS &&
+      (check_sectionoffset && !so_addr.IsSectionOffset())) {
+    if (error_ptr)
+      error_ptr->SetErrorString("failed to resolve load address");
+    return {};
+  }
+
+  return load_addr;
+}
+
+/// Helper function to move common code used to load sized data from a uint8_t
+/// buffer.
+///
+/// \param addr_bytes uint8_t buffer containg raw data
+/// \param size_addr_bytes how large is the underlying raw data
+/// \param byte_order what is the byter order of the underlyig data
+/// \param size How much of the underlying data we want to use
+/// \return The underlying data converted into a Scalar
+static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
+                                         size_t size_addr_bytes,
+                                         ByteOrder byte_order, size_t size) {
+  DataExtractor addr_data(addr_bytes, size_addr_bytes, byte_order, size);
+
+  lldb::offset_t addr_data_offset = 0;
+  switch (size) {
+  case 1:
+    return addr_data.GetU8(&addr_data_offset);
+  case 2:
+    return addr_data.GetU16(&addr_data_offset);
+  case 4:
+    return addr_data.GetU32(&addr_data_offset);
+  case 8:
+    return addr_data.GetU64(&addr_data_offset);
+  default:
+    return addr_data.GetAddress(&addr_data_offset);
+  }
+}
+
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -1025,6 +1099,7 @@ bool DWARFExpression::Evaluate(
       if (frame)
         stack.back().ConvertToLoadAddress(module_sp.get(),
                                           frame->CalculateTarget().get());
+
       break;
 
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
@@ -1088,26 +1163,15 @@ bool DWARFExpression::Evaluate(
       case Value::ValueType::FileAddress: {
         auto file_addr = stack.back().GetScalar().ULongLong(
             LLDB_INVALID_ADDRESS);
-        if (!module_sp) {
-          if (error_ptr)
-            error_ptr->SetErrorString(
-                "need module to resolve file address for DW_OP_deref");
-          return false;
-        }
+
         Address so_addr;
-        if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-          if (error_ptr)
-            error_ptr->SetErrorString(
-                "failed to resolve file address in module");
+        auto maybe_load_addr = ResolveAndLoadFileAddress(
+            exe_ctx, module_sp, error_ptr, "DW_OP_deref", file_addr, so_addr);
+
+        if (!maybe_load_addr)
           return false;
-        }
-        addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
-        if (load_Addr == LLDB_INVALID_ADDRESS) {
-          if (error_ptr)
-            error_ptr->SetErrorString("failed to resolve load address");
-          return false;
-        }
-        stack.back().GetScalar() = load_Addr;
+
+        stack.back().GetScalar() = *maybe_load_addr;
         // Fall through to load address promotion code below.
       } LLVM_FALLTHROUGH;
       case Value::ValueType::Scalar:
@@ -1218,6 +1282,47 @@ bool DWARFExpression::Evaluate(
         stack.back().GetScalar() = ptr;
         stack.back().ClearContext();
       } break;
+      case Value::ValueType::FileAddress: {
+        auto file_addr =
+            stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+        Address so_addr;
+        auto maybe_load_addr =
+            ResolveAndLoadFileAddress(exe_ctx, module_sp, error_ptr,
+                                      "DW_OP_deref_size", file_addr, so_addr,
+                                      /*check_sectionoffset=*/true);
+
+        if (!maybe_load_addr)
+          return false;
+
+        addr_t load_addr = *maybe_load_addr;
+
+        if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
+          uint8_t addr_bytes[size];
+          Status error;
+
+          if (exe_ctx->GetTargetRef().ReadMemory(
+                  so_addr, &addr_bytes, size, error,
+                  /*force_live_memory=*/false) == size) {
+            ObjectFile *objfile = module_sp->GetObjectFile();
+
+            stack.back().GetScalar() = DerefSizeExtractDataHelper(
+                addr_bytes, sizeof(addr_bytes), objfile->GetByteOrder(), size);
+            stack.back().ClearContext();
+            break;
+          } else {
+            if (error_ptr)
+              error_ptr->SetErrorStringWithFormat(
+                  "Failed to dereference pointer for for DW_OP_deref_size: "
+                  "%s\n",
+                  error.AsCString());
+            return false;
+          }
+        }
+        stack.back().GetScalar() = load_addr;
+        // Fall through to load address promotion code below.
+      }
+
+        LLVM_FALLTHROUGH;
       case Value::ValueType::Scalar:
       case Value::ValueType::LoadAddress:
         if (exe_ctx) {
@@ -1228,26 +1333,10 @@ bool DWARFExpression::Evaluate(
             Status error;
             if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
                 size) {
-              DataExtractor addr_data(addr_bytes, sizeof(addr_bytes),
-                                      process->GetByteOrder(), size);
-              lldb::offset_t addr_data_offset = 0;
-              switch (size) {
-              case 1:
-                stack.back().GetScalar() = addr_data.GetU8(&addr_data_offset);
-                break;
-              case 2:
-                stack.back().GetScalar() = addr_data.GetU16(&addr_data_offset);
-                break;
-              case 4:
-                stack.back().GetScalar() = addr_data.GetU32(&addr_data_offset);
-                break;
-              case 8:
-                stack.back().GetScalar() = addr_data.GetU64(&addr_data_offset);
-                break;
-              default:
-                stack.back().GetScalar() =
-                    addr_data.GetAddress(&addr_data_offset);
-              }
+
+              stack.back().GetScalar() =
+                  DerefSizeExtractDataHelper(addr_bytes, sizeof(addr_bytes),
+                                             process->GetByteOrder(), size);
               stack.back().ClearContext();
             } else {
               if (error_ptr)
@@ -1270,7 +1359,6 @@ bool DWARFExpression::Evaluate(
         }
         break;
 
-      case Value::ValueType::FileAddress:
       case Value::ValueType::Invalid:
         if (error_ptr)
           error_ptr->SetErrorString("Invalid value for DW_OP_deref_size.\n");

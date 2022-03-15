@@ -98,6 +98,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   auto Tokens = annotate("struct S {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
+
+  Tokens = annotate("template <typename T> struct S<const T[N]> {};");
+  EXPECT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
+  EXPECT_TOKEN(Tokens[13], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_StructLBrace);
+
+  Tokens = annotate("template <typename T> struct S<T const[N]> {};");
+  EXPECT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
+  EXPECT_TOKEN(Tokens[13], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_StructLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
@@ -115,6 +129,31 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   auto Tokens = annotate("enum E {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_EnumLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsDefaultedAndDeletedFunctions) {
+  auto Tokens = annotate("auto operator<=>(const T &) const & = default;");
+  EXPECT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T> void F(T) && = delete;");
+  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_PointerOrReference);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsVariables) {
+  auto Tokens =
+      annotate("inline bool var = is_integral_v<int> && is_signed_v<int>;");
+  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_BinaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsVariableTemplates) {
+  auto Tokens =
+      annotate("template <typename T> "
+               "inline bool var = is_integral_v<int> && is_signed_v<int>;");
+  EXPECT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsLBracesInMacroDefinition) {
@@ -143,6 +182,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsDelete) {
   Tokens = annotate("delete/*comment*/[] (void *)p;");
   EXPECT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsFunctionRefQualifiers) {
+  auto Tokens = annotate("void f() &;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("void operator=(T) &&;");
+  EXPECT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::ampamp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T> void f() &;");
+  EXPECT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T> void operator=(T) &;");
+  EXPECT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {

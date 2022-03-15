@@ -67,7 +67,7 @@ static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
 /// Return the intrinsic ID associated with ldmatrix for the given paramters.
 static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
                                                   int32_t num) {
-  if (layout == NVVM::MMALayout::col) {
+  if (layout == NVVM::MMALayout::row) {
     switch (num) {
     case 1:
       return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16;

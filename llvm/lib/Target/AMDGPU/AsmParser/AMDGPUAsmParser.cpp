@@ -1542,6 +1542,7 @@ private:
     int64_t Id;
     bool IsSymbolic = false;
     bool IsDefined = false;
+    StringRef Name;
 
     OperandInfoTy(int64_t Id_) : Id(Id_) {}
   };
@@ -4046,6 +4047,20 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
     if (OpSel & ~3)
       return false;
   }
+
+  if (isGFX940() && (MII.get(Opc).TSFlags & SIInstrFlags::IsDOT)) {
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    if (OpSelIdx != -1) {
+      if (Inst.getOperand(OpSelIdx).getImm() != 0)
+        return false;
+    }
+    int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
+    if (OpSelHiIdx != -1) {
+      if (Inst.getOperand(OpSelHiIdx).getImm() != -1)
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -6245,6 +6260,7 @@ AMDGPUAsmParser::parseHwregBody(OperandInfoTy &HwReg,
   if (isToken(AsmToken::Identifier) &&
       (HwReg.Id = getHwregId(getTokenStr(), getSTI())) >= 0) {
     HwReg.IsSymbolic = true;
+    HwReg.Name = getTokenStr();
     lex(); // skip register name
   } else if (!parseExpr(HwReg.Id, "a register name")) {
     return false;
@@ -6276,7 +6292,8 @@ AMDGPUAsmParser::validateHwreg(const OperandInfoTy &HwReg,
 
   using namespace llvm::AMDGPU::Hwreg;
 
-  if (HwReg.IsSymbolic && !isValidHwreg(HwReg.Id, getSTI())) {
+  if (HwReg.IsSymbolic &&
+      !isValidHwreg(HwReg.Id, getSTI(), HwReg.Name)) {
     Error(HwReg.Loc,
           "specified hardware register is not supported on this GPU");
     return false;

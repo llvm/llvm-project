@@ -9,6 +9,7 @@
 #ifndef ARITHMETIC_PATTERNS
 #define ARITHMETIC_PATTERNS
 
+include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 
 // Add two integer attributes and create a new one with the result.

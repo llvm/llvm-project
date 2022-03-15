@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/MachO_arm64.h"
+#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 
 #include "MachOLinkGraphBuilder.h"
 #include "PerGraphGOTAndPLTStubsBuilder.h"

@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lseek
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lseek
+)
+
+add_entrypoint_object(
   read
   ALIAS
   DEPENDS
