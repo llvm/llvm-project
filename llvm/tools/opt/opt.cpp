@@ -39,7 +39,6 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -300,10 +299,6 @@ static cl::opt<std::string> RemarksFormat(
     "pass-remarks-format",
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
-
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
 
 namespace llvm {
 cl::opt<PGOKind>
@@ -586,17 +581,6 @@ int main(int argc, char **argv) {
   initializeExampleIRTransforms(Registry);
 #endif
 
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin) {
-      errs() << "Failed to load passes from '" << PluginPath
-             << "'. Request ignored.\n";
-      return;
-    }
-    PluginList.emplace_back(Plugin.get());
-  });
-
   cl::ParseCommandLineOptions(argc, argv,
     "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
@@ -604,19 +588,6 @@ int main(int argc, char **argv) {
 
   if (AnalyzeOnly && NoOutput) {
     errs() << argv[0] << ": analyze mode conflicts with no-output mode.\n";
-    return 1;
-  }
-
-  // If `-passes=` is specified, use NPM.
-  // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
-  // e.g. `-enable-new-pm -sroa` will use NPM.
-  // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
-  const bool UseNPM = (EnableNewPassManager && !shouldForceLegacyPM()) ||
-                      PassPipeline.getNumOccurrences() > 0;
-
-  if (!UseNPM && PluginList.size()) {
-    errs() << argv[0] << ": " << PassPlugins.ArgStr
-           << " specified with legacy PM.\n";
     return 1;
   }
 
@@ -781,7 +752,12 @@ int main(int argc, char **argv) {
       }
   }
 
-  if (UseNPM) {
+  // If `-passes=` is specified, use NPM.
+  // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
+  // e.g. `-enable-new-pm -sroa` will use NPM.
+  // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
+  if ((EnableNewPassManager && !shouldForceLegacyPM()) ||
+      PassPipeline.getNumOccurrences() > 0) {
     if (AnalyzeOnly) {
       errs() << "Cannot specify -analyze under new pass manager, either "
                 "specify '-enable-new-pm=0', or use the corresponding new pass "
@@ -845,7 +821,7 @@ int main(int argc, char **argv) {
     // layer.
     return runPassPipeline(argv[0], *M, TM.get(), &TLII, Out.get(),
                            ThinLinkOut.get(), RemarksFile.get(), Pipeline,
-                           Passes, PluginList, OK, VK, PreserveAssemblyUseListOrder,
+                           Passes, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash, EnableDebugify)
                ? 0

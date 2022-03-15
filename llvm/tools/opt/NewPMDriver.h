@@ -26,7 +26,6 @@
 namespace llvm {
 class StringRef;
 class Module;
-class PassPlugin;
 class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
@@ -70,8 +69,7 @@ bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      TargetLibraryInfoImpl *TLII, ToolOutputFile *Out,
                      ToolOutputFile *ThinLinkOut, ToolOutputFile *OptRemarkFile,
                      StringRef PassPipeline, ArrayRef<StringRef> PassInfos,
-                     ArrayRef<PassPlugin> PassPlugins, opt_tool::OutputKind OK,
-                     opt_tool::VerifierKind VK,
+                     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
                      bool ShouldPreserveAssemblyUseListOrder,
                      bool ShouldPreserveBitcodeUseListOrder,
                      bool EmitSummaryIndex, bool EmitModuleHash,
