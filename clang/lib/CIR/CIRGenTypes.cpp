@@ -532,7 +532,8 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
 
   // FIXME: Kill copy.
   SmallVector<CanQualType, 16> argTypes;
-  assert(args.size() == 0 && "Args NYI");
+  for (const auto &arg : args)
+    argTypes.push_back(CGT.getContext().getCanonicalParamType(arg.Ty));
   return CGT.arrangeCIRFunctionInfo(
       GetReturnType(fnType->getReturnType()), /*instanceMethod=*/false,
       chainCall, argTypes, fnType->getExtInfo(), paramInfos, required);
