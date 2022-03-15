@@ -1908,8 +1908,9 @@ static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
   if (TT.getObjectFormat() == Triple::MachO &&
       DemangledEntryPoint.front() == '_')
     DemangledEntryPoint = DemangledEntryPoint.drop_front();
+  using llvm::orc::shared::SPSString;
   using SPSRunProgramSig =
-      int64_t(SPSString, SPSString, SPSSequence<SPSString>);
+      int64_t(SPSString, SPSString, shared::SPSSequence<SPSString>);
   int64_t Result;
   if (auto Err = S.ES.callSPSWrapper<SPSRunProgramSig>(
           EntryPointAddr, Result, S.MainJD->getName(), DemangledEntryPoint,
