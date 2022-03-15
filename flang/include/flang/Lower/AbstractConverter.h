@@ -79,6 +79,13 @@ public:
   /// Get the binding of an implied do variable by name.
   virtual mlir::Value impliedDoBinding(llvm::StringRef name) = 0;
 
+  /// Copy the binding of src to target symbol.
+  virtual void copySymbolBinding(SymbolRef src, SymbolRef target) = 0;
+
+  /// Binds the symbol to an fir extended value. The symbol binding will be
+  /// added or replaced at the inner-most level of the local symbol map.
+  virtual void bindSymbol(SymbolRef sym, const fir::ExtendedValue &exval) = 0;
+
   /// Get the label set associated with a symbol.
   virtual bool lookupLabelSet(SymbolRef sym, pft::LabelSet &labelSet) = 0;
 

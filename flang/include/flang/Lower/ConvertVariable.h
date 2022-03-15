@@ -85,5 +85,11 @@ fir::ExtendedValue
 genExtAddrInInitializer(Fortran::lower::AbstractConverter &converter,
                         mlir::Location loc, const SomeExpr &addr);
 
+/// Create global variable from a compiler generated object symbol that
+/// describes a derived type for the runtime.
+void createRuntimeTypeInfoGlobal(Fortran::lower::AbstractConverter &converter,
+                                 mlir::Location loc,
+                                 const Fortran::semantics::Symbol &typeInfoSym);
+
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

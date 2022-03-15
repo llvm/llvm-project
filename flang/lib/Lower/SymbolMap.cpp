@@ -31,13 +31,23 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
 }
 
 Fortran::lower::SymbolBox
-Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef sym) {
+Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
+  Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
   for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
        jmap != jend; ++jmap) {
     auto iter = jmap->find(&*sym);
     if (iter != jmap->end())
       return iter->second;
   }
+  return SymbolBox::None{};
+}
+
+Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
+    Fortran::semantics::SymbolRef symRef) {
+  auto &map = symbolMapStack.back();
+  auto iter = map.find(&symRef.get().GetUltimate());
+  if (iter != map.end())
+    return iter->second;
   return SymbolBox::None{};
 }
 
