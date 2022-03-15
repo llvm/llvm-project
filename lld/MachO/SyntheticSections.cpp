@@ -417,6 +417,12 @@ static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
   return dysym.getFile()->ordinal;
 }
 
+static int16_t ordinalForSymbol(const Symbol &sym) {
+  if (const auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    return ordinalForDylibSymbol(*dysym);
+  return BIND_SPECIAL_DYLIB_FLAT_LOOKUP;
+}
+
 static void encodeDylibOrdinal(int16_t ordinal, raw_svector_ostream &os) {
   if (ordinal <= 0) {
     os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
@@ -486,14 +492,14 @@ void BindingSection::finalizeContents() {
   int16_t lastOrdinal = 0;
 
   for (auto &p : sortBindings(bindingsMap)) {
-    const DylibSymbol *sym = p.first;
+    const Symbol *sym = p.first;
     std::vector<BindingEntry> &bindings = p.second;
     uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
     if (sym->isWeakRef())
       flags |= BIND_SYMBOL_FLAGS_WEAK_IMPORT;
     os << flags << sym->getName() << '\0'
        << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER);
-    int16_t ordinal = ordinalForDylibSymbol(*sym);
+    int16_t ordinal = ordinalForSymbol(*sym);
     if (ordinal != lastOrdinal) {
       encodeDylibOrdinal(ordinal, os);
       lastOrdinal = ordinal;
@@ -596,7 +602,7 @@ bool StubHelperSection::isNeeded() const { return in.lazyBinding->isNeeded(); }
 void StubHelperSection::writeTo(uint8_t *buf) const {
   target->writeStubHelperHeader(buf);
   size_t off = target->stubHelperHeaderSize;
-  for (const DylibSymbol *sym : in.lazyBinding->getEntries()) {
+  for (const Symbol *sym : in.lazyBinding->getEntries()) {
     target->writeStubHelperEntry(buf + off, *sym, addr + off);
     off += target->stubHelperEntrySize;
   }
@@ -667,7 +673,7 @@ LazyBindingSection::LazyBindingSection()
 void LazyBindingSection::finalizeContents() {
   // TODO: Just precompute output size here instead of writing to a temporary
   // buffer
-  for (DylibSymbol *sym : entries)
+  for (Symbol *sym : entries)
     sym->lazyBindOffset = encode(*sym);
 }
 
@@ -675,11 +681,11 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-void LazyBindingSection::addEntry(DylibSymbol *dysym) {
-  if (entries.insert(dysym)) {
-    dysym->stubsHelperIndex = entries.size() - 1;
+void LazyBindingSection::addEntry(Symbol *sym) {
+  if (entries.insert(sym)) {
+    sym->stubsHelperIndex = entries.size() - 1;
     in.rebase->addEntry(in.lazyPointers->isec,
-                        dysym->stubsIndex * target->wordSize);
+                        sym->stubsIndex * target->wordSize);
   }
 }
 
@@ -689,7 +695,7 @@ void LazyBindingSection::addEntry(DylibSymbol *dysym) {
 // BIND_OPCODE_DONE terminator. As such, unlike in the non-lazy-binding case,
 // we cannot encode just the differences between symbols; we have to emit the
 // complete bind information for each symbol.
-uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
+uint32_t LazyBindingSection::encode(const Symbol &sym) {
   uint32_t opstreamOffset = contents.size();
   OutputSegment *dataSeg = in.lazyPointers->parent;
   os << static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
@@ -697,7 +703,7 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   uint64_t offset = in.lazyPointers->addr - dataSeg->addr +
                     sym.stubsIndex * target->wordSize;
   encodeULEB128(offset, os);
-  encodeDylibOrdinal(ordinalForDylibSymbol(sym), os);
+  encodeDylibOrdinal(ordinalForSymbol(sym), os);
 
   uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
   if (sym.isWeakRef())
