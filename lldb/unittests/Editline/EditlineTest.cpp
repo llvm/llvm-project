@@ -84,6 +84,7 @@ private:
   bool IsInputComplete(lldb_private::Editline *editline,
                        lldb_private::StringList &lines);
 
+  std::mutex output_mutex;
   std::unique_ptr<lldb_private::Editline> _editline_sp;
 
   PseudoTerminal _pty;
@@ -117,7 +118,7 @@ EditlineAdapter::EditlineAdapter()
   // Create an Editline instance.
   _editline_sp.reset(new lldb_private::Editline(
       "gtest editor", *_el_secondary_file, *_el_secondary_file,
-      *_el_secondary_file, false));
+      *_el_secondary_file, output_mutex, false));
   _editline_sp->SetPrompt("> ");
 
   // Hookup our input complete callback.

@@ -165,11 +165,14 @@ public:
 
   virtual void PrintAsync(const char *s, size_t len, bool is_stdout);
 
+  std::mutex &GetOutputMutex() { return m_output_mutex; }
+
 protected:
   Debugger &m_debugger;
   lldb::FileSP m_input_sp;
   lldb::StreamFileSP m_output_sp;
   lldb::StreamFileSP m_error_sp;
+  std::mutex m_output_mutex;
   repro::DataRecorder *m_data_recorder;
   Predicate<bool> m_popped;
   Flags m_flags;
