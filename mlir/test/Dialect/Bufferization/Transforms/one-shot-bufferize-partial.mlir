@@ -132,8 +132,6 @@ func @unused_unknown_op(%t1 : tensor<?xf32>) -> vector<5xf32> {
 
 // -----
 
-// CHECK: #[[$MAP3:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @unknown_op_may_read(
 func @unknown_op_may_read(%v: vector<5xf32>)
     -> (tensor<10xf32>, tensor<10xf32>) {
@@ -142,27 +140,25 @@ func @unknown_op_may_read(%v: vector<5xf32>)
 
   // One alloc for the init_tensor, another one because the transfer_write
   // bufferizes out-of-place.
-  // CHECK: %[[m1:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10xf32>
-  // CHECK: %[[alloc_casted:.*]] = memref.cast %[[alloc]] : memref<10xf32> to memref<10xf32, #[[$MAP3]]>
-  // CHECK: %[[m1_casted:.*]] = memref.cast %[[m1]] : memref<10xf32> to memref<10xf32, #[[$MAP3]]>
+  // CHECK: %[[m1:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   %t1 = linalg.init_tensor [10] : tensor<10xf32>
 
   // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[m1]]
-  // CHECK: %[[filled_tensor:.*]] = bufferization.to_tensor %[[m1_casted]]
+  // CHECK: %[[filled_tensor:.*]] = bufferization.to_tensor %[[m1]]
   %filled = linalg.fill ins(%cst : f32) outs(%t1 : tensor<10xf32>) -> tensor<10xf32>
 
   // The transfer_write is out-of-place because "dummy_op" may read.
   // CHECK: memref.copy %[[m1]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-  // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc_casted]]
+  // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   %1 = vector.transfer_write %v, %filled[%idx] : vector<5xf32>, tensor<10xf32>
 
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[filled_tensor]])
   %2 = "test.dummy_op"(%filled) : (tensor<10xf32>) -> (tensor<10xf32>)
 
-  // CHECK: memref.dealloc %[[alloc]]
-  // CHECK: memref.dealloc %[[m1]]
+  // CHECK-DAG: memref.dealloc %[[alloc]]
+  // CHECK-DAG: memref.dealloc %[[m1]]
   // CHECK: return %[[alloc_tensor]], %[[dummy]]
   return %1, %2 : tensor<10xf32>, tensor<10xf32>
 }
