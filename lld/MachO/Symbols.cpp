@@ -44,12 +44,14 @@ Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
                  uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
                  bool isPrivateExtern, bool isThumb,
                  bool isReferencedDynamically, bool noDeadStrip,
-                 bool canOverrideWeakDef, bool isWeakDefCanBeHidden)
+                 bool canOverrideWeakDef, bool isWeakDefCanBeHidden,
+                 bool interposable)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
       privateExtern(isPrivateExtern), includeInSymtab(true), thumb(isThumb),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
-      weakDefCanBeHidden(isWeakDefCanBeHidden), weakDef(isWeakDef),
-      external(isExternal), isec(isec), value(value), size(size) {
+      interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
+      weakDef(isWeakDef), external(isExternal), isec(isec), value(value),
+      size(size) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.

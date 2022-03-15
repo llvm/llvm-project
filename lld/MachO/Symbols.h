@@ -118,7 +118,8 @@ public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
           bool isThumb, bool isReferencedDynamically, bool noDeadStrip,
-          bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false);
+          bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false,
+          bool interposable = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -158,6 +159,14 @@ public:
   // metadata. This is information only for the static linker and not written
   // to the output.
   bool noDeadStrip : 1;
+  // Whether references to this symbol can be interposed at runtime to point to
+  // a different symbol definition (with the same name). For example, if both
+  // dylib A and B define an interposable symbol _foo, and we load A before B at
+  // runtime, then all references to _foo within dylib B will point to the
+  // definition in dylib A.
+  //
+  // Only extern symbols may be interposable.
+  bool interposable : 1;
 
   bool weakDefCanBeHidden : 1;
 
