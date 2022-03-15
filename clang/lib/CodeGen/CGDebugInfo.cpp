@@ -424,16 +424,16 @@ CGDebugInfo::createFile(StringRef FileName,
   SmallString<128> DirBuf;
   SmallString<128> FileBuf;
   if (llvm::sys::path::is_absolute(RemappedFile)) {
-    // Strip the common prefix (if it is more than just "/") from current
-    // directory and FileName for a more space-efficient encoding.
+    // Strip the common prefix (if it is more than just "/" or "C:\") from
+    // current directory and FileName for a more space-efficient encoding.
     auto FileIt = llvm::sys::path::begin(RemappedFile);
     auto FileE = llvm::sys::path::end(RemappedFile);
     auto CurDirIt = llvm::sys::path::begin(CurDir);
     auto CurDirE = llvm::sys::path::end(CurDir);
     for (; CurDirIt != CurDirE && *CurDirIt == *FileIt; ++CurDirIt, ++FileIt)
       llvm::sys::path::append(DirBuf, *CurDirIt);
-    if (std::distance(llvm::sys::path::begin(CurDir), CurDirIt) == 1) {
-      // Don't strip the common prefix if it is only the root "/"
+    if (llvm::sys::path::root_path(DirBuf) == DirBuf) {
+      // Don't strip the common prefix if it is only the root ("/" or "C:\")
       // since that would make LLVM diagnostic locations confusing.
       Dir = {};
       File = RemappedFile;
