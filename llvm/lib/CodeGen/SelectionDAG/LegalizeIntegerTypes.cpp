@@ -1432,6 +1432,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SADDSUBO_CARRY(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_ABS(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+
+  // If a larger ABS or SMAX isn't supported by the target, try to expand now.
+  // If we expand later we'll end up sign extending more than just the sra input
+  // in sra+xor+sub expansion.
+  if (!OVT.isVector() &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::ABS, NVT) &&
+      !TLI.isOperationLegal(ISD::SMAX, NVT)) {
+    if (SDValue Res = TLI.expandABS(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Res);
+  }
+
   SDValue Op0 = SExtPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::ABS, SDLoc(N), Op0.getValueType(), Op0);
 }

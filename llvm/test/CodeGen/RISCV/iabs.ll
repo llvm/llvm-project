@@ -18,16 +18,13 @@ declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare i64 @llvm.abs.i64(i64, i1 immarg)
 declare i128 @llvm.abs.i128(i128, i1 immarg)
 
-; FIXME: Sign extending the input to the input to the xor isn't needed and
-; causes an extra srai.
 define i8 @abs8(i8 %x) {
 ; RV32I-LABEL: abs8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a1, a0, 24
-; RV32I-NEXT:    srai a0, a0, 31
-; RV32I-NEXT:    xor a1, a1, a0
-; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 24
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: abs8:
@@ -39,20 +36,18 @@ define i8 @abs8(i8 %x) {
 ;
 ; RV32ZBT-LABEL: abs8:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    slli a0, a0, 24
-; RV32ZBT-NEXT:    srai a1, a0, 24
-; RV32ZBT-NEXT:    srai a0, a0, 31
-; RV32ZBT-NEXT:    xor a1, a1, a0
-; RV32ZBT-NEXT:    sub a0, a1, a0
+; RV32ZBT-NEXT:    slli a1, a0, 24
+; RV32ZBT-NEXT:    srai a1, a1, 31
+; RV32ZBT-NEXT:    xor a0, a0, a1
+; RV32ZBT-NEXT:    sub a0, a0, a1
 ; RV32ZBT-NEXT:    ret
 ;
 ; RV64I-LABEL: abs8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a1, a0, 56
-; RV64I-NEXT:    srai a0, a0, 63
-; RV64I-NEXT:    xor a1, a1, a0
-; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    slli a1, a0, 56
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs8:
@@ -64,26 +59,22 @@ define i8 @abs8(i8 %x) {
 ;
 ; RV64ZBT-LABEL: abs8:
 ; RV64ZBT:       # %bb.0:
-; RV64ZBT-NEXT:    slli a0, a0, 56
-; RV64ZBT-NEXT:    srai a1, a0, 56
-; RV64ZBT-NEXT:    srai a0, a0, 63
-; RV64ZBT-NEXT:    xor a1, a1, a0
-; RV64ZBT-NEXT:    sub a0, a1, a0
+; RV64ZBT-NEXT:    slli a1, a0, 56
+; RV64ZBT-NEXT:    srai a1, a1, 63
+; RV64ZBT-NEXT:    xor a0, a0, a1
+; RV64ZBT-NEXT:    sub a0, a0, a1
 ; RV64ZBT-NEXT:    ret
   %abs = tail call i8 @llvm.abs.i8(i8 %x, i1 true)
   ret i8 %abs
 }
 
-; FIXME: Sign extending the input to the input to the xor isn't needed and
-; causes an extra srai.
 define i8 @select_abs8(i8 %x) {
 ; RV32I-LABEL: select_abs8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a1, a0, 24
-; RV32I-NEXT:    srai a0, a0, 31
-; RV32I-NEXT:    xor a1, a1, a0
-; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 24
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: select_abs8:
@@ -95,20 +86,18 @@ define i8 @select_abs8(i8 %x) {
 ;
 ; RV32ZBT-LABEL: select_abs8:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    slli a0, a0, 24
-; RV32ZBT-NEXT:    srai a1, a0, 24
-; RV32ZBT-NEXT:    srai a0, a0, 31
-; RV32ZBT-NEXT:    xor a1, a1, a0
-; RV32ZBT-NEXT:    sub a0, a1, a0
+; RV32ZBT-NEXT:    slli a1, a0, 24
+; RV32ZBT-NEXT:    srai a1, a1, 31
+; RV32ZBT-NEXT:    xor a0, a0, a1
+; RV32ZBT-NEXT:    sub a0, a0, a1
 ; RV32ZBT-NEXT:    ret
 ;
 ; RV64I-LABEL: select_abs8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a1, a0, 56
-; RV64I-NEXT:    srai a0, a0, 63
-; RV64I-NEXT:    xor a1, a1, a0
-; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    slli a1, a0, 56
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: select_abs8:
@@ -120,11 +109,10 @@ define i8 @select_abs8(i8 %x) {
 ;
 ; RV64ZBT-LABEL: select_abs8:
 ; RV64ZBT:       # %bb.0:
-; RV64ZBT-NEXT:    slli a0, a0, 56
-; RV64ZBT-NEXT:    srai a1, a0, 56
-; RV64ZBT-NEXT:    srai a0, a0, 63
-; RV64ZBT-NEXT:    xor a1, a1, a0
-; RV64ZBT-NEXT:    sub a0, a1, a0
+; RV64ZBT-NEXT:    slli a1, a0, 56
+; RV64ZBT-NEXT:    srai a1, a1, 63
+; RV64ZBT-NEXT:    xor a0, a0, a1
+; RV64ZBT-NEXT:    sub a0, a0, a1
 ; RV64ZBT-NEXT:    ret
   %1 = icmp slt i8 %x, 0
   %2 = sub nsw i8 0, %x
@@ -132,16 +120,13 @@ define i8 @select_abs8(i8 %x) {
   ret i8 %3
 }
 
-; FIXME: Sign extending the input to the input to the xor isn't needed and
-; causes an extra srai.
 define i16 @abs16(i16 %x) {
 ; RV32I-LABEL: abs16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a1, a0, 16
-; RV32I-NEXT:    srai a0, a0, 31
-; RV32I-NEXT:    xor a1, a1, a0
-; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: abs16:
@@ -153,20 +138,18 @@ define i16 @abs16(i16 %x) {
 ;
 ; RV32ZBT-LABEL: abs16:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    slli a0, a0, 16
-; RV32ZBT-NEXT:    srai a1, a0, 16
-; RV32ZBT-NEXT:    srai a0, a0, 31
-; RV32ZBT-NEXT:    xor a1, a1, a0
-; RV32ZBT-NEXT:    sub a0, a1, a0
+; RV32ZBT-NEXT:    slli a1, a0, 16
+; RV32ZBT-NEXT:    srai a1, a1, 31
+; RV32ZBT-NEXT:    xor a0, a0, a1
+; RV32ZBT-NEXT:    sub a0, a0, a1
 ; RV32ZBT-NEXT:    ret
 ;
 ; RV64I-LABEL: abs16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a1, a0, 48
-; RV64I-NEXT:    srai a0, a0, 63
-; RV64I-NEXT:    xor a1, a1, a0
-; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs16:
@@ -178,26 +161,22 @@ define i16 @abs16(i16 %x) {
 ;
 ; RV64ZBT-LABEL: abs16:
 ; RV64ZBT:       # %bb.0:
-; RV64ZBT-NEXT:    slli a0, a0, 48
-; RV64ZBT-NEXT:    srai a1, a0, 48
-; RV64ZBT-NEXT:    srai a0, a0, 63
-; RV64ZBT-NEXT:    xor a1, a1, a0
-; RV64ZBT-NEXT:    sub a0, a1, a0
+; RV64ZBT-NEXT:    slli a1, a0, 48
+; RV64ZBT-NEXT:    srai a1, a1, 63
+; RV64ZBT-NEXT:    xor a0, a0, a1
+; RV64ZBT-NEXT:    sub a0, a0, a1
 ; RV64ZBT-NEXT:    ret
   %abs = tail call i16 @llvm.abs.i16(i16 %x, i1 true)
   ret i16 %abs
 }
 
-; FIXME: Sign extending the input to the input to the xor isn't needed and
-; causes an extra srai.
 define i16 @select_abs16(i16 %x) {
 ; RV32I-LABEL: select_abs16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a1, a0, 16
-; RV32I-NEXT:    srai a0, a0, 31
-; RV32I-NEXT:    xor a1, a1, a0
-; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: select_abs16:
@@ -209,20 +188,18 @@ define i16 @select_abs16(i16 %x) {
 ;
 ; RV32ZBT-LABEL: select_abs16:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    slli a0, a0, 16
-; RV32ZBT-NEXT:    srai a1, a0, 16
-; RV32ZBT-NEXT:    srai a0, a0, 31
-; RV32ZBT-NEXT:    xor a1, a1, a0
-; RV32ZBT-NEXT:    sub a0, a1, a0
+; RV32ZBT-NEXT:    slli a1, a0, 16
+; RV32ZBT-NEXT:    srai a1, a1, 31
+; RV32ZBT-NEXT:    xor a0, a0, a1
+; RV32ZBT-NEXT:    sub a0, a0, a1
 ; RV32ZBT-NEXT:    ret
 ;
 ; RV64I-LABEL: select_abs16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a1, a0, 48
-; RV64I-NEXT:    srai a0, a0, 63
-; RV64I-NEXT:    xor a1, a1, a0
-; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: select_abs16:
@@ -234,11 +211,10 @@ define i16 @select_abs16(i16 %x) {
 ;
 ; RV64ZBT-LABEL: select_abs16:
 ; RV64ZBT:       # %bb.0:
-; RV64ZBT-NEXT:    slli a0, a0, 48
-; RV64ZBT-NEXT:    srai a1, a0, 48
-; RV64ZBT-NEXT:    srai a0, a0, 63
-; RV64ZBT-NEXT:    xor a1, a1, a0
-; RV64ZBT-NEXT:    sub a0, a1, a0
+; RV64ZBT-NEXT:    slli a1, a0, 48
+; RV64ZBT-NEXT:    srai a1, a1, 63
+; RV64ZBT-NEXT:    xor a0, a0, a1
+; RV64ZBT-NEXT:    sub a0, a0, a1
 ; RV64ZBT-NEXT:    ret
   %1 = icmp slt i16 %x, 0
   %2 = sub nsw i16 0, %x
