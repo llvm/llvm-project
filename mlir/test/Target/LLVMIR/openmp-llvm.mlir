@@ -663,6 +663,48 @@ llvm.func @test_omp_wsloop_guided_simd(%lb : i64, %ub : i64, %step : i64) -> () 
 
 // -----
 
+// CHECK-LABEL: @simdloop_simple
+llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr<f32>) {
+  "omp.simdloop" (%lb, %ub, %step) ({
+    ^bb0(%iv: i64):
+      %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+      // The form of the emitted IR is controlled by OpenMPIRBuilder and
+      // tested there. Just check that the right metadata is added.
+      // CHECK: llvm.access.group
+      %4 = llvm.getelementptr %arg0[%iv] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+      llvm.store %3, %4 : !llvm.ptr<f32>
+      omp.yield
+  }) {operand_segment_sizes = dense<[1,1,1]> : vector<3xi32>} :
+    (i64, i64, i64) -> () 
+
+  llvm.return
+}
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+
+// -----
+
+// CHECK-LABEL: @simdloop_simple_multiple
+llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
+  omp.simdloop (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    // The form of the emitted IR is controlled by OpenMPIRBuilder and
+    // tested there. Just check that the right metadata is added.
+    // CHECK: llvm.access.group
+    // CHECK-NEXT: llvm.access.group
+    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
+    llvm.store %3, %5 : !llvm.ptr<f32>
+    omp.yield
+  } 
+  llvm.return
+}
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+
+// -----
+
 omp.critical.declare @mutex hint(contended)
 
 // CHECK-LABEL: @omp_critical
