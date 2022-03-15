@@ -245,8 +245,9 @@ public:
   }
 
 private:
-  BasicBlock *makeDisambiguationBB(LLVMContext &Context, BasicBlock *BB,
-                                   std::vector<BasicBlock *> &NewBBs) {
+  // Create a block for intra-function branch disambiguation.
+  BasicBlock *makeBranchDisambiguationBB(LLVMContext &Context, BasicBlock *BB,
+                                         std::vector<BasicBlock *> &NewBBs) {
     BasicBlock *DBB = BasicBlock::Create(Context, "");
     NewBBs.push_back(DBB);
     IRBuilder<> Builder(DBB);
@@ -269,7 +270,7 @@ private:
              SuccIdx++) {
           BasicBlock *SuccBB = BI->getSuccessor(SuccIdx);
           if (SuccBB == &BB) {
-            BasicBlock *DBB = makeDisambiguationBB(Context, &BB, NewBBs);
+            BasicBlock *DBB = makeBranchDisambiguationBB(Context, &BB, NewBBs);
             BI->setSuccessor(SuccIdx, DBB);
             BB.replacePhiUsesWith(&BB, DBB);
           }
@@ -280,7 +281,7 @@ private:
              SuccIdx++) {
           BasicBlock *SuccBB = SI->getSuccessor(SuccIdx);
           if (SuccBB == &BB) {
-            BasicBlock *DBB = makeDisambiguationBB(Context, &BB, NewBBs);
+            BasicBlock *DBB = makeBranchDisambiguationBB(Context, &BB, NewBBs);
             SI->setSuccessor(SuccIdx, DBB);
             BB.replacePhiUsesWith(&BB, DBB);
           }
