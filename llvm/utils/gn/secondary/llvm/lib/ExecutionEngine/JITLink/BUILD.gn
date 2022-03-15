@@ -7,6 +7,7 @@ static_library("JITLink") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "DWARFRecordSectionSplitter.cpp",
     "EHFrameSupport.cpp",
     "ELF.cpp",
     "ELFLinkGraphBuilder.cpp",
