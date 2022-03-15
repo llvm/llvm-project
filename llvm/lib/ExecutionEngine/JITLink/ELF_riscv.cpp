@@ -367,8 +367,8 @@ private:
     }
     case R_RISCV_SUB6: {
       int64_t Value =
-          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) &
-          0x3f - E.getTarget().getAddress().getValue() - E.getAddend();
+          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) & 0x3f;
+      Value -= E.getTarget().getAddress().getValue() - E.getAddend();
       *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<uint8_t>(Value) & 0x3f);
       break;
     }
