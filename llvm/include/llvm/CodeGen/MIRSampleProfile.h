@@ -14,29 +14,17 @@
 #ifndef LLVM_CODEGEN_MIRSAMPLEPROFILE_H
 #define LLVM_CODEGEN_MIRSAMPLEPROFILE_H
 
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/SampleProf.h"
-#include "llvm/ProfileData/SampleProfReader.h"
-
-#include <cassert>
+#include "llvm/Support/Discriminator.h"
+#include <memory>
+#include <string>
 
 namespace llvm {
+class AnalysisUsage;
+class MachineBlockFrequencyInfo;
+class MachineFunction;
+class Module;
 
 using namespace sampleprof;
 

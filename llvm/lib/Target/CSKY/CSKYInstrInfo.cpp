@@ -14,6 +14,7 @@
 #include "CSKYConstantPoolValue.h"
 #include "CSKYMachineFunctionInfo.h"
 #include "CSKYTargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/MC/MCContext.h"
 
 #define DEBUG_TYPE "csky-instr-info"

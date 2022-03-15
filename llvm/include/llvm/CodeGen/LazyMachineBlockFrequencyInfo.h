@@ -17,8 +17,8 @@
 #define LLVM_CODEGEN_LAZYMACHINEBLOCKFREQUENCYINFO_H
 
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
 namespace llvm {

@@ -9,12 +9,11 @@
 #ifndef LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_LIVEDEBUGVALUES_H
 #define LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_LIVEDEBUGVALUES_H
 
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/ADT/Triple.h"
-
 namespace llvm {
+class MachineDominatorTree;
+class MachineFunction;
+class TargetPassConfig;
+class Triple;
 
 // Inline namespace for types / symbols shared between different
 // LiveDebugValues implementations.

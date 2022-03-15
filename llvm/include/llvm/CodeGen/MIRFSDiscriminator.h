@@ -18,23 +18,15 @@
 #define LLVM_CODEGEN_MIRFSDISCRIMINATOR_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/SampleProf.h"
-#include "llvm/ProfileData/SampleProfReader.h"
+#include "llvm/Support/Discriminator.h"
 
 #include <cassert>
+#include <cstdint>
 
 namespace llvm {
+class MachineFunction;
 
 using namespace sampleprof;
 class MIRAddFSDiscriminators : public MachineFunctionPass {

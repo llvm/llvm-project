@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/PassRegistry.h"
 
 namespace llvm {
 

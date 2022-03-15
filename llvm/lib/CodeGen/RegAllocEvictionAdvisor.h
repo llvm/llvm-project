@@ -9,19 +9,25 @@
 #ifndef LLVM_CODEGEN_REGALLOCEVICTIONADVISOR_H
 #define LLVM_CODEGEN_REGALLOCEVICTIONADVISOR_H
 
-#include "AllocationOrder.h"
-#include "llvm/ADT/IndexedMap.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveRegMatrix.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
+class AllocationOrder;
+class LiveInterval;
+class LiveIntervals;
+class LiveRegMatrix;
+class MachineFunction;
+class MachineRegisterInfo;
+class RegisterClassInfo;
+class TargetRegisterInfo;
+class VirtRegMap;
 
 using SmallVirtRegSet = SmallSet<Register, 16>;
 

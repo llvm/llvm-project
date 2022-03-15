@@ -15,17 +15,15 @@
 #ifndef LLVM_CODEGEN_MACHINESSACONTEXT_H
 #define LLVM_CODEGEN_MACHINESSACONTEXT_H
 
-#include "llvm/ADT/GenericSSAContext.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/Printable.h"
 
-#include <memory>
-
 namespace llvm {
+class MachineRegisterInfo;
 class MachineInstr;
-class MachineBasicBlock;
 class MachineFunction;
 class Register;
+template <typename _FunctionT> class GenericSSAContext;
 template <typename, bool> class DominatorTreeBase;
 
 inline auto successors(MachineBasicBlock *BB) { return BB->successors(); }
