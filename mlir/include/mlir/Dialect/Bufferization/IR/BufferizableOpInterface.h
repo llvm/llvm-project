@@ -220,6 +220,14 @@ struct BufferizationOptions {
   /// computation. Whether this pays off or not can be very input IR-specific.
   bool alwaysAliasingWithDest = true;
 
+  /// If set to `true`, try to hoist allocations out of blocks as much as
+  /// possible. An allocation is not hoisted across allocation hoisting barriers
+  /// as indicated by `BufferizableOpInterface::isAllocationHoistingBarrier`.
+  ///
+  /// Examples of allocation hoisting barriers are parallel loops or ops where
+  /// SSA values cannot be captured from the outside.
+  bool hoistAllocations = true;
+
   /// Buffer alignment for new memory allocations.
   unsigned int bufferAlignment = 128;
 
@@ -495,66 +503,14 @@ LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
 LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from, Value to,
                            const BufferizationOptions &options);
 
-/// Finalize all buffer allocations, i.e., create alloc ops as specified in the
-/// bufferization options and deallocate all buffers.
+/// Finalize all buffer allocations.
+/// * Hoist buffer allocations as much as possible.
+/// * Create alloc/dealloc ops as specified by the bufferization options.
 LogicalResult finalizeBuffers(Operation *op,
                               const BufferizationOptions &options);
 } // namespace bufferization
 } // namespace mlir
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h.inc"
-
-namespace mlir {
-namespace bufferization {
-
-/// AllocationHoistingBarrierOnly is an external implementation of
-/// BufferizableOpInterface for ops that are (not yet) bufferizable, but are
-/// known to be allocation hoisting barriers. All interface methods (except for
-/// `isAllocationHoistingBarrier`) are implemented conservatively.
-template <typename OpTy>
-struct AllocationHoistingBarrierOnly
-    : public BufferizableOpInterface::ExternalModel<
-          AllocationHoistingBarrierOnly<OpTy>, OpTy> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    return true;
-  }
-
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    return {};
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::None;
-  }
-
-  bool isWritable(Operation *op, Value value,
-                  const AnalysisState &state) const {
-    return false;
-  }
-
-  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
-    return failure();
-  }
-
-  bool isAllocationHoistingBarrier(Operation *op) const { return true; }
-};
-
-} // namespace bufferization
-} // namespace mlir
 
 #endif // MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_

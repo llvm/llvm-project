@@ -140,8 +140,8 @@ func @unknown_op_may_read(%v: vector<5xf32>)
 
   // One alloc for the init_tensor, another one because the transfer_write
   // bufferizes out-of-place.
-  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   // CHECK: %[[m1:.*]] = memref.alloc() {{.*}} : memref<10xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   %t1 = linalg.init_tensor [10] : tensor<10xf32>
 
   // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[m1]]

@@ -469,6 +469,4 @@ void mlir::scf::registerBufferizableOpInterfaceExternalModels(
   registry.addOpInterface<ForOp, ForOpInterface>();
   registry.addOpInterface<IfOp, IfOpInterface>();
   registry.addOpInterface<YieldOp, YieldOpInterface>();
-  registry
-      .addOpInterface<ParallelOp, AllocationHoistingBarrierOnly<ParallelOp>>();
 }
