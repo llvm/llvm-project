@@ -105,6 +105,9 @@ static bool isAbsent(llvm::ArrayRef<fir::ExtendedValue> args, size_t argIndex) {
   return args.size() <= argIndex || isAbsent(args[argIndex]);
 }
 
+/// Test if an ExtendedValue is present.
+static bool isPresent(const fir::ExtendedValue &exv) { return !isAbsent(exv); }
+
 /// Process calls to Maxval, Minval, Product, Sum intrinsic functions that
 /// take a DIM argument.
 template <typename FD>
@@ -277,6 +280,7 @@ struct IntrinsicLibrary {
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -390,6 +394,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"iand", &I::genIand},
     {"ibits", &I::genIbits},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
+    {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"sum",
      &I::genSum,
      {{{"array", asBox},
@@ -1397,6 +1402,23 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
     result = builder.create<mlir::arith::SelectOp>(loc, mask, result, arg);
   }
   return result;
+}
+
+// NULL
+fir::ExtendedValue
+IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
+  // NULL() without MOLD must be handled in the contexts where it can appear
+  // (see table 16.5 of Fortran 2018 standard).
+  assert(args.size() == 1 && isPresent(args[0]) &&
+         "MOLD argument required to lower NULL outside of any context");
+  const auto *mold = args[0].getBoxOf<fir::MutableBoxValue>();
+  assert(mold && "MOLD must be a pointer or allocatable");
+  fir::BoxType boxType = mold->getBoxTy();
+  mlir::Value boxStorage = builder.createTemporary(loc, boxType);
+  mlir::Value box = fir::factory::createUnallocatedBox(
+      builder, loc, boxType, mold->nonDeferredLenParams());
+  builder.create<fir::StoreOp>(loc, box, boxStorage);
+  return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
 }
 
 // SUM
