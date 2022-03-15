@@ -374,3 +374,35 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   assert(theCall.getNumResults() == 0 && "Returns NYI");
   return RValue::get(nullptr);
 }
+
+void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
+                                  QualType type) {
+  // TODO: Add the DisableDebugLocationUpdates helper
+  assert(!dyn_cast<ObjCIndirectCopyRestoreExpr>(E) && "NYI");
+
+  assert(type->isReferenceType() == E->isGLValue() &&
+         "reference binding to unmaterialized r-value!");
+
+  assert(!E->isGLValue() && "NYI");
+
+  bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
+
+  // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
+  // However, we still have to push an EH-only cleanup in case we unwind before
+  // we make it to the call.
+  assert(!type->isRecordType() && "Record type args NYI");
+
+  assert(!HasAggregateEvalKind && "aggregate args NYI");
+  assert(!isa<ImplicitCastExpr>(E) && "Casted args NYI");
+
+  args.add(buildAnyExprToTemp(E), type);
+}
+
+/// buildAnyExprToTemp - Similar to buildAnyExpr(), however, the result will
+/// always be accessible even if no aggregate location is provided.
+RValue CIRGenFunction::buildAnyExprToTemp(const Expr *E) {
+  AggValueSlot AggSlot = AggValueSlot::ignored();
+
+  assert(!hasAggregateEvaluationKind(E->getType()) && "aggregate args NYI");
+  return buildAnyExpr(E, AggSlot);
+}
