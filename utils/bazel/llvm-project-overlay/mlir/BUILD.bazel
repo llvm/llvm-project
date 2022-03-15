@@ -951,9 +951,11 @@ cc_binary(
 td_library(
     name = "OpBaseTdFiles",
     srcs = [
+        "include/mlir/IR/AttrTypeBase.td",
         "include/mlir/IR/EnumAttr.td",
         "include/mlir/IR/OpAsmInterface.td",
         "include/mlir/IR/OpBase.td",
+        "include/mlir/IR/PatternBase.td",
         "include/mlir/IR/RegionKindInterface.td",
         "include/mlir/IR/SymbolInterfaces.td",
         "include/mlir/IR/TensorEncoding.td",
