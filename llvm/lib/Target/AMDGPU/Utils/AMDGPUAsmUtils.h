@@ -28,6 +28,7 @@ extern const char *const OpGsSymbolic[OP_GS_LAST_];
 namespace Hwreg { // Symbolic names for the hwreg(...) syntax.
 
 extern const char* const IdSymbolic[];
+extern const char* const IdSymbolicGFX940Specific[];
 
 } // namespace Hwreg
 
