@@ -55,6 +55,12 @@ TypeCode::TypeCode(TypeCategory f, int kind) {
     break;
   case TypeCategory::Complex:
     switch (kind) {
+    case 2:
+      raw_ = CFI_type_half_float_Complex;
+      break;
+    case 3:
+      raw_ = CFI_type_bfloat_Complex;
+      break;
     case 4:
       raw_ = CFI_type_float_Complex;
       break;
@@ -62,6 +68,8 @@ TypeCode::TypeCode(TypeCategory f, int kind) {
       raw_ = CFI_type_double_Complex;
       break;
     case 10:
+      raw_ = CFI_type_extended_double_Complex;
+      break;
     case 16:
       raw_ = CFI_type_long_double_Complex;
       break;
