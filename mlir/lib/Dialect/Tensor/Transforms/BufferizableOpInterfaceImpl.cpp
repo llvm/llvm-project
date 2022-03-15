@@ -26,28 +26,27 @@ struct CastOpInterface
     : public BufferizableOpInterface::ExternalModel<CastOpInterface,
                                                     tensor::CastOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return false;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {op->getResult(0)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto castOp = cast<tensor::CastOp>(op);
 
     // The result buffer still has the old (pre-cast) type.
@@ -85,30 +84,29 @@ struct CollapseShapeOpInterface
     : public BufferizableOpInterface::ExternalModel<CollapseShapeOpInterface,
                                                     tensor::CollapseShapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return false;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     if (&opOperand == &op->getOpOperand(0) /*src*/)
       return {op->getOpResult(0)};
     return {};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto collapseShapeOp = cast<tensor::CollapseShapeOp>(op);
     Value buffer =
         *state.getBuffer(rewriter, collapseShapeOp->getOpOperand(0) /*src*/);
@@ -125,23 +123,22 @@ struct DimOpInterface
     : public BufferizableOpInterface::ExternalModel<DimOpInterface,
                                                     tensor::DimOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto dimOp = cast<tensor::DimOp>(op);
     Value v = *state.getBuffer(rewriter, dimOp->getOpOperand(0) /*source*/);
     replaceOpWithNewBufferizedOp<memref::DimOp>(rewriter, op, v, dimOp.index());
@@ -154,30 +151,29 @@ struct ExpandShapeOpInterface
     : public BufferizableOpInterface::ExternalModel<ExpandShapeOpInterface,
                                                     tensor::ExpandShapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return false;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     if (&opOperand == &op->getOpOperand(0) /*src*/)
       return {op->getOpResult(0)};
     return {};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto expandShapeOp = cast<tensor::ExpandShapeOp>(op);
     Value buffer =
         *state.getBuffer(rewriter, expandShapeOp->getOpOperand(0) /*src*/);
@@ -194,30 +190,29 @@ struct ExtractSliceOpInterface
     : public BufferizableOpInterface::ExternalModel<ExtractSliceOpInterface,
                                                     tensor::ExtractSliceOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return false;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     if (&opOperand == &op->getOpOperand(0) /*source*/)
       return {op->getOpResult(0)};
     return {};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::None;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     Location loc = extractSliceOp.getLoc();
     Value srcMemref =
@@ -228,7 +223,8 @@ struct ExtractSliceOpInterface
         extractSliceOp.result().getType().cast<RankedTensorType>();
 
     // If not inplaceable, alloc.
-    bool inplace = state.isInPlace(extractSliceOp->getOpOperand(0));
+    bool inplace =
+        state.getAnalysisState().isInPlace(extractSliceOp->getOpOperand(0));
     Value alloc;
     if (!inplace) {
       FailureOr<Value> allocOrFailure =
@@ -264,7 +260,7 @@ struct ExtractSliceOpInterface
     // If not inplaceable, copy.
     if (!inplace) {
       // Do not copy if the copied data is never read.
-      if (state.isValueRead(extractSliceOp.result()))
+      if (state.getAnalysisState().isValueRead(extractSliceOp.result()))
         if (failed(createMemCpy(rewriter, extractSliceOp.getLoc(), subView,
                                 alloc, state.getOptions())))
           return failure();
@@ -281,23 +277,22 @@ struct ExtractOpInterface
     : public BufferizableOpInterface::ExternalModel<ExtractOpInterface,
                                                     tensor::ExtractOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto extractOp = cast<tensor::ExtractOp>(op);
     Value srcMemref =
         *state.getBuffer(rewriter, extractOp->getOpOperand(0) /*tensor*/);
@@ -334,7 +329,7 @@ struct FromElementsOpInterface
     : public BufferizableOpInterface::ExternalModel<FromElementsOpInterface,
                                                     tensor::FromElementsOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
 
     // Allocate a buffer for the result.
@@ -387,7 +382,7 @@ struct GenerateOpInterface
     : public BufferizableOpInterface::ExternalModel<GenerateOpInterface,
                                                     tensor::GenerateOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
 
     // Allocate memory.
@@ -446,18 +441,17 @@ struct InsertOpInterface
     : public BufferizableOpInterface::ExternalModel<InsertOpInterface,
                                                     tensor::InsertOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return true;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     assert(&opOperand == &op->getOpOperand(1) /*dest*/ &&
            "expected dest OpOperand");
     return {op->getOpResult(0)};
@@ -465,12 +459,12 @@ struct InsertOpInterface
 
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const BufferizationState &state) const {
+                       const AnalysisState &state) const {
     return {&op->getOpOperand(1) /*dest*/};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto insertOp = cast<tensor::InsertOp>(op);
     FailureOr<Value> destMemref =
         state.getBuffer(rewriter, insertOp->getOpOperand(1) /*dest*/);
@@ -483,7 +477,7 @@ struct InsertOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 };
@@ -494,7 +488,7 @@ struct InsertOpInterface
 /// This is one particular type of relationship between ops on tensors that
 /// reduce to an equivalence on buffers. This should be generalized and
 /// exposed as interfaces on the proper types.
-static bool areEquivalentExtractSliceOps(const BufferizationState &state,
+static bool areEquivalentExtractSliceOps(const AnalysisState &state,
                                          ExtractSliceOp st, InsertSliceOp sti) {
   if (!st || !sti)
     return false;
@@ -508,8 +502,8 @@ static bool areEquivalentExtractSliceOps(const BufferizationState &state,
 
 /// Return true if `value` is originating from an ExtractSliceOp that matches
 /// the given InsertSliceOp.
-static bool hasMatchingExtractSliceOp(const BufferizationState &state,
-                                      Value value, InsertSliceOp insertOp) {
+static bool hasMatchingExtractSliceOp(const AnalysisState &state, Value value,
+                                      InsertSliceOp insertOp) {
   auto condition = [&](Value val) {
     if (auto extractOp = val.getDefiningOp<ExtractSliceOp>())
       if (areEquivalentExtractSliceOps(state, extractOp, insertOp))
@@ -527,31 +521,30 @@ struct InsertSliceOpInterface
     : public BufferizableOpInterface::ExternalModel<InsertSliceOpInterface,
                                                     tensor::InsertSliceOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return &opOperand == &op->getOpOperand(1) /*dest*/;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     if (&opOperand == &op->getOpOperand(1) /*dest*/)
       return {op->getResult(0)};
     return {};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   bool isNotConflicting(Operation *op, OpOperand *uRead,
                         OpOperand *uConflictingWrite,
-                        const BufferizationState &state) const {
+                        const AnalysisState &state) const {
     Operation *readingOp = uRead->getOwner();
     Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
@@ -626,7 +619,7 @@ struct InsertSliceOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     // insert_slice ops arise from tiling and bufferizing them out-of-place is
     // generally a deal breaker. When used with loops, this ends up cloning the
     // whole tensor on every single iteration and is a symptom of a
@@ -683,23 +676,22 @@ struct RankOpInterface
     : public BufferizableOpInterface::ExternalModel<RankOpInterface,
                                                     tensor::RankOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto rankOp = cast<tensor::RankOp>(op);
     Value v = *state.getBuffer(rewriter, rankOp->getOpOperand(0) /*source*/);
     replaceOpWithNewBufferizedOp<memref::RankOp>(rewriter, op, rankOp.getType(),

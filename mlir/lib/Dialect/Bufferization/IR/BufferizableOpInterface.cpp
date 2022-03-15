@@ -67,7 +67,7 @@ BufferizationOptions::dynCastBufferizableOp(Value value) const {
 void BufferizationOptions::addDialectStateInitializer(
     StringRef name, const DialectStateInitFn &fn) {
   stateInitializers.push_back(
-      [=](BufferizationState &state) { state.insertDialectState(name, fn()); });
+      [=](AnalysisState &state) { state.insertDialectState(name, fn()); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -85,7 +85,7 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
 /// Determine which OpOperand* will alias with `result` if the op is bufferized
 /// in place. Return an empty vector if the op is not bufferizable.
 SmallVector<OpOperand *>
-BufferizationState::getAliasingOpOperand(OpResult result) const {
+AnalysisState::getAliasingOpOperand(OpResult result) const {
   if (Operation *op = result.getDefiningOp())
     if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
       return bufferizableOp.getAliasingOpOperand(result, *this);
@@ -95,7 +95,7 @@ BufferizationState::getAliasingOpOperand(OpResult result) const {
 /// Determine which OpResult will alias with `opOperand` if the op is bufferized
 /// in place. Return an empty vector if the op is not bufferizable.
 SmallVector<OpResult>
-BufferizationState::getAliasingOpResult(OpOperand &opOperand) const {
+AnalysisState::getAliasingOpResult(OpOperand &opOperand) const {
   if (auto bufferizableOp =
           dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
     return bufferizableOp.getAliasingOpResult(opOperand, *this);
@@ -104,7 +104,7 @@ BufferizationState::getAliasingOpResult(OpOperand &opOperand) const {
 
 /// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
 /// op is not bufferizable.
-bool BufferizationState::bufferizesToMemoryRead(OpOperand &opOperand) const {
+bool AnalysisState::bufferizesToMemoryRead(OpOperand &opOperand) const {
   if (auto bufferizableOp =
           dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
     return bufferizableOp.bufferizesToMemoryRead(opOperand, *this);
@@ -116,7 +116,7 @@ bool BufferizationState::bufferizesToMemoryRead(OpOperand &opOperand) const {
 
 /// Return true if `opOperand` bufferizes to a memory write. Return
 /// `true` if the op is not bufferizable.
-bool BufferizationState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
+bool AnalysisState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
   if (auto bufferizableOp =
           dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
     return bufferizableOp.bufferizesToMemoryWrite(opOperand, *this);
@@ -128,7 +128,7 @@ bool BufferizationState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
 
 /// Return true if `opOperand` does neither read nor write but bufferizes to an
 /// alias. Return false if the op is not bufferizable.
-bool BufferizationState::bufferizesToAliasOnly(OpOperand &opOperand) const {
+bool AnalysisState::bufferizesToAliasOnly(OpOperand &opOperand) const {
   if (auto bufferizableOp =
           dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
     return bufferizableOp.bufferizesToAliasOnly(opOperand, *this);
@@ -141,7 +141,7 @@ bool BufferizationState::bufferizesToAliasOnly(OpOperand &opOperand) const {
 /// Return true if the given value is read by an op that bufferizes to a memory
 /// read. Also takes into account ops that create an alias but do not read by
 /// themselves (e.g., ExtractSliceOp).
-bool BufferizationState::isValueRead(Value value) const {
+bool AnalysisState::isValueRead(Value value) const {
   assert(value.getType().isa<TensorType>() && "expected TensorType");
   SmallVector<OpOperand *> workingSet;
   for (OpOperand &use : value.getUses())
@@ -165,7 +165,7 @@ bool BufferizationState::isValueRead(Value value) const {
 // the aliasing OpOperands. Find and return Values for which `condition`
 // evaluates to true. OpOperands of such matching Values are not traversed any
 // further.
-llvm::SetVector<Value> BufferizationState::findValueInReverseUseDefChain(
+llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition) const {
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
@@ -193,7 +193,7 @@ llvm::SetVector<Value> BufferizationState::findValueInReverseUseDefChain(
 
 // Find the Values of the last preceding write of a given Value.
 llvm::SetVector<Value>
-BufferizationState::findLastPrecedingWrite(Value value) const {
+AnalysisState::findLastPrecedingWrite(Value value) const {
   return findValueInReverseUseDefChain(value, [&](Value value) {
     Operation *op = value.getDefiningOp();
     if (!op)
@@ -205,9 +205,9 @@ BufferizationState::findLastPrecedingWrite(Value value) const {
   });
 }
 
-BufferizationState::BufferizationState(const BufferizationOptions &options)
+AnalysisState::AnalysisState(const BufferizationOptions &options)
     : options(options) {
-  for (const BufferizationOptions::BufferizationStateInitFn &fn :
+  for (const BufferizationOptions::AnalysisStateInitFn &fn :
        options.stateInitializers)
     fn(*this);
 }
@@ -246,13 +246,14 @@ Value mlir::bufferization::lookupBuffer(RewriterBase &rewriter, Value tensor,
 FailureOr<Value> BufferizationState::getBuffer(
     RewriterBase &rewriter, OpOperand &opOperand, bool forceInPlace,
     Optional<Operation *> customCopyInsertionPoint) const {
+  const BufferizationOptions &options = analysisState.getOptions();
   OpBuilder::InsertionGuard guard(rewriter);
   Operation *op = opOperand.getOwner();
   Location loc = op->getLoc();
   Value operand = opOperand.get();
   Value operandBuffer = lookupBuffer(rewriter, operand, options);
 
-  if (forceInPlace || isInPlace(opOperand))
+  if (forceInPlace || analysisState.isInPlace(opOperand))
     return operandBuffer;
 
   // Bufferizing out-of-place: Allocate a new buffer.
@@ -269,22 +270,26 @@ FailureOr<Value> BufferizationState::getBuffer(
   // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
   // use-def chain, it returns that value, regardless of whether it is a
   // memory write or not.
-  SetVector<Value> lastWrites = findLastPrecedingWrite(operand);
+  SetVector<Value> lastWrites = analysisState.findLastPrecedingWrite(operand);
   if (llvm::none_of(lastWrites, [&](Value lastWrite) {
         if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
           return bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(),
-                                              *this);
+                                              analysisState);
         return true;
       }))
     return resultBuffer;
   // Do not copy if the copied data is never read.
-  SmallVector<OpResult> aliasingOpResults = getAliasingOpResult(opOperand);
-  if (!aliasingOpResults.empty() && !bufferizesToMemoryRead(opOperand) &&
-      llvm::none_of(aliasingOpResults,
-                    [&](OpResult opResult) { return isValueRead(opResult); }))
+  SmallVector<OpResult> aliasingOpResults =
+      analysisState.getAliasingOpResult(opOperand);
+  if (!aliasingOpResults.empty() &&
+      !analysisState.bufferizesToMemoryRead(opOperand) &&
+      llvm::none_of(aliasingOpResults, [&](OpResult opResult) {
+        return analysisState.isValueRead(opResult);
+      }))
     return resultBuffer;
   // Do not copy if this op does not read the data, but writes it.
-  if (bufferizesToMemoryWrite(opOperand) && !bufferizesToMemoryRead(opOperand))
+  if (analysisState.bufferizesToMemoryWrite(opOperand) &&
+      !analysisState.bufferizesToMemoryRead(opOperand))
     return resultBuffer;
 
   if (customCopyInsertionPoint) {
@@ -330,20 +335,20 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
   rewriter.replaceOp(op, replacements);
 }
 
-AlwaysCopyBufferizationState::AlwaysCopyBufferizationState(
+AlwaysCopyAnalysisState::AlwaysCopyAnalysisState(
     const BufferizationOptions &options)
-    : BufferizationState(options) {}
+    : AnalysisState(options) {}
 
 /// Return `true` if the given OpResult has been decided to bufferize inplace.
-bool AlwaysCopyBufferizationState::isInPlace(OpOperand &opOperand) const {
+bool AlwaysCopyAnalysisState::isInPlace(OpOperand &opOperand) const {
   // OpOperands that bufferize to a memory write are out-of-place, i.e., an
   // alloc and copy is inserted.
   return !bufferizesToMemoryWrite(opOperand);
 }
 
 /// Return true if `v1` and `v2` bufferize to equivalent buffers.
-bool AlwaysCopyBufferizationState::areEquivalentBufferizedValues(
-    Value v1, Value v2) const {
+bool AlwaysCopyAnalysisState::areEquivalentBufferizedValues(Value v1,
+                                                            Value v2) const {
   // There is no analysis, so we do not know if the values are equivalent. The
   // conservative answer is "false".
   return false;

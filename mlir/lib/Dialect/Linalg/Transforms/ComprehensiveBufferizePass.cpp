@@ -40,7 +40,7 @@ struct LinalgComprehensiveModuleBufferize
       const LinalgComprehensiveModuleBufferize &p) = default;
 
   explicit LinalgComprehensiveModuleBufferize(
-      const AnalysisBufferizationOptions &options)
+      const OneShotBufferizationOptions &options)
       : options(options) {}
 
   void runOnOperation() override;
@@ -61,7 +61,7 @@ struct LinalgComprehensiveModuleBufferize
   }
 
 private:
-  llvm::Optional<AnalysisBufferizationOptions> options;
+  llvm::Optional<OneShotBufferizationOptions> options;
 };
 } // namespace
 
@@ -81,7 +81,7 @@ static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
 }
 
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
-  AnalysisBufferizationOptions opt;
+  OneShotBufferizationOptions opt;
   if (!options) {
     // Make new bufferization options if none were provided when creating the
     // pass.
@@ -129,6 +129,6 @@ std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass() {
 }
 
 std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass(
-    const AnalysisBufferizationOptions &options) {
+    const OneShotBufferizationOptions &options) {
   return std::make_unique<LinalgComprehensiveModuleBufferize>(options);
 }

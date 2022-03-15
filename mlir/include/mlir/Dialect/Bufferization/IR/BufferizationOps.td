@@ -125,7 +125,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     // results as not writable enforces a buffer copy and has the same effect.
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationState &state) const {
+                            BufferizationState &state) const {
       // to_tensor cannot be bufferized. However, other ops that are using
       // to_tensor's result will eventually be bufferized. At that point, they
       // will start using to_tensor's memref operand. Once all users of
@@ -136,7 +136,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
       return failure();
     }
 
-    bool isWritable(Value value, const BufferizationState &state) const {
+    bool isWritable(Value value, const AnalysisState &state) const {
       // It is unknown whether the memref operand is writable or not.
       return false;
     }
@@ -194,30 +194,30 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     // but such IR may no longer be analyzable by One-Shot analysis.
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
       // It is unknown whether the resulting memref will be read or not.
       return true;
     }
 
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const BufferizationState &state) const {
+                                 const AnalysisState &state) const {
       // It is unknown whether the resulting MemRef will be written or not.
       return true;
     }
 
     bool mustBufferizeInPlace(OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
       // ToMemrefOps always bufferize inplace.
       return true;
     }
 
     SmallVector<OpResult> getAliasingOpResult(
-        OpOperand &opOperand, const BufferizationState &state) const {
+        OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationState &state);
+                            BufferizationState &state);
   }];
 
   let assemblyFormat = "$tensor attr-dict `:` type($memref)";
