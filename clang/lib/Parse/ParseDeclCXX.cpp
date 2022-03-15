@@ -74,15 +74,27 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
   SourceLocation FirstNestedInlineLoc;
 
   ParsedAttributesWithRange attrs(AttrFactory);
-  SourceLocation attrLoc;
-  if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                ? diag::warn_cxx14_compat_ns_enum_attribute
-                                : diag::ext_ns_enum_attribute)
-      << 0 /*namespace*/;
-    attrLoc = Tok.getLocation();
-    ParseCXX11Attributes(attrs);
-  }
+
+  auto ReadAttributes = [&] {
+    bool MoreToParse;
+    do {
+      MoreToParse = false;
+      if (Tok.is(tok::kw___attribute)) {
+        ParseGNUAttributes(attrs);
+        MoreToParse = true;
+      }
+      if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
+        Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
+                                    ? diag::warn_cxx14_compat_ns_enum_attribute
+                                    : diag::ext_ns_enum_attribute)
+            << 0 /*namespace*/;
+        ParseCXX11Attributes(attrs);
+        MoreToParse = true;
+      }
+    } while (MoreToParse);
+  };
+
+  ReadAttributes();
 
   if (Tok.is(tok::identifier)) {
     Ident = Tok.getIdentifierInfo();
@@ -108,15 +120,13 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     }
   }
 
+  ReadAttributes();
+
+  SourceLocation attrLoc = attrs.Range.getBegin();
+
   // A nested namespace definition cannot have attributes.
   if (!ExtraNSs.empty() && attrLoc.isValid())
     Diag(attrLoc, diag::err_unexpected_nested_namespace_attribute);
-
-  // Read label attributes, if present.
-  if (Tok.is(tok::kw___attribute)) {
-    attrLoc = Tok.getLocation();
-    ParseGNUAttributes(attrs);
-  }
 
   if (Tok.is(tok::equal)) {
     if (!Ident) {
