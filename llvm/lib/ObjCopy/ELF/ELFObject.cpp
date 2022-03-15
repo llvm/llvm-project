@@ -545,18 +545,6 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   return Error::success();
 }
 
-Expected<CompressedSection>
-CompressedSection::create(const SectionBase &Sec,
-                          DebugCompressionType CompressionType) {
-  return CompressedSection(Sec, CompressionType);
-}
-Expected<CompressedSection>
-CompressedSection::create(ArrayRef<uint8_t> CompressedData,
-                          uint64_t DecompressedSize,
-                          uint64_t DecompressedAlign) {
-  return CompressedSection(CompressedData, DecompressedSize, DecompressedAlign);
-}
-
 CompressedSection::CompressedSection(const SectionBase &Sec,
                                      DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
@@ -1754,12 +1742,8 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
       uint64_t DecompressedSize, DecompressedAlign;
       std::tie(DecompressedSize, DecompressedAlign) =
           getDecompressedSizeAndAlignment<ELFT>(*Data);
-      Expected<CompressedSection> NewSection =
-          CompressedSection::create(*Data, DecompressedSize, DecompressedAlign);
-      if (!NewSection)
-        return NewSection.takeError();
-
-      return Obj.addSection<CompressedSection>(std::move(*NewSection));
+      return Obj.addSection<CompressedSection>(
+          CompressedSection(*Data, DecompressedSize, DecompressedAlign));
     }
 
     return Obj.addSection<Section>(*Data);
