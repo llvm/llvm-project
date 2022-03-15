@@ -2,10 +2,6 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
 
-if (NOT BOOTSTRAPPING_MODE)
-  add_library(swiftCompilerModules ALIAS swiftCompilerStub)
-endif()
-
 add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftASTManipulator.cpp
   SwiftExpressionParser.cpp
@@ -41,7 +37,6 @@ add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
     swiftSIL
     swiftSILOptimizer
     swiftSerialization
-    swiftCompilerModules
     clangAST
     clangBasic
     clangRewrite
@@ -50,3 +45,13 @@ add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
     Support
     Core
   )
+
+if(BOOTSTRAPPING_MODE)
+  target_link_libraries(lldbPluginExpressionParserSwift
+    PRIVATE
+      swiftCompilerModules)
+else()
+  target_link_libraries(lldbPluginExpressionParserSwift
+    PRIVATE
+      swiftCompilerStub)
+endif()
