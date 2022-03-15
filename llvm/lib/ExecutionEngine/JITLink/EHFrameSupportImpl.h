@@ -21,21 +21,6 @@
 namespace llvm {
 namespace jitlink {
 
-/// A LinkGraph pass that splits blocks in a section that follows the DWARF
-/// Record format into sub-blocks where each header gets its own block.
-/// When splitting EHFrames, DWARFRecordSectionSplitter should not be run
-/// without EHFrameEdgeFixer, which is responsible for adding FDE-to-CIE edges.
-class DWARFRecordSectionSplitter {
-public:
-  DWARFRecordSectionSplitter(StringRef SectionName);
-  Error operator()(LinkGraph &G);
-
-private:
-  Error processBlock(LinkGraph &G, Block &B, LinkGraph::SplitBlockCache &Cache);
-
-  StringRef SectionName;
-};
-
 /// A LinkGraph pass that adds missing FDE-to-CIE, FDE-to-PC and FDE-to-LSDA
 /// edges.
 class EHFrameEdgeFixer {
