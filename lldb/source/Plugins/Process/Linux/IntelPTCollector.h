@@ -1,4 +1,4 @@
-//===-- IntelPTManager.h -------------------------------------- -*- C++ -*-===//
+//===-- IntelPTCollector.h -------------------------------------- -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_IntelPTManager_H_
-#define liblldb_IntelPTManager_H_
+#ifndef liblldb_IntelPTCollector_H_
+#define liblldb_IntelPTCollector_H_
 
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
@@ -203,9 +203,9 @@ private:
 };
 
 /// Main class that manages intel-pt process and thread tracing.
-class IntelPTManager {
+class IntelPTCollector {
 public:
-  IntelPTManager(lldb::pid_t pid) : m_pid(pid), m_thread_traces(pid) {}
+  IntelPTCollector(lldb::pid_t pid) : m_pid(pid), m_thread_traces(pid) {}
 
   static bool IsSupported();
 
@@ -260,4 +260,4 @@ private:
 } // namespace process_linux
 } // namespace lldb_private
 
-#endif // liblldb_IntelPTManager_H_
+#endif // liblldb_IntelPTCollector_H_

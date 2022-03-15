@@ -1,5 +1,5 @@
 add_lldb_library(lldbPluginProcessLinux
-  IntelPTManager.cpp
+  IntelPTCollector.cpp
   NativeProcessLinux.cpp
   NativeRegisterContextLinux.cpp
   NativeRegisterContextLinux_arm.cpp
