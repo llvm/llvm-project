@@ -278,9 +278,6 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  assert(CallArgs.size() == 0 &&
-         "Args not yet supported. When they are we'll need to consider "
-         "supporting temporary allocas for passed args");
 
   // Translate all of the arguments as necessary to match the CIR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -289,7 +286,47 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   CIRGenFunctionInfo::const_arg_iterator info_it = CallInfo.arg_begin();
   for (CallArgList::const_iterator I = CallArgs.begin(), E = CallArgs.end();
        I != E; ++I, ++info_it, ++ArgNo) {
-    assert(false && "Nothing to see here!");
+    const ABIArgInfo &ArgInfo = info_it->info;
+
+    // Insert a padding argument to ensure proper alignment.
+    assert(!CIRFunctionArgs.hasPaddingArg(ArgNo) && "Padding args NYI");
+
+    unsigned FirstCIRArg, NumCIRArgs;
+    std::tie(FirstCIRArg, NumCIRArgs) = CIRFunctionArgs.getCIRArgs(ArgNo);
+
+    switch (ArgInfo.getKind()) {
+    case ABIArgInfo::Direct: {
+      if (!ArgInfo.getCoerceToType().isa<mlir::cir::StructType>() &&
+          ArgInfo.getCoerceToType() == convertType(info_it->type) &&
+          ArgInfo.getDirectOffset() == 0) {
+        assert(NumCIRArgs == 1);
+        mlir::Value V;
+        assert(!I->isAggregate() && "Aggregate NYI");
+        V = I->getKnownRValue().getScalarVal();
+
+        assert(CallInfo.getExtParameterInfo(ArgNo).getABI() !=
+                   ParameterABI::SwiftErrorResult &&
+               "swift NYI");
+
+        // We might have to widen integers, but we should never truncate.
+        assert(ArgInfo.getCoerceToType() == V.getType() && "widening NYI");
+
+        mlir::FunctionType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
+
+        // If the argument doesn't match, perform a bitcast to coerce it. This
+        // can happen due to trivial type mismatches.
+        if (FirstCIRArg < CIRFuncTy.getNumInputs() &&
+            V.getType() != CIRFuncTy.getInput(FirstCIRArg))
+          assert(false && "Shouldn't have to bitcast anything yet");
+
+        CIRCallArgs[FirstCIRArg] = V;
+        break;
+      }
+      assert(false && "this code path shouldn't be hit yet");
+    }
+    default:
+      assert(false && "Only Direct support so far");
+    }
   }
 
   const CIRGenCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);

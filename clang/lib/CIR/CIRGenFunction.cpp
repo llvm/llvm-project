@@ -283,3 +283,7 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
 
   return Call;
 }
+
+mlir::Type CIRGenFunction::convertType(QualType T) {
+  return CGM.getTypes().ConvertType(T);
+}
