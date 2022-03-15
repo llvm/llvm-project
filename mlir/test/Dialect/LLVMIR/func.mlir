@@ -123,6 +123,20 @@ module {
   // CHECK: llvm.func @external_func
   // GENERIC: linkage = #llvm.linkage<external>
   llvm.func external @external_func()
+
+  // CHECK-LABEL: llvm.func @arg_struct_attr(
+  // CHECK-SAME: %{{.*}}: !llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+  llvm.func @arg_struct_attr(
+      %arg0 : !llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+    llvm.return
+  }
+
+   // CHECK-LABEL: llvm.func @res_struct_attr(%{{.*}}: !llvm.struct<(i32)>)
+   // CHECK-SAME:-> (!llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+  llvm.func @res_struct_attr(%arg0 : !llvm.struct<(i32)>)
+      -> (!llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+    llvm.return %arg0 : !llvm.struct<(i32)>
+  }
 }
 
 // -----
