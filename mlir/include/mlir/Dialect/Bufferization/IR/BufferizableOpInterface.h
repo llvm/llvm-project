@@ -415,13 +415,22 @@ struct BufferizationState {
   BufferizationState(const AnalysisState &analysisState)
       : analysisState(analysisState) {}
 
+  /// Creates a memref allocation with the given type and dynamic extents.
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                               ValueRange dynShape);
+
+  /// Creates a memref allocation for the given shaped value. This function may
+  /// perform additional optimizations such as buffer allocation hoisting.
+  // TODO: Allocation hoisting should be a cleanup pass.
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue);
+
   /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization was decided.
   FailureOr<Value>
   getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
             bool forceInPlace = false,
-            Optional<Operation *> customCopyInsertionPoint = None) const;
+            Optional<Operation *> customCopyInsertionPoint = None);
 
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const {
@@ -477,27 +486,6 @@ BaseMemRefType getMemRefType(TensorType tensorType,
                              MemRefLayoutAttrInterface layout = {},
                              Attribute memorySpace = {});
 
-/// Creates a memref allocation with the given type and dynamic extents.
-FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                             ValueRange dynShape,
-                             const BufferizationOptions &options);
-
-/// Creates a memref allocation with the given type and dynamic extents. If
-/// `createDealloc`, a deallocation op is inserted at the point where the
-/// allocation goes out of scope.
-FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                             ValueRange dynShape, bool deallocMemref,
-                             const BufferizationOptions &options);
-
-/// Creates a memref allocation for the given shaped value. This function may
-/// perform additional optimizations such as buffer allocation hoisting. If
-/// `createDealloc`, a deallocation op is inserted at the point where the
-/// allocation goes out of scope.
-// TODO: Allocation hoisting should be a cleanup pass.
-FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
-                             bool deallocMemref,
-                             const BufferizationOptions &options);
-
 /// Creates a memref deallocation. The given memref buffer must have been
 /// allocated using `createAlloc`.
 LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
@@ -507,6 +495,10 @@ LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
 LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from, Value to,
                            const BufferizationOptions &options);
 
+/// Finalize all buffer allocations, i.e., create alloc ops as specified in the
+/// bufferization options and deallocate all buffers.
+LogicalResult finalizeBuffers(Operation *op,
+                              const BufferizationOptions &options);
 } // namespace bufferization
 } // namespace mlir
 

@@ -235,9 +235,8 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    FailureOr<Value> alloc =
-        createAlloc(rewriter, initTensorOp->getLoc(), initTensorOp.result(),
-                    state.getOptions().createDeallocs, state.getOptions());
+    FailureOr<Value> alloc = state.createAlloc(rewriter, initTensorOp->getLoc(),
+                                               initTensorOp.result());
     if (failed(alloc))
       return failure();
     replaceOpWithBufferizedValues(rewriter, op, *alloc);

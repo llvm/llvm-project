@@ -71,13 +71,6 @@ void populateEliminateBufferizeMaterializationsPatterns(
 LogicalResult bufferizeOp(Operation *op, const AnalysisState &analysisState);
 
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
-/// Reuse an existing `BufferizationState`.
-///
-/// Note: This function overload is useful for extending the bufferization.
-LogicalResult bufferizeOp(Operation *op,
-                          BufferizationState &bufferizationState);
-
-/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 /// Buffers are duplicated and copied before any tensor use that bufferizes to
 /// a memory write.
 ///
@@ -87,6 +80,16 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options);
 
 BufferizationOptions getPartialBufferizationOptions();
 
+//===----------------------------------------------------------------------===//
+// Helper functions for extending Bufferization
+//===----------------------------------------------------------------------===//
+
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Reuse an existing `BufferizationState`.
+///
+/// Note: This function overload is useful for extending the bufferization.
+LogicalResult bufferizeOp(Operation *op,
+                          BufferizationState &bufferizationState);
 } // namespace bufferization
 } // namespace mlir
 
