@@ -239,7 +239,8 @@ public:
 private:
   /// Allocate memory indices for the results of operations within the matcher
   /// and rewriters.
-  void allocateMemoryIndices(FuncOp matcherFunc, ModuleOp rewriterModule);
+  void allocateMemoryIndices(pdl_interp::FuncOp matcherFunc,
+                             ModuleOp rewriterModule);
 
   /// Generate the bytecode for the given operation.
   void generate(Region *region, ByteCodeWriter &writer);
@@ -482,7 +483,7 @@ struct ByteCodeLiveRange {
 } // namespace
 
 void Generator::generate(ModuleOp module) {
-  FuncOp matcherFunc = module.lookupSymbol<FuncOp>(
+  auto matcherFunc = module.lookupSymbol<pdl_interp::FuncOp>(
       pdl_interp::PDLInterpDialect::getMatcherFunctionName());
   ModuleOp rewriterModule = module.lookupSymbol<ModuleOp>(
       pdl_interp::PDLInterpDialect::getRewriterModuleName());
@@ -494,7 +495,7 @@ void Generator::generate(ModuleOp module) {
 
   // Generate code for the rewriter functions.
   ByteCodeWriter rewriterByteCodeWriter(rewriterByteCode, *this);
-  for (FuncOp rewriterFunc : rewriterModule.getOps<FuncOp>()) {
+  for (auto rewriterFunc : rewriterModule.getOps<pdl_interp::FuncOp>()) {
     rewriterToAddr.try_emplace(rewriterFunc.getName(), rewriterByteCode.size());
     for (Operation &op : rewriterFunc.getOps())
       generate(&op, rewriterByteCodeWriter);
@@ -514,11 +515,11 @@ void Generator::generate(ModuleOp module) {
   }
 }
 
-void Generator::allocateMemoryIndices(FuncOp matcherFunc,
+void Generator::allocateMemoryIndices(pdl_interp::FuncOp matcherFunc,
                                       ModuleOp rewriterModule) {
   // Rewriters use simplistic allocation scheme that simply assigns an index to
   // each result.
-  for (FuncOp rewriterFunc : rewriterModule.getOps<FuncOp>()) {
+  for (auto rewriterFunc : rewriterModule.getOps<pdl_interp::FuncOp>()) {
     ByteCodeField index = 0, typeRangeIndex = 0, valueRangeIndex = 0;
     auto processRewriterValue = [&](Value val) {
       valueToMemIndex.try_emplace(val, index++);

@@ -95,6 +95,7 @@ Attribute Changes in Clang
   This fixes `Issue 53805 <https://github.com/llvm/llvm-project/issues/53805>`_.
 
 - Improved namespace attributes handling:
+
   - Handle GNU attributes before a namespace identifier and subsequent
     attributes of different kinds.
   - Emit error on GNU attributes for a nested namespace definition.

@@ -597,7 +597,8 @@ static bool shouldImport(Symbol *sym) {
         return false;
   }
 
-  if (config->isPic || config->relocatable || config->importUndefined)
+  if (config->isPic || config->relocatable || config->importUndefined ||
+      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
@@ -1004,21 +1005,22 @@ void Writer::createSyntheticInitFunctions() {
     WasmSym::applyGlobalTLSRelocs->markLive();
   }
 
-  if (config->isPic) {
-    // For PIC code we create synthetic functions that apply relocations.
-    // These get called from __wasm_call_ctors before the user-level
-    // constructors.
+  if (config->isPic ||
+      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
+    // For PIC code, or when dynamically importing addresses, we create
+    // synthetic functions that apply relocations.  These get called from
+    // __wasm_call_ctors before the user-level constructors.
     WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
         "__wasm_apply_data_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
     WasmSym::applyDataRelocs->markLive();
+  }
 
-    if (out.globalSec->needsRelocations()) {
-      WasmSym::applyGlobalRelocs = symtab->addSyntheticFunction(
-          "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-          make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
-      WasmSym::applyGlobalRelocs->markLive();
-    }
+  if (config->isPic && out.globalSec->needsRelocations()) {
+    WasmSym::applyGlobalRelocs = symtab->addSyntheticFunction(
+        "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
+    WasmSym::applyGlobalRelocs->markLive();
   }
 
   int startCount = 0;

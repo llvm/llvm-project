@@ -2097,14 +2097,14 @@ class __r_anchor_multiline
 {
     typedef __owns_one_state<_CharT> base;
 
-    bool __multiline;
+    bool __multiline_;
 
 public:
     typedef _VSTD::__state<_CharT> __state;
 
     _LIBCPP_INLINE_VISIBILITY
     __r_anchor_multiline(bool __multiline, __node<_CharT>* __s)
-        : base(__s), __multiline(__multiline) {}
+        : base(__s), __multiline_(__multiline) {}
 
     virtual void __exec(__state&) const;
 };
@@ -2119,7 +2119,7 @@ __r_anchor_multiline<_CharT>::__exec(__state& __s) const
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
     }
-    else if (__multiline && __is_eol(*__s.__current_))
+    else if (__multiline_ && __is_eol(*__s.__current_))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();

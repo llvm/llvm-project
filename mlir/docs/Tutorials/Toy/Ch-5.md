@@ -172,8 +172,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // With the target and rewrite patterns defined, we can now attempt the
   // conversion. The conversion will signal failure if any of our *illegal*
   // operations were not converted successfully.
-  mlir::FuncOp function = getOperation();
-  if (mlir::failed(mlir::applyPartialConversion(function, target, patterns)))
+  if (mlir::failed(mlir::applyPartialConversion(getOperation(), target, patterns)))
     signalPassFailure();
 }
 ```
@@ -232,7 +231,7 @@ def PrintOp : Toy_Op<"print"> {
 Let's take a concrete example:
 
 ```mlir
-func @main() {
+toy.func @main() {
   %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
   %2 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
   %3 = toy.mul %2, %2 : tensor<3x2xf64>

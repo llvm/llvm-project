@@ -5621,12 +5621,52 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           onlyUsesZeroFlag(SDValue(Node, 0))) {
         unsigned ShiftOpcode = ISD::DELETED_NODE;
         unsigned ShiftAmt;
-        if (isMask_64(~Mask)) {
-          ShiftOpcode = X86::SHR64ri;
-          ShiftAmt = countTrailingZeros(Mask);
-        } else if (isMask_64(Mask)) {
-          ShiftOpcode = X86::SHL64ri;
-          ShiftAmt = countLeadingZeros(Mask);
+        unsigned SubRegIdx;
+        MVT SubRegVT;
+        unsigned TestOpcode;
+        if (isShiftedMask_64(Mask)) {
+          unsigned LeadingZeros = countLeadingZeros(Mask);
+          unsigned TrailingZeros = countTrailingZeros(Mask);
+          // If the mask covers the most significant bit, then we can replace
+          // TEST+AND with a SHR and check eflags.
+          // This emits a redundant TEST which is subsequently eliminated.
+          if (LeadingZeros == 0) {
+            ShiftOpcode = X86::SHR64ri;
+            ShiftAmt = TrailingZeros;
+            SubRegIdx = 0;
+            TestOpcode = X86::TEST64rr;
+            // If the mask covers the least signifcant bit, then we can replace
+            // TEST+AND with a SHL and check eflags.
+            // This emits a redundant TEST which is subsequently eliminated.
+          } else if (TrailingZeros == 0) {
+            ShiftOpcode = X86::SHL64ri;
+            ShiftAmt = LeadingZeros;
+            SubRegIdx = 0;
+            TestOpcode = X86::TEST64rr;
+          } else if (MaskC->hasOneUse()) {
+            // If the mask is 8/16 or 32bits wide, then we can replace it with
+            // a SHR and a TEST8rr/TEST16rr/TEST32rr.
+            unsigned PopCount = 64 - LeadingZeros - TrailingZeros;
+            if (PopCount == 8) {
+              ShiftOpcode = X86::SHR64ri;
+              ShiftAmt = TrailingZeros;
+              SubRegIdx = X86::sub_8bit;
+              SubRegVT = MVT::i8;
+              TestOpcode = X86::TEST8rr;
+            } else if (PopCount == 16) {
+              ShiftOpcode = X86::SHR64ri;
+              ShiftAmt = TrailingZeros;
+              SubRegIdx = X86::sub_16bit;
+              SubRegVT = MVT::i16;
+              TestOpcode = X86::TEST16rr;
+            } else if (PopCount == 32) {
+              ShiftOpcode = X86::SHR64ri;
+              ShiftAmt = TrailingZeros;
+              SubRegIdx = X86::sub_32bit;
+              SubRegVT = MVT::i32;
+              TestOpcode = X86::TEST32rr;
+            }
+          }
         }
         if (ShiftOpcode != ISD::DELETED_NODE) {
           SDValue ShiftC = CurDAG->getTargetConstant(ShiftAmt, dl, MVT::i64);
@@ -5634,8 +5674,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
               CurDAG->getMachineNode(ShiftOpcode, dl, MVT::i64, MVT::i32,
                                      N0.getOperand(0), ShiftC),
               0);
+          if (SubRegIdx != 0) {
+            Shift =
+                CurDAG->getTargetExtractSubreg(SubRegIdx, dl, SubRegVT, Shift);
+          }
           MachineSDNode *Test =
-              CurDAG->getMachineNode(X86::TEST64rr, dl, MVT::i32, Shift, Shift);
+              CurDAG->getMachineNode(TestOpcode, dl, MVT::i32, Shift, Shift);
           ReplaceNode(Node, Test);
           return;
         }

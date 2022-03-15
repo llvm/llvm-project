@@ -10,6 +10,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/FunctionImplementation.h"
 
 using namespace mlir;
 using namespace mlir::pdl_interp;
@@ -159,6 +160,29 @@ LogicalResult ForEachOp::verify() {
     return emitOpError("operand must be a range of loop variable type");
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::FuncOp
+//===----------------------------------------------------------------------===//
+
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
+                   FunctionType type, ArrayRef<NamedAttribute> attrs) {
+  buildWithEntryBlock(builder, state, name, type, attrs, type.getInputs());
+}
+
+ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false, buildFuncType);
+}
+
+void FuncOp::print(OpAsmPrinter &p) {
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
 }
 
 //===----------------------------------------------------------------------===//

@@ -45,7 +45,7 @@ namespace {
 ///   3) If the worklist is empty, the algorithm succeeded.
 ///
 class ShapeInferencePass
-    : public mlir::PassWrapper<ShapeInferencePass, OperationPass<FuncOp>> {
+    : public mlir::PassWrapper<ShapeInferencePass, OperationPass<toy::FuncOp>> {
 public:
   void runOnOperation() override {
     auto f = getOperation();

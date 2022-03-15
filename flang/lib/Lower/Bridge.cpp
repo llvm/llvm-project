@@ -64,32 +64,30 @@ public:
 
   /// Convert the PFT to FIR.
   void run(Fortran::lower::pft::Program &pft) {
-    // Primary translation pass.
+    // Preliminary translation pass.
     //  - Declare all functions that have definitions so that definition
     //    signatures prevail over call site signatures.
     //  - Define module variables and OpenMP/OpenACC declarative construct so
     //    that they are available before lowering any function that may use
     //    them.
+    //  - Translate block data programs so that common block definitions with
+    //    data initializations take precedence over other definitions.
     for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-      std::visit(Fortran::common::visitors{
-                     [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                       declareFunction(f);
-                     },
-                     [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                       lowerModuleDeclScope(m);
-                       for (Fortran::lower::pft::FunctionLikeUnit &f :
-                            m.nestedFunctions)
-                         declareFunction(f);
-                     },
-                     [&](Fortran::lower::pft::BlockDataUnit &b) {},
-                     [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
-                       setCurrentPosition(
-                           d.get<Fortran::parser::CompilerDirective>().source);
-                       mlir::emitWarning(toLocation(),
-                                         "ignoring all compiler directives");
-                     },
-                 },
-                 u);
+      std::visit(
+          Fortran::common::visitors{
+              [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                declareFunction(f);
+              },
+              [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                lowerModuleDeclScope(m);
+                for (Fortran::lower::pft::FunctionLikeUnit &f :
+                     m.nestedFunctions)
+                  declareFunction(f);
+              },
+              [&](Fortran::lower::pft::BlockDataUnit &b) { lowerBlockData(b); },
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+          },
+          u);
     }
 
     // Primary translation pass.
@@ -189,6 +187,26 @@ public:
     return val;
   }
 
+  void copySymbolBinding(Fortran::lower::SymbolRef src,
+                         Fortran::lower::SymbolRef target) override final {
+    localSymbols.addSymbol(target, lookupSymbol(src).toExtendedValue());
+  }
+
+  /// Add the symbol binding to the inner-most level of the symbol map and
+  /// return true if it is not already present. Otherwise, return false.
+  bool bindIfNewSymbol(Fortran::lower::SymbolRef sym,
+                       const fir::ExtendedValue &exval) {
+    if (shallowLookupSymbol(sym))
+      return false;
+    bindSymbol(sym, exval);
+    return true;
+  }
+
+  void bindSymbol(Fortran::lower::SymbolRef sym,
+                  const fir::ExtendedValue &exval) override final {
+    localSymbols.addSymbol(sym, exval, /*forced=*/true);
+  }
+
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
                       Fortran::lower::pft::LabelSet &labelSet) override final {
     Fortran::lower::pft::FunctionLikeUnit &owningProc =
@@ -231,12 +249,8 @@ public:
   fir::ExtendedValue genExprBox(const Fortran::lower::SomeExpr &expr,
                                 Fortran::lower::StatementContext &context,
                                 mlir::Location loc) override final {
-    if (expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr) &&
-        !Fortran::evaluate::HasVectorSubscript(expr))
-      return Fortran::lower::createSomeArrayBox(*this, expr, localSymbols,
-                                                context);
-    return fir::BoxValue(
-        builder->createBox(loc, genExprAddr(expr, context, &loc)));
+    return Fortran::lower::createBoxValue(loc, *this, expr, localSymbols,
+                                          context);
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -379,6 +393,42 @@ public:
     builder = nullptr;
     hostAssocTuple = mlir::Value{};
     localSymbols.clear();
+  }
+
+  /// Helper to generate GlobalOps when the builder is not positioned in any
+  /// region block. This is required because the FirOpBuilder assumes it is
+  /// always positioned inside a region block when creating globals, the easiest
+  /// way comply is to create a dummy function and to throw it afterwards.
+  void createGlobalOutsideOfFunctionLowering(
+      const std::function<void()> &createGlobals) {
+    // FIXME: get rid of the bogus function context and instantiate the
+    // globals directly into the module.
+    MLIRContext *context = &getMLIRContext();
+    mlir::FuncOp func = fir::FirOpBuilder::createFunction(
+        mlir::UnknownLoc::get(context), getModuleOp(),
+        fir::NameUniquer::doGenerated("Sham"),
+        mlir::FunctionType::get(context, llvm::None, llvm::None));
+    func.addEntryBlock();
+    builder = new fir::FirOpBuilder(func, bridge.getKindMap());
+    createGlobals();
+    if (mlir::Region *region = func.getCallableRegion())
+      region->dropAllReferences();
+    func.erase();
+    delete builder;
+    builder = nullptr;
+    localSymbols.clear();
+  }
+  /// Instantiate the data from a BLOCK DATA unit.
+  void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
+    createGlobalOutsideOfFunctionLowering([&]() {
+      Fortran::lower::AggregateStoreMap fakeMap;
+      for (const auto &[_, sym] : bdunit.symTab) {
+        if (sym->has<Fortran::semantics::ObjectEntityDetails>()) {
+          Fortran::lower::pft::Variable var(*sym, true);
+          instantiateVar(var, fakeMap);
+        }
+      }
+    });
   }
 
   /// Map mlir function block arguments to the corresponding Fortran dummy
@@ -611,30 +661,18 @@ public:
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    // FIXME: get rid of the bogus function context and instantiate the
-    // globals directly into the module.
-    MLIRContext *context = &getMLIRContext();
     setCurrentPosition(mod.getStartingSourceLoc());
-    mlir::FuncOp func = fir::FirOpBuilder::createFunction(
-        mlir::UnknownLoc::get(context), getModuleOp(),
-        fir::NameUniquer::doGenerated("ModuleSham"),
-        mlir::FunctionType::get(context, llvm::None, llvm::None));
-    func.addEntryBlock();
-    builder = new fir::FirOpBuilder(func, bridge.getKindMap());
-    for (const Fortran::lower::pft::Variable &var :
-         mod.getOrderedSymbolTable()) {
-      // Only define the variables owned by this module.
-      const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-      if (!owningScope || mod.getScope() == *owningScope)
-        Fortran::lower::defineModuleVariable(*this, var);
-    }
-    for (auto &eval : mod.evaluationList)
-      genFIR(eval);
-    if (mlir::Region *region = func.getCallableRegion())
-      region->dropAllReferences();
-    func.erase();
-    delete builder;
-    builder = nullptr;
+    createGlobalOutsideOfFunctionLowering([&]() {
+      for (const Fortran::lower::pft::Variable &var :
+           mod.getOrderedSymbolTable()) {
+        // Only define the variables owned by this module.
+        const Fortran::semantics::Scope *owningScope = var.getOwningScope();
+        if (!owningScope || mod.getScope() == *owningScope)
+          Fortran::lower::defineModuleVariable(*this, var);
+      }
+      for (auto &eval : mod.evaluationList)
+        genFIR(eval);
+    });
   }
 
   /// Lower functions contained in a module.
@@ -670,6 +708,14 @@ private:
   Fortran::lower::SymbolBox
   lookupSymbol(const Fortran::semantics::Symbol &sym) {
     if (Fortran::lower::SymbolBox v = localSymbols.lookupSymbol(sym))
+      return v;
+    return {};
+  }
+
+  /// Find the symbol in the inner-most level of the local map or return null.
+  Fortran::lower::SymbolBox
+  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
       return v;
     return {};
   }
@@ -785,10 +831,19 @@ private:
           // tags all result variables with one of the largest types to allow
           // them to share the same storage.  Convert this to the actual type.
           if (resultRef.getType() != resultRefType)
-            TODO(loc, "Convert to actual type");
+            resultRef = builder->createConvert(loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
     builder->create<mlir::func::ReturnOp>(loc, resultVal);
+  }
+
+  /// Get the return value of a call to \p symbol, which is a subroutine entry
+  /// point that has alternative return specifiers.
+  const mlir::Value
+  getAltReturnResult(const Fortran::semantics::Symbol &symbol) {
+    assert(Fortran::semantics::HasAlternateReturns(symbol) &&
+           "subroutine does not have alternate returns");
+    return getSymbolAddress(symbol);
   }
 
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
@@ -802,6 +857,10 @@ private:
     }
     if (Fortran::semantics::IsFunction(symbol)) {
       genReturnSymbol(symbol);
+    } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
+      mlir::Value retval = builder->create<fir::LoadOp>(
+          toLocation(), getAltReturnResult(symbol));
+      builder->create<mlir::func::ReturnOp>(toLocation(), retval);
     } else {
       genExitRoutine();
     }
@@ -1945,7 +2004,21 @@ private:
     }
     mlir::Location loc = toLocation();
     if (stmt.v) {
-      TODO(loc, "Alternate return statement");
+      // Alternate return statement - If this is a subroutine where some
+      // alternate entries have alternate returns, but the active entry point
+      // does not, ignore the alternate return value.  Otherwise, assign it
+      // to the compiler-generated result variable.
+      const Fortran::semantics::Symbol &symbol = funit->getSubprogramSymbol();
+      if (Fortran::semantics::HasAlternateReturns(symbol)) {
+        Fortran::lower::StatementContext stmtCtx;
+        const Fortran::lower::SomeExpr *expr =
+            Fortran::semantics::GetExpr(*stmt.v);
+        assert(expr && "missing alternate return expression");
+        mlir::Value altReturnIndex = builder->createConvert(
+            loc, builder->getIndexType(), createFIRExpr(loc, expr, stmtCtx));
+        builder->create<fir::StoreOp>(loc, altReturnIndex,
+                                      getAltReturnResult(symbol));
+      }
     }
     // Branch to the last block of the SUBROUTINE, which has the actual return.
     if (!funit->finalBlock) {
@@ -1999,10 +2072,7 @@ private:
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}   // nop
   void genFIR(const Fortran::parser::EndIfStmt &) {}         // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
-
-  void genFIR(const Fortran::parser::EntryStmt &) {
-    TODO(toLocation(), "EntryStmt lowering");
-  }
+  void genFIR(const Fortran::parser::EntryStmt &) {}         // nop
 
   void genFIR(const Fortran::parser::IfStmt &) {
     TODO(toLocation(), "IfStmt lowering");
