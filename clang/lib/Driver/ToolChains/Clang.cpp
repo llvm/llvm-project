@@ -8263,9 +8263,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         RocmTC.getCommonDeviceLibNames(TCArgs, Arch.str());
 
     for (StringRef LibName : BCLibs)
-      CmdArgs.push_back(
-          Args.MakeArgString("-target-library=" + TC->getTripleString() + "-" +
-                             Arch + "=" + LibName));
+      CmdArgs.push_back(Args.MakeArgString(
+          "-target-library=" + Action::GetOffloadKindName(Action::OFK_OpenMP) +
+          "-" + TC->getTripleString() + "-" + Arch + "=" + LibName));
   }
 
   if (D.isUsingLTO(/* IsOffload */ true)) {
