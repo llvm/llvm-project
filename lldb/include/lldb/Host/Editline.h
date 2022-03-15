@@ -154,7 +154,8 @@ using namespace line_editor;
 class Editline {
 public:
   Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, bool color_prompts);
+           FILE *error_file, std::recursive_mutex &output_mutex,
+           bool color_prompts);
 
   ~Editline();
 
@@ -402,7 +403,7 @@ private:
   std::string m_suggestion_ansi_suffix;
 
   std::size_t m_previous_autosuggestion_size = 0;
-  std::mutex m_output_mutex;
+  std::recursive_mutex &m_output_mutex;
 };
 }
 

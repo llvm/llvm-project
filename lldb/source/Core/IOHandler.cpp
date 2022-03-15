@@ -123,6 +123,7 @@ void IOHandler::SetPopped(bool b) { m_popped.SetValue(b, eBroadcastOnChange); }
 void IOHandler::WaitForPop() { m_popped.WaitForValueEqualTo(true); }
 
 void IOHandler::PrintAsync(const char *s, size_t len, bool is_stdout) {
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   lldb::StreamFileSP stream = is_stdout ? m_output_sp : m_error_sp;
   stream->Write(s, len);
   stream->Flush();
@@ -266,9 +267,9 @@ IOHandlerEditline::IOHandlerEditline(
                  m_input_sp && m_input_sp->GetIsRealTerminal();
 
   if (use_editline) {
-    m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
-                                               GetOutputFILE(), GetErrorFILE(),
-                                               m_color_prompts);
+    m_editline_up = std::make_unique<Editline>(
+        editline_name, GetInputFILE(), GetOutputFILE(), GetErrorFILE(),
+        GetOutputMutex(), m_color_prompts);
     m_editline_up->SetIsInputCompleteCallback(
         [this](Editline *editline, StringList &lines) {
           return this->IsInputCompleteCallback(editline, lines);
@@ -619,6 +620,7 @@ void IOHandlerEditline::GotEOF() {
 void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
+    std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
     lldb::StreamFileSP stream = is_stdout ? m_output_sp : m_error_sp;
     m_editline_up->PrintAsync(stream.get(), s, len);
   } else
