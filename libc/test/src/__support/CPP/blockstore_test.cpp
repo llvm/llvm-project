@@ -41,6 +41,27 @@ public:
     __llvm_libc::cpp::BlockStore<Element, BLOCK_SIZE, REVERSE>::destroy(
         &block_store);
   }
+
+  template <bool REVERSE> void back_test() {
+    using __llvm_libc::cpp::BlockStore;
+    BlockStore<int, 4, REVERSE> block_store;
+    for (int i = 0; i < 20; i++)
+      block_store.push_back(i);
+    for (int i = 19; i >= 0; i--, block_store.pop_back())
+      ASSERT_EQ(block_store.back(), i);
+    block_store.destroy(&block_store);
+  }
+
+  template <bool REVERSE> void empty_test() {
+    using __llvm_libc::cpp::BlockStore;
+    BlockStore<int, 2, REVERSE> block_store;
+
+    ASSERT_TRUE(block_store.empty());
+    block_store.push_back(1);
+    for (int i = 0; i < 10; i++, block_store.push_back(1))
+      ASSERT_FALSE(block_store.empty());
+    block_store.destroy(&block_store);
+  }
 };
 
 TEST_F(LlvmLibcBlockStoreTest, PopulateAndIterate4) {
@@ -65,4 +86,14 @@ TEST_F(LlvmLibcBlockStoreTest, PopulateAndIterateReverse8) {
 
 TEST_F(LlvmLibcBlockStoreTest, PopulateAndIterateReverse10) {
   populate_and_iterate<4, 10, true>();
+}
+
+TEST_F(LlvmLibcBlockStoreTest, Back) {
+  back_test<false>();
+  back_test<true>();
+}
+
+TEST_F(LlvmLibcBlockStoreTest, Empty) {
+  empty_test<false>();
+  empty_test<true>();
 }
