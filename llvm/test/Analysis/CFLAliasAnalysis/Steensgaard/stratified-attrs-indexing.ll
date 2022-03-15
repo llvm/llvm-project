@@ -17,17 +17,19 @@ define void @test(i1 %cond,
                   i32* %arg26, i32* %arg27, i32* %arg28, i32* %arg29, i32* %arg30,
                   i32* %arg31, i32* %arg32, i32* %arg33, i32* %arg34, i32* %arg35) {
 
-  ; CHECK: 946 Total Alias Queries Performed
-  ; CHECK: 43 no alias responses (4.5%)
+  ; CHECK: 45 Total Alias Queries Performed
+  ; CHECK: 9 no alias responses (20.0%)
   %a = alloca i32, align 4
-  %b = select i1 %cond, i32* %arg35, i32* %arg34
-  %c = select i1 %cond, i32* %arg34, i32* %arg33
-  %d = select i1 %cond, i32* %arg33, i32* %arg32
-  %e = select i1 %cond, i32* %arg32, i32* %arg31
-  %f = select i1 %cond, i32* %arg31, i32* %arg30
-  %g = select i1 %cond, i32* %arg30, i32* %arg29
-  %h = select i1 %cond, i32* %arg29, i32* %arg28
-  %i = select i1 %cond, i32* %arg28, i32* %arg27
+  load i32, i32* %a
+  load i32, i32* %arg27
+  load i32, i32* %arg28
+  load i32, i32* %arg29
+  load i32, i32* %arg30
+  load i32, i32* %arg31
+  load i32, i32* %arg32
+  load i32, i32* %arg33
+  load i32, i32* %arg34
+  load i32, i32* %arg35
 
   ret void
 }

@@ -25,6 +25,7 @@ entry:
   %i = alloca i32, align 4
   %AliasA1 = alloca i32**, align 8
   %ShouldAliasA = alloca i32*, align 8
+  %ignore1 = load i32*, i32** %A
   store i64 0, i64* %RefCopy, align 8
   store i32 0, i32* %i, align 4
   br label %for.cond

@@ -14,6 +14,8 @@ define void @test_memset_pattern4_const_size(i8* noalias %a, i8* noalias %patter
 ; CHECK-NEXT:  NoModRef:  Ptr: i8* %pattern.gep.4	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
 ;
 entry:
+  load i8, i8* %a
+  load i8, i8* %pattern
   call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
   %a.gep.1 = getelementptr i8, i8* %a, i32 1
   store i8 0, i8* %a.gep.1
@@ -35,6 +37,8 @@ define void @test_memset_pattern4_variable_size(i8* noalias %a, i8* noalias %pat
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 %n)
 ;
 entry:
+  load i8, i8* %a
+  load i8, i8* %pattern
   call void @memset_pattern4(i8* %a, i8* %pattern, i64 %n)
   %a.gep.1 = getelementptr i8, i8* %a, i32 1
   store i8 0, i8* %a.gep.1
@@ -53,6 +57,8 @@ define void @test_memset_pattern8_const_size(i8* noalias %a, i8* noalias %patter
 ; CHECK-NEXT:  NoModRef:  Ptr: i8* %pattern.gep.8	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
 ;
 entry:
+  load i8, i8* %a
+  load i8, i8* %pattern
   call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
   %a.gep.1 = getelementptr i8, i8* %a, i32 1
   store i8 0, i8* %a.gep.1
@@ -74,6 +80,8 @@ define void @test_memset_pattern8_variable_size(i8* noalias %a, i8* noalias %pat
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 %n)
 ;
 entry:
+  load i8, i8* %a
+  load i8, i8* %pattern
   call void @memset_pattern8(i8* %a, i8* %pattern, i64 %n)
   %a.gep.1 = getelementptr i8, i8* %a, i32 1
   store i8 0, i8* %a.gep.1
@@ -92,6 +100,8 @@ define void @test_memset_pattern16_const_size(i8* noalias %a, i8* noalias %patte
 ; CHECK-NEXT:  NoModRef:  Ptr: i8* %pattern.gep.16	<->  call void @memset_pattern16(i8* %a, i8* %pattern, i64 17)
 ;
 entry:
+  load i8, i8* %a
+  load i8, i8* %pattern
   call void @memset_pattern16(i8* %a, i8* %pattern, i64 17)
   %a.gep.1 = getelementptr i8, i8* %a, i32 1
   store i8 0, i8* %a.gep.1
@@ -113,6 +123,8 @@ define void @test_memset_pattern16_variable_size(i8* noalias %a, i8* noalias %pa
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern16(i8* %a, i8* %pattern, i64 %n)
 ;
 entry:
+  load i8, i8* %a
+  load i8, i8* %pattern
   call void @memset_pattern16(i8* %a, i8* %pattern, i64 %n)
   %a.gep.1 = getelementptr i8, i8* %a, i32 1
   store i8 0, i8* %a.gep.1

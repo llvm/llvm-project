@@ -18,6 +18,10 @@ define void @compute1(i32 %num.0.lcssa, i32* %out) {
   %add12 = or i32 %num.0.lcssa, 2
   %idxprom13 = zext i32 %add12 to i64
   %arrayidx14 = getelementptr inbounds i32, i32* %out, i64 %idxprom13
+  load i32, i32* %out
+  load i32, i32* %arrayidx8
+  load i32, i32* %arrayidx11
+  load i32, i32* %arrayidx14
   ret void
 }
 
@@ -27,5 +31,7 @@ define void @compute2(i32 %num, i32* %out.addr) {
   %add9 = add i32 %num, 1
   %idxprom10 = zext i32 %add9 to i64
   %arrayidx11 = getelementptr inbounds i32, i32* %out.addr, i64 %idxprom10
+  load i32, i32* %out.addr
+  load i32, i32* %arrayidx11
   ret void
 }

@@ -18,6 +18,11 @@ define void @test0(%T addrspace(100)* %P) {
   %C = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1
   %D = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1, i64 0
   %E = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1, i64 5
+  load %T, %T addrspace(100)* %A
+  load i32, i32 addrspace(100)* %B
+  load [10 x i8], [10 x i8] addrspace(100)* %C
+  load i8, i8 addrspace(100)* %D
+  load i8, i8 addrspace(100)* %E
   ret void
 }
 
@@ -37,6 +42,8 @@ define void @test1(double addrspace(100)* %P, i128 %i) {
   %i69 = add i128 %i, 590295810358705651712
   %A = getelementptr double, double addrspace(100)* %P, i128 %i70
   %B = getelementptr double, double addrspace(100)* %P, i128 %i69
+  load double, double addrspace(100)* %A
+  load double, double addrspace(100)* %B
   ret void
 }
 
@@ -56,5 +63,7 @@ define void @test2(double addrspace(100)* %P, i128 %i) {
   %j70 = add i128 %i69, 590295810358705651712 
   %A = getelementptr double, double addrspace(100)* %P, i128 %i70
   %C = getelementptr double, double addrspace(100)* %P, i128 %j70
+  load double, double addrspace(100)* %A
+  load double, double addrspace(100)* %C
   ret void
 }

@@ -13,20 +13,24 @@ define i32* @return_escaped_callee() {
 	ret i32* %ptr_cast
 }
 ; CHECK-LABEL: Function: test_return_escape
-; CHECK: NoAlias: i32* %a, i32** %x
-; CHECK: NoAlias: i32* %b, i32** %x
-; CHECK: NoAlias: i32* %a, i32* %b
-; CHECK: NoAlias: i32* %c, i32** %x
-; CHECK: NoAlias: i32* %a, i32* %c
-; CHECK: NoAlias: i32* %b, i32* %c
-; CHECK: NoAlias: i32* %a, i32* %d
-; CHECK: MayAlias: i32* %b, i32* %d
-; CHECK: MayAlias: i32* %c, i32* %d
+; CHECK-DAG: NoAlias: i32* %a, i32** %x
+; CHECK-DAG: NoAlias: i32* %b, i32** %x
+; CHECK-DAG: NoAlias: i32* %a, i32* %b
+; CHECK-DAG: NoAlias: i32* %c, i32** %x
+; CHECK-DAG: NoAlias: i32* %a, i32* %c
+; CHECK-DAG: NoAlias: i32* %b, i32* %c
+; CHECK-DAG: NoAlias: i32* %a, i32* %d
+; CHECK-DAG: MayAlias: i32* %b, i32* %d
+; CHECK-DAG: MayAlias: i32* %c, i32* %d
 define void @test_return_escape(i32** %x) {
   %a = alloca i32, align 4
   %b = call i32* @return_escaped_callee()
   %c = call i32* @return_escaped_callee()
+  load i32, i32* %a
+  load i32, i32* %b
+  load i32, i32* %c
   %d = load i32*, i32** %x
+  load i32, i32* %d
 
   ret void
 }

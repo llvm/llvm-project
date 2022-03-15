@@ -28,12 +28,16 @@ define void @test_store_arg() {
   %p = alloca i32*, align 8
   %q = alloca i32*, align 8
 
+  load i32, i32* %a
+  load i32, i32* %b
   store i32* %a, i32** %p
   store i32* %b, i32** %q
   call void @store_arg_callee(i32** %p, i32* %b)
 
   %lp = load i32*, i32** %p
   %lq = load i32*, i32** %q
+  load i32, i32* %lp
+  load i32, i32* %lq
 
   ret void
 }

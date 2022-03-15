@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i64 @global_and_deref_arg_1(i64* dereferenceable(8) %arg) nofree nosync {
 ; CHECK:     Function: global_and_deref_arg_1: 2 pointers, 0 call sites
-; CHECK-NEXT:  NoAlias:	i32* @G, i64* %arg
+; CHECK-NEXT:  NoAlias:	i64* %arg, i32* @G
 bb:
   store i64 1, i64* %arg, align 8
   store i32 0, i32* @G, align 4
@@ -27,7 +27,7 @@ bb:
 
 define i32 @byval_and_deref_arg_1(i32* byval(i32) %obj, i64* dereferenceable(8) %arg) nofree nosync {
 ; CHECK:     Function: byval_and_deref_arg_1: 2 pointers, 0 call sites
-; CHECK-NEXT:  NoAlias:	i32* %obj, i64* %arg
+; CHECK-NEXT:  NoAlias:	i64* %arg, i32* %obj
 bb:
   store i32 1, i32* %obj, align 4
   store i64 0, i64* %arg, align 8
@@ -80,7 +80,7 @@ bb:
 
 define i64 @global_and_deref_arg_non_deref_1(i64* dereferenceable(2) %arg) nofree nosync {
 ; CHECK:     Function: global_and_deref_arg_non_deref_1: 2 pointers, 0 call sites
-; CHECK-NEXT:  NoAlias:	i32* @G, i64* %arg
+; CHECK-NEXT:  NoAlias:	i64* %arg, i32* @G
 bb:
   store i64 1, i64* %arg, align 8
   store i32 0, i32* @G, align 4
@@ -101,7 +101,7 @@ bb:
 
 define i32 @byval_and_deref_arg_non_deref_1(i32* byval(i32) %obj, i64* dereferenceable(2) %arg) nofree nosync {
 ; CHECK:     Function: byval_and_deref_arg_non_deref_1: 2 pointers, 0 call sites
-; CHECK-NEXT:  NoAlias:	i32* %obj, i64* %arg
+; CHECK-NEXT:  NoAlias:	i64* %arg, i32* %obj
 bb:
   store i32 1, i32* %obj, align 4
   store i64 0, i64* %arg, align 8

@@ -14,6 +14,8 @@
 ; CHECK:         NoAlias:      float* %g, float* %next
 define void @simple(float *%src1, float * noalias %src2, i32 %n) nounwind {
 entry:
+  load float, float* %src1
+  load float, float* %src2
   br label %loop
 
 loop:
@@ -22,6 +24,7 @@ loop:
   %next = getelementptr inbounds float, float* %phi, i32 1
   %g = getelementptr inbounds float, float* %src1, i32 3
   %l = load float, float* %phi
+  load float, float* %next
   %a = fadd float %l, 1.0
   store float %a, float* %g
   %idxn = add nsw nuw i32 %idx, 1
@@ -33,25 +36,27 @@ end:
 }
 
 ; CHECK-LABEL: Function: notmust: 6 pointers, 0 call sites
-; CHECK:        MustAlias:    [2 x i32]* %tab, i8* %0
-; CHECK:        PartialAlias (off 4): [2 x i32]* %tab, i32* %arrayidx
-; CHECK:        NoAlias:      i32* %arrayidx, i8* %0
-; CHECK:        MustAlias:    [2 x i32]* %tab, i32* %arrayidx1
-; CHECK:        MustAlias:    i32* %arrayidx1, i8* %0
-; CHECK:        NoAlias:      i32* %arrayidx, i32* %arrayidx1
-; CHECK:        MayAlias:     [2 x i32]* %tab, i32* %p.addr.05.i
-; CHECK:        MayAlias:     i32* %p.addr.05.i, i8* %0
-; CHECK:        MayAlias:     i32* %arrayidx, i32* %p.addr.05.i
-; CHECK:        MayAlias:     i32* %arrayidx1, i32* %p.addr.05.i
-; CHECK:        MayAlias:     [2 x i32]* %tab, i32* %incdec.ptr.i
-; CHECK:        NoAlias:      i32* %incdec.ptr.i, i8* %0
-; CHECK:        MayAlias:     i32* %arrayidx, i32* %incdec.ptr.i
-; CHECK:        NoAlias:      i32* %arrayidx1, i32* %incdec.ptr.i
-; CHECK:        NoAlias:      i32* %incdec.ptr.i, i32* %p.addr.05.i
+; CHECK: MustAlias:	i8* %0, [2 x i32]* %tab
+; CHECK: PartialAlias (off -4):	i32* %arrayidx, [2 x i32]* %tab
+; CHECK: NoAlias:	i8* %0, i32* %arrayidx
+; CHECK: MustAlias:	i32* %arrayidx1, [2 x i32]* %tab
+; CHECK: MustAlias:	i8* %0, i32* %arrayidx1
+; CHECK: NoAlias:	i32* %arrayidx, i32* %arrayidx1
+; CHECK: MayAlias:	i32* %incdec.ptr.i, [2 x i32]* %tab
+; CHECK: NoAlias:	i8* %0, i32* %incdec.ptr.i
+; CHECK: MayAlias:	i32* %arrayidx, i32* %incdec.ptr.i
+; CHECK: NoAlias:	i32* %arrayidx1, i32* %incdec.ptr.i
+; CHECK: MayAlias:	i32* %p.addr.05.i, [2 x i32]* %tab
+; CHECK: MayAlias:	i8* %0, i32* %p.addr.05.i
+; CHECK: MayAlias:	i32* %arrayidx, i32* %p.addr.05.i
+; CHECK: MayAlias:	i32* %arrayidx1, i32* %p.addr.05.i
+; CHECK: NoAlias:	i32* %incdec.ptr.i, i32* %p.addr.05.i
 define i32 @notmust() nounwind {
 entry:
   %tab = alloca [2 x i32], align 4
+  %ignore1 = load [2 x i32], [2 x i32]* %tab
   %0 = bitcast [2 x i32]* %tab to i8*
+  %ignore2 = load i8, i8* %0
   %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %tab, i32 0, i32 1
   store i32 0, i32* %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds [2 x i32], [2 x i32]* %tab, i32 0, i32 0
@@ -66,6 +71,7 @@ while.body.i: ; preds = %while.body.i, %entry
   %p.addr.05.i = phi i32* [ %incdec.ptr.i, %while.body.i ], [ %arrayidx1, %entry ]
   %sub.i = sub nsw i32 %foo.06.i, %2
   %incdec.ptr.i = getelementptr inbounds i32, i32* %p.addr.05.i, i32 1
+  %ignore3 = load i32, i32* %incdec.ptr.i
   store i32 %sub.i, i32* %p.addr.05.i, align 4
   %cmp.i = icmp sgt i32 %sub.i, 1
   br i1 %cmp.i, label %while.body.i, label %f.exit
@@ -86,25 +92,27 @@ if.end: ; preds = %f.exit
 }
 
 ; CHECK-LABEL: Function: reverse: 6 pointers, 0 call sites
-; CHECK:         MustAlias:    [10 x i32]* %tab, i8* %0
-; CHECK:         MustAlias:    [10 x i32]* %tab, i32* %arrayidx
-; CHECK:         MustAlias:    i32* %arrayidx, i8* %0
-; CHECK:         PartialAlias (off 36): [10 x i32]* %tab, i32* %arrayidx1
-; CHECK:         NoAlias:      i32* %arrayidx1, i8* %0
-; CHECK:         NoAlias:      i32* %arrayidx, i32* %arrayidx1
-; CHECK:         MayAlias:     [10 x i32]* %tab, i32* %p.addr.05.i
-; CHECK:         MayAlias:     i32* %p.addr.05.i, i8* %0
-; CHECK:         MayAlias:     i32* %arrayidx, i32* %p.addr.05.i
-; CHECK:         MayAlias:     i32* %arrayidx1, i32* %p.addr.05.i
-; CHECK:         MayAlias:     [10 x i32]* %tab, i32* %incdec.ptr.i
-; CHECK:         MayAlias:     i32* %incdec.ptr.i, i8* %0
-; CHECK:         MayAlias:     i32* %arrayidx, i32* %incdec.ptr.i
-; CHECK:         MayAlias:     i32* %arrayidx1, i32* %incdec.ptr.i
-; CHECK:         NoAlias:      i32* %incdec.ptr.i, i32* %p.addr.05.i
+; CHECK: MustAlias:	i8* %0, [10 x i32]* %tab
+; CHECK: MustAlias:	i32* %arrayidx, [10 x i32]* %tab
+; CHECK: MustAlias:	i8* %0, i32* %arrayidx
+; CHECK: PartialAlias (off -36):	i32* %arrayidx1, [10 x i32]* %tab
+; CHECK: NoAlias:	i8* %0, i32* %arrayidx1
+; CHECK: NoAlias:	i32* %arrayidx, i32* %arrayidx1
+; CHECK: MayAlias:	i32* %incdec.ptr.i, [10 x i32]* %tab
+; CHECK: MayAlias:	i8* %0, i32* %incdec.ptr.i
+; CHECK: MayAlias:	i32* %arrayidx, i32* %incdec.ptr.i
+; CHECK: MayAlias:	i32* %arrayidx1, i32* %incdec.ptr.i
+; CHECK: MayAlias:	i32* %p.addr.05.i, [10 x i32]* %tab
+; CHECK: MayAlias:	i8* %0, i32* %p.addr.05.i
+; CHECK: MayAlias:	i32* %arrayidx, i32* %p.addr.05.i
+; CHECK: MayAlias:	i32* %arrayidx1, i32* %p.addr.05.i
+; CHECK: NoAlias:	i32* %incdec.ptr.i, i32* %p.addr.05.i
 define i32 @reverse() nounwind {
 entry:
   %tab = alloca [10 x i32], align 4
+  %ignore1 = load [10 x i32], [10 x i32]* %tab
   %0 = bitcast [10 x i32]* %tab to i8*
+  %ignore2 = load i8, i8* %0
   %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %tab, i32 0, i32 0
   store i32 0, i32* %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* %tab, i32 0, i32 9
@@ -119,6 +127,7 @@ while.body.i: ; preds = %while.body.i, %entry
   %p.addr.05.i = phi i32* [ %incdec.ptr.i, %while.body.i ], [ %arrayidx1, %entry ]
   %sub.i = sub nsw i32 %foo.06.i, %2
   %incdec.ptr.i = getelementptr inbounds i32, i32* %p.addr.05.i, i32 -1
+  %ignore3 = load i32, i32* %incdec.ptr.i
   store i32 %sub.i, i32* %p.addr.05.i, align 4
   %cmp.i = icmp sgt i32 %sub.i, 1
   br i1 %cmp.i, label %while.body.i, label %f.exit
@@ -138,31 +147,27 @@ if.end: ; preds = %f.exit
   ret i32 0
 }
 
-; CHECK-LABEL: Function: negative: 6 pointers, 1 call sites
-; CHECK:         NoAlias:      [3 x i16]* %int_arr.10, i16** %argv.6.par
-; CHECK:         NoAlias:      i16* %_tmp1, i16** %argv.6.par
-; CHECK:         PartialAlias (off 4): [3 x i16]* %int_arr.10, i16* %_tmp1
-; CHECK:         NoAlias:      i16* %ls1.9.0, i16** %argv.6.par
-; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %ls1.9.0
-; CHECK:         MayAlias:     i16* %_tmp1, i16* %ls1.9.0
-; CHECK:         NoAlias:      i16* %_tmp7, i16** %argv.6.par
-; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %_tmp7
-; CHECK:         MayAlias:     i16* %_tmp1, i16* %_tmp7
-; CHECK:         NoAlias:      i16* %_tmp7, i16* %ls1.9.0
-; CHECK:         NoAlias:      i16* %_tmp11, i16** %argv.6.par
-; CHECK:         PartialAlias (off 2): [3 x i16]* %int_arr.10, i16* %_tmp11
-; CHECK:         NoAlias:      i16* %_tmp1, i16* %_tmp11
-; CHECK:         MayAlias:     i16* %_tmp11, i16* %ls1.9.0
-; CHECK:         MayAlias:     i16* %_tmp11, i16* %_tmp7
-; CHECK:         Both ModRef:  Ptr: i16** %argv.6.par  <->  %_tmp16 = call i16 @call(i32 %_tmp13)
-; CHECK:         NoModRef:  Ptr: [3 x i16]* %int_arr.10        <->  %_tmp16 = call i16 @call(i32 %_tmp13)
-; CHECK:         NoModRef:  Ptr: i16* %_tmp1   <->  %_tmp16 = call i16 @call(i32 %_tmp13)
-; CHECK:         Both ModRef:  Ptr: i16* %ls1.9.0      <->  %_tmp16 = call i16 @call(i32 %_tmp13)
-; CHECK:         Both ModRef:  Ptr: i16* %_tmp7        <->  %_tmp16 = call i16 @call(i32 %_tmp13)
-; CHECK:         NoModRef:  Ptr: i16* %_tmp11  <->  %_tmp16 = call i16 @call(i32 %_tmp13)
-define i16 @negative(i16 %argc.5.par, i16** nocapture readnone %argv.6.par) {
+; CHECK-LABEL: Function: negative: 5 pointers, 1 call sites
+; CHECK: PartialAlias (off -4):	i16* %_tmp1, [3 x i16]* %int_arr.10
+; CHECK: MayAlias:	[3 x i16]* %int_arr.10, i16* %ls1.9.0
+; CHECK: MayAlias:	i16* %_tmp1, i16* %ls1.9.0
+; CHECK: MayAlias:	i16* %_tmp7, [3 x i16]* %int_arr.10
+; CHECK: MayAlias:	i16* %_tmp1, i16* %_tmp7
+; CHECK: NoAlias:	i16* %_tmp7, i16* %ls1.9.0
+; CHECK: PartialAlias (off -2):	i16* %_tmp11, [3 x i16]* %int_arr.10
+; CHECK: NoAlias:	i16* %_tmp1, i16* %_tmp11
+; CHECK: MayAlias:	i16* %_tmp11, i16* %ls1.9.0
+; CHECK: MayAlias:	i16* %_tmp11, i16* %_tmp7
+; CHECK: NoModRef:  Ptr: [3 x i16]* %int_arr.10	<->  %_tmp16 = call i16 @call(i32 %_tmp13)
+; CHECK: NoModRef:  Ptr: i16* %_tmp1	<->  %_tmp16 = call i16 @call(i32 %_tmp13)
+; CHECK: Both ModRef:  Ptr: i16* %ls1.9.0	<->  %_tmp16 = call i16 @call(i32 %_tmp13)
+; CHECK: Both ModRef:  Ptr: i16* %_tmp7	<->  %_tmp16 = call i16 @call(i32 %_tmp13)
+; CHECK: NoModRef:  Ptr: i16* %_tmp11	<->  %_tmp16 = call i16 @call(i32 %_tmp13)
+define i16 @negative(i16 %argc.5.par) {
   %int_arr.10 = alloca [3 x i16], align 1
+  load [3 x i16], [3 x i16]* %int_arr.10
   %_tmp1 = getelementptr inbounds [3 x i16], [3 x i16]* %int_arr.10, i16 0, i16 2
+  load i16, i16* %_tmp1
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %0
@@ -171,6 +176,7 @@ bb1:                                              ; preds = %bb1, %0
   store i16 %i.7.0, i16* %ls1.9.0, align 1
   %_tmp5 = add nsw i16 %i.7.0, -1
   %_tmp7 = getelementptr i16, i16* %ls1.9.0, i16 -1
+  load i16, i16* %_tmp7
   %_tmp9 = icmp sgt i16 %i.7.0, 0
   br i1 %_tmp9, label %bb1, label %bb3
 
@@ -199,12 +205,16 @@ bb5:                                              ; preds = %bb3, %bb4
 define void @dynamic_offset(i1 %c, i8* noalias %p.base) {
 entry:
   %a = alloca i8
+  load i8, i8* %p.base
+  load i8, i8* %a
   br label %loop
 
 loop:
   %p = phi i8* [ %p.base, %entry ], [ %p.next, %loop ]
   %offset = call i16 @call(i32 0)
   %p.next = getelementptr inbounds i8, i8* %p, i16 %offset
+  load i8, i8* %p
+  load i8, i8* %p.next
   br i1 %c, label %loop, label %exit
 
 exit:
@@ -221,41 +231,51 @@ exit:
 ; CHECK: MustAlias: i32* %p.next, i32* %result
 define i32* @symmetry(i32* %p.base, i1 %c) {
 entry:
+  load i32, i32* %p.base
   br label %loop
 
 loop:
   %p = phi i32* [ %p.base, %entry ], [ %p.next, %loop ]
   %p.next = getelementptr inbounds i32, i32* %p, i32 1
+  load i32, i32* %p
+  load i32, i32* %p.next
   br i1 %c, label %loop, label %exit
 
 exit:
   %result = phi i32* [ %p.next, %loop ]
+  load i32, i32* %result
   ret i32* %result
 }
 
 ; CHECK-LABEL: Function: nested_loop
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer
-; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
 ; NO-PHI-VALUES: MayAlias: i8* %a, i8* %p.inner
 ; PHI-VALUES: NoAlias: i8* %a, i8* %p.inner
 ; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
+; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
 define void @nested_loop(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8
+  load i8, i8* %p.base
+  load i8, i8* %a
   br label %outer_loop
 
 outer_loop:
   %p.outer = phi i8* [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
+  load i8, i8* %p.outer
   br label %inner_loop
 
 inner_loop:
   %p.inner = phi i8* [ %p.outer, %outer_loop ], [ %p.inner.next, %inner_loop ]
   %p.inner.next = getelementptr inbounds i8, i8* %p.inner, i64 1
+  load i8, i8* %p.inner
+  load i8, i8* %p.inner.next
   br i1 %c, label %inner_loop, label %outer_loop_latch
 
 outer_loop_latch:
   %p.outer.next = getelementptr inbounds i8, i8* %p.inner, i64 10
+  load i8, i8* %p.outer.next
   br i1 %c2, label %outer_loop, label %exit
 
 exit:
@@ -273,16 +293,22 @@ exit:
 define void @nested_loop2(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8
+  load i8, i8* %p.base
+  load i8, i8* %a
   br label %outer_loop
 
 outer_loop:
   %p.outer = phi i8* [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
   %p.outer.next = getelementptr inbounds i8, i8* %p.outer, i64 10
+  load i8, i8* %p.outer
+  load i8, i8* %p.outer.next
   br label %inner_loop
 
 inner_loop:
   %p.inner = phi i8* [ %p.outer.next, %outer_loop ], [ %p.inner.next, %inner_loop ]
   %p.inner.next = getelementptr inbounds i8, i8* %p.inner, i64 1
+  load i8, i8* %p.inner
+  load i8, i8* %p.inner.next
   br i1 %c, label %inner_loop, label %outer_loop_latch
 
 outer_loop_latch:
@@ -302,16 +328,22 @@ exit:
 define void @nested_loop3(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8
+  load i8, i8* %p.base
+  load i8, i8* %a
   br label %outer_loop
 
 outer_loop:
   %p.outer = phi i8* [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
   %p.outer.next = getelementptr inbounds i8, i8* %p.outer, i64 10
+  load i8, i8* %p.outer
+  load i8, i8* %p.outer.next
   br label %inner_loop
 
 inner_loop:
   %p.inner = phi i8* [ %p.outer, %outer_loop ], [ %p.inner.next, %inner_loop ]
   %p.inner.next = getelementptr inbounds i8, i8* %p.inner, i64 1
+  load i8, i8* %p.inner
+  load i8, i8* %p.inner.next
   br i1 %c, label %inner_loop, label %outer_loop_latch
 
 outer_loop_latch:
@@ -331,16 +363,22 @@ exit:
 define void @sibling_loop(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8
+  load i8, i8* %p.base
+  load i8, i8* %a
   br label %loop1
 
 loop1:
   %p1 = phi i8* [ %p.base, %entry ], [ %p1.next, %loop1 ]
   %p1.next = getelementptr inbounds i8, i8* %p1, i64 10
+  load i8, i8* %p1
+  load i8, i8* %p1.next
   br i1 %c, label %loop1, label %loop2
 
 loop2:
   %p2 = phi i8* [ %p1.next, %loop1 ], [ %p2.next, %loop2 ]
   %p2.next = getelementptr inbounds i8, i8* %p2, i64 1
+  load i8, i8* %p2
+  load i8, i8* %p2.next
   br i1 %c2, label %loop2, label %exit
 
 exit:
@@ -357,16 +395,22 @@ exit:
 define void @sibling_loop2(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8
+  load i8, i8* %p.base
+  load i8, i8* %a
   br label %loop1
 
 loop1:
   %p1 = phi i8* [ %p.base, %entry ], [ %p1.next, %loop1 ]
   %p1.next = getelementptr inbounds i8, i8* %p1, i64 10
+  load i8, i8* %p1
+  load i8, i8* %p1.next
   br i1 %c, label %loop1, label %loop2
 
 loop2:
   %p2 = phi i8* [ %p1, %loop1 ], [ %p2.next, %loop2 ]
   %p2.next = getelementptr inbounds i8, i8* %p2, i64 1
+  load i8, i8* %p2
+  load i8, i8* %p2.next
   br i1 %c2, label %loop2, label %exit
 
 exit:

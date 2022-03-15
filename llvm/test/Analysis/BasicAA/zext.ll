@@ -11,6 +11,8 @@ define void @test_with_zext() {
   %2 = getelementptr inbounds i8, i8* %1, i64 16
   %3 = zext i32 3 to i64
   %b = getelementptr inbounds i8, i8* %2, i64 %3
+  load i8, i8* %a
+  load i8, i8* %b
   ret void
 }
 
@@ -23,19 +25,23 @@ define void @test_with_lshr(i64 %i) {
   %2 = getelementptr inbounds i8, i8* %1, i64 16
   %3 = lshr i64 %i, 2
   %b = getelementptr inbounds i8, i8* %2, i64 %3
+  load i8, i8* %a
+  load i8, i8* %b
   ret void
 }
 
 ; CHECK-LABEL: test_with_lshr_different_sizes
-; CHECK:  NoAlias: i16* %m2.idx, i8* %m1
+; CHECK:  NoAlias: i8* %m1, i16* %m2.idx
 
 define void @test_with_lshr_different_sizes(i64 %i) {
   %m0 = tail call i8* @malloc(i64 120)
   %m1 = getelementptr inbounds i8, i8* %m0, i64 1
+  load i8, i8* %m1
   %m2 = getelementptr inbounds i8, i8* %m0, i64 2
   %idx = lshr i64 %i, 2
   %m2.i16 = bitcast i8* %m2 to i16*
   %m2.idx = getelementptr inbounds i16, i16* %m2.i16, i64 %idx
+  load i16, i16* %m2.idx
   ret void
 }
 
@@ -48,9 +54,11 @@ define void @test_with_a_loop(i8* %mem) {
 for.loop:
   %i = phi i32 [ 0, %0 ], [ %i.plus1, %for.loop ]
   %a = getelementptr inbounds i8, i8* %mem, i64 8
+  load i8, i8* %a
   %a.plus1 = getelementptr inbounds i8, i8* %mem, i64 16
   %i.64 = zext i32 %i to i64
   %b = getelementptr inbounds i8, i8* %a.plus1, i64 %i.64
+  load i8, i8* %b
   %i.plus1 = add nuw nsw i32 %i, 1
   %cmp = icmp eq i32 %i.plus1, 10
   br i1 %cmp, label %for.loop.exit, label %for.loop
@@ -69,9 +77,11 @@ for.loop:
   %mem = phi i8* [ %mem.orig, %0 ], [ %mem.plus1, %for.loop ]
   %i = phi i32 [ 0, %0 ], [ %i.plus1, %for.loop ]
   %a = getelementptr inbounds i8, i8* %mem, i64 8
+  load i8, i8* %a
   %a.plus1 = getelementptr inbounds i8, i8* %mem, i64 16
   %i.64 = zext i32 %i to i64
   %b = getelementptr inbounds i8, i8* %a.plus1, i64 %i.64
+  load i8, i8* %b
   %i.plus1 = add nuw nsw i32 %i, 1
   %mem.plus1 = getelementptr inbounds i8, i8* %mem, i64 8
   %cmp = icmp eq i32 %i.plus1, 10
@@ -82,16 +92,18 @@ for.loop.exit:
 }
 
 ; CHECK-LABEL: test_sign_extension
-; CHECK:  MayAlias: i64* %b.i64, i8* %a
+; CHECK:  MayAlias: i8* %a, i64* %b.i64
 
 define void @test_sign_extension(i32 %p) {
   %1 = tail call i8* @malloc(i64 120)
   %p.64 = zext i32 %p to i64
   %a = getelementptr inbounds i8, i8* %1, i64 %p.64
+  load i8, i8* %a
   %p.minus1 = add i32 %p, -1
   %p.minus1.64 = zext i32 %p.minus1 to i64
   %b.i8 = getelementptr inbounds i8, i8* %1, i64 %p.minus1.64
   %b.i64 = bitcast i8* %b.i8 to i64*
+  load i64, i64* %b.i64
   ret void
 }
 
@@ -105,12 +117,14 @@ for.loop:
   %i = phi i32 [ 0, %reorder ], [ %i.next, %for.loop ]
   %idxprom = zext i32 %i to i64
   %b = getelementptr inbounds [8 x i32], [8 x i32]* %values, i64 0, i64 %idxprom
+  load i32, i32* %b
   %i.next = add nuw nsw i32 %i, 1
-  %1 = icmp eq i32 %i.next, 10
-  br i1 %1, label %for.loop.exit, label %for.loop
+  %cmp = icmp eq i32 %i.next, 10
+  br i1 %cmp, label %for.loop.exit, label %for.loop
 
 reorder:
   %a = getelementptr inbounds [8 x i32], [8 x i32]* %values, i64 0, i64 1
+  load i32, i32* %a
   br label %for.loop
 
 for.loop.exit:
@@ -128,21 +142,23 @@ define void @test_spec2006() {
   %d.val = load i32, i32* @d, align 4
   %d.promoted = sext i32 %d.val to i64
   %1 = icmp slt i32 %d.val, 2
-  br i1 %1, label %.lr.ph, label %3
+  br i1 %1, label %.lr.ph, label %bb3
 
 .lr.ph:                                           ; preds = %0
-  br label %2
+  br label %bb2
 
-; <label>:2                                       ; preds = %.lr.ph, %2
-  %i = phi i32 [ %d.val, %.lr.ph ], [ %i.plus1, %2 ]
+bb2:
+  %i = phi i32 [ %d.val, %.lr.ph ], [ %i.plus1, %bb2 ]
   %i.promoted = sext i32 %i to i64
   %x = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 %d.promoted, i64 %i.promoted
+  load i32*, i32** %x
   %i.plus1 = add nsw i32 %i, 1
   %cmp = icmp slt i32 %i.plus1, 2
-  br i1 %cmp, label %2, label %3
+  br i1 %cmp, label %bb2, label %bb3
 
-; <label>:3                                      ; preds = %._crit_edge, %0
+bb3:
   %y = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 0, i64 1
+  load i32*, i32** %y
   ret void
 }
 
@@ -153,6 +169,8 @@ define void @test_modulo_analysis_easy_case(i64 %i) {
   %h = alloca [1 x [2 x i32*]], align 16
   %x = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 %i, i64 0
   %y = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 0, i64 1
+  load i32*, i32** %x
+  load i32*, i32** %y
   ret void
 }
 
@@ -168,6 +186,8 @@ for.loop:
   %i.promoted = sext i32 %i to i64
   %x = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 %i.promoted, i64 0
   %y = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 0, i64 1
+  load i32*, i32** %x
+  load i32*, i32** %y
   %i.plus1 = add nsw i32 %i, 1
   %cmp = icmp slt i32 %i.plus1, 2
   br i1 %cmp, label %for.loop, label %for.loop.exit
@@ -190,6 +210,8 @@ for.loop:
   %i.promoted = sext i32 %i to i64
   %x = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 %i.promoted, i64 %b.promoted
   %y = getelementptr inbounds [1 x [2 x i32*]], [1 x [2 x i32*]]* %h, i64 0, i64 0, i64 1
+  load i32*, i32** %x
+  load i32*, i32** %y
   %i.plus1 = add nsw i32 %i, 1
   %cmp = icmp slt i32 %i.plus1, 2
   br i1 %cmp, label %for.loop, label %for.loop.exit
@@ -205,6 +227,8 @@ define void @test_const_eval(i8* %ptr, i64 %offset) {
   %a.dup = getelementptr inbounds i8, i8* %ptr, i64 %offset
   %three = zext i32 3 to i64
   %b = getelementptr inbounds i8, i8* %a.dup, i64 %three
+  load i8, i8* %a
+  load i8, i8* %b
   ret void
 }
 
@@ -215,6 +239,8 @@ define void @test_const_eval_scaled(i8* %ptr) {
   %six = mul i64 %three, 2
   %a = getelementptr inbounds i8, i8* %ptr, i64 %six
   %b = getelementptr inbounds i8, i8* %ptr, i64 6
+  load i8, i8* %a
+  load i8, i8* %b
   ret void
 }
 
@@ -249,6 +275,8 @@ define void @test_shl_nuw_zext(i8* %p, i32 %x) {
   %ext.shl = shl nuw i64 %ext, 1
   %p.1 = getelementptr i8, i8* %p, i64 %shl.ext
   %p.2 = getelementptr i8, i8* %p, i64 %ext.shl
+  load i8, i8* %p.1
+  load i8, i8* %p.2
   ret void
 }
 
@@ -261,6 +289,8 @@ define void @test_shl_nsw_sext(i8* %p, i32 %x) {
   %ext.shl = shl nsw i64 %ext, 1
   %p.1 = getelementptr i8, i8* %p, i64 %shl.ext
   %p.2 = getelementptr i8, i8* %p, i64 %ext.shl
+  load i8, i8* %p.1
+  load i8, i8* %p.2
   ret void
 }
 
@@ -272,6 +302,8 @@ define void @test_implicit_sext(i8* %p, i32 %x) {
   %ext.add = add i64 %ext, 1
   %p.1 = getelementptr i8, i8* %p, i32 %add
   %p.2 = getelementptr i8, i8* %p, i64 %ext.add
+  load i8, i8* %p.1
+  load i8, i8* %p.2
   ret void
 }
 
@@ -283,6 +315,8 @@ define void @test_partial_decomposition(i8* %p, i32 %x) {
   %add.2 = add nsw i32 %add, 1
   %p.1 = getelementptr i8, i8* %p, i32 %add.1
   %p.2 = getelementptr i8, i8* %p, i32 %add.2
+  load i8, i8* %p.1
+  load i8, i8* %p.2
   ret void
 }
 

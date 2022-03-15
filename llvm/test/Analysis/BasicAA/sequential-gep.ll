@@ -7,6 +7,8 @@ define void @t1([8 x i32]* %p, i32 %addend, i32* %q) {
   %add = add nsw nuw i32 %addend, %knownnonzero
   %gep1 = getelementptr [8 x i32], [8 x i32]* %p, i32 2, i32 %addend
   %gep2 = getelementptr [8 x i32], [8 x i32]* %p, i32 2, i32 %add
+  load i32, i32* %gep1
+  load i32, i32* %gep2
   ret void
 }
 
@@ -17,6 +19,8 @@ define void @t2([8 x i32]* %p, i32 %addend, i32* %q) {
   %add = add nsw nuw i32 %addend, %knownnonzero
   %gep1 = getelementptr [8 x i32], [8 x i32]* %p, i32 1, i32 %addend
   %gep2 = getelementptr [8 x i32], [8 x i32]* %p, i32 0, i32 %add
+  load i32, i32* %gep1
+  load i32, i32* %gep2
   ret void
 }
 
@@ -27,6 +31,8 @@ define void @t3([8 x i32]* %p, i32 %addend, i32* %q) {
   %add = add nsw nuw i32 %addend, %knownnonzero
   %gep1 = getelementptr [8 x i32], [8 x i32]* %p, i32 0, i32 %add
   %gep2 = getelementptr [8 x i32], [8 x i32]* %p, i32 0, i32 %add
+  load i32, i32* %gep1
+  load i32, i32* %gep2
   ret void
 }
 
@@ -37,17 +43,21 @@ define void @t4([8 x i32]* %p, i32 %addend, i32* %q) {
   %add = add nsw nuw i32 %addend, %knownnonzero
   %gep1 = getelementptr [8 x i32], [8 x i32]* %p, i32 1, i32 %addend
   %gep2 = getelementptr [8 x i32], [8 x i32]* %p, i32 %add, i32 %add
+  load i32, i32* %gep1
+  load i32, i32* %gep2
   ret void
 }
 
 ; CHECK: Function: t5
-; CHECK: MayAlias: i32* %gep2, i64* %bc
+; CHECK: MayAlias: i64* %bc, i32* %gep2
 define void @t5([8 x i32]* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add nsw nuw i32 %addend, %knownnonzero
   %gep1 = getelementptr [8 x i32], [8 x i32]* %p, i32 2, i32 %addend
   %gep2 = getelementptr [8 x i32], [8 x i32]* %p, i32 2, i32 %add
   %bc = bitcast i32* %gep1 to i64*
+  load i32, i32* %gep2
+  load i64, i64* %bc
   ret void
 }
 
@@ -58,26 +68,30 @@ define void @add_non_zero_simple(i32* %p, i32 %addend, i32* %q) {
   %add = add i32 %addend, %knownnonzero
   %gep1 = getelementptr i32, i32* %p, i32 %addend
   %gep2 = getelementptr i32, i32* %p, i32 %add
+  load i32, i32* %gep1
+  load i32, i32* %gep2
   ret void
 }
 
 ; CHECK-LABEL: Function: add_non_zero_different_scales
-; CHECK: MayAlias: i16* %gep2, i32* %gep1
+; CHECK: MayAlias: i32* %gep1, i16* %gep2
 define void @add_non_zero_different_scales(i32* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add i32 %addend, %knownnonzero
   %p16 = bitcast i32* %p to i16*
   %gep1 = getelementptr i32, i32* %p, i32 %addend
   %gep2 = getelementptr i16, i16* %p16, i32 %add
+  load i32, i32* %gep1
+  load i16, i16* %gep2
   ret void
 }
 
 ; CHECK-LABEL: Function: add_non_zero_different_sizes
 ; CHECK: NoAlias: i16* %gep1.16, i32* %gep2
-; CHECK: NoAlias: i16* %gep2.16, i32* %gep1
+; CHECK: NoAlias: i32* %gep1, i16* %gep2.16
 ; CHECK: NoAlias: i16* %gep1.16, i16* %gep2.16
-; CHECK: MayAlias: i32* %gep2, i64* %gep1.64
-; CHECK: MayAlias: i16* %gep2.16, i64* %gep1.64
+; CHECK: MayAlias: i64* %gep1.64, i32* %gep2
+; CHECK: MayAlias: i64* %gep1.64, i16* %gep2.16
 ; CHECK: MayAlias: i32* %gep1, i64* %gep2.64
 ; CHECK: MayAlias: i16* %gep1.16, i64* %gep2.64
 ; CHECK: MayAlias: i64* %gep1.64, i64* %gep2.64
@@ -90,6 +104,12 @@ define void @add_non_zero_different_sizes(i32* %p, i32 %addend, i32* %q) {
   %gep2.16 = bitcast i32* %gep2 to i16*
   %gep1.64 = bitcast i32* %gep1 to i64*
   %gep2.64 = bitcast i32* %gep2 to i64*
+  load i32, i32* %gep1
+  load i32, i32* %gep2
+  load i16, i16* %gep1.16
+  load i16, i16* %gep2.16
+  load i64, i64* %gep1.64
+  load i64, i64* %gep2.64
   ret void
 }
 
@@ -107,6 +127,10 @@ define void @add_non_zero_with_offset(i32* %p, i32 %addend, i32* %q) {
   %gep2 = getelementptr i32, i32* %p, i32 %add
   %gep1.16 = bitcast i32* %gep1 to i16*
   %gep2.16 = bitcast i32* %gep2 to i16*
+  load i32, i32* %gep1
+  load i32, i32* %gep2
+  load i16, i16* %gep1.16
+  load i16, i16* %gep2.16
   ret void
 }
 
@@ -118,23 +142,29 @@ define void @add_non_zero_assume(i32* %p, i32 %addend, i32 %knownnonzero) {
   %add = add i32 %addend, %knownnonzero
   %gep1 = getelementptr i32, i32* %p, i32 %addend
   %gep2 = getelementptr i32, i32* %p, i32 %add
+  load i32, i32* %gep1
+  load i32, i32* %gep2
   ret void
 }
 
 ; CHECK-LABEL: non_zero_index_simple
 ; CHECK: NoAlias: i32* %gep, i32* %p
 ; CHECK: NoAlias: i16* %gep.16, i32* %p
-; CHECK: MayAlias: i32* %p, i64* %gep.64
+; CHECK: MayAlias: i64* %gep.64, i32* %p
 define void @non_zero_index_simple(i32* %p, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %gep = getelementptr i32, i32* %p, i32 %knownnonzero
   %gep.16 = bitcast i32* %gep to i16*
   %gep.64 = bitcast i32* %gep to i64*
+  load i32, i32* %p
+  load i32, i32* %gep
+  load i16, i16* %gep.16
+  load i64, i64* %gep.64
   ret void
 }
 
 ; CHECK-LABEL: non_zero_index_with_offset
-; CHECK: NoAlias: i32* %gep, i32* %p
+; CHECK: MayAlias: i32* %gep, i32* %p
 ; CHECK: NoAlias: i16* %gep.16, i32* %p
 define void @non_zero_index_with_offset(i32* %p, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
@@ -143,6 +173,9 @@ define void @non_zero_index_with_offset(i32* %p, i32* %q) {
   %p.off = bitcast i8* %p.off.8 to i32*
   %gep = getelementptr i32, i32* %p.off, i32 %knownnonzero
   %gep.16 = bitcast i32* %gep to i16*
+  load i32, i32* %p
+  load i32, i32* %gep
+  load i16, i16* %gep.16
   ret void
 }
 
@@ -152,6 +185,8 @@ define void @non_zero_index_assume(i32* %p, i32 %knownnonzero) {
   %cmp = icmp ne i32 %knownnonzero, 0
   call void @llvm.assume(i1 %cmp)
   %gep = getelementptr i32, i32* %p, i32 %knownnonzero
+  load i32, i32* %p
+  load i32, i32* %gep
   ret void
 }
 

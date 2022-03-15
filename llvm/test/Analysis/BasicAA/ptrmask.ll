@@ -2,24 +2,28 @@
 
 %struct = type <{ [20 x i64] }>
 
-; CHECK-LABEL: Function: test_noalias: 4 pointers, 1 call sites
+; CHECK-LABEL: Function: test_noalias
 ; CHECK-NEXT:  NoAlias:	%struct* %ptr1, i64* %ptr2
 ; CHECK-NEXT:  NoAlias:	%struct* %addr.ptr, i64* %ptr2
 ; CHECK-NEXT:  NoAlias:	i64* %gep, i64* %ptr2
 define void @test_noalias(%struct* noalias %ptr1, i64* %ptr2, i64 %offset) {
 entry:
   %addr.ptr = call %struct* @llvm.ptrmask.p0s_struct.p0s.struct.i64(%struct* %ptr1, i64 72057594037927928)
+  load %struct, %struct* %ptr1
+  load %struct, %struct* %addr.ptr
   store i64 10, i64* %ptr2
   %gep = getelementptr inbounds %struct, %struct* %addr.ptr, i64 0, i32 0, i64 %offset
   store i64 1, i64* %gep, align 8
   ret void
 }
 
-; CHECK-NEXT: Function: test_alias: 4 pointers, 1 call sites
+; CHECK-NEXT: Function: test_alias
 ; CHECK-NOT: NoAlias
 define void @test_alias(%struct* %ptr1, i64* %ptr2, i64 %offset) {
 entry:
   %addr.ptr = call %struct* @llvm.ptrmask.p0s_struct.p0s.struct.i64(%struct* %ptr1, i64 72057594037927928)
+  load %struct, %struct* %ptr1
+  load %struct, %struct* %addr.ptr
   store i64 10, i64* %ptr2
   %gep = getelementptr inbounds %struct, %struct* %addr.ptr, i64 0, i32 0, i64 %offset
   store i64 1, i64* %gep, align 8

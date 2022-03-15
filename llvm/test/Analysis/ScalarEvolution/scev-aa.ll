@@ -9,7 +9,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
 
 ; p[i] and p[i+1] don't alias.
 
-; CHECK: Function: loop: 3 pointers, 0 call sites
+; CHECK-LABEL: Function: loop
 ; CHECK: NoAlias: double* %pi, double* %pi.next
 
 define void @loop(double* nocapture %p, i64 %n) nounwind {
@@ -35,7 +35,7 @@ return:
 
 ; Slightly more involved: p[j][i], p[j][i+1], and p[j+1][i] don't alias.
 
-; CHECK: Function: nestedloop: 4 pointers, 0 call sites
+; CHECK-LABEL: Function: nestedloop
 ; CHECK: NoAlias: double* %pi.j, double* %pi.next.j
 ; CHECK: NoAlias: double* %pi.j, double* %pi.j.next
 ; CHECK: NoAlias: double* %pi.j.next, double* %pi.next.j
@@ -93,7 +93,7 @@ return:
 ; however the analysis currently doesn't do that.
 ; TODO: Make the analysis smarter and turn that MayAlias into a NoAlias.
 
-; CHECK: Function: nestedloop_more: 4 pointers, 0 call sites
+; CHECK-LABEL: Function: nestedloop_more
 ; CHECK: NoAlias: double* %pi.j, double* %pi.next.j
 ; CHECK: MayAlias: double* %pi.j, double* %pi.j.next
 
@@ -149,14 +149,14 @@ return:
 %struct.A = type { %struct.B, i32, i32 }
 %struct.B = type { double }
 
-; CHECK: Function: foo: 7 pointers, 0 call sites
-; CHECK: NoAlias: %struct.B* %B, i32* %Z
-; CHECK: NoAlias: %struct.B* %B, %struct.B* %C
-; CHECK: MustAlias: %struct.B* %C, i32* %Z
-; CHECK: NoAlias: %struct.B* %B, i32* %X
-; CHECK: MustAlias: i32* %X, i32* %Z
-; CHECK: MustAlias: %struct.B* %C, i32* %Y
-; CHECK: MustAlias: i32* %X, i32* %Y
+; CHECK-LABEL: Function: foo
+; CHECK-DAG: NoAlias: %struct.B* %B, i32* %Z
+; CHECK-DAG: NoAlias: %struct.B* %B, %struct.B* %C
+; CHECK-DAG: MustAlias: %struct.B* %C, i32* %Z
+; CHECK-DAG: NoAlias: %struct.B* %B, i32* %X
+; CHECK-DAG: MustAlias: i32* %X, i32* %Z
+; CHECK-DAG: MustAlias: %struct.B* %C, i32* %Y
+; CHECK-DAG: MustAlias: i32* %X, i32* %Y
 
 define void @foo() {
 entry:
@@ -167,17 +167,22 @@ entry:
   %C = getelementptr %struct.B, %struct.B* %B, i32 1
   %X = bitcast %struct.B* %C to i32*
   %Y = getelementptr %struct.A, %struct.A* %A, i32 0, i32 1
+  load %struct.B, %struct.B* %B
+  load %struct.B, %struct.B* %C
+  load i32, i32* %X
+  load i32, i32* %Y
+  load i32, i32* %Z
   ret void
 }
 
-; CHECK: Function: bar: 7 pointers, 0 call sites
-; CHECK: NoAlias: %struct.B* %N, i32* %P
-; CHECK: NoAlias: %struct.B* %N, %struct.B* %R
-; CHECK: MustAlias: %struct.B* %R, i32* %P
-; CHECK: NoAlias: %struct.B* %N, i32* %W
-; CHECK: MustAlias: i32* %P, i32* %W
-; CHECK: MustAlias: %struct.B* %R, i32* %V
-; CHECK: MustAlias: i32* %V, i32* %W
+; CHECK-LABEL: Function: bar
+; CHECK-DAG: NoAlias: %struct.B* %N, i32* %P
+; CHECK-DAG: NoAlias: %struct.B* %N, %struct.B* %R
+; CHECK-DAG: MustAlias: i32* %P, %struct.B* %R
+; CHECK-DAG: NoAlias: %struct.B* %N, i32* %W
+; CHECK-DAG: MustAlias: i32* %P, i32* %W
+; CHECK-DAG: MustAlias: %struct.B* %R, i32* %V
+; CHECK-DAG: MustAlias: i32* %V, i32* %W
 
 define void @bar() {
   %M = alloca %struct.A
@@ -187,6 +192,11 @@ define void @bar() {
   %R = getelementptr %struct.B, %struct.B* %N, i32 1
   %W = bitcast %struct.B* %R to i32*
   %V = getelementptr %struct.A, %struct.A* %M, i32 0, i32 1
+  load %struct.B, %struct.B* %N
+  load %struct.B, %struct.B* %R
+  load i32, i32* %P
+  load i32, i32* %V
+  load i32, i32* %W
   ret void
 }
 
@@ -210,7 +220,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-; CHECK: Function: test_no_dom: 3 pointers, 0 call sites
+; CHECK-LABEL: Function: test_no_dom: 3 pointers, 0 call sites
 ; CHECK: MayAlias:	double* %addr1, double* %data
 ; CHECK: NoAlias:	double* %addr2, double* %data
 ; CHECK: MayAlias:	double* %addr1, double* %addr2
@@ -221,6 +231,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; dominance order.
 define void @test_no_dom(double* %data) {
 entry:
+  load double, double* %data
   br label %for.body
   
 for.body:
@@ -253,7 +264,7 @@ for.end:
 
 declare double* @get_addr(i32 %i)
 
-; CHECK: Function: test_no_dom2: 3 pointers, 2 call sites
+; CHECK-LABEL: Function: test_no_dom2: 3 pointers, 2 call sites
 ; CHECK: MayAlias:	double* %addr1, double* %data
 ; CHECK: MayAlias:	double* %addr2, double* %data
 ; CHECK: MayAlias:	double* %addr1, double* %addr2
@@ -263,6 +274,7 @@ declare double* @get_addr(i32 %i)
 ; to test_no_dom, but involves SCEVUnknown as opposed to SCEVAddRecExpr.
 define void @test_no_dom2(double* %data) {
 entry:
+  load double, double* %data
   br label %for.body
   
 for.body:
@@ -294,7 +306,7 @@ for.end:
 }
 
 
-; CHECK: Function: test_dom: 3 pointers, 0 call sites
+; CHECK-LABEL: Function: test_dom: 3 pointers, 0 call sites
 ; CHECK: MayAlias:	double* %addr1, double* %data
 ; CHECK: NoAlias:	double* %addr2, double* %data
 ; CHECK: NoAlias:	double* %addr1, double* %addr2
@@ -304,6 +316,7 @@ for.end:
 ; addrecs and cancel out the %data base pointer.
 define void @test_dom(double* %data) {
 entry:
+  load double, double* %data
   br label %for.body
   
 for.body:
@@ -333,7 +346,3 @@ for.latch:
 for.end:
   ret void
 }
-
-; CHECK: 17 no alias responses
-; CHECK: 32 may alias responses
-; CHECK: 18 must alias responses

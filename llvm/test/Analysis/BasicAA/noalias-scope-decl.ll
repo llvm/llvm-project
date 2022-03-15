@@ -5,6 +5,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #
 declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 define void @test1(i8* %P, i8* %Q) nounwind ssp {
+  load i8, i8* %P
+  load i8, i8* %Q
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   ret void

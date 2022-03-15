@@ -27,6 +27,10 @@ define void @test_return_escape(i32** %x) {
   %b = call i32* @return_escaped_callee()
   %c = call i32* @return_escaped_callee()
   %d = load i32*, i32** %x
+  load i32, i32* %a
+  load i32, i32* %b
+  load i32, i32* %c
+  load i32, i32* %d
 
   ret void
 }

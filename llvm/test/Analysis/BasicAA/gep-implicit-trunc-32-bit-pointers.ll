@@ -13,6 +13,7 @@ define void @mustalias_overflow_in_32_bit_constants(i8* %ptr) {
 ; CHECK-NEXT:    MustAlias:    i8* %gep.2, i8* %ptr
 ; CHECK-NEXT:    MustAlias:    i8* %gep.1, i8* %gep.2
 ;
+  load i8, i8* %ptr
   %gep.1 = getelementptr i8, i8* %ptr, i64 4294967296
   store i8 0, i8* %gep.1
   %gep.2 = getelementptr i8, i8* %ptr, i64 0
@@ -24,6 +25,7 @@ define void @mustalias_overflow_in_32_with_var_index([1 x i8]* %ptr, i64 %n) {
 ; CHECK-LABEL: Function: mustalias_overflow_in_32_with_var_index
 ; CHECK:       MustAlias: i8* %gep.1, i8* %gep.2
 ;
+  load [1 x i8], [1 x i8]* %ptr
   %gep.1 = getelementptr [1 x i8], [1 x i8]* %ptr, i64 %n, i64 4294967296
   store i8 0, i8* %gep.1
   %gep.2 = getelementptr [1 x i8], [1 x i8]* %ptr, i64 %n, i64 0
@@ -37,6 +39,7 @@ define void @noalias_overflow_in_32_bit_constants(i8* %ptr) {
 ; CHECK-NEXT:    NoAlias:  i8* %gep.2, i8* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.1, i8* %gep.2
 ;
+  load i8, i8* %ptr
   %gep.1 = getelementptr i8, i8* %ptr, i64 4294967296
   store i8 0, i8* %gep.1
   %gep.2 = getelementptr i8, i8* %ptr, i64 1
@@ -53,6 +56,7 @@ define void @mustalias_overflow_in_32_bit_add_mul_gep(i8* %ptr, i64 %i) {
 ; CHECK-NEXT:    MayAlias: i8* %gep.2, i8* %ptr
 ; CHECK-NEXT:    MayAlias: i8* %gep.1, i8* %gep.2
 ;
+  load i8, i8* %ptr
   %s.1 = icmp sgt i64 %i, 0
   call void @llvm.assume(i1 %s.1)
 
@@ -69,6 +73,7 @@ define void @mayalias_overflow_in_32_bit_non_zero(i8* %ptr, i64 %n) {
 ; CHECK-LABEL: Function: mayalias_overflow_in_32_bit_non_zero
 ; CHECK:    MayAlias: i8* %gep, i8* %ptr
 ;
+  load i8, i8* %ptr
   %c = icmp ne i64 %n, 0
   call void @llvm.assume(i1 %c)
   store i8 0, i8* %ptr
@@ -83,6 +88,7 @@ define void @mayalias_overflow_in_32_bit_positive(i8* %ptr, i64 %n) {
 ; CHECK:    MayAlias: i8* %gep.2, i8* %ptr
 ; CHECK:    MayAlias: i8* %gep.1, i8* %gep.2
 ;
+  load i8, i8* %ptr
   %c = icmp sgt i64 %n, 0
   call void @llvm.assume(i1 %c)
   %gep.1 = getelementptr i8, i8* %ptr, i64 -1

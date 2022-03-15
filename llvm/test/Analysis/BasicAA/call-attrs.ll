@@ -14,6 +14,7 @@ declare void @func()
 
 define void @test(i8* noalias %p) {
 entry:
+  load i8, i8* %p
   call void @readonly_attr(i8* %p)
   call void @readonly_func(i8* %p)
 

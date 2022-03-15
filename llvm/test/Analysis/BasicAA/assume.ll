@@ -7,6 +7,8 @@ declare void @llvm.assume(i1) #0
 define void @test1(i8* %P, i8* %Q) nounwind ssp {
   tail call void @llvm.assume(i1 true)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+  load i8, i8* %P
+  load i8, i8* %Q
   ret void
 
 ; CHECK-LABEL: Function: test1:
@@ -24,6 +26,8 @@ define void @test1(i8* %P, i8* %Q) nounwind ssp {
 define void @test2(i8* %P, i8* %Q) nounwind ssp {
   tail call void @llvm.assume(i1 true) [ "nonnull"(i8* %P) ]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+  load i8, i8* %P
+  load i8, i8* %Q
   ret void
 
 ; CHECK-LABEL: Function: test2:

@@ -20,10 +20,14 @@ define void @test_return_deref_arg() {
   %b = alloca i32, align 4
   %p = alloca i32*, align 8
 
+  load i32, i32* %a
+  load i32, i32* %b
   store i32* %a, i32** %p
   %c = call i32* @return_deref_arg_callee(i32** %p)
 
   %lp = load i32*, i32** %p
+  load i32, i32* %c
+  load i32, i32* %lp
 
   ret void
 }

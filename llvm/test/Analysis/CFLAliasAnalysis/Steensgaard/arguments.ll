@@ -10,6 +10,10 @@ define void @test(i1 %c, i32* %arg1, i32* %arg2) {
   ; CHECK: 3 no alias responses
   %a = alloca i32, align 4
   %b = select i1 %c, i32* %arg1, i32* %arg2
+  load i32, i32* %a
+  load i32, i32* %b
+  load i32, i32* %arg1
+  load i32, i32* %arg2
 
   ret void
 }

@@ -15,6 +15,8 @@ define void @noop_callee(i32* %arg1, i32* %arg2) {
 define void @test_noop() {
   %a = alloca i32, align 4
   %b = alloca i32, align 4
+  load i32, i32* %a
+  load i32, i32* %b
   call void @noop_callee(i32* %a, i32* %b)
 
   ret void

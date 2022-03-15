@@ -20,6 +20,9 @@ define void @test_return_arg() {
   %b = alloca i32, align 4
 
   %c = call i32* @return_arg_callee(i32* %a, i32* %b)
+  load i32, i32* %a
+  load i32, i32* %b
+  load i32, i32* %c
 
   ret void
 }

@@ -15,20 +15,20 @@ define i32*** @return_ref_arg_multilevel_callee(i32* %arg1) {
 	ret i32*** %ptr_cast
 }
 ; CHECK-LABEL: Function: test_return_ref_arg_multilevel
-; CHECK: NoAlias: i32* %a, i32*** %b
-; CHECK: NoAlias: i32** %p, i32*** %b
-; CHECK: NoAlias: i32*** %b, i32*** %pp
-; CHECK: NoAlias: i32* %a, i32** %lb
-; CHECK: NoAlias: i32** %lb, i32** %p
-; CHECK: NoAlias: i32** %lb, i32*** %pp
-; CHECK: NoAlias: i32** %lb, i32*** %b
-; CHECK: MayAlias: i32* %a, i32* %lb_deref
-; CHECK: NoAlias: i32* %lb_deref, i32** %lpp
-; CHECK: MayAlias: i32* %lb_deref, i32* %lpp_deref
-; CHECK: NoAlias: i32* %lpp_deref, i32** %lpp
-; CHECK: MayAlias: i32* %lb_deref, i32* %lp
-; CHECK: NoAlias: i32* %lp, i32** %lpp
-; CHECK: MayAlias: i32* %lp, i32* %lpp_deref
+; CHECK-DAG: NoAlias: i32* %a, i32*** %b
+; CHECK-DAG: NoAlias: i32*** %b, i32** %p
+; CHECK-DAG: NoAlias: i32*** %b, i32*** %pp
+; CHECK-DAG: NoAlias: i32* %a, i32** %lb
+; CHECK-DAG: NoAlias: i32** %lb, i32** %p
+; CHECK-DAG: NoAlias: i32** %lb, i32*** %pp
+; CHECK-DAG: NoAlias: i32*** %b, i32** %lb
+; CHECK-DAG: MayAlias: i32* %a, i32* %lb_deref
+; CHECK-DAG: NoAlias: i32* %lb_deref, i32** %lpp
+; CHECK-DAG: MayAlias: i32* %lb_deref, i32* %lpp_deref
+; CHECK-DAG: NoAlias: i32** %lpp, i32* %lpp_deref
+; CHECK-DAG: MayAlias: i32* %lb_deref, i32* %lp
+; CHECK-DAG: NoAlias: i32* %lp, i32** %lpp
+; CHECK-DAG: MayAlias: i32* %lp, i32* %lpp_deref
 
 ; Temporarily disable modref checks
 ; Just Mod: Ptr: i32*** %b <-> %b = call i32*** @return_ref_arg_multilevel_callee(i32* %a)
@@ -38,6 +38,7 @@ define void @test_return_ref_arg_multilevel() {
   %p = alloca i32*, align 8
   %pp = alloca i32**, align 8
 
+  load i32, i32* %a
   store i32* %a, i32** %p
   store i32** %p, i32*** %pp
   %b = call i32*** @return_ref_arg_multilevel_callee(i32* %a)
@@ -47,6 +48,9 @@ define void @test_return_ref_arg_multilevel() {
   %lpp = load i32**, i32*** %pp
   %lpp_deref = load i32*, i32** %lpp
   %lp = load i32*, i32** %p
+  load i32, i32* %lb_deref
+  load i32, i32* %lpp_deref
+  load i32, i32* %lp
 
   ret void
 }

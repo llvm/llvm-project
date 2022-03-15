@@ -11,8 +11,11 @@
 define void @test(i8* %Arg) {
   %Noalias = alloca i8
   %Escapes = alloca i8
+  load i8, i8* %Arg
+  load i8, i8* %Escapes
   call void @set_thepointer(i8* %Escapes)
   %Retrieved = call i8* @get_thepointer()
+  load i8, i8* %Retrieved
   ret void
 }
 
