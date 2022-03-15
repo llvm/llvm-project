@@ -96,10 +96,6 @@ public:
         continue;
       case LockState::Free:
         // If it was LockState::Free, we shouldn't be here at all.
-        [[clang::fallthrough]];
-      default:
-        // Mutex status cannot be anything else. So control should not reach
-        // here at all.
         return MutexError::BAD_LOCK_STATE;
       }
     }

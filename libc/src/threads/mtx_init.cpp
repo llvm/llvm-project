@@ -14,7 +14,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, mtx_init, (mtx_t * m, int type)) {
-  auto err = Mutex::init(m, type | mtx_timed, type | mtx_recursive, 0);
+  auto err = Mutex::init(m, type & mtx_timed, type & mtx_recursive, 0);
   return err == MutexError::NONE ? thrd_success : thrd_error;
 }
 
