@@ -13,6 +13,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// TODO: fix our assert.h to make it useable
+#define assert(x)                                                              \
+  if (!(x))                                                                    \
+  __builtin_trap()
+
 namespace __llvm_libc {
 namespace cpp {
 
@@ -39,6 +44,22 @@ protected:
   Block first;
   Block *current = &first;
   size_t fill_count = 0;
+
+  struct Pair {
+    Block *first, *second;
+  };
+  Pair getLastBlocks() {
+    if (REVERSE_ORDER)
+      return {current, current->next};
+    Block *prev = nullptr;
+    Block *curr = &first;
+    for (; curr->next; prev = curr, curr = curr->next)
+      ;
+    assert(curr == current);
+    return {curr, prev};
+  }
+
+  Block *getLastBlock() { return getLastBlocks().first; }
 
 public:
   constexpr BlockStore() = default;
@@ -112,6 +133,31 @@ public:
     T *ptr = new_obj();
     *ptr = value;
   }
+
+  T &back() {
+    return *reinterpret_cast<T *>(getLastBlock()->data +
+                                  sizeof(T) * (fill_count - 1));
+  }
+
+  void pop_back() {
+    fill_count--;
+    if (fill_count || current == &first)
+      return;
+    auto [last, prev] = getLastBlocks();
+    if (REVERSE_ORDER) {
+      assert(last == current);
+      current = current->next;
+    } else {
+      assert(prev->next == last);
+      current = prev;
+      current->next = nullptr;
+    }
+    if (last != &first)
+      ::free(last);
+    fill_count = BLOCK_SIZE;
+  }
+
+  bool empty() const { return current == &first && !fill_count; }
 
   iterator begin() {
     if (REVERSE_ORDER)
