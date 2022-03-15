@@ -134,6 +134,8 @@ SDValue VETargetLowering::lowerVVP_LOAD_STORE(SDValue Op,
   // Load specific.
   SDValue PassThru = getNodePassthru(Op);
 
+  SDValue StrideV = getLoadStoreStride(Op, CDAG);
+
   auto DataVT = *getIdiomaticVectorType(Op.getNode());
   auto Packing = getTypePacking(DataVT);
 
@@ -145,7 +147,6 @@ SDValue VETargetLowering::lowerVVP_LOAD_STORE(SDValue Op,
   if (!Mask)
     Mask = CDAG.getConstantMask(Packing, true);
 
-  SDValue StrideV = getLoadStoreStride(Op, CDAG);
   if (IsLoad) {
     MVT LegalDataVT = getLegalVectorType(
         Packing, DataVT.getVectorElementType().getSimpleVT());
