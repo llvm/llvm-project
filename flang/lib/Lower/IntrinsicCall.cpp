@@ -267,6 +267,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
@@ -380,6 +381,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
     {"char", &I::genChar},
+    {"dim", &I::genDim},
     {"dot_product",
      &I::genDotProduct,
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
@@ -1257,6 +1259,25 @@ IntrinsicLibrary::genChar(mlir::Type type,
   mlir::Value len =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
   return fir::CharBoxValue{cast, len};
+}
+
+// DIM
+mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  if (resultType.isa<mlir::IntegerType>()) {
+    mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+    auto diff = builder.create<mlir::arith::SubIOp>(loc, args[0], args[1]);
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::sgt, diff, zero);
+    return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
+  }
+  assert(fir::isa_real(resultType) && "Only expects real and integer in DIM");
+  mlir::Value zero = builder.createRealZeroConstant(loc, resultType);
+  auto diff = builder.create<mlir::arith::SubFOp>(loc, args[0], args[1]);
+  auto cmp = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OGT, diff, zero);
+  return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
 }
 
 // DOT_PRODUCT
