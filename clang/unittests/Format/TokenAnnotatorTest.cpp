@@ -159,6 +159,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsDelete) {
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsFunctionRefQualifiers) {
+  auto Tokens = annotate("void f() &;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("void operator=() &&;");
+  EXPECT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T> void f() &;");
+  EXPECT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T> void operator=() &;");
+  EXPECT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   auto Tokens = annotate("template <typename T>\n"
                          "concept C = (Foo && Bar) && (Bar && Baz);");

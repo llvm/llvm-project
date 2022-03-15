@@ -9889,6 +9889,14 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("template <typename T>\n"
                "void F(T) && = delete;",
                getGoogleStyle());
+  verifyFormat("template <typename T> void operator=(T) &;");
+  verifyFormat("template <typename T> void operator=(T) const &;");
+  verifyFormat("template <typename T> void operator=(T) &noexcept;");
+  verifyFormat("template <typename T> void operator=(T) & = default;");
+  verifyFormat("template <typename T> void operator=(T) &&;");
+  verifyFormat("template <typename T> void operator=(T) && = delete;");
+  verifyFormat("template <typename T> void operator=(T) & {}");
+  verifyFormat("template <typename T> void operator=(T) && {}");
 
   FormatStyle AlignLeft = getLLVMStyle();
   AlignLeft.PointerAlignment = FormatStyle::PAS_Left;
@@ -9909,6 +9917,14 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("void Fn(T const volatile&&) const volatile&&;", AlignLeft);
   verifyFormat("void Fn(T const volatile&&) const volatile&& noexcept;",
                AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) &;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) const&;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & noexcept;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & = default;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) &&;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) && = delete;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
 
   FormatStyle AlignMiddle = getLLVMStyle();
   AlignMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -9930,6 +9946,14 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("void Fn(T const volatile &&) const volatile &&;", AlignMiddle);
   verifyFormat("void Fn(T const volatile &&) const volatile && noexcept;",
                AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) &;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) const &;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & noexcept;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & = default;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) &&;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) && = delete;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & {}", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) && {}", AlignMiddle);
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpacesInCStyleCastParentheses = true;
