@@ -47,6 +47,7 @@ def Async_ValueType : Async_Type<"Value", "value"> {
       return $_get(valueType.getContext(), valueType);
     }]>
   ];
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }
 

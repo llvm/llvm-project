@@ -60,6 +60,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
   );
 
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
 
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
 // DECL: static CompoundAAttr getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
@@ -102,6 +103,7 @@ def C_IndexAttr : TestAttr<"Index"> {
       ins
       StringRefParameter<"Label for index">:$label
     );
+  let hasCustomAssemblyFormat = 1;
 
 // DECL-LABEL: class IndexAttr : public ::mlir::Attribute
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
@@ -127,6 +129,7 @@ def E_AttrWithTypeBuilder : TestAttr<"AttrWithTypeBuilder"> {
   let mnemonic = "attr_with_type_builder";
   let parameters = (ins "::mlir::IntegerAttr":$attr);
   let typeBuilder = "$_attr.getType()";
+  let hasCustomAssemblyFormat = 1;
 }
 
 // DEF-LABEL: struct AttrWithTypeBuilderAttrStorage

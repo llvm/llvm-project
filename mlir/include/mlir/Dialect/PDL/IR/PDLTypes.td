@@ -67,6 +67,7 @@ def PDL_Range : PDL_Type<"Range", "range"> {
     }]>,
   ];
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }
 
