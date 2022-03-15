@@ -658,6 +658,19 @@ public:
     return createFltCmpOp<OpTy>(pred, left, genval(ex.right()));
   }
 
+  /// Create a call to the runtime to compare two CHARACTER values.
+  /// Precondition: This assumes that the two values have `fir.boxchar` type.
+  mlir::Value createCharCompare(mlir::arith::CmpIPredicate pred,
+                                const ExtValue &left, const ExtValue &right) {
+    return fir::runtime::genCharCompare(builder, getLoc(), pred, left, right);
+  }
+
+  template <typename A>
+  mlir::Value createCharCompare(const A &ex, mlir::arith::CmpIPredicate pred) {
+    ExtValue left = genval(ex.left());
+    return createCharCompare(pred, left, genval(ex.right()));
+  }
+
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   ExtValue gen(Fortran::semantics::SymbolRef sym) {
@@ -1077,7 +1090,7 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Character, KIND>> &op) {
-    TODO(getLoc(), "genval char comparison");
+    return createCharCompare(op, translateRelational(op.opr));
   }
 
   ExtValue
