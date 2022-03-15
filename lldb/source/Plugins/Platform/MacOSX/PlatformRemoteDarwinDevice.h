@@ -1,4 +1,5 @@
-//===-- PlatformRemoteDarwinDevice.h -------------------------------------*- C++ -*-===//
+//===-- PlatformRemoteDarwinDevice.h -------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,12 +10,29 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEDARWINDEVICE_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEDARWINDEVICE_H
 
-#include <string>
-
 #include "PlatformDarwin.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
-
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/XcodeSDK.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VersionTuple.h"
+
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace lldb_private {
+class FileSpecList;
+class ModuleSpec;
+class Process;
+class Stream;
+class Target;
+class UUID;
 
 class PlatformRemoteDarwinDevice : public PlatformDarwin {
 public:
@@ -22,37 +40,34 @@ public:
 
   ~PlatformRemoteDarwinDevice() override;
 
-  // lldb_private::Platform functions
-  lldb_private::Status ResolveExecutable(
-      const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-      const lldb_private::FileSpecList *module_search_paths_ptr) override;
+  // Platform functions
+  Status
+  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                    const FileSpecList *module_search_paths_ptr) override;
 
-  void GetStatus(lldb_private::Stream &strm) override;
+  void GetStatus(Stream &strm) override;
 
-  virtual lldb_private::Status
-  GetSymbolFile(const lldb_private::FileSpec &platform_file,
-                const lldb_private::UUID *uuid_ptr,
-                lldb_private::FileSpec &local_file);
+  virtual Status GetSymbolFile(const FileSpec &platform_file,
+                               const UUID *uuid_ptr, FileSpec &local_file);
 
-  lldb_private::Status
-  GetSharedModule(const lldb_private::ModuleSpec &module_spec,
-                  lldb_private::Process *process, lldb::ModuleSP &module_sp,
-                  const lldb_private::FileSpecList *module_search_paths_ptr,
-                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr) override;
+  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+                         lldb::ModuleSP &module_sp,
+                         const FileSpecList *module_search_paths_ptr,
+                         llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                         bool *did_create_ptr) override;
 
   void
-  AddClangModuleCompilationOptions(lldb_private::Target *target,
+  AddClangModuleCompilationOptions(Target *target,
                                    std::vector<std::string> &options) override {
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-        target, options, lldb_private::XcodeSDK::Type::iPhoneOS);
+        target, options, XcodeSDK::Type::iPhoneOS);
   }
 
 protected:
   struct SDKDirectoryInfo {
-    SDKDirectoryInfo(const lldb_private::FileSpec &sdk_dir_spec);
-    lldb_private::FileSpec directory;
-    lldb_private::ConstString build;
+    SDKDirectoryInfo(const FileSpec &sdk_dir_spec);
+    FileSpec directory;
+    ConstString build;
     llvm::VersionTuple version;
     bool user_cached;
   };
@@ -77,19 +92,19 @@ protected:
 
   const SDKDirectoryInfo *GetSDKDirectoryForCurrentOSVersion();
 
-  static lldb_private::FileSystem::EnumerateDirectoryResult
+  static FileSystem::EnumerateDirectoryResult
   GetContainedFilesIntoVectorOfStringsCallback(void *baton,
                                                llvm::sys::fs::file_type ft,
                                                llvm::StringRef path);
 
   uint32_t FindFileInAllSDKs(const char *platform_file_path,
-                             lldb_private::FileSpecList &file_list);
+                             FileSpecList &file_list);
 
   bool GetFileInSDK(const char *platform_file_path, uint32_t sdk_idx,
-                    lldb_private::FileSpec &local_file);
+                    FileSpec &local_file);
 
-  uint32_t FindFileInAllSDKs(const lldb_private::FileSpec &platform_file,
-                             lldb_private::FileSpecList &file_list);
+  uint32_t FindFileInAllSDKs(const FileSpec &platform_file,
+                             FileSpecList &file_list);
 
   uint32_t GetConnectedSDKIndex();
 
@@ -105,5 +120,7 @@ private:
   const PlatformRemoteDarwinDevice &
   operator=(const PlatformRemoteDarwinDevice &) = delete;
 };
+
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEDARWINDEVICE_H
