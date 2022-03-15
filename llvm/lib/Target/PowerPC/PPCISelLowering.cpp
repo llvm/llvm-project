@@ -129,7 +129,7 @@ static cl::opt<bool> EnableQuadwordAtomics(
 static cl::opt<bool>
     DisablePerfectShuffle("ppc-disable-perfect-shuffle",
                           cl::desc("disable vector permute decomposition"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
