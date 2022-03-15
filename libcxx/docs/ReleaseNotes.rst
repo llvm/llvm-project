@@ -98,3 +98,11 @@ Build System Changes
   library should set ``LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON`` when configuring CMake. The current
   behavior, which tries to guess the correct dll-export semantics based on whether we're building
   the libc++ shared library, will be removed in LLVM 16.
+
+- Previously, the C++ ABI library headers would be installed inside ``<prefix>/include/c++/v1``
+  alongside the libc++ headers as part of building libc++. This is not the case anymore -- the
+  ABI library is expected to install its headers where it wants them as part of its own build.
+  Note that no action is required for most users, who build libc++ against libc++abi, since
+  libc++abi already installs its headers in the right location. However, vendors building
+  libc++ against alternate ABI libraries should make sure that their ABI library installs
+  its own headers.
