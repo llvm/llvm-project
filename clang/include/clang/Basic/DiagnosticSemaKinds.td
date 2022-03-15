@@ -10898,7 +10898,7 @@ def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
 def err_omp_lastprivate_loop_var_non_loop_iteration : Error<
   "only loop iteration variables are allowed in 'lastprivate' clause in "
-  "'omp loop' directives">;
+  "'omp %0' directives">;
 def err_omp_interop_variable_expected : Error<
   "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
 def err_omp_interop_variable_wrong_type : Error<
