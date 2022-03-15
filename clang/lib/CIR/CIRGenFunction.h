@@ -165,6 +165,8 @@ public:
   RValue buildAnyExpr(const clang::Expr *E,
                       AggValueSlot aggSlot = AggValueSlot::ignored(),
                       bool ignoreResult = false);
+
+  mlir::Type convertType(clang::QualType T);
 };
 
 } // namespace cir

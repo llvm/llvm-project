@@ -145,6 +145,12 @@ public:
     return isDirect() || isExtend() || isCoerceAndExpand();
   }
 
+  // Direct/Extend accessors
+  unsigned getDirectOffset() const {
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    return DirectAttr.Offset;
+  }
+
   void setDirectOffset(unsigned Offset) {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     DirectAttr.Offset = Offset;
@@ -384,6 +390,12 @@ public:
     if (!HasExtParameterInfos)
       return {};
     return llvm::ArrayRef(getExtParameterInfosBuffer(), NumArgs);
+  }
+  ExtParameterInfo getExtParameterInfo(unsigned argIndex) const {
+    assert(argIndex <= NumArgs);
+    if (!HasExtParameterInfos)
+      return ExtParameterInfo();
+    return getExtParameterInfos()[argIndex];
   }
 
   /// getCallingConvention - REturn the user specified calling convention, which

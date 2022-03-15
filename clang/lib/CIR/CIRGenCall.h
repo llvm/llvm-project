@@ -153,6 +153,13 @@ public:
     (void)IsUsed;
   }
   bool hasLValue() const { return HasLV; }
+
+  RValue getKnownRValue() const {
+    assert(!HasLV && !IsUsed);
+    return RV;
+  }
+
+  bool isAggregate() const { return HasLV || RV.isAggregate(); }
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
