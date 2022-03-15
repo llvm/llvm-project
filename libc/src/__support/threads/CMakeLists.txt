@@ -6,6 +6,6 @@ add_header_library(
   thread
   HDRS
     mutex.h
-  DEPS
+  DEPENDS
     .${LIBC_TARGET_OS}.thread
 )
