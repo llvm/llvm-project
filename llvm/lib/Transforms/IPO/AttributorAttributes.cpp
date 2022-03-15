@@ -3071,10 +3071,6 @@ struct AAReachabilityImpl : AAReachability {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
-        *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
-    if (!NoRecurseAA.isAssumedNoRecurse())
-      return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
 };
@@ -3306,12 +3302,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         return true;
 
       if (ScopeFn) {
-        const auto &ReachabilityAA = A.getAAFor<AAReachability>(
-            *this, IRPosition::function(*ScopeFn), DepClassTy::OPTIONAL);
-
-        if (!ReachabilityAA.isAssumedReachable(A, *UserI, *getCtxI()))
-          return true;
-
         if (auto *CB = dyn_cast<CallBase>(UserI)) {
           if (CB->isArgOperand(&U)) {
 
@@ -3325,6 +3315,9 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
               return true;
           }
         }
+
+        if (!AA::isPotentiallyReachable(A, *UserI, *getCtxI(), *this))
+          return true;
       }
 
       // For cases which can potentially have more users

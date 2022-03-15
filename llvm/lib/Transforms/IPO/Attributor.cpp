@@ -519,6 +519,8 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
   SmallVector<const Instruction *> Worklist;
   Worklist.push_back(&FromI);
 
+  const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+      QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
   while (!Worklist.empty()) {
     const Instruction *CurFromI = Worklist.pop_back_val();
     if (!Visited.insert(CurFromI).second)
@@ -538,7 +540,8 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
                         << *ToI << " [Intra]\n");
       if (Result)
         return true;
-      continue;
+      if (NoRecurseAA.isAssumedNoRecurse())
+        continue;
     }
 
     // TODO: If we can go arbitrarily backwards we will eventually reach an
