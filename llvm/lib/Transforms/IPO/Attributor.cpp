@@ -322,11 +322,11 @@ AA::combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
 }
 
 template <bool IsLoad, typename Ty>
-static bool
-getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
-                                SmallSetVector<Value *, 4> &PotentialCopies,
-                                const AbstractAttribute &QueryingAA,
-                                bool &UsedAssumedInformation, bool OnlyExact) {
+static bool getPotentialCopiesOfMemoryValue(
+    Attributor &A, Ty &I, SmallSetVector<Value *, 4> &PotentialCopies,
+    SmallSetVector<Instruction *, 4> &PotentialValueOrigins,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
+    bool OnlyExact) {
   LLVM_DEBUG(dbgs() << "Trying to determine the potential copies of " << I
                     << " (only exact: " << OnlyExact << ")\n";);
 
@@ -344,6 +344,7 @@ getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
   // dependences and potential copies in the provided container.
   SmallVector<const AAPointerInfo *> PIs;
   SmallVector<Value *> NewCopies;
+  SmallVector<Instruction *> NewCopyOrigins;
 
   const auto *TLI =
       A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
@@ -383,6 +384,7 @@ getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
       if (!InitialValue)
         return false;
       NewCopies.push_back(InitialValue);
+      NewCopyOrigins.push_back(nullptr);
     }
 
     auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
@@ -400,6 +402,7 @@ getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
         assert(isa<LoadInst>(I) && "Expected load or store instruction only!");
         if (!Acc.isWrittenValueUnknown()) {
           NewCopies.push_back(Acc.getWrittenValue());
+          NewCopyOrigins.push_back(Acc.getRemoteInst());
           return true;
         }
         auto *SI = dyn_cast<StoreInst>(Acc.getRemoteInst());
@@ -410,6 +413,7 @@ getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
           return false;
         }
         NewCopies.push_back(SI->getValueOperand());
+        NewCopyOrigins.push_back(SI);
       } else {
         assert(isa<StoreInst>(I) && "Expected load or store instruction only!");
         auto *LI = dyn_cast<LoadInst>(Acc.getRemoteInst());
@@ -445,25 +449,29 @@ getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
     A.recordDependence(*PI, QueryingAA, DepClassTy::OPTIONAL);
   }
   PotentialCopies.insert(NewCopies.begin(), NewCopies.end());
+  PotentialValueOrigins.insert(NewCopyOrigins.begin(), NewCopyOrigins.end());
 
   return true;
 }
 
-bool AA::getPotentiallyLoadedValues(Attributor &A, LoadInst &LI,
-                                    SmallSetVector<Value *, 4> &PotentialValues,
-                                    const AbstractAttribute &QueryingAA,
-                                    bool &UsedAssumedInformation,
-                                    bool OnlyExact) {
+bool AA::getPotentiallyLoadedValues(
+    Attributor &A, LoadInst &LI, SmallSetVector<Value *, 4> &PotentialValues,
+    SmallSetVector<Instruction *, 4> &PotentialValueOrigins,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
+    bool OnlyExact) {
   return getPotentialCopiesOfMemoryValue</* IsLoad */ true>(
-      A, LI, PotentialValues, QueryingAA, UsedAssumedInformation, OnlyExact);
+      A, LI, PotentialValues, PotentialValueOrigins, QueryingAA,
+      UsedAssumedInformation, OnlyExact);
 }
 
 bool AA::getPotentialCopiesOfStoredValue(
     Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
     const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
     bool OnlyExact) {
+  SmallSetVector<Instruction *, 4> PotentialValueOrigins;
   return getPotentialCopiesOfMemoryValue</* IsLoad */ false>(
-      A, SI, PotentialCopies, QueryingAA, UsedAssumedInformation, OnlyExact);
+      A, SI, PotentialCopies, PotentialValueOrigins, QueryingAA,
+      UsedAssumedInformation, OnlyExact);
 }
 
 static bool isAssumedReadOnlyOrReadNone(Attributor &A, const IRPosition &IRP,
@@ -1152,6 +1160,19 @@ bool Attributor::isAssumedDead(const Use &U,
     BasicBlock *IncomingBB = PHI->getIncomingBlock(U);
     return isAssumedDead(*IncomingBB->getTerminator(), QueryingAA, FnLivenessAA,
                          UsedAssumedInformation, CheckBBLivenessOnly, DepClass);
+  } else if (StoreInst *SI = dyn_cast<StoreInst>(UserI)) {
+    if (!CheckBBLivenessOnly && SI->getPointerOperand() != U.get()) {
+      const IRPosition IRP = IRPosition::inst(*SI);
+      const AAIsDead &IsDeadAA =
+          getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
+      if (IsDeadAA.isRemovableStore()) {
+        if (QueryingAA)
+          recordDependence(IsDeadAA, *QueryingAA, DepClass);
+        if (!IsDeadAA.isKnown(AAIsDead::IS_REMOVABLE))
+          UsedAssumedInformation = true;
+        return true;
+      }
+    }
   }
 
   return isAssumedDead(IRPosition::inst(*UserI), QueryingAA, FnLivenessAA,
@@ -2655,6 +2676,30 @@ void InformationCache::initializeInformationCache(const Function &CF,
   // queried by abstract attributes during their initialization or update.
   // This has to happen before we create attributes.
 
+  DenseMap<const Value *, Optional<short>> AssumeUsesMap;
+
+  // Add \p V to the assume uses map which track the number of uses outside of
+  // "visited" assumes. If no outside uses are left the value is added to the
+  // assume only use vector.
+  auto AddToAssumeUsesMap = [&](const Value &V) -> void {
+    SmallVector<const Instruction *> Worklist;
+    if (auto *I = dyn_cast<Instruction>(&V))
+      Worklist.push_back(I);
+    while (!Worklist.empty()) {
+      const Instruction *I = Worklist.pop_back_val();
+      Optional<short> &NumUses = AssumeUsesMap[I];
+      if (!NumUses.hasValue())
+        NumUses = I->getNumUses();
+      NumUses = NumUses.getValue() - /* this assume */ 1;
+      if (NumUses.getValue() != 0)
+        continue;
+      AssumeOnlyValues.insert(I);
+      for (const Value *Op : I->operands())
+        if (auto *OpI = dyn_cast<Instruction>(Op))
+          Worklist.push_back(OpI);
+    }
+  };
+
   for (Instruction &I : instructions(&F)) {
     bool IsInterestingOpcode = false;
 
@@ -2675,6 +2720,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // For `must-tail` calls we remember the caller and callee.
       if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
         fillMapFromAssume(*Assume, KnowledgeMap);
+        AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {
         FI.ContainsMustTailCall = true;
         if (const Function *Callee = cast<CallInst>(I).getCalledFunction())

@@ -409,9 +409,11 @@ static bool genericValueTraversal(
       // will simply end up here again. The load is as far as we can make it.
       if (LI->getPointerOperand() != InitialV) {
         SmallSetVector<Value *, 4> PotentialCopies;
-        if (AA::getPotentiallyLoadedValues(A, *LI, PotentialCopies, QueryingAA,
-                                           UsedAssumedInformation,
-                                           /* OnlyExact */ true)) {
+        SmallSetVector<Instruction *, 4> PotentialValueOrigins;
+        if (AA::getPotentiallyLoadedValues(A, *LI, PotentialCopies,
+                                          PotentialValueOrigins, QueryingAA,
+                                          UsedAssumedInformation,
+                                          /* OnlyExact */ true)) {
           // Values have to be dynamically unique or we loose the fact that a
           // single llvm::Value might represent two runtime values (e.g., stack
           // locations in different recursive calls).
@@ -421,9 +423,9 @@ static bool genericValueTraversal(
               });
           if (DynamicallyUnique &&
               (!Intraprocedural || !CtxI ||
-               llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
-                 return AA::isValidInScope(*PC, CtxI->getFunction());
-               }))) {
+              llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
+                return AA::isValidInScope(*PC, CtxI->getFunction());
+              }))) {
             for (auto *PotentialCopy : PotentialCopies)
               Worklist.push_back({PotentialCopy, CtxI});
             continue;
@@ -3611,6 +3613,10 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     return ChangeStatus::UNCHANGED;
   }
 
+  bool isRemovableStore() const override {
+    return isAssumed(IS_REMOVABLE) && isa<StoreInst>(&getAssociatedValue());
+  }
+
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     Value &V = getAssociatedValue();
@@ -5669,6 +5675,36 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto Before = SimplifiedAssociatedValue;
+
+    // Do not simplify loads that are only used in llvm.assume if we cannot also
+    // remove all stores that may feed into the load. The reason is that the
+    // assume is probably worth something as long as the stores are around.
+    if (auto *LI = dyn_cast<LoadInst>(&getAssociatedValue())) {
+      InformationCache &InfoCache = A.getInfoCache();
+      if (InfoCache.isOnlyUsedByAssume(*LI)) {
+        SmallSetVector<Value *, 4> PotentialCopies;
+        SmallSetVector<Instruction *, 4> PotentialValueOrigins;
+        bool UsedAssumedInformation = false;
+        if (AA::getPotentiallyLoadedValues(A, *LI, PotentialCopies,
+                                           PotentialValueOrigins, *this,
+                                           UsedAssumedInformation,
+                                           /* OnlyExact */ true)) {
+          if (!llvm::all_of(PotentialValueOrigins, [&](Instruction *I) {
+                if (!I)
+                  return true;
+                if (auto *SI = dyn_cast<StoreInst>(I))
+                  return A.isAssumedDead(SI->getOperandUse(0), this,
+                                         /* LivenessAA */ nullptr,
+                                         UsedAssumedInformation,
+                                         /* CheckBBLivenessOnly */ false);
+                return A.isAssumedDead(*I, this, /* LivenessAA */ nullptr,
+                                       UsedAssumedInformation,
+                                       /* CheckBBLivenessOnly */ false);
+              }))
+            return indicatePessimisticFixpoint();
+        }
+      }
+    }
 
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI, bool &,
                             bool Stripped) -> bool {
