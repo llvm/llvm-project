@@ -174,7 +174,7 @@ mlir::ParseResult ConstantOp::parse(mlir::OpAsmParser &parser,
 void ConstantOp::print(mlir::OpAsmPrinter &printer) {
   printer << " ";
   printer.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"value"});
-  printer << value();
+  printer << getValue();
 }
 
 /// Verify that the given attribute value is valid for the given type.
@@ -236,16 +236,16 @@ static mlir::LogicalResult verifyConstantForType(mlir::Type type,
 /// Verifier for the constant operation. This corresponds to the `::verify(...)`
 /// in the op definition.
 mlir::LogicalResult ConstantOp::verify() {
-  return verifyConstantForType(getResult().getType(), value(), *this);
+  return verifyConstantForType(getResult().getType(), getValue(), *this);
 }
 
 mlir::LogicalResult StructConstantOp::verify() {
-  return verifyConstantForType(getResult().getType(), value(), *this);
+  return verifyConstantForType(getResult().getType(), getValue(), *this);
 }
 
 /// Infer the output shape of the ConstantOp, this is required by the shape
 /// inference interface.
-void ConstantOp::inferShapes() { getResult().setType(value().getType()); }
+void ConstantOp::inferShapes() { getResult().setType(getValue().getType()); }
 
 //===----------------------------------------------------------------------===//
 // AddOp
@@ -354,7 +354,7 @@ CallInterfaceCallable GenericCallOp::getCallableForCallee() {
 
 /// Get the argument operands to the called function, this is required by the
 /// call interface.
-Operation::operand_range GenericCallOp::getArgOperands() { return inputs(); }
+Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
 
 //===----------------------------------------------------------------------===//
 // MulOp
@@ -430,8 +430,8 @@ void StructAccessOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
 }
 
 mlir::LogicalResult StructAccessOp::verify() {
-  StructType structTy = input().getType().cast<StructType>();
-  size_t indexValue = index();
+  StructType structTy = getInput().getType().cast<StructType>();
+  size_t indexValue = getIndex();
   if (indexValue >= structTy.getNumElementTypes())
     return emitOpError()
            << "index should be within the range of the input struct type";

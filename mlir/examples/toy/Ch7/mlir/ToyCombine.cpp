@@ -24,11 +24,13 @@ namespace {
 } // namespace
 
 /// Fold constants.
-OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) { return value(); }
+OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
+  return getValue();
+}
 
 /// Fold struct constants.
 OpFoldResult StructConstantOp::fold(ArrayRef<Attribute> operands) {
-  return value();
+  return getValue();
 }
 
 /// Fold simple struct access operations that access into a constant.
@@ -37,7 +39,7 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
   if (!structAttr)
     return nullptr;
 
-  size_t elementIndex = index();
+  size_t elementIndex = getIndex();
   return structAttr[elementIndex];
 }
 
