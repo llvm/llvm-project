@@ -15,22 +15,22 @@ define i64 @test2elt(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvuxdsp f1, v2
 ; CHECK-P8-NEXT:    xscvuxdsp f0, f0
-; CHECK-P8-NEXT:    xscvdpspn v3, f1
-; CHECK-P8-NEXT:    xscvdpspn v2, f0
-; CHECK-P8-NEXT:    vmrghw v2, v3, v2
-; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    xscvdpspn vs1, f1
+; CHECK-P8-NEXT:    xscvdpspn vs0, f0
+; CHECK-P8-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
+; CHECK-P9-NEXT:    xscvuxdsp f1, v2
 ; CHECK-P9-NEXT:    xscvuxdsp f0, f0
-; CHECK-P9-NEXT:    xscvdpspn v3, f0
-; CHECK-P9-NEXT:    xscvuxdsp f0, v2
-; CHECK-P9-NEXT:    xscvdpspn v2, f0
-; CHECK-P9-NEXT:    vmrghw v2, v2, v3
-; CHECK-P9-NEXT:    mfvsrld r3, v2
+; CHECK-P9-NEXT:    xscvdpspn vs1, f1
+; CHECK-P9-NEXT:    xscvdpspn vs0, f0
+; CHECK-P9-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-P9-NEXT:    mfvsrld r3, vs0
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt:
@@ -301,22 +301,22 @@ define i64 @test2elt_signed(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvsxdsp f1, v2
 ; CHECK-P8-NEXT:    xscvsxdsp f0, f0
-; CHECK-P8-NEXT:    xscvdpspn v3, f1
-; CHECK-P8-NEXT:    xscvdpspn v2, f0
-; CHECK-P8-NEXT:    vmrghw v2, v3, v2
-; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    xscvdpspn vs1, f1
+; CHECK-P8-NEXT:    xscvdpspn vs0, f0
+; CHECK-P8-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
+; CHECK-P9-NEXT:    xscvsxdsp f1, v2
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
-; CHECK-P9-NEXT:    xscvdpspn v3, f0
-; CHECK-P9-NEXT:    xscvsxdsp f0, v2
-; CHECK-P9-NEXT:    xscvdpspn v2, f0
-; CHECK-P9-NEXT:    vmrghw v2, v2, v3
-; CHECK-P9-NEXT:    mfvsrld r3, v2
+; CHECK-P9-NEXT:    xscvdpspn vs1, f1
+; CHECK-P9-NEXT:    xscvdpspn vs0, f0
+; CHECK-P9-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-P9-NEXT:    mfvsrld r3, vs0
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt_signed:

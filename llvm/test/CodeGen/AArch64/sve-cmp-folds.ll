@@ -53,8 +53,8 @@ define <vscale x 4 x i1> @not_fcmp_uge_nxv4f32(<vscale x 4 x float> %a, <vscale 
   ret <vscale x 4 x i1> %not
 }
 
-define i1 @foo(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: foo:
+define i1 @foo_first(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: foo_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
@@ -66,3 +66,21 @@ define i1 @foo(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
   ret i1 %bit
 }
 
+define i1 @foo_last(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: foo_last:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %vcond = fcmp oeq <vscale x 4 x float> %a, %b
+  %vscale = call i64 @llvm.vscale.i64()
+  %shl2 = shl nuw nsw i64 %vscale, 2
+  %idx = add nuw nsw i64 %shl2, -1
+  %bit = extractelement <vscale x 4 x i1> %vcond, i64 %idx
+  ret i1 %bit
+}
+
+
+declare i64 @llvm.vscale.i64()

@@ -1,9 +1,5 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s \
-; RUN: -polly-acc-libdevice=%S/Inputs/libdevice-functions-copied-into-kernel_libdevice.ll \
-; RUN:     | FileCheck %s --check-prefix=SCOP
-; RUN: opt %loadPolly -analyze -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
-; RUN: -polly-acc-libdevice=%S/Inputs/libdevice-functions-copied-into-kernel_libdevice.ll \
-; RUN:     < %s | FileCheck %s --check-prefix=KERNEL-IR
+; RUN: opt %loadPolly -polly-acc-libdevice=%S/Inputs/libdevice-functions-copied-into-kernel_libdevice.ll -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir -polly-acc-libdevice=%S/Inputs/libdevice-functions-copied-into-kernel_libdevice.ll -disable-output < %s | FileCheck %s --check-prefix=KERNEL-IR
 ; RUN: opt %loadPolly -S -polly-codegen-ppcg  < %s \
 ; RUN: -polly-acc-libdevice=%S/Inputs/libdevice-functions-copied-into-kernel_libdevice.ll \
 ; RUN:     | FileCheck %s --check-prefix=HOST-IR

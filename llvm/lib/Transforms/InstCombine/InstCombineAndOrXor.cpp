@@ -1322,7 +1322,7 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
-                                          bool IsAnd) {
+                                          bool IsAnd, bool IsLogicalSelect) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
   Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
   FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -1353,7 +1353,7 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     unsigned NewPred = IsAnd ? FCmpCodeL & FCmpCodeR : FCmpCodeL | FCmpCodeR;
 
     // Intersect the fast math flags.
-    // TODO: We can union the fast math flags.
+    // TODO: We can union the fast math flags unless this is a logical select.
     IRBuilder<>::FastMathFlagGuard FMFG(Builder);
     FastMathFlags FMF = LHS->getFastMathFlags();
     FMF &= RHS->getFastMathFlags();
@@ -1362,8 +1362,11 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     return getFCmpValue(NewPred, LHS0, LHS1, Builder);
   }
 
-  if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
-      (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
+  // This transform is not valid for a logical select.
+  if (!IsLogicalSelect &&
+      ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
+       (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO &&
+        !IsAnd))) {
     if (LHS0->getType() != RHS0->getType())
       return nullptr;
 
@@ -2125,7 +2128,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
-      if (Value *Res = foldLogicOfFCmps(LHS, RHS, true))
+      if (Value *Res = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true))
         return replaceInstUsesWith(I, Res);
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
@@ -2891,7 +2894,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
-      if (Value *Res = foldLogicOfFCmps(LHS, RHS, false))
+      if (Value *Res = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false))
         return replaceInstUsesWith(I, Res);
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))

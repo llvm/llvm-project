@@ -97,8 +97,8 @@ public:
   ValueMap m_values;
   DataLayout &m_target_data;
   lldb_private::IRExecutionUnit &m_execution_unit;
-  const BasicBlock *m_bb;
-  const BasicBlock *m_prev_bb;
+  const BasicBlock *m_bb = nullptr;
+  const BasicBlock *m_prev_bb = nullptr;
   BasicBlock::const_iterator m_ii;
   BasicBlock::const_iterator m_ie;
 
@@ -113,8 +113,7 @@ public:
                         lldb_private::IRExecutionUnit &execution_unit,
                         lldb::addr_t stack_frame_bottom,
                         lldb::addr_t stack_frame_top)
-      : m_target_data(target_data), m_execution_unit(execution_unit),
-        m_bb(nullptr), m_prev_bb(nullptr) {
+      : m_target_data(target_data), m_execution_unit(execution_unit) {
     m_byte_order = (target_data.isLittleEndian() ? lldb::eByteOrderLittle
                                                  : lldb::eByteOrderBig);
     m_addr_byte_size = (target_data.getPointerSize(0));

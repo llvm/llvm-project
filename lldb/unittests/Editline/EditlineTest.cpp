@@ -87,15 +87,14 @@ private:
   std::unique_ptr<lldb_private::Editline> _editline_sp;
 
   PseudoTerminal _pty;
-  int _pty_primary_fd;
-  int _pty_secondary_fd;
+  int _pty_primary_fd = -1;
+  int _pty_secondary_fd = -1;
 
   std::unique_ptr<FilePointer> _el_secondary_file;
 };
 
 EditlineAdapter::EditlineAdapter()
-    : _editline_sp(), _pty(), _pty_primary_fd(-1), _pty_secondary_fd(-1),
-      _el_secondary_file() {
+    : _editline_sp(), _pty(), _el_secondary_file() {
   lldb_private::Status error;
 
   // Open the first primary pty available.

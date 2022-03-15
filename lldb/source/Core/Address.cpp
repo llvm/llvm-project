@@ -233,7 +233,7 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
 Address::Address(lldb::addr_t abs_addr) : m_section_wp(), m_offset(abs_addr) {}
 
 Address::Address(addr_t address, const SectionList *section_list)
-    : m_section_wp(), m_offset(LLDB_INVALID_ADDRESS) {
+    : m_section_wp() {
   ResolveAddressUsingFileSections(address, section_list);
 }
 

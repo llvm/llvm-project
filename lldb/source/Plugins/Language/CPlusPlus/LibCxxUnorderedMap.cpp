@@ -44,9 +44,9 @@ public:
 private:
   CompilerType m_element_type;
   CompilerType m_node_type;
-  ValueObject *m_tree;
-  size_t m_num_elements;
-  ValueObject *m_next_element;
+  ValueObject *m_tree = nullptr;
+  size_t m_num_elements = 0;
+  ValueObject *m_next_element = nullptr;
   std::vector<std::pair<ValueObject *, uint64_t>> m_elements_cache;
 };
 } // namespace formatters
@@ -54,8 +54,8 @@ private:
 
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     LibcxxStdUnorderedMapSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type(), m_tree(nullptr),
-      m_num_elements(0), m_next_element(nullptr), m_elements_cache() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type(),
+      m_elements_cache() {
   if (valobj_sp)
     Update();
 }

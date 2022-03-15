@@ -4,6 +4,7 @@ module LLVM_Analysis {
   module * { export * }
 
   // This is intended for (repeated) textual inclusion.
+  textual header "Analysis/ScalarFuncs.def"
   textual header "Analysis/TargetLibraryInfo.def"
   textual header "Analysis/VecFuncs.def"
 }

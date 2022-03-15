@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 
 ; There is no FileCheck because we want to make sure that this doesn't crash.
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-fail-on-verify-module-failure \

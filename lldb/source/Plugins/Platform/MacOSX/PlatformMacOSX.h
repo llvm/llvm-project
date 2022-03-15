@@ -47,7 +47,8 @@ public:
     return PlatformDarwin::GetFile(source, destination);
   }
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures(
+      const lldb_private::ArchSpec &process_host_arch) override;
 
   lldb_private::ConstString
   GetSDKDirectory(lldb_private::Target &target) override;

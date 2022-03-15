@@ -281,3 +281,36 @@ define i32 @test_alias_allocas_2xs32(i32 *%ptr) {
   store i32 5, i32 *%addr2
   ret i32 %ld
 }
+
+define void @test_volatile(i32 **%ptr) {
+; CHECK-LABEL: test_volatile:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    str wzr, [x8]
+; CHECK-NEXT:    str wzr, [x8, #4]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32*, i32** %ptr, align 8
+  store volatile i32 0, i32* %0, align 4;
+  %1 = bitcast i32** %ptr to i8**
+  %add.ptr.i.i38 = getelementptr inbounds i32, i32* %0, i64 1
+  store volatile i32 0, i32* %add.ptr.i.i38, align 4
+  ret void
+}
+
+define void @test_atomic(i32 **%ptr) {
+; CHECK-LABEL: test_atomic:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    add x9, x8, #4
+; CHECK-NEXT:    stlr wzr, [x8]
+; CHECK-NEXT:    stlr wzr, [x9]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32*, i32** %ptr, align 8
+  store atomic i32 0, i32* %0 release, align 4;
+  %1 = bitcast i32** %ptr to i8**
+  %add.ptr.i.i38 = getelementptr inbounds i32, i32* %0, i64 1
+  store atomic i32 0, i32* %add.ptr.i.i38 release, align 4
+  ret void
+}

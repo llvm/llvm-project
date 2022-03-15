@@ -93,6 +93,10 @@ def gi_flat_scratch_saddr :
     GIComplexOperandMatcher<s32, "selectScratchSAddr">,
     GIComplexPatternEquiv<ScratchSAddr>;
 
+def gi_flat_scratch_svaddr :
+    GIComplexOperandMatcher<s32, "selectScratchSVAddr">,
+    GIComplexPatternEquiv<ScratchSVAddr>;
+
 def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
     GIComplexPatternEquiv<DS1Addr1Offset>;

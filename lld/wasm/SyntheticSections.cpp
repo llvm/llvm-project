@@ -542,15 +542,16 @@ void ElemSection::writeBody() {
     writeUleb128(os, tableNumber, "table number");
 
   WasmInitExpr initExpr;
+  initExpr.Extended = false;
   if (config->isPic) {
-    initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Value.Global =
+    initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
+    initExpr.Inst.Value.Global =
         (config->is64.getValueOr(false) ? WasmSym::tableBase32
                                         : WasmSym::tableBase)
             ->getGlobalIndex();
   } else {
-    initExpr.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Value.Int32 = config->tableBase;
+    initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
+    initExpr.Inst.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);
 

@@ -91,11 +91,14 @@ private:
   ScopInfo *SI;
   DependenceInfoWrapperPass *DI;
 };
+
+llvm::Pass *createPolyhedralInfoPrinterLegacyPass(llvm::raw_ostream &OS);
 } // end namespace polly
 
 namespace llvm {
 class PassRegistry;
 void initializePolyhedralInfoPass(llvm::PassRegistry &);
+void initializePolyhedralInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

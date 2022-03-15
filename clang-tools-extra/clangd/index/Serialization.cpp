@@ -192,7 +192,7 @@ public:
     }
     if (llvm::zlib::isAvailable()) {
       llvm::SmallString<1> Compressed;
-      llvm::cantFail(llvm::zlib::compress(RawTable, Compressed));
+      llvm::zlib::compress(RawTable, Compressed);
       write32(RawTable.size(), OS);
       OS << Compressed;
     } else {

@@ -169,6 +169,15 @@ struct OutlinableRegion {
   /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
   Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
 
+  /// Find a corresponding BasicBlock for \p BB in similar OutlinableRegion \p Other.
+  ///
+  /// \param Other [in] - The OutlinableRegion to find the corresponding
+  /// BasicBlock in.
+  /// \param BB [in] - The BasicBlock to look for in the other region.
+  /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
+  BasicBlock *findCorrespondingBlockIn(const OutlinableRegion &Other,
+                                       BasicBlock *BB);
+
   /// Get the size of the code removed from the region.
   ///
   /// \param [in] TTI - The TargetTransformInfo for the parent function.

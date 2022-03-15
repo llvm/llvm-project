@@ -24,9 +24,8 @@ using namespace lldb_private;
 OptionValueFileColonLine::OptionValueFileColonLine() = default;
 
 OptionValueFileColonLine::OptionValueFileColonLine(llvm::StringRef input)
-    : m_line_number(LLDB_INVALID_LINE_NUMBER),
-      m_column_number(LLDB_INVALID_COLUMN_NUMBER),
-      m_completion_mask(CommandCompletions::eSourceFileCompletion) {
+
+{
   SetValueFromString(input, eVarSetOperationAssign);
 }
 

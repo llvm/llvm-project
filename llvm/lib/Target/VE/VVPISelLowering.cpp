@@ -92,20 +92,31 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
                                        VectorV, Mask, AVL, Op->getFlags());
   }
 
-  if (VVPOpcode == VEISD::VVP_SELECT) {
+  switch (VVPOpcode) {
+  default:
+    llvm_unreachable("lowerToVVP called for unexpected SDNode.");
+  case VEISD::VVP_FFMA: {
+    // VE has a swizzled operand order in FMA (compared to LLVM IR and
+    // SDNodes).
+    auto X = Op->getOperand(2);
+    auto Y = Op->getOperand(0);
+    auto Z = Op->getOperand(1);
+    return CDAG.getNode(VVPOpcode, LegalVecVT, {X, Y, Z, Mask, AVL});
+  }
+  case VEISD::VVP_SELECT: {
     auto Mask = Op->getOperand(0);
     auto OnTrue = Op->getOperand(1);
     auto OnFalse = Op->getOperand(2);
     return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
   }
-  if (VVPOpcode == VEISD::VVP_SETCC) {
+  case VEISD::VVP_SETCC: {
     EVT LegalResVT = getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     auto LHS = Op->getOperand(0);
     auto RHS = Op->getOperand(1);
     auto Pred = Op->getOperand(2);
     return CDAG.getNode(VVPOpcode, LegalResVT, {LHS, RHS, Pred, Mask, AVL});
   }
-  llvm_unreachable("lowerToVVP called for unexpected SDNode.");
+  }
 }
 
 SDValue VETargetLowering::lowerVVP_LOAD_STORE(SDValue Op,

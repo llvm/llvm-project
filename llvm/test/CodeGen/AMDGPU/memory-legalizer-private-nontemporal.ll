@@ -6,6 +6,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx700 -amdgcn-skip-cache-invalidations -verify-machineinstrs < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+tgsplit -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940-NOTTGSPLIT %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -mattr=+tgsplit -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940-TGSPLIT %s
 
 define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX6-LABEL: private_nontemporal_load_0:
@@ -125,6 +127,28 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-NOTTGSPLIT-LABEL: private_nontemporal_load_0:
+; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
+; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    scratch_load_dword v0, off, s4 nt
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-TGSPLIT-LABEL: private_nontemporal_load_0:
+; GFX940-TGSPLIT:       ; %bb.0: ; %entry
+; GFX940-TGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX940-TGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
+; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-TGSPLIT-NEXT:    scratch_load_dword v0, off, s4 nt
+; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-TGSPLIT-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX940-TGSPLIT-NEXT:    s_endpgm
     i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
 entry:
   %val = load i32, i32 addrspace(5)* %in, align 4, !nontemporal !0
@@ -253,6 +277,30 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-NOTTGSPLIT-LABEL: private_nontemporal_load_1:
+; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
+; GFX940-NOTTGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    scratch_load_dword v0, v0, s4 nt
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-TGSPLIT-LABEL: private_nontemporal_load_1:
+; GFX940-TGSPLIT:       ; %bb.0: ; %entry
+; GFX940-TGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX940-TGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
+; GFX940-TGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-TGSPLIT-NEXT:    scratch_load_dword v0, v0, s4 nt
+; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-TGSPLIT-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX940-TGSPLIT-NEXT:    s_endpgm
     i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -378,6 +426,28 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX90A-TGSPLIT-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen glc slc
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-NOTTGSPLIT-LABEL: private_nontemporal_store_0:
+; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x8
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s4 nt
+; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-TGSPLIT-LABEL: private_nontemporal_store_0:
+; GFX940-TGSPLIT:       ; %bb.0: ; %entry
+; GFX940-TGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-TGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x8
+; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-TGSPLIT-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-TGSPLIT-NEXT:    scratch_store_dword off, v0, s4 nt
+; GFX940-TGSPLIT-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %val = load i32, i32 addrspace(1)* %in, align 4
@@ -504,6 +574,30 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX90A-TGSPLIT-NEXT:    buffer_store_dword v1, v0, s[8:11], 0 offen glc slc
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-NOTTGSPLIT-LABEL: private_nontemporal_store_1:
+; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x8
+; GFX940-NOTTGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
+; GFX940-NOTTGSPLIT-NEXT:    scratch_store_dword v0, v1, s4 nt
+; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
+;
+; GFX940-TGSPLIT-LABEL: private_nontemporal_store_1:
+; GFX940-TGSPLIT:       ; %bb.0: ; %entry
+; GFX940-TGSPLIT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-TGSPLIT-NEXT:    s_load_dword s4, s[0:1], 0x8
+; GFX940-TGSPLIT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-TGSPLIT-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
+; GFX940-TGSPLIT-NEXT:    scratch_store_dword v0, v1, s4 nt
+; GFX940-TGSPLIT-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

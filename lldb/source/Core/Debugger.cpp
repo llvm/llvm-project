@@ -9,6 +9,7 @@
 #include "lldb/Core/Debugger.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
@@ -1068,9 +1069,12 @@ bool Debugger::CheckTopIOHandlerTypes(IOHandler::Type top_type,
 }
 
 void Debugger::PrintAsync(const char *s, size_t len, bool is_stdout) {
-  lldb_private::StreamFile &stream =
-      is_stdout ? GetOutputStream() : GetErrorStream();
-  m_io_handler_stack.PrintAsync(&stream, s, len);
+  bool printed = m_io_handler_stack.PrintAsync(s, len, is_stdout);
+  if (!printed) {
+    lldb::StreamFileSP stream =
+        is_stdout ? m_output_stream_sp : m_error_stream_sp;
+    stream->Write(s, len);
+  }
 }
 
 ConstString Debugger::GetTopIOHandlerControlSequence(char ch) {
@@ -1284,36 +1288,6 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<StreamCallback>(log_callback, baton);
 }
 
-ConstString Debugger::ProgressEventData::GetFlavorString() {
-  static ConstString g_flavor("Debugger::ProgressEventData");
-  return g_flavor;
-}
-
-ConstString Debugger::ProgressEventData::GetFlavor() const {
-  return Debugger::ProgressEventData::GetFlavorString();
-}
-
-void Debugger::ProgressEventData::Dump(Stream *s) const {
-  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
-  if (m_completed == 0 || m_completed == m_total)
-    s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
-  else
-    s->PutCString(", type = update");
-  // If m_total is UINT64_MAX, there is no progress to report, just "start"
-  // and "end". If it isn't we will show the completed and total amounts.
-  if (m_total != UINT64_MAX)
-    s->Printf(", progress = %" PRIu64 " of %" PRIu64, m_completed, m_total);
-}
-
-const Debugger::ProgressEventData *
-Debugger::ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
-  if (event_ptr)
-    if (const EventData *event_data = event_ptr->GetData())
-      if (event_data->GetFlavor() == ProgressEventData::GetFlavorString())
-        return static_cast<const ProgressEventData *>(event_ptr->GetData());
-  return nullptr;
-}
-
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
                                   const std::string &message,
                                   uint64_t completed, uint64_t total,
@@ -1322,9 +1296,9 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
   const uint32_t event_type = Debugger::eBroadcastBitProgress;
   if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
     return;
-  EventSP event_sp(new Event(event_type, new Debugger::ProgressEventData(
-                                             progress_id, message, completed,
-                                             total, is_debugger_specific)));
+  EventSP event_sp(new Event(
+      event_type, new ProgressEventData(progress_id, message, completed, total,
+                                        is_debugger_specific)));
   debugger.GetBroadcaster().BroadcastEvent(event_sp);
 }
 
@@ -1752,8 +1726,7 @@ lldb::thread_result_t Debugger::IOHandlerThread() {
 }
 
 void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
-  auto *data =
-      Debugger::ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  auto *data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   if (!data)
     return;
 
@@ -1777,45 +1750,47 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Determine whether the current output file is an interactive terminal with
   // color support. We assume that if we support ANSI escape codes we support
   // vt100 escape codes.
-  File &output = GetOutputFile();
-  if (!output.GetIsInteractive() || !output.GetIsTerminalWithColors())
+  File &file = GetOutputFile();
+  if (!file.GetIsInteractive() || !file.GetIsTerminalWithColors())
     return;
 
+  StreamSP output = GetAsyncOutputStream();
+
   // Print over previous line, if any.
-  output.Printf("\r");
+  output->Printf("\r");
 
   if (data->GetCompleted()) {
     // Clear the current line.
-    output.Printf("\x1B[2K");
-    output.Flush();
+    output->Printf("\x1B[2K");
+    output->Flush();
     return;
   }
 
   const bool use_color = GetUseColor();
   llvm::StringRef ansi_prefix = GetShowProgressAnsiPrefix();
   if (!ansi_prefix.empty())
-    output.Printf(
+    output->Printf(
         "%s", ansi::FormatAnsiTerminalCodes(ansi_prefix, use_color).c_str());
 
   // Print the progress message.
   std::string message = data->GetMessage();
   if (data->GetTotal() != UINT64_MAX) {
-    output.Printf("[%" PRIu64 "/%" PRIu64 "] %s...", data->GetCompleted(), data->GetTotal(),
-                  message.c_str());
+    output->Printf("[%" PRIu64 "/%" PRIu64 "] %s...", data->GetCompleted(),
+                   data->GetTotal(), message.c_str());
   } else {
-    output.Printf("%s...", message.c_str());
+    output->Printf("%s...", message.c_str());
   }
 
   llvm::StringRef ansi_suffix = GetShowProgressAnsiSuffix();
   if (!ansi_suffix.empty())
-    output.Printf(
+    output->Printf(
         "%s", ansi::FormatAnsiTerminalCodes(ansi_suffix, use_color).c_str());
 
   // Clear until the end of the line.
-  output.Printf("\x1B[K\r");
+  output->Printf("\x1B[K\r");
 
   // Flush the output.
-  output.Flush();
+  output->Flush();
 }
 
 bool Debugger::HasIOHandlerThread() { return m_io_handler_thread.IsJoinable(); }

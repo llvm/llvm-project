@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Verify we do not simplify the runtime check to "true" due to the domain
 ; constraints as the test contains an error block that influenced the domains

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops  -analyze -polly-only-func=f,g < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-only-func=f,g -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Check that the flag `-polly-only-func` limits analysis to `f` and `g`.
 ;
