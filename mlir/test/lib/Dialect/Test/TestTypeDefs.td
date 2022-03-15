@@ -363,4 +363,18 @@ def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
   let assemblyFormat = "`<` (`(` $type^ `)`)? `>`";
 }
 
+def TestTypeCustom : Test_Type<"TestTypeCustom"> {
+  let parameters = (ins "int":$a, OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "custom_type";
+  let assemblyFormat = [{ `<` custom<CustomTypeA>($a)
+                              custom<CustomTypeB>(ref($a), $b) `>` }];
+}
+
+def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
+  let parameters = (ins StringRefParameter<>:$foo);
+  let mnemonic = "custom_type_string";
+  let assemblyFormat = [{ `<` custom<FooString>($foo)
+                              custom<BarString>(ref($foo)) `>` }];
+}
+
 #endif // TEST_TYPEDEFS
