@@ -13,6 +13,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
+#include "clang/AST/ExprObjC.h"
 #include "clang/Basic/TargetInfo.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -144,7 +145,24 @@ void CIRGenFunction::buildCallArgs(
 
   // Evaluate each argument in the appropriate order.
   size_t CallArgsStart = Args.size();
-  assert(ArgTypes.size() == 0 && "Args NYI");
+  for (unsigned I = 0, E = ArgTypes.size(); I != E; ++I) {
+    unsigned Idx = LeftToRight ? I : E - I - 1;
+    CallExpr::const_arg_iterator Arg = ArgRange.begin() + Idx;
+    unsigned InitialArgSize = Args.size();
+    assert(!isa<ObjCIndirectCopyRestoreExpr>(*Arg) && "NYI");
+    assert(!isa<ObjCMethodDecl>(AC.getDecl()) && "NYI");
+
+    buildCallArg(Args, *Arg, ArgTypes[Idx]);
+    // In particular, we depend on it being the last arg in Args, and the
+    // objectsize bits depend on there only being one arg if !LeftToRight.
+    assert(InitialArgSize + 1 == Args.size() &&
+           "The code below depends on only adding one arg per buildCallArg");
+    (void)InitialArgSize;
+    // Since pointer argument are never emitted as LValue, it is safe to emit
+    // non-null argument check for r-value only.
+    assert(!SanOpts.has(SanitizerKind::NonnullAttribute) && "Sanitizers NYI");
+    assert(!SanOpts.has(SanitizerKind::NullabilityArg) && "Sanitizers NYI");
+  }
 
   if (!LeftToRight) {
     // Un-reverse the arguments we just evaluated so they match up with the CIR
@@ -155,9 +173,8 @@ void CIRGenFunction::buildCallArgs(
 
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
-/// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
-/// where the result should be returned.
-RValue CIRGenFunction::buildAnyExpr(const Expr *E) {
+RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
+                                    bool ignoreResult) {
   switch (CIRGenFunction::getEvaluationKind(E->getType())) {
   case TEK_Scalar:
     return RValue::get(CGM.buildScalarExpr(E));

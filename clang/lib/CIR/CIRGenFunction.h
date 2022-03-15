@@ -149,15 +149,22 @@ public:
   RValue buildCallExpr(const clang::CallExpr *E,
                        ReturnValueSlot ReturnValue = ReturnValueSlot());
 
+  void buildCallArg(CallArgList &args, const clang::Expr *E,
+                    clang::QualType ArgType);
+
+  /// buildAnyExprToTemp - Similarly to buildAnyExpr(), however, the result will
+  /// always be accessible even if no aggregate location is provided.
+  RValue buildAnyExprToTemp(const clang::Expr *E);
+
   CIRGenCallee buildCallee(const clang::Expr *E);
 
   /// buildAnyExpr - Emit code to compute the specified expression which can
   /// have any type. The result is returned as an RValue struct. If this is an
   /// aggregate expression, the aggloc/agglocvolatile arguments indicate where
   /// the result should be returned.
-  /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
-  /// where the result should be returned.
-  RValue buildAnyExpr(const clang::Expr *E);
+  RValue buildAnyExpr(const clang::Expr *E,
+                      AggValueSlot aggSlot = AggValueSlot::ignored(),
+                      bool ignoreResult = false);
 };
 
 } // namespace cir

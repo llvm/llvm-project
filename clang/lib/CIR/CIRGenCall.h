@@ -150,9 +150,9 @@ public:
   clang::QualType Ty;
   CallArg(RValue rv, clang::QualType ty)
       : RV(rv), HasLV(false), IsUsed(false), Ty(ty) {
-    (void)HasLV;
     (void)IsUsed;
   }
+  bool hasLValue() const { return HasLV; }
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
