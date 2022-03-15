@@ -149,6 +149,22 @@ v_mov_b64 v[2:3], 1
 // GFX940: v_mov_b64_e32 v[2:3], 0x64              ; encoding: [0xff,0x70,0x04,0x7e,0x64,0x00,0x00,0x00]
 v_mov_b64 v[2:3], 0x64
 
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_lshl_add_u64 v[2:3], s[4:5], v7, v[8:9] ; encoding: [0x02,0x00,0x08,0xd2,0x04,0x0e,0x22,0x04]
+v_lshl_add_u64 v[2:3], s[4:5], v7, v[8:9]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_lshl_add_u64 v[2:3], v[4:5], 0, 1     ; encoding: [0x02,0x00,0x08,0xd2,0x04,0x01,0x05,0x02]
+v_lshl_add_u64 v[2:3], v[4:5], 0, 1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_lshl_add_u64 v[2:3], v[4:5], 3, s[2:3] ; encoding: [0x02,0x00,0x08,0xd2,0x04,0x07,0x09,0x00]
+v_lshl_add_u64 v[2:3], v[4:5], 3, s[2:3]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_lshl_add_u64 v[2:3], s[4:5], 4, v[2:3] ; encoding: [0x02,0x00,0x08,0xd2,0x04,0x08,0x09,0x04]
+v_lshl_add_u64 v[2:3], s[4:5], 4, v[2:3]
+
 // GFX90A: error: invalid operand for instruction
 // GFX10:  error: instruction not supported on this GPU
 // GFX940: buffer_wbl2 sc1                         ; encoding: [0x00,0x80,0xa0,0xe0,0x00,0x00,0x00,0x00]
