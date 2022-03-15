@@ -112,6 +112,21 @@ def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
   let assemblyFormat = "attr-dict `:` type($result)";
 }
 
+def GPU_GlobalIdOp : GPU_IndexOp<"global_id"> {
+  let description = [{
+    Returns the unique global workitem/thread id, i.e., the unique index of the
+    current workitem/thread within all workgroups / grid along the x, y, or z
+    `dimension`.
+
+    Example:
+
+    ```mlir
+    %gidX = gpu.global_id x
+    ```
+  }];
+}
+
+
 def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
