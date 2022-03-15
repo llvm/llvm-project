@@ -130,6 +130,74 @@ ds_pk_add_rtn_bf16  v3, v2, v1
 ds_pk_add_rtn_bf16  a3, v2, a1
 
 // NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: global_load_lds_dword v[2:3], off       ; encoding: [0x00,0x80,0xa8,0xdc,0x02,0x00,0x7f,0x00]
+global_load_lds_dword v[2:3], off
+
+// NOT-GFX940: error:
+// GFX940: global_load_lds_dword v[2:3], off sc0 nt sc1 ; encoding: [0x00,0x80,0xab,0xde,0x02,0x00,0x7f,0x00]
+global_load_lds_dword v[2:3], off sc0 nt sc1
+
+// NOT-GFX940: error:
+// GFX940: global_load_lds_dword v[2:3], off offset:4 ; encoding: [0x04,0x80,0xa8,0xdc,0x02,0x00,0x7f,0x00]
+global_load_lds_dword v[2:3], off offset:4
+
+// NOT-GFX940: error:
+// GFX940: global_load_lds_dword v2, s[4:5] offset:4 ; encoding: [0x04,0x80,0xa8,0xdc,0x02,0x00,0x04,0x00]
+global_load_lds_dword v2, s[4:5] offset:4
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: global_load_lds_ubyte v[2:3], off       ; encoding: [0x00,0x80,0x98,0xdc,0x02,0x00,0x7f,0x00]
+global_load_lds_ubyte v[2:3], off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: global_load_lds_sbyte v[2:3], off       ; encoding: [0x00,0x80,0x9c,0xdc,0x02,0x00,0x7f,0x00]
+global_load_lds_sbyte v[2:3], off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: global_load_lds_sshort v[2:3], off      ; encoding: [0x00,0x80,0xa4,0xdc,0x02,0x00,0x7f,0x00]
+global_load_lds_sshort v[2:3], off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: global_load_lds_ushort v[2:3], off      ; encoding: [0x00,0x80,0xa0,0xdc,0x02,0x00,0x7f,0x00]
+global_load_lds_ushort v[2:3], off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: scratch_load_lds_dword v2, off          ; encoding: [0x00,0x60,0xa8,0xdc,0x02,0x00,0x7f,0x00]
+scratch_load_lds_dword v2, off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: scratch_load_lds_dword v2, s4           ; encoding: [0x00,0x60,0xa8,0xdc,0x02,0x00,0x04,0x00]
+scratch_load_lds_dword v2, s4
+
+// NOT-GFX940: error:
+// GFX940: scratch_load_lds_dword v2, s4 offset:4  ; encoding: [0x04,0x60,0xa8,0xdc,0x02,0x00,0x04,0x00]
+scratch_load_lds_dword v2, s4 offset:4
+
+// NOT-GFX940: error:
+// GFX940: scratch_load_lds_dword off, s4 offset:4 ; encoding: [0x04,0x40,0xa8,0xdc,0x00,0x00,0x04,0x00]
+scratch_load_lds_dword off, s4 offset:4
+
+// NOT-GFX940: error:
+// GFX940: scratch_load_lds_dword off, off offset:4 ; encoding: [0x04,0x40,0xa8,0xdc,0x00,0x00,0x7f,0x00]
+scratch_load_lds_dword off, off offset:4
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: scratch_load_lds_ubyte v2, off          ; encoding: [0x00,0x60,0x98,0xdc,0x02,0x00,0x7f,0x00]
+scratch_load_lds_ubyte v2, off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: scratch_load_lds_sbyte v2, off          ; encoding: [0x00,0x60,0x9c,0xdc,0x02,0x00,0x7f,0x00]
+scratch_load_lds_sbyte v2, off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: scratch_load_lds_ushort v2, off         ; encoding: [0x00,0x60,0xa0,0xdc,0x02,0x00,0x7f,0x00]
+scratch_load_lds_ushort v2, off
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: scratch_load_lds_sshort v2, off         ; encoding: [0x00,0x60,0xa4,0xdc,0x02,0x00,0x7f,0x00]
+scratch_load_lds_sshort v2, off
+
+// NOT-GFX940: error: instruction not supported on this GPU
 // GFX940: v_mov_b64_e32 v[2:3], v[4:5]            ; encoding: [0x04,0x71,0x04,0x7e]
 v_mov_b64 v[2:3], v[4:5]
 
