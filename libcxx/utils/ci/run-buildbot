@@ -434,7 +434,7 @@ apple-system-backdeployment-*)
 
     if [[ "${OSX_ROOTS}" == "" ]]; then
         echo "--- Downloading previous macOS dylibs"
-        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/liu4fmc53qzlfly/libcxx-roots.tar.gz"
+        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
         OSX_ROOTS="${BUILD_DIR}/macos-roots"
         mkdir -p "${OSX_ROOTS}"
         curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
