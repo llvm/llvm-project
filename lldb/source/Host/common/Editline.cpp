@@ -1376,12 +1376,10 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 }
 
 Editline::Editline(const char *editline_name, FILE *input_file,
-                   FILE *output_file, FILE *error_file,
-                   std::mutex &output_mutex, bool color_prompts)
+                   FILE *output_file, FILE *error_file, bool color_prompts)
     : m_editor_status(EditorStatus::Complete), m_color_prompts(color_prompts),
       m_input_file(input_file), m_output_file(output_file),
-      m_error_file(error_file), m_input_connection(fileno(input_file), false),
-      m_output_mutex(output_mutex) {
+      m_error_file(error_file), m_input_connection(fileno(input_file), false) {
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
