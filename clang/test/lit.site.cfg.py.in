@@ -4,16 +4,16 @@ import sys
 
 config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
 config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
-config.llvm_tools_dir = path(r"@LLVM_TOOLS_DIR@")
-config.llvm_libs_dir = path(r"@LLVM_LIBS_DIR@")
-config.llvm_shlib_dir = path(r"@SHLIBDIR@")
+config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
+config.llvm_libs_dir = lit_config.substitute(path(r"@LLVM_LIBS_DIR@"))
+config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.clang_lit_site_cfg = __file__
 config.clang_obj_root = path(r"@CLANG_BINARY_DIR@")
 config.clang_src_dir = path(r"@CLANG_SOURCE_DIR@")
-config.clang_tools_dir = path(r"@CLANG_TOOLS_DIR@")
+config.clang_tools_dir = lit_config.substitute(path(r"@CLANG_TOOLS_DIR@"))
 config.clang_lib_dir = path(r"@CMAKE_LIBRARY_OUTPUT_DIRECTORY@")
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
@@ -37,18 +37,6 @@ config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
 config.has_plugins = @CLANG_PLUGIN_SUPPORT@
 config.clang_vendor_uti = "@CLANG_VENDOR_UTI@"
 config.llvm_external_lit = path(r"@LLVM_EXTERNAL_LIT@")
-
-# Support substitution of the tools and libs dirs with user parameters. This is
-# used when we can't determine the tool dir at configuration time.
-try:
-    config.clang_tools_dir = config.clang_tools_dir % lit_config.params
-    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
-    config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
-except KeyError:
-    e = sys.exc_info()[1]
-    key, = e.args
-    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

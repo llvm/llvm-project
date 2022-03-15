@@ -2,14 +2,14 @@
 
 import sys
 
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_shlib_dir = path(r"@SHLIBDIR@")
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
 config.flang_src_dir = "@FLANG_SOURCE_DIR@"
-config.flang_tools_dir = "@FLANG_TOOLS_DIR@"
+config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
 config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.flang_lib_dir = "@CMAKE_BINARY_DIR@/lib"
@@ -19,17 +19,6 @@ config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.cc = "@CMAKE_C_COMPILER@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
-
-# Support substitution of the tools_dir with user parameters. This is
-# used when we can't determine the tool dir at configuration time.
-try:
-    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-    config.flang_tools_dir = config.flang_tools_dir % lit_config.params
-    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
-except KeyError:
-    e = sys.exc_info()[1]
-    key, = e.args
-    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

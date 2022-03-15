@@ -2,17 +2,17 @@
 
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
-config.llvm_shlib_dir = "@SHLIBDIR@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_shlib_dir = lit_config.substitute("@SHLIBDIR@")
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
-config.lldb_libs_dir = "@LLDB_LIBS_DIR@"
-config.lldb_tools_dir = "@LLDB_TOOLS_DIR@"
+config.lldb_libs_dir = lit_config.substitute("@LLDB_LIBS_DIR@")
+config.lldb_tools_dir = lit_config.substitute("@LLDB_TOOLS_DIR@")
 # Since it comes from the command line, it may have backslashes which
 # should not need to be escaped.
-config.lldb_lit_tools_dir = r"@LLDB_LIT_TOOLS_DIR@"
+config.lldb_lit_tools_dir = lit_config.substitute(r"@LLDB_LIT_TOOLS_DIR@")
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
@@ -26,19 +26,6 @@ config.lldb_system_debugserver = @LLDB_USE_SYSTEM_DEBUGSERVER@
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")
-
-# Support substitution of the tools and libs dirs with user parameters. This is
-# used when we can't determine the tool dir at configuration time.
-try:
-    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-    config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
-    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
-    config.lldb_libs_dir = config.lldb_libs_dir % lit_config.params
-    config.lldb_tools_dir = config.lldb_tools_dir % lit_config.params
-    config.lldb_lit_tools_dir = config.lldb_lit_tools_dir % lit_config.params
-except KeyError as e:
-    key, = e.args
-    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

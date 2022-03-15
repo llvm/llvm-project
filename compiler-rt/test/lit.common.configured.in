@@ -70,13 +70,9 @@ set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
 
 # LLVM tools dir can be passed in lit parameters, so try to
 # apply substitution.
-try:
-  config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-  config.clang = config.clang % lit_config.params
-  config.compiler_rt_libdir = config.compiler_rt_libdir % lit_config.params
-except KeyError as e:
-  key, = e.args
-  lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key, key))
+config.llvm_tools_dir = lit_config.substitute(config.llvm_tools_dir)
+config.clang = lit_config.substitute(config.clang)
+config.compiler_rt_libdir = lit_config.substitute(config.compiler_rt_libdir)
 
 if not os.path.exists(config.clang):
   lit_config.fatal("Can't find compiler on path %r" % config.clang)
