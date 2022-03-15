@@ -1,7 +1,13 @@
 //===- BlockDisambiguate.cpp - Unambiguous block mapping for yk ----===//
 //
 // This pass ensures that yk is able to unambiguously map machine blocks back
-// to LLVM IR blocks.
+// to LLVM IR blocks. Specifically it does two separate, but related, things:
+//
+//  - Inserts blocks to disambiguate intra-function branching.
+//  - Inserts blocks to disambiguate returning from direct recursion.
+//
+// Intra-function branch disambiguation
+// ------------------------------------
 //
 // In the JIT runtime, the mapping stage converts the *machine* basic blocks of
 // a trace back to high-level basic blocks (the ones in LLVM IR). A problem
@@ -108,18 +114,74 @@
 // The former unambiguously expresses that `bbA` was executed twice. The latter
 // unambiguously expresses that `bbA` was executed only once.
 //
+// Return from direct recursion disambiguation
+// -------------------------------------------
+//
+// A similar case that requires disambiguation is where a function recursively
+// calls itself (i.e. the function is "directly recursive") immediately before
+// returning.
+//
+// When a series of recursive calls bubble up from the recursion
+// we will get repeated entries for the high-level block containing the
+// return statement. But since the return block may include other instructions
+// which may themselves lower to multiple machine basic blocks, we need to do
+// something in order to differentiate recursive returning from non-recursive
+// returning when we see repeated entries for a block containing a return
+// statement.
+//
+// In other words, given the return block for a function `myself()` shown in
+// Fig 3b. and the high-level trace `[bbRet, bbRet, bbRet, bbRet]`, how many
+// times have we returned from recursive calls? We can't say because
+// `<instructions>` may generate multiple machine basic blocks that all map
+// back to `bbRet` [1].
+//
+// Our solution is to insert a (high-level) padding block between the return
+// statement and the instructions preceding it.
+//
+//           ┌────────────────┐             ┌────────────────┐
+//           │bbRet:          │             │bbRet1:         │
+//           │  <instructions>│             │  <instructions>│
+//           │  call @myself()│             │  call @myself()│
+//           │  ret           │             │  br %bbRet2    │
+//           └────────────────┘             └────────────────┘
+//                                                  │
+//            (Fig 3a, above)                       ▼
+//            Return block before             ┌────────────┐
+//            transformation.                 │bbRet2:     │
+//                                            │  br %bbRet3│
+//                                            └────────────┘
+//                                                  │
+//         (Fig 3b, right)                          ▼
+//         Return block after transformation    ┌───────┐
+//         with padding block.                  │bbRet3:│
+//                                              │  ret  │
+//                                              └───────┘
+//
+// After transformation, repeated entries for a block can only occur in the
+// mapped trace if `<instructions>` becomes multiple machine blocks during
+// code-gen (e.g. `[bbRet1, bbRet1, bbRet1, bbRet1]`), whereas returning from
+// direct recursion will cause sequences of `bbRet2, bbRet3` to appear in the
+// mapped trace.
+//
+// As with intra-function branch disambiguation, the mapper is then free to
+// collapse repeated entries for the same block when constructing the mapped
+// trace.
+//
+// Discussion
+// ----------
+//
 // The pass runs after high-level IR optimisations (and requires some backend
 // optimisations disabled) to ensure that LLVM doesn't undo our work, by
 // folding the machine block for `bbB` back into its predecessor in `bbA`.
 //
 // Alternative approaches that we dismissed, and why:
 //
-//  - Consider branches back to the entry machine block of a high-level block
-//    as a re-execution of the high-level block. Even assuming that we can
-//    identify the entry machine block for a high-level block, this is flawed.
-//    As can be seen in the example above, both internal and non-internal
-//    control flow can branch back to the entry block. Additionally, there may
-//    not be a unique entry machine basic block.
+//  - For intra-function branches, consider branches back to the entry machine
+//    block of a high-level block as a re-execution of the high-level block.
+//    Even assuming that we can identify the entry machine block for a
+//    high-level block, this is flawed. As can be seen in the example above,
+//    both internal and non-internal control flow can branch back to the entry
+//    block. Additionally, there may not be a unique entry machine basic block.
 //
 //  - Mark (in the machine IR) which branches are exits to the high-level IR
 //    block and encode this is the basic block map somehow. This is more
@@ -132,7 +194,8 @@
 //    likely that some LLVM IR constructs require internal control flow for
 //    correct semantics.
 //
-// Footnotes:
+// Footnotes
+// ---------
 //
 // [0]: For some targets, a single high-level LLVM IR instruction can even
 //      lower to a machine-IR-level loop, for example `cmpxchng` on some ARM
@@ -141,6 +204,10 @@
 //      a machine-level loop presents a worst-case scenario for ambiguity, as
 //      a potentially unbounded number of machine blocks can be executed
 //      within the confines of a single high-level basic block.
+//
+// [1]: Futher those machine blocks may branch to the same address that a
+//      return from direct recursion would land at, adding another layer of
+//      ambiguity.
 //
 //===----------------------------------------------------------------------===//
 
@@ -218,6 +285,32 @@ private:
             BB.replacePhiUsesWith(&BB, DBB);
           }
         }
+      } else if (isa<ReturnInst>(TI)) {
+        // Apply return from  direct recursion disambiguation.
+        //
+        // YKFIXME: We do this even if the function is not directly recursive.
+        // If we can prove that it is not, then we can skip this step.
+
+        // Make the New Return Block (NRBB) and the Padding Block (PBB).
+        BasicBlock *NRBB = BasicBlock::Create(Context, "");
+        BasicBlock *PBB = BasicBlock::Create(Context, "");
+
+        // Make the original return block branch to the padding block.
+        IRBuilder<> Builder(Context);
+        Builder.SetInsertPoint(TI);
+        Builder.CreateBr(PBB);
+
+        // Make the padding block branch to the new return block.
+        Builder.SetInsertPoint(PBB);
+        Builder.CreateBr(NRBB);
+
+        // Move the original return instruction into the new return block.
+        Builder.SetInsertPoint(NRBB);
+        TI->removeFromParent();
+        Builder.Insert(TI);
+
+        NewBBs.push_back(NRBB);
+        NewBBs.push_back(PBB);
       }
     }
 
