@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
@@ -275,6 +276,9 @@ struct IntrinsicLibrary {
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCharacterCompare(mlir::Type,
+                                         llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
@@ -283,6 +287,8 @@ struct IntrinsicLibrary {
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -352,6 +358,9 @@ struct IntrinsicHandler {
   // The following may be omitted in the table below.
   Fortran::lower::IntrinsicArgumentLoweringRules argLoweringRules = {};
   bool isElemental = true;
+  /// Code heavy intrinsic can be outlined to make FIR
+  /// more readable.
+  bool outline = false;
 };
 
 constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
@@ -399,6 +408,15 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"iand", &I::genIand},
     {"ibits", &I::genIbits},
+    {"len",
+     &I::genLen,
+     {{{"string", asInquired}, {"kind", asValue}}},
+     /*isElemental=*/false},
+    {"len_trim", &I::genLenTrim},
+    {"lge", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sge>},
+    {"lgt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sgt>},
+    {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
+    {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"sum",
@@ -422,6 +440,14 @@ static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   return result != std::end(handlers) && result->name == name ? result
                                                               : nullptr;
 }
+
+/// To make fir output more readable for debug, one can outline all intrinsic
+/// implementation in wrappers (overrides the IntrinsicHandler::outline flag).
+static llvm::cl::opt<bool> outlineAllIntrinsics(
+    "outline-intrinsics",
+    llvm::cl::desc(
+        "Lower all intrinsic procedure implementation in their own functions"),
+    llvm::cl::init(false));
 
 //===----------------------------------------------------------------------===//
 // Math runtime description and matching utility
@@ -861,7 +887,7 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef name,
                                    llvm::Optional<mlir::Type> resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name)) {
-    bool outline = false;
+    bool outline = handler->outline || outlineAllIntrinsics;
     return std::visit(
         [&](auto &generator) -> fir::ExtendedValue {
           return invokeHandler(generator, *handler, resultType, args, outline,
@@ -1348,6 +1374,43 @@ mlir::Value IntrinsicLibrary::genIbits(mlir::Type resultType,
   auto lenIsZero = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::eq, len, zero);
   return builder.create<mlir::arith::SelectOp>(loc, lenIsZero, zero, res2);
+}
+
+// LEN
+// Note that this is only used for an unrestricted intrinsic LEN call.
+// Other uses of LEN are rewritten as descriptor inquiries by the front-end.
+fir::ExtendedValue
+IntrinsicLibrary::genLen(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Optional KIND argument reflected in result type and otherwise ignored.
+  assert(args.size() == 1 || args.size() == 2);
+  mlir::Value len = fir::factory::readCharLen(builder, loc, args[0]);
+  return builder.createConvert(loc, resultType, len);
+}
+
+// LEN_TRIM
+fir::ExtendedValue
+IntrinsicLibrary::genLenTrim(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Optional KIND argument reflected in result type and otherwise ignored.
+  assert(args.size() == 1 || args.size() == 2);
+  const fir::CharBoxValue *charBox = args[0].getCharBox();
+  if (!charBox)
+    TODO(loc, "character array len_trim");
+  auto len =
+      fir::factory::CharacterExprHelper(builder, loc).createLenTrim(*charBox);
+  return builder.createConvert(loc, resultType, len);
+}
+
+// LGE, LGT, LLE, LLT
+template <mlir::arith::CmpIPredicate pred>
+fir::ExtendedValue
+IntrinsicLibrary::genCharacterCompare(mlir::Type type,
+                                      llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  return fir::runtime::genCharCompare(
+      builder, loc, pred, fir::getBase(args[0]), fir::getLen(args[0]),
+      fir::getBase(args[1]), fir::getLen(args[1]));
 }
 
 // Compare two FIR values and return boolean result as i1.
