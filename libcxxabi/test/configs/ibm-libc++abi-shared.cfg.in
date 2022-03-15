@@ -4,16 +4,16 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}',''))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{install}/include/c++/v1 ' +
+    '-nostdinc++ -I %{include} ' +
     '-D__LIBC_NO_CPP_MATH_OVERLOADS__ -DLIBCXXABI_NO_TIMER ' +
     '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
     '-I %{libcxx}/test/support -I %{libcxx}/src'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{install}/lib -lc++ -lc++abi -Wl,-bbigtoc'
+    '-nostdlib++ -L %{lib} -lc++ -lc++abi -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env LIBPATH=%{install}/lib -- '
+    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
 ))
 
 import os, site

@@ -45,11 +45,11 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{install}/include/c++/v1 -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
+    '-nostdinc++ -I %{include} -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
     '-I %{libcxx}/test/support -I %{libcxx}/src'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{install}/lib -lc++ -lc++abi'
+    '-nostdlib++ -L %{lib} -lc++ -lc++abi'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '

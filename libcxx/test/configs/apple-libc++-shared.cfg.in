@@ -13,13 +13,13 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{install}/include/c++/v1 -I %{libcxx}/test/support'
+    '-nostdinc++ -I %{include} -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{install}/lib -lc++'
+    '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{install}/lib -- '
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
 ))
 
 import os, site
