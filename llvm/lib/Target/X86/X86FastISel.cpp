@@ -2587,6 +2587,8 @@ bool X86FastISel::TryEmitSmallMemcpy(X86AddressMode DestAM,
 
 // Add an annotation to an intrinsic instruction, specifying whether the
 // intrinsic has been inlined or not.
+//
+// This is only necessary for intrinsics which may emit machine code.
 void annotateIntrinsic(const IntrinsicInst *II, bool Inlined) {
   IntrinsicInst *CI = const_cast<IntrinsicInst *>(II);
   LLVMContext& C = CI->getContext();
